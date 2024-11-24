@@ -116,7 +116,7 @@ class Codec(ABC, Generic[T]):
         """
         pass
 
-class CodecRegistry:
+class CodecRegistry(Generic[T]):
     """
     Registry for managing codec implementations.
     

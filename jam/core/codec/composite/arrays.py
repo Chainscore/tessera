@@ -168,9 +168,12 @@ def make_array_codec(element_type: Type[T], length: int) -> ArrayCodec[T]:
 
 
 # Type alias helper for fixed-length arrays
-class Array(Generic[T]):
+class Array(Generic[T], List[T]):
     """Type alias helper for fixed-length arrays."""
-    
+
+    def __init__(self, length: int):
+        self.length = length
+        
     def __class_getitem__(cls, key: Tuple[Type[T], int]) -> ArrayCodec[T]:
         """
         Create array codec through type syntax.

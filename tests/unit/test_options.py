@@ -21,7 +21,7 @@ class TestOptionCodec:
     ])
     def test_some_values(self, type_, value):
         """Test encoding/decoding of present values of different types."""
-        codec = Option[type_]
+        codec = OptionCodec(type_)
         encoded = codec.encode(value)
         decoded, size = codec.decode_from(encoded)
         assert decoded == value
@@ -33,7 +33,7 @@ class TestOptionCodec:
     @pytest.mark.parametrize("type_", [int, str, bool, float, bytes])
     def test_none_values(self, type_):
         """Test encoding/decoding of None for different value types."""
-        codec = Option[type_]
+        codec = OptionCodec(type_)
         encoded = codec.encode(None)
         decoded, size = codec.decode_from(encoded)
         assert decoded is None
@@ -46,8 +46,8 @@ class TestOptionCodec:
     def test_nested_options(self):
         """Test encoding/decoding of nested optional values."""
         # Create Option[Option[int]] codec
-        inner_codec = Option[int]
-        outer_codec = OptionCodec(Optional[int], inner_codec)
+        inner_codec = OptionCodec(int)
+        outer_codec = OptionCodec(inner_codec)
         
         # Test various nesting combinations
         test_cases = [
@@ -64,7 +64,7 @@ class TestOptionCodec:
 
     def test_invalid_types(self):
         """Test handling of invalid value types."""
-        codec = Option[int]
+        codec = OptionCodec(int)
         
         invalid_values = [
             "not an int",  # Wrong type
@@ -78,7 +78,7 @@ class TestOptionCodec:
 
     def test_buffer_bounds(self):
         """Test buffer bounds checking."""
-        codec = Option[int]
+        codec = OptionCodec(int)
         
         # Test None value with too small buffer
         with pytest.raises(EncodeError):

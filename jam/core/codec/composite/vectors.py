@@ -84,7 +84,7 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
             return bytes([self.TAG_U24]) + length.to_bytes(3, 'little')
             
         if length <= 0xFFFFFFFF:  # u32 max
-            return bytes([self.TAG_FD]) + length.to_bytes(4, 'little')
+            return bytes([self.TAG_U32]) + length.to_bytes(4, 'little')
             
         raise ValueError(f"Length {length} too large to encode")
 
@@ -146,9 +146,9 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
             length_size = len(self._encode_length(len(value)))
         except ValueError as e:
             raise EncodeError(0, 0, str(e))
-            
+        
         return length_size + sum(
-            self.element_codec.encode_size(item) for item in value
+            self.element_codec.encode_size(item) for item in value # type: ignore
         )
 
     def encode_into(self, value: Sequence[T], buffer: bytearray, offset: int = 0) -> int:
@@ -189,7 +189,7 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
                         0, 0,
                         f"Expected {self.element_type.__name__}, got {type(item)}"
                     )
-                written = self.element_codec.encode_into(item, buffer, current_offset)
+                written = self.element_codec.encode_into(item, buffer, current_offset) # type: ignore
                 current_offset += written
                 
             return current_offset - offset
@@ -221,7 +221,7 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
             result = []
             for i in range(length):
                 try:
-                    item, size = self.element_codec.decode_from(buffer, current_offset)
+                    item, size = self.element_codec.decode_from(buffer, current_offset) # type: ignore
                     result.append(item)
                     current_offset += size
                 except DecodeError as e:

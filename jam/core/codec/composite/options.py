@@ -64,7 +64,7 @@ class OptionCodec(Codec[Optional[T]], Generic[T]):
         """
         if value is None:
             return self.TAG_SIZE
-        return self.TAG_SIZE + self.value_codec.encode_size(value)
+        return self.TAG_SIZE + self.value_codec.encode_size(value) # type: ignore
 
     def encode_into(self, value: Optional[T], buffer: bytearray, offset: int = 0) -> int:
         """
@@ -100,7 +100,7 @@ class OptionCodec(Codec[Optional[T]], Generic[T]):
         buffer[offset] = self.TAG_SOME
         
         # Write value
-        written = self.value_codec.encode_into(value, buffer, offset + self.TAG_SIZE)
+        written = self.value_codec.encode_into(value, buffer, offset + self.TAG_SIZE) # type: ignore
         return self.TAG_SIZE + written
 
     def decode_from(self, buffer: Union[bytes, bytearray, memoryview], 
@@ -126,7 +126,7 @@ class OptionCodec(Codec[Optional[T]], Generic[T]):
             
         if tag == self.TAG_SOME:
             try:
-                value, size = self.value_codec.decode_from(
+                value, size = self.value_codec.decode_from( # type: ignore
                     buffer, offset + self.TAG_SIZE
                 )
                 return value, self.TAG_SIZE + size

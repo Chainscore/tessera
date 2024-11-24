@@ -1,29 +1,57 @@
 """
-Integer codec implementations for JAM protocol.
+Integer codec implementations for JAM protocol encoding specification.
 
-This module implements encoding and decoding for various integer types according to 
-the JAM protocol specification (Appendix C). It includes both fixed-width integers
-and general number encoding.
+Implements both fixed-width integers and the general variable-length integer 
+encoding scheme specified in JAM graypaper Appendix C.
+
+Fixed width integers are encoded in little-endian format.
+Variable length integers use the following scheme:
+- 0x00-0xFC: Direct value (1 byte)
+- 0xFD: u16 value (3 bytes) 
+- 0xFE: u24 value (4 bytes)
+- 0xFF: u32 value (5 bytes)
 """
 
-from typing import TypeVar, Dict, Union, Tuple, Type
+from typing import TypeVar, Dict, Union, Tuple, Type, Optional, Final, cast
 import struct
-from ..base import Codec, EncodeError, DecodeError, check_buffer_size, ensure_size
+from ..base import (
+    Codec, CodecRegistry, EncodeError, DecodeError,
+    check_buffer_size, ensure_size
+)
 
+# Type variable for integers
 T = TypeVar('T', bound=int)
 
+# Constants for variable length encoding
+DIRECT_ENCODING_MAX: Final[int] = 0xFC
+TAG_U16: Final[int] = 0xFD
+TAG_U24: Final[int] = 0xFE  
+TAG_U32: Final[int] = 0xFF
+
+# Maximum values for each type
+MAX_U8: Final[int] = 0xFF
+MAX_U16: Final[int] = 0xFFFF
+MAX_U24: Final[int] = 0xFFFFFF
+MAX_U32: Final[int] = 0xFFFFFFFF
+MAX_U64: Final[int] = 0xFFFFFFFFFFFFFFFF
+
 class IntegerCodec(Codec[T]):
-    """Base codec for fixed-width integers."""
+    """
+    Base codec for fixed-width integers.
+    
+    Encodes integers in little-endian format with fixed width.
+    Supports both signed and unsigned values.
+    """
     
     def __init__(self, byte_size: int, signed: bool, python_type: Type[int],
                  min_value: int, max_value: int):
         """
-        Initialize the codec.
+        Initialize codec for specific integer type.
         
         Args:
-            byte_size: Number of bytes for this integer type
-            signed: Whether this is a signed integer type
-            python_type: The Python type this codec handles
+            byte_size: Number of bytes for encoded value
+            signed: Whether type is signed
+            python_type: Python type for values
             min_value: Minimum allowed value
             max_value: Maximum allowed value
         """
@@ -32,230 +60,256 @@ class IntegerCodec(Codec[T]):
         self.python_type = python_type
         self.min_value = min_value
         self.max_value = max_value
-        # Create struct format string based on endianness and size
-        self._struct_format = '<' + {
+        
+        # Create struct format for efficient encoding/decoding
+        self._format = '<' + {
             1: 'b' if signed else 'B',
-            2: 'h' if signed else 'H',
+            2: 'h' if signed else 'H', 
             4: 'i' if signed else 'I',
-            8: 'q' if signed else 'Q',
+            8: 'q' if signed else 'Q'
         }[byte_size]
-        self._struct = struct.Struct(self._struct_format)
+        self._struct = struct.Struct(self._format)
 
     def encode_size(self, value: T) -> int:
-        """Calculate encoded size (fixed for given integer type)."""
+        """Get encoded size (fixed for given type)."""
         return self.byte_size
 
-    def encode_into(self, value: T, buffer: bytearray, offset: int = 0) -> int:
+    def encode_into(self, value: T, buffer: bytearray, 
+                   offset: int = 0) -> int:
         """
-        Encode an integer into the buffer.
+        Encode integer into buffer.
         
         Args:
             value: Integer to encode
             buffer: Target buffer
-            offset: Starting offset in buffer
+            offset: Starting offset
+            context: Optional encoding context
             
         Returns:
             Number of bytes written
             
         Raises:
-            EncodeError: If value is out of bounds or buffer too small
+            EncodeError: If value out of bounds or buffer too small
         """
         if not isinstance(value, int):
             raise EncodeError(
-                self.byte_size, 0,
-                f"Expected int, got {type(value)}"
+                expected="int",
+                actual=type(value).__name__
             )
-        
+            
         if not self.min_value <= value <= self.max_value:
             raise EncodeError(
-                self.byte_size, 0,
-                f"Value {value} out of bounds for {self.python_type.__name__}"
+                expected=0,
+                actual=value,
+                message="Integer value out of bounds"
             )
-
+            
         check_buffer_size(buffer, self.byte_size, offset)
         self._struct.pack_into(buffer, offset, value)
         return self.byte_size
 
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], 
+    def decode_from(self, buffer: Union[bytes, bytearray, memoryview],
                    offset: int = 0) -> Tuple[T, int]:
         """
-        Decode an integer from the buffer.
+        Decode integer from buffer.
         
         Args:
             buffer: Source buffer
-            offset: Starting offset in buffer
+            offset: Starting offset
+            context: Optional decoding context
             
         Returns:
             Tuple of (decoded value, bytes read)
             
         Raises:
-            DecodeError: If buffer is too small
+            DecodeError: If buffer too small
         """
         ensure_size(buffer, self.byte_size, offset)
         value = self._struct.unpack_from(buffer, offset)[0]
-        return self.python_type(value), self.byte_size
-
+        return cast(T, self.python_type(value)), self.byte_size
 
 class GeneralCodec(Codec[int]):
     """
-    Codec for general number encoding as specified in JAM protocol.
+    Codec for variable-length integer encoding.
     
-    This implements the variable-length encoding scheme that minimizes bytes
-    for smaller numbers while supporting the full u64 range.
+    Implements JAM protocol variable length encoding scheme:
+    - 0x00-0xFC: Direct value (1 byte)
+    - 0xFD: u16 value (3 bytes)
+    - 0xFE: u24 value (4 bytes) 
+    - 0xFF: u32 value (5 bytes)
     """
     
-    MAX_ENCODED_SIZE = 9  # Maximum possible encoded size for any number
-
     def encode_size(self, value: int) -> int:
-        """Calculate the number of bytes needed to encode the value."""
+        """Calculate encoded size based on value magnitude."""
+        if not isinstance(value, int):
+            raise EncodeError(
+                expected=0,
+                actual=value,
+                message="Expected integer"
+            )
+            
         if value < 0:
-            raise EncodeError(0, 0, "Cannot encode negative values")
+            raise EncodeError(
+                expected=0,
+                actual=value,
+                message="Cannot encode negative values"
+            )
             
-        if value == 0:
+        if value <= DIRECT_ENCODING_MAX:
             return 1
-            
-        # Determine required size based on value ranges
-        if value < 128:                    return 1  # 2^7
-        if value < 16384:                  return 2  # 2^14
-        if value < 2097152:                return 3  # 2^21
-        if value < 268435456:              return 4  # 2^28
-        if value < 34359738368:            return 5  # 2^35
-        if value < 4398046511104:          return 6  # 2^42
-        if value < 562949953421312:        return 7  # 2^49
-        if value < 72057594037927936:      return 8  # 2^56
-        if value <= 18446744073709551615:  return 9  # 2^64
-        
-        raise EncodeError(0, 0, f"Value {value} too large for encoding")
+        elif value <= MAX_U16:
+            return 3  # tag + 2 bytes
+        elif value <= MAX_U24:
+            return 4  # tag + 3 bytes
+        elif value <= MAX_U32:
+            return 5  # tag + 4 bytes
+        else:
+            raise EncodeError(
+                expected=0,
+                actual=value,
+                message="Value too large for encoding"
+            )
 
-    def encode_into(self, value: int, buffer: bytearray, offset: int = 0) -> int:
+    def encode_into(self, value: int, buffer: bytearray,
+                   offset: int = 0) -> int:
         """
-        Encode a general number using variable-length encoding.
+        Encode integer using variable-length scheme.
         
         Args:
-            value: Number to encode
+            value: Integer to encode
             buffer: Target buffer
-            offset: Starting offset in buffer
+            offset: Starting offset
+            context: Optional encoding context
             
         Returns:
             Number of bytes written
             
         Raises:
-            EncodeError: If value is invalid or buffer too small
+            EncodeError: If value invalid or buffer too small
         """
-        if value < 0:
-            raise EncodeError(0, 0, "Cannot encode negative values")
-
         size = self.encode_size(value)
         check_buffer_size(buffer, size, offset)
-
-        if value == 0:
-            buffer[offset] = 0
+        
+        if value <= DIRECT_ENCODING_MAX:
+            buffer[offset] = value
             return 1
-
-        if value < (1 << (7 * size)):
-            # Regular encoding path
-            l = size - 1
-            # First byte: 2^8 - 2^(8-l) + floor_div(value, 2^(8l))
-            decoded_var = (1 << 8) - (1 << (8 - l)) + (value >> (8 * l))
-            buffer[offset] = decoded_var & 0xFF
             
-            # Remaining bytes
-            remaining = value & ((1 << (8 * l)) - 1)
-            for i in range(l):
-                buffer[offset + l - i] = remaining & 0xFF
-                remaining >>= 8
-                
-        else:
-            # Full 64-bit encoding path
-            buffer[offset] = 0xFF  # Signal full encoding
-            for i in range(8):
-                buffer[offset + 8 - i] = value & 0xFF
-                value >>= 8
+        if value <= MAX_U16:
+            buffer[offset] = TAG_U16
+            buffer[offset+1:offset+3] = value.to_bytes(2, 'little')
+            return 3
+            
+        if value <= MAX_U24:
+            buffer[offset] = TAG_U24
+            buffer[offset+1:offset+4] = value.to_bytes(3, 'little')
+            return 4
+            
+        if value <= MAX_U32:
+            buffer[offset] = TAG_U32
+            buffer[offset+1:offset+5] = value.to_bytes(4, 'little')
+            return 5
+            
+        raise EncodeError(
+            expected=0,
+            actual=value,
+            message="Value too large for encoding"
+        )
 
-        return size
-
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], 
+    def decode_from(self, buffer: Union[bytes, bytearray, memoryview],
                    offset: int = 0) -> Tuple[int, int]:
         """
-        Decode a general number.
+        Decode integer using variable-length scheme.
         
         Args:
             buffer: Source buffer
-            offset: Starting offset in buffer
+            offset: Starting offset
+            context: Optional decoding context
             
         Returns:
             Tuple of (decoded value, bytes read)
             
         Raises:
-            DecodeError: If buffer is too small or invalid encoding
+            DecodeError: If buffer too small or invalid encoding
         """
         ensure_size(buffer, 1, offset)
+        tag = buffer[offset]
         
-        first_byte = buffer[offset]
-        
-        if first_byte == 0:
-            return 0, 1
+        if tag <= DIRECT_ENCODING_MAX:
+            return tag, 1
             
-        if first_byte == 0xFF:
-            # Full 64-bit encoding
-            ensure_size(buffer, 9, offset)
-            value = 0
-            for i in range(8):
-                value = (value << 8) | buffer[offset + i + 1]
-            return value, 9
+        if tag == TAG_U16:
+            ensure_size(buffer, 3, offset)
+            value = int.from_bytes(buffer[offset+1:offset+3], 'little')
+            if value <= DIRECT_ENCODING_MAX:
+                raise DecodeError(
+                    expected=0,
+                    actual=value,
+                    message="Invalid encoding: value too small for u16 tag"
+                )
+            return value, 3
             
-        # Calculate l (number of additional bytes) from first byte
-        l = 1
-        test = first_byte
-        while test & 0x80:
-            l += 1
-            test = (test << 1) & 0xFF
+        if tag == TAG_U24:
+            ensure_size(buffer, 4, offset)
+            value = int.from_bytes(buffer[offset+1:offset+4], 'little')
+            if value <= MAX_U16:
+                raise DecodeError(
+                    expected=0,
+                    actual=value,
+                    message="Invalid encoding: value too small for u24 tag"
+                )
+            return value, 4
             
-        ensure_size(buffer, l + 1, offset)
-        
-        # Extract value from remaining bytes
-        value = (first_byte - (0xFF - (1 << (8 - l)) + 1)) << (8 * l)
-        for i in range(l):
-            value |= buffer[offset + 1 + i] << (8 * (l - 1 - i))
+        if tag == TAG_U32:
+            ensure_size(buffer, 5, offset)
+            value = int.from_bytes(buffer[offset+1:offset+5], 'little')
+            if value <= MAX_U24:
+                raise DecodeError(
+                    expected=0,
+                    actual=value,
+                    message="Invalid encoding: value too small for u32 tag"
+                )
+            return value, 5
             
-        return value, l + 1
+        raise DecodeError(
+            expected=0,  # Expected value doesn't apply here, using 0 as default
+            actual=tag,  # Pass the invalid tag as the actual value
+            message="Invalid tag in variable length encoding"
+        )
+
+# Then create specialized types for each integer width
+class U8(int): pass
+class U16(int): pass
+class U32(int): pass
+class U64(int): pass
+class I8(int): pass
+class I16(int): pass
+class I32(int): pass
+class I64(int): pass
+
+# Create codec instances with proper types
+u8 = IntegerCodec(1, False, U8, 0, MAX_U8)
+u16 = IntegerCodec(2, False, U16, 0, MAX_U16)
+u32 = IntegerCodec(4, False, U32, 0, MAX_U32)
+u64 = IntegerCodec(8, False, U64, 0, MAX_U64)
+
+i8 = IntegerCodec(1, True, I8, -128, 127)
+i16 = IntegerCodec(2, True, I16, -32768, 32767)
+i32 = IntegerCodec(4, True, I32, -0x80000000, 0x7FFFFFFF)
+i64 = IntegerCodec(8, True, I64, -0x8000000000000000, 0x7FFFFFFFFFFFFFFF)
 
 
-# Create codec instances for standard integer types
-u8 = IntegerCodec(1, False, int, 0, 255)
-u16 = IntegerCodec(2, False, int, 0, 65535)
-u32 = IntegerCodec(4, False, int, 0, 4294967295)
-u64 = IntegerCodec(8, False, int, 0, 18446744073709551615)
-
-i8 = IntegerCodec(1, True, int, -128, 127)
-i16 = IntegerCodec(2, True, int, -32768, 32767)
-i32 = IntegerCodec(4, True, int, -2147483648, 2147483647)
-i64 = IntegerCodec(8, True, int, -9223372036854775808, 9223372036854775807)
-
-# General number codec instance
+# General variable length codec
 general = GeneralCodec()
 
-# Register codecs with registry
-from ..base import CodecRegistry
+# Register specialized types
+CodecRegistry.register(U8, u8)
+CodecRegistry.register(U16, u16)
+CodecRegistry.register(U32, u32)
+CodecRegistry.register(U64, u64)
+CodecRegistry.register(I8, i8)
+CodecRegistry.register(I16, i16)
+CodecRegistry.register(I32, i32)
+CodecRegistry.register(I64, i64)
 
-# Map Python integer ranges to appropriate fixed-width codecs
-RANGE_CODECS = [
-    ((-128, 127), i8),
-    ((-32768, 32767), i16),
-    ((-2147483648, 2147483647), i32),
-    ((-9223372036854775808, 9223372036854775807), i64),
-    ((0, 255), u8),
-    ((0, 65535), u16),
-    ((0, 4294967295), u32),
-    ((0, 18446744073709551615), u64),
-]
-
-def get_codec_for_value(value: int) -> Codec[int]:
-    """Get the most appropriate codec for a given integer value."""
-    for (min_val, max_val), codec in RANGE_CODECS:
-        if min_val <= value <= max_val:
-            return codec
-    raise ValueError(f"No suitable codec for value: {value}")
-
-# Register int type with the general codec as default
+# General int still uses GeneralCodec
 CodecRegistry.register(int, general)

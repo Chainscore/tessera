@@ -14,7 +14,7 @@ class TestTupleCodec:
 
     def test_basic_tuple(self):
         """Test basic encoding/decoding of simple tuples."""
-        codec = Tuple[int, str, bool]
+        codec = TupleCodec([int, str, bool])
         value = (42, "hello", True)
         encoded = codec.encode(value)
         decoded, size = codec.decode_from(encoded)
@@ -30,7 +30,7 @@ class TestTupleCodec:
     ])
     def test_various_tuple_sizes(self, types, value):
         """Test tuples of different sizes."""
-        codec = Tuple[types]
+        codec = TupleCodec(types)
         encoded = codec.encode(value)
         decoded, size = codec.decode_from(encoded)
         assert decoded == value
@@ -38,7 +38,7 @@ class TestTupleCodec:
 
     def test_empty_tuple(self):
         """Test handling of empty tuples."""
-        codec = Tuple[()]
+        codec = TupleCodec([])
         value = ()
         encoded = codec.encode(value)
         decoded, size = codec.decode_from(encoded)
@@ -50,7 +50,7 @@ class TestTupleCodec:
     def test_nested_tuples(self):
         """Test encoding/decoding of nested tuples."""
         # Create a codec for Tuple[Tuple[int, str], bool]
-        inner_codec = Tuple[int, str]
+        inner_codec = TupleCodec([int, str])
         outer_codec = TupleCodec([PyTuple[int, str], bool])
         
         value = ((42, "hello"), True)
@@ -61,7 +61,7 @@ class TestTupleCodec:
 
     def test_length_mismatch(self):
         """Test handling of incorrect tuple lengths."""
-        codec = Tuple[int, str, bool]
+        codec = TupleCodec([int, str, bool])
         
         # Too few elements
         with pytest.raises(EncodeError):
@@ -73,7 +73,7 @@ class TestTupleCodec:
 
     def test_type_mismatch(self):
         """Test handling of incorrect element types."""
-        codec = Tuple[int, str, bool]
+        codec = TupleCodec([int, str, bool])
         
         invalid_tuples = [
             ("not int", "hello", True),  # Wrong first element type
@@ -87,7 +87,7 @@ class TestTupleCodec:
 
     def test_invalid_input_type(self):
         """Test handling of non-tuple inputs."""
-        codec = Tuple[int, str]
+        codec = TupleCodec([int, str])
         
         invalid_inputs = [
             42,             # int
@@ -102,7 +102,7 @@ class TestTupleCodec:
 
     def test_buffer_bounds(self):
         """Test buffer bounds checking."""
-        codec = Tuple[int, str]
+        codec = TupleCodec([int, str])
         value = (42, "hello")
         size = codec.encode_size(value)
         
@@ -118,7 +118,7 @@ class TestTupleCodec:
 
     def test_offset_handling(self):
         """Test encoding and decoding with buffer offsets."""
-        codec = Tuple[int, str]
+        codec = TupleCodec([int, str])
         value = (42, "hello")
         size = codec.encode_size(value)
         
@@ -143,7 +143,7 @@ class TestTupleCodec:
         value = (42, "hello")
         
         # Using Tuple type syntax
-        codec1 = Tuple[int, str]
+        codec1 = TupleCodec([int, str])
         
         # Using make_tuple_codec function
         codec2 = make_tuple_codec(int, str)
@@ -181,7 +181,7 @@ class TestTupleCodec:
         from jam.core.codec.composite.arrays import Array
         
         # Create codec for Tuple[Option[int], Array[str, 2]]
-        codec = Tuple[Optional[int], Tuple[str, str]]
+        codec = TupleCodec([Option[int], Array[str, 2]])
         
         value = (42, ("hello", "world"))
         encoded = codec.encode(value)
@@ -190,7 +190,7 @@ class TestTupleCodec:
 
     def test_tuple_with_empty_string(self):
         """Test handling of empty strings in tuples."""
-        codec = Tuple[str, int, str]
+        codec = TupleCodec([str, int, str])
         value = ("", 42, "hello")
         encoded = codec.encode(value)
         decoded, size = codec.decode_from(encoded)
@@ -198,7 +198,7 @@ class TestTupleCodec:
 
     def test_partial_decode_failure(self):
         """Test handling of decode failures partway through tuple."""
-        codec = Tuple[int, str]
+        codec = TupleCodec([int, str])
         
         # Create valid encoding and corrupt it
         valid = codec.encode((42, "hello"))
