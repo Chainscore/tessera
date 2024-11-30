@@ -237,9 +237,9 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
 
 
 # Type alias helper for vectors
-class Vector(Generic[T]):
+class Vector(Generic[T], list):
     """Type alias helper for vectors."""
-    
+        
     def __class_getitem__(cls, element_type: Type[T]) -> VectorCodec[T]:
         """
         Create vector codec through type syntax.
@@ -248,7 +248,6 @@ class Vector(Generic[T]):
             codec = Vector[int]  # Creates codec for List[int]
         """
         return VectorCodec(element_type)
-
 
 def make_vector_codec(element_type: Type[T]) -> VectorCodec[T]:
     """

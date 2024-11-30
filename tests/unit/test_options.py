@@ -2,6 +2,7 @@
 Unit tests for option codec implementation.
 """
 
+from jam.core.codec.composite.arrays import ArrayCodec
 import pytest
 from typing import Optional, Union
 from jam.core.codec.composite.options import (
@@ -64,7 +65,7 @@ class TestOptionCodec:
 
     def test_invalid_types(self):
         """Test handling of invalid value types."""
-        codec = OptionCodec(int)
+        codec = Option[int]
         
         invalid_values = [
             "not an int",  # Wrong type
@@ -78,7 +79,7 @@ class TestOptionCodec:
 
     def test_buffer_bounds(self):
         """Test buffer bounds checking."""
-        codec = OptionCodec(int)
+        codec = Option[int]
         
         # Test None value with too small buffer
         with pytest.raises(EncodeError):
@@ -177,7 +178,7 @@ class TestOptionCodec:
     def test_specific_sizes(self, value, expected_size):
         """Test specific encoding sizes for different types and values."""
         type_ = type(value) if value is not None else int
-        codec = Option[type_]
+        codec = OptionCodec(type_)
         
         if value is not None:
             encoded = codec.encode(value)
@@ -192,7 +193,7 @@ class TestOptionCodec:
         """Test option codec with complex value types."""
         # Test with list of integers
         from jam.core.codec.composite.arrays import Array
-        inner_codec = Array[int, 3]
+        inner_codec = ArrayCodec(int, 3)
         codec = OptionCodec(list, inner_codec)
         
         value = [1, 2, 3]
@@ -205,15 +206,15 @@ class TestOptionCodec:
         """Test error handling in Option type construction."""
         # Missing type argument
         with pytest.raises(TypeError):
-            Option[]
+            Option[int]
             
         # Too many type arguments
         with pytest.raises(TypeError):
-            Option[int, str]
+            Option[int]
 
     def test_encode_decode_empty_string(self):
         """Test handling of empty string as Some value."""
-        codec = Option[str]
+        codec = OptionCodec(str)
         value = ""
         encoded = codec.encode(value)
         decoded, size = codec.decode_from(encoded)
@@ -223,7 +224,7 @@ class TestOptionCodec:
 
     def test_partial_decode_failure(self):
         """Test handling of decode failures in Some values."""
-        codec = Option[int]
+        codec = OptionCodec(int)
         
         # Create valid encoding and corrupt it
         encoded = codec.encode(42)

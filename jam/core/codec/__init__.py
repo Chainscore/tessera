@@ -52,7 +52,7 @@ from .primitives.strings import codec as str_codec
 # Re-export composite type constructors
 from .composite.arrays import Array, make_array_codec
 from .composite.options import Option, make_option_codec
-from .composite.vectors import Vector, make_vector_codec
+from .composite.vectors import Vector, VectorCodec
 from .composite.tuples import Tuple, make_tuple_codec
 
 # Convenience functions for encoding/decoding
@@ -104,16 +104,14 @@ def register_default_codecs():
     def register_for_type(base_type, type_args):
         """Helper to register common container type variants."""
         for element_type in [int, str, bool]:
+            CodecRegistry.register(Vector[element_type], VectorCodec(element_type))
             if base_type is PyTuple:
                 for length in range(5):  # Register up to 4-tuples
                     args = (element_type,) * length
                     register_tuple_type(PyTuple[args])
-            elif base_type is list:
-                register_vector_type(List[element_type])
             elif base_type is Optional:
                 register_option_type(Optional[element_type])
 
-    from .composite.vectors import register_vector_type
     from .composite.options import register_option_type
     from .composite.tuples import register_tuple_type
     
