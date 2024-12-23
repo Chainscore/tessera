@@ -1,5 +1,5 @@
 """
-Array codec implementation for JAM protocol.
+Array codec
 
 Implements encoding and decoding of fixed-length arrays according to the JAM specification.
 Arrays are encoded by concatenating their encoded elements with no length prefix.
@@ -24,7 +24,7 @@ class ArrayCodec(Codec[Sequence[T]], Generic[T]):
     The length is fixed and known at encoding/decoding time.
     """
     
-    # Maximum array size constant from specification
+    # Maximum array size constant
     MAX_SIZE = 1000
     
     def __init__(self, element_type: Type[T], length: int, element_codec: Optional[Codec[T]] = None):

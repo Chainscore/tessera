@@ -37,13 +37,12 @@ Example Usage:
 # Re-export main types and base functionality
 from .base import (
     Codec, CodecRegistry, 
-    EncodeError, DecodeError,
+    EncodeError, DecodeError, 
 )
 
 # Re-export primitive codecs
 from .primitives.integers import (
-    u8, u16, u32, u64,
-    i8, i16, i32, i64,
+    u8, u16, u32, u64, u128, u256,
     general as general_int
 )
 from .primitives.bools import codec as bool_codec
