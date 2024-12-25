@@ -29,7 +29,9 @@ class OptionCodec(Codec[Optional[T]], Generic[T]):
     # Constants for tag values
     TAG_NONE = 0
     TAG_SOME = 1
-    TAG_SIZE = 1  # Size of tag in bytes
+    # Size of tag in bytes
+    # TODO: should this be general int?
+    TAG_SIZE = 1  
     
     def __init__(self, value_type: Type[T], value_codec: Codec[T]):
         """
@@ -137,53 +139,3 @@ class OptionCodec(Codec[Optional[T]], Generic[T]):
             0, 0,
             f"Invalid option tag: {tag}, expected 0 or 1"
         )
-
-
-def make_option_codec(value_type: Type[T]) -> OptionCodec[T]:
-    """
-    Create option codec for given value type.
-    
-    Args:
-        value_type: Type of values to encode/decode
-        
-    Returns:
-        OptionCodec instance
-        
-    Raises:
-        ValueError: If no codec found for value_type
-    """
-    # Create a codec for the value type
-    value_codec = value_type() if isinstance(value_type, type) and issubclass(value_type, Codec) else None
-    return OptionCodec(value_type, value_codec)
-
-
-# Type alias helper for optional values
-class Option(Generic[T]):
-    """Type alias helper for optional values."""
-    
-    def __class_getitem__(cls, value_type: Type[T]) -> OptionCodec[T]:
-        """
-        Create option codec through type syntax.
-        
-        Example:
-            codec = Option[int]  # Creates codec for Optional[int]
-        """
-        return make_option_codec(value_type)
-
-
-# Register Option type with registry
-from typing import _GenericAlias  # type: ignore
-def register_option_type(option_type: _GenericAlias) -> None:
-    """
-    Register codec for an Optional[T] type.
-    
-    Args:
-        option_type: Optional type to register (e.g., Optional[int])
-    """
-    if hasattr(option_type, "__origin__") and option_type.__origin__ is Union:
-        # Extract the non-None type argument
-        args = [arg for arg in option_type.__args__ if arg is not type(None)]
-        if len(args) == 1:
-            value_type = args[0]
-            # Instead of registering, just create and return the codec
-            return make_option_codec(value_type)

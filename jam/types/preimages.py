@@ -1,0 +1,16 @@
+"""Preimage types for the JAM protocol."""
+from dataclasses import dataclass
+from typing import List
+from .base import ByteSequence
+from .core import ServiceId
+
+@dataclass
+class Preimage:
+    """Preimage structure."""
+    requester: ServiceId
+    blob: ByteSequence
+
+@dataclass
+class PreimagesExtrinsic:
+    """Preimages extrinsic structure."""
+    preimages: List[Preimage] 
