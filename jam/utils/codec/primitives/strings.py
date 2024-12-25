@@ -15,8 +15,8 @@ from typing import Union, Tuple, Optional
 import struct
 from ..base import (
     Codec, EncodeError, DecodeError, 
-    check_buffer_size, ensure_size
 )
+from ..utils import check_buffer_size, ensure_size
 
 class StringCodec(Codec[str]):
     """
@@ -31,7 +31,7 @@ class StringCodec(Codec[str]):
     LENGTH_FORMAT = '<Q'  # struct format for little-endian u64
     _length_struct = struct.Struct(LENGTH_FORMAT)
     
-    def encode_size(self, value: str) -> int:
+    def encode_size(self, value: Union[str, bytes]) -> int:
         """
         Calculate the number of bytes needed to encode the string.
         
@@ -49,7 +49,13 @@ class StringCodec(Codec[str]):
             EncodeError: If string is too large to encode
         """
         try:
-            encoded = value.encode('utf-8')
+            if isinstance(value, str):
+                encoded = value.encode('utf-8')
+            elif isinstance(value, bytes):
+                encoded = value
+            else:
+                raise EncodeError(0, 0, f"Expected str or bytes, got {type(value)}")
+            
             if len(encoded) > (2**64 - 1):
                 raise EncodeError(
                     0, 0,
@@ -138,16 +144,6 @@ class StringCodec(Codec[str]):
             
         except UnicodeDecodeError as e:
             raise DecodeError(0, 0, f"Invalid UTF-8 sequence in buffer: {e}")
-
-
-# Create singleton instance
-codec = StringCodec()
-
-# Register with codec registry
-from ..base import CodecRegistry
-CodecRegistry.register(str, codec)
-
-# Convenience functions
-encode = codec.encode
-encode_into = codec.encode_into
-decode_from = codec.decode_from
+        
+# Codec instance
+string_codec = StringCodec()

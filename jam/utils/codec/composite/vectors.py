@@ -15,10 +15,9 @@ Length encoding scheme:
 """
 
 from typing import TypeVar, Generic, List, Sequence, Union, Type, Optional
-from ..base import (
-    Codec, CodecRegistry, EncodeError, DecodeError,
-    check_buffer_size, ensure_size
-)
+
+from jam.utils.codec.utils import check_buffer_size, ensure_size
+from ..base import Codec, EncodeError, DecodeError
 
 
 T = TypeVar('T')
@@ -37,7 +36,7 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
     TAG_U24 = 0xFE           # Tag for 3-byte length
     TAG_U32 = 0xFD           # Tag for 4-byte length
     
-    def __init__(self, element_type: Type[T], element_codec: Optional[Codec[T]] = None):
+    def __init__(self, element_type: Type[T], element_codec: Codec[T]):
         """
         Initialize vector codec.
         
@@ -52,7 +51,7 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
         self.element_type = element_type
         
         # Get codec for elements
-        self.element_codec = element_codec or CodecRegistry.get(element_type)
+        self.element_codec = element_codec
         if self.element_codec is None:
             raise ValueError(
                 f"No codec registered for element type {element_type.__name__}"
@@ -234,50 +233,3 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
             
         except DecodeError as e:
             raise DecodeError(0, 0, f"Failed to decode vector: {str(e)}")
-
-
-# Type alias helper for vectors
-class Vector(Generic[T], list):
-    """Type alias helper for vectors."""
-        
-    def __class_getitem__(cls, element_type: Type[T]) -> VectorCodec[T]:
-        """
-        Create vector codec through type syntax.
-        
-        Example:
-            codec = Vector[int]  # Creates codec for List[int]
-        """
-        return VectorCodec(element_type)
-
-def make_vector_codec(element_type: Type[T]) -> VectorCodec[T]:
-    """
-    Create vector codec for given element type.
-    
-    Args:
-        element_type: Type of vector elements
-        
-    Returns:
-        VectorCodec instance
-        
-    Example:
-        codec = make_vector_codec(int)
-    """
-    return VectorCodec(element_type)
-
-
-# Register common vector types with registry
-def register_vector_type(vector_type: Type) -> None:
-    """
-    Register codec for a specific vector type.
-    
-    Args:
-        vector_type: Vector type to register (e.g., List[int])
-        
-    Example:
-        register_vector_type(List[int])
-    """
-    from typing import get_args, get_origin
-    
-    if get_origin(vector_type) in (list, Sequence):
-        element_type = get_args(vector_type)[0]
-        CodecRegistry.register(vector_type, make_vector_codec(element_type))

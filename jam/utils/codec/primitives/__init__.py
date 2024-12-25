@@ -8,18 +8,23 @@ This module provides codecs for primitive types including:
 """
 
 from .integers import (
-    u8, u16, u32, u64, u128, u256,
-    general as general_int
+    U8, U16, U32, U64, U128, U256,
+    GeneralCodec as GeneralIntCodec,
+    u8_codec, u16_codec, u32_codec, u64_codec, u128_codec, u256_codec,
+    general_codec
 )
-from .bools import codec as bool_codec
-from .strings import codec as str_codec
+from .bools import BooleanCodec as BoolCodec
+from .strings import StringCodec as StrCodec
+from .bitsequence import BitSequenceCodec
 
 __all__ = [
     # Integer codecs
-    'u8', 'u16', 'u32', 'u64', 'u128', 'u256',
-    'general_int',
+    'U8', 'U16', 'U32', 'U64', 'U128', 'U256',
+    
+    'GeneralIntCodec',
     # Boolean codec
-    'bool_codec',
+    'BoolCodec',
     # String codec
-    'str_codec',
+    'StrCodec',
+    'BitSequenceCodec',
 ]

@@ -9,21 +9,14 @@ This module provides codecs for composite types including:
 - Protocols (structured data)
 """
 
-from .arrays import Array, make_array_codec
-from .options import Option, make_option_codec
-from .tuples import Tuple, make_tuple_codec
-from .vectors import Vector, make_vector_codec
-from .protocols import Protocol, codec_protocol
+from .arrays import ArrayCodec
+from .options import OptionCodec
+from .vectors import VectorCodec
+from .dictionaries import DictionaryCodec
 
 __all__ = [
-    # Array types
-    'Array', 'make_array_codec',
-    # Option types
-    'Option', 'make_option_codec',
-    # Tuple types
-    'Tuple', 'make_tuple_codec',
-    # Vector types
-    'Vector', 'make_vector_codec',
-    # Protocol helpers
-    'Protocol', 'codec_protocol',
+    'ArrayCodec',
+    'OptionCodec',
+    'VectorCodec', 
+    'DictionaryCodec',
 ]

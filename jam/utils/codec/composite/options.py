@@ -12,9 +12,9 @@ Format:
 
 from typing import TypeVar, Generic, Optional, Union, Type, Tuple
 from ..base import (
-    Codec, CodecRegistry, EncodeError, DecodeError,
-    check_buffer_size, ensure_size
+    Codec, EncodeError, DecodeError
 )
+from ..utils import check_buffer_size, ensure_size
 
 T = TypeVar('T')
 
@@ -31,7 +31,7 @@ class OptionCodec(Codec[Optional[T]], Generic[T]):
     TAG_SOME = 1
     TAG_SIZE = 1  # Size of tag in bytes
     
-    def __init__(self, value_type: Type[T], value_codec: Optional[Codec[T]] = None):
+    def __init__(self, value_type: Type[T], value_codec: Codec[T]):
         """
         Initialize option codec.
         
@@ -46,7 +46,7 @@ class OptionCodec(Codec[Optional[T]], Generic[T]):
         self.value_type = value_type
         
         # Get codec for values
-        self.value_codec = value_codec or CodecRegistry.get(value_type)
+        self.value_codec = value_codec
         if self.value_codec is None:
             raise ValueError(
                 f"No codec registered for value type {value_type.__name__}"
@@ -152,7 +152,9 @@ def make_option_codec(value_type: Type[T]) -> OptionCodec[T]:
     Raises:
         ValueError: If no codec found for value_type
     """
-    return OptionCodec(value_type)
+    # Create a codec for the value type
+    value_codec = value_type() if isinstance(value_type, type) and issubclass(value_type, Codec) else None
+    return OptionCodec(value_type, value_codec)
 
 
 # Type alias helper for optional values
@@ -183,4 +185,5 @@ def register_option_type(option_type: _GenericAlias) -> None:
         args = [arg for arg in option_type.__args__ if arg is not type(None)]
         if len(args) == 1:
             value_type = args[0]
-            CodecRegistry.register(option_type, make_option_codec(value_type))
+            # Instead of registering, just create and return the codec
+            return make_option_codec(value_type)

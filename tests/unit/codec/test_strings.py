@@ -3,7 +3,7 @@ Unit tests for string codec implementation.
 """
 
 import pytest
-from jam.core.codec.primitives.strings import codec, EncodeError, DecodeError
+from jam.utils.codec.primitives.strings import StringCodec, EncodeError, DecodeError, string_codec
 
 
 class TestStringCodec:
@@ -25,16 +25,16 @@ class TestStringCodec:
     ])
     def test_roundtrip(self, test_str):
         """Test encoding and decoding roundtrip for various strings."""
-        encoded = codec.encode(test_str)
-        decoded, size = codec.decode_from(encoded)
+        encoded = string_codec.encode(test_str)
+        decoded, size = string_codec.decode_from(encoded)
         assert decoded == test_str
         assert size == len(encoded)
-        assert size == codec.encode_size(test_str)
+        assert size == StringCodec().encode_size(test_str)
 
     def test_length_prefix(self):
         """Test that length prefix is correctly encoded."""
         test_str = "Hello"
-        encoded = codec.encode(test_str)
+        encoded = string_codec.encode(test_str)
         
         # First 8 bytes should be length (5) in little-endian u64
         expected_prefix = bytes([5, 0, 0, 0, 0, 0, 0, 0])
@@ -45,28 +45,28 @@ class TestStringCodec:
 
     def test_empty_string(self):
         """Test handling of empty strings."""
-        encoded = codec.encode("")
+        encoded = string_codec.encode("")
         # Should just be 8 zero bytes for length
         assert encoded == bytes([0] * 8)
         
-        decoded, size = codec.decode_from(encoded)
+        decoded, size = string_codec.decode_from(encoded)
         assert decoded == ""
         assert size == 8
 
     def test_buffer_bounds(self):
         """Test buffer bounds checking."""
         test_str = "Test string"
-        size = codec.encode_size(test_str)
+        size = string_codec.encode_size(test_str)
         
         # Test encoding into too small buffer
         with pytest.raises(EncodeError):
-            codec.encode_into(test_str, bytearray(size - 1))
+            string_codec.encode_into(test_str, bytearray(size - 1))
         
         # Test decoding from too small buffer
-        encoded = codec.encode(test_str)
+        encoded = string_codec.encode(test_str)
         for i in range(len(encoded)):
             with pytest.raises(DecodeError):
-                codec.decode_from(encoded[:i])
+                string_codec.decode_from(encoded[:i])
 
     def test_invalid_types(self):
         """Test that non-string values raise appropriate errors."""
@@ -83,22 +83,22 @@ class TestStringCodec:
         
         for value in invalid_values:
             with pytest.raises(EncodeError):
-                codec.encode(value)
+                string_codec.encode(value)
 
     def test_offset_handling(self):
         """Test encoding and decoding with buffer offsets."""
         test_str = "Test"
-        buffer_size = codec.encode_size(test_str)
+        buffer_size = string_codec.encode_size(test_str)
         
         # Create buffer with padding
         buffer = bytearray([0xFF] * (buffer_size + 2))
         
         # Test encoding at offset
-        written = codec.encode_into(test_str, buffer, 1)
+        written = string_codec.encode_into(test_str, buffer, 1)
         assert written == buffer_size
         
         # Test decoding at offset
-        decoded, size = codec.decode_from(buffer, 1)
+        decoded, size = string_codec.decode_from(buffer, 1)
         assert decoded == test_str
         assert size == buffer_size
         
@@ -110,14 +110,9 @@ class TestStringCodec:
         """Test handling of large strings."""
         # Test string just under limit
         large_str = "x" * (2**20)  # 1MB string
-        encoded = codec.encode(large_str)
-        decoded, size = codec.decode_from(encoded)
+        decoded, size = string_codec.decode_from(string_codec.encode(large_str))
         assert decoded == large_str
-        
-        # Test string exceeding u64 max
-        too_large = "x" * (2**64)
-        with pytest.raises(EncodeError):
-            codec.encode(too_large)
+        assert size == len(string_codec.encode(large_str))
 
     def test_invalid_utf8_sequence(self):
         """Test handling of invalid UTF-8 sequences."""
@@ -128,23 +123,7 @@ class TestStringCodec:
         ])
         
         with pytest.raises(DecodeError):
-            codec.decode_from(invalid_buffer)
-
-    def test_codec_registry(self):
-        """Test integration with codec registry."""
-        from jam.core.codec.base import CodecRegistry
-        
-        # Verify registration
-        assert CodecRegistry.get(str) is codec
-        
-        # Test encoding through registry
-        test_str = "Hello, world!"
-        encoded = CodecRegistry.encode(test_str)
-        assert encoded == codec.encode(test_str)
-        
-        # Test decoding through registry
-        decoded, size = CodecRegistry.decode(str, encoded)
-        assert decoded == test_str
+            string_codec.decode_from(invalid_buffer)
 
     @pytest.mark.parametrize("string,expected_size", [
         ("", 8),  # Empty string: just length prefix
@@ -152,26 +131,26 @@ class TestStringCodec:
         ("α", 10),  # Single Greek: length + 2 bytes
         ("🦀", 12),  # Single emoji: length + 4 bytes
         ("Hello", 13),  # ASCII string: length + 5 bytes
-        ("Hello, 世界", 18),  # Mixed string: length + variable bytes
+        ("Hello, 世界", 21),  # Mixed string: length + variable bytes
     ])
     def test_specific_sizes(self, string, expected_size):
         """Test that specific strings encode to expected sizes."""
-        encoded = codec.encode(string)
+        encoded = string_codec.encode(string)
         assert len(encoded) == expected_size
-        assert codec.encode_size(string) == expected_size
+        assert string_codec.encode_size(string) == expected_size
 
     def test_manual_decode_matches_codec(self):
         """Verify that our understanding of the format matches implementation."""
         import struct
         
         test_str = "Hello, world!"
-        encoded = codec.encode(test_str)
+        encoded = string_codec.encode(test_str)
         
         # Manual decode
         length = struct.unpack('<Q', encoded[:8])[0]
         content = encoded[8:8+length].decode('utf-8')
         
         # Should match codec decode
-        decoded, size = codec.decode_from(encoded)
+        decoded, size = string_codec.decode_from(encoded)
         assert content == decoded
         assert size == len(encoded)

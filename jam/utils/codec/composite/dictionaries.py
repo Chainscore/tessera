@@ -13,9 +13,11 @@ Format:
 
 from typing import TypeVar, Generic, Dict as typing_Dict, Mapping, Union, Type, Optional, Tuple
 import operator
+
+from jam.utils.codec.primitives.integers import general_codec
+from jam.utils.codec.utils import check_buffer_size
 from ..base import (
-    Codec, CodecRegistry, EncodeError, DecodeError,
-    check_buffer_size, ensure_size
+    Codec, EncodeError, DecodeError,
 )
 from .vectors import VectorCodec
 
@@ -34,8 +36,8 @@ class DictionaryCodec(Codec[Mapping[K, V]], Generic[K, V]):
         self, 
         key_type: Type[K], 
         value_type: Type[V], 
-        key_codec: Optional[Codec[K]] = None,
-        value_codec: Optional[Codec[V]] = None
+        key_codec: Codec[K],
+        value_codec: Codec[V]
     ):
         """
         Initialize dictionary codec.
@@ -53,22 +55,8 @@ class DictionaryCodec(Codec[Mapping[K, V]], Generic[K, V]):
         self.value_type = value_type
         
         # Get codecs for keys and values
-        self.key_codec = key_codec or CodecRegistry.get(key_type)
-        if self.key_codec is None:
-            raise ValueError(
-                f"No codec registered for key type {key_type.__name__}"
-            )
-        
-        self.value_codec = value_codec or CodecRegistry.get(value_type)
-        if self.value_codec is None:
-            raise ValueError(
-                f"No codec registered for value type {value_type.__name__}"
-            )
-            
-        # Create codec for sequence of key-value pairs
-        # This gives us length prefix encoding for free
-        PairType = Tuple[key_type, value_type]  
-        self.pair_codec = VectorCodec(PairType)
+        self.key_codec = key_codec
+        self.value_codec = value_codec
 
     def _encode_pair(
         self, key: K, value: V, buffer: bytearray, offset: int
@@ -152,7 +140,7 @@ class DictionaryCodec(Codec[Mapping[K, V]], Generic[K, V]):
         )
         
         # Get length prefix size from pair codec
-        total_size = self.pair_codec.encode_size(pairs)
+        total_size = general_codec.encode_size(len(pairs)) + pairs_size
         
         return total_size
 
@@ -182,7 +170,7 @@ class DictionaryCodec(Codec[Mapping[K, V]], Generic[K, V]):
         
         try:
             # Get sorted pairs by encoded key
-            temp_buffer = bytearray(1024)  # Buffer for temporary key encoding
+            temp_buffer = bytearray(1024)
             pairs_with_key_bytes = []
             
             for key, val in value.items():
@@ -191,8 +179,19 @@ class DictionaryCodec(Codec[Mapping[K, V]], Generic[K, V]):
                 
             pairs = [p[1] for p in sorted(pairs_with_key_bytes)]
             
-            # Use pair codec to encode length and pairs
-            return self.pair_codec.encode_into(pairs, buffer, offset)
+            # Encode length prefix using VectorCodec's length encoding scheme
+            len_encoded = general_codec.encode(len(pairs))
+            buffer[offset:offset+len(len_encoded)] = len_encoded
+            current_offset = offset + len(len_encoded)
+            
+            # Encode each pair directly
+            for key, val in pairs:
+                written = self.key_codec.encode_into(key, buffer, current_offset)
+                current_offset += written
+                written = self.value_codec.encode_into(val, buffer, current_offset)
+                current_offset += written
+                
+            return current_offset - offset
             
         except EncodeError as e:
             raise EncodeError(0, 0, f"Failed to encode dictionary: {str(e)}")
@@ -214,73 +213,26 @@ class DictionaryCodec(Codec[Mapping[K, V]], Generic[K, V]):
             DecodeError: If buffer too small or invalid encoding
         """
         try:
-            # Use pair codec to decode length and pairs
-            pairs, size = self.pair_codec.decode_from(buffer, offset)
+            # Decode length prefix using VectorCodec's length decoding scheme
+            length, length_size = general_codec.decode_from(buffer, offset)
+            current_offset = offset + length_size
             
-            # Convert to dictionary
+            # Decode pairs
             result = {}
-            for key, value in pairs:
+            for _ in range(length):
+                # Decode key
+                key, key_size = self.key_codec.decode_from(buffer, current_offset)
+                current_offset += key_size
+                
+                # Decode value
+                value, value_size = self.value_codec.decode_from(buffer, current_offset)
+                current_offset += value_size
+                
                 if key in result:
-                    raise DecodeError(
-                        0, 0,
-                        f"Duplicate key in dictionary: {key}"
-                    )
+                    raise DecodeError(0, 0, f"Duplicate key in dictionary: {key}")
                 result[key] = value
                 
-            return result, size
+            return result, current_offset - offset
             
         except DecodeError as e:
             raise DecodeError(0, 0, f"Failed to decode dictionary: {str(e)}")
-
-
-class Dict(Generic[K, V]):
-    """Type alias helper for dictionaries."""
-    
-    def __class_getitem__(cls, types: Tuple[Type[K], Type[V]]) -> DictionaryCodec[K, V]:
-        """
-        Create dictionary codec through type syntax.
-        
-        Example:
-            codec = Dict[str, int]  # Creates codec for Dict[str, int]
-        """
-        if not isinstance(types, tuple) or len(types) != 2:
-            raise TypeError("Dict type requires [key_type, value_type]")
-            
-        key_type, value_type = types
-        return DictionaryCodec(key_type, value_type)
-
-
-def make_dict_codec(
-    key_type: Type[K], value_type: Type[V]
-) -> DictionaryCodec[K, V]:
-    """
-    Create dictionary codec for given key and value types.
-    
-    Args:
-        key_type: Type of dictionary keys
-        value_type: Type of dictionary values
-        
-    Returns:
-        DictionaryCodec instance
-        
-    Example:
-        codec = make_dict_codec(str, int)
-    """
-    return DictionaryCodec(key_type, value_type)
-
-
-def register_dict_type(dict_type: Type) -> None:
-    """
-    Register codec for a specific dictionary type.
-    
-    Args:
-        dict_type: Dictionary type to register (e.g., Dict[str, int])
-        
-    Example:
-        register_dict_type(Dict[str, int])
-    """
-    from typing import get_args, get_origin
-    
-    if get_origin(dict_type) in (typing_Dict, Dict):
-        key_type, value_type = get_args(dict_type)
-        CodecRegistry.register(dict_type, make_dict_codec(key_type, value_type))

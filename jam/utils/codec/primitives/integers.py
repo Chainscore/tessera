@@ -12,11 +12,12 @@ Variable length integers use the following scheme:
 - 0xFF: u32 value (5 bytes)
 """
 
-from typing import TypeVar, Dict, Union, Tuple, Type, Optional, Final, cast
+from typing import TypeVar, Union, Tuple, Type, cast
 from ..base import (
-    Codec, CodecRegistry, EncodeError, DecodeError,
-    check_buffer_size, ensure_size
+    Codec, EncodeError, DecodeError,
 )
+from ..utils import check_buffer_size, ensure_size
+
 import math
 from decimal import Decimal
 
@@ -112,6 +113,13 @@ class GeneralCodec(Codec[int]):
     
     def encode_size(self, value: int) -> int:
         """Calculate encoded size based on value magnitude."""
+        if not isinstance(value, int):
+            raise EncodeError(
+                expected=int,
+                actual=type(value),
+                message="Value must be an integer"
+            )
+        
         if value < 0:
             raise EncodeError(
                 expected=0,
@@ -147,6 +155,13 @@ class GeneralCodec(Codec[int]):
         Raises:
             EncodeError: If value invalid or buffer too small
         """
+        if not isinstance(value, int):
+            raise EncodeError(
+                expected=int,
+                actual=type(value),
+                message="Value must be an integer"
+            )
+        
         if value < 0:
             raise EncodeError(
                 expected=0,
@@ -162,10 +177,10 @@ class GeneralCodec(Codec[int]):
         check_buffer_size(buffer, size, offset)
         if(value < 2**(7*8)):
             _l = self.l(value)
-            buffer[offset: offset + 1] = u8.encode(2**8 - 2**(8-_l) + math.floor(Decimal(value)/(Decimal(2)**(_l*8))))
+            buffer[offset: offset + 1] = IntegerCodec(1, int).encode(2**8 - 2**(8-_l) + math.floor(Decimal(value)/(Decimal(2)**(_l*8))))
             buffer[offset + 1: offset + _l] = IntegerCodec(_l, int).encode(value % 2**(_l*8))
         elif value < 2**64:
-            buffer[offset: offset + 1] = u8.encode(2**8 - 1)
+            buffer[offset: offset + 1] = IntegerCodec(1, int).encode(2**8 - 1)
             buffer[offset + 1: offset + 8] = IntegerCodec(8, int).encode(value)
         else:
             raise EncodeError(
@@ -191,6 +206,7 @@ class GeneralCodec(Codec[int]):
         Raises:
             DecodeError: If buffer too small or invalid encoding
         """
+        ensure_size(buffer, 1, offset)
         tag = buffer[offset]
 
         if tag < 2**7:
@@ -210,31 +226,25 @@ class GeneralCodec(Codec[int]):
             return alpha*2**(l*8) + beta, l+1
 
 # Specialized types for each integer width
-class U8(int): pass
-class U16(int): pass
-class U32(int): pass
-class U64(int): pass
-class U128(int): pass
-class U256(int): pass
-
+class U8(int): 
+    byte_size = 1
+class U16(int): 
+    byte_size = 2
+class U32(int): 
+    byte_size = 4
+class U64(int): 
+    byte_size = 8
+class U128(int): 
+    byte_size = 16
+class U256(int): 
+    byte_size = 32
 # Codec instances with proper types
-u8 = IntegerCodec(1, U8)
-u16 = IntegerCodec(2, U16)
-u32 = IntegerCodec(4, U32)
-u64 = IntegerCodec(8, U64)
-u128 = IntegerCodec(16, U128)
-u256 = IntegerCodec(32, U256)
+u8_codec = IntegerCodec(U8.byte_size, U8)
+u16_codec = IntegerCodec(U16.byte_size, U16)
+u32_codec = IntegerCodec(U32.byte_size, U32)
+u64_codec = IntegerCodec(U64.byte_size, U64)
+u128_codec = IntegerCodec(U128.byte_size, U128)
+u256_codec = IntegerCodec(U256.byte_size, U256)
 
 # General variable length codec
-general = GeneralCodec()
-
-# Register specialized types
-CodecRegistry.register(U8, u8)
-CodecRegistry.register(U16, u16)
-CodecRegistry.register(U32, u32)
-CodecRegistry.register(U64, u64)
-CodecRegistry.register(U128, u128)
-CodecRegistry.register(U256, u256)
-
-# General int still uses GeneralCodec
-CodecRegistry.register(int, general)
+general_codec = GeneralCodec()

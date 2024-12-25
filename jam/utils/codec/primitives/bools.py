@@ -6,7 +6,8 @@ Booleans are encoded as a single byte with 0 for False and 1 for True.
 """
 
 from typing import Tuple, Union
-from ..base import Codec, EncodeError, DecodeError, check_buffer_size, ensure_size
+from ..base import Codec, EncodeError, DecodeError
+from ..utils import check_buffer_size, ensure_size
 
 
 class BooleanCodec(Codec[bool]):
@@ -73,16 +74,6 @@ class BooleanCodec(Codec[bool]):
         # Any non-zero value is considered True
         value = bool(buffer[offset])
         return value, 1
-
-
-# Create singleton instance
-codec = BooleanCodec()
-
-# Register with codec registry
-from ..base import CodecRegistry
-CodecRegistry.register(bool, codec)
-
-# Convenience functions
-encode = codec.encode
-encode_into = codec.encode_into
-decode_from = codec.decode_from
+    
+# Codec instance
+boolean_codec = BooleanCodec()
