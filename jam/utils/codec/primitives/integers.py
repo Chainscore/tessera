@@ -21,16 +21,13 @@ from ..utils import check_buffer_size, ensure_size
 import math
 from decimal import Decimal
 
-# Type variable for integers
-T = TypeVar('T', bound=int)
-
 def encode(value: int, byte_size: int) -> bytes:
     return value.to_bytes(byte_size, 'little', signed=False)
 
 def decode(buffer: Union[bytes, bytearray, memoryview]) -> int:
     return int.from_bytes(buffer, 'little', signed=False)
 
-class IntegerCodec(Codec[T]):
+class IntegerCodec(Codec):
     """
     Base codec for fixed-width integers.
     
@@ -49,11 +46,11 @@ class IntegerCodec(Codec[T]):
         self.byte_size = byte_size
         self.python_type = python_type
 
-    def encode_size(self, value: T) -> int:
+    def encode_size(self, value) -> int:
         """Get encoded size (fixed for given type)."""
         return self.byte_size
                     
-    def encode_into(self, value: T, buffer: bytearray, 
+    def encode_into(self, value: int, buffer: bytearray, 
                    offset: int = 0) -> int:
         """
         Encode integer into buffer.
@@ -81,7 +78,7 @@ class IntegerCodec(Codec[T]):
         return self.byte_size
 
     def decode_from(self, buffer: Union[bytes, bytearray, memoryview],
-                   offset: int = 0) -> Tuple[T, int]:
+                   offset: int = 0) -> Tuple[int, int]:
         """
         Decode integer from buffer.
         
@@ -98,7 +95,7 @@ class IntegerCodec(Codec[T]):
         """
         ensure_size(buffer, self.byte_size, offset)
         value = int.from_bytes(buffer[offset:offset+self.byte_size], 'little')
-        return cast(T, self.python_type(value)), self.byte_size
+        return value, self.byte_size
 
 class GeneralCodec(Codec[int]):
     """

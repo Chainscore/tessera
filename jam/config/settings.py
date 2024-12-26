@@ -1,9 +1,10 @@
-# jam/config/settings.py
-
-from pydantic import BaseSettings
 from pathlib import Path
+from jam.utils.constants import (
+    SLOT_PERIOD, EPOCH_LENGTH, VALIDATOR_COUNT,
+    MAX_SERVICE_CODE_SIZE
+)
 
-class Settings(BaseSettings):
+class Settings():
     # Node settings
     NODE_NAME: str = "JAM-Node"
     NODE_ID: str | None = None
@@ -17,17 +18,17 @@ class Settings(BaseSettings):
     DB_PATH: Path = Path("data/db")
     
     # Consensus settings
-    EPOCH_LENGTH: int = 600  # slots
-    SLOT_DURATION: int = 6   # seconds
-    VALIDATOR_COUNT: int = 1023
+    EPOCH_LENGTH: int = EPOCH_LENGTH
+    SLOT_DURATION: int = SLOT_PERIOD
+    VALIDATOR_COUNT: int = VALIDATOR_COUNT
     
     # PVM settings
     PVM_MAX_MEMORY: int = 2**32  # 4GB
     PVM_STACK_SIZE: int = 2**20  # 1MB
     
     # Service settings
-    MAX_SERVICE_SIZE: int = 4_000_000  # bytes
-    MAX_PREIMAGE_SIZE: int = 4_000_000  # bytes
+    MAX_SERVICE_SIZE: int = MAX_SERVICE_CODE_SIZE
+    MAX_PREIMAGE_SIZE: int = MAX_SERVICE_CODE_SIZE
     
     # Execution settings
     MAX_REFINE_GAS: int = 500_000_000

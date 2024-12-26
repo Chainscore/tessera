@@ -59,7 +59,7 @@ class TestOptionCodec:
     def test_nested_options(self):
         """Test encoding/decoding of nested options."""
         inner_codec = OptionCodec(int, general_codec)
-        outer_codec = OptionCodec(Optional[int], inner_codec)
+        outer_codec = OptionCodec(type(Optional[int]), inner_codec)
         
         test_values = [
             None,               # Outer None
@@ -143,7 +143,7 @@ class TestOptionCodec:
         
         # Create Option[Vector[Option[int]]] codec
         inner_codec = OptionCodec(int, general_codec)
-        middle_codec = VectorCodec(Optional[int], inner_codec)
+        middle_codec = VectorCodec(inner_codec)
         outer_codec = OptionCodec(list, middle_codec)
         
         test_values = [

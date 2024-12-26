@@ -13,10 +13,12 @@ from .arrays import ArrayCodec
 from .options import OptionCodec
 from .vectors import VectorCodec
 from .dictionaries import DictionaryCodec
+from .bitsequence import BitSequenceCodec
 
 __all__ = [
     'ArrayCodec',
     'OptionCodec',
     'VectorCodec', 
     'DictionaryCodec',
+    'BitSequenceCodec',
 ]

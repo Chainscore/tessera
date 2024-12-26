@@ -180,7 +180,7 @@ class TestDictionaryCodec:
         from jam.utils.codec.composite.vectors import VectorCodec
         
         # Create Dict[str, Dict[str, List[int]]] codec
-        inner_list_codec = VectorCodec(int, general_codec)
+        inner_list_codec = VectorCodec(general_codec)
         inner_dict_codec = DictionaryCodec(str, list, string_codec, inner_list_codec)
         outer_codec = DictionaryCodec(str, dict, string_codec, inner_dict_codec)
         

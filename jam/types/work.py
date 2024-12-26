@@ -1,7 +1,7 @@
 """Work package and work report types for the JAM protocol."""
 from dataclasses import dataclass
 from typing import List, Optional, Union
-from .base import ByteSequence, U16, U32
+from .base import U16, U32, Bits
 from .core import (
     OpaqueHash, HeaderHash, StateRoot, BeefyRoot, Gas, ServiceId,
     WorkPackageHash, WorkReportHash, ExportsRoot, ErasureRoot, CoreIndex
@@ -23,7 +23,7 @@ class ExtrinsicSpec:
 class Authorizer:
     """Authorizer structure."""
     code_hash: OpaqueHash
-    params: ByteSequence
+    params: Bits
 
 @dataclass
 class RefineContext:
@@ -40,7 +40,7 @@ class WorkItem:
     """Work item structure."""
     service: ServiceId
     code_hash: OpaqueHash
-    payload: ByteSequence
+    payload: Bits
     refine_gas_limit: Gas
     accumulate_gas_limit: Gas
     import_segments: List[ImportSpec]
@@ -50,7 +50,7 @@ class WorkItem:
 @dataclass
 class WorkPackage:
     """Work package structure."""
-    authorization: ByteSequence
+    authorization: Bits
     auth_code_host: ServiceId
     authorizer: Authorizer
     context: RefineContext
@@ -63,11 +63,11 @@ class WorkPackage:
 @dataclass
 class WorkExecResult:
     """Work execution result."""
-    result: Union[ByteSequence, str]  # 'out-of-gas', 'panic', 'bad-code', 'code-oversize'
+    result: Union[Bits, str]  # 'out-of-gas', 'panic', 'bad-code', 'code-oversize'
     is_ok: bool = True
 
     @classmethod
-    def ok(cls, value: ByteSequence) -> 'WorkExecResult':
+    def ok(cls, value: Bits) -> 'WorkExecResult':
         return cls(result=value, is_ok=True)
 
     @classmethod
@@ -107,7 +107,7 @@ class WorkReport:
     context: RefineContext
     core_index: CoreIndex
     authorizer_hash: OpaqueHash
-    auth_output: ByteSequence
+    auth_output: Bits
     segment_root_lookup: List[SegmentRootLookupItem]
     results: List[WorkResult]
 

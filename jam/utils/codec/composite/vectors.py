@@ -36,25 +36,20 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
     TAG_U24 = 0xFE           # Tag for 3-byte length
     TAG_U32 = 0xFD           # Tag for 4-byte length
     
-    def __init__(self, element_type: Type[T], element_codec: Codec[T]):
+    def __init__(self, element_codec: Codec[T]):
         """
         Initialize vector codec.
         
         Args:
-            element_type: Type of vector elements
             element_codec: Optional specific codec for elements. If None, will be
                          looked up from registry
                          
-        Raises:
-            ValueError: If no codec found for element_type
         """
-        self.element_type = element_type
-        
         # Get codec for elements
         self.element_codec = element_codec
         if self.element_codec is None:
             raise ValueError(
-                f"No codec registered for element type {element_type.__name__}"
+                f"No codec registered for element type"
             )
             
     def _encode_length(self, length: int) -> bytes:
@@ -183,11 +178,6 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
             
             # Encode elements
             for item in value:
-                if not isinstance(item, self.element_type):
-                    raise EncodeError(
-                        0, 0,
-                        f"Expected {self.element_type.__name__}, got {type(item)}"
-                    )
                 written = self.element_codec.encode_into(item, buffer, current_offset) # type: ignore
                 current_offset += written
                 

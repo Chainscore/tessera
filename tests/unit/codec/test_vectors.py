@@ -15,7 +15,7 @@ class TestVectorCodec:
 
     def test_basic_vector(self):
         """Test basic encoding/decoding of integer vectors."""
-        codec = VectorCodec(int, general_codec)
+        codec = VectorCodec(general_codec)
         value = [1, 2, 3]
 
         encoded = codec.encode(value)
@@ -32,7 +32,7 @@ class TestVectorCodec:
     ])
     def test_length_boundaries(self, length):
         """Test vector encoding at length boundaries."""
-        codec = VectorCodec(int, general_codec)
+        codec = VectorCodec(general_codec)
         value = [0] * length
         
         encoded = codec.encode(value)
@@ -49,7 +49,7 @@ class TestVectorCodec:
     ])
     def test_length_prefixes(self, value, expected_prefix):
         """Test that length prefixes are correctly encoded."""
-        codec = VectorCodec(int, general_codec)
+        codec = VectorCodec(general_codec)
         encoded = codec.encode(value)
         assert encoded[:len(expected_prefix)] == expected_prefix
 
@@ -60,7 +60,7 @@ class TestVectorCodec:
     ])
     def test_various_types(self, element_type, codec, values):
         """Test vector codec with various element types."""
-        vector_codec = VectorCodec(element_type, codec)
+        vector_codec = VectorCodec(codec)
         encoded = vector_codec.encode(values)
         decoded, size = vector_codec.decode_from(encoded)
         assert decoded == values
@@ -68,8 +68,8 @@ class TestVectorCodec:
 
     def test_nested_vectors(self):
         """Test encoding/decoding of nested vectors."""
-        inner_codec = VectorCodec(int, general_codec)
-        outer_codec = VectorCodec(list, inner_codec)
+        inner_codec = VectorCodec(general_codec)
+        outer_codec = VectorCodec(inner_codec)
         
         value = [[1, 2], [3, 4, 5], [6]]
         encoded = outer_codec.encode(value)
@@ -79,7 +79,7 @@ class TestVectorCodec:
 
     def test_buffer_bounds(self):
         """Test buffer bounds checking."""
-        codec = VectorCodec(int, general_codec)
+        codec = VectorCodec(general_codec)
         value = [1, 2, 3]
         
         # Test decoding from too small buffer
@@ -90,7 +90,7 @@ class TestVectorCodec:
 
     def test_invalid_types(self):
         """Test handling of invalid value types."""
-        codec = VectorCodec(int, general_codec)
+        codec = VectorCodec(general_codec)
         
         invalid_values = [
             42,           # int
@@ -105,7 +105,7 @@ class TestVectorCodec:
 
     def test_invalid_element_types(self):
         """Test handling of invalid element types."""
-        codec = VectorCodec(int, general_codec)
+        codec = VectorCodec(general_codec)
         
         invalid_lists = [
             ["not int"],
@@ -120,7 +120,7 @@ class TestVectorCodec:
 
     def test_offset_handling(self):
         """Test encoding and decoding with buffer offsets."""
-        codec = VectorCodec(int, general_codec)
+        codec = VectorCodec(general_codec)
         value = [1, 2, 3]
         
         # Create buffer with padding
@@ -140,7 +140,7 @@ class TestVectorCodec:
 
     def test_empty_vector(self):
         """Test handling of empty vectors."""
-        codec = VectorCodec(int, general_codec)
+        codec = VectorCodec(general_codec)
         value = []
         
         encoded = codec.encode(value)
@@ -153,7 +153,7 @@ class TestVectorCodec:
 
     def test_partial_decode_failure(self):
         """Test handling of decode failures partway through vector."""
-        codec = VectorCodec(int, general_codec)
+        codec = VectorCodec(general_codec)
         
         # Create valid encoding and corrupt it
         valid = codec.encode([1, 2, 3])

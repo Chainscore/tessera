@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from typing import List
 from .base import U32
-from .core import ValidatorIndex, WorkReportHash, Ed25519Public
+from .core import OpaqueHash, ValidatorIndex, WorkReportHash, Ed25519Public
 from .crypto import Ed25519Signature
 
 @dataclass

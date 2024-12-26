@@ -1,7 +1,7 @@
 """Assurance types for the JAM protocol."""
 from dataclasses import dataclass
 from typing import List
-from .base import ByteSequence
+from .base import Bits
 from .core import OpaqueHash, ValidatorIndex
 from .crypto import Ed25519Signature
 
@@ -9,7 +9,7 @@ from .crypto import Ed25519Signature
 class AvailAssurance:
     """Availability assurance structure."""
     anchor: OpaqueHash
-    bitfield: ByteSequence  # Size should be avail_bitfield_bytes from constants
+    bitfield: Bits  # Size should be avail_bitfield_bytes from constants
     validator_index: ValidatorIndex
     signature: Ed25519Signature
 

@@ -1,25 +1,21 @@
 """JAM protocol types."""
 
 from .base import (
-    U8, U16, U32, U64,
-    ByteSequence, ByteArray32,
-    validate_u8, validate_u16, validate_u32, validate_u64,
-    validate_byte_array32
+    U8, U16, U32, U64, U128, U256,
+    ByteArray32, ByteArray64, ByteArray128, ByteArray256, ByteArray144, ByteArray96, ByteArray784,
+    Bits
 )
 
 from .crypto import (
     BandersnatchPublic, Ed25519Public, BlsPublic,
-    BandersnatchVrfSignature, BandersnatchRingVrfSignature, Ed25519Signature,
-    validate_bandersnatch_public, validate_ed25519_public, validate_bls_public,
-    validate_bandersnatch_vrf_signature, validate_bandersnatch_ring_vrf_signature,
-    validate_ed25519_signature
+    BandersnatchVrfSignature, BandersnatchRingVrfSignature, Ed25519Signature
 )
 
 from .core import (
     OpaqueHash, TimeSlot, ValidatorIndex, CoreIndex,
     HeaderHash, StateRoot, BeefyRoot, WorkPackageHash, WorkReportHash,
     ExportsRoot, ErasureRoot, Gas, Entropy,
-    ValidatorMetadata, ValidatorData, EntropyBuffer, ServiceInfo
+    ValidatorMetadata, ValidatorData, EntropyBuffer, ServiceInfo, ServiceId
 )
 
 from .work import (
@@ -58,16 +54,11 @@ from .guarantees import (
 __all__ = [
     # Base types
     'U8', 'U16', 'U32', 'U64',
-    'ByteSequence', 'ByteArray32',
-    'validate_u8', 'validate_u16', 'validate_u32', 'validate_u64',
-    'validate_byte_array32',
+    'ByteArray32',
 
     # Crypto types
     'BandersnatchPublic', 'Ed25519Public', 'BlsPublic',
     'BandersnatchVrfSignature', 'BandersnatchRingVrfSignature', 'Ed25519Signature',
-    'validate_bandersnatch_public', 'validate_ed25519_public', 'validate_bls_public',
-    'validate_bandersnatch_vrf_signature', 'validate_bandersnatch_ring_vrf_signature',
-    'validate_ed25519_signature',
 
     # Core types
     'OpaqueHash', 'TimeSlot', 'ValidatorIndex', 'CoreIndex',
