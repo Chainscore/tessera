@@ -1,189 +1,146 @@
 """
-Unit tests for option codec implementation.
+Unit tests for choice codec implementation.
 """
 
 import pytest
-from typing import Optional
-from jam.utils.codec.composite.options import OptionCodec
-from jam.utils.codec.base import EncodeError, DecodeError
-from jam.utils.codec.primitives.integers import IntegerCodec, GeneralCodec
-from jam.utils.codec.primitives.strings import StringCodec
-from jam.utils.codec.primitives.bools import BooleanCodec
+from typing import Any, Tuple, Union, Optional
+from jam.utils.codec.composite.choices import ChoiceCodec
+from jam.types.base.choice import Choice
+from jam.utils.codec.base import Codable, EncodeError, DecodeError
+from jam.types.base.boolean import Boolean
+from jam.types.base.integers import U16, U8
+from jam.types.base.string import String
 
-class TestOptionCodec:
-    """Test suite for option encoding/decoding."""
+class TestChoiceCodec:
+    """Test suite for choice encoding/decoding."""
 
-    def test_none_value(self):
-        """Test encoding/decoding of None values."""
-        codec = OptionCodec(int, general_codec)
-        value = None
-        encoded = codec.encode(value)
-        # Should just be tag byte (0)
-        assert encoded == bytes([0])
-        decoded, size = codec.decode_from(encoded)
-        assert decoded is None
-        assert size == 1
-
-    def test_some_value(self):
-        """Test encoding/decoding of Some values."""
-        codec = OptionCodec(int, general_codec)
-        value = 42
-        encoded = codec.encode(value)
-        # Should be tag byte (1) followed by encoded value
-        assert encoded[0] == 1
-        decoded, size = codec.decode_from(encoded)
+    def test_basic_choice(self):
+        """Test basic encoding/decoding of choice values."""
+        choice = Choice([Boolean, U8])
+        value = Boolean(True)
+        choice.set(value)
+        encoded = choice.encode()
+        decoded, size = Choice.decode_from([Boolean, U8], encoded)
         assert decoded == value
         assert size == len(encoded)
 
-    @pytest.mark.parametrize("value_type,codec,sample", [
-        (int, general_codec, 42),
-        (str, string_codec, "hello"),
-        (bool, boolean_codec, True),
-    ])
-    def test_various_types(self, value_type, codec, sample):
-        """Test option codec with various value types."""
-        option_codec = OptionCodec(value_type, codec)
-        
-        # Test Some case
-        encoded = option_codec.encode(sample)
-        decoded, size = option_codec.decode_from(encoded)
-        assert decoded == sample
+    @pytest.mark.parametrize("types,value", [
+        ([Boolean, U8], Boolean(True)),
+        ([Boolean, U8], U8(255)),
+        ([String, U16, Boolean], U16(17)),
+        ([String, U16, Boolean], String("test")),
+        ([String, U16, Boolean], Boolean(False)),
+    ], ids=lambda val: str(val) if not isinstance(val, list) else f"types_{len(val)}")
+    def test_choice_variants(self, types, value):
+        """Test encoding/decoding of different choice variants."""
+        choice = Choice(types)
+        choice.set(value)
+        encoded = choice.encode()
+        decoded, size = Choice.decode_from(types, encoded)
+        assert decoded == value
         assert size == len(encoded)
-        
-        # Test None case
-        encoded = option_codec.encode(None)
-        decoded, size = option_codec.decode_from(encoded)
-        assert decoded is None
-        assert size == 1
 
-    def test_nested_options(self):
-        """Test encoding/decoding of nested options."""
-        inner_codec = OptionCodec(int, general_codec)
-        outer_codec = OptionCodec(type(Optional[int]), inner_codec)
+    def test_nested_choices(self):
+        """Test encoding/decoding of nested choices."""
+        class TestChoice(Choice):
+            def __init__(self):
+                super().__init__([Boolean, U8])
+            
+            @staticmethod
+            def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[Any, int]:
+                return ChoiceCodec.decode_from([Boolean, U8], buffer, offset)
+        outer_types = [String, TestChoice]
         
-        test_values = [
-            None,               # Outer None
-            42,                # Some(Some(42))
-        ]
+        # Create nested choice structure
+        inner_choice = TestChoice()
+        inner_choice.set(U8(42))
         
-        for value in test_values:
-            encoded = outer_codec.encode(value)
-            decoded, size = outer_codec.decode_from(encoded)
-            assert decoded == value
-            assert size == len(encoded)
+        outer_choice = Choice(outer_types)
+        outer_choice.set(inner_choice)
+        
+        encoded = outer_choice.encode()
+        decoded, size = Choice.decode_from(outer_types, encoded)
+        assert decoded == inner_choice.get()
+        assert size == len(encoded)
+
+    def test_invalid_tag(self):
+        """Test handling of invalid choice tags during decoding."""
+        types = [Boolean, U8]
+        choice = Choice(types)
+        
+        # Create invalid encoding with out-of-bounds tag
+        invalid_buffer = bytearray([2])  # Tag 2 is invalid for 2 choices
+        
+        with pytest.raises(DecodeError) as exc_info:
+            Choice.decode_from(types, invalid_buffer)
+        assert "Invalid choice tag" in str(exc_info.value)
+
+    def test_type_mismatch(self):
+        """Test handling of type mismatches."""
+        types = [Boolean, U8]
+        choice = Choice(types)
+        
+        # Try to set invalid type
+        with pytest.raises(ValueError):
+            choice.set(String("invalid"))
+
+    def test_empty_types(self):
+        """Test handling of empty types list."""
+        with pytest.raises(ValueError):
+            Choice([])
 
     def test_buffer_bounds(self):
         """Test buffer bounds checking."""
-        codec = OptionCodec(int, general_codec)
-        value = 42
-        size = codec.encode_size(value)
+        types = [Boolean, U8]
+        choice = Choice(types)
+        choice.set(Boolean(True))
         
-        # Test encoding into too small buffer
-        with pytest.raises(EncodeError):
-            codec.encode_into(value, bytearray(size - 1))
-        
+        encoded = choice.encode()
         # Test decoding from too small buffer
-        encoded = codec.encode(value)
         for i in range(len(encoded)):
             with pytest.raises(DecodeError):
-                codec.decode_from(encoded[:i])
-
-    def test_invalid_types(self):
-        """Test handling of invalid value types."""
-        codec = OptionCodec(int, general_codec)
-        
-        invalid_values = [
-            "not an int",    # str
-            3.14,            # float
-            [1, 2, 3],      # list
-            {1, 2, 3},      # set
-        ]
-        
-        for value in invalid_values:
-            with pytest.raises(EncodeError):
-                codec.encode(value)
+                Choice.decode_from(types, encoded[:i])
 
     def test_offset_handling(self):
         """Test encoding and decoding with buffer offsets."""
-        codec = OptionCodec(int, general_codec)
-        value = 42
-        size = codec.encode_size(value)
+        types = [Boolean, U8]
+        choice = Choice(types)
+        choice.set(Boolean(True))
         
         # Create buffer with padding
-        buffer = bytearray([0xFF] * (size + 2))
+        buffer = bytearray([0xFF] * 10)
         
         # Test encoding at offset
-        written = codec.encode_into(value, buffer, 1)
-        assert written == size
+        written = choice.encode_into(buffer, 1)
+        assert buffer[0] == 0xFF  # Padding unchanged
         
         # Test decoding at offset
-        decoded, read = codec.decode_from(buffer, 1)
-        assert decoded == value
-        assert read == size
-        
-        # Verify padding wasn't overwritten
-        assert buffer[0] == 0xFF
-        assert buffer[-1] == 0xFF
+        decoded, size = Choice.decode_from(types, buffer, 1)
+        assert decoded == Boolean(True)
+        assert size == written
 
-    def test_invalid_tag(self):
-        """Test handling of invalid tag values during decoding."""
-        codec = OptionCodec(int, general_codec)
-        
-        # Create buffer with invalid tag
-        invalid_tag = 2
-        buffer = bytes([invalid_tag])
-        
-        with pytest.raises(DecodeError) as exc_info:
-            codec.decode_from(buffer)
-        assert "Invalid option tag" in str(exc_info.value)
+    @pytest.mark.parametrize("types,value,expected_size", [
+        ([Boolean, U8], Boolean(True), 2),  # tag + bool
+        ([Boolean, U8], U8(42), 2),         # tag + u8
+        ([String, U8], String("test"), 6),  # tag + string length + string
+        ([U16, U8], U16(1000), 3),          # tag + u16
+    ], ids=lambda val: str(val) if not isinstance(val, list) else f"types_{len(val)}")
+    def test_encode_size(self, types, value, expected_size):
+        """Test that encode_size returns correct sizes for different choices."""
+        choice = Choice(types)
+        choice.set(value)
+        print("Encoding", value, choice.encode())
+        assert choice.encode_size() == expected_size
+        assert len(choice.encode()) == expected_size
 
-    def test_complex_nested_structure(self):
-        """Test complex nested option structures."""
-        from jam.utils.codec.composite.vectors import VectorCodec
+    def test_deterministic_encoding(self):
+        """Test that choice encoding is deterministic."""
+        types = [Boolean, U8]
+        choice1 = Choice(types)
+        choice2 = Choice(types)
         
-        # Create Option[Vector[Option[int]]] codec
-        inner_codec = OptionCodec(int, general_codec)
-        middle_codec = VectorCodec(inner_codec)
-        outer_codec = OptionCodec(list, middle_codec)
+        value = Boolean(True)
+        choice1.set(value)
+        choice2.set(value)
         
-        test_values = [
-            None,                           # None
-            [None, 1, None, 2, 3],         # Some([None, Some(1), None, Some(2), Some(3)])
-            [],                            # Some([])
-        ]
-        
-        for value in test_values:
-            encoded = outer_codec.encode(value)
-            decoded, size = outer_codec.decode_from(encoded)
-            assert decoded == value
-            assert size == len(encoded)
-
-    def test_string_options(self):
-        """Test options with string values of various content."""
-        codec = OptionCodec(str, string_codec)
-        test_values = [
-            None,               # None
-            "",                # Empty string
-            "hello",           # ASCII
-            "Hello, 世界！",    # Mixed ASCII and Unicode
-            "🦀 Rust",         # Emojis
-            "a" * 1000,        # Long string
-        ]
-        
-        for value in test_values:
-            encoded = codec.encode(value)
-            decoded, size = codec.decode_from(encoded)
-            assert decoded == value
-            assert size == len(encoded)
-
-    def test_partial_decode_failure(self):
-        """Test handling of decode failures partway through value."""
-        codec = OptionCodec(int, general_codec)
-        
-        # Create valid encoding and corrupt it
-        valid = codec.encode(42)
-        corrupted = valid[:-1]  # Remove last byte
-        
-        with pytest.raises(DecodeError) as exc_info:
-            codec.decode_from(corrupted)
-        assert "Failed to decode Some value" in str(exc_info.value) 
+        assert choice1.encode() == choice2.encode()

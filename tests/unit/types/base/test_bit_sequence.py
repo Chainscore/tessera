@@ -3,7 +3,7 @@
 import pytest
 from jam.types.base.bit_sequence import Bits, CoreBits
 from jam.utils.constants import CORE_COUNT
-from jam.utils.codec.composite.bitsequence import BitSequence
+from jam.utils.codec.composite.bit_sequences import BitSequence
 
 class TestBitSequenceTypes:
     """Test suite for bit sequence type implementations."""

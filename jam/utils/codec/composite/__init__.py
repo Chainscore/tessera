@@ -10,14 +10,14 @@ This module provides codecs for composite types including:
 """
 
 from .arrays import ArrayCodec
-from .options import OptionCodec
+from .choices import ChoiceCodec
 from .vectors import VectorCodec
 from .dictionaries import DictionaryCodec
-from .bitsequence import BitSequenceCodec
+from .bit_sequences import BitSequenceCodec
 
 __all__ = [
     'ArrayCodec',
-    'OptionCodec',
+    'ChoiceCodec',
     'VectorCodec', 
     'DictionaryCodec',
     'BitSequenceCodec',

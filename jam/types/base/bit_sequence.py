@@ -1,7 +1,7 @@
 from typing import List, Optional, Self, Sequence, Tuple, Union
 
 from jam.utils.codec.base import Codec, Codable
-from jam.utils.codec.composite.bitsequence import BitSequence, BitSequenceCodec
+from jam.utils.codec.composite.bit_sequences import BitSequence, BitSequenceCodec
 from jam.utils.constants import CORE_COUNT
 
 class Bits(Codable, Sequence[bool]):

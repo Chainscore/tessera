@@ -20,7 +20,7 @@ class ChoiceCodec(Codec[T], Generic[T]):
     followed by the encoded value of that type.
     """
 
-    def __init__(self, choices: Sequence[Codable[T]]):
+    def __init__(self, choices: Sequence[Type[Codable[T]]]):
         """
         Initialize ChoiceCodec.
 
@@ -34,12 +34,14 @@ class ChoiceCodec(Codec[T], Generic[T]):
         return GeneralCodec().encode_size(len(self.choices) - 1) + value.encode_size()
 
     def encode_into(self, value: Codable[T], buffer: bytearray, offset: int = 0) -> int:
-        tag = self.choices.index(value)
+        tag = self.choices.index(type(value))
         tag_size = GeneralCodec().encode_into(tag, buffer, offset)
-        return value.encode_into(buffer, offset + tag_size)
+        return tag_size + value.encode_into(buffer, offset + tag_size)
 
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[T, int]:
+    @staticmethod
+    def decode_from(choices: Sequence[Type[Codable[T]]], buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[T, int]:
         tag, tag_size = GeneralCodec.decode_from(buffer, offset)
-        if tag < 0 or tag >= len(self.choices):
+        if tag < 0 or tag >= len(choices):
             raise DecodeError(0, 0, f"Invalid choice tag: {tag}")
-        return self.choices[tag].decode_from(buffer, offset + tag_size)
+        value, size = choices[tag].decode_from(buffer, offset + tag_size)
+        return (value, tag_size + size)

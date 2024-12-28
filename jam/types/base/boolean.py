@@ -10,6 +10,9 @@ class Boolean(Codable, bytes):
     def __init__(self, value: bool):
         self.codec = BooleanCodec()
 
+    def __repr__(self):
+        return f"Boolean({self})"
+
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
         # decode and return a new Boolean instance

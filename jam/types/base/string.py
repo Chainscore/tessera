@@ -8,6 +8,7 @@ class String(Codable, str):
     """
     
     def __init__(self, value: str):
+        str.__init__(value)
         self.codec = StringCodec()
 
     @staticmethod

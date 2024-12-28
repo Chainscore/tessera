@@ -5,7 +5,7 @@ Unit tests for bit sequence codec implementation.
 from typing import Optional, Sequence, Union
 import pytest
 from jam.types.base.bit_sequence import Bits
-from jam.utils.codec.composite.bitsequence import BitSequenceCodec, EncodeError, DecodeError
+from jam.utils.codec.composite.bit_sequences import BitSequenceCodec, EncodeError, DecodeError
 
 class TestBitSequenceCodec:
     """Test suite for bit sequence encoding/decoding."""
