@@ -6,12 +6,12 @@ The length is known at compile-time in Rust; in Python we enforce it at runtime.
 Maximum array size is 1000 elements as per specification.
 """
 
-from typing import List, Tuple, Union, Sequence
+from typing import Iterable, List, Tuple, Union, Sequence
 
-from ..base import Codec, EncodeError, DecodeError
+from ..base import Codable, Codec, EncodeError, DecodeError
 from ..utils import check_buffer_size
 
-class ArrayCodec(Codec[Sequence]):
+class ArrayCodec(Codec[Sequence[Codable]]):
     """
     Codec for fixed-length arrays/sequences.
     
@@ -20,8 +20,9 @@ class ArrayCodec(Codec[Sequence]):
     """
     
     MAX_SIZE = 1000
+    length: int
     
-    def __init__(self, length: int, element_codec: Codec):
+    def __init__(self, length: int):
         if length > self.MAX_SIZE:
             raise ValueError(
                 f"Array length {length} exceeds maximum allowed size {self.MAX_SIZE}"
@@ -30,22 +31,30 @@ class ArrayCodec(Codec[Sequence]):
             raise ValueError(f"Array length cannot be negative: {length}")
             
         self.length = length
-        self.element_codec = element_codec
             
-    def encode_size(self, value: Sequence) -> int:
+    def encode_size(self, value: Sequence[Codable]) -> int:
         if len(value) != self.length:
             raise EncodeError(
                 self.length, len(value),
                 f"Array length mismatch: expected {self.length}, got {len(value)}"
             )
-        
+        if not isinstance(value, Iterable):
+            raise EncodeError(
+                0, 0,
+                f"Expected Iterable, got {type(value)}"
+            )
         size = 0
         for item in value:
-            size += self.element_codec.encode_size(item)
+            if not isinstance(item, Codable):
+                raise EncodeError(
+                    0, 0,
+                    f"Expected Codable, got {type(item)}"
+                )
+            size += item.encode_size()
             
         return size
         
-    def encode_into(self, value: Sequence, buffer: bytearray, offset: int = 0) -> int:
+    def encode_into(self, value: Sequence[Codable], buffer: bytearray, offset: int = 0) -> int:
         if len(value) != self.length:
             raise EncodeError(
                 self.length, len(value),
@@ -57,20 +66,22 @@ class ArrayCodec(Codec[Sequence]):
         
         current_offset = offset
         for item in value:
-            written = self.element_codec.encode_into(item, buffer, current_offset)
+            written = item.encode_into(buffer, current_offset)
             current_offset += written
             
         return current_offset - offset
         
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], 
-                   offset: int = 0) -> Tuple[List, int]:
+    @staticmethod
+    def decode_from(length: int, codable_class: type[Codable], buffer: Union[bytes, bytearray, memoryview], 
+                   offset: int = 0) -> Tuple[List[Codable], int]:
         result = []
         current_offset = offset
         bytes_read = 0
         
         try:
-            for _ in range(self.length):
-                item, size = self.element_codec.decode_from(buffer, current_offset)
+            for _ in range(length):
+                print("codable_class", codable_class)
+                item, size = codable_class.decode_from(buffer, current_offset)
                 result.append(item)
                 current_offset += size
                 bytes_read += size

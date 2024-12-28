@@ -8,7 +8,7 @@ all codec implementations.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TypeVar, Generic, Tuple, Optional, Union, Any
+from typing import Self, TypeVar, Generic, Tuple, Optional, Union, Any
 
 # Type variable for generic codec implementations
 T = TypeVar('T')
@@ -115,7 +115,6 @@ class Codec(ABC, Generic[T]):
         """
         pass
 
-
 class Codable(Generic[T]):
     """
     Codable interface.
@@ -134,9 +133,33 @@ class Codable(Generic[T]):
     def encode(self) -> bytes:
         return self.codec.encode(self)
 
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[T, int]:
-        return self.codec.decode_from(buffer, offset)
+    @staticmethod
+    @abstractmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[Any, int]:
+        """
+        Decode the value from the provided buffer starting at the specified offset.
+
+        Args:
+            buffer: The buffer to decode from
+            offset: Starting position in the buffer
+
+        Returns:
+            Tuple containing:
+                - The decoded value
+                - Number of bytes read
+        """
+        pass
     
     def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
+        """
+        Encode the value into the provided buffer at the specified offset.
+
+        Args:
+            buffer: The buffer to encode into
+            offset: Starting position in the buffer
+            
+        Returns:
+            int: Number of bytes written
+        """
         return self.codec.encode_into(self, buffer, offset)
     

@@ -50,7 +50,7 @@ class StringCodec(Codec[str]):
         """
         try:
             if isinstance(value, str):
-                encoded = value.encode('utf-8')
+                encoded = bytes(value, 'utf-8')
             elif isinstance(value, bytes):
                 encoded = value
             else:
@@ -88,7 +88,7 @@ class StringCodec(Codec[str]):
         
         try:
             # Encode string content as UTF-8
-            encoded = value.encode('utf-8')
+            encoded = bytes(value, 'utf-8')
             encoded_len = len(encoded)
             
             if encoded_len > (2**64 - 1):
@@ -111,7 +111,8 @@ class StringCodec(Codec[str]):
         except UnicodeEncodeError as e:
             raise EncodeError(0, 0, f"Failed to UTF-8 encode string: {e}")
 
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], 
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], 
                    offset: int = 0) -> Tuple[str, int]:
         """
         Decode a string from the provided buffer.
@@ -127,19 +128,19 @@ class StringCodec(Codec[str]):
             DecodeError: If buffer is too small or contains invalid UTF-8
         """
         # Ensure we have enough bytes for length
-        ensure_size(buffer, self.LENGTH_SIZE, offset)
+        ensure_size(buffer, StringCodec.LENGTH_SIZE, offset)
         
         # Read length prefix
-        length = self._length_struct.unpack_from(buffer, offset)[0]
+        length = StringCodec._length_struct.unpack_from(buffer, offset)[0]
         
         # Ensure we have enough bytes for content
-        total_size = self.LENGTH_SIZE + length
+        total_size = StringCodec.LENGTH_SIZE + length
         ensure_size(buffer, total_size, offset)
         
         try:
             # Extract and decode content
-            content = buffer[offset + self.LENGTH_SIZE:offset + total_size]
-            string = content.decode('utf-8')
+            content = buffer[offset + StringCodec.LENGTH_SIZE:offset + total_size]
+            string = bytes(content).decode('utf-8')
             return string, total_size
             
         except UnicodeDecodeError as e:

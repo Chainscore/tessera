@@ -1,11 +1,11 @@
 """Cryptographic types for the JAM protocol."""
-from typing import NewType, Self, Tuple
+from typing import NewType, Self, Tuple, Union
 
 class ByteArray(bytes):
     """Fixed-width byte array type."""
     size: int = 0
 
-    def __new__(cls, value: bytes):
+    def __new__(cls, value: Union[bytes, bytearray, memoryview]):
         if len(value) != cls.size:
             raise ValueError(f"Expected {cls.size} bytes, got {len(value)}")
         return super().__new__(cls, value)

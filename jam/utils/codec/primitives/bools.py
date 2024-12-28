@@ -15,8 +15,8 @@ class BooleanCodec(Codec[bool]):
     Codec for boolean values.
     
     Encoding scheme:
-    - False -> 0x00
-    - True  -> 0x01
+    - False -> b''
+    - True  -> b'00'
     
     Any non-zero value is decoded as True for robustness.
     """
@@ -48,14 +48,12 @@ class BooleanCodec(Codec[bool]):
         Raises:
             EncodeError: If the buffer is too small or value is invalid type
         """
-        if not isinstance(value, bool):
-            raise EncodeError(1, 0, f"Expected bool, got {type(value)}")
-            
         check_buffer_size(buffer, 1, offset)
         buffer[offset] = 1 if value else 0
         return 1
         
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], 
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], 
                    offset: int = 0) -> Tuple[bool, int]:
         """
         Decode a boolean value from the provided buffer.

@@ -6,9 +6,9 @@ import pytest
 from typing import Optional
 from jam.utils.codec.composite.options import OptionCodec
 from jam.utils.codec.base import EncodeError, DecodeError
-from jam.utils.codec.primitives.integers import general_codec
-from jam.utils.codec.primitives.strings import string_codec
-from jam.utils.codec.primitives.bools import boolean_codec
+from jam.utils.codec.primitives.integers import IntegerCodec, GeneralCodec
+from jam.utils.codec.primitives.strings import StringCodec
+from jam.utils.codec.primitives.bools import BooleanCodec
 
 class TestOptionCodec:
     """Test suite for option encoding/decoding."""

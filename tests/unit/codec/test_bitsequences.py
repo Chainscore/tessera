@@ -2,7 +2,9 @@
 Unit tests for bit sequence codec implementation.
 """
 
+from typing import Optional, Sequence, Union
 import pytest
+from jam.types.base.bit_sequence import Bits
 from jam.utils.codec.composite.bitsequence import BitSequenceCodec, EncodeError, DecodeError
 
 class TestBitSequenceCodec:
@@ -23,13 +25,20 @@ class TestBitSequenceCodec:
     ])
     def test_codec_roundtrip(self, bit_length, bits):
         """Test encoding and decoding roundtrip for valid values."""
-        codec = BitSequenceCodec(bit_length)
         
-        encoded = codec.encode(bits)
-        decoded, size = codec.decode_from(encoded)
+        class NBits(Bits):
+            def __init__(self, bits: Sequence[bool]):
+                super().__init__(bits)
+            
+            @staticmethod
+            def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+                return Bits.decode_from(bit_length, buffer, offset)
+                
+        encoded = NBits(bits).encode()
+        decoded, size = NBits.decode_from(encoded)
         assert decoded == bits
         assert size == len(encoded)
-        assert size == codec.encode_size(bits)
+        assert size == NBits(bits).encode_size()
 
     def test_length_mismatch(self):
         """Test that sequences with wrong length raise appropriate errors."""
@@ -90,7 +99,7 @@ class TestBitSequenceCodec:
         encoded = codec.encode(bits)
         for i in range(len(encoded)):
             with pytest.raises(DecodeError):
-                codec.decode_from(encoded[:i])
+                codec.decode_from(16, buffer=encoded[:i])
 
     def test_offset_handling(self):
         """Test encoding and decoding with buffer offsets."""
@@ -107,7 +116,7 @@ class TestBitSequenceCodec:
         assert buffer[2] == 0xFF  # Padding unchanged
         
         # Test decoding at offset
-        decoded, size = codec.decode_from(buffer, offset=1)
+        decoded, size = codec.decode_from(8, buffer=buffer, offset=1)
         assert decoded == bits
         assert size == 1
 

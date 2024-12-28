@@ -14,10 +14,8 @@ from .base import (
 
 # # Re-export primitive codecs
 from .primitives.integers import (
-    U8, U16, U32, U64, U128, U256,
-    u8_codec, u16_codec, u32_codec, u64_codec, u128_codec, u256_codec,
     GeneralCodec,
-    general_codec
+    IntegerCodec
 )
 from .primitives.bools import BooleanCodec, boolean_codec
 from .primitives.strings import StringCodec, string_codec

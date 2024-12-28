@@ -1,11 +1,10 @@
-
 # Public key types
 from typing import NewType
 
 from jam.types.base.byte_array import ByteArray144, ByteArray32, ByteArray96, ByteArray784, ByteArray64
 
 
-BandersnatchPublic = NewType('BandersnatchPublic', ByteArray144)
+BandersnatchPublic = NewType('BandersnatchPublic', ByteArray32)
 Ed25519Public = NewType('Ed25519Public', ByteArray32)
 BlsPublic = NewType('BlsPublic', ByteArray144)
 

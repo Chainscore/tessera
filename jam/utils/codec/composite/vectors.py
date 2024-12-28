@@ -1,28 +1,24 @@
 """
-Vector codec implementation for JAM protocol.
+Vector codec implementation for JAM.
 
 Implements encoding and decoding of dynamic-length sequences according to the JAM specification.
 Vectors are encoded with a length prefix followed by concatenated encoded elements.
 
 Format:
-    [Length_Tag: u8][Length_Data: varies][Elements...]
+    [Length_Tag: GeneralInt][Length_Data: varies][Elements...]
 
-Length encoding scheme:
-    0x00-0xFC: Direct value (1 byte)
-    0xFF: u16 value (3 bytes)
-    0xFE: u24 value (4 bytes)
-    0xFD: u32 value (5 bytes)
 """
 
 from typing import TypeVar, Generic, List, Sequence, Union, Type, Optional
 
+from jam.utils.codec.primitives.integers import GeneralCodec
 from jam.utils.codec.utils import check_buffer_size, ensure_size
-from ..base import Codec, EncodeError, DecodeError
+from ..base import Codable, Codec, EncodeError, DecodeError
 
 
 T = TypeVar('T')
 
-class VectorCodec(Codec[Sequence[T]], Generic[T]):
+class VectorCodec(Codec[Sequence[Codable[T]]], Generic[T]):
     """
     Codec for dynamic-length sequences (vectors).
     
@@ -30,94 +26,7 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
     followed by the concatenated encoded elements.
     """
     
-    # Constants for length encoding
-    MAX_DIRECT_LENGTH = 0xFC  # Maximum length for 1-byte encoding
-    TAG_U16 = 0xFF           # Tag for 2-byte length
-    TAG_U24 = 0xFE           # Tag for 3-byte length
-    TAG_U32 = 0xFD           # Tag for 4-byte length
-    
-    def __init__(self, element_codec: Codec[T]):
-        """
-        Initialize vector codec.
-        
-        Args:
-            element_codec: Optional specific codec for elements. If None, will be
-                         looked up from registry
-                         
-        """
-        # Get codec for elements
-        self.element_codec = element_codec
-        if self.element_codec is None:
-            raise ValueError(
-                f"No codec registered for element type"
-            )
-            
-    def _encode_length(self, length: int) -> bytes:
-        """
-        Encode a length value according to the variable-length scheme.
-        
-        Args:
-            length: Length to encode
-            
-        Returns:
-            Encoded length bytes
-            
-        Raises:
-            ValueError: If length is negative or too large
-        """
-        if length < 0:
-            raise ValueError("Length cannot be negative")
-            
-        if length <= self.MAX_DIRECT_LENGTH:
-            return bytes([length])
-            
-        if length <= 0xFFFF:  # u16 max
-            return bytes([self.TAG_U16]) + length.to_bytes(2, 'little')
-            
-        if length <= 0xFFFFFF:  # u24 max
-            return bytes([self.TAG_U24]) + length.to_bytes(3, 'little')
-            
-        if length <= 0xFFFFFFFF:  # u32 max
-            return bytes([self.TAG_U32]) + length.to_bytes(4, 'little')
-            
-        raise ValueError(f"Length {length} too large to encode")
-
-    def _decode_length(self, buffer: Union[bytes, bytearray, memoryview], 
-                     offset: int = 0) -> tuple[int, int]:
-        """
-        Decode a length value from the buffer.
-        
-        Args:
-            buffer: Source buffer
-            offset: Starting position in buffer
-            
-        Returns:
-            Tuple of (decoded length, bytes read)
-            
-        Raises:
-            DecodeError: If buffer is too small or invalid encoding
-        """
-        ensure_size(buffer, 1, offset)
-        tag = buffer[offset]
-        
-        if tag <= self.MAX_DIRECT_LENGTH:
-            return tag, 1
-            
-        if tag == self.TAG_U16:
-            ensure_size(buffer, 3, offset)
-            return int.from_bytes(buffer[offset+1:offset+3], 'little'), 3
-            
-        if tag == self.TAG_U24:
-            ensure_size(buffer, 4, offset)
-            return int.from_bytes(buffer[offset+1:offset+4], 'little'), 4
-            
-        if tag == self.TAG_U32:
-            ensure_size(buffer, 5, offset)
-            return int.from_bytes(buffer[offset+1:offset+5], 'little'), 5
-            
-        raise DecodeError(0, 0, f"Invalid length tag: {tag}")
-
-    def encode_size(self, value: Sequence[T]) -> int:
+    def encode_size(self, value: Sequence[Codable[T]]) -> int:
         """
         Calculate number of bytes needed to encode vector.
         
@@ -130,22 +39,30 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
         Raises:
             EncodeError: If sequence is invalid type or too long
         """
-        if not isinstance(value, (list, tuple)):
+        if not isinstance(value, Sequence):
             raise EncodeError(
                 0, 0,
                 f"Expected list or tuple, got {type(value)}"
             )
             
         try:
-            length_size = len(self._encode_length(len(value)))
+            length_size = GeneralCodec().encode_size(len(value))
         except ValueError as e:
             raise EncodeError(0, 0, str(e))
         
-        return length_size + sum(
-            self.element_codec.encode_size(item) for item in value # type: ignore
-        )
+        size = length_size
+        for item in value:
+            try:
+                size += item.encode_size()
+            except AttributeError:
+                raise EncodeError(
+                    0, 0,
+                    f"Element {item} does not support encode_size()"
+                )
+        
+        return size
 
-    def encode_into(self, value: Sequence[T], buffer: bytearray, offset: int = 0) -> int:
+    def encode_into(self, value: Sequence[Codable[T]], buffer: bytearray, offset: int = 0) -> int:
         """
         Encode vector into buffer.
         
@@ -160,7 +77,7 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
         Raises:
             EncodeError: If sequence invalid or buffer too small
         """
-        if not isinstance(value, (list, tuple)):
+        if not isinstance(value, Sequence):
             raise EncodeError(
                 0, 0,
                 f"Expected list or tuple, got {type(value)}"
@@ -172,13 +89,21 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
         
         try:
             # Encode length prefix
-            length_bytes = self._encode_length(len(value))
-            buffer[offset:offset+len(length_bytes)] = length_bytes
-            current_offset = offset + len(length_bytes)
+            length_bytes = GeneralCodec().encode_into(len(value), buffer, offset)
+            current_offset = offset + length_bytes
             
             # Encode elements
+            # Ensure all elements are of the same type
+            _element_type = None
             for item in value:
-                written = self.element_codec.encode_into(item, buffer, current_offset) # type: ignore
+                if _element_type is None:
+                    _element_type = type(item)
+                elif type(item) != _element_type:
+                    raise EncodeError(
+                        0, 0,
+                        f"All elements must be of the same type, got {type(item)}"
+                    )
+                written = item.encode_into(buffer, current_offset) 
                 current_offset += written
                 
             return current_offset - offset
@@ -186,8 +111,12 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
         except ValueError as e:
             raise EncodeError(0, 0, str(e))
 
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], 
-                   offset: int = 0) -> tuple[List[T], int]:
+    @staticmethod
+    def decode_from(
+        codable_class: Type[Codable[T]],
+        buffer: Union[bytes, bytearray, memoryview], 
+        offset: int = 0
+    ) -> tuple[List[T], int]:
         """
         Decode vector from buffer.
         
@@ -203,14 +132,14 @@ class VectorCodec(Codec[Sequence[T]], Generic[T]):
         """
         try:
             # Decode length prefix
-            length, length_size = self._decode_length(buffer, offset)
+            length, length_size = GeneralCodec.decode_from(buffer, offset)
             current_offset = offset + length_size
             
             # Decode elements
             result = []
             for i in range(length):
                 try:
-                    item, size = self.element_codec.decode_from(buffer, current_offset) # type: ignore
+                    item, size = codable_class.decode_from(buffer, current_offset)
                     result.append(item)
                     current_offset += size
                 except DecodeError as e:
