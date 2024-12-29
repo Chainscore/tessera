@@ -105,3 +105,14 @@ class U256(FixedInt):
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
         return IntegerCodec.decode_from(U256.byte_size, buffer, offset)
+
+class U512(FixedInt):
+    """512-bit unsigned integer type."""
+    byte_size = 64
+
+    def __init__(self, value: int):
+        super().__init__(value)
+    
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+        return IntegerCodec.decode_from(U512.byte_size, buffer, offset)

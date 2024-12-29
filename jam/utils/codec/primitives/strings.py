@@ -79,14 +79,18 @@ class StringCodec(Codec[str]):
             )
         
         try:
-            total_size = self.encode_size(value)
+            # Encode the string first to get actual byte length
+            encoded_content = StringCodec._encode(value)
+            encoded_length = len(encoded_content)
+            
+            total_size = GeneralCodec().encode_size(encoded_length) + encoded_length
             check_buffer_size(buffer, total_size, offset)
             
-            # Write length prefix
-            length_size = GeneralCodec().encode_into(len(value), buffer, offset)
+            # Write length prefix using encoded byte length
+            length_size = GeneralCodec().encode_into(encoded_length, buffer, offset)
             
             # Write string content
-            buffer[offset + length_size: offset + total_size] = StringCodec._encode(value)
+            buffer[offset + length_size:offset + total_size] = encoded_content
             
             return total_size
             

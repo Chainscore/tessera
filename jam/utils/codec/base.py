@@ -91,9 +91,13 @@ class Codec(ABC, Generic[T]):
         Raises:
             EncodeError: If encoding fails
         """
+        print(value)
         size = self.encode_size(value)
+        print(size)
         buffer = bytearray(size)
+        print(buffer)
         written = self.encode_into(value, buffer)
+        print(written)
         return bytes(buffer[:written])
 
     @abstractmethod
