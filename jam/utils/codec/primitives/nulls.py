@@ -44,7 +44,8 @@ class NullCodec(Codec[None]):
             raise EncodeError(0, 0, "Value must be None")
         return 0
         
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], 
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], 
                    offset: int = 0) -> Tuple[None, int]:
         """
         Decode a null value from the provided buffer.

@@ -7,11 +7,10 @@ JAM protocol specification.
 
 import pytest
 from jam.utils.codec.primitives.integers import (
-    u8_codec, u16_codec, u32_codec, u64_codec, u128_codec, u256_codec, general_codec,
-    U8, U16, U32, U64, U128, U256,
-    IntegerCodec, GeneralCodec,
     EncodeError, DecodeError
 )
+
+from jam.types.base.integers import U8, U16, U32, U64, U128, U256, Int
 
 class TestFixedWidthIntegers:
     """Test fixed-width integer encoding/decoding."""
@@ -33,88 +32,87 @@ class TestFixedWidthIntegers:
     ])
     def test_codec_roundtrip(self, value):
         """Test encoding and decoding roundtrip for valid values."""
-        codec = IntegerCodec(value.byte_size, type(value))
-        encoded = codec.encode(value)
-        decoded, size = codec.decode_from(encoded)
+        encoded = value.encode()
+        decoded, size = value.decode_from(encoded)
         assert decoded == value
         assert size == len(encoded)
         
-    @pytest.mark.parametrize("value,expected_error", [
-        (U8(-1), EncodeError),
-        (U8(256), EncodeError),
-        (U16(-1), EncodeError),
-        (U16(2**16), EncodeError),
-        (U32(-1), EncodeError),
-        (U32(2**32), EncodeError),
-        (U64(-1), EncodeError),
-        (U64(2**64), EncodeError),
-        (U128(-1), EncodeError),
-        (U128(2**128), EncodeError),
-        (U256(-1), EncodeError),
-        (U256(2**256), EncodeError),
+    @pytest.mark.parametrize("_type,value,expected_error", [
+        (U8, -1, ValueError),
+        (U8, 256, ValueError),
+        (U16, -1, ValueError),
+        (U16, 2**16, ValueError),
+        (U32, -1, ValueError),
+        (U32, 2**32, ValueError),
+        (U64, -1, ValueError),
+        (U64, 2**64, ValueError),
+        (U128, -1, ValueError),
+        (U128, 2**128, ValueError),
+        (U256, -1, ValueError),
+        (U256, 2**256, ValueError),
     ])
-    def test_codec_value_bounds(self, value, expected_error):
+    def test_codec_value_bounds(self, _type, value, expected_error):
         """Test that out-of-bounds values raise appropriate errors."""
         with pytest.raises(expected_error):
-            codec = IntegerCodec(value.byte_size, type(value))
-            codec.encode(value)
+            _type(value).encode()
             
     def test_buffer_size_validation(self):
         """Test encoding into buffers that are too small."""
-        for codec in [u8_codec, u16_codec, u32_codec, u64_codec, u128_codec, u256_codec]:
+        for value in [U8(0), U16(0), U32(0), U64(0), U128(0), U256(0)]:
             with pytest.raises(EncodeError):
-                codec.encode_into(0, bytearray(codec.byte_size - 1))
+                len(bytearray(value.byte_size - 1))
+                value.encode_into(bytearray(value.byte_size - 1))
                 
     def test_decode_insufficient_bytes(self):
         """Test decoding from buffers that are too small."""
-        for codec in [u8_codec, u16_codec, u32_codec, u64_codec, u128_codec, u256_codec]:
+        for value in [U8(0), U16(0), U32(0), U64(0), U128(0), U256(0)]:
             with pytest.raises(DecodeError):
-                codec.decode_from(bytes(codec.byte_size - 1))
+                value.decode_from(bytes(value.byte_size - 1))
 
 
 class TestGeneralNumberEncoding:
     """Test general number encoding according to JAM specification."""
     
     @pytest.mark.parametrize("value,expected_size", [
-        (0, 1),
-        (2**7-1, 1),
-        (2**7, 2),
-        (2**14-1, 2),
-        (2**14, 3),
-        (2**21-1, 3),
-        (2**21, 4),
-        (2**28-1, 4),
-        (2**28, 5),
-        (2**35-1, 5),
-        (2**35, 6),
-        (2**42-1, 6),
-        (2**42, 7),
-        (2**49-1, 7),
-        (2**49, 8),
-        (2**56-1, 8),
-        (2**56, 9),
-        (2**63-1, 9),
-        (2**63+1, 9),
-        (2**64-1, 9),
+        (Int(0), 1),
+        (Int(2**7-1), 1),
+        (Int(2**7), 2),
+        (Int(2**14-1), 2),
+        (Int(2**14), 3),
+        (Int(2**21-1), 3),
+        (Int(2**21), 4),
+        (Int(2**28-1), 4),
+        (Int(2**28), 5),
+        (Int(2**35-1), 5),
+        (Int(2**35), 6),
+        (Int(2**42-1), 6),
+        (Int(2**42), 7),
+        (Int(2**49-1), 7),
+        (Int(2**49), 8),
+        (Int(2**56-1), 8),
+        (Int(2**56), 9),
+        (Int(2**63-1), 9),
+        (Int(2**63+1), 9),
+        (Int(2**64-1), 9),
     ])
     def test_encode_size(self, value, expected_size):
         """Test that encode_size returns correct sizes for different values."""
-        assert general_codec.encode_size(value) == expected_size
+        assert value.encode_size() == expected_size
 
     @pytest.mark.parametrize("value,expected_encoding", [
-        (0, bytes([0])),
-        (127, bytes([127])),
-        (128, bytes([128, 128])),
-        (255, bytes([128, 255])),
-        (256, bytes([129, 0])),
-        (300, bytes([129, 44])),
-        (1000, bytes([131, 232])),
-        (9223372036854775808, bytes([255, 0, 0, 0, 0, 0, 0, 0, 128])),  # 2^63
-        (18446744073709551615, bytes([255, 255, 255, 255, 255, 255, 255, 255, 255])),  # u64::MAX
+        (Int(0), bytes([0])),
+        (Int(127), bytes([127])),
+        (Int(128), bytes([128, 128])),
+        (Int(255), bytes([128, 255])),
+        (Int(256), bytes([129, 0])),
+        (Int(300), bytes([129, 44])),
+        (Int(1000), bytes([131, 232])),
+        (Int(9223372036854775808), bytes([255, 0, 0, 0, 0, 0, 0, 0, 128])),  # 2^63
+        (Int(18446744073709551615), bytes([255, 255, 255, 255, 255, 255, 255, 255, 255])),  # u64::MAX
     ])
     def test_encoding(self, value, expected_encoding):
         """Test encoding specific values produces expected byte sequences."""
-        encoded = general_codec.encode(value)
+        encoded = value.encode()
         assert encoded == expected_encoding
         
     @pytest.mark.parametrize("encoded,expected_value", [
@@ -130,7 +128,7 @@ class TestGeneralNumberEncoding:
     ])
     def test_decoding(self, encoded, expected_value):
         """Test decoding specific byte sequences produces expected values."""
-        decoded, size = general_codec.decode_from(encoded)
+        decoded, size = Int.decode_from(encoded)
         assert decoded == expected_value
         assert size == len(encoded)
 
@@ -148,18 +146,17 @@ class TestGeneralNumberEncoding:
             if value > 18446744073709551615:  # u64::MAX
                 continue
 
-            print("value -----", value)
-            encoded = general_codec.encode(value)
-            decoded, size = general_codec.decode_from(encoded)
+            encoded = Int(value).encode()
+            decoded, size = Int.decode_from(encoded)
             assert decoded == value
             assert size == len(encoded)
             
     def test_negative_values(self):
         """Test that negative values raise appropriate errors."""
-        with pytest.raises(EncodeError):
-            general_codec.encode(-1)
+        with pytest.raises(ValueError):
+            Int(-1).encode()
             
     def test_too_large_values(self):
         """Test that values larger than u64::MAX raise appropriate errors."""
-        with pytest.raises(EncodeError):
-            general_codec.encode(18446744073709551616)  # u64::MAX + 1
+        with pytest.raises(ValueError):
+            Int(18446744073709551616).encode()  # u64::MAX + 1

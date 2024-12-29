@@ -13,6 +13,8 @@ ensure compatibility with the maximum possible string size.
 
 from typing import Union, Tuple, Optional
 import struct
+
+from jam.utils.codec.primitives.integers import GeneralCodec
 from ..base import (
     Codec, EncodeError, DecodeError, 
 )
@@ -25,11 +27,15 @@ class StringCodec(Codec[str]):
     Handles both str and static str references with UTF-8 encoding.
     Maximum string length is determined by u64 max value.
     """
-    
-    # Constants
-    LENGTH_SIZE = 8  # Size of u64 length prefix in bytes
-    LENGTH_FORMAT = '<Q'  # struct format for little-endian u64
-    _length_struct = struct.Struct(LENGTH_FORMAT)
+
+    @staticmethod
+    def _encode(value: Union[str, bytes]) -> bytes:
+        if isinstance(value, str):
+            return bytes(value, 'utf-8')
+        elif isinstance(value, bytes):
+            return value
+        else:
+            raise EncodeError(0, 0, f"Expected str or bytes, got {type(value)}")
     
     def encode_size(self, value: Union[str, bytes]) -> int:
         """
@@ -48,22 +54,8 @@ class StringCodec(Codec[str]):
         Raises:
             EncodeError: If string is too large to encode
         """
-        try:
-            if isinstance(value, str):
-                encoded = value.encode('utf-8')
-            elif isinstance(value, bytes):
-                encoded = value
-            else:
-                raise EncodeError(0, 0, f"Expected str or bytes, got {type(value)}")
-            
-            if len(encoded) > (2**64 - 1):
-                raise EncodeError(
-                    0, 0,
-                    "String too large to encode (exceeds u64::MAX bytes when UTF-8 encoded)"
-                )
-            return self.LENGTH_SIZE + len(encoded)
-        except UnicodeEncodeError as e:
-            raise EncodeError(0, 0, f"Failed to UTF-8 encode string: {e}")
+        enc_len = len(StringCodec._encode(value))
+        return GeneralCodec().encode_size(enc_len) + enc_len
 
     def encode_into(self, value: str, buffer: bytearray, offset: int = 0) -> int:
         """
@@ -87,31 +79,26 @@ class StringCodec(Codec[str]):
             )
         
         try:
-            # Encode string content as UTF-8
-            encoded = value.encode('utf-8')
-            encoded_len = len(encoded)
+            # Encode the string first to get actual byte length
+            encoded_content = StringCodec._encode(value)
+            encoded_length = len(encoded_content)
             
-            if encoded_len > (2**64 - 1):
-                raise EncodeError(
-                    0, 0,
-                    "String too large to encode (exceeds u64::MAX bytes when UTF-8 encoded)"
-                )
-                
-            total_size = self.LENGTH_SIZE + encoded_len
+            total_size = GeneralCodec().encode_size(encoded_length) + encoded_length
             check_buffer_size(buffer, total_size, offset)
             
-            # Write length prefix
-            self._length_struct.pack_into(buffer, offset, encoded_len)
+            # Write length prefix using encoded byte length
+            length_size = GeneralCodec().encode_into(encoded_length, buffer, offset)
             
             # Write string content
-            buffer[offset + self.LENGTH_SIZE:offset + total_size] = encoded
+            buffer[offset + length_size:offset + total_size] = encoded_content
             
             return total_size
             
         except UnicodeEncodeError as e:
             raise EncodeError(0, 0, f"Failed to UTF-8 encode string: {e}")
 
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], 
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], 
                    offset: int = 0) -> Tuple[str, int]:
         """
         Decode a string from the provided buffer.
@@ -126,20 +113,17 @@ class StringCodec(Codec[str]):
         Raises:
             DecodeError: If buffer is too small or contains invalid UTF-8
         """
-        # Ensure we have enough bytes for length
-        ensure_size(buffer, self.LENGTH_SIZE, offset)
-        
         # Read length prefix
-        length = self._length_struct.unpack_from(buffer, offset)[0]
+        length, length_size = GeneralCodec().decode_from(buffer, offset)
         
         # Ensure we have enough bytes for content
-        total_size = self.LENGTH_SIZE + length
+        total_size = length_size + length
         ensure_size(buffer, total_size, offset)
         
         try:
             # Extract and decode content
-            content = buffer[offset + self.LENGTH_SIZE:offset + total_size]
-            string = content.decode('utf-8')
+            content = buffer[offset + length_size:offset + total_size]
+            string = bytes(content).decode('utf-8')
             return string, total_size
             
         except UnicodeDecodeError as e:

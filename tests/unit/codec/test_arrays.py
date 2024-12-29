@@ -3,115 +3,122 @@ Unit tests for array codec implementation.
 """
 
 import pytest
-from typing import List, Sequence
+from typing import List, Optional, Sequence, Union
+from jam.types.base import Array
 from jam.utils.codec.composite.arrays import ArrayCodec
-from jam.utils.codec.base import EncodeError, DecodeError
-from jam.utils.codec.primitives.integers import general_codec
-from jam.utils.codec.primitives.bools import boolean_codec
-from jam.utils.codec.primitives.strings import string_codec
+from jam.utils.codec.base import Codable, EncodeError, DecodeError
+from jam.types.base.boolean import Boolean
+from jam.types.base.string import String
+from jam.types.base.integers import U8
 
 class TestArrayCodec:
     """Test suite for array encoding/decoding."""
 
     def test_basic_integer_array(self):
         """Test basic encoding/decoding of integer arrays."""
-        codec = ArrayCodec(3, general_codec)
-        value = [1, 2, 3]
+        codec = ArrayCodec(3)
+        value = [U8(1), U8(2), U8(3)]
 
         encoded = codec.encode(value)
-        decoded, size = codec.decode_from(encoded)
-        assert decoded == value
-        assert size == len(encoded)
-
-    def test_nested_arrays(self):
-        """Test encoding/decoding of nested arrays."""
-        inner_codec = ArrayCodec(3, general_codec)
-        outer_codec = ArrayCodec(2, inner_codec)
-        
-        value = [[1, 2, 3], [4, 5, 6]]
-        
-        encoded = outer_codec.encode(value)
-        decoded, size = outer_codec.decode_from(encoded)
+        decoded, size = ArrayCodec.decode_from(3, U8, encoded)
         assert decoded == value
         assert size == len(encoded)
 
     @pytest.mark.parametrize("codec,values", [
-        (ArrayCodec(3, general_codec), [1, 2, 3]),
-        (ArrayCodec(2, boolean_codec), [True, False]),
-        (ArrayCodec(2, string_codec), ["hello", "world"]),
+        (ArrayCodec(3), [U8(1), U8(2), U8(3)]),
+        (ArrayCodec(2), [Boolean(True), Boolean(False)]),
+        (ArrayCodec(2), [String("hello"), String("world")]),
     ])
     def test_various_types(self, codec, values):
         """Test array codec with various element types."""
         encoded = codec.encode(values)
-        decoded, size = codec.decode_from(encoded)
+        decoded, size = ArrayCodec.decode_from(len(values), type(values[0]), encoded)
         assert decoded == values
         assert size == len(encoded)
 
     def test_empty_array(self):
         """Test handling of zero-length arrays."""
-        codec = ArrayCodec(0, general_codec)
+        codec = ArrayCodec(0)
         value = []
         
         encoded = codec.encode(value)
-        decoded, size = codec.decode_from(encoded)
+        decoded, size = ArrayCodec.decode_from(0, U8, encoded)
         assert decoded == value
         assert size == len(encoded)
 
     def test_maximum_size(self):
         """Test array size limits."""
         # Test maximum allowed size
-        codec = ArrayCodec(1000, general_codec)
+        codec = ArrayCodec(1000)
         assert codec.length == 1000
 
         # Test exceeding maximum size
         with pytest.raises(ValueError):
-            ArrayCodec(1001, general_codec)
+            ArrayCodec(1001)
 
     def test_negative_length(self):
         """Test that negative lengths are rejected."""
         with pytest.raises(ValueError):
-            ArrayCodec(-1, general_codec)
+            ArrayCodec(-1)
 
     def test_length_mismatch(self):
         """Test handling of incorrect array lengths."""
-        codec = ArrayCodec(3, general_codec)
+        codec = ArrayCodec(3)
         
         # Too few elements
         with pytest.raises(EncodeError):
-            codec.encode([1, 2])
+            codec.encode([U8(1), U8(2)])
             
         # Too many elements
         with pytest.raises(EncodeError):
-            codec.encode([1, 2, 3, 4])
+            codec.encode([U8(1), U8(2), U8(3), U8(4)])
 
     def test_invalid_element_type(self):
         """Test handling of invalid element types during encoding."""
-        codec = ArrayCodec(3, general_codec)
+        codec = ArrayCodec(3)
         
         with pytest.raises(EncodeError):
-            codec.encode(["not", "an", "int"])
+            codec.encode(["not", "a", "string"]) # type: ignore
 
     def test_buffer_bounds(self):
         """Test buffer bounds checking."""
-        codec = ArrayCodec(3, general_codec)
-        value = [1, 2, 3]
+        codec = ArrayCodec(3)
+        value = [U8(1), U8(2), U8(3)]
         
         encoded = codec.encode(value)
         # Test decoding from too small buffer
         for i in range(len(encoded)):
             with pytest.raises(DecodeError):
-                codec.decode_from(encoded[:i])
+                ArrayCodec.decode_from(3, U8, encoded[:i])
 
-    def test_complex_nested_structure(self):
-        """Test complex nested array structures."""
-        # Create 2x2x2 array of integers
-        inner_codec = ArrayCodec(2, general_codec)
-        middle_codec = ArrayCodec(2, inner_codec)
-        outer_codec = ArrayCodec(2, middle_codec)
-        
-        value = [[[1, 2], [1, 2]], [[1, 2], [1, 2]]]
-        
-        encoded = outer_codec.encode(value)
-        decoded, size = outer_codec.decode_from(encoded)
+    def test_nested_arrays(self):
+        """Test encoding/decoding of nested arrays."""
+        class FixedIntArray3(Array[int], Codable):
+            """Fixed-size array of 3 integers."""
+            def __init__(self, initial: Optional[Sequence[int]] = None):
+                super().__init__(3, initial)
+            
+            @staticmethod
+            def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+                value, size = ArrayCodec.decode_from(3, U8, buffer, offset)
+                return FixedIntArray3(value), size # type: ignore
+            
+
+        class FixedIntArray2(Array[FixedIntArray3]):
+            """Fixed-size array of 2 integers."""
+            def __init__(self, initial: Optional[Sequence[FixedIntArray3]] = None):
+                super().__init__(2, initial)
+            
+            @staticmethod
+            def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+                value, size = ArrayCodec.decode_from(2, FixedIntArray3, buffer, offset)
+                return FixedIntArray2(value), size # type: ignore
+
+        inner_array_1 = FixedIntArray3([U8(1), U8(2), U8(3)])
+        inner_array_2 = FixedIntArray3([U8(4), U8(5), U8(6)])
+
+        value = FixedIntArray2([inner_array_1, inner_array_2])
+        encoded = value.encode()
+        decoded, size = FixedIntArray2.decode_from(encoded)
         assert decoded == value
         assert size == len(encoded)

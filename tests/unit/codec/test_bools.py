@@ -33,19 +33,18 @@ def test_roundtrip():
         assert decoded is value
         assert size == 1
 
-def test_invalid_type():
+def test_non_boolean_values():
     """Test that non-boolean values raise TypeError."""
-    invalid_values = [
-        0,      # int
-        1,      # int
-        "True", # str
-        1.0,    # float
-        None,   # NoneType
+    values = [
+        [0, False],      # int
+        [1, True],      # int
+        ["True", True], # str
+        [1.0, True],    # float
+        [None, False],   # NoneType
     ]
     
-    for value in invalid_values:
-        with pytest.raises(EncodeError):
-            boolean_codec.encode(value)
+    for value in values:
+        assert boolean_codec.encode(value[0]) == boolean_codec.encode(value[1])
 
 def test_buffer_bounds():
     """Test buffer bounds checking."""

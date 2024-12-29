@@ -1,17 +1,35 @@
 """Integer types"""
-from decimal import Decimal
-from typing import Tuple
-
+from typing import Union
 from jam.utils.codec.base import Codable
-from jam.utils.codec.primitives.integers import IntegerCodec, u8_codec
+from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
 
-# Simple integer types
+# General integer type
+class Int(Codable, int):
+    """General integer type."""
+    
+    def __init__(self, value: int):
+        self.codec = GeneralCodec()
+
+    def __new__(cls, value: int):
+        max_value = 2**(8*8) - 1
+        if not 0 <= value <= max_value:
+            raise ValueError(
+                f"{cls.__name__} value must be between 0 and {max_value}, got {value}"
+            )
+        instance = super().__new__(cls, value)
+        return instance
+
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+        return GeneralCodec.decode_from(buffer, offset)
+
+# Fixed integer types
 class FixedInt(Codable, int):
     """Fixed-width integer type."""
     byte_size: int
 
     def __init__(self, value: int):
-        self.codec = IntegerCodec(self.byte_size, int)
+        self.codec = IntegerCodec(self.byte_size)
 
     def __new__(cls, value: int):
         max_value = 2**(8*cls.byte_size) - 1
@@ -28,6 +46,10 @@ class U8(FixedInt):
 
     def __init__(self, value: int):
         super().__init__(value)
+    
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+        return IntegerCodec.decode_from(U8.byte_size, buffer, offset)
 
 class U16(FixedInt):
     """16-bit unsigned integer type."""
@@ -35,6 +57,10 @@ class U16(FixedInt):
 
     def __init__(self, value: int):
         super().__init__(value)
+    
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+        return IntegerCodec.decode_from(U16.byte_size, buffer, offset)
 
 class U32(FixedInt):
     """32-bit unsigned integer type."""
@@ -42,6 +68,10 @@ class U32(FixedInt):
 
     def __init__(self, value: int):
         super().__init__(value)
+    
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+        return IntegerCodec.decode_from(U32.byte_size, buffer, offset)
 
 class U64(FixedInt):
     """64-bit unsigned integer type."""
@@ -49,6 +79,10 @@ class U64(FixedInt):
 
     def __init__(self, value: int):
         super().__init__(value)
+    
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+        return IntegerCodec.decode_from(U64.byte_size, buffer, offset)
 
 class U128(FixedInt):
     """128-bit unsigned integer type."""
@@ -56,6 +90,10 @@ class U128(FixedInt):
 
     def __init__(self, value: int):
         super().__init__(value)
+    
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+        return IntegerCodec.decode_from(U128.byte_size, buffer, offset)
 
 class U256(FixedInt):
     """256-bit unsigned integer type."""
@@ -63,6 +101,10 @@ class U256(FixedInt):
 
     def __init__(self, value: int):
         super().__init__(value)
+    
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+        return IntegerCodec.decode_from(U256.byte_size, buffer, offset)
 
 class U512(FixedInt):
     """512-bit unsigned integer type."""
@@ -70,6 +112,7 @@ class U512(FixedInt):
 
     def __init__(self, value: int):
         super().__init__(value)
-
-
-U8(1).encode()
+    
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
+        return IntegerCodec.decode_from(U512.byte_size, buffer, offset)

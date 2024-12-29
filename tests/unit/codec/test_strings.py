@@ -36,22 +36,22 @@ class TestStringCodec:
         test_str = "Hello"
         encoded = string_codec.encode(test_str)
         
-        # First 8 bytes should be length (5) in little-endian u64
-        expected_prefix = bytes([5, 0, 0, 0, 0, 0, 0, 0])
-        assert encoded[:8] == expected_prefix
+        # First byte should be length (5)
+        expected_prefix = bytes([5])
+        assert encoded[:1] == expected_prefix
         
         # Following bytes should be UTF-8 encoded string
-        assert encoded[8:] == test_str.encode('utf-8')
+        assert encoded[1:] == test_str.encode('utf-8')
 
     def test_empty_string(self):
         """Test handling of empty strings."""
         encoded = string_codec.encode("")
         # Should just be 8 zero bytes for length
-        assert encoded == bytes([0] * 8)
+        assert encoded == bytes([0] * 1)
         
         decoded, size = string_codec.decode_from(encoded)
         assert decoded == ""
-        assert size == 8
+        assert size == 1
 
     def test_buffer_bounds(self):
         """Test buffer bounds checking."""
@@ -118,7 +118,7 @@ class TestStringCodec:
         """Test handling of invalid UTF-8 sequences."""
         # Create invalid UTF-8 sequence
         invalid_buffer = bytearray([
-            5, 0, 0, 0, 0, 0, 0, 0,  # length prefix (5)
+            5,
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF  # Invalid UTF-8
         ])
         
@@ -126,12 +126,12 @@ class TestStringCodec:
             string_codec.decode_from(invalid_buffer)
 
     @pytest.mark.parametrize("string,expected_size", [
-        ("", 8),  # Empty string: just length prefix
-        ("a", 9),  # Single ASCII: length + 1 byte
-        ("α", 10),  # Single Greek: length + 2 bytes
-        ("🦀", 12),  # Single emoji: length + 4 bytes
-        ("Hello", 13),  # ASCII string: length + 5 bytes
-        ("Hello, 世界", 21),  # Mixed string: length + variable bytes
+        ("", 1),  # Empty string: just length prefix
+        ("a", 2),  # Single ASCII: length + 1 byte
+        ("α", 3),  # Single Greek: length + 2 bytes
+        ("🦀", 5),  # Single emoji: length + 4 bytes
+        ("Hello", 6),  # ASCII string: length + 5 bytes
+        ("Hello, 世界", 14),  # Mixed string: length + variable bytes
     ])
     def test_specific_sizes(self, string, expected_size):
         """Test that specific strings encode to expected sizes."""
@@ -147,8 +147,7 @@ class TestStringCodec:
         encoded = string_codec.encode(test_str)
         
         # Manual decode
-        length = struct.unpack('<Q', encoded[:8])[0]
-        content = encoded[8:8+length].decode('utf-8')
+        content = bytes(encoded[1:]).decode('utf-8')
         
         # Should match codec decode
         decoded, size = string_codec.decode_from(encoded)

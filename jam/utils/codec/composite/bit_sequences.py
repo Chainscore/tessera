@@ -5,7 +5,7 @@ from ..utils import check_buffer_size, ensure_size
 BitSequence = Union[bool, int]
 
 class BitSequenceCodec(Codec[Sequence[BitSequence]]):
-    """``
+    """
     Codec for encoding and decoding sequences of bits.
     
     Bits are packed into octets (bytes) from least significant to most significant.
@@ -41,7 +41,10 @@ class BitSequenceCodec(Codec[Sequence[BitSequence]]):
 
         return total_size
 
-    def decode_from(self, buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[Sequence[BitSequence], int]:
+    @staticmethod
+    def decode_from(length: int,
+                    buffer: Union[bytes, bytearray, memoryview], 
+                    offset: int = 0) -> Tuple[Sequence[BitSequence], int]:
         """
         Decode bit sequence from buffer.
         
@@ -56,18 +59,18 @@ class BitSequenceCodec(Codec[Sequence[BitSequence]]):
         Raises:
             DecodeError: If buffer too small or bit_length not specified
         """
-        if self.bit_length is None:
+        if length is None:
             raise DecodeError(
                 expected=0,
                 actual=0,
                 message="bit_length must be specified for decoding"
             )
         
-        if self.bit_length == 0:
+        if length == 0:
             return [], 0
             
         # Calculate required bytes
-        byte_count = (self.bit_length + 7) // 8
+        byte_count = (length + 7) // 8
         ensure_size(buffer, byte_count, offset)
         
         result = []
@@ -75,7 +78,7 @@ class BitSequenceCodec(Codec[Sequence[BitSequence]]):
             byte = buffer[offset + byte_idx]
             for bit_idx in range(8):
                 # Only append bits up to the requested length
-                if len(result) < self.bit_length:
+                if len(result) < length:
                     result.append(bool(byte & (1 << bit_idx)))
             
         return result, byte_count

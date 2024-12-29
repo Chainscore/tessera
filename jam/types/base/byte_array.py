@@ -1,18 +1,21 @@
 """Cryptographic types for the JAM protocol."""
-from typing import NewType, Self, Tuple
+from typing import NewType, Self, Tuple, Union
 
-class ByteArray(bytes):
+from jam.utils.codec.base import Codable
+
+class ByteArray(Codable, bytes):
     """Fixed-width byte array type."""
     size: int = 0
 
-    def __new__(cls, value: bytes):
+    def __init__(self, value: Union[bytes, bytearray, memoryview]):
+        if len(value) != self.size:
+            raise ValueError(f"Expected {self.size} bytes, got {len(value)}")
+
+    def __new__(cls, value: Union[bytes, bytearray, memoryview]):
         if len(value) != cls.size:
             raise ValueError(f"Expected {cls.size} bytes, got {len(value)}")
         return super().__new__(cls, value)
     
-    def __init__(self, value: bytes):
-        super().__init__()
-
     def encode_size(self) -> int:
         return self.size
     
@@ -20,41 +23,78 @@ class ByteArray(bytes):
         buffer[offset:offset + self.size] = self
         return self.size
     
-    def decode_from(self, buffer: bytes, offset: int = 0) -> Tuple[Self, int]:
-        return self.__class__(buffer[offset:offset + self.size]), self.size
+    @staticmethod
+    def decode_from(size: int, buffer: bytes, offset: int = 0):
+        return buffer[offset:offset + size], size
 
 class ByteArray8(ByteArray):
     """8-bit byte array type."""
     size: int = 8
 
+    @staticmethod
+    def decode_from(buffer: bytes, offset: int = 0):
+        return ByteArray.decode_from(8, buffer, offset)
+
 class ByteArray16(ByteArray):
     """16-bit byte array type."""
     size: int = 16
+
+    @staticmethod
+    def decode_from(buffer: bytes, offset: int = 0):
+        return ByteArray.decode_from(16, buffer, offset)
 
 class ByteArray32(ByteArray):
     """32-bit byte array type."""
     size: int = 32
 
+    @staticmethod
+    def decode_from(buffer: bytes, offset: int = 0):
+        return ByteArray.decode_from(32, buffer, offset)
+
 class ByteArray64(ByteArray):
     """64-bit byte array type."""
     size: int = 64
+
+    @staticmethod
+    def decode_from(buffer: bytes, offset: int = 0):
+        return ByteArray.decode_from(64, buffer, offset)
 
 class ByteArray96(ByteArray):
     """96-bit byte array type."""
     size: int = 96
 
+    @staticmethod
+    def decode_from(buffer: bytes, offset: int = 0):
+        return ByteArray.decode_from(96, buffer, offset)
+
 class ByteArray128(ByteArray):
     """128-bit byte array type."""
     size: int = 128
+
+    @staticmethod
+    def decode_from(buffer: bytes, offset: int = 0):
+        return ByteArray.decode_from(128, buffer, offset)
 
 class ByteArray144(ByteArray):
     """144-bit byte array type."""
     size: int = 144
 
+    @staticmethod
+    def decode_from(buffer: bytes, offset: int = 0):
+        return ByteArray.decode_from(144, buffer, offset)
+
 class ByteArray256(ByteArray):
     """256-bit byte array type."""
     size: int = 256
 
+    @staticmethod
+    def decode_from(buffer: bytes, offset: int = 0):
+        return ByteArray.decode_from(256, buffer, offset)
+
 class ByteArray784(ByteArray):
     """784-bit byte array type."""
     size: int = 784
+
+    @staticmethod
+    def decode_from(buffer: bytes, offset: int = 0):
+        return ByteArray.decode_from(784, buffer, offset)
