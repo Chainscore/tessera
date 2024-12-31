@@ -33,7 +33,8 @@ class ByteArray8(ByteArray):
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0):
-        return ByteArray.decode_from(8, buffer, offset)
+        value, size = ByteArray.decode_from(8, buffer, offset)
+        return ByteArray8(value), size
 
 class ByteArray16(ByteArray):
     """16-bit byte array type."""
@@ -41,7 +42,8 @@ class ByteArray16(ByteArray):
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0):
-        return ByteArray.decode_from(16, buffer, offset)
+        value, size = ByteArray.decode_from(16, buffer, offset)
+        return ByteArray16(value), size
 
 class ByteArray32(ByteArray):
     """32-bit byte array type."""
@@ -49,7 +51,8 @@ class ByteArray32(ByteArray):
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0):
-        return ByteArray.decode_from(32, buffer, offset)
+        value, size = ByteArray.decode_from(32, buffer, offset)
+        return ByteArray32(value), size
 
 class ByteArray64(ByteArray):
     """64-bit byte array type."""
@@ -57,7 +60,8 @@ class ByteArray64(ByteArray):
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0):
-        return ByteArray.decode_from(64, buffer, offset)
+        value, size = ByteArray.decode_from(64, buffer, offset)
+        return ByteArray64(value), size
 
 class ByteArray96(ByteArray):
     """96-bit byte array type."""
@@ -65,7 +69,8 @@ class ByteArray96(ByteArray):
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0):
-        return ByteArray.decode_from(96, buffer, offset)
+        value, size = ByteArray.decode_from(96, buffer, offset)
+        return ByteArray96(value), size
 
 class ByteArray128(ByteArray):
     """128-bit byte array type."""
@@ -73,7 +78,8 @@ class ByteArray128(ByteArray):
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0):
-        return ByteArray.decode_from(128, buffer, offset)
+        value, size = ByteArray.decode_from(128, buffer, offset)
+        return ByteArray128(value), size
 
 class ByteArray144(ByteArray):
     """144-bit byte array type."""
@@ -81,7 +87,8 @@ class ByteArray144(ByteArray):
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0):
-        return ByteArray.decode_from(144, buffer, offset)
+        value, size = ByteArray.decode_from(144, buffer, offset)
+        return ByteArray144(value), size
 
 class ByteArray256(ByteArray):
     """256-bit byte array type."""
@@ -89,7 +96,8 @@ class ByteArray256(ByteArray):
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0):
-        return ByteArray.decode_from(256, buffer, offset)
+        value, size = ByteArray.decode_from(256, buffer, offset)
+        return ByteArray256(value), size
 
 class ByteArray784(ByteArray):
     """784-bit byte array type."""
@@ -97,4 +105,5 @@ class ByteArray784(ByteArray):
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0):
-        return ByteArray.decode_from(784, buffer, offset)
+        value, size = ByteArray.decode_from(784, buffer, offset)
+        return ByteArray784(value), size

@@ -1,5 +1,5 @@
 """Fixed-size array implementation"""
-from typing import Generic, List, Optional, Sequence, TypeVar, Union, overload
+from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, Union, overload
 
 from jam.types.base.integers import Int
 from jam.utils.codec.base import Codec, Codable

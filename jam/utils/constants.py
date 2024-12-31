@@ -19,6 +19,7 @@ CORE_COUNT = 341
 VALIDATOR_COUNT = 1023
 TICKET_ENTRIES_PER_VALIDATOR = 2
 AUDIT_BIAS_FACTOR = 2
+VALIDATORS_SUPER_MAJORITY = VALIDATOR_COUNT // 2 + 1
 
 # Gas constants
 ACCUMULATION_GAS = 10_000_000
@@ -61,3 +62,6 @@ SIGNING_CONTEXTS = {
     'valid': '$jam_valid',            # Ed25519 Judgments for valid work-reports
     'invalid': '$jam_invalid',        # Ed25519 Judgments for invalid work-reports
 }
+
+# Maximum number of judgements per dispute
+MAX_JUDGEMENTS_PER_DISPUTE = 32

@@ -4,19 +4,19 @@ from jam.utils.codec.base import Codec, Codable
 from jam.utils.codec.composite.bit_sequences import BitSequence, BitSequenceCodec
 from jam.utils.constants import CORE_COUNT
 
-class Bits(Codable, Sequence[bool]):
+class Bits(Codable, Sequence[BitSequence]):
     """Bit sequence codec."""
-    def __init__(self, bits: Sequence[bool]):
+    def __init__(self, bits: Sequence[BitSequence]):
         super().__init__(BitSequenceCodec(len(bits)))
         self._bits = list(bits)
 
-    def __new__(cls, bits: Sequence[bool]) -> Self:
+    def __new__(cls, bits: Sequence[BitSequence]) -> Self:
         return super().__new__(cls)
     
     def __len__(self) -> int:
         return len(self._bits)
 
-    def __getitem__(self, index: Union[int, slice]) -> Union[bool, Sequence[bool]]:
+    def __getitem__(self, index: Union[int, slice]) -> Union[BitSequence, Sequence[BitSequence]]:
         if isinstance(index, slice):
             return self._bits[index]
         else:
@@ -24,11 +24,11 @@ class Bits(Codable, Sequence[bool]):
                 raise IndexError("Index out of range")
             return self._bits[index]
 
-    def __setitem__(self, index: int, value: bool) -> None:
+    def __setitem__(self, index: int, value: BitSequence) -> None:
         if index < 0 or index >= len(self._bits):
             raise IndexError("Index out of range")
-        if not isinstance(value, bool):
-            raise TypeError("Value must be a boolean")
+        if not isinstance(value, BitSequence):
+            raise TypeError("Value must be a BitSequence")
         self._bits[index] = value
 
     def __eq__(self, other: object) -> bool:
