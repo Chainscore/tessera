@@ -100,6 +100,7 @@ class WorkExecResult(Codable):
     
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, WorkExecResult):
+            
             return self.value == other.value
         elif isinstance(other, dict):
             return self.value == WorkExecResult(other).value
