@@ -19,6 +19,7 @@ class BitSequenceCodec(Codec[Sequence[BitSequence]]):
         return (len(value) + 7) // 8
 
     def encode_into(self, value: Sequence[BitSequence], buffer: bytearray, offset: int = 0) -> int:
+        print("Encoding bit sequence", value)
         if self.bit_length != len(value):
             raise EncodeError(
                 expected=self.bit_length,
@@ -32,19 +33,25 @@ class BitSequenceCodec(Codec[Sequence[BitSequence]]):
         total_size = self.encode_size(value)
         check_buffer_size(buffer, total_size, offset)
 
-        byte = 0
-        for i, bit in enumerate(value):
-            byte |= (bool(bit) << (i % 8))
-            if i % 8 == 7 or i == len(value) - 1:
-                buffer[offset + i // 8] = byte
-                byte = 0
+        # Initialize all bytes to 0
+        for i in range(total_size):
+            buffer[offset + i] = 0
 
+        # Pack bits from least significant to most significant
+        for i, bit in enumerate(value):
+            byte_index = offset + (i // 8)
+            bit_position = i % 8
+            if bool(bit):
+                buffer[byte_index] |= (1 << bit_position)
+        
+        print("Encoded bit sequence", buffer[offset:offset + total_size].hex())
         return total_size
 
     @staticmethod
     def decode_from(length: int,
                     buffer: Union[bytes, bytearray, memoryview], 
                     offset: int = 0) -> Tuple[Sequence[BitSequence], int]:
+        print("Decoding bit sequence", buffer[offset:offset + length].hex())
         """
         Decode bit sequence from buffer.
         
@@ -80,5 +87,6 @@ class BitSequenceCodec(Codec[Sequence[BitSequence]]):
                 # Only append bits up to the requested length
                 if len(result) < length:
                     result.append(bool(byte & (1 << bit_idx)))
-            
+        
+        print("Decoded bit sequence", result)
         return result, byte_count

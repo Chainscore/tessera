@@ -1,5 +1,6 @@
 from typing import Type, Union, Any, Optional, List, Tuple, Dict, Callable
 
+from jam.types.base.null import Null
 from jam.utils.codec.base import Codable
 from jam.utils.codec.composite.choices import ChoiceCodec
 
@@ -7,7 +8,8 @@ class Choice(Codable):
     """
     A choice is a value that can be one of several possible types.
     """
-    def __init__(self, types: List[Type[Codable]]):
+
+    def __init__(self, types: List[Type[Codable]], default: Codable = Null()):
         self.codec = ChoiceCodec(types)
         if len(types) == 0:
             raise ValueError("Choice must have at least one type")

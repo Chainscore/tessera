@@ -84,9 +84,11 @@ class Vector(Generic[T], Codable, Sequence[T]):
         self._data.extend(values)
         
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Vector):
+        if not isinstance(other, Vector) and not isinstance(other, list):
             return False
-        return self._data == other._data
+        if isinstance(other, Vector):
+            return self._data == other._data
+        return self._data == other
 
     @staticmethod
     def decode_from(

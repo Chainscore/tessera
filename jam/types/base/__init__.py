@@ -1,9 +1,30 @@
-from .byte_array import ByteArray144, ByteArray32, ByteArray96, ByteArray784, ByteArray64, ByteArray128, ByteArray256
-from .integers import U8, U16, U32, U64, U128, U256
-from .bit_sequence import Bits
-from .array import Array
+"""Base types for the JAM protocol."""
+
+from jam.types.base.integers import U8, U16, U32, U64
+from jam.types.base.byte_array import (
+    ByteArray32, ByteArray64, ByteArray96,
+    ByteArray144, ByteArray784
+)
+from jam.types.base.array import Array
+from jam.types.base.bytes import Bytes
+from jam.types.base.vector import Vector
+from jam.types.base.choice import Choice
+from jam.types.base.null import Null
 
 __all__ = [
-    'ByteArray144', 'ByteArray32', 'ByteArray96', 'ByteArray784', 'ByteArray64', 'ByteArray128', 'ByteArray256',
-    'U8', 'U16', 'U32', 'U64', 'U128', 'U256', 'Bits', 'Array'
+    # Integer types
+    'U8', 'U16', 'U32', 'U64',
+    
+    # Fixed-size byte array types
+    'ByteArray32', 'ByteArray64', 'ByteArray96',
+    'ByteArray144', 'ByteArray784',
+    
+    # Array types
+    'Array', 'Vector',
+    
+    # Variable-length byte sequence type
+    'Bytes',
+    
+    # Choice and Null types
+    'Choice', 'Null'
 ]

@@ -73,14 +73,13 @@ class ArrayCodec(Codec[Sequence[Codable]]):
         
     @staticmethod
     def decode_from(length: int, codable_class: type[Codable], buffer: Union[bytes, bytearray, memoryview], 
-                   offset: int = 0) -> Tuple[List[Codable], int]:
+                   offset: int = 0) -> Tuple[List, int]:
         result = []
         current_offset = offset
         bytes_read = 0
         
         try:
             for _ in range(length):
-                print("codable_class", codable_class)
                 item, size = codable_class.decode_from(buffer, current_offset)
                 result.append(item)
                 current_offset += size

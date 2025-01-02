@@ -2,9 +2,18 @@
 
 import pytest
 from jam.types.base.bit_sequence import Bits
-from jam.types.extended.core_bits import CoreBits
 from jam.utils.constants import CORE_COUNT
 from jam.utils.codec.composite.bit_sequences import BitSequence
+
+class CoreBits(Bits):
+    """CoreBits is a subclass of Bits that has a fixed length of CORE_COUNT."""
+    def __init__(self, bits: list[bool]):
+        super().__init__(bits)
+        self.bits = bits
+    
+    @staticmethod   
+    def decode_from(buffer: bytes, offset: int = 0):
+        return Bits.decode_from(CORE_COUNT, buffer, offset)
 
 class TestBitSequenceTypes:
     """Test suite for bit sequence type implementations."""

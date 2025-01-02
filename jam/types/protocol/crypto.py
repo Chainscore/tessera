@@ -1,10 +1,9 @@
+from jam.types.base.byte_array import (
+    ByteArray32, ByteArray64, ByteArray96,
+    ByteArray144, ByteArray784
+)
+
 # Public key types
-from typing import NewType
-
-from jam.types.base.byte_array import ByteArray144, ByteArray32, ByteArray96, ByteArray784, ByteArray64
-from jam.types.base.integers import U32
-
-
 BandersnatchPublic = ByteArray32
 Ed25519Public = ByteArray32
 BlsPublic = ByteArray144
@@ -14,8 +13,10 @@ BandersnatchVrfSignature = ByteArray96
 BandersnatchRingVrfSignature = ByteArray784
 Ed25519Signature = ByteArray64
 
+# Hash types
 HeaderHash = ByteArray32
 StateRoot = ByteArray32
+BeefyRoot = ByteArray32
 OpaqueHash = ByteArray32
-
 Entropy = ByteArray32
+WorkReportHash = ByteArray32

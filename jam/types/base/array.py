@@ -1,5 +1,5 @@
 """Fixed-size array implementation"""
-from typing import Generic, List, Optional, Sequence, TypeVar, Union, overload
+from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, Union, overload
 
 from jam.types.base.integers import Int
 from jam.utils.codec.base import Codec, Codable
@@ -126,7 +126,8 @@ class Array(Generic[T], Codable, Sequence[T]):
         for value in values:
             self.append(value)
     
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Array):
-            return False
-        return self._data == other._data
+    def __eq__(self, other: Sequence[T]) -> bool:
+        if isinstance(other, Array):
+            return self._data == other._data
+        else:
+            return self._data == other

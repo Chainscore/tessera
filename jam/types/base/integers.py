@@ -31,6 +31,9 @@ class FixedInt(Codable, int):
     def __init__(self, value: int):
         self.codec = IntegerCodec(self.byte_size)
 
+    def __repr__(self):
+        return f"U{8*self.byte_size}({int(self)})"
+
     def __new__(cls, value: int):
         max_value = 2**(8*cls.byte_size) - 1
         if not 0 <= value <= max_value:
@@ -49,7 +52,8 @@ class U8(FixedInt):
     
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
-        return IntegerCodec.decode_from(U8.byte_size, buffer, offset)
+        value, size = IntegerCodec.decode_from(U8.byte_size, buffer, offset)
+        return U8(value), size
 
 class U16(FixedInt):
     """16-bit unsigned integer type."""
@@ -60,7 +64,8 @@ class U16(FixedInt):
     
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
-        return IntegerCodec.decode_from(U16.byte_size, buffer, offset)
+        value, size = IntegerCodec.decode_from(U16.byte_size, buffer, offset)
+        return U16(value), size
 
 class U32(FixedInt):
     """32-bit unsigned integer type."""
@@ -71,7 +76,8 @@ class U32(FixedInt):
     
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
-        return IntegerCodec.decode_from(U32.byte_size, buffer, offset)
+        value, size = IntegerCodec.decode_from(U32.byte_size, buffer, offset)
+        return U32(value), size
 
 class U64(FixedInt):
     """64-bit unsigned integer type."""
@@ -82,7 +88,8 @@ class U64(FixedInt):
     
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
-        return IntegerCodec.decode_from(U64.byte_size, buffer, offset)
+        value, size = IntegerCodec.decode_from(U64.byte_size, buffer, offset)
+        return U64(value), size
 
 class U128(FixedInt):
     """128-bit unsigned integer type."""
@@ -93,7 +100,8 @@ class U128(FixedInt):
     
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
-        return IntegerCodec.decode_from(U128.byte_size, buffer, offset)
+        value, size = IntegerCodec.decode_from(U128.byte_size, buffer, offset)
+        return U128(value), size
 
 class U256(FixedInt):
     """256-bit unsigned integer type."""
@@ -104,7 +112,8 @@ class U256(FixedInt):
     
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
-        return IntegerCodec.decode_from(U256.byte_size, buffer, offset)
+        value, size = IntegerCodec.decode_from(U256.byte_size, buffer, offset)
+        return U256(value), size
 
 class U512(FixedInt):
     """512-bit unsigned integer type."""
@@ -115,4 +124,5 @@ class U512(FixedInt):
     
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
-        return IntegerCodec.decode_from(U512.byte_size, buffer, offset)
+        value, size = IntegerCodec.decode_from(U512.byte_size, buffer, offset)
+        return U512(value), size
