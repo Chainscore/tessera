@@ -33,8 +33,9 @@ class Preimage(Codable):
         current_offset = offset
         requester, size = ServiceId.decode_from(buffer, current_offset)
         current_offset += size
-        blob = Bytes(buffer[current_offset:])
-        return Preimage(requester, blob), len(buffer) - offset
+        blob, size = Bytes.decode_from(buffer, current_offset)
+        current_offset += size
+        return Preimage(requester, blob), current_offset - offset
 
 class PreimagesExtrinsic(Vector[Preimage]):
     """Sequence of preimages."""

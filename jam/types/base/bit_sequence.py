@@ -31,10 +31,12 @@ class Bits(Codable, Sequence[BitSequence]):
             raise TypeError("Value must be a BitSequence")
         self._bits[index] = value
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Sequence[BitSequence]) -> bool:
         if not isinstance(other, Bits):
+            return Bits(other) == self
+        if len(self._bits) != len(other._bits):
             return False
-        return self._bits == other._bits
+        return all(a == b for a, b in zip(self._bits, other._bits))
 
     def __repr__(self) -> str:
         return f"Bits(bits={self._bits})"

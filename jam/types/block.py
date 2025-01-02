@@ -68,4 +68,5 @@ class Block(Codable):
         header, size = Header.decode_from(buffer, offset)
         current_offset = offset + size
         extrinsic, size = Extrinsic.decode_from(buffer, current_offset)
+        current_offset += size
         return Block(header, extrinsic), current_offset - offset

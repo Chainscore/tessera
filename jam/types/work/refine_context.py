@@ -17,7 +17,7 @@ class RefineContext(Codable):
     beefy_root: BeefyRoot
     lookup_anchor: HeaderHash
     lookup_anchor_slot: TimeSlot
-    prerequisites: List[OpaqueHash]
+    prerequisites: Vector[OpaqueHash]
 
     def enc_sequence(self) -> Sequence[Codable]:
         sequence: List[Codable] = [
@@ -25,9 +25,9 @@ class RefineContext(Codable):
             self.state_root,
             self.beefy_root,
             self.lookup_anchor,
-            self.lookup_anchor_slot
+            self.lookup_anchor_slot,
+            self.prerequisites
         ]
-        sequence.extend(self.prerequisites)
         return sequence
 
     def encode_size(self) -> int:
@@ -53,12 +53,8 @@ class RefineContext(Codable):
         current_offset += size
         lookup_anchor_slot, size = TimeSlot.decode_from(buffer, current_offset)
         current_offset += size
-
-        prerequisites = []
-        while current_offset < len(buffer):
-            prerequisite, size = OpaqueHash.decode_from(buffer, current_offset)
-            prerequisites.append(prerequisite)
-            current_offset += size
+        prerequisites, size = Vector.decode_from(OpaqueHash, buffer, current_offset)
+        current_offset += size
 
         return RefineContext(
             anchor,
@@ -66,5 +62,5 @@ class RefineContext(Codable):
             beefy_root,
             lookup_anchor,
             lookup_anchor_slot,
-            prerequisites
+            Vector(prerequisites)
         ), current_offset - offset 

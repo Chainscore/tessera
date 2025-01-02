@@ -3,6 +3,7 @@ from typing import List, Any, Tuple, Sequence
 from enum import Enum
 
 from jam.types.base.array import Array
+from jam.types.base.boolean import Boolean
 from jam.types.base.integers import U16, U32
 from jam.types.base.vector import Vector
 from jam.utils.codec.base import Codable
@@ -17,20 +18,18 @@ from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
 @dataclass
 class Judgement(Codable):
     """Judgement structure."""
-    vote: bool
+    vote: Boolean
     index: ValidatorIndex
     signature: Ed25519Signature
 
     def enc_sequence(self) -> Sequence[Codable]:
-        return [self.index, self.signature]
+        return [self.vote, self.index, self.signature]
 
     def encode_size(self) -> int:
-        return sum(item.encode_size() for item in self.enc_sequence()) + 1  # +1 for vote
+        return sum(item.encode_size() for item in self.enc_sequence())
 
     def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
         current_offset = offset
-        buffer[current_offset] = 1 if self.vote else 0
-        current_offset += 1
         for item in self.enc_sequence():
             size = item.encode_into(buffer, current_offset)
             current_offset += size
@@ -39,8 +38,8 @@ class Judgement(Codable):
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0) -> Tuple[Any, int]:
         current_offset = offset
-        vote = bool(buffer[current_offset])
-        current_offset += 1
+        vote, size = Boolean.decode_from(buffer, current_offset)
+        current_offset += size
         index, size = ValidatorIndex.decode_from(buffer, current_offset)
         current_offset += size
         signature, size = Ed25519Signature.decode_from(buffer, current_offset)
@@ -82,20 +81,18 @@ class Culprit(Codable):
 class Fault(Codable):
     """Fault structure."""
     target: WorkReportHash
-    vote: bool
+    vote: Boolean
     key: Ed25519Public
     signature: Ed25519Signature
 
     def enc_sequence(self) -> Sequence[Codable]:
-        return [self.target, self.key, self.signature]
+        return [self.target, self.vote, self.key, self.signature]
 
     def encode_size(self) -> int:
-        return sum(item.encode_size() for item in self.enc_sequence()) + 1  # +1 for vote
+        return sum(item.encode_size() for item in self.enc_sequence())
 
     def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
         current_offset = offset
-        buffer[current_offset] = 1 if self.vote else 0
-        current_offset += 1
         for item in self.enc_sequence():
             size = item.encode_into(buffer, current_offset)
             current_offset += size
@@ -106,13 +103,18 @@ class Fault(Codable):
         current_offset = offset
         target, size = WorkReportHash.decode_from(buffer, current_offset)
         current_offset += size
-        vote = bool(buffer[current_offset])
-        current_offset += 1
+        vote, size = Boolean.decode_from(buffer, current_offset)
+        current_offset += size
         key, size = Ed25519Public.decode_from(buffer, current_offset)
         current_offset += size
         signature, size = Ed25519Signature.decode_from(buffer, current_offset)
         current_offset += size
         return Fault(target, vote, key, signature), current_offset - offset
+
+    def __eq__(self, value: object) -> bool:
+        if isinstance(value, Fault):
+            return self.target == value.target and self.vote == value.vote and self.key == value.key and self.signature == value.signature
+        return False
 
 class JudgementVotes(Array[Judgement]):
     """Judgement votes array."""
@@ -129,10 +131,10 @@ class Verdict(Codable):
     """Verdict structure."""
     target: WorkReportHash
     age: U32
-    signature: Ed25519Signature
+    votes: JudgementVotes
 
     def enc_sequence(self) -> Sequence[Codable]:
-        return [self.target, self.age, self.signature]
+        return [self.target, self.age, self.votes]
 
     def encode_size(self) -> int:
         return sum(item.encode_size() for item in self.enc_sequence())
@@ -150,9 +152,9 @@ class Verdict(Codable):
         current_offset = offset + size
         age, size = U32.decode_from(buffer, current_offset)
         current_offset += size
-        signature, size = Ed25519Signature.decode_from(buffer, current_offset)
+        votes, size = JudgementVotes.decode_from(buffer, current_offset)
         current_offset += size
-        return Verdict(target, age, signature), current_offset - offset
+        return Verdict(target, age, votes), current_offset - offset
 
 @dataclass
 class DisputesRecords(Codable):
@@ -192,6 +194,13 @@ class DisputesExtrinsic(Codable):
 
     def encode_size(self) -> int:
         return sum(item.encode_size() for item in self.enc_sequence())
+    
+    def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
+        current_offset = offset
+        for item in self.enc_sequence():
+            size = item.encode_into(buffer, current_offset)
+            current_offset += size
+        return current_offset - offset
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0) -> Tuple[Any, int]:

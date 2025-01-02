@@ -5,6 +5,7 @@ from enum import Enum
 from jam.types.base.integers import U16, U32, U8
 from jam.types.base.array import Array
 from jam.types.base.bytes import Bytes
+from jam.types.base.vector import Vector
 from jam.utils.codec.base import Codable
 from jam.types.protocol.crypto import (
     BandersnatchPublic, BandersnatchVrfSignature,
@@ -12,6 +13,7 @@ from jam.types.protocol.crypto import (
     StateRoot, OpaqueHash
 )
 from jam.utils.codec.composite.arrays import ArrayCodec
+from jam.utils.codec.composite.vectors import VectorCodec
 from jam.utils.constants import (
     EPOCH_LENGTH,
     MAX_TICKETS_PER_EXTRINSIC
@@ -100,12 +102,12 @@ class KeysAccumulator(Array[BandersnatchPublic]):
         values, size = ArrayCodec.decode_from(EPOCH_LENGTH, BandersnatchPublic, buffer, offset)
         return KeysAccumulator(values), size 
 
-class TicketsExtrinsic(Array[TicketEnvelope]):
+class TicketsExtrinsic(Vector[TicketEnvelope]):
     """Fixed-size array of ticket envelopes for an extrinsic."""
     def __init__(self, entries: List[TicketEnvelope]):
-        super().__init__(MAX_TICKETS_PER_EXTRINSIC, entries)
+        super().__init__(entries)
     
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0) -> Tuple[Any, int]:
-        values, size = ArrayCodec.decode_from(MAX_TICKETS_PER_EXTRINSIC, TicketEnvelope, buffer, offset)
+        values, size = VectorCodec.decode_from(TicketEnvelope, buffer, offset)
         return TicketsExtrinsic(values), size 

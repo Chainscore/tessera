@@ -7,13 +7,18 @@ class ByteArray(Codable, bytes):
     """Fixed-width byte array type."""
     size: int = 0
 
-    def __init__(self, value: Union[bytes, bytearray, memoryview]):
+    def __init__(self, value: Union[bytes, bytearray, memoryview, str]):
+        if isinstance(value, str):
+            value = bytes.fromhex(value[2:] if value.startswith("0x") else value)
         if len(value) != self.size:
             raise ValueError(f"Expected {self.size} bytes, got {len(value)}")
 
-    def __new__(cls, value: Union[bytes, bytearray, memoryview]):
+    def __new__(cls, value: Union[bytes, bytearray, memoryview, str]):
+        if isinstance(value, str):
+            value = bytes.fromhex(value[2:] if value.startswith("0x") else value)
         if len(value) != cls.size:
             raise ValueError(f"Expected {cls.size} bytes, got {len(value)}")
+        
         return super().__new__(cls, value)
     
     def encode_size(self) -> int:
@@ -41,7 +46,7 @@ class ByteArray16(ByteArray):
     size: int = 16
 
     @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0):
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
         value, size = ByteArray.decode_from(16, buffer, offset)
         return ByteArray16(value), size
 
@@ -50,7 +55,7 @@ class ByteArray32(ByteArray):
     size: int = 32
 
     @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0):
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
         value, size = ByteArray.decode_from(32, buffer, offset)
         return ByteArray32(value), size
 
@@ -59,7 +64,7 @@ class ByteArray64(ByteArray):
     size: int = 64
 
     @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0):
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
         value, size = ByteArray.decode_from(64, buffer, offset)
         return ByteArray64(value), size
 
@@ -68,7 +73,7 @@ class ByteArray96(ByteArray):
     size: int = 96
 
     @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0):
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
         value, size = ByteArray.decode_from(96, buffer, offset)
         return ByteArray96(value), size
 
@@ -77,7 +82,7 @@ class ByteArray128(ByteArray):
     size: int = 128
 
     @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0):
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
         value, size = ByteArray.decode_from(128, buffer, offset)
         return ByteArray128(value), size
 
@@ -86,7 +91,7 @@ class ByteArray144(ByteArray):
     size: int = 144
 
     @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0):
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
         value, size = ByteArray.decode_from(144, buffer, offset)
         return ByteArray144(value), size
 
@@ -95,7 +100,7 @@ class ByteArray256(ByteArray):
     size: int = 256
 
     @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0):
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
         value, size = ByteArray.decode_from(256, buffer, offset)
         return ByteArray256(value), size
 
@@ -104,6 +109,6 @@ class ByteArray784(ByteArray):
     size: int = 784
 
     @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0):
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
         value, size = ByteArray.decode_from(784, buffer, offset)
         return ByteArray784(value), size

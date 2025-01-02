@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List, Any, Tuple, Sequence
 
 from jam.types.base.bytes import Bytes
+from jam.types.base.vector import Vector
 from jam.utils.codec.base import Codable
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ServiceId
@@ -34,8 +35,9 @@ class Authorizer(Codable):
         current_offset = offset
         code_hash, size = OpaqueHash.decode_from(buffer, current_offset)
         current_offset += size
-        params = Bytes(buffer[current_offset:])
-        return Authorizer(code_hash, params), len(buffer) - offset
+        params, size = Bytes.decode_from(buffer, current_offset)
+        current_offset += size
+        return Authorizer(code_hash, params), current_offset - offset
 
 @dataclass
 class WorkPackage(Codable):
@@ -44,11 +46,11 @@ class WorkPackage(Codable):
     auth_code_host: ServiceId
     authorizer: Authorizer
     context: RefineContext
-    items: List[WorkItem]  # Size 1..4
+    items: Vector[WorkItem] 
 
     def __init__(self, authorization: Bytes, auth_code_host: ServiceId,
                  authorizer: Authorizer, context: RefineContext,
-                 items: List[WorkItem]):
+                 items: Vector[WorkItem]):
         if not (1 <= len(items) <= MAX_WORK_ITEMS):
             raise ValueError(f"Number of work items must be between 1 and {MAX_WORK_ITEMS}")
         self.authorization = authorization
@@ -62,9 +64,9 @@ class WorkPackage(Codable):
             self.authorization,
             self.auth_code_host,
             self.authorizer,
-            self.context
+            self.context,
+            self.items
         ]
-        sequence.extend(self.items)
         return sequence
 
     def encode_size(self) -> int:
@@ -80,28 +82,20 @@ class WorkPackage(Codable):
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0) -> Tuple[Any, int]:
         current_offset = offset
-        authorization = Bytes(buffer[current_offset:])
-        current_offset += len(authorization)
+        authorization, size = Bytes.decode_from(buffer, current_offset)
+        current_offset += size
         auth_code_host, size = ServiceId.decode_from(buffer, current_offset)
         current_offset += size
         authorizer, size = Authorizer.decode_from(buffer, current_offset)
         current_offset += size
         context, size = RefineContext.decode_from(buffer, current_offset)
         current_offset += size
-
-        items = []
-        while current_offset < len(buffer) and len(items) < MAX_WORK_ITEMS:
-            item, size = WorkItem.decode_from(buffer, current_offset)
-            items.append(item)
-            current_offset += size
-
-        if not items:
-            raise ValueError("Work package must contain at least one work item")
-
+        items, size = Vector.decode_from(WorkItem, buffer, current_offset)
+        current_offset += size
         return WorkPackage(
             authorization,
             auth_code_host,
             authorizer,
             context,
-            items
+            Vector(items)
         ), current_offset - offset

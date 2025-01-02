@@ -6,7 +6,7 @@ TimeSlot = U32
 ValidatorIndex = U16
 CoreIndex = U16
 Gas = U64
-ServiceId = U16
+ServiceId = U32
 
 # Hash type aliases
 WorkPackageHash = OpaqueHash

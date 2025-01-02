@@ -41,7 +41,7 @@ from jam.types.work import (
     ImportSpec, ExtrinsicSpec, Authorizer, RefineContext,
     WorkExecResult, WorkResult, WorkItem,
     WorkPackage, WorkReport, WorkPackageSpec,
-    SegmentRootLookupItem, SegmentRootLookup
+    SegmentRootLookupItem
 )
 
 # Ticket types
@@ -103,7 +103,7 @@ __all__ = [
     'ImportSpec', 'ExtrinsicSpec', 'Authorizer', 'RefineContext',
     'WorkExecResult', 'WorkResult', 'WorkItem',
     'WorkPackage', 'WorkReport', 'WorkPackageSpec',
-    'SegmentRootLookupItem', 'SegmentRootLookup',
+    'SegmentRootLookupItem',
 
     # Ticket types
     'TicketEnvelope', 'TicketBody', 'TicketsAccumulator', 'KeysAccumulator', 'TicketsExtrinsic',

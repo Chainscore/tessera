@@ -73,8 +73,8 @@ class WorkItem(Codable):
     payload: Bytes
     refine_gas_limit: Gas
     accumulate_gas_limit: Gas
-    import_segments: List[ImportSpec]
-    extrinsic: List[ExtrinsicSpec]
+    import_segments: Vector[ImportSpec]
+    extrinsic: Vector[ExtrinsicSpec]
     export_count: U16
 
     def enc_sequence(self) -> Sequence[Codable]:
@@ -84,10 +84,10 @@ class WorkItem(Codable):
             self.payload,
             self.refine_gas_limit,
             self.accumulate_gas_limit,
+            self.import_segments,
+            self.extrinsic,
             self.export_count
         ]
-        sequence.extend(self.import_segments)
-        sequence.extend(self.extrinsic)
         return sequence
 
     def encode_size(self) -> int:
@@ -107,26 +107,18 @@ class WorkItem(Codable):
         current_offset += size
         code_hash, size = OpaqueHash.decode_from(buffer, current_offset)
         current_offset += size
-        payload = Bytes(buffer[current_offset:])
-        current_offset += len(payload)
+        payload, size = Bytes.decode_from(buffer, current_offset)
+        current_offset += size
         refine_gas_limit, size = Gas.decode_from(buffer, current_offset)
         current_offset += size
         accumulate_gas_limit, size = Gas.decode_from(buffer, current_offset)
         current_offset += size
+        import_segments, size = Vector.decode_from(ImportSpec, buffer, current_offset)
+        current_offset += size
+        extrinsic, size = Vector.decode_from(ExtrinsicSpec, buffer, current_offset)
+        current_offset += size
         export_count, size = U16.decode_from(buffer, current_offset)
         current_offset += size
-
-        import_segments = []
-        while current_offset < len(buffer):
-            segment, size = ImportSpec.decode_from(buffer, current_offset)
-            import_segments.append(segment)
-            current_offset += size
-
-        extrinsic = []
-        while current_offset < len(buffer):
-            spec, size = ExtrinsicSpec.decode_from(buffer, current_offset)
-            extrinsic.append(spec)
-            current_offset += size
 
         return WorkItem(
             service,
@@ -134,7 +126,7 @@ class WorkItem(Codable):
             payload,
             refine_gas_limit,
             accumulate_gas_limit,
-            import_segments,
-            extrinsic,
+            Vector(import_segments),
+            Vector(extrinsic),
             export_count
         ), current_offset - offset

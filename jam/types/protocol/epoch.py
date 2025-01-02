@@ -3,13 +3,13 @@ from dataclasses import dataclass
 from typing import List, Any, Tuple, Optional, Sequence
 from jam.types.protocol.validators import ValidatorArray
 from jam.utils.codec.base import Codable
-from jam.types.protocol.crypto import OpaqueHash
+from jam.types.protocol.crypto import Entropy, OpaqueHash
 
 @dataclass
 class EpochMark(Codable):
     """Epoch mark structure."""
-    entropy: OpaqueHash
-    tickets_entropy: OpaqueHash
+    entropy: Entropy
+    tickets_entropy: Entropy
     validators: ValidatorArray
 
     def enc_sequence(self) -> Sequence[Codable]:
@@ -38,3 +38,6 @@ class EpochMark(Codable):
         current_offset += size
         
         return EpochMark(entropy, tickets_entropy, validators), current_offset - offset
+
+    def __eq__(self, other):
+        return self.entropy == other.entropy and self.tickets_entropy == other.tickets_entropy and self.validators == other.validators

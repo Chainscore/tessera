@@ -44,11 +44,10 @@ class ReportGuarantee(Codable):
     """Report guarantee structure."""
     report: WorkReport
     slot: TimeSlot
-    signatures: List[ValidatorSignature]
+    signatures: Vector[ValidatorSignature]
 
     def enc_sequence(self) -> Sequence[Codable]:
-        sequence: List[Codable] = [self.report, self.slot]
-        sequence.extend(self.signatures)
+        sequence: List[Codable] = [self.report, self.slot, self.signatures]
         return sequence
 
     def encode_size(self) -> int:
@@ -68,21 +67,16 @@ class ReportGuarantee(Codable):
         current_offset += size
         slot, size = TimeSlot.decode_from(buffer, current_offset)
         current_offset += size
-        
-        signatures = []
-        while current_offset < len(buffer):
-            signature, size = ValidatorSignature.decode_from(buffer, current_offset)
-            signatures.append(signature)
-            current_offset += size
-        
-        return ReportGuarantee(report, slot, signatures), current_offset - offset
+        signatures, size = Vector.decode_from(ValidatorSignature, buffer, current_offset)
+        current_offset += size
+        return ReportGuarantee(report, slot, Vector(signatures)), current_offset - offset
 
 class GuaranteesExtrinsic(Vector[ReportGuarantee]):
     """Sequence of report guarantees with size limit of CORE_COUNT."""
     def __init__(self, guarantees: List[ReportGuarantee]):
         if len(guarantees) > CORE_COUNT:
             raise ValueError(f"Number of guarantees cannot exceed {CORE_COUNT}")
-        super().__init__(guarantees) 
+        super().__init__(guarantees)
     
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):

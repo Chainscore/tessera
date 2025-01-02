@@ -31,6 +31,9 @@ class FixedInt(Codable, int):
     def __init__(self, value: int):
         self.codec = IntegerCodec(self.byte_size)
 
+    def __repr__(self):
+        return f"U{8*self.byte_size}({int(self)})"
+
     def __new__(cls, value: int):
         max_value = 2**(8*cls.byte_size) - 1
         if not 0 <= value <= max_value:
