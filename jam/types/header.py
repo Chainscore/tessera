@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import Any, List, Sequence, Tuple, Union
 
-from jam.types.base.array import Array
+from jam.types.base.sequences.array import Array
 from jam.types.base.bytes import Bytes
 from jam.types.base.choice import Choice
-from jam.types.base.integers import U16
+from jam.types.base.integers.fixed import U16
 from jam.types.base.null import Null
 from jam.types.base.option import Option
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.types.extrinsics.tickets import TicketBody
 from jam.types.protocol.core import ErasureRoot, ExportsRoot, TimeSlot, ValidatorIndex
 from jam.types.protocol.validators import ValidatorArray

@@ -5,9 +5,9 @@ from typing import Any, List, Optional, Tuple
 import pytest
 
 from jam.types.base.byte_array import ByteArray32, ByteArray64, ByteArray96, ByteArray128, ByteArray144
-from jam.types.base.integers import U32
+from jam.types.base.integers.fixed import U32
 from jam.utils.codec.base import Codable
-from jam.types.base.array import Array
+from jam.types.base.sequences.array import Array
 
 TimeSlot = U32
 ValidatorIndex = U32

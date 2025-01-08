@@ -1,6 +1,6 @@
 # Fixed-size array types
 from typing import Any, List, Tuple
-from jam.types.base.array import Array
+from jam.types.base.sequences.array import Array
 from jam.types.protocol.crypto import OpaqueHash
 from jam.utils.codec.composite.arrays import ArrayCodec
 

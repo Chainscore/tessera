@@ -1,48 +1,54 @@
-"""Bytes type for the JAM protocol."""
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union, cast
 
 from jam.utils.codec.base import Codable
-from jam.utils.codec.primitives.integers import GeneralCodec
+from jam.utils.codec.primitives.bytes import BytesCodec
 
 @dataclass
 class Bytes(Codable):
     """Variable-length byte sequence type."""
-    data: bytes
+    value: bytes
 
     def __init__(self, data: Union[bytes, str, int]):
+        """
+        Initialize a byte sequence.
+        
+        Args:
+            data: Input data, can be:
+                - bytes: Used directly
+                - str: Interpreted as hex string (with optional 0x prefix)
+                - int: Converted to single byte
+        """
         if isinstance(data, str):
             if data.startswith("0x"):
-                self.data = bytes.fromhex(data[2:])
+                value = bytes.fromhex(data[2:])
             else:
-                self.data = bytes.fromhex(data)
+                value = bytes.fromhex(data)
         elif isinstance(data, int):
-            self.data = bytes([data])
+            value = bytes([data])
         else:
-            self.data = data
+            value = data
+            
+        super().__init__(codec=BytesCodec())
+        self.value = value
 
     def __len__(self) -> int:
-        return len(self.data)
+        return len(self.value)
 
     def __bytes__(self) -> bytes:
-        return self.data
-
-    def encode_size(self) -> int:
-        return GeneralCodec().encode_size(len(self.data)) + len(self.data)
-
-    def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
-        size = GeneralCodec().encode_into(len(self.data), buffer, offset)   
-        buffer[offset + size:offset + size + len(self.data)] = self.data
-        return size + len(self.data)
-
-    @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0) -> Tuple[Any, int]:
-        # For simplicity, assume remaining buffer is the byte sequence
-        length, size = GeneralCodec().decode_from(buffer, offset)
-        data = buffer[offset + size:offset + size + length]
-        return Bytes(data), size + length
+        return self.value
     
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Bytes):
-            return self.data == other.data
+            return self.value == other.value
+        elif isinstance(other, (bytes, bytearray)):
+            return self.value == other
         return False
+    
+    def __repr__(self) -> str:
+        return f"Bytes(0x{self.value.hex()})"
+    
+    @staticmethod
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple['Bytes', int]:
+        value, size = BytesCodec.decode_from(buffer, offset)
+        return Bytes(value), size

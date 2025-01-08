@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import List, Any, Tuple, Optional, Sequence
 from enum import Enum
 
-from jam.types.base.integers import U16, U32, U8
-from jam.types.base.array import Array
+from jam.types.base.integers.fixed import U16, U32, U8
+from jam.types.base.sequences.array import Array
 from jam.types.base.bytes import Bytes
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.utils.codec.base import Codable
 from jam.types.protocol.crypto import (
     BandersnatchPublic, BandersnatchVrfSignature,

@@ -67,5 +67,5 @@ class TestFixedIntTypes:
         # Test basic arithmetic
         assert int(a + b) == 150
         assert int(a - b) == 50
-        assert int(a * b) == 5000  # Note: This might overflow in real usage
+        assert int(U16(a) * U16(b)) == 5000  # Note: This might overflow in real usage
         assert float(a / b) == 2.0

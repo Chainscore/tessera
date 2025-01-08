@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from typing import List, Any, Tuple, Sequence
 
 from jam.types.base.bytes import Bytes
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
+from jam.types.base.sequences.vector import decodable_vector
 from jam.utils.codec.base import Codable
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ServiceId
@@ -38,6 +39,9 @@ class Authorizer(Codable):
         params, size = Bytes.decode_from(buffer, current_offset)
         current_offset += size
         return Authorizer(code_hash, params), current_offset - offset
+
+@decodable_vector(WorkItem)
+class WorkItems(Vector[WorkItem]): pass
 
 @dataclass
 class WorkPackage(Codable):
@@ -90,12 +94,12 @@ class WorkPackage(Codable):
         current_offset += size
         context, size = RefineContext.decode_from(buffer, current_offset)
         current_offset += size
-        items, size = Vector.decode_from(WorkItem, buffer, current_offset)
+        items, size = WorkItems.decode_from(buffer, current_offset)
         current_offset += size
         return WorkPackage(
             authorization,
             auth_code_host,
             authorizer,
             context,
-            Vector(items)
+            items
         ), current_offset - offset

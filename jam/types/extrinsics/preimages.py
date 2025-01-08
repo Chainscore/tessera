@@ -4,7 +4,7 @@ from typing import List, Any, Tuple, Sequence, Union
 
 from jam.types.base.integers import U32
 from jam.types.base.bytes import Bytes
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.utils.codec.base import Codable
 from jam.types.protocol.core import ServiceId
 from jam.utils.codec.composite.vectors import VectorCodec

@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import List, Any, Tuple, Optional, Sequence
 from jam.types.base.choice import Choice
-from jam.types.base.array import Array
+from jam.types.base.sequences.array import Array
 from jam.types.base.null import Null
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.utils.codec.base import Codable
 from jam.types.protocol.crypto import (
     HeaderHash, StateRoot, OpaqueHash

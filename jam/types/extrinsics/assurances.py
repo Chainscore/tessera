@@ -1,29 +1,14 @@
 from dataclasses import dataclass
-from typing import List, Self, Sequence, Tuple, Union, cast
-from jam.types.base.array import Array
-from jam.types.base.bit_sequence import Bits
-from jam.types.base.vector import Vector
+from typing import Sequence
+from jam.types.base import BitSequence, decodable_bit_sequence
+from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.crypto import Ed25519Signature, OpaqueHash
 from jam.types.protocol.core import ValidatorIndex
 from jam.utils.codec.base import Codable
-from jam.utils.codec.composite.arrays import ArrayCodec
-from jam.utils.codec.composite.bit_sequences import BitSequence
-from jam.utils.constants import AUDIT_BIAS_FACTOR, CORE_COUNT, VALIDATOR_COUNT
+from jam.utils.constants import CORE_COUNT
 
-class AvailBitField(Bits):
-    """Availability bitfield structure: octets of size VALIDATOR_COUNT"""
-    def __init__(self, data: Union[Sequence[BitSequence], str, bytes]):
-        if isinstance(data, str):
-            if data.startswith("0x"):
-                value = int(data[2:], 16)
-            # Use CORE_COUNT instead of hardcoded 8
-            data = cast(Sequence[BitSequence], [(value >> i) & 1 for i in range(CORE_COUNT)])
-        super().__init__(data)
-    
-    @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0):
-        data, size = Bits.decode_from(CORE_COUNT, buffer, offset)
-        return AvailBitField(data), size
+@decodable_bit_sequence(CORE_COUNT)
+class AvailBitField(BitSequence): pass
 
 @dataclass
 class AvailAssurance(Codable):
@@ -58,12 +43,6 @@ class AvailAssurance(Codable):
         current_offset += size
         return AvailAssurance(anchor, bitfield, validator_index, signature), current_offset - offset
 
-class AssurancesExtrinsic(Vector[AvailAssurance]):
-    """Fixed-size array of availability assurances for an extrinsic."""
-    def __init__(self, entries: Sequence[AvailAssurance]):
-        super().__init__(entries)
 
-    @staticmethod
-    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
-        entries, size = Vector.decode_from(AvailAssurance, buffer, offset)
-        return AssurancesExtrinsic(entries), size
+@decodable_vector(AvailAssurance)
+class AssurancesExtrinsic(Vector[AvailAssurance]): pass;

@@ -7,7 +7,7 @@ from jam.types.base.choice import Choice
 from jam.types.base.integers import U16, U32
 from jam.types.base.bytes import Bytes
 from jam.types.base.null import Null
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ErasureRoot, ExportsRoot, WorkPackageHash
 from jam.utils.codec.base import Codable

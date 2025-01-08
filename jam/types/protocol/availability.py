@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Any, Tuple, Sequence
 from jam.types.base.choice import Choice
-from jam.types.base.integers import U32
-from jam.types.base.array import Array
+from jam.types.base.integers.fixed import U32
+from jam.types.base.sequences.array import Array
 from jam.types.base.null import Null
 from jam.types.work import WorkReport
 from jam.utils.codec.base import Codable

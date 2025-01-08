@@ -4,7 +4,8 @@ from typing import List, Any, Tuple, Sequence
 
 from jam.types.base.integers import U16, U32
 from jam.types.base.bytes import Bytes
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
+from jam.types.base.sequences.vector import decodable_vector
 from jam.utils.codec.base import Codable
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ServiceId, Gas
@@ -65,6 +66,14 @@ class ExtrinsicSpec(Codable):
         current_offset += size
         return ExtrinsicSpec(hash_val, len_val), current_offset - offset
 
+
+@decodable_vector(ImportSpec)
+class ImportSpecs(Vector[ImportSpec]): pass
+
+@decodable_vector(ExtrinsicSpec)
+class ExtrinsicSpecs(Vector[ExtrinsicSpec]): pass
+
+
 @dataclass
 class WorkItem(Codable):
     """Work item structure."""
@@ -73,8 +82,8 @@ class WorkItem(Codable):
     payload: Bytes
     refine_gas_limit: Gas
     accumulate_gas_limit: Gas
-    import_segments: Vector[ImportSpec]
-    extrinsic: Vector[ExtrinsicSpec]
+    import_segments: ImportSpecs
+    extrinsic: ExtrinsicSpecs
     export_count: U16
 
     def enc_sequence(self) -> Sequence[Codable]:
@@ -113,9 +122,9 @@ class WorkItem(Codable):
         current_offset += size
         accumulate_gas_limit, size = Gas.decode_from(buffer, current_offset)
         current_offset += size
-        import_segments, size = Vector.decode_from(ImportSpec, buffer, current_offset)
+        import_segments, size = ImportSpecs.decode_from(buffer, current_offset)
         current_offset += size
-        extrinsic, size = Vector.decode_from(ExtrinsicSpec, buffer, current_offset)
+        extrinsic, size = ExtrinsicSpecs.decode_from(buffer, current_offset)
         current_offset += size
         export_count, size = U16.decode_from(buffer, current_offset)
         current_offset += size

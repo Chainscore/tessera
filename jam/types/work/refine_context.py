@@ -2,12 +2,16 @@
 from dataclasses import dataclass
 from typing import List, Any, Tuple, Sequence
 
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
+from jam.types.base.sequences.vector import decodable_vector
 from jam.utils.codec.base import Codable
 from jam.types.protocol.crypto import (
     HeaderHash, StateRoot, BeefyRoot, OpaqueHash
 )
 from jam.types.protocol.core import TimeSlot
+
+@decodable_vector(OpaqueHash)
+class OpaqueHashes(Vector[OpaqueHash]): pass
 
 @dataclass
 class RefineContext(Codable):
@@ -53,7 +57,7 @@ class RefineContext(Codable):
         current_offset += size
         lookup_anchor_slot, size = TimeSlot.decode_from(buffer, current_offset)
         current_offset += size
-        prerequisites, size = Vector.decode_from(OpaqueHash, buffer, current_offset)
+        prerequisites, size = OpaqueHashes.decode_from(buffer, current_offset)
         current_offset += size
 
         return RefineContext(

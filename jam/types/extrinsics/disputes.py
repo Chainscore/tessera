@@ -2,10 +2,11 @@ from dataclasses import dataclass
 from typing import List, Any, Tuple, Sequence
 from enum import Enum
 
-from jam.types.base.array import Array
+from jam.types.base.sequences.array import Array
 from jam.types.base.boolean import Boolean
-from jam.types.base.integers import U16, U32
-from jam.types.base.vector import Vector
+from jam.types.base.integers.fixed import U16, U32
+from jam.types.base import Vector
+from jam.types.base.sequences.vector import decodable_vector
 from jam.utils.codec.base import Codable
 from jam.types.protocol.crypto import (
     Ed25519Public, Ed25519Signature,
@@ -156,13 +157,19 @@ class Verdict(Codable):
         current_offset += size
         return Verdict(target, age, votes), current_offset - offset
 
+@decodable_vector(WorkReportHash)
+class WorkReportHashes(Vector[WorkReportHash]): pass
+
+@decodable_vector(Ed25519Public)
+class Offenders(Vector[Ed25519Public]): pass
+
 @dataclass
 class DisputesRecords(Codable):
     """Disputes records structure."""
-    good: Vector[WorkReportHash]
-    bad: Vector[WorkReportHash]
-    wonky: Vector[WorkReportHash]
-    offenders: Vector[Ed25519Public]
+    good: WorkReportHashes
+    bad: WorkReportHashes
+    wonky: WorkReportHashes
+    offenders: Offenders
 
     def enc_sequence(self) -> Sequence[Codable]:
         return [self.good, self.bad, self.wonky, self.offenders]
@@ -172,22 +179,32 @@ class DisputesRecords(Codable):
     
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0) -> Tuple[Any, int]:
-        good, size = Vector.decode_from(WorkReportHash, buffer, offset)
+        good, size = WorkReportHashes.decode_from(buffer, offset)
         current_offset = offset + size
-        bad, size = Vector.decode_from(WorkReportHash, buffer, current_offset)
+        bad, size = WorkReportHashes.decode_from(buffer, current_offset)
         current_offset += size
-        wonky, size = Vector.decode_from(WorkReportHash, buffer, current_offset)
+        wonky, size = WorkReportHashes.decode_from(buffer, current_offset)
         current_offset += size
-        offenders, size = Vector.decode_from(Ed25519Public, buffer, current_offset)
+        offenders, size = Offenders.decode_from(buffer, current_offset)
         current_offset += size
-        return DisputesRecords(Vector(good), Vector(bad), Vector(wonky), Vector(offenders)), current_offset - offset
+        return DisputesRecords(good, bad, wonky, offenders), current_offset - offset
+
+
+@decodable_vector(Verdict)
+class Verdicts(Vector[Verdict]): pass;
+
+@decodable_vector(Culprit)
+class Culprits(Vector[Culprit]): pass;
+
+@decodable_vector(Fault)
+class Faults(Vector[Fault]): pass;
 
 @dataclass
 class DisputesExtrinsic(Codable):
     """Disputes extrinsic structure."""
-    verdicts: Vector[Verdict]
-    culprits: Vector[Culprit]
-    faults: Vector[Fault]
+    verdicts: Verdicts
+    culprits: Culprits
+    faults: Faults
 
     def enc_sequence(self) -> Sequence[Codable]:
         return [self.verdicts, self.culprits, self.faults]
@@ -204,10 +221,10 @@ class DisputesExtrinsic(Codable):
 
     @staticmethod
     def decode_from(buffer: bytes, offset: int = 0) -> Tuple[Any, int]:
-        verdicts, size = Vector.decode_from(Verdict, buffer, offset)
+        verdicts, size = Verdicts.decode_from(buffer, offset)
         current_offset = offset + size
-        culprits, size = Vector.decode_from(Culprit, buffer, current_offset)
+        culprits, size = Culprits.decode_from(buffer, current_offset)
         current_offset += size
-        faults, size = Vector.decode_from(Fault, buffer, current_offset)
+        faults, size = Faults.decode_from(buffer, current_offset)
         current_offset += size
         return DisputesExtrinsic(Vector(verdicts), Vector(culprits), Vector(faults)), current_offset - offset
