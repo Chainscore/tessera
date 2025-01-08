@@ -62,7 +62,6 @@ class Byte(Codable[int]):
     
     def encode_into(self, buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> int:
         """Encode byte into buffer."""
-        print(f"Encoding byte {self.value} into buffer at offset {offset} of size {len(buffer)} with size {self.encode_size()}")
         return IntegerCodec(1).encode_into(self.value, buffer, offset)
 
     @staticmethod

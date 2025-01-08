@@ -10,6 +10,8 @@ registration and automatic type inference.
 from .base import (
     Codec, 
     EncodeError, DecodeError, 
+    BufferError,
+    codable_dataclass
 )
 
 # Re-export primitive codecs
@@ -26,3 +28,16 @@ from .composite.choices import ChoiceCodec
 from .composite.vectors import VectorCodec
 from .composite.dictionaries import DictionaryCodec
 from .composite.bit_sequences import BitSequenceCodec
+
+__all__ = [
+    "Codec", "EncodeError", "DecodeError", "BufferError",
+    "codable_dataclass",
+    "GeneralCodec", "IntegerCodec",
+    "BooleanCodec", "boolean_codec",
+    "StringCodec", "string_codec",
+    "ArrayCodec",
+    "ChoiceCodec",
+    "VectorCodec",
+    "DictionaryCodec",
+    "BitSequenceCodec"
+]

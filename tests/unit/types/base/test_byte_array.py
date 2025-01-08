@@ -6,9 +6,9 @@ from jam.types.base import (
     ByteArray96, ByteArray128, ByteArray144, ByteArray256, ByteArray784
 )
 
-def make_test_bytes(size: int) -> bytes:
+def make_test_bytes(size: int) -> bytearray:
     """Create test bytes of given size, repeating 0-255 pattern."""
-    return bytes(i % 256 for i in range(size))
+    return bytearray(i % 256 for i in range(size))
 
 class TestByteArrayTypes:
     """Test suite for fixed-width byte array type implementations."""
@@ -27,7 +27,7 @@ class TestByteArrayTypes:
     def test_valid_creation(self, array_class, size):
         """Test creation of ByteArray types with valid values."""
         # Test with zeros
-        value = bytes(size)
+        value = bytearray(size)
         byte_array = array_class(value)
         assert isinstance(byte_array, array_class)
         assert len(byte_array) == size
@@ -145,3 +145,19 @@ class TestByteArrayTypes:
         byte_array = array_class(value)
         expected = f"{array_class.__name__}([{', '.join(f'Byte(0x{byte.to_bytes().hex()})' for byte in value)}])"
         assert repr(byte_array) == expected
+        
+    @pytest.mark.parametrize("array_class,in_range,out_of_range", [
+        (ByteArray8, 8, 9),
+        (ByteArray16, 16, 17),
+        (ByteArray32, 32, 33),
+        (ByteArray64, 64, 65),
+        (ByteArray96, 96, 97),
+        (ByteArray128, 128, 129),
+        (ByteArray144, 144, 145),
+        (ByteArray256, 256, 257),
+        (ByteArray784, 784, 785),
+    ])
+    def test_fail_on_more_than_length(self, array_class, in_range, out_of_range):
+        """Test that creating ByteArray types with invalid lengths raises ValueError."""
+        with pytest.raises(ValueError):
+            array_class(bytearray(out_of_range))  # Too long

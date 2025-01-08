@@ -8,7 +8,7 @@ all codec implementations.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, fields
-from typing import Self, TypeVar, Generic, Tuple, Optional, Union, Any, Sequence, Callable
+from typing import Type, Self, TypeVar, Generic, Tuple, Optional, Union, Any, Sequence, Callable
 
 # Type variable for generic codec implementations
 T = TypeVar('T')
@@ -72,9 +72,7 @@ class Codable(Generic[T]):
     value: Any = None
     codec: Optional[Codec[Any]] = None
     
-    def __init__(self, 
-                 codec: Optional[Codec[Any]] = None,
-                 enc_sequence: Optional[Callable[[], Sequence[Any]]] = None):
+    def __init__(self, codec: Optional[Codec[Any]] = None):
         """
         Initialize the Codable.
         
@@ -83,14 +81,15 @@ class Codable(Generic[T]):
             enc_sequence: Optional function that returns sequence of fields to encode
         """
         self.codec = codec
-        self._enc_sequence = enc_sequence
+        
+    def enc_sequence(self) -> Sequence[Self]: ...
 
     def encode_size(self) -> int:
         """Calculate number of bytes needed to encode."""
         if self.codec is not None:
             return self.codec.encode_size(self.value if hasattr(self, 'value') else self)
-        elif self._enc_sequence is not None:
-            return sum(item.encode_size() for item in self._enc_sequence())
+        elif self.enc_sequence is not None:
+            return sum(item.encode_size() for item in self.enc_sequence())
         raise NotImplementedError("No supported encoding method found")
 
     def encode(self) -> bytes:
@@ -107,16 +106,15 @@ class Codable(Generic[T]):
                 buffer, 
                 offset
             )
-        elif self._enc_sequence is not None:
+        elif self.enc_sequence is not None:
             current_offset = offset
-            for item in self._enc_sequence():
+            for item in self.enc_sequence():
                 size = item.encode_into(buffer, current_offset)
                 current_offset += size
             return current_offset - offset
         raise NotImplementedError("No supported encoding method found")
 
     @staticmethod
-    @abstractmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[Any, int]:
         """
         Decode from buffer. Must be implemented by subclasses or added via decorator.
@@ -134,45 +132,39 @@ class Codable(Generic[T]):
         # the codec to decode it.
         raise NotImplementedError("decode_from must be implemented by subclasses or added via decorator")
 
-def codable_dataclass(cls):
-    """
-    Decorator that adds Codable support to a dataclass.
-    
-    Example:
-        @codable_dataclass
-        @dataclass
-        class Example(Codable):
-            field1: int
-            field2: str
-    """
-    def enc_sequence(self) -> Sequence[Codable]:
-        """Get sequence of fields to encode."""
-        return [getattr(self, field.name) for field in fields(self)]
-    
-    def decode_from(buffer: bytes, offset: int = 0) -> Tuple[Any, int]:
-        """Decode from buffer."""
-        current_offset = offset
-        decoded_values = []
-        field_types = [field.type for field in fields(cls)]
-        
-        
-        for field_type in field_types:
-            if isinstance(field_type, str):
-                raise ValueError(f"Field {field_type} is not a string")
-            value, size = field_type.decode_from(buffer, current_offset)
-            decoded_values.append(value)
-            current_offset += size
-            
-        return cls(*decoded_values), current_offset - offset
 
-    # Initialize with enc_sequence
-    original_init = cls.__init__
-    def new_init(self, *args, **kwargs):
-        Codable.__init__(self, enc_sequence=enc_sequence.__get__(self, cls))
-        original_init(self, *args, **kwargs)
+
+
+def codable_dataclass() -> Callable[[Type[T]], Type[T]]:
+    """
+    Decorator that adds Codable support to any dataclass.
+    """
+    def decorator(cls: Type[T]) -> Type[T]:
+        # Make the class inherit from Codable if it doesn't already
+        if not issubclass(cls, Codable):
+            cls.__bases__ = (Codable,) + cls.__bases__
+            
+        def enc_sequence(self) -> Sequence[Codable]:
+            return [getattr(self, field.name) for field in fields(self)]
+        
+        @staticmethod
+        def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[T, int]:
+            current_offset = offset
+            decoded_values = []
+            
+            for field in fields(cls): # type: ignore
+                field_type = field.type
+                if isinstance(field_type, str):
+                    raise ValueError(f"Field type '{field_type}' is not resolved")
+                value, size = field_type.decode_from(buffer, current_offset)
+                decoded_values.append(value)
+                current_offset += size
+                
+            instance = cls(*decoded_values)
+            return instance, current_offset - offset  # type: ignore
+        
+        setattr(cls, 'enc_sequence', enc_sequence)
+        setattr(cls, 'decode_from', decode_from)
+        return cls
     
-    cls.__init__ = new_init
-    cls.decode_from = staticmethod(decode_from)
-    
-    return cls
-    
+    return decorator

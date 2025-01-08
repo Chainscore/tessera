@@ -25,7 +25,7 @@ class ByteArray(BaseSequence[Byte]):
     
     length: int = 0
     
-    def __init__(self, initial: Sequence[Union[Byte, int]] ):
+    def __init__(self, initial: Union[Sequence[Union[Byte, int]], bytearray] ):
         """
         Initialize byte array.
         

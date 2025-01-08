@@ -4,14 +4,14 @@ from typing import Any, List, Optional, Tuple
 
 import pytest
 
-from jam.types.base.byte_array import ByteArray32, ByteArray64, ByteArray96, ByteArray128, ByteArray144
+from jam.types.base import ByteArray32, ByteArray64, ByteArray96, ByteArray128, ByteArray144
 from jam.types.base.integers.fixed import U32
-from jam.utils.codec.base import Codable
-from jam.types.base.sequences.array import Array
+from jam.utils.codec.base import Codable, codable_dataclass
 
 TimeSlot = U32
 ValidatorIndex = U32
 
+@codable_dataclass()
 @dataclass
 class DemoHeader(Codable):
     """Block header structure."""
@@ -22,32 +22,6 @@ class DemoHeader(Codable):
     author_index: ValidatorIndex
     entropy_source: ByteArray32
     seal: ByteArray32
-
-    def enc_sequence(self) -> List[Codable]:
-        return [self.parent, self.parent_state_root, self.extrinsic_hash, self.slot, self.author_index, self.entropy_source, self.seal]
-
-    def encode_size(self) -> int:
-        return sum(item.encode_size() for item in self.enc_sequence())
-
-    def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
-        current_offset = offset
-        for item in self.enc_sequence():
-            size = item.encode_into(buffer, current_offset)
-            current_offset += size
-        return current_offset - offset
-
-    @staticmethod
-    def decode_from(buffer: bytes, offset: int = 0) -> Tuple[Any, int]:
-        # Decode all items in the sequence
-        decoded = []
-        current_offset = offset
-        for item_type in [ByteArray32, ByteArray32, ByteArray32, U32, U32, ByteArray32, ByteArray32]:
-            item, size = item_type.decode_from(buffer, current_offset)
-            decoded.append(item)  # Use the decoded item directly, not the tuple
-            current_offset += size
-        
-        return DemoHeader(*decoded), current_offset - offset
-
 
 class TestDemoHeader:
     """Test suite for DemoHeader type implementation."""
