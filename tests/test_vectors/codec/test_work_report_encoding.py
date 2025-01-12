@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from jam.types.base.integers import U16, U32
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.types.protocol.core import CoreIndex, ErasureRoot, ExportsRoot, Gas, ServiceId, TimeSlot
 from jam.types.protocol.crypto import BeefyRoot, HeaderHash, OpaqueHash, StateRoot
 from jam.types.work import WorkReport, WorkResult, WorkExecResult

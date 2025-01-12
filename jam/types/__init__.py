@@ -28,7 +28,7 @@ from jam.types.block import (
 
 # Header types
 from jam.types.header import (
-    Header
+    Header, TicketsMark, OffendersMark
 )
 
 # Service types
@@ -64,11 +64,6 @@ from jam.types.protocol.history import (
     Mmr, BlockInfo, BlocksHistory, ReportedWorkPackage
 )
 
-# Epoch types
-from jam.types.protocol.epoch import (
-    EpochMark
-)
-
 # Validator types
 from jam.types.protocol.validators import (
     ValidatorMetadata, ValidatorData, ValidatorsData, ValidatorArray
@@ -94,7 +89,7 @@ __all__ = [
     'Block', 'Extrinsic',
 
     # Header types
-    'Header',
+    'Header', 'EpochMark', 'TicketsMark', 'OffendersMark',
 
     # Service types
     'ServiceInfo',
@@ -116,9 +111,6 @@ __all__ = [
 
     # History types
     'Mmr', 'BlockInfo', 'BlocksHistory', 'ReportedWorkPackage',
-
-    # Epoch types
-    'EpochMark',
 
     # Validator types
     'ValidatorMetadata', 'ValidatorData', 'ValidatorsData', 'ValidatorArray',

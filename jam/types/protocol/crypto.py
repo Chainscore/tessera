@@ -1,4 +1,4 @@
-from jam.types.base.byte_array import (
+from jam.types.base import (
     ByteArray32, ByteArray64, ByteArray96,
     ByteArray144, ByteArray784
 )

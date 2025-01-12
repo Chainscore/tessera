@@ -50,7 +50,7 @@ class IntegerCodec(Codec):
         """Get encoded size (fixed for given type)."""
         return self.byte_size
                     
-    def encode_into(self, value: int, buffer: bytearray, 
+    def encode_into(self, value: int, buffer: Union[bytes, bytearray, memoryview], 
                    offset: int = 0) -> int:
         """
         Encode integer into buffer.
@@ -74,7 +74,10 @@ class IntegerCodec(Codec):
             )
             
         check_buffer_size(buffer, self.byte_size, offset)
-        buffer[offset:offset+self.byte_size] = encode(value, self.byte_size)
+        encoded_bytes = encode(value, self.byte_size)
+        if isinstance(buffer, bytes):
+            buffer = bytearray(buffer)
+        buffer[offset:offset+self.byte_size] = encoded_bytes
         return self.byte_size
 
     @staticmethod
@@ -175,10 +178,12 @@ class GeneralCodec(Codec[int]):
         if(value < 2**(7*8)):
             _l = self.l(value)
             buffer[offset: offset + 1] = IntegerCodec(1).encode(2**8 - 2**(8-_l) + math.floor(Decimal(value)/(Decimal(2)**(_l*8))))
-            buffer[offset + 1: offset + _l] = IntegerCodec(_l).encode(value % 2**(_l*8))
+            offset += 1
+            buffer[offset: offset + _l] = IntegerCodec(_l).encode(value % 2**(_l*8))
         elif value < 2**64:
             buffer[offset: offset + 1] = IntegerCodec(1).encode(2**8 - 1)
-            buffer[offset + 1: offset + 8] = IntegerCodec(8).encode(value)
+            offset += 1
+            buffer[offset: offset + 8] = IntegerCodec(8).encode(value)
         else:
             raise EncodeError(
                 expected=0,

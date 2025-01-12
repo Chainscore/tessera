@@ -2,14 +2,12 @@
 import json
 from pathlib import Path
 
-from jam.types.base.null import Null
-from jam.types.base.option import Option
 from jam.types.block import Header
 from jam.types.extrinsics.tickets import TicketAttempt, TicketBody, TicketId
 from jam.types.header import OffendersMark, TicketsMark
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.crypto import (
-    Ed25519Public, Entropy, HeaderHash, StateRoot, BeefyRoot, OpaqueHash,
+    Ed25519Public, Entropy, HeaderHash, StateRoot, OpaqueHash,
     BandersnatchPublic, BandersnatchVrfSignature
 )
 from jam.types.protocol.epoch import EpochMark
@@ -27,8 +25,8 @@ def test_header_0_encoding():
         expected_bytes = f.read()
 
     # Create Header from JSON
-    epoch_mark = Null()
-    tickets_mark = Null()
+    epoch_mark = None
+    tickets_mark = None
     if header_json["epoch_mark"] is not None:
         epoch_mark = EpochMark(
             entropy=Entropy(bytes.fromhex(header_json["epoch_mark"]["entropy"][2:])),
@@ -46,8 +44,8 @@ def test_header_0_encoding():
         parent_state_root=StateRoot(bytes.fromhex(header_json["parent_state_root"][2:])),
         extrinsic_hash=OpaqueHash(bytes.fromhex(header_json["extrinsic_hash"][2:])),
         slot=TimeSlot(header_json["slot"]),
-        epoch_mark=Option(EpochMark, epoch_mark),
-        tickets_mark=Option(TicketsMark, tickets_mark),
+        epoch_mark=epoch_mark,
+        tickets_mark=tickets_mark,
         offenders_mark=OffendersMark(
             [Ed25519Public(bytes.fromhex(offender[2:])) for offender in header_json["offenders_mark"]]
         ),
@@ -86,8 +84,8 @@ def test_header_1_encoding():
         expected_bytes = f.read()
 
     # Create Header from JSON
-    epoch_mark = Null()
-    tickets_mark = Null()
+    epoch_mark = None
+    tickets_mark = None
     if header_json["epoch_mark"] is not None:
         epoch_mark = EpochMark(
             entropy=Entropy(bytes.fromhex(header_json["epoch_mark"]["entropy"][2:])),
@@ -105,8 +103,8 @@ def test_header_1_encoding():
         parent_state_root=StateRoot(bytes.fromhex(header_json["parent_state_root"][2:])),
         extrinsic_hash=OpaqueHash(bytes.fromhex(header_json["extrinsic_hash"][2:])),
         slot=TimeSlot(header_json["slot"]),
-        epoch_mark=Option(EpochMark, epoch_mark),
-        tickets_mark=Option(TicketsMark, tickets_mark),
+        epoch_mark=epoch_mark,
+        tickets_mark=tickets_mark,
         offenders_mark=OffendersMark(
             [Ed25519Public(bytes.fromhex(offender[2:])) for offender in header_json["offenders_mark"]]
         ),

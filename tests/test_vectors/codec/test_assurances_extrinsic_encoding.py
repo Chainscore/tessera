@@ -2,7 +2,6 @@
 import json
 from pathlib import Path
 
-from jam.types.base.vector import Vector
 from jam.types.extrinsics.assurances import AssurancesExtrinsic, AvailAssurance, AvailBitField
 from jam.types.protocol.core import ValidatorIndex
 from jam.types.protocol.crypto import Ed25519Signature, OpaqueHash
@@ -21,7 +20,7 @@ def test_assurances_extrinsic_encoding():
     # Create AssurancesExtrinsic from JSON
     assurances = AssurancesExtrinsic(
         [AvailAssurance(
-            anchor=OpaqueHash(a["anchor"][2:]),
+            anchor=OpaqueHash(a["anchor"]),
             bitfield=AvailBitField(a["bitfield"]),
             validator_index=ValidatorIndex(a["validator_index"]),
             signature=Ed25519Signature(a["signature"])
@@ -31,6 +30,9 @@ def test_assurances_extrinsic_encoding():
     # Test encoding
     encoded = bytearray(assurances.encode_size())
     assurances.encode_into(encoded)
+
+    print("ENC:", bytes(encoded))
+    print("EXP:", expected_bytes)
     assert bytes(encoded) == expected_bytes
 
     # # Test decoding

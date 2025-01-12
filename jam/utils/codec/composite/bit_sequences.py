@@ -19,7 +19,7 @@ class BitSequenceCodec(Codec[Sequence[BitSequence]]):
         return (len(value) + 7) // 8
 
     def encode_into(self, value: Sequence[BitSequence], buffer: bytearray, offset: int = 0) -> int:
-        print("Encoding bit sequence", value)
+        print(f"Encoding bit sequence {value} of length")
         if self.bit_length != len(value):
             raise EncodeError(
                 expected=self.bit_length,
@@ -43,15 +43,14 @@ class BitSequenceCodec(Codec[Sequence[BitSequence]]):
             bit_position = i % 8
             if bool(bit):
                 buffer[byte_index] |= (1 << bit_position)
-        
-        print("Encoded bit sequence", buffer[offset:offset + total_size].hex())
+
+        print(f"Encoded bit sequence {buffer[offset:offset+total_size]}")
         return total_size
 
     @staticmethod
     def decode_from(length: int,
                     buffer: Union[bytes, bytearray, memoryview], 
                     offset: int = 0) -> Tuple[Sequence[BitSequence], int]:
-        print("Decoding bit sequence", buffer[offset:offset + length].hex())
         """
         Decode bit sequence from buffer.
         
@@ -72,7 +71,7 @@ class BitSequenceCodec(Codec[Sequence[BitSequence]]):
                 actual=0,
                 message="bit_length must be specified for decoding"
             )
-        
+
         if length == 0:
             return [], 0
             
@@ -88,5 +87,5 @@ class BitSequenceCodec(Codec[Sequence[BitSequence]]):
                 if len(result) < length:
                     result.append(bool(byte & (1 << bit_idx)))
         
-        print("Decoded bit sequence", result)
+        print(f"Decoded bit sequence {result}")
         return result, byte_count

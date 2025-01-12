@@ -3,13 +3,11 @@ import json
 from pathlib import Path
 
 from jam.types.base.boolean import Boolean
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.types.extrinsics.disputes import DisputesExtrinsic, Culprit, Fault, Judgement, JudgementVotes, Verdict
 from jam.types.protocol.core import ValidatorIndex, WorkReportHash
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature
-from jam.types.work import WorkReport, WorkPackageSpec
-from jam.types.base.integers import U16, U32
-from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
+from jam.types.base.integers import  U32
 
 def test_disputes_extrinsic_encoding():
     """Test encoding/decoding of DisputesExtrinsic against test vectors."""

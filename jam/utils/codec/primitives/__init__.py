@@ -12,18 +12,15 @@ from .integers import (
     GeneralCodec,
     IntegerCodec
 )
-from .bools import BooleanCodec as BoolCodec, boolean_codec
-from .strings import StringCodec as StrCodec, string_codec
+from .bools import BooleanCodec
+from .strings import StringCodec
 
 __all__ = [
     # Integer codecs
     'IntegerCodec',
     'GeneralCodec',
     # Boolean codec
-    'BoolCodec',
+    'BooleanCodec',
     # String codec
-    'StrCodec',
-    # Codecs
-    'boolean_codec',
-    'string_codec',
+    'StringCodec',
 ]

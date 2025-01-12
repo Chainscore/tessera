@@ -10,19 +10,35 @@ registration and automatic type inference.
 from .base import (
     Codec, 
     EncodeError, DecodeError, 
+    BufferError,
+    Codable,
 )
+
+# Re-export JSON codec
+from .json import JsonCodec, JsonSerializable, json_serializable
 
 # Re-export primitive codecs
-from .primitives.integers import (
+from .primitives import (
     GeneralCodec,
-    IntegerCodec
+    IntegerCodec,
+    BooleanCodec,
+    StringCodec,
 )
-from .primitives.bools import BooleanCodec, boolean_codec
-from .primitives.strings import StringCodec, string_codec
 
 # Re-export composite type constructors
-from .composite.arrays import ArrayCodec
-from .composite.choices import ChoiceCodec
-from .composite.vectors import VectorCodec
-from .composite.dictionaries import DictionaryCodec
-from .composite.bit_sequences import BitSequenceCodec
+from .composite import BitSequenceCodec, decodable_dataclass, ArrayCodec, ChoiceCodec, VectorCodec, DictionaryCodec
+
+__all__ = [
+    "Codable",
+    "Codec", "EncodeError", "DecodeError", "BufferError",
+    "GeneralCodec", "IntegerCodec",
+    "BooleanCodec",
+    "StringCodec",
+    "ArrayCodec",
+    "ChoiceCodec",
+    "decodable_dataclass",
+    "VectorCodec",
+    "DictionaryCodec",
+    "BitSequenceCodec",
+    "JsonCodec", "JsonSerializable", "json_serializable"
+]

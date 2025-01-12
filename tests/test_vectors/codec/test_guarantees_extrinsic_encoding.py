@@ -4,9 +4,9 @@ from pathlib import Path
 
 from jam.types.base.bytes import Bytes
 from jam.types.base.integers import U16, U32
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.types.extrinsics.guarantees import GuaranteesExtrinsic, ReportGuarantee, ValidatorSignature
-from jam.types.protocol.core import CoreIndex, ErasureRoot, ExportsRoot, Gas, ServiceId, ValidatorIndex, TimeSlot, WorkPackageHash
+from jam.types.protocol.core import CoreIndex, ErasureRoot, ExportsRoot, Gas, ServiceId, ValidatorIndex, TimeSlot
 from jam.types.protocol.crypto import BeefyRoot, Ed25519Signature, HeaderHash, OpaqueHash, StateRoot
 from jam.types.work import WorkExecResult
 from jam.types.work import WorkReport
@@ -29,10 +29,10 @@ def test_guarantees_extrinsic_encoding():
         [ReportGuarantee(
             report=WorkReport(
                 package_spec=WorkPackageSpec(
-                    hash=OpaqueHash(bytes.fromhex(g["report"]["package_spec"]["hash"][2:])),
+                    hash=OpaqueHash(g["report"]["package_spec"]["hash"]),
                     length=U32(g["report"]["package_spec"]["length"]),
-                    erasure_root=ErasureRoot(bytes.fromhex(g["report"]["package_spec"]["erasure_root"][2:])),
-                    exports_root=ExportsRoot(bytes.fromhex(g["report"]["package_spec"]["exports_root"][2:])),
+                    erasure_root=ErasureRoot(g["report"]["package_spec"]["erasure_root"]),
+                    exports_root=ExportsRoot(g["report"]["package_spec"]["exports_root"]),
                     exports_count=U16(g["report"]["package_spec"]["exports_count"])
                 ),
                 context=RefineContext(

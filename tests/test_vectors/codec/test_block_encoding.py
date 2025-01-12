@@ -4,11 +4,9 @@ from pathlib import Path
 
 from jam.types.base.boolean import Boolean
 from jam.types.base.integers import U16, U32
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.types.block import Block, Header, Extrinsic
 from jam.types.base.bytes import Bytes
-from jam.types.base.option import Option
-from jam.types.base.null import Null
 from jam.types.extrinsics.assurances import AssurancesExtrinsic, AvailAssurance, AvailBitField
 from jam.types.extrinsics.disputes import Culprit, DisputesExtrinsic, Fault, Judgement, JudgementVotes, Verdict
 from jam.types.extrinsics.guarantees import GuaranteesExtrinsic, ReportGuarantee, ValidatorSignature
@@ -37,8 +35,8 @@ def test_block_encoding():
         expected_bytes = f.read()
 
     # Create Block from JSON
-    epoch_mark = Null()
-    tickets_mark = Null()
+    epoch_mark = None
+    tickets_mark = None
     if block_json["header"]["epoch_mark"] is not None:
         epoch_mark = EpochMark(
             entropy=Entropy(bytes.fromhex(block_json["header"]["epoch_mark"]["entropy"][2:])),
@@ -57,8 +55,8 @@ def test_block_encoding():
         parent_state_root=StateRoot(bytes.fromhex(block_json["header"]["parent_state_root"][2:])),
         extrinsic_hash=OpaqueHash(bytes.fromhex(block_json["header"]["extrinsic_hash"][2:])),
         slot=TimeSlot(block_json["header"]["slot"]),
-        epoch_mark=Option(EpochMark, epoch_mark),
-        tickets_mark=Option(TicketsMark, tickets_mark),
+        epoch_mark=epoch_mark,
+        tickets_mark=tickets_mark,
         offenders_mark=OffendersMark(
             [Ed25519Public(bytes.fromhex(offender[2:])) for offender in block_json["header"]["offenders_mark"]]
         ),

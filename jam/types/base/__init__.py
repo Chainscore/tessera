@@ -1,30 +1,46 @@
-"""Base types for the JAM protocol."""
-
-from jam.types.base.integers import U8, U16, U32, U64
-from jam.types.base.byte_array import (
-    ByteArray32, ByteArray64, ByteArray96,
-    ByteArray144, ByteArray784
-)
-from jam.types.base.array import Array
+from jam.types.base.integers import U8, U16, U32, U64, U128, U256, U512, Int, decodable_int
 from jam.types.base.bytes import Bytes
-from jam.types.base.vector import Vector
+from jam.types.base.string import String
 from jam.types.base.choice import Choice
+from jam.types.base.sequences import Array, Vector, BitSequence, ByteArray8, ByteArray16, ByteArray32, ByteArray64, ByteArray96, ByteArray128, ByteArray144, ByteArray256, ByteArray784, ByteArray, decodable_array, decodable_bit_sequence, decodable_vector, decodable_byte_array 
+from jam.types.base.option import Option
 from jam.types.base.null import Null
+from jam.types.base.dictionary import Dictionary
+from jam.types.base.boolean import Boolean
+from jam.types.base.byte import Byte
 
 __all__ = [
     # Integer types
-    'U8', 'U16', 'U32', 'U64',
+    'Int', 'U8', 'U16', 'U32', 'U64', 'U128', 'U256', 'U512',
     
     # Fixed-size byte array types
-    'ByteArray32', 'ByteArray64', 'ByteArray96',
-    'ByteArray144', 'ByteArray784',
+    'ByteArray',
+    'ByteArray8', 'ByteArray16', 'ByteArray32', 'ByteArray64', 'ByteArray96', 'ByteArray128', 'ByteArray144', 'ByteArray256', 'ByteArray784',
     
     # Array types
-    'Array', 'Vector',
+    'Array', 'Vector', 'BitSequence',
     
     # Variable-length byte sequence type
     'Bytes',
     
     # Choice and Null types
-    'Choice', 'Null'
+    'Choice', 'Null',
+    
+    # Dictionary type
+    'Dictionary',
+    
+    # Boolean type
+    'Boolean',
+    
+    # Byte type
+    'Byte',
+    
+    # String type
+    'String',
+    
+    # Option type
+    'Option',
+    
+    # Decodable types
+    'decodable_int', 'decodable_array', 'decodable_bit_sequence', 'decodable_vector', 'decodable_byte_array'
 ]
