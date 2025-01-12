@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Sequence, Tuple, Type, TypeVar, Union, List
+from typing import Callable, Sequence, Tuple, Type, TypeVar, Union, List
 
 from jam.types.base.boolean import Boolean
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
@@ -18,7 +18,7 @@ class BitSequence(BaseSequence[Boolean]):
     
     length: int = 0
     
-    def __init__(self, initial: Union[Sequence[Union[Boolean, int, bool]], bytes, bytearray, memoryview]):
+    def __init__(self, initial: Union[Sequence[Union[Boolean, int, bool]], bytes, bytearray, memoryview, str]):
         """
         Initialize bit sequence.
         
@@ -37,6 +37,10 @@ class BitSequence(BaseSequence[Boolean]):
         __data = []
         if isinstance(initial, bytearray) or isinstance(initial, bytes) or isinstance(initial, memoryview):
             __data = [Boolean(bool(bit)) for bit in initial]
+        elif isinstance(initial, str):
+            if initial.startswith('0x'):
+                initial = initial[2:]
+            __data = [Boolean(bool(int(bit))) for bit in initial]
         else:
             for item in initial:
                 if isinstance(item, Boolean):

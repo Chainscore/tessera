@@ -7,8 +7,8 @@ all codec implementations.
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, fields
-from typing import Type, Self, TypeVar, Generic, Tuple, Optional, Union, Any, Sequence, Callable
+from dataclasses import dataclass, fields, is_dataclass
+from typing import Type, TypeVar, Generic, Tuple, Optional, Union, Any, Dict
 
 # Type variable for generic codec implementations
 T = TypeVar('T')
@@ -16,6 +16,7 @@ T = TypeVar('T')
 class CodecError(Exception):
     """Base class for codec-related exceptions."""
     pass
+
 
 @dataclass
 class BufferError(CodecError):
@@ -64,9 +65,10 @@ class Codable(Generic[T]):
     """
     Base class for all codable types.
     
-    Can be used in two ways:
+    Can be used in three ways:
     1. With a codec: Initialize with codec=some_codec
     2. With sequence: Initialize with enc_sequence=lambda: [field1, field2, ...]
+    3. With JSON: Use to_json() and from_json() for JSON serialization
     """
     
     value: Any = None
@@ -82,14 +84,10 @@ class Codable(Generic[T]):
         """
         self.codec = codec
         
-    def enc_sequence(self) -> Sequence[Self]: ...
-
     def encode_size(self) -> int:
         """Calculate number of bytes needed to encode."""
         if self.codec is not None:
             return self.codec.encode_size(self.value if hasattr(self, 'value') else self)
-        elif self.enc_sequence is not None:
-            return sum(item.encode_size() for item in self.enc_sequence())
         raise NotImplementedError("No supported encoding method found")
 
     def encode(self) -> bytes:
@@ -106,12 +104,6 @@ class Codable(Generic[T]):
                 buffer, 
                 offset
             )
-        elif self.enc_sequence is not None:
-            current_offset = offset
-            for item in self.enc_sequence():
-                size = item.encode_into(buffer, current_offset)
-                current_offset += size
-            return current_offset - offset
         raise NotImplementedError("No supported encoding method found")
 
     @staticmethod
@@ -128,43 +120,64 @@ class Codable(Generic[T]):
                 - The decoded value
                 - Number of bytes read
         """
-        # We cannot implement this here because this is static method and we need to know
-        # the codec to decode it.
         raise NotImplementedError("decode_from must be implemented by subclasses or added via decorator")
 
-
-
-
-def codable_dataclass() -> Callable[[Type[T]], Type[T]]:
-    """
-    Decorator that adds Codable support to any dataclass.
-    """
-    def decorator(cls: Type[T]) -> Type[T]:
-        # Make the class inherit from Codable if it doesn't already
-        if not issubclass(cls, Codable):
-            cls.__bases__ = (Codable,) + cls.__bases__
-            
-        def enc_sequence(self) -> Sequence[Codable]:
-            return [getattr(self, field.name) for field in fields(self)]
+    @classmethod
+    def from_json(cls: Type[T], data: Dict[str, Any]) -> T:
+        """Create an instance from a JSON dictionary.
         
-        @staticmethod
-        def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[T, int]:
-            current_offset = offset
-            decoded_values = []
+        Args:
+            data: Dictionary containing the serialized data
             
-            for field in fields(cls): # type: ignore
-                field_type = field.type
-                if isinstance(field_type, str):
-                    raise ValueError(f"Field type '{field_type}' is not resolved")
-                value, size = field_type.decode_from(buffer, current_offset)
-                decoded_values.append(value)
-                current_offset += size
+        Returns:
+            An instance of the class
+            
+        Raises:
+            ValueError: If the data is invalid or missing required fields
+            TypeError: If the data contains invalid types
+        """
+        if not is_dataclass(cls):
+            raise TypeError(f"{cls.__name__} must be a dataclass to use JSON serialization")
+            
+        field_types = {f.name: f.type for f in fields(cls)}
+        field_values = {}
+        
+        for field in fields(cls):
+            name = field.name
+            if name not in data:
+                raise ValueError(f"Missing field {name}")
                 
-            instance = cls(*decoded_values)
-            return instance, current_offset - offset  # type: ignore
+            value = data[name]
+            field_type = field_types[name]
+            
+            # Handle nested Codable types
+            if isinstance(field_type, type) and hasattr(field_type, 'from_json'):
+                field_values[name] = field_type.from_json(value)
+            else:
+                field_values[name] = value
+                
+        return cls(**field_values)  # type: ignore
+
+    def to_json(self) -> Dict[str, Any]:
+        """Convert the instance to a JSON dictionary.
         
-        setattr(cls, 'enc_sequence', enc_sequence)
-        setattr(cls, 'decode_from', decode_from)
-        return cls
-    
-    return decorator
+        Returns:
+            Dictionary containing the serialized data
+            
+        Raises:
+            TypeError: If the instance is not a dataclass
+        """
+        if not is_dataclass(self):
+            raise TypeError(f"{self.__class__.__name__} must be a dataclass to use JSON serialization")
+            
+        result = {}
+        for field in fields(self):
+            value = getattr(self, field.name)
+            
+            # Handle nested types with to_json
+            if hasattr(value, 'to_json'):
+                result[field.name] = value.to_json()
+            else:
+                result[field.name] = value
+                
+        return result

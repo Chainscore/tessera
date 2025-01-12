@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.types.work import RefineContext
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash, StateRoot, BeefyRoot, OpaqueHash

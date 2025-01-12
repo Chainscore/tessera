@@ -1,6 +1,5 @@
 """Tests for ticket-related types."""
 import json
-import os
 from pathlib import Path
 
 from jam.types.extrinsics.tickets import TicketEnvelope, TicketsExtrinsic

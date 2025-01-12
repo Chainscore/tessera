@@ -5,7 +5,7 @@ Implements encoding and decoding of choice (union) values according to the JAM s
 Choice values are encoded with a 1-byte tag followed by the encoded value based on the tag.
 """
 
-from typing import Sequence, TypeVar, Generic, Union, Type, Tuple, Dict, Optional, cast
+from typing import Sequence, TypeVar, Generic, Union, Type, Tuple, Optional, cast
 
 from jam.utils.codec.primitives.integers import GeneralCodec
 from ..base import Codable, Codec, EncodeError, DecodeError
@@ -66,7 +66,7 @@ class ChoiceCodec(Codec[T], Generic[T]):
         if value is None:
             raise EncodeError(0, 0, "Cannot encode None value")
             
-        if not isinstance(value, Codable):
+        if not (isinstance(value, Codable) or isinstance(value, type(None))):
             raise EncodeError(0, 0, "Value must be Codable")
             
         try:
@@ -91,16 +91,24 @@ class ChoiceCodec(Codec[T], Generic[T]):
         Raises:
             EncodeError: If value type is not in choices list or buffer is too small
         """
-        if not isinstance(value, Codable):
-            raise EncodeError(0, 0, "Value must be Codable")
-            
+        if (not isinstance(value, Codable)) & (value is not None):
+            raise EncodeError(0, 0, f"Value {value} must be Codable")
+        
         try:
-            tag = self.choices.index(type(value))
+            tag = 0
+            for i, choice in enumerate(self.choices):
+                if choice is type(value):
+                    tag = i
+                    break
         except ValueError:
-            raise EncodeError(0, 0, f"Value type {type(value)} not in choices list")
-            
+            raise EncodeError(0, 0, f"Value type {type(value)} not in choices list {self.choices}")
+        
         tag_size = self._tag_codec.encode_into(tag, buffer, offset)
-        value_size = value.encode_into(buffer, offset + tag_size)
+        offset += tag_size
+        value_size = 0
+        if value is not None:
+            value_size = value.encode_into(buffer, offset)
+            offset += value_size
         return tag_size + value_size
 
     @staticmethod
@@ -132,6 +140,9 @@ class ChoiceCodec(Codec[T], Generic[T]):
         
         if tag < 0 or tag >= len(choices):
             raise DecodeError(offset, 1, f"Invalid choice tag: {tag}")
-            
+        
+        if choices[tag] is type(None):
+            return None, tag_size
+        
         value, value_size = choices[tag].decode_from(buffer, offset + tag_size)
-        return value, tag_size + value_size
+        return cast(choices[tag], value), tag_size + value_size

@@ -2,11 +2,9 @@
 import json
 from pathlib import Path
 
-from jam.types.base.vector import Vector
 from jam.types.base.bytes import Bytes
 from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
 from jam.types.protocol.core import ServiceId
-from jam.types.protocol.crypto import OpaqueHash
 
 def test_preimages_extrinsic_encoding():
     """Test encoding/decoding of PreimagesExtrinsic against test vectors."""

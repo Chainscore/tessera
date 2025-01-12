@@ -1,6 +1,6 @@
 from typing import Callable, Self, Union, Any, Tuple, TypeVar, Type, cast, Optional
 from jam.utils.codec.base import Codable
-from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
+from jam.utils.codec.primitives.integers import IntegerCodec
 from .base import BaseInteger
 
 T = TypeVar('T', bound='BaseInteger')
@@ -20,6 +20,32 @@ class FixedInt(BaseInteger, Codable):
             max_value = (1 << (8 * self.byte_size)) - 1
             if not 0 <= value <= max_value:
                 raise ValueError(f"Value must be between 0 and {max_value}, got {value}")
+
+    def to_json(self) -> int:
+        """Convert integer to JSON value.
+        
+        Returns:
+            Integer value
+        """
+        return self.value
+
+    @classmethod
+    def from_json(cls, data: int) -> 'FixedInt':
+        """Create integer from JSON value.
+        
+        Args:
+            data: Integer value
+            
+        Returns:
+            New FixedInt instance
+            
+        Raises:
+            TypeError: If data is not an integer
+            ValueError: If value is out of range
+        """
+        if not isinstance(data, int):
+            raise TypeError("Value must be an integer")
+        return cls(data)
 
 def decodable_int(byte_size: int) -> Callable[[Type[FixedInt]], Type[FixedInt]]:
     """Decorator to make a class decodable as an integer."""

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from jam.types.base.boolean import Boolean
-from jam.types.base.vector import Vector
+from jam.types.base import Vector
 from jam.types.extrinsics.disputes import DisputesExtrinsic, Culprit, Fault, Judgement, JudgementVotes, Verdict
 from jam.types.protocol.core import ValidatorIndex, WorkReportHash
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature

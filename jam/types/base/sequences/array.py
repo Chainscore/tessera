@@ -39,7 +39,6 @@ class Array(BaseSequence[T]):
             TypeError: If elements are not all of the same Codable type
             ValueError: If initial values don't match fixed length
         """
-        print(f"Array init: {self._length} {initial} {self._element_type}")
         if len(initial) != self._length:
             raise ValueError(f"Initial values must have length {self._length}")
         
@@ -159,7 +158,8 @@ def decodable_array(length: int, element_type: Type[T]) -> Callable[[Type[Any]],
         
         @staticmethod
         def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[Any, int]:
-            return ArrayCodec.decode_from(length, element_type, buffer, offset)
+            value, size = ArrayCodec.decode_from(length, element_type, buffer, offset)
+            return cls(value), size
         
         cls.decode_from = decode_from
         

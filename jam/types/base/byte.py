@@ -1,7 +1,7 @@
 from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
 
 from jam.utils.codec.base import Codable
-from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
+from jam.utils.codec.primitives.integers import IntegerCodec
 
 class Byte(Codable[int]):
     """

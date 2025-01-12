@@ -1,13 +1,12 @@
 """Unit tests for Option type implementation."""
 
 import pytest
-from typing import Any, Optional, Type, TypeVar, cast
+from typing import TypeVar, cast
 
 from jam.types.base.option import Option
 from jam.types.base.boolean import Boolean
 from jam.types.base.integers import Int
-from jam.types.base.null import Null
-from jam.utils.codec.base import EncodeError, DecodeError, Codable
+from jam.utils.codec.base import DecodeError, Codable
 
 T = TypeVar('T', bound=Codable)
 

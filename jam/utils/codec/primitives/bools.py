@@ -9,7 +9,6 @@ from typing import Tuple, Union
 from ..base import Codec, EncodeError, DecodeError
 from ..utils import check_buffer_size, ensure_size
 
-
 class BooleanCodec(Codec[bool]):
     """
     Codec for boolean values.

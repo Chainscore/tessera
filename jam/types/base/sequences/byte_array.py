@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Callable, Sequence, Tuple, Type, TypeVar, Union
 
 from jam.utils.codec.composite.arrays import ArrayCodec
 from jam.types.base.byte import Byte
@@ -25,7 +25,7 @@ class ByteArray(BaseSequence[Byte]):
     
     length: int = 0
     
-    def __init__(self, initial: Union[Sequence[Union[Byte, int]], bytearray] ):
+    def __init__(self, initial: Union[Sequence[Union[Byte, int]], bytearray, str] ):
         """
         Initialize byte array.
         
@@ -40,6 +40,11 @@ class ByteArray(BaseSequence[Byte]):
         """
         super().__init__(codec=ArrayCodec(self.length))
         self._element_type = Byte
+
+        if isinstance(initial, str):
+            if initial.startswith('0x'):
+                initial = initial[2:]
+            initial = bytes.fromhex(initial)
         
         if len(initial) != self.length:
             raise ValueError(f"Initial values must have length {self.length}")
@@ -169,6 +174,40 @@ class ByteArray(BaseSequence[Byte]):
             
         self._data = [Byte(x) for x in data]
 
+    def to_json(self) -> str:
+        """Convert byte array to hex string.
+        
+        Returns:
+            Hex string representation of the array, prefixed with '0x'
+        """
+        return '0x' + ''.join(f'{x.value:02x}' for x in self._data)
+
+    @classmethod
+    def from_json(cls, data: str) -> 'ByteArray':
+        """Create byte array from hex string.
+        
+        Args:
+            data: Hex string representation of the array, prefixed with '0x'
+            
+        Returns:
+            New ByteArray instance
+            
+        Raises:
+            ValueError: If data is not a valid hex string or has wrong length
+        """
+        if not isinstance(data, str) or not data.startswith('0x'):
+            raise ValueError("Data must be a hex string starting with '0x'")
+            
+        hex_str = data[2:]  # Remove '0x' prefix
+        if len(hex_str) != cls.length * 2:  # Each byte is 2 hex chars
+            raise ValueError(f"Data must have length {cls.length * 2} hex chars")
+            
+        try:
+            byte_data = bytes.fromhex(hex_str)
+            return cls(byte_data)
+        except ValueError as e:
+            raise ValueError(f"Invalid hex string: {e}")
+
     @classmethod
     def decode_from(
         cls,
@@ -214,36 +253,35 @@ def decodable_byte_array(length: int) -> Callable[[Type['ByteArray']], Type['Byt
         
         @staticmethod
         def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple['ByteArray', int]:
-            value, size = ArrayCodec.decode_from(length, Byte, buffer, offset)
-            return cls(value), size
+            return cls(buffer[offset:offset + length]), length
         
         cls.decode_from = decode_from
         return cls
     return decorator
 
 @decodable_byte_array(8)
-class ByteArray8(ByteArray): pass
+class ByteArray8(ByteArray): ...
 
 @decodable_byte_array(16)
-class ByteArray16(ByteArray): pass
+class ByteArray16(ByteArray): ...
 
 @decodable_byte_array(32)
-class ByteArray32(ByteArray): pass
+class ByteArray32(ByteArray): ...
 
 @decodable_byte_array(64)
-class ByteArray64(ByteArray): pass
+class ByteArray64(ByteArray): ...
 
 @decodable_byte_array(96)
-class ByteArray96(ByteArray): pass
+class ByteArray96(ByteArray): ...
 
 @decodable_byte_array(128)
-class ByteArray128(ByteArray): pass
+class ByteArray128(ByteArray): ...
 
 @decodable_byte_array(144)
-class ByteArray144(ByteArray): pass
+class ByteArray144(ByteArray): ...
 
 @decodable_byte_array(256)
-class ByteArray256(ByteArray): pass
+class ByteArray256(ByteArray): ...
 
 @decodable_byte_array(784)
-class ByteArray784(ByteArray): pass
+class ByteArray784(ByteArray): ...
