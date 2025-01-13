@@ -4,8 +4,6 @@ from jam.utils.codec import Codable, decodable_dataclass
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import Gas
 
-ServiceId = U32
-
 @decodable_dataclass
 @dataclass
 class ServiceInfo(Codable):

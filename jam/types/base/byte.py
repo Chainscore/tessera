@@ -1,7 +1,10 @@
-from typing import Any, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Optional, Self, Tuple, Type, TypeVar, Union, cast
 
+from jam.types.base.integers.fixed import U8
 from jam.utils.codec.base import Codable
 from jam.utils.codec.primitives.integers import IntegerCodec
+
+Bytable = Union[int, bytes, str, bytearray, memoryview, U8]
 
 class Byte(Codable[int]):
     """
@@ -18,7 +21,7 @@ class Byte(Codable[int]):
         >>> assert decoded == b
     """
     
-    def __init__(self, value: int):
+    def __init__(self, value: Bytable):
         """
         Initialize byte.
         
@@ -29,10 +32,25 @@ class Byte(Codable[int]):
             TypeError: If value is not an integer
             ValueError: If value is out of range
         """
-        if not isinstance(value, int):
-            raise TypeError("Value must be an integer")
+        # Wrap value if it's not a Byte
+        if isinstance(value, str):
+            if value.startswith('0x'):
+                value = int(value[2:], 16)
+            else:
+                value = int(value)
+        if isinstance(value, Byte) or isinstance(value, U8):
+            value = value.value
+        elif isinstance(value, bytes) or isinstance(value, bytearray) or isinstance(value, memoryview):
+            value = int.from_bytes(value)
+        elif isinstance(value, U8):
+            value = value.value
+        elif isinstance(value, int):
+            pass
+        else:
+            raise TypeError(f"Value ${type(value)} must be ${Bytable}")
+        
         if not 0 <= value <= 255:
-            raise ValueError("Value must be in range [0, 255]")
+            raise ValueError(f"Value {value} must be in range [0, 255]")
             
         self.value = value
 
@@ -44,6 +62,9 @@ class Byte(Codable[int]):
         """Compare for equality."""
         if isinstance(other, Byte):
             return self.value == other.value
+        if isinstance(other, Bytable):
+            return self == Byte(other)
+        
         if isinstance(other, int):
             return 0 <= other <= 255 and self.value == other
         return False

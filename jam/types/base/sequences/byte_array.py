@@ -1,7 +1,7 @@
 from typing import Callable, Sequence, Tuple, Type, TypeVar, Union
 
 from jam.utils.codec.composite.arrays import ArrayCodec
-from jam.types.base.byte import Byte
+from jam.types.base.byte import Bytable, Byte
 from .base import BaseSequence
 
 T = TypeVar('T', bound=Byte)
@@ -25,7 +25,7 @@ class ByteArray(BaseSequence[Byte]):
     
     length: int = 0
     
-    def __init__(self, initial: Union[Sequence[Union[Byte, int]], bytearray, str] ):
+    def __init__(self, initial: Union[Sequence[Bytable], bytearray, str] ):
         """
         Initialize byte array.
         
@@ -51,24 +51,21 @@ class ByteArray(BaseSequence[Byte]):
         
         self._data = [Byte(0)] * self.length
         for item, i in zip(initial, range(self.length)):
-            if isinstance(item, int):
-                self._data[i] = Byte(item)
-            else:
-                self._data[i] = item
-        
+            self._data[i] = Byte(item)
 
-    def __setitem__(self, index: int, value: Union[Byte, int]) -> None:
+    def __setitem__(self, index: int | slice, value: Bytable | Sequence[Bytable]) -> None:
         """Set byte at index."""
-        if not 0 <= index < self.length:
-            raise IndexError(f"Index {index} out of range")
-            
-        if isinstance(value, int):
-            value = Byte(value)
-            
-        if not isinstance(value, Byte):
-            raise TypeError("Value must be Byte or integer")
-            
-        self._data[index] = value
+        if isinstance(index, slice):
+            if isinstance(value, Sequence):
+                for i, v in zip(range(index.start, index.stop, index.step or 1), value):
+                    self._data[i] = Byte(v)
+            else:
+                for i in range(index.start, index.stop, index.step):
+                    self._data[i] = Byte(value)
+        else:
+            if not 0 <= index < self.length:
+                raise IndexError(f"Index {index} out of range")
+            self._data[index]= Byte(value)
 
     def append(self, value: Union[Byte, int]) -> None:
         """
@@ -84,13 +81,7 @@ class ByteArray(BaseSequence[Byte]):
         if len(self._data) >= self.length:
             raise ValueError(f"Cannot append to array of fixed length {self.length}")
             
-        if isinstance(value, int):
-            value = Byte(value)
-            
-        if not isinstance(value, Byte):
-            raise TypeError("Value must be Byte or integer")
-            
-        self._data.append(value)
+        self._data.append(Byte(value))
 
     def pop(self, index: int = -1) -> Byte:
         """
