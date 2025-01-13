@@ -1,9 +1,9 @@
 from typing import (
-    Generic, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union, Dict,
+    Generic, Mapping, Optional, Tuple, Type, TypeVar, Union, Dict,
     Iterator, ItemsView, KeysView, ValuesView
 )
 
-from jam.utils.codec.base import Codec, Codable
+from jam.utils.codec.base import Codable
 from jam.utils.codec.composite.dictionaries import DictionaryCodec
 
 K = TypeVar('K', bound=Codable)
@@ -27,6 +27,9 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V]):
         >>> decoded == d
         True
     """
+
+    key_type: Type[K]
+    value_type: Type[V]
     
     def __init__(self, initial: Optional[Mapping[K, V]] = None):
         """
@@ -96,31 +99,20 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V]):
         """Get view of values."""
         return self.value.values()
 
-    @staticmethod
-    def decode_from(
-        key_type: Type[K],
-        value_type: Type[V],
-        buffer: Union[bytes, bytearray, memoryview], 
-        offset: int = 0
-    ) -> Tuple['Dictionary[K, V]', int]:
-        """
-        Decode dictionary from buffer.
+    
+def decodable_dictionary(key_type: Type[K], value_type: Type[V]) -> Type[Dictionary[K, V]]:
+    def decorator(cls: Type[Dictionary[K, V]]) -> Type[Dictionary[K, V]]:
+        cls.key_type = key_type
+        cls.value_type = value_type
+
+        @staticmethod
+        def decode_from(
+            buffer: Union[bytes, bytearray, memoryview], 
+            offset: int = 0
+        ) -> Tuple['Dictionary[K, V]', int]:
+            value, size = DictionaryCodec.decode_from(key_type, value_type, buffer, offset)
+            return Dictionary(value), size 
         
-        Args:
-            key_type: Type of dictionary keys (must be Codable)
-            value_type: Type of dictionary values (must be Codable)
-            buffer: Source buffer
-            offset: Starting offset
-            
-        Returns:
-            Tuple of (decoded dictionary, bytes read)
-            
-        Raises:
-            DecodeError: If buffer is invalid or too short
-            TypeError: If key_type or value_type is not Codable
-        """
-        if not issubclass(key_type, Codable) or not issubclass(value_type, Codable):
-            raise TypeError("Dictionary key and value types must be Codable")
-            
-        value, size = DictionaryCodec.decode_from(key_type, value_type, buffer, offset)
-        return Dictionary(value), size 
+        cls.decode_from = decode_from
+        return cls
+    return decorator

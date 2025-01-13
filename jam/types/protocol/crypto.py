@@ -2,6 +2,7 @@ from jam.types.base import (
     ByteArray32, ByteArray64, ByteArray96,
     ByteArray144, ByteArray784
 )
+from jam.types.base.sequences.vector import Vector, decodable_vector
 
 # Public key types
 BandersnatchPublic = ByteArray32
@@ -20,3 +21,9 @@ BeefyRoot = ByteArray32
 OpaqueHash = ByteArray32
 Entropy = ByteArray32
 WorkReportHash = ByteArray32
+
+# Merkle Mountain Range
+@decodable_vector(element_type=ByteArray32)
+class MMR(Vector[ByteArray32]):
+    """Merkle Mountain Range"""
+    ...

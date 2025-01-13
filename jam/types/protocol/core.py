@@ -13,4 +13,4 @@ WorkPackageHash = OpaqueHash
 WorkReportHash = OpaqueHash
 ExportsRoot = OpaqueHash
 ErasureRoot = OpaqueHash
-
+SegmentRoot = OpaqueHash

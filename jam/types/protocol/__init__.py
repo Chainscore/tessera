@@ -26,7 +26,7 @@ from jam.types.protocol.validators import (
 from jam.types.protocol.crypto import (
     BandersnatchPublic, BandersnatchVrfSignature,
     HeaderHash, StateRoot, OpaqueHash, Entropy,
-    BeefyRoot
+    BeefyRoot, MMR
 )
 
 __all__ = [
@@ -51,5 +51,5 @@ __all__ = [
 
     # Crypto types
     'BandersnatchPublic', 'BandersnatchVrfSignature', 'HeaderHash',
-    'StateRoot', 'OpaqueHash', 'Entropy', 'BeefyRoot'
+    'StateRoot', 'OpaqueHash', 'Entropy', 'BeefyRoot', 'MMR'
 ] 
