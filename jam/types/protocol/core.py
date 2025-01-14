@@ -7,6 +7,8 @@ ValidatorIndex = U16
 CoreIndex = U16
 Gas = U64
 ServiceId = U32
+Balance = U64
+BlobLength = U32
 
 # Hash type aliases
 WorkPackageHash = OpaqueHash

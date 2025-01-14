@@ -25,7 +25,9 @@ class Choice(Codable[T], Generic[T]):
         True
     """
 
-    def __init__(self, types: List[Type[Codable[T]]], default: Optional[Codable[T]] = None):
+    types: List[Type[Codable[T]]]
+
+    def __init__(self, initial: Codable[T]):
         """
         Initialize Choice.
         
@@ -36,15 +38,15 @@ class Choice(Codable[T], Generic[T]):
         Raises:
             ValueError: If types list is empty
         """
-        if len(types) == 0:
+        if len(self.types) == 0:
             raise ValueError("Choice must have at least one type")
             
-        super().__init__(codec=ChoiceCodec(types))
-        self.types = types
-        self.value: Optional[Codable[T]] = None
+        super().__init__(codec=ChoiceCodec(self.types))
+
+        if not isinstance(initial, Codable):
+            raise TypeError("Choice value must be Codable")
         
-        if default is not None:
-            self.set(default)
+        self.value: Codable[T] = initial
 
     def set(self, value: Codable[T]) -> None:
         """
@@ -83,28 +85,36 @@ class Choice(Codable[T], Generic[T]):
         """Get string representation."""
         return f"Choice({self.value!r})"
 
-    @staticmethod
-    def decode_from(
-        types: List[Type[Codable[T]]], 
-        buffer: Union[bytes, bytearray, memoryview], 
-        offset: int = 0
-    ) -> Tuple[Codable[T], int]:
-        """
-        Decode choice from buffer.
+def decodable_choice(types: List[Type[Codable[T]]]) -> Type[Choice[T]]:
+    """Decodable choice"""
+    def decorator(cls: Type[Choice[T]]) -> Type[Choice[T]]:
+        @staticmethod
+        def decode_from(
+            types: List[Type[Codable[T]]], 
+            buffer: Union[bytes, bytearray, memoryview], 
+            offset: int = 0
+        ) -> Tuple[Choice[T], int]:
+            """
+            Decode choice from buffer.
+            
+            Args:
+                types: List of possible types for this choice
+                buffer: Source buffer
+                offset: Starting offset
+                
+            Returns:
+                Tuple of (decoded value, bytes read)
+                
+            Raises:
+                DecodeError: If buffer is invalid or too short
+                ValueError: If types list is empty
+            """
+            if len(types) == 0:
+                raise ValueError("Choice must have at least one type")
+                
+            value, size = ChoiceCodec.decode_from(types, buffer, offset)
+            return cls(types, value), size
         
-        Args:
-            types: List of possible types for this choice
-            buffer: Source buffer
-            offset: Starting offset
-            
-        Returns:
-            Tuple of (decoded value, bytes read)
-            
-        Raises:
-            DecodeError: If buffer is invalid or too short
-            ValueError: If types list is empty
-        """
-        if len(types) == 0:
-            raise ValueError("Choice must have at least one type")
-            
-        return ChoiceCodec.decode_from(types, buffer, offset)
+        cls.decode_from = decode_from
+        return cls
+    return decorator

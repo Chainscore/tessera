@@ -3,6 +3,6 @@ from jam.types.protocol.validators import ValidatorData
 from jam.utils.constants import VALIDATOR_COUNT
 
 @decodable_array(VALIDATOR_COUNT, ValidatorData)
-class Iota(Array[ValidatorData]): 
-    """Staging set of validators"""
+class Lambada(Array[ValidatorData]): 
+    """Previous epoch's validator keys and metadata."""
     ...

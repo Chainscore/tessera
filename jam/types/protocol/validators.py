@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from jam.types.base.sequences.array import Array, decodable_array
+from jam.types.base.sequences.byte_array import ByteArray128
 from jam.utils.codec import Codable, decodable_dataclass
 from jam.types.protocol.crypto import (
     BandersnatchPublic, Ed25519Public, BlsPublic
@@ -12,9 +13,10 @@ class ValidatorArray(Array[BandersnatchPublic]): ...
 
 @decodable_dataclass
 @dataclass
-class ValidatorMetadata(Codable):
+class ValidatorMetadata(ByteArray128):
     """Validator metadata structure."""
-    data: bytes  # 128 bytes fixed size
+    #NOTE - Could define fns to parse metadata into a more useful format
+    ...
 
 @decodable_dataclass
 @dataclass

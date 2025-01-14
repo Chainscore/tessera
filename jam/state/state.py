@@ -1,10 +1,4 @@
-from dataclasses import dataclass, field
-from typing import Dict, Optional, Any
-from ..storage.state_keys import construct_state_key, STATE_KEY_PREFIXES
-from .components import Alpha, Beta
+from jam.state.components.sigma import Sigma
 
-@dataclass
-class State:
-    alpha: Alpha
-    beta: Beta
-    
+
+class State(Sigma): ...
