@@ -1,5 +1,5 @@
 import pytest
-from jam.storage.state_keys import construct_state_key
+from jam.state.utils.key_constructor import construct_state_key
 from jam.types.base.integers.fixed import U8
 from jam.types.base.sequences.byte_array import ByteArray32
 from jam.types.protocol.core import ServiceId

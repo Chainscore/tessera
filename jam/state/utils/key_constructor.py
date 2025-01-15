@@ -4,7 +4,7 @@ from jam.types.base.sequences.byte_array import ByteArray32
 from jam.types.protocol.core import ServiceId
 
 def construct_state_key(
-    input: Union[U8, Tuple[U32, ServiceId], Tuple[ServiceId, ByteArray32]]
+    input: Union[U8, int, Tuple[U32, ServiceId], Tuple[ServiceId, ByteArray32]]
 ) -> ByteArray32:
     """
     State key constructor function C as defined in Appendix D.
@@ -15,7 +15,7 @@ def construct_state_key(
     """
     sequence = ByteArray32([0] * 32)
     
-    if isinstance(input, U8):
+    if isinstance(input, U8) or isinstance(input, int):
         # Case 1: Single U8 index
         sequence[0] = input
         
@@ -30,7 +30,6 @@ def construct_state_key(
                 i += 2
             
         elif isinstance(input[0], ServiceId) and isinstance(input[1], ByteArray32):
-            print("To sequence:", input)
             # Case 3: (ServiceId, ByteArray32[0:28])
             service_id, hash_bytes = input
             service_id_encoded = service_id.encode()

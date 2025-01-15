@@ -1,4 +1,4 @@
-from typing import Callable, Sequence, Tuple, Type, TypeVar, Union
+from typing import Callable, Literal, Sequence, Tuple, Type, TypeVar, Union
 
 from jam.utils.codec.composite.arrays import ArrayCodec
 from jam.types.base.byte import Bytable, Byte
@@ -47,7 +47,7 @@ class ByteArray(BaseSequence[Byte]):
             initial = bytes.fromhex(initial)
         
         if len(initial) != self.length:
-            raise ValueError(f"Initial values must have length {self.length}")
+            raise ValueError(f"Initial values ({len(initial)}) must have length {self.length}")
         
         self._data = [Byte(0)] * self.length
         for item, i in zip(initial, range(self.length)):
@@ -57,10 +57,10 @@ class ByteArray(BaseSequence[Byte]):
         """Set byte at index."""
         if isinstance(index, slice):
             if isinstance(value, Sequence):
-                for i, v in zip(range(index.start, index.stop, index.step or 1), value):
+                for i, v in zip(range(index.start, index.stop or self.length, index.step or 1), value):
                     self._data[i] = Byte(v)
             else:
-                for i in range(index.start, index.stop, index.step):
+                for i in range(index.start, index.stop or self.length, index.step or 1):
                     self._data[i] = Byte(value)
         else:
             if not 0 <= index < self.length:
@@ -209,6 +209,25 @@ class ByteArray(BaseSequence[Byte]):
             raise ValueError("Codec not set")
         return cls.codec.decode_from(buffer, offset)
 
+    def __hash__(self) -> int:
+        return hash(self.to_bytes())
+    
+    def startswith(self, prefix: Union[bytes, bytearray, memoryview]) -> bool:
+        return self.to_bytes().startswith(prefix)
+    
+    # Support <, >, <=, >=, ==, !=
+    def __lt__(self, other: object) -> bool:
+        return self.to_bytes() < other.to_bytes()
+    
+    def __le__(self, other: object) -> bool:
+        return self.to_bytes() <= other.to_bytes()
+    
+    def __gt__(self, other: object) -> bool:
+        return self.to_bytes() > other.to_bytes()
+    
+    def __ge__(self, other: object) -> bool:
+        return self.to_bytes() >= other.to_bytes()
+    
     def __eq__(self, other: object) -> bool:
         """
         Compare for equality with another object.
@@ -236,6 +255,13 @@ class ByteArray(BaseSequence[Byte]):
             except (TypeError, IndexError, AttributeError):
                 return False
         return False
+
+    
+    def __ne__(self, other: object) -> bool:
+        return self.to_bytes() != other.to_bytes()
+    
+    def hex(self) -> str:
+        return self.to_json()
 
 def decodable_byte_array(length: int) -> Callable[[Type['ByteArray']], Type['ByteArray']]:
     """Decorator to make a class decodable as a fixed-length byte array."""

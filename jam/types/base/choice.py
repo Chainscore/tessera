@@ -88,6 +88,7 @@ class Choice(Codable[T], Generic[T]):
 def decodable_choice(types: List[Type[Codable[T]]]) -> Type[Choice[T]]:
     """Decodable choice"""
     def decorator(cls: Type[Choice[T]]) -> Type[Choice[T]]:
+        cls.types = types
         @staticmethod
         def decode_from(
             types: List[Type[Codable[T]]], 

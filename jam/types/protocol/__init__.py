@@ -26,8 +26,10 @@ from jam.types.protocol.validators import (
 from jam.types.protocol.crypto import (
     BandersnatchPublic, BandersnatchVrfSignature,
     HeaderHash, StateRoot, OpaqueHash, Entropy,
-    BeefyRoot, MMR
+    BeefyRoot
 )
+
+from jam.types.protocol.merkle import MMR
 
 __all__ = [
     # Core types

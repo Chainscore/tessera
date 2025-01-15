@@ -4,6 +4,7 @@ T = TypeVar('T', bound='BaseInteger')
 
 class BaseInteger():
     """Base integer type"""
+    value: int
     
     def __init__(self, value: Union[int, 'BaseInteger']):
         """Initialize an integer."""

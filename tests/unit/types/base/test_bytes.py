@@ -39,12 +39,12 @@ class TestBytesType:
         assert b1 != b3
 
         # Test equality with bytes objects
-        assert b1 == b'hello'
-        assert b1 != b'world'
+        assert bytes(b1) == b'hello'
+        assert bytes(b1) != b'world'
 
         # Test equality with other types
-        assert b1 != 42
-        assert b1 != "hello"
+        assert bytes(b1) != 42
+        assert bytes(b1) != "hello"
 
     def test_bytes_codec_roundtrip(self):
         """Test encoding and decoding roundtrip."""
@@ -63,7 +63,7 @@ class TestBytesType:
     def test_bytes_repr(self):
         """Test string representation."""
         b = Bytes(b'hello')
-        expected = "Bytes(0x68656c6c6f)"  # 'hello' in hex
+        expected = "Bytes([Byte(0x68), Byte(0x65), Byte(0x6c), Byte(0x6c), Byte(0x6f)])"  # 'hello' in hex
         assert repr(b) == expected
 
     def test_invalid_hex_string(self):

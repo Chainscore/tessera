@@ -11,8 +11,6 @@ from jam.utils.constants import VALIDATOR_COUNT
 @decodable_array(length=VALIDATOR_COUNT, element_type=BandersnatchPublic)
 class ValidatorArray(Array[BandersnatchPublic]): ...
 
-@decodable_dataclass
-@dataclass
 class ValidatorMetadata(ByteArray128):
     """Validator metadata structure."""
     #NOTE - Could define fns to parse metadata into a more useful format

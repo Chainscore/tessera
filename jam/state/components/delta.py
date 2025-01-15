@@ -1,10 +1,8 @@
-
 from dataclasses import dataclass
-from multiprocessing.dummy import Array
 from jam.types.base.bytes import Bytes
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
-from jam.types.base.integers.fixed import U32
-from jam.types.base.sequences.array import decodable_array
+from jam.types.base.integers.fixed import U32, U64
+from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.byte_array import ByteArray32
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.utils.codec.base import Codable
@@ -28,7 +26,7 @@ class LookupTable(Codable):
     data: ByteArray32
     length: BlobLength
 
-@decodable_array(3, U32)
+@decodable_array(length=3, element_type=U32)
 class Timestamps(Array[U32]):
     """Lookup timestamps"""
     ...
@@ -53,3 +51,13 @@ class AccountData(Codable):
 class Delta(Dictionary[ServiceId, AccountData]):
     """Delta state"""
     ...
+
+#TODO - : Confirm these types + usage
+"""Number of items in the account storage"""
+Ai = U32
+
+"""The total number of octets used in storage"""
+Ao = U64
+
+"""The minimum, or threshold, balance needed for any given service account"""
+At = Balance

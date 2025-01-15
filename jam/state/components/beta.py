@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from jam.types import Vector
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
-from jam.types.base.sequences.vector import decodable_vector
+from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.core import SegmentRoot, WorkPackageHash
-from jam.types.protocol.crypto import MMR, HeaderHash, StateRoot
+from jam.types.protocol.crypto import HeaderHash, StateRoot
+from jam.types.protocol.merkle import MMR
 from jam.utils.codec.base import Codable
 from jam.utils.codec.composite.dataclasses import decodable_dataclass
 

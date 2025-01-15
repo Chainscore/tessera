@@ -1,6 +1,5 @@
-from jam.types import Vector, Array
-from jam.types.base.sequences.array import decodable_array
-from jam.types.base.sequences.vector import decodable_vector
+from jam.types import Array, decodable_array
+from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.crypto import OpaqueHash
 from jam.utils.constants import CORE_COUNT, MAX_AUTH_POOL_ITEMS
 
