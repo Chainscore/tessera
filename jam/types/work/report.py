@@ -23,6 +23,7 @@ class Panic(Null): ...
 class BadCode(Null): ...
 class CodeOversize(Null): ...
 
+
 class WorkExecResult(Codable):
     """Work execution result choice."""
     def __init__(self, value: Union[dict, Ok, OutOfGas, Panic, BadCode, CodeOversize]):
@@ -45,7 +46,7 @@ class WorkExecResult(Codable):
     def fromJson(self, json: dict):
         key = list(json.keys())[0]
         if key == "ok":
-            self.set(Ok(json["ok"]))
+            self.set(Ok(Bytes(json["ok"])))
         elif key == "bad_code":
             self.set(BadCode())
         elif key == "code_oversize":
@@ -97,7 +98,6 @@ class WorkExecResult(Codable):
     
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, WorkExecResult):
-            
             return self.value == other.value
         elif isinstance(other, dict):
             return self.value == WorkExecResult(other).value

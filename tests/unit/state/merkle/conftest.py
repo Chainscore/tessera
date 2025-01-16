@@ -26,6 +26,7 @@ from jam.state.components.xi import Xi
 
 from jam.types.base.bytes import Bytes
 from jam.types.base.integers.fixed import U32
+from jam.types.base.integers.general import Int
 from jam.types.base.null import Null
 from jam.types.protocol.crypto import (
     BlsPublic, ByteArray32, Ed25519Public, HeaderHash, StateRoot,
@@ -139,7 +140,7 @@ def dummy_state_components() -> Dict[str, object]:
     chi_g = ChiG({ServiceId(i): Gas(100) for i in range(3)})
     components['chi'] = Chi(m=ServiceId(0), a=ServiceId(1), v=ServiceId(2), g=chi_g)
     components['psi'] = Psi(PsiG([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]), PsiB([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]), PsiW([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]), PsiO([Ed25519Public(create_dummy_bytes32()) for _ in range(3)]))
-    all_validator_stats = AllValidatorStats([ValidatorStat(num_blocks=1, num_tickets=1, num_preimages=1, num_octets=1, num_reports=1, num_avail=1) for _ in range(VALIDATOR_COUNT)])
+    all_validator_stats = AllValidatorStats([ValidatorStat(num_blocks=Int(1), num_tickets=Int(1), num_preimages=Int(1), num_octets=Int(1), num_reports=Int(1), num_avail=Int(1)) for _ in range(VALIDATOR_COUNT)])
     components['pi'] = Pi([all_validator_stats for _ in range(2)])
     components['theta'] = Theta([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
     components['xi'] = Xi([WorkPackageHash(create_dummy_bytes32()) for _ in range(EPOCH_LENGTH)])

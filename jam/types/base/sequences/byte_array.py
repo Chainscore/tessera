@@ -258,10 +258,13 @@ class ByteArray(BaseSequence[Byte]):
 
     
     def __ne__(self, other: object) -> bool:
-        return self.to_bytes() != other.to_bytes()
+        return not self.__eq__(other)
     
     def hex(self) -> str:
         return self.to_json()
+    
+    def __bytes__(self) -> bytes:
+        return self.to_bytes()
 
 def decodable_byte_array(length: int) -> Callable[[Type['ByteArray']], Type['ByteArray']]:
     """Decorator to make a class decodable as a fixed-length byte array."""

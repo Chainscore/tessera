@@ -14,7 +14,7 @@ class State(Sigma):
 
     def transform(self) -> dict:
         """Transform the state into a dictionary as defined in D.2"""
-        # TODO - Add the rest of the state components when they are implemented
+        # TODO - To add service-related state components when they Section 9 is implemented
         return {
             construct_state_key(1): self.alpha.encode(),
             construct_state_key(2): self.beta.encode(),
@@ -24,33 +24,19 @@ class State(Sigma):
             construct_state_key(6): self.eta.encode(),
             construct_state_key(7): self.iota.encode(),
             construct_state_key(8): self.kappa.encode(),
+            construct_state_key(9): self.lambada.encode(),
+            construct_state_key(10): self.rho.encode(),
+            construct_state_key(11): self.tau.encode(),
+            construct_state_key(12): self.chi.encode(),
+            construct_state_key(13): self.pi.encode(),
+            construct_state_key(14): self.theta.encode(),
+            construct_state_key(15): self.xi.encode(),
         }
     
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
         return self._merkle.merkelize(self.transform())
-
-    def merkelize(self) -> bytes:
-        """Compute the cryptographic commitment for this state
-        
-        Returns:
-            bytes: The root hash of the state Merkle trie
-        """
-        # Transform state into dictionary
-        state_dict = self.transform()
-        
-        # Clear any previous state and compute new commitment
-        self._merkle.clear()
-        return self._merkle.merkelize(state_dict)
-        
-    def get_merkle_nodes(self) -> dict:
-        """Get all nodes in the state Merkle trie
-        
-        This is useful for generating proofs of state components.
-        
-        Returns:
-            dict: Mapping of node hashes to encoded nodes
-        """
-        return self._merkle.get_nodes()
-
     
+    def get_merkle_nodes(self) -> dict:
+        """Get all nodes in the state Merkle trie"""
+        return self._merkle.get_nodes()

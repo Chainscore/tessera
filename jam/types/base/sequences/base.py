@@ -1,5 +1,5 @@
 from typing import Generic, List, Optional, Sequence, Type, TypeVar, Union
-from jam.utils.codec.base import Codec, Codable
+from jam.utils.codec.base import Codable
 
 T = TypeVar('T', bound=Codable)
 
@@ -54,7 +54,7 @@ class BaseSequence(Codable[Sequence[T]], Generic[T], Sequence[T]):
             if len(self) == 0 and len(other) == 0:
                 return True
             return (self._element_type == other._element_type and 
-                   self._data == other._data)
+                self._data == other._data)
         if isinstance(other, list) or isinstance(other, tuple):
             return all(x == y for x, y in zip(self._data, other))
         return False

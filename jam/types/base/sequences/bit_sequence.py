@@ -1,6 +1,7 @@
-from typing import Callable, Sequence, Tuple, Type, TypeVar, Union, List
+from typing import Callable, Sequence, Tuple, Type, TypeVar, Union
 
 from jam.types.base.boolean import Boolean
+from jam.types.base.byte import Byte
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from .base import BaseSequence
 
@@ -38,9 +39,9 @@ class BitSequence(BaseSequence[Boolean]):
         if isinstance(initial, bytearray) or isinstance(initial, bytes) or isinstance(initial, memoryview):
             __data = [Boolean(bool(bit)) for bit in initial]
         elif isinstance(initial, str):
-            if initial.startswith('0x'):
-                initial = initial[2:]
-            __data = [Boolean(bool(int(bit))) for bit in initial]
+            __data = [Boolean(bool(bit)) for bit in Byte(initial).to_bit_array("little")]
+            # Take only the last length bits
+            __data = __data[:self.length]
         else:
             for item in initial:
                 if isinstance(item, Boolean):

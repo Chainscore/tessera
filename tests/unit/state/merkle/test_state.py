@@ -14,8 +14,8 @@ def test_state_merkelize(dummy_state_components):
     state2 = State(**dummy_state_components)
     
     # States with same components should have same root
-    root1 = state1.merkelize()
-    root2 = state2.merkelize()
+    root1 = state1.generate_root()
+    root2 = state2.generate_root()
     assert root1 == root2
     assert root1 != state1._merkle.trie.node.ZERO_HASH
     
@@ -28,7 +28,7 @@ def test_state_merkle_nodes(dummy_state_components):
     state = State(**dummy_state_components)
     
     # Get initial root
-    root = state.merkelize()
+    root = state.generate_root()
     
     # Get nodes and verify root node exists
     nodes = state.get_merkle_nodes()
@@ -46,7 +46,7 @@ def test_state_transform(dummy_state_components):
     state_dict = state.transform()
     
     # Verify all components are included
-    assert len(state_dict) == 8  # Currently only 8 components in transform()
+    assert len(state_dict) == 15  # Currently only 8 components in transform()
     
     # Verify keys are properly constructed
     for i in range(1, 9):

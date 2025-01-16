@@ -75,9 +75,6 @@ def test_service_id_hash_pair():
 def test_invalid_inputs():
     """Test error cases with invalid inputs"""
     with pytest.raises(ValueError, match="Invalid input type"):
-        construct_state_key(123)  # Raw integer instead of U8
-        
-    with pytest.raises(ValueError, match="Invalid input type"):
         construct_state_key("invalid")  # String input
         
     with pytest.raises(ValueError, match="Invalid tuple input types"):

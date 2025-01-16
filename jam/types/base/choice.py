@@ -1,6 +1,4 @@
-from typing import Type, Union, Any, Optional, List, Tuple, Dict, Callable, TypeVar, Generic
-
-from jam.types.base.null import Null
+from typing import Sequence, Type, Union, Optional, List, Tuple, TypeVar, Generic
 from jam.utils.codec.base import Codable
 from jam.utils.codec.composite.choices import ChoiceCodec
 
@@ -25,7 +23,7 @@ class Choice(Codable[T], Generic[T]):
         True
     """
 
-    types: List[Type[Codable[T]]]
+    types: Sequence[Type[Codable[T]]]
 
     def __init__(self, initial: Codable[T]):
         """
@@ -40,7 +38,11 @@ class Choice(Codable[T], Generic[T]):
         """
         if len(self.types) == 0:
             raise ValueError("Choice must have at least one type")
-            
+
+        # Make sure the initial value is a valid type
+        if type(initial) not in self.types:
+            raise ValueError(f"Value type {type(initial)} is not in allowed types: {self.types}")
+        
         super().__init__(codec=ChoiceCodec(self.types))
 
         if not isinstance(initial, Codable):
@@ -83,15 +85,18 @@ class Choice(Codable[T], Generic[T]):
 
     def __repr__(self) -> str:
         """Get string representation."""
-        return f"Choice({self.value!r})"
+        return f"{self.__class__.__name__}({self.value!r})"
 
-def decodable_choice(types: List[Type[Codable[T]]]) -> Type[Choice[T]]:
+def decodable_choice(types: Sequence[Type[Codable[T]]]) -> Type[Choice[T]]:
     """Decodable choice"""
     def decorator(cls: Type[Choice[T]]) -> Type[Choice[T]]:
+        # Make sure the types are valid
+        if len(types) == 0:
+            raise ValueError("Choice must have at least one type")
         cls.types = types
+
         @staticmethod
         def decode_from(
-            types: List[Type[Codable[T]]], 
             buffer: Union[bytes, bytearray, memoryview], 
             offset: int = 0
         ) -> Tuple[Choice[T], int]:
@@ -114,7 +119,7 @@ def decodable_choice(types: List[Type[Codable[T]]]) -> Type[Choice[T]]:
                 raise ValueError("Choice must have at least one type")
                 
             value, size = ChoiceCodec.decode_from(types, buffer, offset)
-            return cls(types, value), size
+            return cls(value), size
         
         cls.decode_from = decode_from
         return cls
