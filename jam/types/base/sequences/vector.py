@@ -152,6 +152,10 @@ class Vector(BaseSequence[T]):
         for value in values:
             self.append(value)
 
+    def __bytes__(self) -> bytes:
+        # Combine bytes of all values in the vector
+        return b''.join(bytes(value) for value in self._data)
+
 
 def decodable_vector(element_type: Type[T]) -> Callable[[Type['Vector[T]']], Type['Vector[T]']]:
     """Decorator to make a class decodable as a vector."""

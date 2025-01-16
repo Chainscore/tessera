@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence, Tuple, Type, TypeVar, Union, Callable, Any
+from typing import Sequence, Tuple, Type, TypeVar, Union, Callable, Any
 
 from jam.utils.codec.base import Codable
 from jam.utils.codec.composite.arrays import ArrayCodec
@@ -12,15 +12,6 @@ class Array(BaseSequence[T]):
     
     The array has a fixed length that is set at initialization. All elements
     must be instances of the same Codable type.
-    
-    Examples:
-        >>> from jam.types.base.integers import Int
-        >>> arr = Array(3, [Int(1), Int(2), Int(3)])  # Fixed length of 3
-        >>> assert len(arr) == 3
-        >>> assert arr[0] == Int(1)
-        >>> encoded = arr.encode()
-        >>> decoded, _ = Array.decode_from(3, Int, encoded)
-        >>> assert decoded == arr
     """
     
     _length: int = 0
@@ -40,10 +31,10 @@ class Array(BaseSequence[T]):
             ValueError: If initial values don't match fixed length
         """
         if len(initial) != self._length:
-            raise ValueError(f"Initial values must have length {self._length}")
+            raise ValueError(f"Array: Initial values must have length {self._length}")
         
         if len(initial) > 0 and not isinstance(initial[0], self._element_type):
-            raise TypeError(f"All elements must be instances of {self._element_type}")
+            raise TypeError(f"Array: All elements in {type(initial[0])} must be instances of {self._element_type}")
         
         self._data = list(initial)
         
@@ -53,13 +44,13 @@ class Array(BaseSequence[T]):
     def length(self) -> int:
         """Get array length."""
         if self._length is None:
-            raise ValueError("Array length not set")
+            raise ValueError("Array: Length not set")
         return self._length
 
     def __setitem__(self, index: int, value: T) -> None:
         """Set item at index."""
         if not 0 <= index < self.length:
-            raise IndexError(f"Index {index} out of range")
+            raise IndexError(f"Array: Index {index} out of range")
             
         self._validate_value(value)
         self._data[index] = value

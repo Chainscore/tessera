@@ -4,7 +4,8 @@
 from jam.types.base import (
     U8, U16, U32, U64,
     ByteArray32, ByteArray64, ByteArray96, ByteArray144, ByteArray784,
-    Array, Bytes
+    Array, Bytes,
+    decodable_int, decodable_array, decodable_bit_sequence, decodable_vector, decodable_byte_array, decodable_dictionary, decodable_choice
 )
 
 # Crypto types
@@ -114,4 +115,7 @@ __all__ = [
 
     # Validator types
     'ValidatorMetadata', 'ValidatorData', 'ValidatorsData', 'ValidatorArray',
+
+    # Decodable types
+    'decodable_int', 'decodable_array', 'decodable_bit_sequence', 'decodable_vector', 'decodable_byte_array', 'decodable_dictionary', 'decodable_choice'
 ]

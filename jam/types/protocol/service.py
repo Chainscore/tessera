@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from jam.types.base.integers import U32, U64
-from jam.utils.codec import Codable, decodable_dataclass
+# from jam.utils.codec import Codable
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import Gas
-
-ServiceId = U32
+from jam.utils.codec.base import Codable
+from jam.utils.codec.composite.dataclasses import decodable_dataclass
 
 @decodable_dataclass
 @dataclass

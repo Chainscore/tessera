@@ -1,4 +1,4 @@
-from typing import Callable, Self, Union, Any, Tuple, TypeVar, Type, cast, Optional
+from typing import Callable, Union, Any, Tuple, TypeVar, Type
 from jam.utils.codec.base import Codable
 from jam.utils.codec.primitives.integers import IntegerCodec
 from .base import BaseInteger
@@ -62,22 +62,22 @@ def decodable_int(byte_size: int) -> Callable[[Type[FixedInt]], Type[FixedInt]]:
     return decorator
 
 @decodable_int(1)
-class U8(FixedInt): pass
+class U8(FixedInt): ...
 
 @decodable_int(2)
-class U16(FixedInt): pass
+class U16(FixedInt): ...
 
 @decodable_int(4)
-class U32(FixedInt): pass
+class U32(FixedInt): ...
 
 @decodable_int(8)
-class U64(FixedInt): pass
+class U64(FixedInt): ...
 
 @decodable_int(16)
-class U128(FixedInt): pass
+class U128(FixedInt): ...
 
 @decodable_int(32)
-class U256(FixedInt): pass
+class U256(FixedInt): ...
 
 @decodable_int(64)
-class U512(FixedInt): pass
+class U512(FixedInt): ...
