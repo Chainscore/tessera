@@ -1,21 +1,25 @@
 from typing import Sequence, Tuple, Type, TypeVar, Union, Callable, Any
 
+from jam.types.base.bit import Bit
 from jam.utils.codec.base import Codable
 from jam.utils.codec.composite.arrays import ArrayCodec
+from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from .base import BaseSequence
 
 T = TypeVar('T', bound=Codable)
 
-class Array(BaseSequence[T]):
+class Array(BaseSequence):
     """
-    Fixed-length array implementation that supports codec operations.
+    Fixed-length array is an extension of the BaseSequence, to only allow fixed length arrays.
     
-    The array has a fixed length that is set at initialization. All elements
-    must be instances of the same Codable type.
+    The array has a fixed length, append, extend, pop, insert, remove, and clear methods are not supported.
+    Elements can be:
+    - Set/Updated at any index
+    - Swapped with another element at any index
+    - Get from any index
     """
     
     _length: int = 0
-    _element_type: Type[T]
     
     def __init__(self, initial: Sequence[T] = []):
         """
@@ -23,9 +27,7 @@ class Array(BaseSequence[T]):
         
         Args:
             length: Fixed length of the array
-            initial: Optional initial values. Must match the fixed length.
-                    All elements must be instances of the same Codable type.
-                    
+            initial: Required initial values
         Raises:
             TypeError: If elements are not all of the same Codable type
             ValueError: If initial values don't match fixed length
@@ -33,105 +35,33 @@ class Array(BaseSequence[T]):
         if len(initial) != self._length:
             raise ValueError(f"Array: Initial values must have length {self._length}")
         
-        if len(initial) > 0 and not isinstance(initial[0], self._element_type):
-            raise TypeError(f"Array: All elements in {type(initial[0])} must be instances of {self._element_type}")
-        
-        self._data = list(initial)
-        
-        super().__init__(codec=ArrayCodec(self._length))
-        
-    @property
-    def length(self) -> int:
-        """Get array length."""
-        if self._length is None:
-            raise ValueError("Array: Length not set")
-        return self._length
+        if self._element_type is Bit:
+            super().__init__(initial, codec=BitSequenceCodec(self._length))
+        else:
+            super().__init__(initial, codec=ArrayCodec(self._length))
 
     def __setitem__(self, index: int, value: T) -> None:
         """Set item at index."""
-        if not 0 <= index < self.length:
+        if not 0 <= index < self._length:
             raise IndexError(f"Array: Index {index} out of range")
-            
-        self._validate_value(value)
-        self._data[index] = value
+        super().__setitem__(index, value)
 
     def append(self, value: T) -> None:
-        """
-        Append value to end of array.
-        
-        Args:
-            value: Value to append. Must be instance of the same type as other elements.
-            
-        Raises:
-            TypeError: If value is not of the correct type
-            ValueError: If array is already at fixed length
-        """
-        if len(self._data) >= self.length:
-            raise ValueError(f"Cannot append to array of fixed length {self.length}")
-            
-        self._validate_value(value)
-        self._data.append(value)
+        raise ValueError("Cannot append to fixed-length array")
 
     def pop(self, index: int = -1) -> T:
-        """
-        Remove and return item at index.
-        
-        Args:
-            index: Index of item to remove
-            
-        Returns:
-            Removed item
-            
-        Raises:
-            IndexError: If index out of range
-            ValueError: Array must maintain fixed length
-        """
-        raise ValueError("Cannot remove items from fixed-length array")
+        raise ValueError("Cannot pop from fixed-length array")
 
     def insert(self, index: int, value: T) -> None:
-        """
-        Insert value at index.
-        
-        Args:
-            index: Index to insert at
-            value: Value to insert
-            
-        Raises:
-            ValueError: Array must maintain fixed length
-        """
         raise ValueError("Cannot insert into fixed-length array")
 
     def remove(self, value: T) -> None:
-        """
-        Remove first occurrence of value.
-        
-        Args:
-            value: Value to remove
-            
-        Raises:
-            ValueError: Array must maintain fixed length
-        """
         raise ValueError("Cannot remove from fixed-length array")
 
     def clear(self) -> None:
-        """
-        Clear all elements.
-        
-        Raises:
-            ValueError: Array must maintain fixed length
-        """
         raise ValueError("Cannot clear fixed-length array")
 
     def extend(self, values: Sequence[T]) -> None:
-        """
-        Extend array with values.
-        
-        Args:
-            values: Values to add
-            
-        Raises:
-            ValueError: Array must maintain fixed length
-        """
         raise ValueError("Cannot extend fixed-length array")
 
 def decodable_array(length: int, element_type: Type[T]) -> Callable[[Type[Any]], Type[Any]]:

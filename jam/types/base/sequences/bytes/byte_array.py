@@ -1,0 +1,29 @@
+from jam.types.base.sequences.array import Array, decodable_array
+from .byte import Byte
+
+@decodable_array(8, Byte)
+class ByteArray8(Array[Byte]): ...
+
+@decodable_array(16, Byte)
+class ByteArray16(Array[Byte]): ...
+
+@decodable_array(32, Byte)
+class ByteArray32(Array[Byte]): ...
+
+@decodable_array(64, Byte)
+class ByteArray64(Array[Byte]): ...
+
+@decodable_array(96, Byte)
+class ByteArray96(Array[Byte]): ...
+
+@decodable_array(128, Byte)
+class ByteArray128(Array[Byte]): ...
+
+@decodable_array(144, Byte)
+class ByteArray144(Array[Byte]): ...
+
+@decodable_array(256, Byte)
+class ByteArray256(Array[Byte]): ...
+
+@decodable_array(784, Byte)
+class ByteArray784(Array[Byte]): ...

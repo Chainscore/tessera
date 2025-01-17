@@ -1,10 +1,7 @@
 from types import NoneType
-from typing import Tuple, Union, Optional, TypeVar, Generic
-
+from typing import Tuple, Union
 from jam.utils.codec.base import Codable
 from jam.utils.codec.primitives.nulls import NullCodec
-
-T = TypeVar('T')
 
 class Null(Codable[None]):
     """
@@ -62,3 +59,5 @@ class Null(Codable[None]):
         """
         _, size = NullCodec.decode_from(buffer, offset)
         return Null(), size
+
+Null = Null()
