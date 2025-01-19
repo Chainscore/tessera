@@ -5,9 +5,8 @@ Implements encoding and decoding of null values according to the JAM specificati
 Null values are encoded as an empty byte sequence.
 """
 
-from typing import Tuple, Union, Type, Optional
-from ..base import Codec, EncodeError, DecodeError
-from ..utils import check_buffer_size, ensure_size
+from typing import Tuple, Union, Optional
+from jam.utils.codec import Codec, EncodeError
 
 class NullCodec(Codec[None]):
     """

@@ -1,9 +1,10 @@
-from typing import List, Optional, Sequence, Type, TypeVar, Union
-from jam.utils.codec.base import Codable, Codec
+from typing import Generic, List, Optional, Sequence, Type, TypeVar, Union
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.codec import Codec
 
 T = TypeVar("T", bound=Codable)
 
-class BaseSequence(Codable[Sequence[T]]):
+class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
     """
     Base class for sequence types.
 
@@ -25,13 +26,13 @@ class BaseSequence(Codable[Sequence[T]]):
         # Make sure initial values are all of the same type
         for value in initial:
             self.validate_value(value)
-        self._codec = codec
         self.value = initial
+        super().__init__(codec=codec)
 
     def validate_value(self, value: T) -> None:
         """Validate that a value is of the correct type."""
         if not isinstance(value, self._element_type):
-            raise TypeError(f"Value must be instance of {self._element_type}")
+            raise TypeError(f"Value {value} must be instance of {self._element_type}")
 
     def __len__(self) -> int:
         """Get number of elements."""
@@ -47,7 +48,7 @@ class BaseSequence(Codable[Sequence[T]]):
 
     def __repr__(self) -> str:
         """Get string representation."""
-        return f"{self.__class__.__name__}({self.value!r})"
+        return f"{self.__class__.__name__}([{', '.join(f'{value!r}' for value in self.value)}])"
 
     def _validate_value(self, value: T) -> None:
         """
@@ -73,7 +74,7 @@ class BaseSequence(Codable[Sequence[T]]):
             if len(self) == 0 and len(other) == 0:
                 return True
             return (
-                self._element_type == other._element_type and self._data == other._data
+                self._element_type == other._element_type and self.value == other.value
             )
         if isinstance(other, list) or isinstance(other, tuple):
             return all(x == y for x, y in zip(self.value, other))
@@ -161,7 +162,7 @@ class BaseSequence(Codable[Sequence[T]]):
         Returns:
             Number of occurrences
         """
-        return self._data.count(value)
+        return self.value.count(value)
 
     def index(self, value: T, start: int = 0, stop: Optional[int] = None) -> int:
         """
@@ -180,12 +181,13 @@ class BaseSequence(Codable[Sequence[T]]):
         """
         if stop is None:
             stop = len(self)
-        return self._data.index(value, start, stop)
+        return self.value.index(value, start, stop)
 
-    def reverse(self) -> None:
+    def reverse(self) -> 'BaseSequence[T]':
         """Reverse the vector in place."""
-        self._data.reverse()
-
+        self.value = self.value.reverse()
+        return self
+    
     def extend(self, values: Sequence[T]) -> None:
         """
         Extend vector with values.
@@ -201,4 +203,70 @@ class BaseSequence(Codable[Sequence[T]]):
 
     def __bytes__(self) -> bytes:
         # Combine bytes of all values in the vector
-        return b"".join(bytes(value) for value in self._data)
+        return b"".join(bytes(value) for value in self.value)
+
+    def __add__(self, other: Union['BaseSequence[T]', Sequence[T]]) -> 'BaseSequence[T]':
+        """Add two sequences together, returning a new sequence."""
+        if isinstance(other, BaseSequence):
+            other_values = other.value
+        else:
+            other_values = other
+        new_sequence = self.__class__(self.value.copy(), codec=self.codec)
+        new_sequence.extend(other_values)
+        return new_sequence
+
+    def __iadd__(self, other: Union['BaseSequence[T]', Sequence[T]]) -> 'BaseSequence[T]':
+        """In-place addition of sequences."""
+        if isinstance(other, BaseSequence):
+            self.extend(other.value)
+        else:
+            self.extend(other)
+        return self
+
+    def __mul__(self, n: int) -> 'BaseSequence[T]':
+        """Multiply sequence by an integer, returning a new sequence."""
+        if not isinstance(n, int):
+            raise TypeError("Can only multiply sequence by an integer")
+        new_sequence = self.__class__(self.value * n, codec=self.codec)
+        return new_sequence
+
+    def __imul__(self, n: int) -> 'BaseSequence[T]':
+        """In-place multiplication of sequence."""
+        if not isinstance(n, int):
+            raise TypeError("Can only multiply sequence by an integer")
+        self.value *= n
+        return self
+
+    def __contains__(self, item: T) -> bool:
+        """Check if item is in sequence."""
+        return item in self.value
+
+    def copy(self) -> 'BaseSequence[T]':
+        """Return a shallow copy of the sequence."""
+        return self.__class__(self.value.copy(), codec=self.codec)
+
+    def sort(self, *, key=None, reverse=False) -> None:
+        """
+        Sort the sequence in place.
+
+        Args:
+            key: Function of one argument that is used to extract a comparison key
+            reverse: If True, sort in descending order
+        """
+        self.value.sort(key=key, reverse=reverse)
+
+    def __reversed__(self):
+        """Return a reverse iterator over the sequence."""
+        return reversed(self.value)
+
+    def __delitem__(self, index: Union[int, slice]) -> None:
+        """Delete item at index."""
+        del self.value[index]
+
+    def __rmul__(self, n: int) -> 'BaseSequence[T]':
+        """Right multiplication (n * sequence)."""
+        return self.__mul__(n)
+        
+    def __hash__(self) -> None:
+        """Sequences are mutable, so they should not be hashable."""
+        raise TypeError(f"unhashable type: '{self.__class__.__name__}'")

@@ -1,5 +1,5 @@
-from typing import Sequence, Type, Union, Optional, List, Tuple, TypeVar, Generic
-from jam.utils.codec.base import Codable
+from typing import Sequence, Type, Union, Optional, Tuple, TypeVar, Generic
+from jam.utils.codec import Codable
 from jam.utils.codec.composite.choices import ChoiceCodec
 
 T = TypeVar('T')
@@ -11,19 +11,28 @@ class Choice(Codable[T], Generic[T]):
     A Choice represents a tagged union type that can hold a value of one of several
     possible Codable types. The actual type is determined by a tag byte during
     encoding/decoding.
-    
-    Examples:
-        >>> from jam.types.base.boolean import Boolean
-        >>> from jam.types.base.integers import U8
-        >>> choice = Choice([Boolean, U8])
-        >>> choice.set(Boolean(True))
-        >>> encoded = choice.encode()
-        >>> decoded, _ = Choice.decode_from([Boolean, U8], encoded)
-        >>> decoded == Boolean(True)
-        True
+
+    To use a choice, you need to define all possible types:
+        >>> @decodable_choice([U8, U16])
+        >>> class MyChoice(Choice): ...
+        >>> my_choice: MyChoice = MyChoice(U8(1))
+        >>> assert my_choice.type == U8
+        >>> assert my_choice.value == U8(1)
+
+    To use a optional choice, we'd pair it with Nullable:
+        >>> @decodable_choice([U8, Nullable])
+        >>> class OptionalU8(Choice): ...
+        >>> my_choice: OptionalU8 = OptionalU8(U8(1))
+        >>> assert my_choice.type == U8
+        >>> assert my_choice.value == U8(1)
+        >>> my_choice: OptionalU8 = OptionalU8(Null)
+        >>> assert my_choice.type == Nullable
+        >>> assert my_choice.value is None
     """
 
-    types: Sequence[Type[Codable[T]]]
+    # Selected type
+    type: Type[Codable[T]]
+    value: Codable[T]
 
     def __init__(self, initial: Codable[T]):
         """
@@ -50,7 +59,7 @@ class Choice(Codable[T], Generic[T]):
         
         self.value: Codable[T] = initial
 
-    def set(self, value: Codable[T]) -> None:
+    def __set__(self, value: Codable[T]) -> None:
         """
         Set the choice value.
         
@@ -68,7 +77,7 @@ class Choice(Codable[T], Generic[T]):
             
         self.value = value
 
-    def get(self) -> Optional[Codable[T]]:
+    def __get__(self) -> Optional[Codable[T]]:
         """
         Get the current value.
         
@@ -79,9 +88,14 @@ class Choice(Codable[T], Generic[T]):
 
     def __eq__(self, other: object) -> bool:
         """Compare for equality."""
-        if not isinstance(other, Choice):
-            return False
-        return self.value == other.value
+        try:
+            return self.value == other.value
+        except:
+            return self.value == other
+        
+    def __bool__(self) -> bool:
+        """Check if the choice has a value."""
+        return self.value is not None
 
     def __repr__(self) -> str:
         """Get string representation."""

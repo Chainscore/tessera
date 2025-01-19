@@ -2,10 +2,10 @@
 Unit tests for bit sequence codec implementation.
 """
 
-from typing import Optional, Sequence, Union
 import pytest
-from jam.types.base import BitSequence, decodable_bit_sequence
-from jam.utils.codec.composite.bit_sequences import BitSequenceCodec, EncodeError, DecodeError
+from jam.types.base import BitArray, decodable_bit_array
+from jam.utils.codec.errors import EncodeError, DecodeError
+from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 
 class TestBitSequenceCodec:
     """Test suite for bit sequence encoding/decoding."""
@@ -26,8 +26,8 @@ class TestBitSequenceCodec:
     def test_codec_roundtrip(self, bit_length, bits):
         """Test encoding and decoding roundtrip for valid values."""
         
-        @decodable_bit_sequence(bit_length)
-        class NBits(BitSequence): pass
+        @decodable_bit_array(bit_length)
+        class NBits(BitArray): ...
                 
         bit_seq = NBits(bits)
         encoded = bit_seq.encode()
@@ -95,7 +95,7 @@ class TestBitSequenceCodec:
         encoded = codec.encode(bits)
         for i in range(len(encoded)):
             with pytest.raises(DecodeError):
-                codec.decode_from(length=16, buffer=encoded[:i], offset=0)
+                codec.decode_from(bit_length=16, buffer=encoded[:i], offset=0)
 
     def test_offset_handling(self):
         """Test encoding and decoding with buffer offsets."""
@@ -112,7 +112,7 @@ class TestBitSequenceCodec:
         assert buffer[2] == 0xFF  # Padding unchanged
         
         # Test decoding at offset
-        decoded, size = codec.decode_from(length=len(bits), buffer=buffer, offset=1)
+        decoded, size = codec.decode_from(bit_length=len(bits), buffer=buffer, offset=1)
         assert list(decoded) == bits
         assert size == 1
 

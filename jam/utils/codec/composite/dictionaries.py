@@ -11,14 +11,12 @@ Format:
         [Encoded Key][Encoded Value]
 """
 
-from typing import TypeVar, Generic, Dict as typing_Dict, Mapping, Union, Type, Optional, Tuple
-import operator
-
+from typing import TypeVar, Generic, Dict as typing_Dict, Mapping, Union, Type, Tuple
 from jam.utils.codec.primitives.integers import GeneralCodec
 from jam.utils.codec.utils import check_buffer_size
-from ..base import (
-    Codable, Codec, EncodeError, DecodeError,
-)
+from ..codec import Codec
+from ..codable import Codable
+from ..errors import EncodeError, DecodeError
 
 K = TypeVar('K')
 V = TypeVar('V')

@@ -3,7 +3,7 @@ from typing import (
     Iterator, ItemsView, KeysView, ValuesView
 )
 
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.dictionaries import DictionaryCodec
 
 K = TypeVar('K', bound=Codable)

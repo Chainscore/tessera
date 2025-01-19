@@ -6,7 +6,7 @@ from jam.types.base.integers import U16, U32
 from jam.types.base import Vector
 from jam.types.protocol.crypto import BeefyRoot, HeaderHash, StateRoot
 from jam.types.work import WorkPackage, WorkItem
-from jam.types.base.bytes import Bytes
+from jam.types.base import Bytes
 from jam.types.protocol.core import ServiceId, OpaqueHash, Gas, TimeSlot
 from jam.types.work.item import ExtrinsicSpec, ImportSpec
 from jam.types.work.package import Authorizer

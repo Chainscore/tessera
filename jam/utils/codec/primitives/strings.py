@@ -11,14 +11,11 @@ The length is encoded using little-endian u64 format to match specification and
 ensure compatibility with the maximum possible string size.
 """
 
-from typing import Union, Tuple, Optional
-import struct
-
+from typing import Union, Tuple
 from jam.utils.codec.primitives.integers import GeneralCodec
-from ..base import (
-    Codec, EncodeError, DecodeError, 
-)
-from ..utils import check_buffer_size, ensure_size
+from jam.utils.codec.codec import Codec
+from jam.utils.codec.errors import EncodeError, DecodeError
+from jam.utils.codec.utils import check_buffer_size, ensure_size
 
 class StringCodec(Codec[str]):
     """

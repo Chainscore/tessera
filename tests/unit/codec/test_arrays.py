@@ -3,11 +3,10 @@ Unit tests for array codec implementation.
 """
 
 import pytest
-from typing import List, Optional, Sequence, Union
 from jam.types.base import Array
 from jam.types.base.sequences.array import decodable_array
 from jam.utils.codec.composite.arrays import ArrayCodec
-from jam.utils.codec.base import Codable, EncodeError, DecodeError
+from jam.utils.codec.errors import EncodeError, DecodeError
 from jam.types.base.boolean import Boolean
 from jam.types.base.string import String
 from jam.types.base.integers import U8

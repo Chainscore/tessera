@@ -4,7 +4,7 @@ from pathlib import Path
 
 from jam.types.base import Vector
 from jam.types.work import WorkItem
-from jam.types.base.bytes import Bytes
+from jam.types.base import Bytes
 from jam.types.base.integers import U16, U32
 from jam.types.protocol.core import ServiceId, OpaqueHash, Gas
 from jam.types.work.item import ExtrinsicSpec, ImportSpec

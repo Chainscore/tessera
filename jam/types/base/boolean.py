@@ -1,5 +1,5 @@
 from typing import Union, Any, Tuple
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
 from jam.utils.codec.primitives.bools import BooleanCodec
 
 class Boolean(Codable):
@@ -50,6 +50,11 @@ class Boolean(Codable):
     def __repr__(self) -> str:
         """String representation."""
         return f"Boolean({self.value})"
+    
+    def __bytes__(self) -> bytes:
+        """Bytes representation."""
+        print(f"Converting {self.value} to bytes = {bytes([1 if self.value else 0])}")
+        return bytes([1 if self.value else 0])
     
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[Any, int]:

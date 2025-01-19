@@ -2,7 +2,7 @@
 
 import pytest
 from jam.types.base.string import String
-from jam.utils.codec.base import DecodeError
+from jam.utils.codec.errors import DecodeError
 
 class TestString:
     def test_initialization(self):

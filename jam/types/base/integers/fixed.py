@@ -1,5 +1,5 @@
 from typing import Callable, Union, Any, Tuple, TypeVar, Type
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
 from jam.utils.codec.primitives.integers import IntegerCodec
 from .base import BaseInteger
 

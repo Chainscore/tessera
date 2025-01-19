@@ -5,7 +5,6 @@ from pathlib import Path
 from jam.types.protocol.core import Gas, ServiceId
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.work import WorkResult, WorkExecResult
-from jam.types.base.bytes import Bytes
 
 def test_work_result_0_encoding():
     """Test encoding/decoding of WorkResult against test vector 0."""

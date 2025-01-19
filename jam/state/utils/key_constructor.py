@@ -37,13 +37,11 @@ def construct_state_key(
             h_pointer = 0  
             while seq_pointer < 32:
                 if len(service_id_encoded) > h_pointer:
-                    print("Adding sid [", h_pointer, "] + hex [", h_pointer + 1, "]:", service_id_encoded[h_pointer], hash_bytes[h_pointer])
                     sequence[seq_pointer] = service_id_encoded[h_pointer]
                     sequence[seq_pointer + 1] = hash_bytes[h_pointer]
                     h_pointer += 1
                     seq_pointer += 2
                 else:
-                    print("Adding hash [", h_pointer, "] + hex [", 32, "]:", hash_bytes[h_pointer:32])
                     sequence[seq_pointer:32] = hash_bytes[h_pointer:32]
                     break
 

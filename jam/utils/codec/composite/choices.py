@@ -8,7 +8,9 @@ Choice values are encoded with a 1-byte tag followed by the encoded value based 
 from typing import Sequence, TypeVar, Generic, Union, Type, Tuple, Optional, cast
 
 from jam.utils.codec.primitives.integers import GeneralCodec
-from ..base import Codable, Codec, EncodeError, DecodeError
+from jam.utils.codec.codec import Codec
+from jam.utils.codec.errors import EncodeError, DecodeError
+from jam.utils.codec.codable import Codable
 
 T = TypeVar('T')
 
@@ -22,18 +24,20 @@ class ChoiceCodec(Codec[T], Generic[T]):
     The tag is encoded as a general integer, followed by the encoded value
     of the selected type. The tag value corresponds to the index of the
     type in the choices list.
-    
-    Examples:
-        >>> from jam.types.base.boolean import Boolean
-        >>> from jam.types.base.integers import U8
-        >>> codec = ChoiceCodec([Boolean, U8])
-        >>> encoded = codec.encode(Boolean(True))
-        >>> decoded, _ = codec.decode_from([Boolean, U8], encoded)
-        >>> decoded == Boolean(True)
-        True
-    """
 
-    def __init__(self, choices: Sequence[Type[Codable[T]]]):
+    Args:
+        choices: A list of types that are allowed for this choice. Their index
+                will be used as the tag.
+        tag_codec: A codec for the tag. Defaults to GeneralCodec() [Best for most cases]. 
+                Alternatively we can use FixedInt(U8) for a fixed size tag if choices > 128.
+
+    Raises:
+        ValueError: If choices list is empty
+    """
+    _choices: Sequence[Type[Codable[T]]]
+    _tag_codec: Codec[int]
+
+    def __init__(self, choices: Sequence[Type[Codable[T]]], __tag_codec: Codec[int] = GeneralCodec()):
         """
         Initialize ChoiceCodec.
 
@@ -46,9 +50,9 @@ class ChoiceCodec(Codec[T], Generic[T]):
         """
         if len(choices) == 0:
             raise ValueError("Choices list cannot be empty")
-            
-        self.choices = choices
-        self._tag_codec = GeneralCodec()
+        self._choices = choices
+        self._tag_codec = __tag_codec
+
 
     def encode_size(self, value: Optional[Codable[T]]) -> int:
         """
@@ -70,7 +74,7 @@ class ChoiceCodec(Codec[T], Generic[T]):
             raise EncodeError(0, 0, "Value must be Codable")
             
         try:
-            tag = self.choices.index(type(value))
+            tag = self._choices.index(type(value))
         except ValueError:
             raise EncodeError(0, 0, f"Value type {type(value)} not in choices list")
             
@@ -96,12 +100,12 @@ class ChoiceCodec(Codec[T], Generic[T]):
         
         try:
             tag = 0
-            for i, choice in enumerate(self.choices):
+            for i, choice in enumerate(self._choices):
                 if choice is type(value):
                     tag = i
                     break
         except ValueError:
-            raise EncodeError(0, 0, f"Value type {type(value)} not in choices list {self.choices}")
+            raise EncodeError(0, 0, f"ChoiceCodec: Value type {type(value)} not in choices list {self._choices}")
         
         tag_size = self._tag_codec.encode_into(tag, buffer, offset)
         offset += tag_size

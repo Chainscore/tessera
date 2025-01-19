@@ -1,14 +1,13 @@
-from typing import Sequence, Tuple, Type, TypeVar, Union, Callable, Any
+from typing import Generic, Sequence, Tuple, Type, TypeVar, Union, Callable, Any
 
-from jam.types.base.bit import Bit
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.codec import Codec
 from jam.utils.codec.composite.arrays import ArrayCodec
-from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from .base import BaseSequence
 
 T = TypeVar('T', bound=Codable)
 
-class Array(BaseSequence):
+class Array(BaseSequence, Generic[T]):
     """
     Fixed-length array is an extension of the BaseSequence, to only allow fixed length arrays.
     
@@ -20,25 +19,23 @@ class Array(BaseSequence):
     """
     
     _length: int = 0
-    
-    def __init__(self, initial: Sequence[T] = []):
+    def __init__(self, initial: Sequence[T] = [], codec: Codec[T] | None = None):
         """
         Initialize array.
         
         Args:
-            length: Fixed length of the array
             initial: Required initial values
         Raises:
             TypeError: If elements are not all of the same Codable type
             ValueError: If initial values don't match fixed length
         """
         if len(initial) != self._length:
-            raise ValueError(f"Array: Initial values must have length {self._length}")
+            raise ValueError(f"Array: Initial values of length {len(initial)} must have length {self._length}")
         
-        if self._element_type is Bit:
-            super().__init__(initial, codec=BitSequenceCodec(self._length))
-        else:
-            super().__init__(initial, codec=ArrayCodec(self._length))
+        if codec is None:
+            codec = ArrayCodec(self._length)
+        
+        super().__init__(initial=initial, codec=codec)
 
     def __setitem__(self, index: int, value: T) -> None:
         """Set item at index."""
@@ -63,6 +60,8 @@ class Array(BaseSequence):
 
     def extend(self, values: Sequence[T]) -> None:
         raise ValueError("Cannot extend fixed-length array")
+    
+
 
 def decodable_array(length: int, element_type: Type[T]) -> Callable[[Type[Any]], Type[Any]]:
     """
@@ -74,7 +73,7 @@ def decodable_array(length: int, element_type: Type[T]) -> Callable[[Type[Any]],
     3. Custom decode_from implementation
     """
     def decorator(cls: Type[Array[T]]) -> Type[Array[T]]:
-        cls._element_type = element_type  # type: ignore
+        cls._element_type = element_type  
         cls._length = length
         
         @staticmethod

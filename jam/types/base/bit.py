@@ -1,9 +1,11 @@
-from jam.types.base.utils.byte_utils import Bytable, ByteUtils
+from jam.utils.byte_utils import Bytable, ByteUtils
 
 class Bit:
     """
     A bit is a single binary digit, either 0 or 1.
     """
+    value: int
+    
     def __init__(self, value: Bytable):
         # Convert everything down to bytes
         data = ByteUtils.bytes_to_int(ByteUtils.to_bytes(value))
@@ -12,23 +14,24 @@ class Bit:
         self.value = data
     
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, Bit):
+        try:
             return self.value == other.value
-        return False
+        except Exception as e:
+            return self.value == other
     
     def __and__(self, other: 'Bit') -> 'Bit':
         return Bit(self.value & other.value)
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Bit({self.value})"
     
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return bytes([self.value])
     
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.value)
     
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return bool(self.value)
     
     def __int__(self) -> int:
@@ -36,3 +39,6 @@ class Bit:
     
     def __index__(self) -> int:
         return self.value
+    
+    def __hash__(self) -> int:
+        return hash(self.value)

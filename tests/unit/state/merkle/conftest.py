@@ -24,7 +24,7 @@ from jam.state.components.tau import Tau
 from jam.state.components.theta import AllReadyWRs, ReadyWR, Theta
 from jam.state.components.xi import Xi
 
-from jam.types.base.bytes import Bytes
+from jam.types.base import Bytes
 from jam.types.base.integers.fixed import U32
 from jam.types.base.integers.general import Int
 from jam.types.base.null import Null

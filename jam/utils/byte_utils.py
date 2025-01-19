@@ -44,9 +44,23 @@ class ByteUtils:
                 byt = bytes(value)
             except Exception as e:
                 """Catch any other error"""
-                raise TypeError(f"468277217587568142: Failed to convert ${type(value)} to bytes. Full Error: {e}")
+                raise TypeError(f"ByteUtils.to_bytes: Failed to convert {value} to bytes. Full Error: {e}")
         return bytearray(byt)
+    
+    @staticmethod
+    def ensure_valid_sequence(value: Sequence) -> bool:
+        """Check if a sequence is valid
 
+        Checks if all elements in the sequence are same type
+        
+        Args:
+            value: Sequence to check
+        
+        Returns:
+            True if the sequence is valid, False otherwise
+        """
+        return all(isinstance(item, type(value[0])) for item in value)
+    
     @staticmethod
     def bool_to_bytes(value: bool) -> bytes:
         """Convert boolean to bytes"""
@@ -79,7 +93,7 @@ class ByteUtils:
         return bytes(result)
 
     @staticmethod
-    def bytes_to_bitarray(value: bytes, bitorder: Literal["msb", "lsb"] = "msb") -> List[bool]:
+    def bytes_to_bitarray(value: bytes, bitorder: Literal["msb", "lsb"] = "msb", target_length: int|None = None) -> List[bool]:
         """Convert bytes to bit array
         
         Args:
@@ -94,8 +108,22 @@ class ByteUtils:
                     result.append(bool((byte >> (7 - i)) & 1))  # MSB first
                 else:
                     result.append(bool((byte >> i) & 1))        # LSB first
+        
+        if target_length is not None:
+            # If msb, remove the starting bits
+            if bitorder == "msb":
+                result = result[-target_length:]
+                # If less than target length, pad with False
+                if len(result) < target_length:
+                    result = [False] * (target_length - len(result)) + result
+            # If lsb, remove the ending bits
+            else:
+                result = result[:target_length]
+                # If less than target length, pad with False
+                if len(result) < target_length:
+                    result = result + [False] * (target_length - len(result))
         return result
-
+    
     @staticmethod
     def str_to_bytes(value: str, encoding: str = 'utf-8') -> bytes:
         """Convert string to bytes"""
@@ -106,41 +134,79 @@ class ByteUtils:
         """Convert bytes to string"""
         return value.decode(encoding)
 
-    # Higher level conversion utilities
     @classmethod
     def hex_to_bitarray(cls, hex_str: str) -> List[bool]:
         """Convert hex string to bit array"""
+        # First convert hex to bytes, then bytes to bitarray
         return cls.bytes_to_bitarray(cls.hex_to_bytes(hex_str))
 
     @classmethod
     def bitarray_to_hex(cls, bits: List[bool]) -> str:
         """Convert bit array to hex string"""
+        # First convert bits to bytes, then bytes to hex
         return cls.bytes_to_hex(cls.bitarray_to_bytes(bits))
-
-    @classmethod
-    def int_to_bitarray(cls, value: int, length: Optional[int] = None) -> List[bool]:
-        """Convert integer to bit array"""
-        return cls.bytes_to_bitarray(cls.int_to_bytes(value, length))
 
     @classmethod
     def bitarray_to_int(cls, bits: List[bool]) -> int:
         """Convert bit array to integer"""
-        return cls.bytes_to_int(cls.bitarray_to_bytes(bits))
+        result = 0
+        for bit in reversed(bits):
+            result = (result << 1) | int(bit)
+        return result
 
     @classmethod
     def hex_to_int(cls, hex_str: str) -> int:
         """Convert hex string to integer"""
-        return cls.bytes_to_int(cls.hex_to_bytes(hex_str))
+        return int(hex_str.replace('0x', '').replace(' ', ''), 16)
 
     @classmethod
     def int_to_hex(cls, value: int, length: Optional[int] = None) -> str:
-        """Convert integer to hex string"""
-        return cls.bytes_to_hex(cls.int_to_bytes(value, length))
-    
+        """Convert integer to hex string
+        
+        Args:
+            value: Integer to convert
+            length: Optional number of bytes to pad to
+        
+        Returns:
+            Hex string without '0x' prefix
+        """
+        if length is None:
+            return format(value, 'x')
+        return format(value, f'0{length*2}x')
+
     @staticmethod
     def bytable_to_bitarray(value: bytearray) -> List[bool]:
         """Convert bytearray to bitarray"""
+        return ByteUtils.bytes_to_bitarray(bytes(value))
+    
+    @staticmethod
+    def int_to_bitarray(n: int) -> list[bool]:
+        """
+        Convert an integer to its binary representation as a list of booleans.
+        The least significant bit is at index 0.
+        
+        Args:
+            n: The integer to convert
+            
+        Returns:
+            A list of booleans where True represents 1 and False represents 0
+            
+        Examples:
+            >>> int_to_bits(5)  # 5 is 101 in binary
+            [True, False, True]
+            >>> int_to_bits(0)
+            [False]
+        """
+        if n == 0:
+            return [False]
+        
+        bits = []
+        while n:
+            bits.append(bool(n & 1))
+            n >>= 1
+        
+        return bits
 
 if __name__ == "__main__":
-    test_data = 300
-    print(len(ByteUtils.int_to_bytes(300)))
+    test_data = [0] * 10
+    print(ByteUtils.to_bytes(test_data))

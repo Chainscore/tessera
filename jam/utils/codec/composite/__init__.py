@@ -4,9 +4,10 @@ Composite type codecs for JAM protocol.
 This module provides codecs for composite types including:
 - Arrays (fixed length)
 - Options (nullable values)
-- Tuples (fixed length heterogeneous)
 - Vectors (dynamic length)
-- Protocols (structured data)
+- Dictionaries (key-value pairs)
+- Bit sequences (sequences of bits)
+- Dataclasses (structured data)
 """
 
 from .arrays import ArrayCodec

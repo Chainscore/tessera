@@ -1,29 +1,48 @@
+from typing import Callable, Sequence, Type
 from jam.types.base.sequences.array import Array, decodable_array
-from .byte import Byte
+from jam.types.base.sequences.bytes.bit_array import Byte
+from jam.utils.byte_utils import Bytable, ByteUtils
 
-@decodable_array(8, Byte)
-class ByteArray8(Array[Byte]): ...
+class ByteArray(Array[Byte]):
+    """Array of bytes"""
+    
+    def __init__(self, value: Bytable):
+        if isinstance(value, Sequence) and isinstance(value[0], Byte):
+            super().__init__(value)
+        else:
+            byt = [Byte(b) for b in ByteUtils.to_bytes(value)]
+            super().__init__(byt)
 
-@decodable_array(16, Byte)
-class ByteArray16(Array[Byte]): ...
+    def __str__(self) -> str:
+        return ByteUtils.to_hex(self)
 
-@decodable_array(32, Byte)
-class ByteArray32(Array[Byte]): ...
 
-@decodable_array(64, Byte)
-class ByteArray64(Array[Byte]): ...
+def decodable_bytearray(length: int) -> Callable[[Type[ByteArray]], Type[ByteArray]]:
+    return decodable_array(length, Byte)
 
-@decodable_array(96, Byte)
-class ByteArray96(Array[Byte]): ...
+@decodable_bytearray(8)
+class ByteArray8(ByteArray): ...
 
-@decodable_array(128, Byte)
-class ByteArray128(Array[Byte]): ...
+@decodable_bytearray(16)
+class ByteArray16(ByteArray): ...
 
-@decodable_array(144, Byte)
-class ByteArray144(Array[Byte]): ...
+@decodable_bytearray(32)
+class ByteArray32(ByteArray): ...
 
-@decodable_array(256, Byte)
-class ByteArray256(Array[Byte]): ...
+@decodable_bytearray(64)
+class ByteArray64(ByteArray): ...
 
-@decodable_array(784, Byte)
-class ByteArray784(Array[Byte]): ...
+@decodable_bytearray(96)
+class ByteArray96(ByteArray): ...
+
+@decodable_bytearray(128)
+class ByteArray128(ByteArray): ...
+
+@decodable_bytearray(144)
+class ByteArray144(ByteArray): ...
+
+@decodable_bytearray(256)
+class ByteArray256(ByteArray): ...
+
+@decodable_bytearray(784)
+class ByteArray784(ByteArray): ...

@@ -1,6 +1,6 @@
-from typing import Callable, Self, Union, Any, Tuple, TypeVar, Type, cast, Optional
-from jam.utils.codec.base import Codable
-from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
+from typing import Union, Any, Tuple, TypeVar
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.primitives.integers import GeneralCodec
 from .base import BaseInteger
 
 T = TypeVar('T', bound='BaseInteger')

@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-from jam.types.base.bytes import Bytes
+from jam.types.base import Bytes
 from jam.types.base.integers import U16, U32
 from jam.types.base import Vector
 from jam.types.extrinsics.guarantees import GuaranteesExtrinsic, ReportGuarantee, ValidatorSignature

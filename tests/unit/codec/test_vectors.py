@@ -3,12 +3,11 @@ Unit tests for vector codec implementation.
 """
 
 import pytest
-from typing import List, Sequence, Union
 from jam.types.base.boolean import Boolean
 from jam.types.base.integers import Int
 from jam.types.base.string import String
 from jam.utils.codec.composite.vectors import VectorCodec
-from jam.utils.codec.base import EncodeError, DecodeError
+from jam.utils.codec import EncodeError, DecodeError
 from jam.types.base import Vector, decodable_vector
 
 @decodable_vector(Int)
@@ -87,17 +86,15 @@ class TestVectorCodec:
 
     def test_invalid_element_types(self):
         """Test handling of invalid element types."""
-        codec = VectorCodec()
-        
         invalid_lists = [
-            TestIntVector([Int(1), String("not int"), Int(3)]),  # type: ignore
-            TestIntVector([Int(1), Int(2), None]), # type: ignore
-            TestIntVector([Int(1), Int(2), Boolean(True)]), # type: ignore
+            [Int(1), String("not int"), Int(3)],  # type: ignore
+            [Int(1), Int(2), None], # type: ignore
+            [Int(1), Int(2), Boolean(True)], # type: ignore
         ]
         
         for value in invalid_lists:
-            with pytest.raises(EncodeError):
-                value.encode()
+            with pytest.raises(TypeError):
+                TestIntVector(value)
 
     def test_offset_handling(self):
         """Test encoding and decoding with buffer offsets."""

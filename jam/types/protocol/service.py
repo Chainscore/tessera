@@ -3,7 +3,7 @@ from jam.types.base.integers import U32, U64
 # from jam.utils.codec import Codable
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import Gas
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.dataclasses import decodable_dataclass
 
 @decodable_dataclass

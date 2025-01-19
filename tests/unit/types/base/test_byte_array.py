@@ -5,8 +5,8 @@ from jam.types.base import (
     ByteArray8, ByteArray16, ByteArray32, ByteArray64,
     ByteArray96, ByteArray128, ByteArray144, ByteArray256, ByteArray784
 )
-from jam.types.base.byte import Byte
-from jam.types.base.bytes import Bytes
+from jam.types.base import Byte
+from jam.types.base import Bytes
 
 def make_test_bytes(size: int) -> Bytes:
     """Create test bytes of given size, repeating 0-255 pattern."""
@@ -108,7 +108,10 @@ class TestByteArrayTypes:
     def test_equality(self, array_class, size):
         """Test equality comparison."""
         value1 = make_test_bytes(size)
-        value2 = Bytes(reversed(value1.value))
+        value2 = Bytes([b for b in reversed(value1)])
+
+        print(f"Value1: {value1}")
+        print(f"Value2: {value2}")
         
         arr1 = array_class(value1)
         arr2 = array_class(value1)  # Same value as arr1
@@ -163,3 +166,10 @@ class TestByteArrayTypes:
         """Test that creating ByteArray types with invalid lengths raises ValueError."""
         with pytest.raises(ValueError):
             array_class(bytearray(out_of_range))  # Too long
+
+
+    def test_hex_strings(self):
+        """Test that hex strings are converted to byte arrays correctly."""
+        hex_str = "0x2398ce69c3585e1b1b574a5a7185a2a086350abd4606d15aace8b4610b494772"
+        byte_array = ByteArray32(hex_str)
+        assert bytes(byte_array) == bytes.fromhex(hex_str[2:])

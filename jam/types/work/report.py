@@ -3,13 +3,14 @@ from dataclasses import dataclass
 from typing import Any, Tuple, Union
 
 from jam.types.base.integers import U16, U32
-from jam.types.base.bytes import Bytes
-from jam.types.base.null import Null
+from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.null import Nullable
 from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ErasureRoot, ExportsRoot, WorkPackageHash
-from jam.utils.codec import Codable, decodable_dataclass
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.composite.dataclasses import decodable_dataclass
 
 from jam.types.protocol.core import (
     ServiceId, Gas, CoreIndex
@@ -18,10 +19,10 @@ from jam.types.work.refine_context import RefineContext
 from jam.utils.codec.primitives.integers import GeneralCodec
 
 class Ok(Bytes): ...
-class OutOfGas(Null): ...
-class Panic(Null): ...
-class BadCode(Null): ...
-class CodeOversize(Null): ...
+class OutOfGas(Nullable): ...
+class Panic(Nullable): ...
+class BadCode(Nullable): ...
+class CodeOversize(Nullable): ...
 
 
 class WorkExecResult(Codable):
@@ -59,7 +60,7 @@ class WorkExecResult(Codable):
             raise ValueError(f"Invalid key for WorkExecResult: {key}")
 
     def set(self, value: Codable):
-        if not isinstance(value, (Bytes, Null)):
+        if not isinstance(value, (Bytes, Nullable)):
             raise ValueError(f"Invalid value for WorkExecResult: {value}")
         self.value = value
     

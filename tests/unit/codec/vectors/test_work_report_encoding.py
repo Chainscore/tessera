@@ -7,7 +7,7 @@ from jam.types.base import Vector
 from jam.types.protocol.core import CoreIndex, ErasureRoot, ExportsRoot, Gas, ServiceId, TimeSlot
 from jam.types.protocol.crypto import BeefyRoot, HeaderHash, OpaqueHash, StateRoot
 from jam.types.work import WorkReport, WorkResult, WorkExecResult
-from jam.types.base.bytes import Bytes
+from jam.types.base import Bytes
 from jam.types.work.refine_context import RefineContext
 from jam.types.work.report import SegmentRootLookupItem, WorkPackageSpec
 

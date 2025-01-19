@@ -2,8 +2,8 @@
 from dataclasses import fields, is_dataclass
 from typing import Type, TypeVar, Tuple, Union
 
-from jam.utils.codec.base import Codable
-from .choices import ChoiceCodec
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.composite.choices import ChoiceCodec
 
 T = TypeVar('T')
 
@@ -36,14 +36,8 @@ def decodable_dataclass(cls: Type[T]) -> Type[T]:
             raise TypeError(f"{self.__class__.__name__} must be a dataclass to use encoding")
         for field in fields(self):
             item = getattr(self, field.name)
-            # If this is an optional, we need to encode the value
-            if field.type.__name__ == 'Optional':
-                # If the item is None, we need to encode a 0
-                size = ChoiceCodec([type(None), field.type.__args__[0]]).encode_into(item, buffer, current_offset)
-                current_offset += size
-            else:
-                size = item.encode_into(buffer, current_offset)
-                current_offset += size
+            size = item.encode_into(buffer, current_offset)
+            current_offset += size
 
         return current_offset - offset
     
@@ -53,15 +47,7 @@ def decodable_dataclass(cls: Type[T]) -> Type[T]:
         decoded_values = []
         for field in fields(cls): # type: ignore
             field_type = field.type
-            
-            # if this is an optional, we need to decode the field type
-            # like it could be - typing.Optional[jam.types.header.EpochMark]
-            if field_type.__name__ == 'Optional':
-                # if the value is 0, we need to set the value to None
-                print(f"Decoding optional field {field.name} with type {field_type}, {buffer[current_offset]}")
-                value, size = ChoiceCodec.decode_from([type(None), field_type.__args__[0]], buffer, current_offset)
-            else:
-                value, size = field_type.decode_from(buffer, current_offset)
+            value, size = field_type.decode_from(buffer, current_offset)
             decoded_values.append(value)
             current_offset += size
         

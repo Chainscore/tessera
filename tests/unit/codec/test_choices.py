@@ -3,8 +3,9 @@
 import pytest
 from typing import Tuple, Union, Type, List, cast, TypeVar
 
-from jam.types.base.choice import Choice, decodable_choice
-from jam.utils.codec.base import Codable, EncodeError, DecodeError
+from jam.types.base.choices import Choice, decodable_choice
+from jam.utils.codec.codable import Codable
+from jam.utils.codec import EncodeError, DecodeError
 from jam.types.base.boolean import Boolean
 from jam.types.base.integers.fixed import U16, U8
 from jam.types.base.string import String

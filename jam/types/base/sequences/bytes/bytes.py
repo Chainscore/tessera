@@ -1,6 +1,7 @@
+from typing import Sequence
 from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.types.base.utils.byte_utils import ByteUtils
-from .byte import Bytable, Byte
+from jam.utils.byte_utils import ByteUtils, Bytable
+from jam.types.base.sequences.bytes.bit_array import Byte
 
 @decodable_vector(Byte)
 class Bytes(Vector[Byte]):
@@ -12,5 +13,12 @@ class Bytes(Vector[Byte]):
         Args:
             value: Bytable which is either int, bytes, str, bytearray, memoryview, Sequence[Byte]
         """
+        if isinstance(value, Sequence) and isinstance(value[0], Byte):
+            super().__init__(value)
+            return
         data: list[Byte] = [Byte(b) for b in ByteUtils.to_bytes(value)]
         super().__init__(data)
+
+    def hex(self) -> str:
+        """Get hex representation of Bytes."""
+        return bytes(self).hex()

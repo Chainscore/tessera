@@ -9,9 +9,10 @@ __pycache__/
 *.pyw
 *.pywz
 
-.pytest_cache/
 .idea/
+.pytest_cache/
+.venv/
+.vscode/
 *.egg-info/
 
-.venv/
 .vscode/

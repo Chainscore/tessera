@@ -8,8 +8,10 @@ Maximum array size is 1000 elements as per specification.
 
 from typing import Iterable, List, Tuple, Union, Sequence
 
-from ..base import Codable, Codec, EncodeError, DecodeError
-from ..utils import check_buffer_size
+from jam.utils.codec.codec import Codec
+from jam.utils.codec.errors import EncodeError, DecodeError
+from jam.utils.codec.utils import check_buffer_size
+from jam.utils.codec.codable import Codable
 
 class ArrayCodec(Codec[Sequence[Codable]]):
     """
