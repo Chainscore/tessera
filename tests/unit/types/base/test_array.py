@@ -1,16 +1,11 @@
 """Unit tests for array type implementation."""
 
 import pytest
-from typing import List, Sequence, cast
-
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.integers.fixed import U8
-from jam.utils.codec.composite.arrays import ArrayCodec
 
 @decodable_array(length=4, element_type=U8)  # Fixed length array of U8s for testing
-class TestArray(Array[U8]): 
-    """Test array class with fixed length of 4 U8s."""
-    pass
+class TestArray(Array[U8]): ...
 
 class TestArrayTypes:
     """Test suite for array type implementations."""

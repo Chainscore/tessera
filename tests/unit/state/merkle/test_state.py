@@ -1,6 +1,7 @@
 import pytest
 
 from jam.state.state import State
+from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.crypto import Hash, ByteArray32
 
 def test_state_initialization(dummy_state_components):
@@ -50,7 +51,7 @@ def test_state_transform(dummy_state_components):
     
     # Verify keys are properly constructed
     for i in range(1, 9):
-        assert any(k.startswith(bytes([i])) for k in state_dict.keys()) 
+        assert any(k.startswith(Bytes(bytes([i]))) for k in state_dict.keys()) 
 
 
 def test_state_root(dummy_state_components):

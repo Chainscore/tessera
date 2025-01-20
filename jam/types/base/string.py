@@ -1,5 +1,5 @@
 from typing import Union, Any, Tuple
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
 from jam.utils.codec.primitives.strings import StringCodec
 
 class String(Codable):

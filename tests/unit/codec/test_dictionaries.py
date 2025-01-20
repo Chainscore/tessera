@@ -6,9 +6,9 @@ from typing import Dict, Mapping, Type, Tuple, Any, cast
 from jam.types.base.boolean import Boolean
 from jam.types.base.integers import Int, U8, U16, U32
 from jam.types.base.string import String
-from jam.types.base.bytes import Bytes
+from jam.types.base import Bytes
 from jam.utils.codec.composite.dictionaries import DictionaryCodec
-from jam.utils.codec.base import Codable, EncodeError, DecodeError
+from jam.utils.codec import Codable, EncodeError, DecodeError
 
 def make_test_dict(key_type: Type[Codable], value_type: Type[Codable]) -> Dict[Codable, Codable]:
     """Helper to create test dictionaries."""

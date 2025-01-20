@@ -12,11 +12,10 @@ Variable length integers use the following scheme:
 - 0xFF: u32 value (5 bytes)
 """
 
-from typing import Self, Union, Tuple
-from ..base import (
-    Codec, EncodeError, DecodeError,
-)
-from ..utils import check_buffer_size, ensure_size
+from typing import Union, Tuple
+from jam.utils.codec.codec import Codec
+from jam.utils.codec.errors import EncodeError, DecodeError
+from jam.utils.codec.utils import check_buffer_size, ensure_size
 
 import math
 from decimal import Decimal
@@ -51,7 +50,7 @@ class IntegerCodec(Codec):
         return self.byte_size
                     
     def encode_into(self, value: int, buffer: Union[bytes, bytearray, memoryview], 
-                   offset: int = 0) -> int:
+                offset: int = 0) -> int:
         """
         Encode integer into buffer.
         

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.array import Array, decodable_array
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.dataclasses import decodable_dataclass
 from jam.utils.constants import VALIDATOR_COUNT
 

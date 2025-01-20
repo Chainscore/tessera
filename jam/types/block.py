@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from jam.types.header import Header
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
 from jam.types.extrinsics import (
     TicketsExtrinsic, PreimagesExtrinsic,
     GuaranteesExtrinsic, AssurancesExtrinsic,
     DisputesExtrinsic
 )
-from jam.utils.codec import decodable_dataclass
+from jam.utils.codec.composite.dataclasses import decodable_dataclass
 
 @decodable_dataclass
 @dataclass

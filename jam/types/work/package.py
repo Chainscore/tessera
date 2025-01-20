@@ -1,9 +1,10 @@
 """Work package types for the JAM protocol."""
 from dataclasses import dataclass
-from jam.types.base.bytes import Bytes
+from jam.types.base import Bytes
 from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
-from jam.utils.codec import Codable, decodable_dataclass
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.composite.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ServiceId
 from jam.types.work.item import WorkItem

@@ -1,6 +1,6 @@
 """Type-specific JSON encoding/decoding functions."""
 
-from typing import Any, Type, TypeVar, Union
+from typing import Any, Type, TypeVar
 
 T = TypeVar('T')
 
@@ -21,7 +21,7 @@ def decode_bytes(data: str, target_type: Type[T]) -> T:
             byte_data = bytes.fromhex(data[2:])
         else:
             byte_data = bytes.fromhex(data)
-        if target_type == bytes:
+        if target_type is bytes:
             return byte_data  # type: ignore
         return target_type(byte_data)  # type: ignore
     raise TypeError(f"Expected hex string, got {type(data)}")

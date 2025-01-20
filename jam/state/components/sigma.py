@@ -16,7 +16,7 @@ from jam.state.components.phi import Phi
 from jam.state.components.tau import Tau
 from jam.state.components.theta import Theta
 from jam.state.components.xi import Xi
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.dataclasses import decodable_dataclass
 
 @decodable_dataclass

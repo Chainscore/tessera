@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from typing import Optional
+from jam.types.base.choices.option import Option, decodable_option
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base import Vector, decodable_vector
 from jam.types.extrinsics.tickets import TicketBody
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.epoch import EpochMark
-from jam.utils.codec import Codable, decodable_dataclass
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.composite.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import (
     BandersnatchVrfSignature, Ed25519Public, HeaderHash, StateRoot, OpaqueHash,
 )
@@ -18,6 +19,13 @@ class TicketsMark(Array[TicketBody]): ...
 @decodable_vector(element_type=Ed25519Public)
 class OffendersMark(Vector[Ed25519Public]): ...
 
+
+@decodable_option(optional_type=EpochMark)
+class OptionalEpochMark(Option): ...
+
+@decodable_option(optional_type=TicketsMark)
+class OptionalTicketsMark(Option): ...
+
 @decodable_dataclass
 @dataclass
 class Header(Codable):
@@ -26,8 +34,8 @@ class Header(Codable):
     parent_state_root: StateRoot
     extrinsic_hash: OpaqueHash
     slot: TimeSlot
-    epoch_mark: Optional[EpochMark]
-    tickets_mark: Optional[TicketsMark]
+    epoch_mark: OptionalEpochMark
+    tickets_mark: OptionalTicketsMark
     offenders_mark: OffendersMark
     author_index: ValidatorIndex
     entropy_source: BandersnatchVrfSignature

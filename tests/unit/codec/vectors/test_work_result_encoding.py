@@ -2,10 +2,7 @@
 import json
 from pathlib import Path
 
-from jam.types.protocol.core import Gas, ServiceId
-from jam.types.protocol.crypto import OpaqueHash
-from jam.types.work import WorkResult, WorkExecResult
-from jam.types.base.bytes import Bytes
+from jam.types.work.report import WorkResult
 
 def test_work_result_0_encoding():
     """Test encoding/decoding of WorkResult against test vector 0."""
@@ -19,13 +16,7 @@ def test_work_result_0_encoding():
         expected_bytes = f.read()
 
     # Create WorkResult from JSON
-    result = WorkResult(
-        service_id=ServiceId(result_json["service_id"]),
-        code_hash=OpaqueHash(bytes.fromhex(result_json["code_hash"][2:])),
-        payload_hash=OpaqueHash(bytes.fromhex(result_json["payload_hash"][2:])),
-        accumulate_gas=Gas(int(result_json["accumulate_gas"])),
-        result=WorkExecResult(result_json["result"])
-    )
+    result = WorkResult.from_json(result_json)
 
     # Test encoding
     encoded = bytearray(result.encode_size())
@@ -56,19 +47,12 @@ def test_work_result_1_encoding():
         expected_bytes = f.read()
 
     # Create WorkResult from JSON
-    result = WorkResult(
-        service_id=ServiceId(result_json["service_id"]),
-        code_hash=OpaqueHash(bytes.fromhex(result_json["code_hash"][2:])),
-        payload_hash=OpaqueHash(bytes.fromhex(result_json["payload_hash"][2:])),
-        accumulate_gas=Gas(int(result_json["accumulate_gas"])),
-        result=WorkExecResult(result_json["result"])
-    )
+    result = WorkResult.from_json(result_json)
 
     # Test encoding
     encoded = bytearray(result.encode_size())
     result.encode_into(encoded)
     assert bytes(encoded) == expected_bytes
-
 
     # Test decoding
     decoded, size = WorkResult.decode_from(expected_bytes)

@@ -1,13 +1,12 @@
 import pytest
-from dataclasses import fields
-from typing import List, Dict
+from typing import Dict
 
 from jam.state.components.alpha import Alpha, AuthorizationPool, AuthorizerHash
 from jam.state.components.beta import Beta, BlockHistory, PackageDict
 from jam.state.components.chi import Chi, ChiG
 from jam.state.components.eta import Eta
 from jam.state.components.gamma import (
-    Gamma, GammaK, GammaA, GammaS, GammaSTickets, GammaSFallback
+    Gamma, GammaK, GammaA, GammaS, GammaSTickets
 )
 from jam.state.components.delta import (
     Delta, AccountData, AccountStorage, PreImageLookup,
@@ -21,13 +20,13 @@ from jam.state.components.psi import Psi, PsiB, PsiG, PsiO, PsiW
 from jam.state.components.rho import OptionalWorkReportState, Rho
 from jam.state.components.phi import AuthorizationQueue, Phi
 from jam.state.components.tau import Tau
-from jam.state.components.theta import AllReadyWRs, ReadyWR, Theta
+from jam.state.components.theta import AllReadyWRs, Theta
 from jam.state.components.xi import Xi
 
-from jam.types.base.bytes import Bytes
+from jam.types.base import Bytes
 from jam.types.base.integers.fixed import U32
 from jam.types.base.integers.general import Int
-from jam.types.base.null import Null
+from jam.types.base.null import Nullable
 from jam.types.protocol.crypto import (
     BlsPublic, ByteArray32, Ed25519Public, HeaderHash, StateRoot,
     OpaqueHash, BandersnatchPublic, BandersnatchRingRoot,
@@ -39,7 +38,6 @@ from jam.types.protocol.core import (
 )
 from jam.types.protocol.merkle import MMR
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
-from jam.types.work.report import WorkReport
 from jam.utils.constants import (
     CORE_COUNT, MAX_AUTH_POOL_ITEMS, MAX_AUTH_QUEUE_ITEMS,
     VALIDATOR_COUNT, EPOCH_LENGTH
@@ -131,7 +129,7 @@ def dummy_state_components() -> Dict[str, object]:
     components['kappa'] = Kappa(dummy_validator_data)
     components['lambada'] = Lambada(dummy_validator_data)
     components['gamma'] = gamma
-    components['rho'] = Rho([OptionalWorkReportState(Null()) for _ in range(CORE_COUNT)])  # noqa: F821
+    components['rho'] = Rho([OptionalWorkReportState(Nullable()) for _ in range(CORE_COUNT)])  # noqa: F821
     components['tau'] = Tau(0)
 
     # Phi - Authorization queue

@@ -3,7 +3,8 @@ from jam.types.base.integers.fixed import U8
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
-from jam.utils.codec import Codable, decodable_dataclass
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.composite.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import (
     BandersnatchPublic, BandersnatchRingVrfSignature,
     OpaqueHash

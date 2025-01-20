@@ -1,13 +1,14 @@
 from dataclasses import dataclass
-from jam.types.base import BitSequence, decodable_bit_sequence
+from jam.types.base import BitArray, decodable_bit_array
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.crypto import Ed25519Signature, OpaqueHash
 from jam.types.protocol.core import ValidatorIndex
-from jam.utils.codec import Codable, decodable_dataclass
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.composite.dataclasses import decodable_dataclass
 from jam.utils.constants import CORE_COUNT
 
-@decodable_bit_sequence(CORE_COUNT)
-class AvailBitField(BitSequence): ...
+@decodable_bit_array(length=CORE_COUNT, bitorder="lsb")
+class AvailBitField(BitArray): ...
 
 @decodable_dataclass
 @dataclass

@@ -1,6 +1,6 @@
 from typing import Dict
 from jam.types.protocol.crypto import Hash
-from jam.types.base.sequences.byte_array import ByteArray32, ByteArray64
+from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
 from jam.state.merkle.node import Node
 
 NodeHash = ByteArray32

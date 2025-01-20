@@ -1,7 +1,7 @@
 """Unit tests for bytes type implementation."""
 
 import pytest
-from jam.types.base.bytes import Bytes
+from jam.types.base import Bytes
 
 class TestBytesType:
     """Test suite for bytes type implementation."""
@@ -39,7 +39,7 @@ class TestBytesType:
         assert b1 != b3
 
         # Test equality with bytes objects
-        assert bytes(b1) == b'hello'
+        assert bytes(b1) == bytes(b'hello')
         assert bytes(b1) != b'world'
 
         # Test equality with other types

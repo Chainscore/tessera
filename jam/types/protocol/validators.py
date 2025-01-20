@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 
 from jam.types.base.sequences.array import Array, decodable_array
-from jam.types.base.sequences.byte_array import ByteArray128
-from jam.utils.codec import Codable, decodable_dataclass
+from jam.types.base.sequences.bytes.byte_array import ByteArray128
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.composite.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import (
     BandersnatchPublic, Ed25519Public, BlsPublic
 )

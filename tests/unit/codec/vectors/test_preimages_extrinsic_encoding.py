@@ -1,10 +1,7 @@
 """Tests for preimages extrinsic encoding."""
 import json
 from pathlib import Path
-
-from jam.types.base.bytes import Bytes
-from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
-from jam.types.protocol.core import ServiceId
+from jam.types.extrinsics.preimages import PreimagesExtrinsic
 
 def test_preimages_extrinsic_encoding():
     """Test encoding/decoding of PreimagesExtrinsic against test vectors."""
@@ -18,12 +15,7 @@ def test_preimages_extrinsic_encoding():
         expected_bytes = f.read()
 
     # Create PreimagesExtrinsic from JSON
-    preimages = PreimagesExtrinsic(
-        [Preimage(
-            requester=ServiceId(int(p["requester"])),
-            blob=Bytes(p["blob"])
-        ) for p in preimages_json]
-    )
+    preimages = PreimagesExtrinsic.from_json(preimages_json)
 
     # Test encoding
     encoded = bytearray(preimages.encode_size())

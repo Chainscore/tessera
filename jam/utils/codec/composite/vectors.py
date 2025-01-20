@@ -9,11 +9,13 @@ Format:
 
 """
 
-from typing import TypeVar, Generic, List, Sequence, Union, Type, Optional
+from typing import TypeVar, Generic, List, Sequence, Union, Type
 
 from jam.utils.codec.primitives.integers import GeneralCodec
-from jam.utils.codec.utils import check_buffer_size, ensure_size
-from ..base import Codable, Codec, EncodeError, DecodeError
+from jam.utils.codec.utils import check_buffer_size
+from jam.utils.codec.codec import Codec
+from jam.utils.codec.errors import EncodeError, DecodeError
+from jam.utils.codec.codable import Codable
 
 
 T = TypeVar('T')
@@ -54,10 +56,10 @@ class VectorCodec(Codec[Sequence[Codable[T]]], Generic[T]):
         for item in value:
             try:
                 size += item.encode_size()
-            except AttributeError:
+            except Exception as e:
                 raise EncodeError(
                     0, 0,
-                    f"Element {item} does not support encode_size()"
+                    f"Element {item} does not support encode_size(). Full error: {e}"
                 )
         
         return size

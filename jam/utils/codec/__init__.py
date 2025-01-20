@@ -7,15 +7,14 @@ registration and automatic type inference.
 """
 
 # Re-export main types and base functionality
-from .base import (
-    Codec, 
+from .codec import Codec
+
+from .errors import (
     EncodeError, DecodeError, 
     BufferError,
-    Codable,
 )
 
-# Re-export JSON codec
-from .json import JsonCodec, JsonSerializable, json_serializable
+from .codable import Codable
 
 # Re-export primitive codecs
 from .primitives import (
@@ -27,6 +26,8 @@ from .primitives import (
 
 # Re-export composite type constructors
 from .composite import BitSequenceCodec, decodable_dataclass, ArrayCodec, ChoiceCodec, VectorCodec, DictionaryCodec
+
+from .json import JsonSerializable, encode_bytes, decode_bytes, encode_integer, decode_integer
 
 __all__ = [
     "Codable",
@@ -40,5 +41,6 @@ __all__ = [
     "VectorCodec",
     "DictionaryCodec",
     "BitSequenceCodec",
-    "JsonCodec", "JsonSerializable", "json_serializable"
+    "JsonCodec", "JsonSerializable", "json_serializable",
+    "encode_bytes", "decode_bytes", "encode_integer", "decode_integer"
 ]

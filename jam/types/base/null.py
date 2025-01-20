@@ -1,12 +1,9 @@
 from types import NoneType
-from typing import Tuple, Union, Optional, TypeVar, Generic
-
-from jam.utils.codec.base import Codable
+from typing import Tuple, Union
+from jam.utils.codec import Codable
 from jam.utils.codec.primitives.nulls import NullCodec
 
-T = TypeVar('T')
-
-class Null(Codable[None]):
+class Nullable(Codable):
     """
     Null value implementation.
     
@@ -37,11 +34,11 @@ class Null(Codable[None]):
 
     def __repr__(self) -> str:
         """Get string representation."""
-        return f"{self.__class__.__name__}()"
+        return f"Null"
 
     def __eq__(self, other: object) -> bool:
         """Compare for equality."""
-        if isinstance(other, Null):
+        if isinstance(other, Nullable):
             return True
         return isinstance(other, NoneType)
 
@@ -49,7 +46,7 @@ class Null(Codable[None]):
     def decode_from(
         buffer: Union[bytes, bytearray, memoryview], 
         offset: int = 0
-    ) -> Tuple['Null', int]:
+    ) -> Tuple['Nullable', int]:
         """
         Decode null value from buffer.
         
@@ -61,4 +58,6 @@ class Null(Codable[None]):
             Tuple of (decoded null value, bytes read)
         """
         _, size = NullCodec.decode_from(buffer, offset)
-        return Null(), size
+        return Null, size
+
+Null = Nullable()

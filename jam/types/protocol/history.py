@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from typing import List
-from jam.types.base.choice import Choice
+from jam.types.base.choices import Choice
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.utils.codec import Codable, decodable_dataclass
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.composite.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import (
     HeaderHash, StateRoot, OpaqueHash
 )

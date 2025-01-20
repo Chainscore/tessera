@@ -1,9 +1,9 @@
 from typing import Optional
 
-from jam.types.base.byte import Byte
-from jam.types.base.bytes import Bytes
+from jam.types.base.bit import Bit
 from jam.types.protocol.crypto import Hash
-from jam.types.base.sequences.byte_array import ByteArray32, ByteArray64
+from jam.types.base.sequences.bytes import ByteArray32, ByteArray64, Bytes
+from jam.types.base import Byte
 
 class Node:
     """Node encoding for Merkle trees as defined in D.2.1
@@ -28,7 +28,7 @@ class Node:
         """
         # Convert ByteArray32 to bytes for bitwise operations
         # Replace first bit with 0
-        left_hash[0].set_bits(0, 0)
+        left_hash[0][0] = Bit(0)
         
         # Combine the left and right hashes
         node = ByteArray64([0] * 64)
@@ -53,7 +53,7 @@ class Node:
         # First bit is 1 for leaf nodes
         node = ByteArray64([0] * 64)  # 512 bits total, first bit set
         # Set first 31 bytes of key to 1:32
-        node[0].set_bits(0, 1)
+        node[0][0] = Bit(1)
         node[1:32] = key[:31]
         
         if len(value) <= 32:
@@ -61,7 +61,7 @@ class Node:
 
             # 6-bit - size of value
             encoded_size: Byte = Byte(len(value))
-            node[0].set_bits(slice(2, 8), encoded_size.to_bit_array()[2:8])
+            node[0][2:8] = encoded_size[2:8]
 
             # Store key and value 
             node[1:32] = key[:31]  # First 31 bytes for key
@@ -69,7 +69,7 @@ class Node:
             # Rest is already zeroed
         else:
             # Regular leaf - second bit is 1
-            node[0].set_bits(1, 1)
+            node[0][1] = Bit(1)
 
             node[1:32] = key[:31]  # First 31 bytes for key
             node[32:] = self.hash_function(bytes(value))  # Hash of value in last 32 bytes

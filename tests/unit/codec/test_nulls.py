@@ -3,8 +3,8 @@
 import pytest
 from typing import Any, Optional, Type, TypeVar, cast
 
-from jam.types.base.null import Null
-from jam.utils.codec.base import EncodeError, DecodeError, Codable
+from jam.types.base.null import Null, Nullable
+from jam.utils.codec import EncodeError, DecodeError, Codable
 from jam.utils.codec.primitives.nulls import NullCodec
 
 class TestNullCodec:
@@ -42,7 +42,7 @@ class TestNullCodec:
             {},             # dict
             True,           # bool
             b"",            # bytes
-            Null(),         # Null instance
+            Nullable(),         # Null instance
         ]
         
         for value in invalid_values:
@@ -79,25 +79,25 @@ class TestNull:
 
     def test_basic_null(self):
         """Test basic Null functionality."""
-        null = Null()
+        null = Nullable()
         assert null.get() is None
-        assert str(null) == "Null()"
-        assert repr(null) == "Null()"
+        assert str(null) == "Null"
+        assert repr(null) == "Null"
 
     def test_encode_decode(self):
         """Test encoding/decoding of Null values."""
-        null = Null()
+        null = Nullable()
         encoded = null.encode()
         assert encoded == b""
-        decoded, size = Null.decode_from(encoded)
-        assert isinstance(decoded, Null)
+        decoded, size = Nullable.decode_from(encoded)
+        assert isinstance(decoded, Nullable)
         assert decoded == null
         assert size == 0
 
     def test_equality(self):
         """Test equality comparison."""
-        null1 = Null()
-        null2 = Null()
+        null1 = Nullable()
+        null2 = Nullable()
         assert null1 == null2
         assert null1 == None  # noqa: E711
         assert null1 != "not null"
@@ -106,7 +106,7 @@ class TestNull:
 
     def test_buffer_operations(self):
         """Test buffer operations."""
-        null = Null()
+        null = Nullable()
         
         # Test encode_size
         assert null.encode_size() == 0
@@ -121,6 +121,6 @@ class TestNull:
         """Test decoding with offset."""
         buffer = bytearray([0xFF] * 10)
         decoded, size = Null.decode_from(buffer, 5)
-        assert isinstance(decoded, Null)
+        assert isinstance(decoded, Nullable)
         assert size == 0
         assert buffer == bytearray([0xFF] * 10)  # Buffer unchanged 
