@@ -46,19 +46,19 @@ class PedersenVRF:
     def point_to_string(P: Tuple[int, int]) -> bytes:
         """Convert a point to bytes."""
         x, y = P
-        return x.to_bytes(32, 'big') + y.to_bytes(32, 'big')
+        return x.to_bytes(32, 'little') + y.to_bytes(32, 'little')
 
     @staticmethod
     def string_to_int(s: bytes) -> int:
         """Convert bytes to an integer."""
-        return int.from_bytes(s, 'big')
+        return int.from_bytes(s, 'little')
     @staticmethod
     def hash_to_point(message:str)->int:
         """
         Map a message deterministically to a point on the SECP256k1 curve.
         """
         # Hash the message to produce an integer
-        hash_value = int.from_bytes(hashlib.sha256(message.encode()).digest(), 'big')
+        hash_value = int.from_bytes(hashlib.sha256(message.encode()).digest(), 'little')
 
         # Find a valid point on the curve
         x = hash_value % PedersenVRF.p

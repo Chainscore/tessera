@@ -139,7 +139,7 @@ class IETF:
 
     def generate_nonce(self, secret_key: int, input_point: Tuple[int, int]) -> int:
         """Generate a nonce"""
-        hashed_sk = hashlib.sha512(secret_key.to_bytes(32, 'big')).digest()
+        hashed_sk = hashlib.sha512(secret_key.to_bytes(32, 'little')).digest()
         h_input = self.point_to_string(input_point)
         k_string = self.sha512(hashed_sk[32:] + h_input)
         return self.string_to_int(k_string) % self.n
@@ -182,17 +182,17 @@ class IETF:
 
     def hash_to_point(self, message: str) -> int:
         """Map a message deterministically to a point on the curve"""
-        hash_value = int.from_bytes(hashlib.sha256(message.encode()).digest(), 'big')
+        hash_value = int.from_bytes(hashlib.sha256(message.encode()).digest(), 'little')
         return hash_value % self.p
 
     def point_to_string(self, P: Tuple[int, int]) -> bytes:
         """Convert a point to bytes"""
         x, y = P
-        return x.to_bytes(32, 'big') + y.to_bytes(32, 'big')
+        return x.to_bytes(32, 'little') + y.to_bytes(32, 'little')
 
     def string_to_int(self, s: bytes) -> int:
         """Convert bytes to an integer"""
-        return int.from_bytes(s, 'big')
+        return int.from_bytes(s, 'little')
 
     def sha512(self, data: bytes) -> bytes:
         """Calculate SHA-512 hash"""
