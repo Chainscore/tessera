@@ -42,3 +42,28 @@ class Bit:
     
     def __hash__(self) -> int:
         return hash(self.value)
+    
+    def __gt__(self, other: object) -> bool:
+        if isinstance(other, Bit):
+            return self.value > other.value
+        return False
+    
+    def __lt__(self, other: object) -> bool:
+        if isinstance(other, Bit):
+            return self.value < other.value
+        return False
+    
+    def __ge__(self, other: object) -> bool:
+        if isinstance(other, Bit):
+            return self.value >= other.value
+        return False
+    
+    def __le__(self, other: object) -> bool:
+        if isinstance(other, Bit):
+            return self.value <= other.value
+        return False
+    
+    def __ne__(self, other: object) -> bool:
+        if isinstance(other, Bit):
+            return self.value != other.value
+        return False

@@ -56,10 +56,10 @@ class VectorCodec(Codec[Sequence[Codable[T]]], Generic[T]):
         for item in value:
             try:
                 size += item.encode_size()
-            except AttributeError:
+            except Exception as e:
                 raise EncodeError(
                     0, 0,
-                    f"Element {item} does not support encode_size()"
+                    f"Element {item} does not support encode_size(). Full error: {e}"
                 )
         
         return size

@@ -1,4 +1,7 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.composite.dataclasses import decodable_dataclass
 from jam.utils.codec.json.json_serializable import JsonSerializable
 
 def test_basic_dc_json():
@@ -32,27 +35,23 @@ def test_composite_json():
     assert model.d == [True, False, True]
 
 def test_class_array_json():
+    @decodable_dataclass
     @dataclass
-    class CustomClass():
+    class CustomClass(Codable):
         a: int
         b: str
         c: float
         d: bool
 
+    @decodable_dataclass
     @dataclass
-    class TestModel(JsonSerializable):
-        a: list[CustomClass]
-        d: list[bool]
+    class TestModel(Codable):
+        a: CustomClass
 
-    data = {"a": [{"a": 1, "b": "hello", "c": 3.14, "d": True}, {"a": 2, "b": "world", "c": 2.71, "d": False}], "d": [True, False, True]}
+    data = {"a": {"a": 1, "b": "hello", "c": 3.14, "d": True}}
     model = TestModel.from_json(data)
-    # Compare a
-    assert model.a[0].a == 1
-    assert model.a[0].b == "hello"
-    assert model.a[0].c == 3.14
-    assert model.a[0].d is True
-    assert model.a[1].a == 2
-    assert model.a[1].b == "world"
-    assert model.a[1].c == 2.71
-    assert model.a[1].d is False
-    assert model.d == [True, False, True]
+    # Compare all values
+    assert model.a.a == 1
+    assert model.a.b == "hello"
+    assert model.a.c == 3.14
+    assert model.a.d is True

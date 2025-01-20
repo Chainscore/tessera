@@ -28,17 +28,18 @@ class BitArray(Array):
             TypeError: If elements are not Boolean instances
             ValueError: If initial values don't match fixed length
         """
+        codec = BitSequenceCodec(bit_length=self._length, bit_order=self._bit_order)
         # If already a BitArray, just use it 
         if isinstance(value, BitArray) or (isinstance(value, Sequence) and all((isinstance(bit, (Bit, Boolean, bool))) for bit in value)):
             if not all(isinstance(bit, Bit) for bit in value):
                 value = [Bit(bit) for bit in value]
-            super().__init__(value)
+            super().__init__(value, codec=codec)
             return
         
         # Format different types into a list of Booleans
         data: list[bool] = ByteUtils.bytes_to_bitarray(ByteUtils.to_bytes(value), bitorder=self._bit_order, target_length=self._length)
-        super().__init__([Bit(bit) for bit in data], codec=BitSequenceCodec(bit_length=self._length, bit_order=self._bit_order))
-    
+        super().__init__([Bit(bit) for bit in data], codec=codec)
+
     def __bytes__(self) -> bytes:
         return ByteUtils.bitarray_to_bytes([bool(bit) for bit in self.value])
     

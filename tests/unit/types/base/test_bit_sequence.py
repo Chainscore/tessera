@@ -7,12 +7,10 @@ from jam.types.base.sequences import BitArray, decodable_bit_array
 from jam.utils.constants import CORE_COUNT
 
 @decodable_bit_array(4)  # Fixed length for testing
-class TestBits(BitArray):
-    pass
+class TestBits(BitArray): ...
 
 @decodable_bit_array(CORE_COUNT)  # Fixed length for testing
-class CoreBits(BitArray):
-    pass
+class CoreBits(BitArray): ...
 
 class TestBitSequenceTypes:
     """Test suite for bit sequence type implementations."""

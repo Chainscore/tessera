@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple
 
 from jam.types.protocol.crypto import Hash
-from jam.types.base.sequences.byte_array import ByteArray32
+from jam.types.base.sequences.bytes import ByteArray32
 from jam.state.merkle.trie import MerkleTrie, NodeHash, EncodedNode
 
 class StateMerkle:

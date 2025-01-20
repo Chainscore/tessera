@@ -3,7 +3,6 @@ from jam.types.base import (
     ByteArray144, ByteArray784
 )
 
-
 # Public key types
 BandersnatchPublic = ByteArray32
 Ed25519Public = ByteArray32

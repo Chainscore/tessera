@@ -1,6 +1,6 @@
+from collections.abc import Sequence
 from dataclasses import is_dataclass, fields
-from typing import Any, Dict, Sequence, Type, TypeVar, Generic, get_origin, get_args, Optional, List, Protocol, runtime_checkable
-from .types import encode_bytes, decode_bytes, encode_integer, decode_integer
+from typing import Any, Dict, Type, TypeVar, Generic, get_origin, get_args, List
 
 T = TypeVar('T')
 V = TypeVar('V')
@@ -31,22 +31,13 @@ class JsonCodec:
         if isinstance(obj, (str, int, float, bool)):
             return obj
         
+        # If object has custom to_json method, use it
+        if hasattr(obj, 'to_json') and callable(obj.to_json):
+            return obj.to_json()
+            
         # Handle sequences
         if isinstance(obj, list):
             return [JsonCodec.to_json(item) for item in obj]
-        
-        # Handle Choice types (including Option)
-        try:
-            from jam.types.base.choices.choice import Choice
-            if isinstance(obj, Choice):
-                # For Option types, if value is None or Null, return None
-                from jam.types.base.null import Null, Nullable
-                if obj.value is None or isinstance(obj.value, Null):
-                    return None
-                # Otherwise serialize the value
-                return JsonCodec.to_json(obj.value)
-        except ImportError:
-            pass
             
         # Handle dataclasses
         if is_dataclass(obj):
@@ -54,28 +45,6 @@ class JsonCodec:
                 field.name: JsonCodec.to_json(getattr(obj, field.name))
                 for field in fields(obj)
             }
-            
-        # Handle objects with value attribute
-        if hasattr(obj, 'value'):
-            # Handle bit arrays and byte arrays
-            if hasattr(obj, '_length'):  # BitArray or ByteArray
-                return encode_bytes(obj)
-            # Handle sequences
-            if isinstance(obj.value, list):
-                return [JsonCodec.to_json(item) for item in obj.value]
-            # Handle integer types
-            if isinstance(obj.value, int):
-                return encode_integer(obj)
-            # Handle boolean types
-            if isinstance(obj.value, bool):
-                return obj.value
-            # Handle null type
-            if obj.value is None:
-                return None
-            
-        # Handle any remaining byte-like objects
-        if hasattr(obj, 'to_bytes'):
-            return encode_bytes(obj)
             
         return str(obj)
 
@@ -92,22 +61,11 @@ class JsonCodec:
         Returns:
             The decoded value wrapped in the target type.
         """
-        # Handle None values
-        if data is None:
-            try:
-                # Try to handle Option type with None value
-                from jam.types.base.choices.option import Option
-                if issubclass(target_type, Option):
-                    from jam.types.base.null import Null
-                    return target_type(Null())  # type: ignore
-            except ImportError:
-                pass
-            return None  # type: ignore
             
         # Handle basic types
         if target_type in (str, int, float, bool):
             return data  # type: ignore
-            
+        
         # Handle dataclasses
         if is_dataclass(target_type):
             if not isinstance(data, dict):
@@ -121,91 +79,23 @@ class JsonCodec:
                     raise ValueError(f"Missing field {field.name} for {target_type.__name__}")
                     
             return target_type(**field_values)  # type: ignore
-            
-        # Handle generic types
-        origin = get_origin(target_type)
-        if origin is not None:
-            if origin is list or origin is List or origin is Sequence:
-                item_type = get_args(target_type)[0]
-                return [JsonCodec.from_json(item, item_type) for item in data]  # type: ignore
-
-        # Handle Choice types (including Option types)
-        try:
-            from jam.types.base.choices.choice import Choice
-            if issubclass(target_type, Choice):
-                # Get choices from the class
-                choices = None
-                for base in target_type.__mro__:
-                    if hasattr(base, 'types'):
-                        choices = base.types
-                        break
-                if choices is None:
-                    raise ValueError(f"No types found for {target_type.__name__}")
-
-                # Handle Option types specially
-                from jam.types.base.null import Nullable
-                if len(choices) == 2 and choices[0] == Nullable:
-                    # This is an Option type
-                    if data is None:
-                        from jam.types.base.null import Null
-                        return target_type(Null())  # type: ignore
-                    else:
-                        # Try to decode the value with the second type
-                        value_type = choices[1]
-                        try:
-                            value = JsonCodec.from_json(data, value_type)
-                            return target_type(value)  # type: ignore
-                        except Exception as e:
-                            raise ValueError(f"Failed to decode Option value: {e}")
-
-                # For regular Choice types, try each possible type
-                last_error = None
-                for choice_type in choices:
+        else:
+            # Handle generic types
+            origin = get_all_subclasses(target_type)
+            if origin is not None and Sequence in origin:
+                try:
+                    return target_type(data)
+                except Exception as e:
+                    return target_type([JsonCodec.from_json(item, target_type._element_type) for item in data])  # type: ignore
+            else:
+                # If they have a custom from_json method, use it
+                try:
+                    return target_type(data)
+                except Exception as e:
                     try:
-                        value = JsonCodec.from_json(data, choice_type)
-                        return target_type(value)  # type: ignore
-                    except (ValueError, TypeError) as e:
-                        last_error = e
-                        continue
-
-                raise ValueError(f"No valid choice type found for {data} in {target_type.__name__}: {last_error}")
-        except ImportError:
-            pass
-
-        # Handle BitArray types
-        try:
-            from jam.types.base.sequences.bytes.bit_array import BitArray
-            if isinstance(data, str) and issubclass(target_type, BitArray):
-                return target_type(data)  # type: ignore
-        except ImportError:
-            pass
-
-        # Handle ByteArray types
-        try:
-            from jam.types.base.sequences.bytes.byte_array import ByteArray
-            if isinstance(data, str) and issubclass(target_type, ByteArray):
-                return target_type(data)  # type: ignore
-        except ImportError:
-            pass
-
-        # Handle sequence types with _element_type
-        if hasattr(target_type, '_element_type') and isinstance(data, list):
-            sequence = target_type()
-            element_type = target_type._element_type
-            if element_type is not None:
-                for item in data:
-                    sequence.append(JsonCodec.from_json(item, element_type))
-            return sequence  # type: ignore
-
-        # Handle integer-like types
-        if hasattr(target_type, 'value') and hasattr(target_type, 'byte_size'):
-            return decode_integer(data, target_type)  # type: ignore
-            
-        # Handle other byte array types
-        if hasattr(target_type, 'to_bytes') and isinstance(data, str):
-            return decode_bytes(data, target_type)  # type: ignore
-            
-        raise ValueError(f"Unsupported type: {target_type}")
+                        return target_type.from_json(data)
+                    except Exception as e:
+                        raise ValueError(f"Unsupported type for JSON deserialization: {target_type}. Full error: {e}") from e
 
 def json_serializable(cls: Type[T]) -> Type[T]:
     """Decorator to make a dataclass JSON serializable"""
@@ -217,3 +107,12 @@ def json_serializable(cls: Type[T]) -> Type[T]:
         cls.__bases__ = (JsonSerializable,) + cls.__bases__
     
     return cls
+
+
+def get_all_subclasses(cls: Type[T]) -> List[Type[T]]:
+    """Get all subclasses of a class"""
+    all_subclasses = []
+    for subclass in cls.__mro__:
+        all_subclasses.append(subclass)
+    return all_subclasses
+

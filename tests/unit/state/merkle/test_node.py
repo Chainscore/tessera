@@ -1,9 +1,9 @@
 import pytest
 
 from jam.state.merkle.node import Node
-from jam.types.base.byte import Byte
-from jam.types.base.bytes import Bytes
-from jam.types.protocol.crypto import Hash, ByteArray32
+from jam.types.base.sequences.bytes import Bytes, ByteArray32
+from jam.types.base import Byte
+from jam.types.protocol.crypto import Hash
 
 def test_node_initialization():
     """Test node initialization with and without hash function"""
@@ -23,7 +23,7 @@ def test_encode_branch():
     
     # Check size and first bit
     assert len(encoded) == node.NODE_SIZE
-    assert encoded[0].to_bit_array()[0] == 0  # First bit should be 0
+    assert encoded[0][0] == 0  # First bit should be 0
     
     # Check hash contents
     assert encoded[1:32] == left_hash[:31]  # First 31 bytes of left hash
@@ -40,9 +40,9 @@ def test_encode_leaf_embedded():
     
     # Check size and bits
     assert len(encoded) == node.NODE_SIZE
-    assert encoded[0].to_bit_array()[0] == 1  # First bit should be 1
-    assert encoded[0].to_bit_array()[1] == 0  # Second bit should be 1 for embedded
-    assert Byte(encoded[0].to_bit_array()[2:8]).value == len(value)  # Size bits should match value length
+    assert encoded[0][0] == 1  # First bit should be 1
+    assert encoded[0][1] == 0  # Second bit should be 1 for embedded
+    assert encoded[0][2:8] == Byte(len(value))[2:8]  # Size bits should match value length
     
     # Check contents
     assert encoded[1:32] == key[:-1]  # Key bytes
@@ -59,8 +59,8 @@ def test_encode_leaf_regular():
     
     # Check size and bits
     assert len(encoded) == node.NODE_SIZE
-    assert encoded[0].to_bit_array()[0] == 1  # First bit should be 1
-    assert encoded[0].to_bit_array()[1] == 1  # Second bit should be 0 for regular
+    assert encoded[0][0] == 1  # First bit should be 1
+    assert encoded[0][1] == 1  # Second bit should be 0 for regular
     
     # Check contents
     assert encoded[1:32] == key[0:31]  # Key bytes

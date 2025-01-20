@@ -147,10 +147,10 @@ class ByteUtils:
         return cls.bytes_to_hex(cls.bitarray_to_bytes(bits))
 
     @classmethod
-    def bitarray_to_int(cls, bits: List[bool]) -> int:
+    def bitarray_to_int(cls, bits: List[bool], bitorder: Literal["msb", "lsb"] = "msb") -> int:
         """Convert bit array to integer"""
         result = 0
-        for bit in reversed(bits):
+        for bit in (bits if bitorder == "msb" else reversed(bits)):
             result = (result << 1) | int(bit)
         return result
 

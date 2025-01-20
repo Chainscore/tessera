@@ -60,9 +60,6 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
         Raises:
             TypeError: If value is not of the correct type
         """
-        if not isinstance(value, Codable):
-            raise TypeError("Elements must be Codable")
-
         if self._element_type is None:
             self._element_type = type(value)
         elif not isinstance(value, self._element_type):
@@ -79,7 +76,29 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
         if isinstance(other, list) or isinstance(other, tuple):
             return all(x == y for x, y in zip(self.value, other))
         return False
-
+    
+    def __gt__(self, other: object) -> bool:
+        """Compare for greater than."""
+        if isinstance(other, BaseSequence):
+            return self.value > other.value
+        return False
+    
+    def __lt__(self, other: object) -> bool:
+        """Compare for less than."""
+        if isinstance(other, BaseSequence):
+            return self.value < other.value
+        return False
+    
+    def __ge__(self, other: object) -> bool:
+        """Compare for greater than or equal to."""
+        return self > other or self == other
+    
+    def __le__(self, other: object) -> bool:
+        """Compare for less than or equal to."""
+        if isinstance(other, BaseSequence):
+            return self < other or self == other
+        return False
+    
     @property
     def element_type(self) -> Optional[Type[T]]:
         """Get the type of elements in this sequence."""
@@ -269,4 +288,13 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
         
     def __hash__(self) -> None:
         """Sequences are mutable, so they should not be hashable."""
-        raise TypeError(f"unhashable type: '{self.__class__.__name__}'")
+        from hashlib import blake2b
+        return int.from_bytes(blake2b(bytes(self)).digest())
+    
+    def startswith(self, prefix: Sequence[T]) -> bool:
+        """Check if sequence starts with prefix."""
+        return self.value[:len(prefix)] == prefix
+    
+    def endswith(self, suffix: Sequence[T]) -> bool:
+        """Check if sequence ends with suffix."""
+        return self.value[-len(suffix):] == suffix

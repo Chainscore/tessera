@@ -3,7 +3,6 @@ from dataclasses import fields, is_dataclass
 from typing import Type, TypeVar, Tuple, Union
 
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.choices import ChoiceCodec
 
 T = TypeVar('T')
 
@@ -19,14 +18,7 @@ def decodable_dataclass(cls: Type[T]) -> Type[T]:
         size = 0
         for field in fields(self):
             item = getattr(self, field.name)
-            # If this is an optional, we need to encode the value
-            if field.type.__name__ == 'Optional':
-                # If the item is None, we need to encode a 0
-                size += 1
-                if item is not None:
-                    size += item.encode_size()
-            else:
-                size += item.encode_size()
+            size += item.encode_size()
         return size
 
     def encode_into(self, buffer: bytearray, offset: int = 0) -> int:

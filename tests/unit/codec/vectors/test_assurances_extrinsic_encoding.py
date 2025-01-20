@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 
 from jam.types.extrinsics.assurances import AssurancesExtrinsic
-import json
 
 def test_assurances_extrinsic_encoding():
     """Test encoding/decoding of AssurancesExtrinsic against test vectors."""
@@ -17,7 +16,6 @@ def test_assurances_extrinsic_encoding():
         expected_bytes = f.read()
 
     # Create AssurancesExtrinsic from JSON
-    
     assurances = AssurancesExtrinsic.from_json(assurances_json)
 
     # Test encoding

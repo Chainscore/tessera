@@ -1,11 +1,11 @@
 
 from dataclasses import dataclass
-from jam.types.base.choice import Choice, decodable_choice
+from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingRoot, BandersnatchRingVrfSignature
 from jam.types.protocol.validators import ValidatorData
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.dataclasses import decodable_dataclass
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 

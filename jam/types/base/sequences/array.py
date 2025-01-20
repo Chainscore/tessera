@@ -37,11 +37,32 @@ class Array(BaseSequence, Generic[T]):
         
         super().__init__(initial=initial, codec=codec)
 
-    def __setitem__(self, index: int, value: T) -> None:
-        """Set item at index."""
-        if not 0 <= index < self._length:
-            raise IndexError(f"Array: Index {index} out of range")
-        super().__setitem__(index, value)
+    def __setitem__(self, index: Union[int, slice], value: Union[T, Sequence[T]]) -> None:
+        """Set item at index or slice."""
+        if isinstance(index, slice):
+            # Get slice indices
+            start, stop, step = index.indices(self._length)
+            # Calculate length of slice
+            slice_len = len(range(start, stop, step))
+            
+            # If value is a single item, repeat it
+            if not isinstance(value, Sequence):
+                value = [value] * slice_len
+
+            # Validate slice length matches value length
+            if len(value) != slice_len:
+                raise ValueError(f"Slice length {slice_len} does not match value length {len(value)}")
+            
+            # Set each value in slice
+            for i, v in zip(range(start, stop, step), value):
+                self._validate_value(v)
+                self.value[i] = v
+                
+        else:
+            if not 0 <= index < self._length:
+                raise IndexError(f"Array: Index {index} out of range")
+            self._validate_value(value)
+            self.value[index] = value
 
     def append(self, value: T) -> None:
         raise ValueError("Cannot append to fixed-length array")

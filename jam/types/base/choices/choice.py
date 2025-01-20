@@ -1,10 +1,11 @@
-from typing import Sequence, Type, Union, Optional, Tuple, TypeVar, Generic
+from typing import Sequence, Type, Union, Optional, Tuple, TypeVar, Generic, Any
 from jam.utils.codec import Codable
 from jam.utils.codec.composite.choices import ChoiceCodec
+from jam.utils.codec.json.json_serializable import JsonSerializable
 
 T = TypeVar('T')
 
-class Choice(Codable[T], Generic[T]):
+class Choice(Codable[T], JsonSerializable, Generic[T]):
     """
     A choice is a value that can be one of several possible types.
     
@@ -90,7 +91,7 @@ class Choice(Codable[T], Generic[T]):
         """Compare for equality."""
         try:
             return self.value == other.value
-        except:
+        except:  # noqa: E722
             return self.value == other
         
     def __bool__(self) -> bool:
@@ -100,6 +101,23 @@ class Choice(Codable[T], Generic[T]):
     def __repr__(self) -> str:
         """Get string representation."""
         return f"{self.__class__.__name__}({self.value!r})"
+
+    def to_json(self) -> Any:
+        """Convert to JSON representation."""
+        return JsonSerializable.to_json(self.value)
+
+    @classmethod
+    def from_json(cls, data: Any) -> 'Choice[T]':
+        """Create from JSON representation."""
+        last_error = None
+        for choice_type in cls.types:
+            try:
+                value = JsonSerializable.from_json(data, choice_type)
+                return cls(value)
+            except (ValueError, TypeError) as e:
+                last_error = e
+                continue
+        raise ValueError(f"No valid choice type found for {data} in {cls.__name__}: {last_error}")
 
 def decodable_choice(types: Sequence[Type[Codable[T]]]) -> Type[Choice[T]]:
     """Decodable choice"""

@@ -4,7 +4,7 @@ from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.core import SegmentRoot, WorkPackageHash
 from jam.types.protocol.crypto import HeaderHash, StateRoot
 from jam.types.protocol.merkle import MMR
-from jam.utils.codec.base import Codable
+from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.dataclasses import decodable_dataclass
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)

@@ -1,7 +1,8 @@
 import pytest
 from jam.state.utils.key_constructor import construct_state_key
+from jam.types.base import Byte
 from jam.types.base.integers.fixed import U8
-from jam.types.base.sequences.byte_array import ByteArray32
+from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.protocol.core import ServiceId
 
 def test_single_u8_index():
@@ -18,9 +19,9 @@ def test_single_u8_index():
         result = construct_state_key(index)
         assert isinstance(result, ByteArray32)
         assert len(result) == 32
-        assert result[0] == index
+        assert int(result[0]) == index.value
         # Verify rest is zeros
-        assert all(b == 0 for b in result[1:])
+        assert all(int(b) == 0 for b in result[1:])
 
 def test_u32_service_id_pair():
     """Test case 2: (U32, ServiceId) -> [i, n₀, 0, n₁, 0, n₂, 0, n₃, 0, 0, ...]"""
@@ -42,16 +43,16 @@ def test_u32_service_id_pair():
         
         # # Verify index bytes
         index_bytes = index.encode()
-        assert result[0] == index_bytes
+        assert bytes(result[0]) == index_bytes
         
         # Verify service ID encoding pattern
         service_id_encoded = service_id.encode()
         for i, byte in enumerate(service_id_encoded):
             pos = 1 + i * 2  # Skip index bytes and account for zero padding
             if pos < 32:
-                assert result[pos] == byte
+                assert result[pos] == Byte(byte)
                 if pos + 1 < 32:
-                    assert result[pos + 1] == 0  # Verify zero padding
+                    assert result[pos + 1] == Byte(0)  # Verify zero padding
 
 def test_service_id_hash_pair():
     """Test case 3: (ServiceId, ByteArray32) -> [n₀, h₀, n₁, h₁, n₂, h₂, n₃, h₃, h₄, h₅, ..., h₂₇]"""
@@ -66,7 +67,7 @@ def test_service_id_hash_pair():
     
     # Check interleaved pattern for first 4 service ID bytes
     for i in range(min(len(service_id_encoded), 4)):
-        assert result[i*2] == service_id_encoded[i]
+        assert result[i*2] == Byte(service_id_encoded[i])
         assert result[i*2 + 1] == hash_bytes[i]
     
     # Check remaining hash bytes
