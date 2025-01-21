@@ -28,8 +28,8 @@ class Node:
         """
         # Convert ByteArray32 to bytes for bitwise operations
         # Replace first bit with 0
-        left_hash[0][0] = Bit(0)
-        
+        left_hash[0][7] = Bit(0)
+
         # Combine the left and right hashes
         node = ByteArray64([0] * 64)
         node[0:32] = left_hash
