@@ -61,7 +61,7 @@ def test_multiple_items_merkelize():
     assert merkle.merkelize(state) == root
 
     state2 = {
-        construct_state_key(2): Bytes(bytes([10] * 163)),
+        construct_state_key(5): Bytes(bytes([10] * 163)),
         construct_state_key(2): Bytes(bytes([20] * 163)),
         construct_state_key(3): Bytes(bytes([30] * 163)),
         construct_state_key(4): Bytes(bytes([40] * 163))

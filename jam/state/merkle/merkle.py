@@ -13,16 +13,15 @@ class StateMerkle:
     def __init__(self, hash_function: Hash = Hash.blake2b):
         """Initialize state merkle with optional hash function"""
         self.trie = MerkleTrie(hash_function)
-        self.bit_index = 0  # Track current bit index for recursive merkelization
 
     def _get_bit(self, key: ByteArray32, index: int) -> bool:
-        """Get bit at index from key, matching the test implementation's bit function"""
+        """Get bit at index from key"""
         byte_index = index >> 3  # Divide by 8
         bit_position = index & 7  # Modulo 8
         return bool(key[byte_index].value[bit_position])
 
     def _merkelize_recursive(self, items: List[Tuple[ByteArray32, ByteArray32]], bit_index: int) -> Tuple[NodeHash, EncodedNode]:
-        """Recursive merkelization matching the test implementation"""
+        """Recursive merkelization"""
         if not items:
             return (self.trie.node.ZERO_HASH, ByteArray64([0] * 64))
         

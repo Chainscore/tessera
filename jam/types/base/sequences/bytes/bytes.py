@@ -13,10 +13,9 @@ class Bytes(Vector[Byte]):
         Args:
             value: Bytable which is either int, bytes, str, bytearray, memoryview, Sequence[Byte]
         """
-        if isinstance(value, Sequence): 
-            if all(isinstance(val, Byte) for val in value):
-                super().__init__(value)
-                return
+        if isinstance(value, Sequence) and all(isinstance(val, Byte) for val in value):
+            super().__init__(value)
+            return
         data: list[Byte] = [Byte(b) for b in ByteUtils.to_bytes(value)]
         super().__init__(data)
 
