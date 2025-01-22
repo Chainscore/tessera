@@ -1,7 +1,6 @@
 from typing import Dict, List, Tuple
-
 from jam.types.protocol.crypto import Hash
-from jam.types.base.sequences.bytes import ByteArray32
+from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
 from jam.state.merkle.trie import MerkleTrie, NodeHash, EncodedNode
 
 class StateMerkle:
@@ -14,48 +13,46 @@ class StateMerkle:
     def __init__(self, hash_function: Hash = Hash.blake2b):
         """Initialize state merkle with optional hash function"""
         self.trie = MerkleTrie(hash_function)
-    
-    def _create_leaf_layer(self, items: List[Tuple[ByteArray32, ByteArray32]]) -> List[Tuple[NodeHash, EncodedNode]]:
-        """Create leaf nodes for all items"""
-        leaves = []
-        for key, value in items:
+        self.bit_index = 0  # Track current bit index for recursive merkelization
+
+    def _get_bit(self, key: ByteArray32, index: int) -> bool:
+        """Get bit at index from key, matching the test implementation's bit function"""
+        byte_index = index >> 3  # Divide by 8
+        bit_position = index & 7  # Modulo 8
+        return bool(key[byte_index].value[bit_position])
+
+    def _merkelize_recursive(self, items: List[Tuple[ByteArray32, ByteArray32]], bit_index: int) -> Tuple[NodeHash, EncodedNode]:
+        """Recursive merkelization matching the test implementation"""
+        if not items:
+            return (self.trie.node.ZERO_HASH, ByteArray64([0] * 64))
+        
+        if len(items) == 1:
+            key, value = items[0]
             encoded = self.trie.node.encode_leaf(key, value)
-            node_hash = self.trie.hash_function(bytes(encoded))
-            leaves.append((node_hash, encoded))
+            node_hash = NodeHash(self.trie.hash_function(bytes(encoded)))
             self.trie._nodes[node_hash] = encoded
-        return leaves
-    
-    def _create_branch_layer(self, nodes: List[Tuple[NodeHash, EncodedNode]]) -> List[Tuple[NodeHash, EncodedNode]]:
-        """Create a layer of branch nodes from pairs of child nodes"""
-        branches = []
-        # for i in range(0, len(nodes), 2):
-        #     # If odd number of nodes, promote last node to next layer
-        #     if i + 1 >= len(nodes):
-        #         branches.append(nodes[i])
-        #         continue
-                
-        #     # Create branch node from pair
-        #     left_hash, _ = nodes[i]
-        #     right_hash, _ = nodes[i + 1]
-        #     encoded = self.trie.node.encode_branch(left_hash, right_hash)
-        #     node_hash = self.trie.hash_function(bytes(encoded))
-        #     branches.append((node_hash, encoded))
-        #     self.trie._nodes[node_hash] = encoded
-
-
-
+            return (node_hash, encoded)
+            
+        # Split items by current bit
         left = []
         right = []
-        for i in range(0, len(nodes)):
-            if nodes[i][0][0][0]:
-                right.append(nodes[i])
+        for key, value in items:
+            if self._get_bit(key, bit_index):
+                right.append((key, value))
             else:
-                left.append(nodes[i])
-
-        # Pair up left and right nodes
-
-        return branches
+                left.append((key, value))
+                
+        # Recursively merkelize subtrees
+        left_hash, left_encoded = self._merkelize_recursive(left, bit_index + 1)
+        right_hash, right_encoded = self._merkelize_recursive(right, bit_index + 1)
         
+        # Create branch node
+        encoded = self.trie.node.encode_branch(left_hash, right_hash)
+        node_hash = NodeHash(self.trie.hash_function(bytes(encoded)))
+        self.trie._nodes[node_hash] = encoded
+        
+        return (node_hash, encoded)
+
     def merkelize(self, state_dict: Dict[ByteArray32, ByteArray32]) -> NodeHash:
         """Merkelize a state dictionary into a cryptographic commitment (Mσ function)
         
@@ -73,16 +70,9 @@ class StateMerkle:
             
         # Sort items to ensure deterministic merklization
         items = sorted(state_dict.items())
-
-        # Create leaf nodes
-        current_layer = self._create_leaf_layer(items)
         
-        # Create branch layers until we reach the root
-        while len(current_layer) > 1:
-            current_layer = self._create_branch_layer(current_layer)
-
-        # Set root hash
-        root_hash, root_node = current_layer[0]
+        # Merkelize recursively starting from bit index 0
+        root_hash, root_encoded = self._merkelize_recursive(items, 0)
         self.trie._root_hash = root_hash
         return root_hash
     

@@ -14,7 +14,7 @@ class BitArray(Array):
     bit array.
     
     """
-    _bit_order: Literal["msb", "lsb"]
+    _bit_order: Literal["msb", "lsb"] = "msb"
 
     def __init__(self, value: Bytable):
         """
@@ -32,7 +32,7 @@ class BitArray(Array):
         # If already a BitArray, just use it 
         if isinstance(value, BitArray) or (isinstance(value, Sequence) and all((isinstance(bit, (Bit, Boolean, bool))) for bit in value)):
             if not all(isinstance(bit, Bit) for bit in value):
-                value = [Bit(bit) for bit in (value if self._bit_order == "msb" else reversed(value))]
+                value = [Bit(bit) for bit in value]
             super().__init__(value, codec=codec)
             return
         

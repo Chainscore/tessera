@@ -18,5 +18,5 @@ def test_trie_vector():
         print(f"Testing vector #{v_index}")
         state_dict = {ByteArray32(k): Bytes(v) for k, v in vector["input"].items()}
         root = trie.merkelize(state_dict)
-        # assert root == ByteArray32(vector["output"])
+        assert root == ByteArray32(vector["output"])
         print(f"✅ Passed vector #{v_index} - Root = {root}")
