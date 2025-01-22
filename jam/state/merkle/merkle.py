@@ -15,13 +15,23 @@ class StateMerkle:
         self.trie = MerkleTrie(hash_function)
 
     def _get_bit(self, key: ByteArray32, index: int) -> bool:
-        """Get bit at index from key"""
+        """Get bit at index from key.
+        
+        Args:
+            key: 32-byte array to extract bit from
+            index: Position of bit to extract (0-255)
+            
+        Returns:
+            bool: Value of bit at specified index
+        """
         byte_index = index >> 3  # Divide by 8
         bit_position = index & 7  # Modulo 8
         return bool(key[byte_index].value[bit_position])
 
     def _merkelize_recursive(self, items: List[Tuple[ByteArray32, ByteArray32]], bit_index: int) -> Tuple[NodeHash, EncodedNode]:
         """Recursive merkelization"""
+        if bit_index >= 256:
+            raise ValueError("bit_index exceeds maximum value of 255")
         if not items:
             return (self.trie.node.ZERO_HASH, ByteArray64([0] * 64))
         
