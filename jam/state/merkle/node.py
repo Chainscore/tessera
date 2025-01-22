@@ -1,5 +1,4 @@
 from typing import Optional
-
 from jam.types.base.bit import Bit
 from jam.types.protocol.crypto import Hash
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64, Bytes
@@ -22,17 +21,17 @@ class Node:
     def encode_branch(self, left_hash: ByteArray32, right_hash: ByteArray32) -> ByteArray64:
         """Encode a branch node (B function in D.3)
         
-        For a branch, the remaining 511 bits are split between the two child node hashes,
-        using the last 255 bits of the 0-bit (left) sub-trie identity and 
-        the full 256 bits of the 1-bit (right) sub-trie identity.
+        For a branch, we:
+        1. Clear the first bit of left_hash (AND with 0xfe)
+        2. Concatenate with full right_hash
         """
-        # Convert ByteArray32 to bytes for bitwise operations
-        # Replace first bit with 0
-        left_hash[0][0] = Bit(0)
-        
-        # Combine the left and right hashes
+        # Clear first bit of left hash (AND with 0xfe)
+        modified_left = ByteArray32(left_hash)
+        modified_left[0][0] = Bit(0)
+
+        # Combine the modified left and right hashes
         node = ByteArray64([0] * 64)
-        node[0:32] = left_hash
+        node[0:32] = modified_left
         node[32:64] = right_hash
         
         return node
