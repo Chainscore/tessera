@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.vector import Vector, decodable_vector
+from jam.types.extrinsics.tickets import TicketBody
 from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingRoot, BandersnatchRingVrfSignature
 from jam.types.protocol.validators import ValidatorData
 from jam.utils.codec.codable import Codable
@@ -14,11 +15,11 @@ class GammaK(Array[ValidatorData]):
     """Validator set"""
     ...
 
-@decodable_vector(BandersnatchRingVrfSignature)
-class GammaA(Vector[BandersnatchRingVrfSignature]):
+@decodable_vector(TicketBody)
+class GammaA(Vector[TicketBody]):
     """Ticket accumulator: set of highest scoring ticket ids to be used for the next epoch"""
     ...
-
+    
 GammaZ = BandersnatchRingRoot
 
 @decodable_array(EPOCH_LENGTH, BandersnatchRingVrfSignature)

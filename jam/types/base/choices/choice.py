@@ -149,7 +149,7 @@ def decodable_choice(types: Sequence[Type[Codable[T]]]) -> Type[Choice[T]]:
             """
             if len(types) == 0:
                 raise ValueError("Choice must have at least one type")
-                
+            
             value, size = ChoiceCodec.decode_from(types, buffer, offset)
             return cls(value), size
         

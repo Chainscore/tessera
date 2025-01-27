@@ -7,7 +7,7 @@ SLOT_PERIOD = chain_config.slot_duration  # seconds
 EPOCH_LENGTH = chain_config.epoch_duration  # timeslots
 ROTATION_PERIOD = chain_config.rotation_period  # timeslots for validator-core assignments
 LOOKUP_ANCHOR_MAX_AGE = 14_400  # maximum age in timeslots
-TICKET_SUBMISSION_END = 500  # slots into epoch
+TICKET_SUBMISSION_END = chain_config.ticket_submission_end  # slots into epoch
 UNAVAILABLE_WORK_EXPIRY = 5  # timeslots
 CONTEST_DURATION = chain_config.contest_duration
 
