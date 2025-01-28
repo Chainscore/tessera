@@ -1,7 +1,10 @@
 
-from typing import List, Self, Tuple, Union, cast
+from typing import List, Self, Tuple, Union
+from jam.pvm.memory import MemoryChunk
+from jam.pvm.register import Registers
 from jam.types.base.bit import Bit
 from jam.types.base.integers.fixed import U8
+from jam.types.protocol.core import Gas, Register
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
@@ -22,12 +25,12 @@ class Program(Codable):
     instruction_set: List[U8]
     offset_bitmask: List[Bit]
 
-    def __init__(self, _z, _jump_table, _instruction_set, _bit_mask):
-        self.z = _z
-        self.jump_table = _jump_table
-        self.instruction_set = _instruction_set
-        self.offset_bitmask = _bit_mask
-
+    def __init__(self, z: U8, jump_table: List[int], instruction_set: List[U8], offset_bitmask: List[Bit]):
+        self.z = z
+        self.jump_table = jump_table
+        self.instruction_set = instruction_set
+        self.offset_bitmask = offset_bitmask
+        
     def encode_size(self) -> int:
         total_size = 0
         total_size += GeneralCodec().encode_size(len(self.jump_table))
@@ -49,18 +52,34 @@ class Program(Codable):
         """
         total_size = self.encode_size()
         check_buffer_size(buffer, total_size, offset)
-
-        offset += GeneralCodec().encode_into(len(self.jump_table), buffer, offset)
-        offset += self.z.encode_into(buffer, offset)
-        offset += GeneralCodec().encode_into(len(self.instruction_set), buffer, offset)
+        current_offset = offset
+        size = GeneralCodec().encode_into(len(self.jump_table), buffer, current_offset)
+        current_offset += size
+        size = self.z.encode_into(buffer, current_offset)
+        current_offset += size
+        size = GeneralCodec().encode_into(len(self.instruction_set), buffer, current_offset)
+        current_offset += size
         for jump in self.jump_table:
-            offset += IntegerCodec(self.z.value).encode_into(jump, buffer, offset)
+            size = IntegerCodec(self.z.value).encode_into(jump, buffer, current_offset)
+            current_offset += size
         for instruction in self.instruction_set:
-            offset += instruction.encode_into(buffer, offset)
-        offset += BitSequenceCodec(len(self.instruction_set), "lsb").encode_into(self.offset_bitmask, buffer, offset)
-
+            size = instruction.encode_into(buffer, current_offset)
+            current_offset += size
+        size = BitSequenceCodec(len(self.instruction_set), "lsb").encode_into(self.offset_bitmask, buffer, current_offset)
+        current_offset += size
+        return current_offset - offset
+    
     @staticmethod
     def decode_from(buffer: Union[bytes, bytearray], offset: int = 0) -> Tuple[Self, int]:
+        """Decode a program from a bytes
+
+        Args:
+            buffer (Union[bytes, bytearray]): Bytes
+            offset (int, optional): Where to start decoding from. Defaults to 0.
+
+        Returns:
+            Tuple[Self, int]: Returns Program and bytes read
+        """
         current_offset = offset
         bytes_read = 0
 
@@ -101,10 +120,6 @@ class Program(Codable):
         value, _ = Program.decode_from(buffer)
         return value
     
-    def __repr__(self) -> str:
-        return f"Program(z={self.z}, jump_table={self.jump_table}, instruction_set={self.instruction_set}, offset_bitmask={self.offset_bitmask})"
-
-
-
-        
-
+    def execute(self, register: Register, initial_registers: Registers, gas: Gas, memory: MemoryChunk) -> Registers:
+        # TODO: Implement execute
+        return initial_registers

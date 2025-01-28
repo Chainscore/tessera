@@ -29,6 +29,10 @@ class Choice(Codable[T], JsonSerializable, Generic[T]):
         >>> my_choice: OptionalU8 = OptionalU8(Null)
         >>> assert my_choice.type == Nullable
         >>> assert my_choice.value is None
+
+    To use this as an enum:
+        >>> @decodable_choice([String, String, String])
+        >>> class OutputType(Choice): ...
     """
 
     # Selected type

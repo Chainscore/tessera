@@ -17,6 +17,9 @@ PVM function $\Psi$ takes in above input and returns:
 - $\mathbb{M}$ = Memory state (sequence)
 
 ----
+
+Recursively execute $\Psi$ till we reach HALT/PANIC
+
 - p = Program instruction set
 - **$\iota$** = Program counter
 - $\varrho$ = Gas counter
