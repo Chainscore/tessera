@@ -2,74 +2,53 @@
 
 ### **Overview**
 
-- **Hybrid Consensus Mechanism**: Safrole is built upon a hybrid consensus system akin to Polkadot's BABE/GRANDPA. This combines two consensus algorithms to leverage their strengths.
+JAM has a hybrid consensus system SAFROLE+GRANDPA, where Safrole is used for Block production and GRANDPA for finalization. Safrole is a simplified version of [SASSAFRAS](https://research.web3.foundation/Polkadot/protocols/block-production/SASSAFRAS)
 
-- **Purpose of Safrole**:
-  - **Rate Limiting**: Controls how quickly new blocks are produced.
-  - **Fork Prevention**: Aims to avoid the creation of multiple competing blocks (forks) that have the same number of ancestor blocks.
+### **State ($\gamma$)**
 
-### **Key Features**
 
-- **Six-Second Timeslots**: Time is divided into six-second intervals called timeslots. Each timeslot allows only one validator (from a predefined set) to author a block.
+Safrole state ($\gamma$) is divided into four parts:
 
-- **Validator Anonymity**: The specific validator assigned to a future timeslot remains anonymous, enhancing security and reducing predictability.
+1. **$\gamma_\mathbf{k}$**
+  
+Pending set of validator keys for the next epoch. These will become $\kappa$ and validate blocks for next epoch.
 
-- **Entropy Pool Generation**: Safrole generates a high-quality pool of randomness (entropy) that other protocol components can utilize, ensuring unpredictability and fairness.
+2. **$\gamma_z$**
 
-### **State Management**
+Ring VRF Root composed of Bandersnatch keys for the **upcoming** epoch's validators ($\gamma_\mathbf{k}$).
 
-- **Core State ($\gamma$)**: Safrole maintains its own state, which is separate from the rest of the protocol but interacts through specific variables:
-  - **$\iota$**: Prospective set of validator keys.
+3. **$\gamma_\mathbf{a}$**
+
+Tickets are collected here for the next epoch. Sorts them by highest-to-lowest (`id` scalar value) scoring ticket.
+
+4.  **$\gamma_\mathbf{s}$**
+
+Current epoch's sealing key sequence. This is either a set of winning Tickets [C] or in case of any fallback - a set of Bandersnatch public keys [H]. This sequence defines who gets to produce block within this epoch. 
+
+
+----
+Safrole interacts with other state components:
+  - **$\iota$**: Staging set of validator keys. Maybe this comes from a list of all available validators (ordered by staked amount / some other parameter).
   - **$\kappa$**: Active set of validator keys.
-  - **$\tau$**: Most recent block's timeslot index.
+  - **$\tau$**: Most recent block's timeslot index. Indicating the number of six-second intervals since the Jam Common Era began.
   - **$\eta$**: Entropy accumulator.
 
-### **Sealing Keys and Ring VRF**
 
-- **Sealing Keys ($\mathsf{E}$)**: For each epoch, Safrole generates a sequence of sealing keys—one for each potential block in that epoch.
+### Validator Rotation
 
-- **Block Headers**: Each block header includes:
-  - **Timeslot Index ($\mathbf{H}_t$)**: Indicates the specific timeslot.
-  - **Seal Signature ($\mathbf{H}_s$)**: Signed by the sealing key for that timeslot.
+At the end of each epoch:
 
-- **Ring VRF with Bandersnatch Curve**:
-  - **Functionality**: Ensures that a sealing key is selected from the validator set without revealing which validator it corresponds to.
-  - **Outcome**: Produces a **ticket**, an unbiased deterministic hash used to select the sealing key.
+filter($\iota$) > $\gamma_{k}$ > $\kappa$ > $\lambda$
+
+`filter` function on $\iota$ removes offenders, and MIGHT order them based some parameter
 
 ---
-
-## 6.1. **Timekeeping**
-
-### **Timeslot Index ($\tau$)**
-
-- **Definition**: $\tau$ represents the most recent block's timeslot index, indicating the number of six-second intervals since the $\text{Jam}$ Common Era began.
-
-- **Epoch and Slot Phase**:
-  - **Epoch Index ($e$)**: Derived from dividing $\tau$ by the epoch length ($\mathsf{E}$).
-  - **Slot Phase Index ($m$)**: The remainder of $\tau$ divided by $\mathsf{E}$, indicating the slot's position within the current epoch.
-
-### **Purpose**
-
-- **Epoch Transition Detection**: By tracking $\tau$, the protocol can easily identify when a new epoch starts and manage validator rotations accordingly.
-
----
-
-## 6.2. **Safrole Basic State ($\gamma$)**
-
-### **State Components**
-
-$\gamma$ is divided into four parts:
-
-1. **$\gamma_\mathbf{k}$**: Pending set of validator keys for the next epoch.
-2. **$\gamma_z$**: Root composed of Bandersnatch keys for the upcoming epoch's validators.
-3. **$\gamma_\mathbf{s}$**: Current epoch's sealing key sequence.
-4. **$\gamma_\mathbf{a}$**: Ticket accumulator holding the highest-scoring tickets for the next epoch.
 
 ### **Tickets ($\mathbb{C}$)**
 
 - **Structure**: Each ticket consists of:
   - **Ticket Identifier ($\mathbf{y}$)**: A high-entropy, unbiasable 32-byte sequence.
-  - **Entry-Index ($r$)**: An integer representing the ticket's position.
+  - **Entry-Index ($r$)**: An integer representing the validator's attempt (0 or 1)
 
 - **Purpose**: Tickets are used to select validators for block production slots in the upcoming epoch.
 
@@ -81,11 +60,7 @@ $\gamma$ is divided into four parts:
 
 ## 6.3. **Key Rotation**
 
-### **Validator Key Sets**
 
-- **Active Set ($\kappa$)**: Validators currently authorized to produce blocks and perform validation.
-- **Staging Set ($\iota$)**: Validators slated to become active in the next epoch.
-- **Pending Set ($\gamma_k$)**: Temporarily holds the next epoch's validator keys, reset at each epoch's start.
 
 ### **Validator Key Structure ($K$)**
 

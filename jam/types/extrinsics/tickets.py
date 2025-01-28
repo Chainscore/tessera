@@ -9,7 +9,7 @@ from jam.types.protocol.crypto import (
     BandersnatchPublic, BandersnatchRingVrfSignature,
     OpaqueHash
 )
-from jam.utils.constants import EPOCH_LENGTH
+from jam.utils.constants import EPOCH_LENGTH, MAX_TICKETS_PER_EXTRINSIC
 
 TicketId = OpaqueHash
 TicketAttempt = U8
@@ -34,5 +34,5 @@ class TicketsAccumulator(Array[TicketBody]): ...
 @decodable_array(length=EPOCH_LENGTH, element_type=BandersnatchPublic)
 class KeysAccumulator(Array[BandersnatchPublic]): ...
 
-@decodable_vector(TicketEnvelope)
+@decodable_vector(element_type=TicketEnvelope, max_length=MAX_TICKETS_PER_EXTRINSIC)
 class TicketsExtrinsic(Vector[TicketEnvelope]): ...
