@@ -70,16 +70,18 @@ class JsonCodec:
         if is_dataclass(target_type):
             if not isinstance(data, dict):
                 raise ValueError(f"Expected dict for {target_type.__name__}, got {type(data)}")
+            
             field_values = {}
             for field in fields(target_type):
-                if field.name in data:
-                    field_values[field.name] = JsonCodec.from_json(data[field.name], field.type) # type: ignore
+                field_name = field.name
+                if field_name in data:
+                    field_values[field_name] = JsonCodec.from_json(data[field_name], field.type) # type: ignore
                 else:
                     # Check by converting _ to -, if still not found, raise error
-                    if field.name.replace("_", "-") in data:
-                        field_values[field.name] = JsonCodec.from_json(data[field.name.replace("_", "-")], field.type) # type: ignore
+                    if field_name.replace("_", "-") in data:
+                        field_values[field_name] = JsonCodec.from_json(data[field_name.replace("_", "-")], field.type) # type: ignore
                     else:
-                        raise ValueError(f"Missing field {field.name} for {target_type.__name__}")
+                        raise ValueError(f"Missing field {field_name} for {target_type.__name__}")
                     
             return target_type(**field_values)  # type: ignore
         else:

@@ -1,4 +1,4 @@
-from typing import Generic, List, Optional, Sequence, Type, TypeVar, Union
+from typing import Any, Generic, List, Optional, Sequence, Type, TypeVar, Union
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.codec import Codec
 
@@ -298,4 +298,9 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
     def endswith(self, suffix: Sequence[T]) -> bool:
         """Check if sequence ends with suffix."""
         return self.value[-len(suffix):] == suffix
+    
+    @classmethod
+    def from_json(cls, data: List[Any]) -> 'BaseSequence[T]':
+        """Create from JSON representation."""
+        return cls([cls._element_type.from_json(item) for item in data])
     

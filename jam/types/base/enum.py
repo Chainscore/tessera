@@ -1,5 +1,5 @@
 from enum import Enum as OGEnum
-from typing import Tuple, Union
+from typing import Tuple, Type, Union
 from jam.types.base.integers.fixed import U8
 from jam.utils.codec.codable import Codable
 
@@ -51,3 +51,9 @@ class Enum(Codable, OGEnum):
     def to_json(self) -> dict:
         return {"name": self.name}
     
+def decodable_enum(cls: Type[Enum]) -> Type[Enum]:
+    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[Enum, int]:
+        return cls.decodeFrom(buffer, offset)
+
+    cls.decode_from = decode_from
+    return cls

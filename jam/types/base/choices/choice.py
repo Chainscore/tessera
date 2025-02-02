@@ -1,11 +1,11 @@
-from typing import Sequence, Type, Union, Optional, Tuple, TypeVar, Generic, Any
+from typing import Dict, Sequence, Type, Union, Optional, Tuple, TypeVar, Generic, Any, get_type_hints
 from jam.utils.codec import Codable
 from jam.utils.codec.composite.choices import ChoiceCodec
 from jam.utils.codec.json.json_serializable import JsonSerializable
 
 T = TypeVar('T')
 
-class Choice(Codable[T], JsonSerializable, Generic[T]):
+class Choice(Codable[T], Generic[T]):
     """
     A choice is a value that can be one of several possible types.
     
@@ -39,6 +39,22 @@ class Choice(Codable[T], JsonSerializable, Generic[T]):
     type: Type[Codable[T]]
     value: Codable[T]
 
+    __choices__: Dict[str, Type[Codable[T]]] = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        if len(cls.__choices__) != 0:
+            cls.__choices__ = {}
+        
+        # Collect the annotations declared in this subclass.
+        # (This will include all annotated names that are defined in the class body.)
+        all_annotations = get_type_hints(cls)
+        # Remove 'value', 'codec', 'type', '__choices__'
+        for k, v in all_annotations.items():
+            if k not in ['value', 'codec', 'type', '__choices__']:
+                cls.__choices__[k] = v
+
     def __init__(self, initial: Codable[T]):
         """
         Initialize Choice.
@@ -50,14 +66,14 @@ class Choice(Codable[T], JsonSerializable, Generic[T]):
         Raises:
             ValueError: If types list is empty
         """
-        if len(self.types) == 0:
+        if len(self.__choices__) == 0:
             raise ValueError("Choice must have at least one type")
 
         # Make sure the initial value is a valid type
-        if type(initial) not in self.types:
-            raise ValueError(f"Value type {type(initial)} is not in allowed types: {self.types}")
+        if type(initial) not in self.__choices__.values():
+            raise ValueError(f"Value type {type(initial)} is not in allowed types: {self.__choices__.values()}")
         
-        super().__init__(codec=ChoiceCodec(self.types))
+        super().__init__(codec=ChoiceCodec(list(self.__choices__.values())))
 
         if not isinstance(initial, Codable):
             raise TypeError("Choice value must be Codable")
@@ -77,8 +93,8 @@ class Choice(Codable[T], JsonSerializable, Generic[T]):
         if not isinstance(value, Codable):
             raise TypeError("Choice value must be Codable")
             
-        if type(value) not in self.types:
-            raise ValueError(f"Value type {type(value)} is not in allowed types: {self.types}")
+        if type(value) not in self.__choices__:
+            raise ValueError(f"Value type {type(value)} is not in allowed types: {self.__choices__}")
             
         self.value = value
 
@@ -114,49 +130,44 @@ class Choice(Codable[T], JsonSerializable, Generic[T]):
     def from_json(cls, data: Any) -> 'Choice[T]':
         """Create from JSON representation."""
         last_error = None
-        for choice_type in cls.types:
-            try:
-                value = JsonSerializable.from_json(data, choice_type)
-                return cls(value)
-            except (ValueError, TypeError) as e:
-                last_error = e
-                continue
+        # Go through all the choices and try to decode the data
+        # While checking, check if data[choices[i]] is available then try to decode it in that type
+        for i, choice_type in enumerate(cls.__choices__.values()):
+            if list(cls.__choices__.keys())[i] in data.keys():
+                data_parsed = choice_type.from_json(data[list(cls.__choices__.keys())[i]])
+                return cls(data_parsed)
+
         raise ValueError(f"No valid choice type found for {data} in {cls.__name__}: {last_error}")
 
-def decodable_choice(types: Sequence[Type[Codable[T]]]) -> Type[Choice[T]]:
-    """Decodable choice"""
-    def decorator(cls: Type[Choice[T]]) -> Type[Choice[T]]:
-        # Make sure the types are valid
-        if len(types) == 0:
-            raise ValueError("Choice must have at least one type")
-        cls.types = types
+def decodable_choice(cls: Type[Choice]) -> Type[Choice]:
+    if len(cls.__choices__) == 0:
+        raise ValueError("Choice must have at least one type")
 
-        @staticmethod
-        def decode_from(
-            buffer: Union[bytes, bytearray, memoryview], 
-            offset: int = 0
-        ) -> Tuple[Choice[T], int]:
-            """
-            Decode choice from buffer.
-            
-            Args:
-                types: List of possible types for this choice
-                buffer: Source buffer
-                offset: Starting offset
-                
-            Returns:
-                Tuple of (decoded value, bytes read)
-                
-            Raises:
-                DecodeError: If buffer is invalid or too short
-                ValueError: If types list is empty
-            """
-            if len(types) == 0:
-                raise ValueError("Choice must have at least one type")
-            
-            value, size = ChoiceCodec.decode_from(types, buffer, offset)
-            return cls(value), size
+    @staticmethod
+    def decode_from(
+        buffer: Union[bytes, bytearray, memoryview], 
+        offset: int = 0
+    ) -> Tuple[Choice, int]:
+        """
+        Decode choice from buffer.
         
-        cls.decode_from = decode_from
-        return cls
-    return decorator
+        Args:
+            types: List of possible types for this choice
+            buffer: Source buffer
+            offset: Starting offset
+            
+        Returns:
+            Tuple of (decoded value, bytes read)
+            
+        Raises:
+            DecodeError: If buffer is invalid or too short
+            ValueError: If types list is empty
+        """
+        if len(cls.__choices__) == 0:
+            raise ValueError("Choice must have at least one type")
+        
+        value, size = ChoiceCodec.decode_from(list(cls.__choices__.values()), buffer, offset)
+        return cls(value), size
+    
+    cls.decode_from = decode_from
+    return cls

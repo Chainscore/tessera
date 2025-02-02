@@ -1,7 +1,7 @@
 """Unit tests for choice codec implementation."""
 
 import pytest
-from typing import Tuple, Union, Type, List, cast, TypeVar
+from typing import Type, List, TypeVar
 
 from jam.types.base.choices import Choice, decodable_choice
 from jam.utils.codec.codable import Codable
@@ -17,8 +17,10 @@ class TestChoiceCodec:
 
     def test_basic_choice(self):
         """Test basic encoding/decoding of choice values."""
-        @decodable_choice([Boolean, U8])
-        class BoolIntChoice(Choice): ...
+        @decodable_choice
+        class BoolIntChoice(Choice): 
+            A: Boolean
+            B: U8
         value = Boolean(True)
         choice = BoolIntChoice(value)
         encoded = choice.encode()
@@ -29,14 +31,16 @@ class TestChoiceCodec:
     @pytest.mark.parametrize("types,value", [
         ([Boolean, U8], Boolean(True)),
         ([Boolean, U8], U8(255)),
-        ([String, U16, Boolean], U16(17)),
-        ([String, U16, Boolean], String("test")),
-        ([String, U16, Boolean], Boolean(False)),
+        ([String, U16], U16(17)),
+        ([String, U16], String("test")),
+        ([String, Boolean], Boolean(False)),
     ], ids=lambda val: str(val) if not isinstance(val, list) else f"types_{len(val)}")
     def test_choice_variants(self, types: List[Type[Codable]], value: Codable):
         """Test encoding/decoding of different choice variants."""
-        @decodable_choice(types)
-        class CustomChoice(Choice): ...
+        @decodable_choice
+        class CustomChoice(Choice): 
+            A: types[0]
+            B: types[1]
 
         choice = CustomChoice(value)
         encoded = choice.encode()
@@ -46,13 +50,15 @@ class TestChoiceCodec:
 
     def test_nested_choices(self):
         """Test encoding/decoding of nested choices."""
-        inner_types = [String, U8]
-        @decodable_choice(inner_types)
-        class TestChoice(Choice): ...
+        @decodable_choice
+        class TestChoice(Choice): 
+            A: String
+            B: U8
 
-        outer_types = [String, TestChoice]
-        @decodable_choice(outer_types)
-        class OuterChoice(Choice): ...
+        @decodable_choice
+        class OuterChoice(Choice): 
+            A: String
+            B: TestChoice
         
         # Create nested choice structure
         inner_choice = TestChoice(U8(42))
@@ -64,8 +70,10 @@ class TestChoiceCodec:
 
     def test_invalid_tag(self):
         """Test handling of invalid choice tags during decoding."""
-        @decodable_choice([Boolean, U8])
-        class TestChoice(Choice): ...
+        @decodable_choice
+        class TestChoice(Choice): 
+            A: Boolean
+            B: U8
         
         # Create invalid encoding with out-of-bounds tag
         invalid_buffer = bytearray([2])  # Tag 2 is invalid for 2 choices
@@ -76,8 +84,10 @@ class TestChoiceCodec:
 
     def test_type_mismatch(self):
         """Test handling of type mismatches."""
-        @decodable_choice([Boolean, U8])
-        class TestChoice(Choice): ...
+        @decodable_choice
+        class TestChoice(Choice): 
+            A: Boolean
+            B: U8
         
         # Try to create choice with invalid type
         with pytest.raises(ValueError):
@@ -86,21 +96,25 @@ class TestChoiceCodec:
     def test_empty_types(self):
         """Test handling of empty types list."""
         with pytest.raises(ValueError):
-            @decodable_choice([])
+            @decodable_choice
             class EmptyChoice(Choice): ...
 
     def test_unset_value(self):
         """Test handling of unset value."""
-        @decodable_choice([Boolean, U8])
-        class TestChoice(Choice): ...
+        @decodable_choice
+        class TestChoice(Choice): 
+            A: Boolean
+            B: U8
         
         with pytest.raises(ValueError):
             choice = TestChoice(None)  # type: ignore
 
     def test_buffer_bounds(self):
         """Test buffer bounds checking."""
-        @decodable_choice([Boolean, U8])
-        class TestChoice(Choice): ...
+        @decodable_choice
+        class TestChoice(Choice): 
+            A: Boolean
+            B: U8
         
         choice = TestChoice(Boolean(True))
         encoded = choice.encode()
@@ -112,8 +126,10 @@ class TestChoiceCodec:
 
     def test_offset_handling(self):
         """Test encoding and decoding with buffer offsets."""
-        @decodable_choice([Boolean, U8])
-        class TestChoice(Choice): ...
+        @decodable_choice
+        class TestChoice(Choice): 
+            A: Boolean
+            B: U8
         
         choice = TestChoice(Boolean(True))
         
@@ -144,8 +160,10 @@ class TestChoiceCodec:
     ], ids=str)
     def test_encode_size(self, value: Codable, expected_size: int):
         """Test that encode_size returns correct sizes for different choices."""
-        @decodable_choice([Boolean, U8])
-        class TestChoice(Choice): ...
+        @decodable_choice
+        class TestChoice(Choice): 
+            A: Boolean
+            B: U8
         
         choice = TestChoice(value)
         assert choice.encode_size() == expected_size
@@ -153,8 +171,10 @@ class TestChoiceCodec:
 
     def test_deterministic_encoding(self):
         """Test that choice encoding is deterministic."""
-        @decodable_choice([Boolean, U8])
-        class TestChoice(Choice): ...
+        @decodable_choice
+        class TestChoice(Choice): 
+            A: Boolean
+            B: U8
         
         choice1 = TestChoice(Boolean(True))
         choice2 = TestChoice(Boolean(True))
@@ -163,8 +183,10 @@ class TestChoiceCodec:
 
     def test_equality(self):
         """Test equality comparison."""
-        @decodable_choice([Boolean, U8])
-        class TestChoice(Choice): ...
+        @decodable_choice
+        class TestChoice(Choice): 
+            A: Boolean
+            B: U8
         
         choice1 = TestChoice(Boolean(True))
         choice2 = TestChoice(Boolean(True))
@@ -176,8 +198,10 @@ class TestChoiceCodec:
 
     def test_string_representation(self):
         """Test string representation."""
-        @decodable_choice([Boolean, U8])
-        class TestChoice(Choice): ...
+        @decodable_choice
+        class TestChoice(Choice): 
+            A: Boolean
+            B: U8
         
         choice = TestChoice(Boolean(True))
         assert str(choice) == f"TestChoice({Boolean(True)})"

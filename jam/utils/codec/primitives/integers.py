@@ -43,7 +43,7 @@ class IntegerCodec(Codec):
             byte_size: Number of bytes for encoded value
             python_type: Python type for values
         """
-        self.byte_size = byte_size
+        self.byte_size = byte_size  
 
     def encode_size(self, value) -> int:
         """Get encoded size (fixed for given type)."""
@@ -98,6 +98,8 @@ class IntegerCodec(Codec):
         ensure_size(buffer, _byte_size, offset)
         value = int.from_bytes(buffer[offset:offset+_byte_size], 'little')
         return value, _byte_size
+    
+
 
 class GeneralCodec(Codec[int]):
     """

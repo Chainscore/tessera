@@ -18,8 +18,7 @@ class ByteArray(Array[Byte]):
     
     @classmethod
     def from_json(cls, data: Any) -> 'ByteArray':
-        print("byte array from json", data)
-        return cls(data)
+        return cls(ByteUtils.to_bytes(data))
     
 def decodable_bytearray(length: int) -> Callable[[Type[ByteArray]], Type[ByteArray]]:
     return decodable_array(length, Byte)
