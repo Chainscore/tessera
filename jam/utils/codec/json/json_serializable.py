@@ -73,16 +73,22 @@ class JsonCodec:
             
             field_values = {}
             for field in fields(target_type):
+                # Is the field name in dataclass
                 field_name = field.name
-                if field_name in data:
-                    field_values[field_name] = JsonCodec.from_json(data[field_name], field.type) # type: ignore
+
+                # Is the field name in the json file
+                data_arg = field_name
+                if data_arg.endswith("_"):
+                    data_arg = field_name[:-1]
+
+                if data_arg in data:
+                    field_values[field_name] = JsonCodec.from_json(data[data_arg], field.type) # type: ignore
                 else:
                     # Check by converting _ to -, if still not found, raise error
                     if field_name.replace("_", "-") in data:
                         field_values[field_name] = JsonCodec.from_json(data[field_name.replace("_", "-")], field.type) # type: ignore
                     else:
                         raise ValueError(f"Missing field {field_name} for {target_type.__name__}")
-                    
             return target_type(**field_values)  # type: ignore
         else:
             # Handle generic types

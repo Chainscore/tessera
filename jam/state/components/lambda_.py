@@ -4,6 +4,6 @@ from jam.types.protocol.validators import ValidatorData
 from jam.utils.constants import VALIDATOR_COUNT
 
 @decodable_array(VALIDATOR_COUNT, ValidatorData)
-class Lambada(Array[ValidatorData]): 
+class Lambda_(Array[ValidatorData]): 
     """Previous epoch's validator keys and metadata."""
     ...

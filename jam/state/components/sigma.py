@@ -4,11 +4,11 @@ from jam.state.components.alpha import Alpha
 from jam.state.components.beta import Beta
 from jam.state.components.chi import Chi
 from jam.state.components.eta import Eta
-from jam.state.components.gamma import Gamma
+from jam.consensus.safrole.gamma import Gamma
 from jam.state.components.delta import Delta
 from jam.state.components.iota import Iota
 from jam.state.components.kappa import Kappa
-from jam.state.components.lambada import Lambada
+from jam.state.components.lambda_ import Lambda_
 from jam.state.components.pi import Pi
 from jam.state.components.psi import Psi
 from jam.state.components.rho import Rho
@@ -56,7 +56,7 @@ class Sigma(Codable):
 
     # Previous epoch's validator keys and metadata
     # Defined in section 6.3
-    lambada: Lambada
+    lambda_: Lambda_
 
     # Tracks work-reports available but not yet accumulated (has states ρ† and ρ‡)
     # Defined in section 11.1
