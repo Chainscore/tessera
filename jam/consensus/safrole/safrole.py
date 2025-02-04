@@ -1,6 +1,5 @@
 from typing import List, Union
 from jam.consensus.safrole.errors import SafroleError
-from jam.consensus.safrole.gamma import GammaK
 from jam.state.state import State
 from jam.types.block import Block
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END

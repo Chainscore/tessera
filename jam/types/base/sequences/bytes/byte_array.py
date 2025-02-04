@@ -13,8 +13,8 @@ class ByteArray(Array[Byte]):
             byt = [Byte(b) for b in ByteUtils.to_bytes(value)]
             super().__init__(byt)
 
-    def __str__(self) -> str:
-        return bytes(self).hex()
+    def __repr__(self) -> str:
+        return f"0x{bytes(self).hex()}"
     
     @classmethod
     def from_json(cls, data: Any) -> 'ByteArray':

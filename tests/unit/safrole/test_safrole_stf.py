@@ -36,4 +36,6 @@ def test_publish_tickets_no_mark():
     for vector in vectors:
         test_state = create_state_from_pre(vector.pre_state)
         test_block = create_block_from_input(vector.input)
-        Safrole.transition(test_state, test_block)
+        output = Safrole.transition(test_state, test_block)
+        print(output)
+        print(vector.post_state)
