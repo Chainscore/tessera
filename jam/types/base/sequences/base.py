@@ -298,3 +298,4 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
     def endswith(self, suffix: Sequence[T]) -> bool:
         """Check if sequence ends with suffix."""
         return self.value[-len(suffix):] == suffix
+    

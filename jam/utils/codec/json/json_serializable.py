@@ -70,24 +70,35 @@ class JsonCodec:
         if is_dataclass(target_type):
             if not isinstance(data, dict):
                 raise ValueError(f"Expected dict for {target_type.__name__}, got {type(data)}")
-                
             field_values = {}
             for field in fields(target_type):
                 if field.name in data:
                     field_values[field.name] = JsonCodec.from_json(data[field.name], field.type) # type: ignore
                 else:
-                    raise ValueError(f"Missing field {field.name} for {target_type.__name__}")
+                    # Check by converting _ to -, if still not found, raise error
+                    if field.name.replace("_", "-") in data:
+                        field_values[field.name] = JsonCodec.from_json(data[field.name.replace("_", "-")], field.type) # type: ignore
+                    else:
+                        raise ValueError(f"Missing field {field.name} for {target_type.__name__}")
                     
             return target_type(**field_values)  # type: ignore
         else:
             # Handle generic types
-            origin = get_all_subclasses(target_type)
-            if origin is not None and Sequence in origin:
-                try:
-                    return target_type(data)
-                except Exception as e:
-                    return target_type([JsonCodec.from_json(item, target_type._element_type) for item in data])  # type: ignore
-            else:
+            try:
+                origin = get_all_subclasses(target_type)
+                if origin is not None and Sequence in origin:
+                    value = None
+                    try:
+                        value = target_type(data)
+                    except Exception as e:
+                        value = target_type([JsonCodec.from_json(item, target_type._element_type) for item in data])  # type: ignore
+                    if value is None:
+                        raise ValueError(f"Unable to parse {target_type.__name__} from {data}")
+                    return value
+                else:
+                    raise ValueError(f"Subclass of {target_type.__name__} is not supported for JSON deserialization")
+
+            except Exception as e:
                 # If they have a custom from_json method, use it
                 try:
                     return target_type(data)
