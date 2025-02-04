@@ -114,12 +114,14 @@ class Program(Codable):
         current_offset +=  size
 
         return Program(z, j, c, offset_bitmask), bytes_read
-    
+
+
     @staticmethod
     def from_json(buffer: Union[bytes, bytearray]) -> Self:
         value, _ = Program.decode_from(buffer)
         return value
-    
+
+
     def execute(self, register: Register, initial_registers: Registers, gas: Gas, memory: MemoryChunk) -> Registers:
         # TODO: Implement execute
         return initial_registers
