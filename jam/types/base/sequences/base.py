@@ -230,7 +230,7 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
             other_values = other.value
         else:
             other_values = other
-        new_sequence = self.__class__(self.value.copy(), codec=self.codec)
+        new_sequence = self.__class__(self.value.copy())
         new_sequence.extend(other_values)
         return new_sequence
 

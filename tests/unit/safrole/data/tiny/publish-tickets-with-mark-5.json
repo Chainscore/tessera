@@ -12,7 +12,7 @@
             "0xbb30a42c1e62f0afda5f0a4e8a562f7a13a24cea00ee81917b86b89e801314aa",
             "0xe88bd757ad5b9bedf372d8d3f0cf6c962a469db61a265f6418e1ffed86da29ec"
         ],
-        "lambada": [
+        "lambda": [
             {
                 "bandersnatch": "0x5e465beb01dbafe160ce8216047f2155dd0569f058afd52dcea601025a8d161d",
                 "ed25519": "0x3b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da29",

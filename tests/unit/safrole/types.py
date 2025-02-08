@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import json
 import os
 from typing import List
-from jam.consensus.safrole.errors import SafroleError
+from jam.consensus.safrole.errors import SafroleErrorCode
 from jam.consensus.safrole.gamma import GammaS, GammaA, GammaK, GammaZ
 from jam.state.components.eta import Eta
 from jam.state.components.iota import Iota
@@ -63,7 +63,7 @@ class OutputMarks(Codable):
 @decodable_choice
 class Output(Choice): 
     ok: OutputMarks
-    err: SafroleError
+    err: SafroleErrorCode
 
 @decodable_dataclass
 @dataclass
@@ -88,6 +88,7 @@ def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testc
                 data = json.loads(f.read())
                 try:
                     tc = Testcase.from_json(data)
+                    print(f"Decoded {file}")
                     result.append(tc)
                 except Exception as e:
                     print(f"❌ Failed to decode {file}: {e}")

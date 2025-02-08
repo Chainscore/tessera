@@ -96,6 +96,7 @@ class Choice(Codable[T], Generic[T]):
         if type(value) not in self.__choices__:
             raise ValueError(f"Value type {type(value)} is not in allowed types: {self.__choices__}")
             
+        self.type = type(value)
         self.value = value
 
     def __get__(self) -> Optional[Codable[T]]:
@@ -109,9 +110,9 @@ class Choice(Codable[T], Generic[T]):
 
     def __eq__(self, other: object) -> bool:
         """Compare for equality."""
-        try:
+        if isinstance(other, Choice):
             return self.value == other.value
-        except:  # noqa: E722
+        else:
             return self.value == other
         
     def __bool__(self) -> bool:

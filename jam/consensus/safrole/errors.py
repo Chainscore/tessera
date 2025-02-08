@@ -1,7 +1,10 @@
+from jam.error import JamError
 from jam.types.base.enum import Enum, decodable_enum
 
+class SafroleError(JamError): ...
+
 @decodable_enum
-class SafroleError(Enum):
+class SafroleErrorCode(Enum):
     BAD_SLOT = "bad_slot"
     UNEXPECTED_TICKET = "unexpected_ticket"
     BAD_TICKET_ORDER = "bad_ticket_order"

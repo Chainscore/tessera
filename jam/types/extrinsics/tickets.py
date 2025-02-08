@@ -25,7 +25,7 @@ class TicketEnvelope(Codable):
 @dataclass
 class TicketBody(Codable):
     """Ticket body structure."""
-    id: TicketId
+    id: TicketId # This is the VRF output of TicketEnvelope.signature https://graypaper.fluffylabs.dev/#/5f542d7/0f84000fbd00
     attempt: TicketAttempt
 
 @decodable_array(length=EPOCH_LENGTH, element_type=TicketBody)

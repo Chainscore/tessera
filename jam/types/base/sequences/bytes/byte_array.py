@@ -1,4 +1,4 @@
-from typing import Any, Callable, Sequence, Type
+from typing import Any, Callable, Sequence, Type, Union, Literal
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.utils.byte_utils import Bytable, ByteUtils
@@ -15,6 +15,12 @@ class ByteArray(Array[Byte]):
 
     def __repr__(self) -> str:
         return f"0x{bytes(self).hex()}"
+
+    def __int__(self) -> int:
+        return int.from_bytes(bytes(self))
+
+    def to_int(self, byteorder: Literal["big", "little"] = "big"):
+        return int.from_bytes(self, byteorder)
     
     @classmethod
     def from_json(cls, data: Any) -> 'ByteArray':
