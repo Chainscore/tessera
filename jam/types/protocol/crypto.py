@@ -2,6 +2,8 @@ from jam.types.base import (
     ByteArray32, ByteArray64, ByteArray96,
     ByteArray144, ByteArray784
 )
+from jam.types.base.sequences.bytes.byte_array import ByteArray
+from jam.types.base.sequences.bytes.bytes import Bytes
 
 # Public key types
 BandersnatchPublic = ByteArray32
@@ -22,12 +24,16 @@ class Hash:
     def blake2b(data: bytes) -> ByteArray32:
         """Blake2b hash function"""
         from hashlib import blake2b
+        if not isinstance(data, bytes):
+            data = bytes(data)
         return ByteArray32(blake2b(data, digest_size=32).digest())
     
     @staticmethod
     def sha256(data: bytes) -> ByteArray32:
         """SHA256 hash function"""
         from hashlib import sha256
+        if not isinstance(data, bytes):
+            data = bytes(data)
         return ByteArray32(sha256(data).digest())
 
 # Hash types

@@ -75,7 +75,7 @@ class ArrayCodec(Codec[Sequence[Codable]]):
         
     @staticmethod
     def decode_from(length: int, codable_class: type[Codable], buffer: Union[bytes, bytearray, memoryview], 
-                   offset: int = 0) -> Tuple[List, int]:
+                offset: int = 0) -> Tuple[List, int]:
         result = []
         current_offset = offset
         bytes_read = 0

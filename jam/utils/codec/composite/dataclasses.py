@@ -37,12 +37,13 @@ def decodable_dataclass(cls: Type[T]) -> Type[T]:
     def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[T, int]:
         current_offset = offset
         decoded_values = []
+        # print("Decoding dataclass:", cls.__name__)
         for field in fields(cls): # type: ignore
             field_type = field.type
             value, size = field_type.decode_from(buffer, current_offset)
             decoded_values.append(value)
+            # print("Decoding field:", field.name, "as", value)
             current_offset += size
-        
         instance = cls(*decoded_values)
         return instance, current_offset - offset  # type: ignore
     

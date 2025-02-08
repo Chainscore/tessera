@@ -19,6 +19,10 @@ class BaseInteger():
         """Allow conversion to int."""
         return self.value
     
+    def to_int(self) -> int:
+        """Allow conversion to int."""
+        return self.value
+    
     def __index__(self) -> int:
         """Allow use in slicing."""
         return self.value

@@ -1,13 +1,17 @@
-from typing import Any, Type
-from jam.types.base.choices.choice import Choice, decodable_choice
+from typing import Any, Tuple, Type, Union
+from jam.types.base.choices.choice import Choice
 from jam.types.base.null import Null, Nullable
 from jam.utils.codec.codable import Codable
+from jam.utils.codec.composite.choices import ChoiceCodec
 from jam.utils.codec.json.json_serializable import JsonSerializable
 
 class Option(Choice):
     """
     An option is a choice that can be either None or a value.
     """
+    def __init_subclass__(cls, **kwargs):
+        ...
+
     def __init__(self, initial: Codable = Null):
         super().__init__(initial)
 
@@ -16,7 +20,8 @@ class Option(Choice):
         """Create from JSON representation."""
         if data is None:
             return cls(Nullable())
-        value = cls.types[1].from_json(data)
+        
+        value = cls.__choices__["some"].from_json(data)
         return cls(value)
     
     def to_json(self) -> Any:
@@ -26,4 +31,39 @@ class Option(Choice):
         return JsonSerializable.to_json(self.value)
 
 def decodable_option(optional_type: Type[Codable]) -> Type[Option]:
-    return decodable_choice([Nullable, optional_type])
+    """Decodable choice"""
+    def decorator(cls: Type[Option]) -> Type[Option]:
+        cls.__choices__ = {
+            "none": Nullable,
+            "some": optional_type
+        }
+
+        @staticmethod
+        def decode_from(
+            buffer: Union[bytes, bytearray, memoryview], 
+            offset: int = 0
+        ) -> Tuple[Option, int]:
+            """
+            Decode option from buffer.
+            
+            Args:
+                optional_type: Type of the optional value
+                buffer: Source buffer
+                offset: Starting offset
+                
+            Returns:
+                Tuple of (decoded value, bytes read)
+                
+            Raises:
+                DecodeError: If buffer is invalid or too short
+                ValueError: If types list is empty
+            """
+            if len(cls.__choices__) == 0:
+                raise ValueError("Choice must have at least one type")
+            
+            value, size = ChoiceCodec.decode_from([Nullable, optional_type], buffer, offset)
+            return cls(value), size
+        
+        cls.decode_from = decode_from
+        return cls
+    return decorator

@@ -117,7 +117,8 @@ class VectorCodec(Codec[Sequence[Codable[T]]], Generic[T]):
     def decode_from(
         codable_class: Type[Codable[T]],
         buffer: Union[bytes, bytearray, memoryview], 
-        offset: int = 0
+        offset: int = 0,
+        max_length: int = 2**63 - 1
     ) -> tuple[List[T], int]:
         """
         Decode vector from buffer.
@@ -136,7 +137,10 @@ class VectorCodec(Codec[Sequence[Codable[T]]], Generic[T]):
             # Decode length prefix
             length, length_size = GeneralCodec.decode_from(buffer, offset)
             current_offset = offset + length_size
-            
+
+            if length > max_length:
+                length = max_length
+
             # Decode elements
             result = []
             for i in range(length):

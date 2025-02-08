@@ -148,8 +148,7 @@ class TestByteArrayTypes:
         """Test string representation."""
         value = make_test_bytes(size)
         byte_array = array_class(value)
-        expected = f"{array_class.__name__}([{', '.join(f'{(byte)}' for byte in value)}])"
-        assert repr(byte_array) == expected
+        assert repr(byte_array) == f"0x{bytes(byte_array).hex()}"
         
     @pytest.mark.parametrize("array_class,in_range,out_of_range", [
         (ByteArray8, 8, 9),

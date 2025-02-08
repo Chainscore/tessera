@@ -9,7 +9,7 @@ from jam.types.protocol.crypto import (
     BandersnatchPublic, BandersnatchRingVrfSignature,
     OpaqueHash
 )
-from jam.utils.constants import EPOCH_LENGTH
+from jam.utils.constants import EPOCH_LENGTH, MAX_TICKETS_PER_EXTRINSIC
 
 TicketId = OpaqueHash
 TicketAttempt = U8
@@ -25,7 +25,7 @@ class TicketEnvelope(Codable):
 @dataclass
 class TicketBody(Codable):
     """Ticket body structure."""
-    id: TicketId
+    id: TicketId # This is the VRF output of TicketEnvelope.signature https://graypaper.fluffylabs.dev/#/5f542d7/0f84000fbd00
     attempt: TicketAttempt
 
 @decodable_array(length=EPOCH_LENGTH, element_type=TicketBody)
@@ -34,5 +34,5 @@ class TicketsAccumulator(Array[TicketBody]): ...
 @decodable_array(length=EPOCH_LENGTH, element_type=BandersnatchPublic)
 class KeysAccumulator(Array[BandersnatchPublic]): ...
 
-@decodable_vector(TicketEnvelope)
+@decodable_vector(element_type=TicketEnvelope, max_length=MAX_TICKETS_PER_EXTRINSIC)
 class TicketsExtrinsic(Vector[TicketEnvelope]): ...
