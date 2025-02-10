@@ -8,16 +8,16 @@ class ByteUtils:
     
     # Convert everything to bytes
     @staticmethod
-    def int_to_bytes(value: int, length: int = None) -> bytes:
+    def int_to_bytes(value: int, length: int = None, byteorder: Literal["big", "little"] = "big") -> bytes:
         """Convert integer to bytes with optional fixed length"""
         if length is None:
             length = (value.bit_length() + 7) // 8
-        return value.to_bytes(length, byteorder='big')
+        return value.to_bytes(length, byteorder)
 
     @staticmethod
-    def bytes_to_int(value: bytes) -> int:
+    def bytes_to_int(value: bytes, byteorder: Literal["big", "little"] = "big") -> int:
         """Convert bytes to integer"""
-        return int.from_bytes(value, byteorder='big')
+        return int.from_bytes(value, byteorder)
 
     @staticmethod
     def hex_to_bytes(hex_str: str) -> bytes:
@@ -99,7 +99,7 @@ class ByteUtils:
         Args:
             value: Bytes to convert
             bitorder: If "msb" (default), outputs bits with most significant first.
-                    If "lsb", outputs bits with least significant first.
+                    If "lsb", outputs bits with the least significant first.
         """
         result = []
         for byte in value:

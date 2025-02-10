@@ -6,11 +6,12 @@ from jam.types.extrinsics import (
     GuaranteesExtrinsic, AssurancesExtrinsic,
     DisputesExtrinsic
 )
-from jam.utils.codec.composite.dataclasses import decodable_dataclass
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from jam.utils.json.serde import JsonSerde
 
 @decodable_dataclass
 @dataclass
-class Extrinsic(Codable):
+class Extrinsic(Codable, JsonSerde):
     """Extrinsic structure."""
     tickets: TicketsExtrinsic
     preimages: PreimagesExtrinsic
@@ -18,9 +19,10 @@ class Extrinsic(Codable):
     assurances: AssurancesExtrinsic
     disputes: DisputesExtrinsic
 
+
 @decodable_dataclass
 @dataclass
-class Block(Codable):
+class Block(Codable, JsonSerde):
     """Block structure."""
     header: Header
     extrinsic: Extrinsic

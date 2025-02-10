@@ -6,11 +6,12 @@ from jam.types.extrinsics.tickets import TicketBody
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.epoch import EpochMark
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.dataclasses import decodable_dataclass
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import (
     BandersnatchVrfSignature, Ed25519Public, HeaderHash, StateRoot, OpaqueHash,
 )
 from jam.utils.constants import EPOCH_LENGTH
+from jam.utils.json.serde import JsonSerde
 
 """Fixed-length array of ticket bodies."""
 @decodable_array(length=EPOCH_LENGTH, element_type=TicketBody)
@@ -19,16 +20,15 @@ class TicketsMark(Array[TicketBody]): ...
 @decodable_vector(element_type=Ed25519Public)
 class OffendersMark(Vector[Ed25519Public]): ...
 
-
-@decodable_option(optional_type=EpochMark)
+@decodable_option(EpochMark)
 class OptionalEpochMark(Option): ...
 
-@decodable_option(optional_type=TicketsMark)
+@decodable_option(TicketsMark)
 class OptionalTicketsMark(Option): ...
 
 @decodable_dataclass
 @dataclass
-class Header(Codable):
+class Header(Codable, JsonSerde):
     """Block header structure."""
     parent: HeaderHash
     parent_state_root: StateRoot

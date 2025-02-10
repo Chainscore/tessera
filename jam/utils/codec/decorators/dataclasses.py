@@ -42,7 +42,6 @@ def decodable_dataclass(cls: Type[T]) -> Type[T]:
             field_type = field.type
             value, size = field_type.decode_from(buffer, current_offset)
             decoded_values.append(value)
-            # print("Decoding field:", field.name, "as", value)
             current_offset += size
         instance = cls(*decoded_values)
         return instance, current_offset - offset  # type: ignore

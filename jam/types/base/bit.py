@@ -1,6 +1,9 @@
+from typing import Any
 from jam.utils.byte_utils import Bytable, ByteUtils
+from jam.utils.json import JsonSerde
+from jam.utils.json.serde import JsonDeserializationError
 
-class Bit:
+class Bit(JsonSerde):
     """
     A bit is a single binary digit, either 0 or 1.
     """
@@ -16,7 +19,7 @@ class Bit:
     def __eq__(self, other: object) -> bool:
         try:
             return self.value == other.value
-        except Exception as e:
+        except Exception:
             return self.value == other
     
     def __and__(self, other: 'Bit') -> 'Bit':
@@ -67,3 +70,16 @@ class Bit:
         if isinstance(other, Bit):
             return self.value != other.value
         return False
+    
+    def to_json(self) -> int:
+        """Convert to JSON representation."""
+        return self.value
+    
+    @classmethod
+    def from_json(cls, value: Any) -> 'Bit':
+        """Create from JSON representation."""
+        if not isinstance(value, int):
+            raise JsonDeserializationError(f"Expected int, got {type(value)}")
+        if value not in (0, 1):
+            raise JsonDeserializationError(f"Invalid Bit of value {value}")
+        return cls(value)

@@ -4,17 +4,18 @@ from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.dataclasses import decodable_dataclass
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import (
     Ed25519Public, Ed25519Signature,
     WorkReportHash
 )
 from jam.types.protocol.core import ValidatorIndex
 from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
+from jam.utils.json.serde import JsonSerde
 
 @decodable_dataclass
 @dataclass
-class Judgement(Codable):
+class Judgement(Codable, JsonSerde):
     """Judgement structure."""
     vote: Boolean
     index: ValidatorIndex
@@ -22,7 +23,7 @@ class Judgement(Codable):
 
 @decodable_dataclass
 @dataclass
-class Culprit(Codable):
+class Culprit(Codable, JsonSerde):
     """Culprit structure."""
     target: WorkReportHash
     key: Ed25519Public
@@ -30,7 +31,7 @@ class Culprit(Codable):
 
 @decodable_dataclass
 @dataclass
-class Fault(Codable):
+class Fault(Codable, JsonSerde):
     """Fault structure."""
     target: WorkReportHash
     vote: Boolean
@@ -42,7 +43,7 @@ class JudgementVotes(Array[Judgement]): ...
 
 @decodable_dataclass
 @dataclass
-class Verdict(Codable):
+class Verdict(Codable, JsonSerde):
     """Verdict structure."""
     target: WorkReportHash
     age: U32
@@ -56,7 +57,7 @@ class Offenders(Vector[Ed25519Public]): ...
 
 @decodable_dataclass
 @dataclass
-class DisputesRecords(Codable):
+class DisputesRecords(Codable, JsonSerde):
     """Disputes records structure."""
     good: WorkReportHashes
     bad: WorkReportHashes
@@ -74,7 +75,7 @@ class Faults(Vector[Fault]): ...
 
 @decodable_dataclass
 @dataclass
-class DisputesExtrinsic(Codable):
+class DisputesExtrinsic(Codable, JsonSerde):
     """Disputes extrinsic structure."""
     verdicts: Verdicts
     culprits: Culprits

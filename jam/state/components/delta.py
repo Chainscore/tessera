@@ -5,7 +5,7 @@ from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.bytes import ByteArray32, Bytes
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.dataclasses import decodable_dataclass
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 
 ServiceCodeHash = ByteArray32
 

@@ -1,4 +1,4 @@
-from typing import Callable, Literal, Sequence, Tuple, Type, Union
+from typing import Any, Callable, Literal, Sequence, Tuple, Type, Union
 from jam.types.base.bit import Bit
 from jam.types.base.boolean import Boolean
 from jam.types.base.sequences.array import Array
@@ -45,6 +45,10 @@ class BitArray(Array):
     
     def __int__(self) -> int:
         return ByteUtils.bitarray_to_int([bool(bit) for bit in self.value])
+    
+    @classmethod
+    def from_json(cls, data: Any) -> 'BitArray':
+        return cls(data)
 
 def decodable_bit_array(length: int, bitorder: Literal["msb", "lsb"]|None = "msb") -> Callable[[Type[BitArray]], Type[BitArray]]:
     """

@@ -276,4 +276,4 @@ The codec system enforces:
 -   [x] Buffer management
 -   [ ] Test suite
 -   [ ] Performance benchmarking
--   [ ] JAM Test Vectors
+-   [x] JAM Test Vectors

@@ -6,7 +6,7 @@ from jam.types.extrinsics.tickets import TicketBody
 from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingRoot, BandersnatchRingVrfSignature
 from jam.types.protocol.validators import ValidatorData
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.dataclasses import decodable_dataclass
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 
 @decodable_array(length=VALIDATOR_COUNT, element_type=ValidatorData)

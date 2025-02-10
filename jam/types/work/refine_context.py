@@ -3,18 +3,19 @@ from dataclasses import dataclass
 from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.dataclasses import decodable_dataclass
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import (
     HeaderHash, StateRoot, BeefyRoot, OpaqueHash
 )
 from jam.types.protocol.core import TimeSlot
+from jam.utils.json.serde import JsonSerde
 
 @decodable_vector(OpaqueHash)
 class OpaqueHashes(Vector[OpaqueHash]): ...
 
 @decodable_dataclass
 @dataclass
-class RefineContext(Codable):
+class RefineContext(Codable, JsonSerde):
     """Refine context structure."""
     anchor: HeaderHash
     state_root: StateRoot

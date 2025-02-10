@@ -1,11 +1,11 @@
-from typing import Dict, Sequence, Type, Union, Optional, Tuple, TypeVar, Generic, Any, get_type_hints
+from typing import Dict, Type, Union, Optional, Tuple, TypeVar, Generic, Any, get_type_hints
 from jam.utils.codec import Codable
 from jam.utils.codec.composite.choices import ChoiceCodec
-from jam.utils.codec.json.json_serializable import JsonSerializable
+from jam.utils.json import JsonSerde
 
 T = TypeVar('T')
 
-class Choice(Codable[T], Generic[T]):
+class Choice(Codable[T], JsonSerde, Generic[T]):
     """
     A choice is a value that can be one of several possible types.
     
@@ -35,11 +35,10 @@ class Choice(Codable[T], Generic[T]):
         >>> class OutputType(Choice): ...
     """
 
-    # Selected type
-    type: Type[Codable[T]]
-    value: Codable[T]
-
+    # All choices
     __choices__: Dict[str, Type[Codable[T]]] = {}
+    # Selected choice
+    value: Dict[str, Codable[T]]
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -55,32 +54,22 @@ class Choice(Codable[T], Generic[T]):
             if k not in ['value', 'codec', 'type', '__choices__']:
                 cls.__choices__[k] = v
 
-    def __init__(self, initial: Codable[T]):
+    def __init__(self, initial: Dict[str, Codable[T]] | Codable[T]):
         """
         Initialize Choice.
         
         Args:
-            types: List of possible types for this choice
-            default: Optional default value
-            
+            initial: Mapping of initial choice name and its value. Should have only one key.
         Raises:
             ValueError: If types list is empty
         """
-        if len(self.__choices__) == 0:
-            raise ValueError("Choice must have at least one type")
+        self.__set_internal__(initial)
+        super().__init__(codec=ChoiceCodec(self.__choices__))
 
-        # Make sure the initial value is a valid type
-        if type(initial) not in self.__choices__.values():
-            raise ValueError(f"Value type {type(initial)} is not in allowed types: {self.__choices__.values()}")
-        
-        super().__init__(codec=ChoiceCodec(list(self.__choices__.values())))
+    def __set__(self, value: Dict[str, Codable[T]] | Codable[T]) -> None:
+        self.__set_internal__(value)
 
-        if not isinstance(initial, Codable):
-            raise TypeError("Choice value must be Codable")
-        
-        self.value: Codable[T] = initial
-
-    def __set__(self, value: Codable[T]) -> None:
+    def __set_internal__(self, value: Dict[str, Codable[T]] | Codable[T]) -> None:
         """
         Set the choice value.
         
@@ -90,14 +79,29 @@ class Choice(Codable[T], Generic[T]):
         Raises:
             ValueError: If value type is not in allowed types list
         """
-        if not isinstance(value, Codable):
-            raise TypeError("Choice value must be Codable")
-            
-        if type(value) not in self.__choices__:
-            raise ValueError(f"Value type {type(value)} is not in allowed types: {self.__choices__}")
-            
-        self.type = type(value)
+        if not isinstance(value, dict):
+            # Find first matching key with value's choice
+            for key, choice_type in self.__choices__.items():
+                if isinstance(value, choice_type):
+                    value = {key: value}
+                    break
+            else:
+                raise ValueError(f"Value type {type(value)} is not in allowed types: {self.__choices__.keys()}")
+
+        if len(value) != 1:
+            raise ValueError(f"Choice must have exactly one key, found {len(value)}")
+        
+        # Ensure the choice key+value are valid and supported
+        choice_key = list(value.keys())[0]
+        if choice_key not in self.__choices__.keys():
+            raise ValueError(f"Value type {choice_key} is not in allowed types: {self.__choices__.keys()}")
+        choice_type = self.__choices__[choice_key]
+        if not str(type(value[choice_key])) == str(choice_type):
+            raise ValueError(f"Value type {type(value[choice_key])} is not in allowed types: {choice_type}")
+        
+        # Set them
         self.value = value
+
 
     def __get__(self) -> Optional[Codable[T]]:
         """
@@ -122,21 +126,18 @@ class Choice(Codable[T], Generic[T]):
     def __repr__(self) -> str:
         """Get string representation."""
         return f"{self.__class__.__name__}({self.value!r})"
-
-    def to_json(self) -> Any:
-        """Convert to JSON representation."""
-        return JsonSerializable.to_json(self.value)
-
+    
     @classmethod
     def from_json(cls, data: Any) -> 'Choice[T]':
         """Create from JSON representation."""
         last_error = None
         # Go through all the choices and try to decode the data
-        # While checking, check if data[choices[i]] is available then try to decode it in that type
-        for i, choice_type in enumerate(cls.__choices__.values()):
-            if list(cls.__choices__.keys())[i] in data.keys():
-                data_parsed = choice_type.from_json(data[list(cls.__choices__.keys())[i]])
-                return cls(data_parsed)
+        choice_key = list(data.keys())[0]
+        print("Inferring choice from JSON:", choice_key, list(cls.__choices__.keys()))
+        if choice_key in list(cls.__choices__.keys()):
+            indexOfChoice = list(cls.__choices__.keys()).index(choice_key)
+            choice_type = list(cls.__choices__.values())[indexOfChoice]
+            return cls({choice_key: choice_type.from_json(data[choice_key])})
 
         raise ValueError(f"No valid choice type found for {data} in {cls.__name__}: {last_error}")
 
@@ -167,7 +168,7 @@ def decodable_choice(cls: Type[Choice]) -> Type[Choice]:
         if len(cls.__choices__) == 0:
             raise ValueError("Choice must have at least one type")
         
-        value, size = ChoiceCodec.decode_from(list(cls.__choices__.values()), buffer, offset)
+        value, size = ChoiceCodec.decode_from(cls.__choices__, buffer, offset)
         return cls(value), size
     
     cls.decode_from = decode_from

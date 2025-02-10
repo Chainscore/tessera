@@ -5,7 +5,7 @@ Implements encoding and decoding of choice (union) values according to the JAM s
 Choice values are encoded with a 1-byte tag followed by the encoded value based on the tag.
 """
 
-from typing import Sequence, TypeVar, Generic, Union, Type, Tuple, Optional, cast
+from typing import Dict, TypeVar, Generic, Union, Type, Tuple
 
 from jam.utils.codec.primitives.integers import GeneralCodec
 from jam.utils.codec.codec import Codec
@@ -34,10 +34,10 @@ class ChoiceCodec(Codec[T], Generic[T]):
     Raises:
         ValueError: If choices list is empty
     """
-    _choices: Sequence[Type[Codable[T]]]
+    _choices: Dict[str, Type[Codable[T]]]
     _tag_codec: Codec[int]
 
-    def __init__(self, choices: Sequence[Type[Codable[T]]], __tag_codec: Codec[int] = GeneralCodec()):
+    def __init__(self, choices: Dict[str, Type[Codable[T]]], __tag_codec: Codec[int] = GeneralCodec()):
         """
         Initialize ChoiceCodec.
 
@@ -54,7 +54,7 @@ class ChoiceCodec(Codec[T], Generic[T]):
         self._tag_codec = __tag_codec
 
 
-    def encode_size(self, value: Optional[Codable[T]]) -> int:
+    def encode_size(self, _value: Dict[str, Codable[T]]) -> int:
         """
         Calculate encoded size for value.
         
@@ -67,6 +67,9 @@ class ChoiceCodec(Codec[T], Generic[T]):
         Raises:
             EncodeError: If value type is not in choices list
         """
+        value_key = list(_value.keys())[0]
+        value = _value[value_key]
+
         if value is None:
             raise EncodeError(0, 0, "Cannot encode None value")
             
@@ -74,13 +77,18 @@ class ChoiceCodec(Codec[T], Generic[T]):
             raise EncodeError(0, 0, "Value must be Codable")
             
         try:
-            tag = self._choices.index(type(value))
+            tag = list(self._choices.keys()).index(value_key)
         except ValueError:
             raise EncodeError(0, 0, f"Value type {type(value)} not in choices list")
             
         return self._tag_codec.encode_size(tag) + value.encode_size()
 
-    def encode_into(self, value: Optional[Codable[T]], buffer: bytearray, offset: int = 0) -> int:
+    def encode_into( 
+        self, 
+        _value: Dict[str, Codable[T]], 
+        buffer: bytearray, 
+        offset: int = 0
+    ) -> int: 
         """
         Encode value into buffer.
         
@@ -95,18 +103,14 @@ class ChoiceCodec(Codec[T], Generic[T]):
         Raises:
             EncodeError: If value type is not in choices list or buffer is too small
         """
+        value_key = list(_value.keys())[0]
+        value = _value[value_key]
+
         if (not isinstance(value, Codable)) & (value is not None):
             raise EncodeError(0, 0, f"Value {value} must be Codable")
         
-        try:
-            tag = 0
-            for i, choice in enumerate(self._choices):
-                if choice is type(value):
-                    tag = i
-                    break
-        except ValueError:
-            raise EncodeError(0, 0, f"ChoiceCodec: Value type {type(value)} not in choices list {self._choices}")
-        
+        tag = list(self._choices.keys()).index(value_key)
+
         tag_size = self._tag_codec.encode_into(tag, buffer, offset)
         offset += tag_size
         value_size = 0
@@ -117,10 +121,10 @@ class ChoiceCodec(Codec[T], Generic[T]):
 
     @staticmethod
     def decode_from(
-        choices: Sequence[Type[Codable[T]]], 
+        choices: Dict[str, Type[Codable[T]]], 
         buffer: Union[bytes, bytearray, memoryview], 
         offset: int = 0
-    ) -> Tuple[Codable[T], int]:
+    ) -> Tuple[Dict[str, Codable[T]], int]:
         """
         Decode choice value from buffer.
         
@@ -145,8 +149,11 @@ class ChoiceCodec(Codec[T], Generic[T]):
         if tag < 0 or tag >= len(choices):
             raise DecodeError(offset, 1, f"Invalid choice tag: {tag}")
         
-        if choices[tag] is type(None):
-            return None, tag_size
+        choice_key = list(choices.keys())[tag]
+        choice_type = list(choices.values())[tag]
+
+        if choice_type is type(None):
+            return { choice_key: None }, tag_size
         
-        value, value_size = choices[tag].decode_from(buffer, offset + tag_size)
-        return cast(choices[tag], value), tag_size + value_size
+        value, value_size = choice_type.decode_from(buffer, offset + tag_size)
+        return { choice_key: value }, tag_size + value_size
