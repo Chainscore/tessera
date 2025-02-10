@@ -17,11 +17,14 @@ from jam.state.components.tau import Tau
 from jam.state.components.theta import Theta
 from jam.state.components.xi import Xi
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.dataclasses import decodable_dataclass
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from jam.utils.json.decorators import json_field, json_serializable
+from jam.utils.json.serde import JsonSerde
 
+@json_serializable
 @decodable_dataclass
-@dataclass
-class Sigma(Codable):
+@dataclass(kw_only=True)
+class Sigma(Codable, JsonSerde):
     """Overall system state combining all components (σ). Defined in Graypaper section 4.2."""
 
     # Core authorizations pool tracking allowed authorizers for each core (α ∈ C⟦H⟧:OH C)
@@ -56,7 +59,7 @@ class Sigma(Codable):
 
     # Previous epoch's validator keys and metadata
     # Defined in section 6.3
-    lambda_: Lambda_
+    lambda_: Lambda_ = json_field(name="lambda")
 
     # Tracks work-reports available but not yet accumulated (has states ρ† and ρ‡)
     # Defined in section 11.1

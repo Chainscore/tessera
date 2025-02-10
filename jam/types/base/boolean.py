@@ -1,8 +1,9 @@
 from typing import Union, Any, Tuple
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.primitives.bools import BooleanCodec
+from jam.utils.json.serde import JsonSerde
 
-class Boolean(Codable):
+class Boolean(Codable, JsonSerde):
     """
     Boolean type that implements the Codable interface.
     

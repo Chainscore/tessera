@@ -1,9 +1,8 @@
-from typing import Any, Tuple, Type, Union
+from typing import Any, Dict, Tuple, Type, Union
 from jam.types.base.choices.choice import Choice
 from jam.types.base.null import Null, Nullable
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.choices import ChoiceCodec
-from jam.utils.codec.json.json_serializable import JsonSerializable
 
 class Option(Choice):
     """
@@ -13,7 +12,17 @@ class Option(Choice):
         ...
 
     def __init__(self, initial: Codable = Null):
-        super().__init__(initial)
+        super().__init__(Option.option_to_choice(initial))
+
+    @staticmethod
+    def option_to_choice(value: Codable | Nullable) -> Dict[str, Codable]:
+        if value is None or isinstance(value, Nullable):
+            return {"none": Null}
+        else:
+            return {"some": value}
+
+    def __set__(self, value: Codable | Nullable):
+        super().__set__(Option.option_to_choice(value))
 
     @classmethod
     def from_json(cls, data: Any) -> 'Option':
@@ -22,13 +31,22 @@ class Option(Choice):
             return cls(Nullable())
         
         value = cls.__choices__["some"].from_json(data)
+        print("option from json", value)
         return cls(value)
     
     def to_json(self) -> Any:
         """Convert to JSON representation."""
-        if isinstance(self.value, Null):
+        if isinstance(self.value, Nullable) or self.value is None:
             return None
-        return JsonSerializable.to_json(self.value)
+        return list(self.value.values())[0].to_json()
+    
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, Option):
+            return self.value == other.value
+        return list(self.value.values())[0] == other
+    
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({list(self.value.values())[0]})"
 
 def decodable_option(optional_type: Type[Codable]) -> Type[Option]:
     """Decodable choice"""
@@ -61,8 +79,8 @@ def decodable_option(optional_type: Type[Codable]) -> Type[Option]:
             if len(cls.__choices__) == 0:
                 raise ValueError("Choice must have at least one type")
             
-            value, size = ChoiceCodec.decode_from([Nullable, optional_type], buffer, offset)
-            return cls(value), size
+            value, size = ChoiceCodec.decode_from(cls.__choices__, buffer, offset)
+            return cls(list(value.values())[0]), size
         
         cls.decode_from = decode_from
         return cls

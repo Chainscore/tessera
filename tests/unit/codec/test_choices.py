@@ -25,7 +25,7 @@ class TestChoiceCodec:
         choice = BoolIntChoice(value)
         encoded = choice.encode()
         decoded, size = BoolIntChoice.decode_from(encoded)
-        assert decoded.value == value
+        assert decoded.value == {"A": value}
         assert size == len(encoded)
 
     @pytest.mark.parametrize("types,value", [
@@ -45,7 +45,7 @@ class TestChoiceCodec:
         choice = CustomChoice(value)
         encoded = choice.encode()
         decoded, size = CustomChoice.decode_from(encoded)
-        assert decoded.value == value
+        assert list(decoded.value.values())[0] == value
         assert size == len(encoded)
 
     def test_nested_choices(self):
@@ -65,7 +65,7 @@ class TestChoiceCodec:
         outer_choice = OuterChoice(inner_choice)
         encoded = outer_choice.encode()
         decoded, size = OuterChoice.decode_from(encoded)
-        assert decoded.value == inner_choice
+        assert list(decoded.value.values())[0] == inner_choice
         assert size == len(encoded)
 
     def test_invalid_tag(self):
@@ -147,7 +147,7 @@ class TestChoiceCodec:
             
             # Test decoding at same offset
             decoded, read = TestChoice.decode_from(buffer, offset)
-            assert decoded.value == Boolean(True)
+            assert list(decoded.value.values())[0] == Boolean(True)
             assert read == written
             
             # Verify only the intended region was modified
@@ -204,4 +204,4 @@ class TestChoiceCodec:
             B: U8
         
         choice = TestChoice(Boolean(True))
-        assert str(choice) == f"TestChoice({Boolean(True)})"
+        assert str(choice) == "TestChoice({'A': " + str(Boolean(True)) + "})"

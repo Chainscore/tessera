@@ -25,9 +25,8 @@ from .primitives import (
 )
 
 # Re-export composite type constructors
-from .composite import BitSequenceCodec, decodable_dataclass, ArrayCodec, ChoiceCodec, VectorCodec, DictionaryCodec
-
-from .json import JsonSerializable, encode_bytes, decode_bytes, encode_integer, decode_integer
+from .composite import BitSequenceCodec, ArrayCodec, ChoiceCodec, VectorCodec, DictionaryCodec
+from .decorators import decodable_dataclass
 
 __all__ = [
     "Codable",
@@ -40,7 +39,5 @@ __all__ = [
     "decodable_dataclass",
     "VectorCodec",
     "DictionaryCodec",
-    "BitSequenceCodec",
-    "JsonCodec", "JsonSerializable", "json_serializable",
-    "encode_bytes", "decode_bytes", "encode_integer", "decode_integer"
+    "BitSequenceCodec"
 ]

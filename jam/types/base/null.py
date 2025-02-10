@@ -1,9 +1,10 @@
 from types import NoneType
-from typing import Tuple, Union
+from typing import Tuple, Union, Dict, Any
 from jam.utils.codec import Codable
 from jam.utils.codec.primitives.nulls import NullCodec
+from jam.utils.json import JsonSerde
 
-class Nullable(Codable):
+class Nullable(Codable, JsonSerde):
     """
     Null value implementation.
     
@@ -34,7 +35,7 @@ class Nullable(Codable):
 
     def __repr__(self) -> str:
         """Get string representation."""
-        return f"Null"
+        return "Null"
 
     def __eq__(self, other: object) -> bool:
         """Compare for equality."""
@@ -59,5 +60,16 @@ class Nullable(Codable):
         """
         _, size = NullCodec.decode_from(buffer, offset)
         return Null, size
+
+    def to_json(self) -> Dict[Any, Any]:
+        """Convert to JSON representation."""
+        return None
+
+    @classmethod
+    def from_json(cls, data: Any) -> 'Nullable':
+        """Create from JSON representation."""
+        if data is not None:
+            raise ValueError("Null value must be None")
+        return Nullable()
 
 Null = Nullable()

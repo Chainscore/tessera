@@ -1,15 +1,16 @@
 from typing import (
-    Generic, Mapping, Optional, Tuple, Type, TypeVar, Union, Dict,
-    Iterator, ItemsView, KeysView, ValuesView
+    Generic, Mapping, Optional, Self, Tuple, Type, TypeVar, Union, Dict,
+    Iterator, ItemsView, KeysView, ValuesView, Any, Sequence
 )
 
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.dictionaries import DictionaryCodec
+from jam.utils.json import JsonSerde
 
 K = TypeVar('K', bound=Codable)
 V = TypeVar('V', bound=Codable)
 
-class Dictionary(Generic[K, V], Codable, Mapping[K, V]):
+class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
     """
     Dictionary implementation that supports codec operations.
     
@@ -99,6 +100,16 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V]):
         """Get view of values."""
         return self.value.values()
 
+    def to_json(self) -> Dict[Any, Any]:
+        """Convert to JSON representation."""
+        return {k.to_json(): v.to_json() for k, v in self.items()}
+
+    @classmethod
+    def from_json(cls: Type[Self], data: Dict[Any, Any]|Sequence[Any]) -> Self:
+        """Create instance from JSON representation."""
+        if not isinstance(data, dict):
+            raise ValueError("Dictionary: JSON representation must be a dictionary")
+        return cls({cls.key_type.from_json(k): cls.value_type.from_json(v) for k, v in data.items()})
     
 def decodable_dictionary(key_type: Type[K], value_type: Type[V]) -> Type[Dictionary[K, V]]:
     def decorator(cls: Type[Dictionary[K, V]]) -> Type[Dictionary[K, V]]:

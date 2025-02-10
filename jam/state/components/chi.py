@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.protocol.core import Gas, ServiceId
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.dataclasses import decodable_dataclass
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 
 
 """Index of Manager service that can alter Chi"""

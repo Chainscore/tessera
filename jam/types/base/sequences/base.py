@@ -1,10 +1,12 @@
 from typing import Any, Generic, List, Optional, Sequence, Type, TypeVar, Union
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.codec import Codec
+from jam.utils.json import JsonSerde
+from jam.utils.json.serde import JsonDeserializationError
 
 T = TypeVar("T", bound=Codable)
 
-class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
+class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
     """
     Base class for sequence types.
 
@@ -25,14 +27,9 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
         """
         # Make sure initial values are all of the same type
         for value in initial:
-            self.validate_value(value)
+            self._validate_value(value)
         self.value = initial
         super().__init__(codec=codec)
-
-    def validate_value(self, value: T) -> None:
-        """Validate that a value is of the correct type."""
-        if not isinstance(value, self._element_type):
-            raise TypeError(f"Value {value} must be instance of {self._element_type}")
 
     def __len__(self) -> int:
         """Get number of elements."""
@@ -62,8 +59,8 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
         """
         if self._element_type is None:
             self._element_type = type(value)
-        elif not isinstance(value, self._element_type):
-            raise TypeError(f"Value must be instance of {self._element_type}")
+        elif not str(type(value)) == str(self._element_type):
+            raise TypeError(f"Value {value} must be instance of {self._element_type}. Debug: {str(type(value)) == str(self._element_type)}")
 
     def __eq__(self, other: object) -> bool:
         """Compare for equality."""
@@ -300,7 +297,8 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], Generic[T]):
         return self.value[-len(suffix):] == suffix
     
     @classmethod
-    def from_json(cls, data: List[Any]) -> 'BaseSequence[T]':
-        """Create from JSON representation."""
+    def from_json(cls, data: Any) -> 'BaseSequence[T]':
+        """Deserialize from JSON."""
+        if not isinstance(data, list):
+            raise JsonDeserializationError(f"Expected list for {cls.__name__}, got {type(data)}")
         return cls([cls._element_type.from_json(item) for item in data])
-    

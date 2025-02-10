@@ -1,8 +1,9 @@
 from typing import Union, Any, TypeVar, cast
+from jam.utils.json import JsonSerde
 
 T = TypeVar('T', bound='BaseInteger')
 
-class BaseInteger():
+class BaseInteger(JsonSerde):
     """Base integer type"""
     value: int
     

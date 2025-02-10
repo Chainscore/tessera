@@ -18,7 +18,7 @@ from jam.types.header import OptionalTicketsMark
 from jam.types.protocol.crypto import Entropy
 from jam.types.protocol.validators import ValidatorArray
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.dataclasses import decodable_dataclass
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 
 @decodable_dataclass
 @dataclass

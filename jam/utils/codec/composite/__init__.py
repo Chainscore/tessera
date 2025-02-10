@@ -15,7 +15,6 @@ from .choices import ChoiceCodec
 from .vectors import VectorCodec
 from .dictionaries import DictionaryCodec
 from .bit_sequences import BitSequenceCodec
-from .dataclasses import decodable_dataclass
 
 __all__ = [
     'ArrayCodec',
@@ -23,5 +22,4 @@ __all__ = [
     'VectorCodec', 
     'DictionaryCodec',
     'BitSequenceCodec',
-    'decodable_dataclass',
 ]

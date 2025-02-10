@@ -2,7 +2,8 @@
 
 import pytest
 from jam.types.base.enum import Enum, decodable_enum
-from jam.utils.codec.errors import EncodeError, DecodeError
+from jam.utils.codec.errors import DecodeError
+from jam.utils.json.serde import JsonDeserializationError
 
 
 @decodable_enum
@@ -68,17 +69,17 @@ class TestEnumTypes:
         assert TestEnum.from_json("C") == TestEnum.C
 
         # Test to_json
-        assert TestEnum.A.to_json() == {"name": "A"}
-        assert TestEnum.B.to_json() == {"name": "B"}
-        assert TestEnum.C.to_json() == {"name": "C"}
+        assert TestEnum.A.to_json() == "a"
+        assert TestEnum.B.to_json() == "b"
+        assert TestEnum.C.to_json() == "c"
 
     def test_invalid_json_values(self):
         """Test handling of invalid JSON values."""
-        with pytest.raises(ValueError):
+        with pytest.raises(JsonDeserializationError):
             TestEnum.from_json("invalid")
-        with pytest.raises(ValueError):
+        with pytest.raises(JsonDeserializationError):
             TestEnum.from_json(42)
-        with pytest.raises(ValueError):
+        with pytest.raises(JsonDeserializationError):
             TestEnum.from_json(None)
 
     def test_encode_size(self):

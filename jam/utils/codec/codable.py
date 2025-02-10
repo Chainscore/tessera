@@ -7,12 +7,11 @@ directly.
 
 from typing import TypeVar, Generic, Tuple, Optional, Union, Any
 from jam.utils.codec.codec import Codec
-from jam.utils.codec.json.json_serializable import JsonSerializable
 
 # Type variable for generic codec implementations
 T = TypeVar('T')
 
-class Codable(JsonSerializable, Generic[T]):
+class Codable(Generic[T]):
     """
     Base class for all codable types.
     

@@ -18,6 +18,8 @@ def test_work_result_0_encoding():
     # Create WorkResult from JSON
     result = WorkResult.from_json(result_json)
 
+    print(result)
+
     # Test encoding
     encoded = bytearray(result.encode_size())
     result.encode_into(encoded)

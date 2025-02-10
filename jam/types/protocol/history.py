@@ -4,26 +4,31 @@ from jam.types.base.choices import Choice
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.dataclasses import decodable_dataclass
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import (
     HeaderHash, StateRoot, OpaqueHash
 )
 from jam.utils.constants import RECENT_HISTORY_SIZE
+from jam.utils.json.decorators import json_serializable
+from jam.utils.json.serde import JsonSerde
 
 """Merkle Mountain Range structure."""
 @decodable_vector(element_type=Choice)
 class Mmr(Vector[Choice]): ...
 
+@json_serializable
 @decodable_dataclass
 @dataclass
-class ReportedWorkPackage(Codable):
+class ReportedWorkPackage(Codable, JsonSerde):
     """Reported work package structure."""
     hash: OpaqueHash
     exports_root: OpaqueHash
 
+
+@json_serializable
 @decodable_dataclass
 @dataclass
-class BlockInfo(Codable):
+class BlockInfo(Codable, JsonSerde):
     """Block information structure."""
     header_hash: HeaderHash
     mmr: Mmr

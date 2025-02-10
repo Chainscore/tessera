@@ -1,8 +1,9 @@
 from typing import Union, Any, Tuple
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.primitives.strings import StringCodec
+from jam.utils.json import JsonSerde
 
-class String(Codable):
+class String(Codable, JsonSerde):
     """
     UTF-8 encoded string type that implements the Codable interface.
     
