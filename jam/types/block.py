@@ -7,10 +7,8 @@ from jam.types.extrinsics import (
     DisputesExtrinsic
 )
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.decorators import json_serializable
 from jam.utils.json.serde import JsonSerde
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class Extrinsic(Codable, JsonSerde):
@@ -22,7 +20,6 @@ class Extrinsic(Codable, JsonSerde):
     disputes: DisputesExtrinsic
 
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class Block(Codable, JsonSerde):

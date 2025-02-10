@@ -8,7 +8,6 @@ from jam.types.protocol.crypto import (
     BandersnatchPublic, Ed25519Public, BlsPublic
 )
 from jam.utils.constants import VALIDATOR_COUNT
-from jam.utils.json.decorators import json_serializable
 from jam.utils.json.serde import JsonSerde
 
 @decodable_array(length=VALIDATOR_COUNT, element_type=BandersnatchPublic)
@@ -19,7 +18,6 @@ class ValidatorMetadata(ByteArray128):
     #NOTE - Could define fns to parse metadata into a more useful format
     ...
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class ValidatorData(Codable, JsonSerde):

@@ -9,10 +9,8 @@ from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ServiceId
 from jam.types.work.item import WorkItem
 from jam.types.work.refine_context import RefineContext
-from jam.utils.json.decorators import json_serializable
 from jam.utils.json.serde import JsonSerde
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class Authorizer(Codable, JsonSerde):
@@ -23,7 +21,6 @@ class Authorizer(Codable, JsonSerde):
 @decodable_vector(WorkItem)
 class WorkItems(Vector[WorkItem]): ...
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class WorkPackage(Codable, JsonSerde):

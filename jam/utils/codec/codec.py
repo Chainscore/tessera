@@ -1,8 +1,8 @@
 """
 Codec interface.
 
-This module defines the fundamental interfaces for encoding and decoding data types
-in JAM. It provides abstract base classes that define all types of codecs.
+This module defines the fundamental interfaces for encoding and decoding data types.
+It provides abstract base classes that define all types of codecs.
 """
 
 from abc import ABC, abstractmethod

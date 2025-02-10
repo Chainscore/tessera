@@ -18,10 +18,9 @@ from jam.state.components.theta import Theta
 from jam.state.components.xi import Xi
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.decorators import json_field, json_serializable
+from jam.utils.json.decorators import json_field
 from jam.utils.json.serde import JsonSerde
 
-@json_serializable
 @decodable_dataclass
 @dataclass(kw_only=True)
 class Sigma(Codable, JsonSerde):

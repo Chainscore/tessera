@@ -11,7 +11,6 @@ from jam.types.protocol.crypto import (
     BandersnatchVrfSignature, Ed25519Public, HeaderHash, StateRoot, OpaqueHash,
 )
 from jam.utils.constants import EPOCH_LENGTH
-from jam.utils.json.decorators import json_serializable
 from jam.utils.json.serde import JsonSerde
 
 """Fixed-length array of ticket bodies."""
@@ -21,14 +20,12 @@ class TicketsMark(Array[TicketBody]): ...
 @decodable_vector(element_type=Ed25519Public)
 class OffendersMark(Vector[Ed25519Public]): ...
 
-
 @decodable_option(EpochMark)
 class OptionalEpochMark(Option): ...
 
 @decodable_option(TicketsMark)
 class OptionalTicketsMark(Option): ...
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class Header(Codable, JsonSerde):

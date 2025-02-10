@@ -17,7 +17,6 @@ from jam.types.protocol.core import (
     ServiceId, Gas, CoreIndex
 )
 from jam.types.work.refine_context import RefineContext
-from jam.utils.json.decorators import json_serializable
 from jam.utils.json.serde import JsonSerde
 
 @decodable_choice
@@ -29,7 +28,6 @@ class WorkExecResult(Choice):
     bad_code: Nullable
     code_oversize: Nullable
         
-@json_serializable
 @decodable_dataclass
 @dataclass
 class WorkResult(Codable, JsonSerde):
@@ -40,7 +38,6 @@ class WorkResult(Codable, JsonSerde):
     accumulate_gas: Gas
     result: WorkExecResult
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class WorkPackageSpec(Codable, JsonSerde):
@@ -51,7 +48,6 @@ class WorkPackageSpec(Codable, JsonSerde):
     exports_root: ExportsRoot
     exports_count: U16
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class SegmentRootLookupItem(Codable, JsonSerde):
@@ -65,7 +61,6 @@ class SegmentRootLookup(Vector[SegmentRootLookupItem]): ...
 @decodable_vector(WorkResult)
 class WorkResults(Vector[WorkResult]): ...
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class WorkReport(Codable, JsonSerde):

@@ -11,10 +11,8 @@ from jam.types.protocol.crypto import (
 )
 from jam.types.protocol.core import ValidatorIndex
 from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
-from jam.utils.json.decorators import json_serializable
 from jam.utils.json.serde import JsonSerde
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class Judgement(Codable, JsonSerde):
@@ -23,7 +21,6 @@ class Judgement(Codable, JsonSerde):
     index: ValidatorIndex
     signature: Ed25519Signature
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class Culprit(Codable, JsonSerde):
@@ -32,7 +29,6 @@ class Culprit(Codable, JsonSerde):
     key: Ed25519Public
     signature: Ed25519Signature
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class Fault(Codable, JsonSerde):
@@ -45,7 +41,6 @@ class Fault(Codable, JsonSerde):
 @decodable_array(length=VALIDATORS_SUPER_MAJORITY, element_type=Judgement)
 class JudgementVotes(Array[Judgement]): ...
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class Verdict(Codable, JsonSerde):
@@ -60,7 +55,6 @@ class WorkReportHashes(Vector[WorkReportHash]): ...
 @decodable_vector(Ed25519Public)
 class Offenders(Vector[Ed25519Public]): ...
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class DisputesRecords(Codable, JsonSerde):
@@ -79,7 +73,6 @@ class Culprits(Vector[Culprit]): ...
 @decodable_vector(Fault)
 class Faults(Vector[Fault]): ...
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class DisputesExtrinsic(Codable, JsonSerde):

@@ -10,13 +10,11 @@ from jam.types.protocol.crypto import (
     OpaqueHash
 )
 from jam.utils.constants import EPOCH_LENGTH, MAX_TICKETS_PER_EXTRINSIC
-from jam.utils.json.decorators import json_serializable
 from jam.utils.json.serde import JsonSerde
 
 TicketId = OpaqueHash
 TicketAttempt = U8
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class TicketEnvelope(Codable, JsonSerde):
@@ -24,7 +22,6 @@ class TicketEnvelope(Codable, JsonSerde):
     attempt: TicketAttempt
     signature: BandersnatchRingVrfSignature
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class TicketBody(Codable, JsonSerde):

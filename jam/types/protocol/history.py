@@ -9,14 +9,12 @@ from jam.types.protocol.crypto import (
     HeaderHash, StateRoot, OpaqueHash
 )
 from jam.utils.constants import RECENT_HISTORY_SIZE
-from jam.utils.json.decorators import json_serializable
 from jam.utils.json.serde import JsonSerde
 
 """Merkle Mountain Range structure."""
 @decodable_vector(element_type=Choice)
 class Mmr(Vector[Choice]): ...
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class ReportedWorkPackage(Codable, JsonSerde):
@@ -25,7 +23,6 @@ class ReportedWorkPackage(Codable, JsonSerde):
     exports_root: OpaqueHash
 
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class BlockInfo(Codable, JsonSerde):

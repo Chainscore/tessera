@@ -19,13 +19,12 @@ class Person:
     active: bool = True
 
 # Dataclass with custom field handling
-@json_serializable
 @with_json_metadata(
     title={'name': 'displayTitle', 'skip_if_none': True},
     description={'name': 'desc'}
 )
 @dataclass
-class Document:
+class Document(JsonSerde):
     id: str
     title: Optional[str] = None
     description: str = "No description"
@@ -37,9 +36,8 @@ class StringVector(Vector[String]): ...
 @decodable_dictionary(String, Int32)
 class StringIntDict(Dictionary[String, Int32]): ...
 
-@json_serializable
 @dataclass
-class ComplexData:
+class ComplexData(JsonSerde):
     strings: StringVector
     numbers: StringIntDict
     flags: Dict[str, Boolean]

@@ -8,10 +8,8 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ServiceId, Gas
-from jam.utils.json.decorators import json_serializable
 from jam.utils.json.serde import JsonSerde
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class ImportSpec(Codable, JsonSerde):
@@ -20,7 +18,6 @@ class ImportSpec(Codable, JsonSerde):
     index: U16
 
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class ExtrinsicSpec(Codable, JsonSerde):
@@ -36,7 +33,6 @@ class ImportSpecs(Vector[ImportSpec]): ...
 class ExtrinsicSpecs(Vector[ExtrinsicSpec]): ...
 
 
-@json_serializable
 @decodable_dataclass
 @dataclass
 class WorkItem(Codable, JsonSerde):
