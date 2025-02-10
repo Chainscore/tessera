@@ -61,7 +61,7 @@ class Nullable(Codable, JsonSerde):
         _, size = NullCodec.decode_from(buffer, offset)
         return Null, size
 
-    def to_json(self) -> Dict[Any, Any]:
+    def to_json(self) -> None:
         """Convert to JSON representation."""
         return None
 

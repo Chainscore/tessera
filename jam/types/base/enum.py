@@ -37,7 +37,7 @@ class Enum(Codable, JsonSerde, OGEnum):
         return U8(index).encode_into(buffer, offset)
 
     @classmethod
-    def decodeFrom(cls, data: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple['Enum']:
+    def decodeFrom(cls, data: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple['Enum', int]:
         # Decode the byte (index of enum) into an JamEnum
         # Return the enum value
         index, bytes_read = U8.decode_from(data, offset)

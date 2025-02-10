@@ -56,7 +56,7 @@ class JsonCodec:
                 return data
             
             # Handle optional types
-            if target_type is Optional:
+            if is_optional_type(target_type):
                 if data is None:
                     return None
                 return JsonCodec.from_json(data, get_args(target_type)[0])

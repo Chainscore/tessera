@@ -117,6 +117,8 @@ def with_json_metadata(**field_metadata: Dict[str, Any]):
                 field_obj = cls.__dataclass_fields__[field_name]
                 # Update field metadata using object.__setattr__
                 object.__setattr__(field_obj, 'metadata', field_meta)
+            else:
+                raise ValueError(f"Field '{field_name}' not found in dataclass")
         
         return cls
     return decorator 

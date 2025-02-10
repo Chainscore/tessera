@@ -49,6 +49,7 @@ class BitArray(Array):
     @classmethod
     def from_json(cls, data: Any) -> 'BitArray':
         return cls(data)
+
 def decodable_bit_array(length: int, bitorder: Literal["msb", "lsb"]|None = "msb") -> Callable[[Type[BitArray]], Type[BitArray]]:
     """
     Extend existing decodable_array to be array of Bits
