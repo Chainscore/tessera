@@ -1,19 +1,21 @@
+"""Core JSON codec implementation."""
+
 from collections.abc import Sequence, Mapping
 from dataclasses import is_dataclass, fields
 from functools import lru_cache
 import sys
 from types import UnionType
-from typing import Any, Dict, Optional, Type, TypeVar, Union, get_args, get_origin
+from typing import Any, Dict, Type, TypeVar, Union, get_args, get_origin
 from .serde import JsonSerializationError, JsonDeserializationError, JsonFieldError
 
 T = TypeVar('T')
 
 class JsonCodec:
-    """Core JSON codec implementation"""
+    """Core JSON serialization engine."""
     
     @staticmethod
     def to_json(obj: Any) -> Any:
-        """Convert any object to a JSON-compatible value"""
+        """Convert object to JSON-compatible value."""
         if obj is None:
             return None
         
@@ -33,7 +35,7 @@ class JsonCodec:
         if is_dataclass(obj):
             return JsonCodec._dataclass_to_json(obj)
         
-        # Handle objects with a value property (common in our base types)
+        # Handle objects with a value property
         if hasattr(obj, 'value'):
             return JsonCodec.to_json(obj.value)
         
@@ -41,7 +43,7 @@ class JsonCodec:
     
     @staticmethod
     def from_json(data: Any, target_type: Type[T]) -> T:
-        """Convert JSON-compatible value to target type"""
+        """Convert JSON-compatible value to target type."""
         try:
             # Handle None
             if data is None:
@@ -88,7 +90,7 @@ class JsonCodec:
     @staticmethod
     @lru_cache(maxsize=128)
     def _get_dataclass_fields(cls: Type) -> Dict[str, Any]:
-        """Get and cache dataclass field information"""
+        """Get and cache dataclass field information."""
         return {
             field.name: {
                 'type': field.type,
@@ -104,7 +106,6 @@ class JsonCodec:
         """Convert dataclass instance to JSON dict"""
         result = {}
         field_info = JsonCodec._get_dataclass_fields(type(obj))
-
         
         for field_name, info in field_info.items():
             value = getattr(obj, field_name)
@@ -114,7 +115,6 @@ class JsonCodec:
             
             # Use custom field name if specified
             json_name = info['metadata'].get('json_name', field_name)
-            
             try:
                 result[json_name] = JsonCodec.to_json(value)
             except Exception as e:
@@ -124,7 +124,7 @@ class JsonCodec:
     
     @staticmethod
     def _dataclass_from_json(data: Dict[str, Any], cls: Type[T]) -> T:
-        """Convert JSON dict to dataclass instance"""
+        """Convert JSON dict to dataclass instance."""
         if not isinstance(data, dict):
             raise JsonDeserializationError(f"Expected dict for {cls.__name__}, got {type(data)}")
         
@@ -137,13 +137,13 @@ class JsonCodec:
             skip_if_none = info['metadata'].get('skip_if_none', False)
 
             if json_name not in data:
-                if skip_if_none:
+                if skip_if_none or is_optional_type(info['type']):
                     field_values[field_name] = None
                 elif is_optional_type(info['type']):
                     field_values[field_name] = None
                 elif info['default'] is not None:  # Has default value
                     field_values[field_name] = info['default']
-                elif info['default_factory'] is not None:  # Has default factory
+                elif info['default_factory'] is not None:
                     field_values[field_name] = info['default_factory']()
                 else:
                     raise JsonFieldError(field_name, info['type'], "Missing required field")
@@ -164,15 +164,13 @@ class JsonCodec:
                 except Exception as e:
                     raise JsonFieldError(field_name, info['type'], str(e))
                 
-        return cls(**field_values) 
-    
+        return cls(**field_values)
 
 def is_optional_type(tp) -> bool:
-    """Check if a type hint represents an Optional type (e.g., Optional[str])."""
+    """Check if type hint is Optional[T]."""
     origin = get_origin(tp)
     args = get_args(tp)
     
-    # Handle both `Union` (typing) and `|` syntax (Python 3.10+)
     if origin is Union or (sys.version_info >= (3, 10) and origin is UnionType):
         return type(None) in args
     return False

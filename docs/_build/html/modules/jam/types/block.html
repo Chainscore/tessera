@@ -1,0 +1,286 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Block Type - JAM &mdash; Tessera 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="jam.types.header module" href="header.html" />
+    <link rel="prev" title="jam.types.work.report module" href="work/report.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Tessera
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../api/index.html">jam.api package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../config/index.html">jam.config package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../consensus/index.html">jam.consensus package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/index.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../crypto/index.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../execution/index.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../network/index.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../playground/index.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pvm/index.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../services/index.html">jam.services package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../state/index.html">jam.state package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../storage/index.html">jam.storage package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Types</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="index.html#module-organization">Module Organization</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="index.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../utils/index.html">jam.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Tessera</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">jam package</a></li>
+          <li class="breadcrumb-item"><a href="index.html">Types</a></li>
+      <li class="breadcrumb-item active">Block Type - JAM</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/modules/jam/types/block.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-jam.types.block">
+<span id="block-type-jam"></span><h1>Block Type - JAM<a class="headerlink" href="#module-jam.types.block" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.block.Extrinsic">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.block.</span></span><span class="sig-name descname"><span class="pre">Extrinsic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tickets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="extrinsics/tickets.html#jam.types.extrinsics.tickets.TicketsExtrinsic" title="jam.types.extrinsics.tickets.TicketsExtrinsic"><span class="pre">TicketsExtrinsic</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">preimages</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="extrinsics/preimages.html#jam.types.extrinsics.preimages.PreimagesExtrinsic" title="jam.types.extrinsics.preimages.PreimagesExtrinsic"><span class="pre">PreimagesExtrinsic</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">guarantees</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="extrinsics/guarantees.html#jam.types.extrinsics.guarantees.GuaranteesExtrinsic" title="jam.types.extrinsics.guarantees.GuaranteesExtrinsic"><span class="pre">GuaranteesExtrinsic</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">assurances</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="extrinsics/assurances.html#jam.types.extrinsics.assurances.AssurancesExtrinsic" title="jam.types.extrinsics.assurances.AssurancesExtrinsic"><span class="pre">AssurancesExtrinsic</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">disputes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="extrinsics/disputes.html#jam.types.extrinsics.disputes.DisputesExtrinsic" title="jam.types.extrinsics.disputes.DisputesExtrinsic"><span class="pre">DisputesExtrinsic</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/jam/types/block.html#Extrinsic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.block.Extrinsic" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codable</span></code></a>, <a class="reference internal" href="../utils/json/serde.html#jam.utils.json.serde.JsonSerde" title="jam.utils.json.serde.JsonSerde"><code class="xref py py-class docutils literal notranslate"><span class="pre">JsonSerde</span></code></a></p>
+<p>Extrinsic structure.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.block.Extrinsic.tickets">
+<span class="sig-name descname"><span class="pre">tickets</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="extrinsics/tickets.html#jam.types.extrinsics.tickets.TicketsExtrinsic" title="jam.types.extrinsics.tickets.TicketsExtrinsic"><span class="pre">TicketsExtrinsic</span></a></em><a class="headerlink" href="#jam.types.block.Extrinsic.tickets" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.block.Extrinsic.preimages">
+<span class="sig-name descname"><span class="pre">preimages</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="extrinsics/preimages.html#jam.types.extrinsics.preimages.PreimagesExtrinsic" title="jam.types.extrinsics.preimages.PreimagesExtrinsic"><span class="pre">PreimagesExtrinsic</span></a></em><a class="headerlink" href="#jam.types.block.Extrinsic.preimages" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.block.Extrinsic.guarantees">
+<span class="sig-name descname"><span class="pre">guarantees</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="extrinsics/guarantees.html#jam.types.extrinsics.guarantees.GuaranteesExtrinsic" title="jam.types.extrinsics.guarantees.GuaranteesExtrinsic"><span class="pre">GuaranteesExtrinsic</span></a></em><a class="headerlink" href="#jam.types.block.Extrinsic.guarantees" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.block.Extrinsic.assurances">
+<span class="sig-name descname"><span class="pre">assurances</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="extrinsics/assurances.html#jam.types.extrinsics.assurances.AssurancesExtrinsic" title="jam.types.extrinsics.assurances.AssurancesExtrinsic"><span class="pre">AssurancesExtrinsic</span></a></em><a class="headerlink" href="#jam.types.block.Extrinsic.assurances" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.block.Extrinsic.disputes">
+<span class="sig-name descname"><span class="pre">disputes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="extrinsics/disputes.html#jam.types.extrinsics.disputes.DisputesExtrinsic" title="jam.types.extrinsics.disputes.DisputesExtrinsic"><span class="pre">DisputesExtrinsic</span></a></em><a class="headerlink" href="#jam.types.block.Extrinsic.disputes" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.block.Extrinsic.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tickets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="extrinsics/tickets.html#jam.types.extrinsics.tickets.TicketsExtrinsic" title="jam.types.extrinsics.tickets.TicketsExtrinsic"><span class="pre">TicketsExtrinsic</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">preimages</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="extrinsics/preimages.html#jam.types.extrinsics.preimages.PreimagesExtrinsic" title="jam.types.extrinsics.preimages.PreimagesExtrinsic"><span class="pre">PreimagesExtrinsic</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">guarantees</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="extrinsics/guarantees.html#jam.types.extrinsics.guarantees.GuaranteesExtrinsic" title="jam.types.extrinsics.guarantees.GuaranteesExtrinsic"><span class="pre">GuaranteesExtrinsic</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">assurances</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="extrinsics/assurances.html#jam.types.extrinsics.assurances.AssurancesExtrinsic" title="jam.types.extrinsics.assurances.AssurancesExtrinsic"><span class="pre">AssurancesExtrinsic</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">disputes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="extrinsics/disputes.html#jam.types.extrinsics.disputes.DisputesExtrinsic" title="jam.types.extrinsics.disputes.DisputesExtrinsic"><span class="pre">DisputesExtrinsic</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#jam.types.block.Extrinsic.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the Codable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>codec</strong> – Optional codec to use for encoding/decoding</p></li>
+<li><p><strong>enc_sequence</strong> – Optional function that returns sequence of fields to encode</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.block.Extrinsic.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.block.Extrinsic.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.block.Extrinsic.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#jam.types.block.Extrinsic.encode_into" title="Link to this definition"></a></dt>
+<dd><p>Encode into provided buffer.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.block.Extrinsic.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#jam.types.block.Extrinsic.encode_size" title="Link to this definition"></a></dt>
+<dd><p>Calculate number of bytes needed to encode.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.block.Block">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.block.</span></span><span class="sig-name descname"><span class="pre">Block</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="header.html#jam.types.header.Header" title="jam.types.header.Header"><span class="pre">Header</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">extrinsic</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#jam.types.block.Extrinsic" title="jam.types.block.Extrinsic"><span class="pre">Extrinsic</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/jam/types/block.html#Block"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.block.Block" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codable</span></code></a>, <a class="reference internal" href="../utils/json/serde.html#jam.utils.json.serde.JsonSerde" title="jam.utils.json.serde.JsonSerde"><code class="xref py py-class docutils literal notranslate"><span class="pre">JsonSerde</span></code></a></p>
+<p>Block structure.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.block.Block.header">
+<span class="sig-name descname"><span class="pre">header</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="header.html#jam.types.header.Header" title="jam.types.header.Header"><span class="pre">Header</span></a></em><a class="headerlink" href="#jam.types.block.Block.header" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.block.Block.extrinsic">
+<span class="sig-name descname"><span class="pre">extrinsic</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#jam.types.block.Extrinsic" title="jam.types.block.Extrinsic"><span class="pre">Extrinsic</span></a></em><a class="headerlink" href="#jam.types.block.Block.extrinsic" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.block.Block.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="header.html#jam.types.header.Header" title="jam.types.header.Header"><span class="pre">Header</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">extrinsic</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#jam.types.block.Extrinsic" title="jam.types.block.Extrinsic"><span class="pre">Extrinsic</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#jam.types.block.Block.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the Codable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>codec</strong> – Optional codec to use for encoding/decoding</p></li>
+<li><p><strong>enc_sequence</strong> – Optional function that returns sequence of fields to encode</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.block.Block.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.block.Block.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.block.Block.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#jam.types.block.Block.encode_into" title="Link to this definition"></a></dt>
+<dd><p>Encode into provided buffer.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.block.Block.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#jam.types.block.Block.encode_size" title="Link to this definition"></a></dt>
+<dd><p>Calculate number of bytes needed to encode.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="work/report.html" class="btn btn-neutral float-left" title="jam.types.work.report module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="header.html" class="btn btn-neutral float-right" title="jam.types.header module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Chainscore Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

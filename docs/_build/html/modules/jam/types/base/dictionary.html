@@ -1,0 +1,406 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>jam.types.base.dictionary module &mdash; Tessera 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="jam.types.base.choices" href="choices.html" />
+    <link rel="prev" title="jam.types.base.sequences.bytes.bytes module" href="sequences/bytes/bytes.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            Tessera
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../api/index.html">jam.api package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../config/index.html">jam.config package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../consensus/index.html">jam.consensus package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../core/index.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../crypto/index.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../execution/index.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../network/index.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../playground/index.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pvm/index.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../services/index.html">jam.services package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../state/index.html">jam.state package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../storage/index.html">jam.storage package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">jam.types</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../index.html#module-organization">Module Organization</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../utils/index.html">jam.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Tessera</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">jam package</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">jam.types</a></li>
+          <li class="breadcrumb-item"><a href="index.html">jam.types.base</a></li>
+      <li class="breadcrumb-item active">jam.types.base.dictionary module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/modules/jam/types/base/dictionary.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-jam.types.base.dictionary">
+<span id="jam-types-base-dictionary-module"></span><h1>jam.types.base.dictionary module<a class="headerlink" href="#module-jam.types.base.dictionary" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.base.dictionary.</span></span><span class="sig-name descname"><span class="pre">Dictionary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Mapping" title="(in Python v3.13)"><span class="pre">Mapping</span></a><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">V</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">K</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">V</span></code>], <a class="reference internal" href="../../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codable</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Mapping" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">K</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">V</span></code>], <a class="reference internal" href="../../utils/json/serde.html#jam.utils.json.serde.JsonSerde" title="jam.utils.json.serde.JsonSerde"><code class="xref py py-class docutils literal notranslate"><span class="pre">JsonSerde</span></code></a></p>
+<p>Dictionary implementation that supports codec operations.</p>
+<p>A dictionary that maps Codable keys to Codable values, providing both standard
+dictionary operations and codec functionality for serialization/deserialization.</p>
+<div class="admonition-examples admonition">
+<p class="admonition-title">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.base.string</span><span class="w"> </span><span class="kn">import</span> <span class="n">String</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.base.integers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Int</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">d</span> <span class="o">=</span> <span class="n">Dictionary</span><span class="p">({</span><span class="n">String</span><span class="p">(</span><span class="s2">&quot;key&quot;</span><span class="p">):</span> <span class="n">Int</span><span class="p">(</span><span class="mi">42</span><span class="p">)})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">d</span><span class="p">[</span><span class="n">String</span><span class="p">(</span><span class="s2">&quot;key&quot;</span><span class="p">)]</span>
+<span class="go">Int(42)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">encoded</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">decoded</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">Dictionary</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">Int</span><span class="p">,</span> <span class="n">encoded</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">decoded</span> <span class="o">==</span> <span class="n">d</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.key_type">
+<span class="sig-name descname"><span class="pre">key_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.key_type" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.value_type">
+<span class="sig-name descname"><span class="pre">value_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">V</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.value_type" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Mapping" title="(in Python v3.13)"><span class="pre">Mapping</span></a><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">V</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>initial</strong> – Optional initial key-value pairs</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.13)"><strong>TypeError</strong></a> – If any key or value is not Codable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.__getitem__">
+<span class="sig-name descname"><span class="pre">__getitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">K</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">V</span></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.__getitem__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.__getitem__" title="Link to this definition"></a></dt>
+<dd><p>Get value for key.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.__iter__">
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.__iter__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.__iter__" title="Link to this definition"></a></dt>
+<dd><p>Iterate over keys.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.__len__">
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.__len__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.__len__" title="Link to this definition"></a></dt>
+<dd><p>Get number of items.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.__eq__">
+<span class="sig-name descname"><span class="pre">__eq__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.__eq__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.__eq__" title="Link to this definition"></a></dt>
+<dd><p>Compare for equality.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.__repr__">
+<span class="sig-name descname"><span class="pre">__repr__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.__repr__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.__repr__" title="Link to this definition"></a></dt>
+<dd><p>Get string representation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">K</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">V</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">V</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.get" title="Link to this definition"></a></dt>
+<dd><p>Get value for key, returning default if key not found.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> – Key to look up</p></li>
+<li><p><strong>default</strong> – Value to return if key not found</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Value for key or default</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.items">
+<span class="sig-name descname"><span class="pre">items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.ItemsView" title="(in Python v3.13)"><span class="pre">ItemsView</span></a><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">V</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.items"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.items" title="Link to this definition"></a></dt>
+<dd><p>Get view of (key, value) pairs.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.keys">
+<span class="sig-name descname"><span class="pre">keys</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.KeysView" title="(in Python v3.13)"><span class="pre">KeysView</span></a><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.keys"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.keys" title="Link to this definition"></a></dt>
+<dd><p>Get view of keys.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.values">
+<span class="sig-name descname"><span class="pre">values</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.ValuesView" title="(in Python v3.13)"><span class="pre">ValuesView</span></a><span class="p"><span class="pre">[</span></span><span class="pre">V</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.values"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.values" title="Link to this definition"></a></dt>
+<dd><p>Get view of values.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.to_json">
+<span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.types.base.dictionary.Dict" title="typing.Dict"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.to_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.to_json" title="Link to this definition"></a></dt>
+<dd><p>Convert to JSON representation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dictionary.from_json">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#jam.types.base.dictionary.Dict" title="typing.Dict"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.13)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Self" title="(in Python v3.13)"><span class="pre">Self</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#Dictionary.from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.Dictionary.from_json" title="Link to this definition"></a></dt>
+<dd><p>Create instance from JSON representation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.decodable_dictionary">
+<span class="sig-prename descclassname"><span class="pre">jam.types.base.dictionary.</span></span><span class="sig-name descname"><span class="pre">decodable_dictionary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">V</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#jam.types.base.dictionary.Dictionary" title="jam.types.base.dictionary.Dictionary"><span class="pre">Dictionary</span></a><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">V</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#decodable_dictionary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.dictionary.decodable_dictionary" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="jam-types-base-dictionary">
+<h1>jam.types.base.dictionary<a class="headerlink" href="#jam-types-base-dictionary" title="Link to this heading"></a></h1>
+<p>Dictionary type implementation for the JAM protocol.</p>
+<section id="type-definition">
+<h2>Type Definition<a class="headerlink" href="#type-definition" title="Link to this heading"></a></h2>
+<section id="dictionary-k-v">
+<h3>Dictionary[K, V]<a class="headerlink" href="#dictionary-k-v" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>K: Key type (must be Codable)</p></li>
+<li><p>V: Value type (must be Codable)</p></li>
+<li><p>Ordered key-value pairs</p></li>
+<li><p>Deterministic encoding</p></li>
+</ul>
+</section>
+</section>
+<section id="encoding-format">
+<h2>Encoding Format<a class="headerlink" href="#encoding-format" title="Link to this heading"></a></h2>
+<p>Structure:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">Length_Tag</span><span class="p">:</span> <span class="n">varint</span><span class="p">][</span><span class="n">Length_Data</span><span class="p">:</span> <span class="n">varies</span><span class="p">][</span><span class="n">Pairs</span><span class="o">...</span><span class="p">]</span>
+<span class="n">where</span> <span class="n">each</span> <span class="n">Pair</span> <span class="ow">is</span><span class="p">:</span>
+    <span class="p">[</span><span class="n">Encoded</span> <span class="n">Key</span><span class="p">][</span><span class="n">Encoded</span> <span class="n">Value</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Length encoding:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mh">0x00</span><span class="o">-</span><span class="mh">0xFC</span><span class="p">:</span> <span class="n">Direct</span> <span class="n">value</span> <span class="p">(</span><span class="mi">1</span> <span class="n">byte</span><span class="p">)</span>
+<span class="mh">0xFF</span><span class="p">:</span> <span class="n">u16</span> <span class="n">value</span> <span class="p">(</span><span class="mi">3</span> <span class="nb">bytes</span><span class="p">)</span>
+<span class="mh">0xFE</span><span class="p">:</span> <span class="n">u24</span> <span class="n">value</span> <span class="p">(</span><span class="mi">4</span> <span class="nb">bytes</span><span class="p">)</span>
+<span class="mh">0xFD</span><span class="p">:</span> <span class="n">u32</span> <span class="n">value</span> <span class="p">(</span><span class="mi">5</span> <span class="nb">bytes</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Pairs are sorted by encoded key bytes for deterministic encoding.</p>
+</section>
+<section id="implementation-details">
+<h2>Implementation Details<a class="headerlink" href="#implementation-details" title="Link to this heading"></a></h2>
+<section id="memory-layout">
+<h3>Memory Layout<a class="headerlink" href="#memory-layout" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Length prefix: Variable size</p></li>
+<li><p>Key-value pairs: Contiguous</p></li>
+<li><p>Keys and values: Variable size</p></li>
+<li><p>No padding between pairs</p></li>
+</ul>
+</section>
+<section id="sorting">
+<h3>Sorting<a class="headerlink" href="#sorting" title="Link to this heading"></a></h3>
+<p>Keys are sorted by their encoded bytes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">_sort_pairs</span><span class="p">(</span><span class="n">pairs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="n">pairs</span><span class="p">,</span>
+        <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="size-calculation">
+<h3>Size Calculation<a class="headerlink" href="#size-calculation" title="Link to this heading"></a></h3>
+<p>Total size is sum of:</p>
+<ol class="arabic simple">
+<li><p>Length prefix size</p></li>
+<li><p>Encoded key sizes</p></li>
+<li><p>Encoded value sizes</p></li>
+</ol>
+</section>
+<section id="error-handling">
+<h3>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading"></a></h3>
+<p>Common error cases:</p>
+<ol class="arabic">
+<li><p>Invalid key type:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">Codable</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Key must be Codable, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>Invalid value type:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Codable</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Value must be Codable, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>Buffer overflow:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span> <span class="o">-</span> <span class="n">offset</span> <span class="o">&lt;</span> <span class="n">needed_size</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">BufferError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Buffer too small: need </span><span class="si">{</span><span class="n">needed_size</span><span class="si">}</span><span class="s2"> bytes&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
+<section id="basic-usage">
+<h3>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.base.dictionary</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.base.string</span><span class="w"> </span><span class="kn">import</span> <span class="n">String</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.base.integers</span><span class="w"> </span><span class="kn">import</span> <span class="n">U32</span>
+
+<span class="c1"># Create dictionary</span>
+<span class="nd">@decodable_dictionary</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">U32</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">StringU32Dict</span><span class="p">(</span><span class="n">Dict</span><span class="p">[</span><span class="n">String</span><span class="p">,</span> <span class="n">U32</span><span class="p">]):</span> <span class="o">...</span>
+
+<span class="n">d</span> <span class="o">=</span> <span class="n">StringU32Dict</span><span class="p">({</span>
+   <span class="n">String</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">):</span> <span class="n">U32</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+   <span class="n">String</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">):</span> <span class="n">U32</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="p">})</span>
+
+<span class="c1"># Encode</span>
+<span class="n">encoded</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+<span class="c1"># -&gt; [02 01 61 01 00 00 00 01 62 02 00 00 00]</span>
+<span class="c1">#    len=2, &quot;a&quot;-&gt;1, &quot;b&quot;-&gt;2</span>
+
+<span class="c1"># Decode</span>
+<span class="n">decoded</span> <span class="o">=</span> <span class="n">StringU32Dict</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">decoded</span> <span class="o">==</span> <span class="p">{</span><span class="n">String</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">):</span> <span class="n">U32</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">String</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">):</span> <span class="n">U32</span><span class="p">(</span><span class="mi">2</span><span class="p">)}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.base.dictionary.Dict">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.base.dictionary.</span></span><span class="sig-name descname"><span class="pre">Dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.types.base.dictionary.Dict" title="Link to this definition"></a></dt>
+<dd><p>Bases:</p>
+<p>A generic version of dict.</p>
+</dd></dl>
+
+</section>
+<section id="decorators">
+<h3>Decorators<a class="headerlink" href="#decorators" title="Link to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="id0">
+<span class="sig-prename descclassname"><span class="pre">jam.types.base.dictionary.</span></span><span class="sig-name descname"><span class="pre">decodable_dictionary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">V</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#jam.types.base.dictionary.Dictionary" title="jam.types.base.dictionary.Dictionary"><span class="pre">Dictionary</span></a><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">V</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/dictionary.html#decodable_dictionary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id0" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="sequences/bytes/bytes.html" class="btn btn-neutral float-left" title="jam.types.base.sequences.bytes.bytes module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="choices.html" class="btn btn-neutral float-right" title="jam.types.base.choices" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Chainscore Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

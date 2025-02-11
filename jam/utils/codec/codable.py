@@ -1,9 +1,4 @@
-"""
-Codable interface.
-
-Codable is a common class for all data types that can be do encoding and decoding
-directly.
-"""
+"""Base class for types that can encode/decode themselves."""
 
 from typing import TypeVar, Generic, Tuple, Optional, Union, Any
 from jam.utils.codec.codec import Codec
