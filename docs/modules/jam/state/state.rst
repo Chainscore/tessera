@@ -1,4 +1,4 @@
-jam.state.state module
+State
 ======================
 
 .. automodule:: jam.state.state

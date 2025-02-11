@@ -1,4 +1,4 @@
-jam.pvm.program module
+Program
 ======================
 
 .. automodule:: jam.pvm.program

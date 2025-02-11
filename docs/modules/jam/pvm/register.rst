@@ -1,4 +1,4 @@
-jam.pvm.register module
+Register
 =======================
 
 .. automodule:: jam.pvm.register

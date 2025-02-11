@@ -1,4 +1,4 @@
-jam.pvm.memory module
+Memory
 =====================
 
 .. automodule:: jam.pvm.memory
