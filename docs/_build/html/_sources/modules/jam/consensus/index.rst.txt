@@ -1,4 +1,4 @@
-jam.consensus package
+Consensus
 =====================
 
 Subpackages

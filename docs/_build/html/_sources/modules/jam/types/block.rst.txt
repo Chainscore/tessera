@@ -1,4 +1,4 @@
-jam.types.block module
+Block Type - JAM
 ======================
 
 .. automodule:: jam.types.block

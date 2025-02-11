@@ -1,4 +1,4 @@
-jam package
+Tessera - JAM Node
 ===========
 
 Subpackages

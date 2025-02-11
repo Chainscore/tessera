@@ -42,7 +42,14 @@
 <div class="viewcode-block" id="Codable">
 <a class="viewcode-back" href="../../../../modules/jam/utils/codec/index.html#jam.utils.codec.codable.Codable">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Codable</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">T</span><span class="p">]):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for codable types supporting direct codec, sequence, or custom encoding.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class for all codable types.</span>
+<span class="sd">    </span>
+<span class="sd">    Can be used in three ways:</span>
+<span class="sd">    1. With a codec: Initialize with codec=some_codec</span>
+<span class="sd">    2. With sequence: Initialize with enc_sequence=lambda: [field1, field2, ...]</span>
+<span class="sd">    3. With JSON: Use to_json() and from_json() for JSON serialization</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="n">value</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">codec</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Codec</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>

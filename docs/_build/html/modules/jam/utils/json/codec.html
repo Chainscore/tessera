@@ -1,45 +1,112 @@
+
+
 <!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<html lang="en" data-content_root="../../../../">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>jam.utils.json.codec &mdash; Tessera 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
 
-    <title>jam.utils.json.codec &#8212; Tessera 0.1.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=5ecbeea2" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/basic.css?v=686e5160" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css?v=27fed22d" />
-    <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
-    <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
     <link rel="next" title="jam.utils.json.serde" href="serde.html" />
-    <link rel="prev" title="jam.utils.json" href="index.html" />
-   
-  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
-  
+    <link rel="prev" title="jam.utils.json" href="index.html" /> 
+</head>
 
-  
-  
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
 
-  </head><body>
-  
-
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
           
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            Tessera
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../api/index.html">jam.api package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../config/index.html">jam.config package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../consensus/index.html">jam.consensus package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../core/index.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../crypto/index.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../execution/index.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../network/index.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../playground/index.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pvm/index.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../services/index.html">jam.services package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../state/index.html">jam.state package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../storage/index.html">jam.storage package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../types/index.html">jam.types</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">jam.utils package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="../index.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+</ul>
 
-          <div class="body" role="main">
-            
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Tessera</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">jam package</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">jam.utils package</a></li>
+          <li class="breadcrumb-item"><a href="index.html">jam.utils.json</a></li>
+      <li class="breadcrumb-item active">jam.utils.json.codec</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/modules/jam/utils/json/codec.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
   <section id="jam-utils-json-codec">
-<h1>jam.utils.json.codec<a class="headerlink" href="#jam-utils-json-codec" title="Link to this heading">¶</a></h1>
+<h1>jam.utils.json.codec<a class="headerlink" href="#jam-utils-json-codec" title="Link to this heading"></a></h1>
 <p>Core JSON serialization engine that handles type-safe conversion between JAM types and JSON.</p>
 <section id="type-resolution">
-<h2>Type Resolution<a class="headerlink" href="#type-resolution" title="Link to this heading">¶</a></h2>
+<h2>Type Resolution<a class="headerlink" href="#type-resolution" title="Link to this heading"></a></h2>
 <section id="type-resolution-order">
-<h3>Type Resolution Order<a class="headerlink" href="#type-resolution-order" title="Link to this heading">¶</a></h3>
+<h3>Type Resolution Order<a class="headerlink" href="#type-resolution-order" title="Link to this heading"></a></h3>
 <ol class="arabic simple">
 <li><p>None type checking</p></li>
 <li><p>Primitive type validation</p></li>
@@ -50,7 +117,7 @@
 </ol>
 </section>
 <section id="type-mapping">
-<h3>Type Mapping<a class="headerlink" href="#type-mapping" title="Link to this heading">¶</a></h3>
+<h3>Type Mapping<a class="headerlink" href="#type-mapping" title="Link to this heading"></a></h3>
 <p>Primitive Types:</p>
 <ul class="simple">
 <li><p>bool -&gt; true/false</p></li>
@@ -75,9 +142,9 @@
 </section>
 </section>
 <section id="implementation-details">
-<h2>Implementation Details<a class="headerlink" href="#implementation-details" title="Link to this heading">¶</a></h2>
+<h2>Implementation Details<a class="headerlink" href="#implementation-details" title="Link to this heading"></a></h2>
 <section id="type-conversion">
-<h3>Type Conversion<a class="headerlink" href="#type-conversion" title="Link to this heading">¶</a></h3>
+<h3>Type Conversion<a class="headerlink" href="#type-conversion" title="Link to this heading"></a></h3>
 <p>The codec processes types in this order:</p>
 <ol class="arabic simple">
 <li><p>None values -&gt; null</p></li>
@@ -90,7 +157,7 @@
 </ol>
 </section>
 <section id="field-processing">
-<h3>Field Processing<a class="headerlink" href="#field-processing" title="Link to this heading">¶</a></h3>
+<h3>Field Processing<a class="headerlink" href="#field-processing" title="Link to this heading"></a></h3>
 <p>For dataclasses, fields are processed with:</p>
 <ol class="arabic simple">
 <li><p>Type validation</p></li>
@@ -102,9 +169,9 @@
 </section>
 </section>
 <section id="error-handling">
-<h2>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading">¶</a></h2>
+<h2>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading"></a></h2>
 <section id="exception-types">
-<h3>Exception Types<a class="headerlink" href="#exception-types" title="Link to this heading">¶</a></h3>
+<h3>Exception Types<a class="headerlink" href="#exception-types" title="Link to this heading"></a></h3>
 <ul class="simple">
 <li><p>JsonSerializationError: Base serialization error</p></li>
 <li><p>JsonDeserializationError: Base deserialization error</p></li>
@@ -112,7 +179,7 @@
 </ul>
 </section>
 <section id="common-error-cases">
-<h3>Common Error Cases<a class="headerlink" href="#common-error-cases" title="Link to this heading">¶</a></h3>
+<h3>Common Error Cases<a class="headerlink" href="#common-error-cases" title="Link to this heading"></a></h3>
 <ol class="arabic simple">
 <li><p>Type mismatch during deserialization</p></li>
 <li><p>Missing required fields</p></li>
@@ -122,41 +189,41 @@
 </section>
 </section>
 <section id="api-reference">
-<h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h2>
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h2>
 <section id="jsoncodec">
-<h3>JsonCodec<a class="headerlink" href="#jsoncodec" title="Link to this heading">¶</a></h3>
+<h3>JsonCodec<a class="headerlink" href="#jsoncodec" title="Link to this heading"></a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="jam.utils.json.codec.JsonCodec">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.json.codec.</span></span><span class="sig-name descname"><span class="pre">JsonCodec</span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.json.codec.</span></span><span class="sig-name descname"><span class="pre">JsonCodec</span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Core JSON serialization engine.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="jam.utils.json.codec.JsonCodec.to_json">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec.to_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec.to_json" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec.to_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec.to_json" title="Link to this definition"></a></dt>
 <dd><p>Convert object to JSON-compatible value.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="jam.utils.json.codec.JsonCodec.from_json">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec.from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec.from_json" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec.from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec.from_json" title="Link to this definition"></a></dt>
 <dd><p>Convert JSON-compatible value to target type.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="jam.utils.json.codec.JsonCodec._get_dataclass_fields">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_get_dataclass_fields</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.13)"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec._get_dataclass_fields"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec._get_dataclass_fields" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_get_dataclass_fields</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../../types/base/dictionary.html#jam.types.base.dictionary.Dict" title="typing.Dict"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec._get_dataclass_fields"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec._get_dataclass_fields" title="Link to this definition"></a></dt>
 <dd><p>Get and cache dataclass field information.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="jam.utils.json.codec.JsonCodec._dataclass_to_json">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_dataclass_to_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.13)"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec._dataclass_to_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec._dataclass_to_json" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_dataclass_to_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../../types/base/dictionary.html#jam.types.base.dictionary.Dict" title="typing.Dict"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec._dataclass_to_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec._dataclass_to_json" title="Link to this definition"></a></dt>
 <dd><p>Convert dataclass instance to JSON dict</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="jam.utils.json.codec.JsonCodec._dataclass_from_json">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_dataclass_from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.13)"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cls</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec._dataclass_from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec._dataclass_from_json" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_dataclass_from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../types/base/dictionary.html#jam.types.base.dictionary.Dict" title="typing.Dict"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cls</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#JsonCodec._dataclass_from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.JsonCodec._dataclass_from_json" title="Link to this definition"></a></dt>
 <dd><p>Convert JSON dict to dataclass instance.</p>
 </dd></dl>
 
@@ -164,19 +231,19 @@
 
 </section>
 <section id="functions">
-<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h3>
+<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h3>
 <dl class="py function">
 <dt class="sig sig-object py" id="jam.utils.json.codec.is_optional_type">
-<span class="sig-prename descclassname"><span class="pre">jam.utils.json.codec.</span></span><span class="sig-name descname"><span class="pre">is_optional_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tp</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#is_optional_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.is_optional_type" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">jam.utils.json.codec.</span></span><span class="sig-name descname"><span class="pre">is_optional_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tp</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/codec.html#is_optional_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.codec.is_optional_type" title="Link to this definition"></a></dt>
 <dd><p>Check if type hint is Optional[T].</p>
 </dd></dl>
 
 </section>
 </section>
 <section id="examples">
-<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
 <section id="basic-usage">
-<h3>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading">¶</a></h3>
+<h3>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.json</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonCodec</span>
 
 <span class="c1"># Primitive types</span>
@@ -191,7 +258,7 @@
 </div>
 </section>
 <section id="dataclass-handling">
-<h3>Dataclass Handling<a class="headerlink" href="#dataclass-handling" title="Link to this heading">¶</a></h3>
+<h3>Dataclass Handling<a class="headerlink" href="#dataclass-handling" title="Link to this heading"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Point</span><span class="p">:</span>
     <span class="n">x</span><span class="p">:</span> <span class="nb">int</span>
@@ -204,7 +271,7 @@
 </div>
 </section>
 <section id="custom-types">
-<h3>Custom Types<a class="headerlink" href="#custom-types" title="Link to this heading">¶</a></h3>
+<h3>Custom Types<a class="headerlink" href="#custom-types" title="Link to this heading"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Vector</span><span class="p">:</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y</span><span class="p">}</span>
@@ -215,7 +282,7 @@
 </div>
 </section>
 <section id="id1">
-<h3>Error Handling<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<h3>Error Handling<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
     <span class="n">JsonCodec</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="s2">&quot;not a dict&quot;</span><span class="p">,</span> <span class="n">Point</span><span class="p">)</span>
 <span class="k">except</span> <span class="n">JsonDeserializationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
@@ -227,82 +294,34 @@
 </section>
 
 
+           </div>
           </div>
-          
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="jam.utils.json" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="serde.html" class="btn btn-neutral float-right" title="jam.utils.json.serde" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Chainscore Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="Main">
-        <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../../../../index.html">Tessera</a></h1>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
 
-
-
-
-
-
-
-
-
-<search id="searchbox" style="display: none" role="search">
-    <div class="searchformwrapper">
-    <form class="search" action="../../../../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</search>
-<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">jam package</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../index.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../index.html#module-contents">Module Contents</a></li>
-</ul>
-</li>
-</ul>
-
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../../../../index.html">Documentation overview</a><ul>
-  <li><a href="../../index.html">jam package</a><ul>
-  <li><a href="../index.html">jam.utils package</a><ul>
-  <li><a href="index.html">jam.utils.json</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">jam.utils.json</a></li>
-      <li>Next: <a href="serde.html" title="next chapter">jam.utils.json.serde</a></li>
-  </ul></li>
-  </ul></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-
-
-
-
-
-
-
-
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &#169;2025, Chainscore Labs.
-      
-      |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
-      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
-      
-      |
-      <a href="../../../../_sources/modules/jam/utils/json/codec.rst.txt"
-          rel="nofollow">Page source</a>
-    </div>
-
-    
-
-    
-  </body>
+</body>
 </html>

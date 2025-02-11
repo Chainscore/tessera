@@ -1,5 +1,5 @@
-jam.utils.constants module
-==========================
+Constants
+==================
 
 .. automodule:: jam.utils.constants
    :members:

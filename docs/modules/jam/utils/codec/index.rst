@@ -1,4 +1,4 @@
-jam.utils.codec
+Codec
 =============
 
 Type-safe serialization framework implementing the JAM protocol specification.

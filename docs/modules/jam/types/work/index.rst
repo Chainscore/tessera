@@ -1,5 +1,5 @@
-jam.types.work package
-======================
+Work Types - JAM
+==============
 
 Submodules
 ----------

@@ -1,5 +1,5 @@
-jam.types.protocol package
-==========================
+Protocol Helper Types
+======================
 
 Submodules
 ----------

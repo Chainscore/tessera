@@ -1,4 +1,4 @@
-jam.types.header module
+Header Type - JAM
 =======================
 
 .. automodule:: jam.types.header

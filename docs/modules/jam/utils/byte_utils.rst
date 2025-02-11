@@ -1,4 +1,4 @@
-jam.utils.byte_utils module
+Byte Utils
 ===========================
 
 .. automodule:: jam.utils.byte_utils

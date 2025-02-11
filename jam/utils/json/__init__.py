@@ -1,28 +1,24 @@
 """
-JSON serialization/deserialization module for JAM types.
+JSON serialization framework integrated with JAM codec system.
 
-This module provides a unified way to convert JAM types to and from JSON.
-It supports both base types and complex dataclasses, with customizable
-field handling and metadata.
+Core:
+* JsonCodec: Type-safe conversion engine
+* JsonSerde: Base mixin for JSON capabilities
+* JsonFieldMetadata: Field configuration
 
-Basic usage:
-    from jam.utils.codec.json import json_serializable, json_field
-
-    @json_serializable
-    @dataclass
-    class MyClass:
-        field1: str = json_field(name="jsonField1")
-        field2: int = json_field(skip_if_none=True)
-
-Advanced usage:
-    @json_serializable
-    @with_json_metadata(
-        field1={'name': 'jsonField1', 'skip_if_none': True},
-        field2={'format': '%Y-%m-%d'}
-    )
-    class MyClass:
-        field1: str
-        field2: datetime
+Type Resolution:
+* bool -> true/false
+* int -> number
+* str -> string
+* bytes -> hex string
+* Null -> null
+* Array[T] -> [T, ...]
+* Vector[T] -> [T, ...]
+* Dict[K,V] -> {K: V, ...}
+* Option[T] -> T | null
+* Enum -> value | name
+* @json_serializable -> object
+* JsonSerde -> custom conversion
 """
 
 from .serde import (

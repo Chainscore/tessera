@@ -1,5 +1,5 @@
-jam.utils package
-=================
+Utilities
+==================
 
 Subpackages
 -----------

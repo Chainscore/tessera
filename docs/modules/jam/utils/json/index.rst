@@ -1,4 +1,4 @@
-jam.utils.json
+JsonSerde
 ============
 
 Type-safe JSON serialization framework integrated with the JAM codec system.

@@ -1,5 +1,5 @@
-jam.types.extrinsics package
-============================
+Extrinsics Types - JAM
+======================
 
 Submodules
 ----------

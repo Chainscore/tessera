@@ -1,0 +1,561 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>jam.types.base.integers &mdash; Tessera 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="jam.types.base.sequences" href="sequences/index.html" />
+    <link rel="prev" title="jam.types.base" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            Tessera
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../api/index.html">jam.api package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../config/index.html">jam.config package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../consensus/index.html">jam.consensus package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../core/index.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../crypto/index.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../execution/index.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../network/index.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../playground/index.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pvm/index.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../services/index.html">jam.services package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../state/index.html">jam.state package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../storage/index.html">jam.storage package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">jam.types</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../index.html#module-organization">Module Organization</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../utils/index.html">jam.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Tessera</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">jam package</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">jam.types</a></li>
+          <li class="breadcrumb-item"><a href="index.html">jam.types.base</a></li>
+      <li class="breadcrumb-item active">jam.types.base.integers</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/modules/jam/types/base/integers.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="jam-types-base-integers">
+<h1>jam.types.base.integers<a class="headerlink" href="#jam-types-base-integers" title="Link to this heading"></a></h1>
+<p>Integer type implementations for the JAM protocol.</p>
+<section id="type-definitions">
+<h2>Type Definitions<a class="headerlink" href="#type-definitions" title="Link to this heading"></a></h2>
+<section id="fixed-width-types">
+<h3>Fixed-width Types<a class="headerlink" href="#fixed-width-types" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>U8: 8-bit unsigned integer</p></li>
+<li><p>U16: 16-bit unsigned integer</p></li>
+<li><p>U32: 32-bit unsigned integer</p></li>
+<li><p>U64: 64-bit unsigned integer</p></li>
+<li><p>U128: 128-bit unsigned integer</p></li>
+<li><p>U256: 256-bit unsigned integer</p></li>
+<li><p>I8: 8-bit signed integer</p></li>
+<li><p>I16: 16-bit signed integer</p></li>
+<li><p>I32: 32-bit signed integer</p></li>
+<li><p>I64: 64-bit signed integer</p></li>
+<li><p>I128: 128-bit signed integer</p></li>
+<li><p>I256: 256-bit signed integer</p></li>
+</ul>
+</section>
+<section id="variable-width-type">
+<h3>Variable-width Type<a class="headerlink" href="#variable-width-type" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Int: Variable-width unsigned integer that supports values &lt; 2⁶⁴</p></li>
+</ul>
+</section>
+</section>
+<section id="encoding-format">
+<h2>Encoding Format<a class="headerlink" href="#encoding-format" title="Link to this heading"></a></h2>
+<section id="fixed-width-integers">
+<h3>Fixed-width Integers<a class="headerlink" href="#fixed-width-integers" title="Link to this heading"></a></h3>
+<p>Little-endian byte order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">U8</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>    <span class="o">-&gt;</span> <span class="p">[</span><span class="mi">2</span><span class="n">A</span><span class="p">]</span>
+<span class="n">U16</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>   <span class="o">-&gt;</span> <span class="p">[</span><span class="mi">2</span><span class="n">A</span> <span class="mi">00</span><span class="p">]</span>
+<span class="n">U32</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>   <span class="o">-&gt;</span> <span class="p">[</span><span class="mi">2</span><span class="n">A</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span><span class="p">]</span>
+<span class="n">U64</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>   <span class="o">-&gt;</span> <span class="p">[</span><span class="mi">2</span><span class="n">A</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span><span class="p">]</span>
+<span class="n">U128</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>  <span class="o">-&gt;</span> <span class="p">[</span><span class="mi">2</span><span class="n">A</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span><span class="p">]</span>
+<span class="n">U256</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>  <span class="o">-&gt;</span> <span class="p">[</span><span class="mi">2</span><span class="n">A</span> <span class="mi">00</span> <span class="o">...</span> <span class="mi">00</span><span class="p">]</span> <span class="p">(</span><span class="mi">32</span> <span class="nb">bytes</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="variable-width-integer">
+<h3>Variable-width Integer<a class="headerlink" href="#variable-width-integer" title="Link to this heading"></a></h3>
+<p>Compact encoding for values &lt; 2⁶⁴:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mh">0x00</span><span class="o">-</span><span class="mh">0xFC</span>           <span class="o">-&gt;</span> <span class="p">[</span><span class="n">value</span><span class="p">]</span>                      <span class="c1"># 1 byte</span>
+<span class="mh">0x00</span><span class="o">-</span><span class="mh">0xFFFF</span>         <span class="o">-&gt;</span> <span class="p">[</span><span class="n">XX</span> <span class="n">value_lo</span> <span class="n">value_hi</span><span class="p">]</span>       <span class="c1"># 3 bytes</span>
+<span class="mh">0x00</span><span class="o">-</span><span class="mh">0xFFFFFF</span>       <span class="o">-&gt;</span> <span class="p">[</span><span class="n">XX</span> <span class="n">value0</span> <span class="n">value1</span> <span class="n">value2</span><span class="p">]</span>    <span class="c1"># 4 bytes</span>
+<span class="mh">0x00</span><span class="o">-</span><span class="mh">0xFFFFFFFF</span>     <span class="o">-&gt;</span> <span class="p">[</span><span class="n">XX</span> <span class="n">value0</span><span class="o">..</span><span class="n">value3</span><span class="p">]</span>          <span class="c1"># 5 bytes</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="implementation-details">
+<h2>Implementation Details<a class="headerlink" href="#implementation-details" title="Link to this heading"></a></h2>
+<section id="memory-layout">
+<h3>Memory Layout<a class="headerlink" href="#memory-layout" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Fixed-width types use native integer types</p></li>
+<li><p>No padding bytes</p></li>
+<li><p>Explicit alignment for larger types</p></li>
+<li><p>Direct buffer access for efficiency</p></li>
+</ul>
+</section>
+<section id="range-validation">
+<h3>Range Validation<a class="headerlink" href="#range-validation" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Unsigned only (no negative values)</p></li>
+<li><p>Maximum value checks</p></li>
+<li><p>Overflow detection</p></li>
+<li><p>Size validation</p></li>
+</ul>
+</section>
+<section id="error-handling">
+<h3>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading"></a></h3>
+<p>Common error cases:</p>
+<ol class="arabic">
+<li><p>Value out of range:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">max_value</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Value </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2"> exceeds maximum </span><span class="si">{</span><span class="n">max_value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>Buffer underflow:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span> <span class="o">-</span> <span class="n">offset</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">BufferError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Need </span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s2"> bytes, have </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">offset</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>Invalid encoding:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">prefix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mh">0xFF</span><span class="p">,</span> <span class="mh">0xFE</span><span class="p">,</span> <span class="mh">0xFD</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="mh">0xFC</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="n">DecodeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid prefix </span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2"> for value </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
+<section id="fixed-width-usage">
+<h3>Fixed-width Usage<a class="headerlink" href="#fixed-width-usage" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.base.integers</span><span class="w"> </span><span class="kn">import</span> <span class="n">U32</span>
+
+<span class="c1"># Create and encode</span>
+<span class="n">value</span> <span class="o">=</span> <span class="n">U32</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">encoded</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>  <span class="c1"># -&gt; [2A 00 00 00]</span>
+
+<span class="c1"># Decode</span>
+<span class="n">decoded</span> <span class="o">=</span> <span class="n">U32</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>  <span class="c1"># -&gt; 42</span>
+
+<span class="c1"># Buffer operations</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">written</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">encode_into</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># -&gt; 4</span>
+<span class="n">decoded</span><span class="p">,</span> <span class="n">read</span> <span class="o">=</span> <span class="n">U32</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># -&gt; (42, 4)</span>
+</pre></div>
+</div>
+</section>
+<section id="variable-width-usage">
+<h3>Variable-width Usage<a class="headerlink" href="#variable-width-usage" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.base.integers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Int</span>
+
+<span class="c1"># Small values use 1 byte</span>
+<span class="n">value</span> <span class="o">=</span> <span class="n">Int</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">encoded</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>  <span class="c1"># -&gt; [2A]</span>
+
+<span class="c1"># Larger values use more bytes</span>
+<span class="n">value</span> <span class="o">=</span> <span class="n">Int</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">encoded</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>  <span class="c1"># -&gt; [_XX_ E8 03]</span>
+
+<span class="c1"># Decode</span>
+<span class="n">decoded</span> <span class="o">=</span> <span class="n">Int</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>  <span class="c1"># -&gt; 1000</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.base.integers.U8">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.base.integers.</span></span><span class="sig-name descname"><span class="pre">U8</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="integers/base.html#jam.types.base.integers.base.BaseInteger" title="jam.types.base.integers.base.BaseInteger"><span class="pre">BaseInteger</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/types/base/integers/fixed.html#U8"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.integers.U8" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="integers/fixed.html#jam.types.base.integers.fixed.FixedInt" title="jam.types.base.integers.fixed.FixedInt"><code class="xref py py-class docutils literal notranslate"><span class="pre">FixedInt</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U8.byte_size">
+<span class="sig-name descname"><span class="pre">byte_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#jam.types.base.integers.U8.byte_size" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.integers.U8.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.base.integers.U8.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U8.has_sign">
+<span class="sig-name descname"><span class="pre">has_sign</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#jam.types.base.integers.U8.has_sign" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.base.integers.U16">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.base.integers.</span></span><span class="sig-name descname"><span class="pre">U16</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="integers/base.html#jam.types.base.integers.base.BaseInteger" title="jam.types.base.integers.base.BaseInteger"><span class="pre">BaseInteger</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/types/base/integers/fixed.html#U16"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.integers.U16" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="integers/fixed.html#jam.types.base.integers.fixed.FixedInt" title="jam.types.base.integers.fixed.FixedInt"><code class="xref py py-class docutils literal notranslate"><span class="pre">FixedInt</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U16.byte_size">
+<span class="sig-name descname"><span class="pre">byte_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#jam.types.base.integers.U16.byte_size" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.integers.U16.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.base.integers.U16.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U16.has_sign">
+<span class="sig-name descname"><span class="pre">has_sign</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#jam.types.base.integers.U16.has_sign" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.base.integers.U32">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.base.integers.</span></span><span class="sig-name descname"><span class="pre">U32</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="integers/base.html#jam.types.base.integers.base.BaseInteger" title="jam.types.base.integers.base.BaseInteger"><span class="pre">BaseInteger</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/types/base/integers/fixed.html#U32"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.integers.U32" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="integers/fixed.html#jam.types.base.integers.fixed.FixedInt" title="jam.types.base.integers.fixed.FixedInt"><code class="xref py py-class docutils literal notranslate"><span class="pre">FixedInt</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U32.byte_size">
+<span class="sig-name descname"><span class="pre">byte_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#jam.types.base.integers.U32.byte_size" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.integers.U32.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.base.integers.U32.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U32.has_sign">
+<span class="sig-name descname"><span class="pre">has_sign</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#jam.types.base.integers.U32.has_sign" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.base.integers.U64">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.base.integers.</span></span><span class="sig-name descname"><span class="pre">U64</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="integers/base.html#jam.types.base.integers.base.BaseInteger" title="jam.types.base.integers.base.BaseInteger"><span class="pre">BaseInteger</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/types/base/integers/fixed.html#U64"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.integers.U64" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="integers/fixed.html#jam.types.base.integers.fixed.FixedInt" title="jam.types.base.integers.fixed.FixedInt"><code class="xref py py-class docutils literal notranslate"><span class="pre">FixedInt</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U64.byte_size">
+<span class="sig-name descname"><span class="pre">byte_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">8</span></em><a class="headerlink" href="#jam.types.base.integers.U64.byte_size" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.integers.U64.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.base.integers.U64.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U64.has_sign">
+<span class="sig-name descname"><span class="pre">has_sign</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#jam.types.base.integers.U64.has_sign" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.base.integers.U128">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.base.integers.</span></span><span class="sig-name descname"><span class="pre">U128</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="integers/base.html#jam.types.base.integers.base.BaseInteger" title="jam.types.base.integers.base.BaseInteger"><span class="pre">BaseInteger</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/types/base/integers/fixed.html#U128"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.integers.U128" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="integers/fixed.html#jam.types.base.integers.fixed.FixedInt" title="jam.types.base.integers.fixed.FixedInt"><code class="xref py py-class docutils literal notranslate"><span class="pre">FixedInt</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U128.byte_size">
+<span class="sig-name descname"><span class="pre">byte_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">16</span></em><a class="headerlink" href="#jam.types.base.integers.U128.byte_size" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.integers.U128.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.base.integers.U128.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U128.has_sign">
+<span class="sig-name descname"><span class="pre">has_sign</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#jam.types.base.integers.U128.has_sign" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.base.integers.U256">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.base.integers.</span></span><span class="sig-name descname"><span class="pre">U256</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="integers/base.html#jam.types.base.integers.base.BaseInteger" title="jam.types.base.integers.base.BaseInteger"><span class="pre">BaseInteger</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/types/base/integers/fixed.html#U256"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.integers.U256" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="integers/fixed.html#jam.types.base.integers.fixed.FixedInt" title="jam.types.base.integers.fixed.FixedInt"><code class="xref py py-class docutils literal notranslate"><span class="pre">FixedInt</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U256.byte_size">
+<span class="sig-name descname"><span class="pre">byte_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">32</span></em><a class="headerlink" href="#jam.types.base.integers.U256.byte_size" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.integers.U256.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.base.integers.U256.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.types.base.integers.U256.has_sign">
+<span class="sig-name descname"><span class="pre">has_sign</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#jam.types.base.integers.U256.has_sign" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.base.integers.Int">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.base.integers.</span></span><span class="sig-name descname"><span class="pre">Int</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="integers/base.html#jam.types.base.integers.base.BaseInteger" title="jam.types.base.integers.base.BaseInteger"><span class="pre">BaseInteger</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/types/base/integers/general.html#Int"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.integers.Int" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="integers/base.html#jam.types.base.integers.base.BaseInteger" title="jam.types.base.integers.base.BaseInteger"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseInteger</span></code></a>, <a class="reference internal" href="../../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codable</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.integers.Int.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="integers/base.html#jam.types.base.integers.base.BaseInteger" title="jam.types.base.integers.base.BaseInteger"><span class="pre">BaseInteger</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/types/base/integers/general.html#Int.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.integers.Int.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize an integer.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.integers.Int._validate">
+<span class="sig-name descname"><span class="pre">_validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/integers/general.html#Int._validate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.integers.Int._validate" title="Link to this definition"></a></dt>
+<dd><p>Validate the integer value is within bounds.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.integers.Int.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/types/base/integers/general.html#Int.decode_from"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.integers.Int.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="jam.types.base" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sequences/index.html" class="btn btn-neutral float-right" title="jam.types.base.sequences" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Chainscore Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

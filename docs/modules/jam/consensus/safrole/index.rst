@@ -1,4 +1,4 @@
-jam.consensus.safrole package
+Safrole
 =============================
 
 Submodules
