@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>jam.utils.codec.composite package &#8212; Tessera  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="jam.utils.codec.composite.arrays module" href="jam.utils.codec.composite.arrays.html" />
+    <link rel="prev" title="jam.utils.codec package" href="jam.utils.codec.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="jam-utils-codec-composite-package">
+<h1>jam.utils.codec.composite package<a class="headerlink" href="#jam-utils-codec-composite-package" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jam.utils.codec.composite.arrays.html">jam.utils.codec.composite.arrays module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.codec.composite.arrays.html#jam.utils.codec.composite.arrays.ArrayCodec"><code class="docutils literal notranslate"><span class="pre">ArrayCodec</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.arrays.html#jam.utils.codec.composite.arrays.ArrayCodec.MAX_SIZE"><code class="docutils literal notranslate"><span class="pre">ArrayCodec.MAX_SIZE</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.arrays.html#jam.utils.codec.composite.arrays.ArrayCodec._abc_impl"><code class="docutils literal notranslate"><span class="pre">ArrayCodec._abc_impl</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.arrays.html#jam.utils.codec.composite.arrays.ArrayCodec.decode_from"><code class="docutils literal notranslate"><span class="pre">ArrayCodec.decode_from()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.arrays.html#jam.utils.codec.composite.arrays.ArrayCodec.encode"><code class="docutils literal notranslate"><span class="pre">ArrayCodec.encode()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.arrays.html#jam.utils.codec.composite.arrays.ArrayCodec.encode_into"><code class="docutils literal notranslate"><span class="pre">ArrayCodec.encode_into()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.arrays.html#jam.utils.codec.composite.arrays.ArrayCodec.encode_size"><code class="docutils literal notranslate"><span class="pre">ArrayCodec.encode_size()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.arrays.html#jam.utils.codec.composite.arrays.ArrayCodec.length"><code class="docutils literal notranslate"><span class="pre">ArrayCodec.length</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jam.utils.codec.composite.bit_sequences.html">jam.utils.codec.composite.bit_sequences module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.codec.composite.bit_sequences.html#jam.utils.codec.composite.bit_sequences.BitSequenceCodec"><code class="docutils literal notranslate"><span class="pre">BitSequenceCodec</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.bit_sequences.html#jam.utils.codec.composite.bit_sequences.BitSequenceCodec._abc_impl"><code class="docutils literal notranslate"><span class="pre">BitSequenceCodec._abc_impl</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.bit_sequences.html#jam.utils.codec.composite.bit_sequences.BitSequenceCodec.bit_length"><code class="docutils literal notranslate"><span class="pre">BitSequenceCodec.bit_length</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.bit_sequences.html#jam.utils.codec.composite.bit_sequences.BitSequenceCodec.bit_order"><code class="docutils literal notranslate"><span class="pre">BitSequenceCodec.bit_order</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.bit_sequences.html#jam.utils.codec.composite.bit_sequences.BitSequenceCodec.decode_from"><code class="docutils literal notranslate"><span class="pre">BitSequenceCodec.decode_from()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.bit_sequences.html#jam.utils.codec.composite.bit_sequences.BitSequenceCodec.encode"><code class="docutils literal notranslate"><span class="pre">BitSequenceCodec.encode()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.bit_sequences.html#jam.utils.codec.composite.bit_sequences.BitSequenceCodec.encode_into"><code class="docutils literal notranslate"><span class="pre">BitSequenceCodec.encode_into()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.bit_sequences.html#jam.utils.codec.composite.bit_sequences.BitSequenceCodec.encode_size"><code class="docutils literal notranslate"><span class="pre">BitSequenceCodec.encode_size()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jam.utils.codec.composite.choices.html">jam.utils.codec.composite.choices module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.codec.composite.choices.html#jam.utils.codec.composite.choices.ChoiceCodec"><code class="docutils literal notranslate"><span class="pre">ChoiceCodec</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.choices.html#jam.utils.codec.composite.choices.ChoiceCodec._abc_impl"><code class="docutils literal notranslate"><span class="pre">ChoiceCodec._abc_impl</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.choices.html#jam.utils.codec.composite.choices.ChoiceCodec._choices"><code class="docutils literal notranslate"><span class="pre">ChoiceCodec._choices</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.choices.html#jam.utils.codec.composite.choices.ChoiceCodec._tag_codec"><code class="docutils literal notranslate"><span class="pre">ChoiceCodec._tag_codec</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.choices.html#jam.utils.codec.composite.choices.ChoiceCodec.decode_from"><code class="docutils literal notranslate"><span class="pre">ChoiceCodec.decode_from()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.choices.html#jam.utils.codec.composite.choices.ChoiceCodec.encode"><code class="docutils literal notranslate"><span class="pre">ChoiceCodec.encode()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.choices.html#jam.utils.codec.composite.choices.ChoiceCodec.encode_into"><code class="docutils literal notranslate"><span class="pre">ChoiceCodec.encode_into()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.choices.html#jam.utils.codec.composite.choices.ChoiceCodec.encode_size"><code class="docutils literal notranslate"><span class="pre">ChoiceCodec.encode_size()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jam.utils.codec.composite.dictionaries.html">jam.utils.codec.composite.dictionaries module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.codec.composite.dictionaries.html#jam.utils.codec.composite.dictionaries.DictionaryCodec"><code class="docutils literal notranslate"><span class="pre">DictionaryCodec</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.dictionaries.html#jam.utils.codec.composite.dictionaries.DictionaryCodec._abc_impl"><code class="docutils literal notranslate"><span class="pre">DictionaryCodec._abc_impl</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.dictionaries.html#jam.utils.codec.composite.dictionaries.DictionaryCodec._encode_pair"><code class="docutils literal notranslate"><span class="pre">DictionaryCodec._encode_pair()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.dictionaries.html#jam.utils.codec.composite.dictionaries.DictionaryCodec.decode_from"><code class="docutils literal notranslate"><span class="pre">DictionaryCodec.decode_from()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.dictionaries.html#jam.utils.codec.composite.dictionaries.DictionaryCodec.encode"><code class="docutils literal notranslate"><span class="pre">DictionaryCodec.encode()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.dictionaries.html#jam.utils.codec.composite.dictionaries.DictionaryCodec.encode_into"><code class="docutils literal notranslate"><span class="pre">DictionaryCodec.encode_into()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.dictionaries.html#jam.utils.codec.composite.dictionaries.DictionaryCodec.encode_size"><code class="docutils literal notranslate"><span class="pre">DictionaryCodec.encode_size()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jam.utils.codec.composite.vectors.html">jam.utils.codec.composite.vectors module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.codec.composite.vectors.html#jam.utils.codec.composite.vectors.VectorCodec"><code class="docutils literal notranslate"><span class="pre">VectorCodec</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.vectors.html#jam.utils.codec.composite.vectors.VectorCodec._abc_impl"><code class="docutils literal notranslate"><span class="pre">VectorCodec._abc_impl</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.vectors.html#jam.utils.codec.composite.vectors.VectorCodec.decode_from"><code class="docutils literal notranslate"><span class="pre">VectorCodec.decode_from()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.vectors.html#jam.utils.codec.composite.vectors.VectorCodec.encode"><code class="docutils literal notranslate"><span class="pre">VectorCodec.encode()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.vectors.html#jam.utils.codec.composite.vectors.VectorCodec.encode_into"><code class="docutils literal notranslate"><span class="pre">VectorCodec.encode_into()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.codec.composite.vectors.html#jam.utils.codec.composite.vectors.VectorCodec.encode_size"><code class="docutils literal notranslate"><span class="pre">VectorCodec.encode_size()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="module-jam.utils.codec.composite">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-jam.utils.codec.composite" title="Link to this heading">¶</a></h2>
+<p>Composite type codecs for JAM protocol.</p>
+<p>This module provides codecs for composite types including:
+- Arrays (fixed length)
+- Options (nullable values)
+- Vectors (dynamic length)
+- Dictionaries (key-value pairs)
+- Bit sequences (sequences of bits)
+- Dataclasses (structured data)</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ArrayCodec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.composite.</span></span><span class="sig-name descname"><span class="pre">ArrayCodec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">length</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/arrays.html#ArrayCodec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.ArrayCodec" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="jam.utils.codec.codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codec</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>[<a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codable</span></code></a>]]</p>
+<p>Codec for fixed-length arrays/sequences.</p>
+<p>Arrays are encoded by concatenating their encoded elements in order.
+The length is fixed and known at encoding/decoding time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>length</strong> (<em>int</em>)</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ArrayCodec.MAX_SIZE">
+<span class="sig-name descname"><span class="pre">MAX_SIZE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1000</span></em><a class="headerlink" href="#jam.utils.codec.composite.ArrayCodec.MAX_SIZE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ArrayCodec._abc_impl">
+<span class="sig-name descname"><span class="pre">_abc_impl</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;_abc._abc_data</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#jam.utils.codec.composite.ArrayCodec._abc_impl" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ArrayCodec.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">length</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">codable_class</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/arrays.html#ArrayCodec.decode_from"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.ArrayCodec.decode_from" title="Link to this definition">¶</a></dt>
+<dd><p>Decode a value from the provided buffer starting at the specified offset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>length</strong> (<em>int</em>)</p></li>
+<li><p><strong>codable_class</strong> (<em>type</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>]</em>)</p></li>
+<li><p><strong>buffer</strong> (<em>bytes</em><em> | </em><em>bytearray</em><em> | </em><em>memoryview</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[<em>List</em>, int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ArrayCodec.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.codec.composite.ArrayCodec.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encode the value into a new bytes object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>T</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ArrayCodec.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/arrays.html#ArrayCodec.encode_into"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.ArrayCodec.encode_into" title="Link to this definition">¶</a></dt>
+<dd><p>Encode the value into the provided buffer at the specified offset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>]</em>)</p></li>
+<li><p><strong>buffer</strong> (<em>bytearray</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ArrayCodec.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/arrays.html#ArrayCodec.encode_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.ArrayCodec.encode_size" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the number of bytes needed to encode the value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ArrayCodec.length">
+<span class="sig-name descname"><span class="pre">length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#jam.utils.codec.composite.ArrayCodec.length" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.BitSequenceCodec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.composite.</span></span><span class="sig-name descname"><span class="pre">BitSequenceCodec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bit_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bit_order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'msb'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/bit_sequences.html#BitSequenceCodec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.BitSequenceCodec" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="jam.utils.codec.codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codec</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>]]</p>
+<p>Codec for encoding and decoding sequences of bits.</p>
+<p>Bits are packed into octets (bytes) from least significant to most significant.
+IMP: It adds bit length encoded as a single byte at the beginning of the sequence ONLY if
+the bit length is not provided.</p>
+<dl class="simple">
+<dt>If dynamic length sequence:</dt><dd><ul class="simple">
+<li><p>Initialise with None</p></li>
+<li><p>No need to pass bit length to decode_from</p></li>
+</ul>
+</dd>
+<dt>If fixed length sequence:</dt><dd><ul class="simple">
+<li><p>Initialise with bit length</p></li>
+<li><p>Pass bit length to decode_from</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bit_length</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>bit_order</strong> (<em>Literal</em><em>[</em><em>'msb'</em><em>, </em><em>'lsb'</em><em>]</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.BitSequenceCodec._abc_impl">
+<span class="sig-name descname"><span class="pre">_abc_impl</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;_abc._abc_data</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#jam.utils.codec.composite.BitSequenceCodec._abc_impl" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.BitSequenceCodec.bit_length">
+<span class="sig-name descname"><span class="pre">bit_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.utils.codec.composite.BitSequenceCodec.bit_length" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.BitSequenceCodec.bit_order">
+<span class="sig-name descname"><span class="pre">bit_order</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'msb'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'lsb'</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'msb'</span></em><a class="headerlink" href="#jam.utils.codec.composite.BitSequenceCodec.bit_order" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.BitSequenceCodec.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bit_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bit_order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'msb'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/bit_sequences.html#BitSequenceCodec.decode_from"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.BitSequenceCodec.decode_from" title="Link to this definition">¶</a></dt>
+<dd><p>Decode bit sequence from buffer.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>buffer: Source buffer
+offset: Starting offset
+bit_length: Expected number of bits (required)</p>
+</dd>
+<dt>Returns:</dt><dd><p>Tuple of (decoded bit list, bytes read)</p>
+</dd>
+<dt>Raises:</dt><dd><p>DecodeError: If buffer too small or bit_length not specified</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> (<em>bytes</em><em> | </em><em>bytearray</em><em> | </em><em>memoryview</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+<li><p><strong>bit_length</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>bit_order</strong> (<em>Literal</em><em>[</em><em>'msb'</em><em>, </em><em>'lsb'</em><em>]</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[<em>Sequence</em>[bool], int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.BitSequenceCodec.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.codec.composite.BitSequenceCodec.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encode the value into a new bytes object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>T</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.BitSequenceCodec.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/bit_sequences.html#BitSequenceCodec.encode_into"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.BitSequenceCodec.encode_into" title="Link to this definition">¶</a></dt>
+<dd><p>Encode the value into the provided buffer at the specified offset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>Sequence</em><em>[</em><em>bool</em><em>]</em>)</p></li>
+<li><p><strong>buffer</strong> (<em>bytearray</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.BitSequenceCodec.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/bit_sequences.html#BitSequenceCodec.encode_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.BitSequenceCodec.encode_size" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the number of bytes needed to encode the value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Sequence</em><em>[</em><em>bool</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ChoiceCodec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.composite.</span></span><span class="sig-name descname"><span class="pre">ChoiceCodec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">choices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ChoiceCodec__tag_codec=&lt;jam.utils.codec.primitives.integers.GeneralCodec</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/choices.html#ChoiceCodec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.ChoiceCodec" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="jam.utils.codec.codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codec</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code>]</p>
+<p>Codec for choice/union values.</p>
+<p>Choice values are encoded with a tag byte indicating the selected type,
+followed by the encoded value of that type.</p>
+<p>The tag is encoded as a general integer, followed by the encoded value
+of the selected type. The tag value corresponds to the index of the
+type in the choices list.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>choices: A list of types that are allowed for this choice. Their index</dt><dd><p>will be used as the tag.</p>
+</dd>
+<dt>tag_codec: A codec for the tag. Defaults to GeneralCodec() [Best for most cases]. </dt><dd><p>Alternatively we can use FixedInt(U8) for a fixed size tag if choices &gt; 128.</p>
+</dd>
+</dl>
+</dd>
+<dt>Raises:</dt><dd><p>ValueError: If choices list is empty</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>choices</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Type</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>T</em><em>]</em><em>]</em><em>]</em>)</p></li>
+<li><p><strong>_ChoiceCodec__tag_codec</strong> (<a class="reference internal" href="jam.utils.codec.codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><em>Codec</em></a><em>[</em><em>int</em><em>]</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ChoiceCodec._abc_impl">
+<span class="sig-name descname"><span class="pre">_abc_impl</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;_abc._abc_data</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#jam.utils.codec.composite.ChoiceCodec._abc_impl" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ChoiceCodec._choices">
+<span class="sig-name descname"><span class="pre">_choices</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><span class="pre">Codable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#jam.utils.codec.composite.ChoiceCodec._choices" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ChoiceCodec._tag_codec">
+<span class="sig-name descname"><span class="pre">_tag_codec</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="jam.utils.codec.codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><span class="pre">Codec</span></a><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#jam.utils.codec.composite.ChoiceCodec._tag_codec" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ChoiceCodec.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">choices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/choices.html#ChoiceCodec.decode_from"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.ChoiceCodec.decode_from" title="Link to this definition">¶</a></dt>
+<dd><p>Decode choice value from buffer.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>choices: List of possible types
+buffer: Source buffer
+offset: Starting offset</p>
+</dd>
+<dt>Returns:</dt><dd><p>Tuple of (decoded value, bytes read)</p>
+</dd>
+<dt>Raises:</dt><dd><p>DecodeError: If buffer is invalid/too short or tag is invalid
+ValueError: If choices list is empty</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>choices</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Type</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>T</em><em>]</em><em>]</em><em>]</em>)</p></li>
+<li><p><strong>buffer</strong> (<em>bytes</em><em> | </em><em>bytearray</em><em> | </em><em>memoryview</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[<em>Dict</em>[str, <a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a>[<em>T</em>]], int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ChoiceCodec.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.codec.composite.ChoiceCodec.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encode the value into a new bytes object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>T</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ChoiceCodec.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/choices.html#ChoiceCodec.encode_into"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.ChoiceCodec.encode_into" title="Link to this definition">¶</a></dt>
+<dd><p>Encode value into buffer.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Value to encode
+buffer: Target buffer
+offset: Starting offset</p>
+</dd>
+<dt>Returns:</dt><dd><p>Number of bytes written</p>
+</dd>
+<dt>Raises:</dt><dd><p>EncodeError: If value type is not in choices list or buffer is too small</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>_value</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>T</em><em>]</em><em>]</em>)</p></li>
+<li><p><strong>buffer</strong> (<em>bytearray</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.ChoiceCodec.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/choices.html#ChoiceCodec.encode_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.ChoiceCodec.encode_size" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate encoded size for value.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Value to encode</p>
+</dd>
+<dt>Returns:</dt><dd><p>Number of bytes needed for encoding</p>
+</dd>
+<dt>Raises:</dt><dd><p>EncodeError: If value type is not in choices list</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>_value</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>T</em><em>]</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.DictionaryCodec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.composite.</span></span><span class="sig-name descname"><span class="pre">DictionaryCodec</span></span><a class="reference internal" href="_modules/jam/utils/codec/composite/dictionaries.html#DictionaryCodec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.DictionaryCodec" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="jam.utils.codec.codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codec</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">K</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">V</span></code>]], <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">K</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">V</span></code>]</p>
+<p>Codec for key-value mappings.</p>
+<p>Dictionaries are encoded as length-prefixed sequences of key-value pairs,
+sorted by encoded key bytes for deterministic encoding.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.DictionaryCodec._abc_impl">
+<span class="sig-name descname"><span class="pre">_abc_impl</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;_abc._abc_data</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#jam.utils.codec.composite.DictionaryCodec._abc_impl" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.DictionaryCodec._encode_pair">
+<span class="sig-name descname"><span class="pre">_encode_pair</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/dictionaries.html#DictionaryCodec._encode_pair"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.DictionaryCodec._encode_pair" title="Link to this definition">¶</a></dt>
+<dd><p>Encode a single key-value pair into buffer.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>key: Key to encode
+value: Value to encode
+buffer: Target buffer
+offset: Starting position in buffer</p>
+</dd>
+<dt>Returns:</dt><dd><p>Tuple of (key_bytes for sorting, bytes written)</p>
+</dd>
+<dt>Raises:</dt><dd><p>EncodeError: If key/value invalid or buffer too small</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>K</em><em>]</em>)</p></li>
+<li><p><strong>value</strong> (<a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>V</em><em>]</em>)</p></li>
+<li><p><strong>buffer</strong> (<em>bytearray</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[bytes, int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.DictionaryCodec.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_codable_class</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_codable_class</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/dictionaries.html#DictionaryCodec.decode_from"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.DictionaryCodec.decode_from" title="Link to this definition">¶</a></dt>
+<dd><p>Decode dictionary from buffer.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>buffer: Source buffer
+offset: Starting position in buffer</p>
+</dd>
+<dt>Returns:</dt><dd><p>Tuple of (decoded dict, bytes read)</p>
+</dd>
+<dt>Raises:</dt><dd><p>DecodeError: If buffer too small or invalid encoding</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key_codable_class</strong> (<em>Type</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>K</em><em>]</em><em>]</em>)</p></li>
+<li><p><strong>value_codable_class</strong> (<em>Type</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>V</em><em>]</em><em>]</em>)</p></li>
+<li><p><strong>buffer</strong> (<em>bytes</em><em> | </em><em>bytearray</em><em> | </em><em>memoryview</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[<em>Dict</em>[<em>K</em>, <em>V</em>], int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.DictionaryCodec.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.codec.composite.DictionaryCodec.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encode the value into a new bytes object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>T</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.DictionaryCodec.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/dictionaries.html#DictionaryCodec.encode_into"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.DictionaryCodec.encode_into" title="Link to this definition">¶</a></dt>
+<dd><p>Encode dictionary into buffer.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Dictionary to encode
+buffer: Target buffer
+offset: Starting position in buffer</p>
+</dd>
+<dt>Returns:</dt><dd><p>Number of bytes written</p>
+</dd>
+<dt>Raises:</dt><dd><p>EncodeError: If dictionary invalid or buffer too small</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>Mapping</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>K</em><em>]</em><em>, </em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>V</em><em>]</em><em>]</em>)</p></li>
+<li><p><strong>buffer</strong> (<em>bytearray</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.DictionaryCodec.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/dictionaries.html#DictionaryCodec.encode_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.DictionaryCodec.encode_size" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate number of bytes needed to encode dictionary.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Dictionary to encode</p>
+</dd>
+<dt>Returns:</dt><dd><p>Number of bytes needed</p>
+</dd>
+<dt>Raises:</dt><dd><p>EncodeError: If dictionary contains invalid types</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Mapping</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>K</em><em>]</em><em>, </em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>V</em><em>]</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.VectorCodec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.composite.</span></span><span class="sig-name descname"><span class="pre">VectorCodec</span></span><a class="reference internal" href="_modules/jam/utils/codec/composite/vectors.html#VectorCodec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.VectorCodec" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="jam.utils.codec.codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codec</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>[<a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codable</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code>]]], <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code>]</p>
+<p>Codec for dynamic-length sequences (vectors).</p>
+<p>Vectors are encoded with a variable-length prefix indicating size,
+followed by the concatenated encoded elements.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.VectorCodec._abc_impl">
+<span class="sig-name descname"><span class="pre">_abc_impl</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;_abc._abc_data</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#jam.utils.codec.composite.VectorCodec._abc_impl" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.VectorCodec.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">codable_class</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">9223372036854775807</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/vectors.html#VectorCodec.decode_from"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.VectorCodec.decode_from" title="Link to this definition">¶</a></dt>
+<dd><p>Decode vector from buffer.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>buffer: Source buffer
+offset: Starting position in buffer</p>
+</dd>
+<dt>Returns:</dt><dd><p>Tuple of (decoded list, bytes read)</p>
+</dd>
+<dt>Raises:</dt><dd><p>DecodeError: If buffer too small or invalid encoding</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>codable_class</strong> (<em>Type</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>T</em><em>]</em><em>]</em>)</p></li>
+<li><p><strong>buffer</strong> (<em>bytes</em><em> | </em><em>bytearray</em><em> | </em><em>memoryview</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+<li><p><strong>max_length</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[<em>List</em>[<em>T</em>], int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.VectorCodec.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.codec.composite.VectorCodec.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encode the value into a new bytes object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>T</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.VectorCodec.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/vectors.html#VectorCodec.encode_into"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.VectorCodec.encode_into" title="Link to this definition">¶</a></dt>
+<dd><p>Encode vector into buffer.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Sequence to encode
+buffer: Target buffer
+offset: Starting position in buffer</p>
+</dd>
+<dt>Returns:</dt><dd><p>Number of bytes written</p>
+</dd>
+<dt>Raises:</dt><dd><p>EncodeError: If sequence invalid or buffer too small</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>T</em><em>]</em><em>]</em>)</p></li>
+<li><p><strong>buffer</strong> (<em>bytearray</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.composite.VectorCodec.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/codec/composite/vectors.html#VectorCodec.encode_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.composite.VectorCodec.encode_size" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate number of bytes needed to encode vector.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Sequence to encode</p>
+</dd>
+<dt>Returns:</dt><dd><p>Number of bytes needed</p>
+</dd>
+<dt>Raises:</dt><dd><p>EncodeError: If sequence is invalid type or too long</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><em>Codable</em></a><em>[</em><em>T</em><em>]</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Tessera</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="jam.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="jam.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="jam.api.html">jam.api package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.config.html">jam.config package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.consensus.html">jam.consensus package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.core.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.crypto.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.execution.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.network.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.playground.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.pvm.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.services.html">jam.services package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.state.html">jam.state package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.storage.html">jam.storage package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.types.html">jam.types package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="jam.utils.html">jam.utils package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="jam.utils.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jam.utils.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jam.utils.html#module-jam.utils">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#module-jam">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="jam.html">jam package</a><ul>
+  <li><a href="jam.utils.html">jam.utils package</a><ul>
+  <li><a href="jam.utils.codec.html">jam.utils.codec package</a><ul>
+      <li>Previous: <a href="jam.utils.codec.html" title="previous chapter">jam.utils.codec package</a></li>
+      <li>Next: <a href="jam.utils.codec.composite.arrays.html" title="next chapter">jam.utils.codec.composite.arrays module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Chainscore Labs.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/jam.utils.codec.composite.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

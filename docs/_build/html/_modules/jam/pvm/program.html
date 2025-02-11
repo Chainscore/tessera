@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jam.pvm.program &#8212; Tessera  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for jam.pvm.program</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Self</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.pvm.memory</span><span class="w"> </span><span class="kn">import</span> <span class="n">MemoryChunk</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.pvm.register</span><span class="w"> </span><span class="kn">import</span> <span class="n">Registers</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.base.bit</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bit</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.base.integers.fixed</span><span class="w"> </span><span class="kn">import</span> <span class="n">U8</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.protocol.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">Gas</span><span class="p">,</span> <span class="n">Register</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.codable</span><span class="w"> </span><span class="kn">import</span> <span class="n">Codable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.composite.bit_sequences</span><span class="w"> </span><span class="kn">import</span> <span class="n">BitSequenceCodec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.primitives.integers</span><span class="w"> </span><span class="kn">import</span> <span class="n">GeneralCodec</span><span class="p">,</span> <span class="n">IntegerCodec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_buffer_size</span>
+
+<div class="viewcode-block" id="Program">
+<a class="viewcode-back" href="../../../jam.pvm.program.html#jam.pvm.program.Program">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Program</span><span class="p">(</span><span class="n">Codable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;This is the program blob which the PVM will execute.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        z: Size of jump-table entries</span>
+<span class="sd">        jump_table: sequence of NN, each of size z</span>
+<span class="sd">        instruction_set: Sequence of instructions (U8)</span>
+<span class="sd">        offset_bitmask: Bitsequence of size len(instruction_set) that defines which blob is an opcode</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">z</span><span class="p">:</span> <span class="n">U8</span>
+    <span class="n">jump_table</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+    <span class="n">instruction_set</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">U8</span><span class="p">]</span>
+    <span class="n">offset_bitmask</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Bit</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="n">U8</span><span class="p">,</span> <span class="n">jump_table</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">instruction_set</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">U8</span><span class="p">],</span> <span class="n">offset_bitmask</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Bit</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="n">z</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">jump_table</span> <span class="o">=</span> <span class="n">jump_table</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">instruction_set</span> <span class="o">=</span> <span class="n">instruction_set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset_bitmask</span> <span class="o">=</span> <span class="n">offset_bitmask</span>
+        
+<div class="viewcode-block" id="Program.encode_size">
+<a class="viewcode-back" href="../../../jam.pvm.program.html#jam.pvm.program.Program.encode_size">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">encode_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="n">total_size</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">total_size</span> <span class="o">+=</span> <span class="n">GeneralCodec</span><span class="p">()</span><span class="o">.</span><span class="n">encode_size</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jump_table</span><span class="p">))</span>
+        <span class="n">total_size</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">encode_size</span><span class="p">()</span>
+        <span class="n">total_size</span> <span class="o">+=</span> <span class="n">GeneralCodec</span><span class="p">()</span><span class="o">.</span><span class="n">encode_size</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instruction_set</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">jump</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jump_table</span><span class="p">:</span>
+            <span class="n">total_size</span> <span class="o">+=</span> <span class="n">IntegerCodec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">encode_size</span><span class="p">(</span><span class="n">jump</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">instruction</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">instruction_set</span><span class="p">:</span>
+            <span class="n">total_size</span> <span class="o">+=</span> <span class="n">instruction</span><span class="o">.</span><span class="n">encode_size</span><span class="p">()</span>
+        <span class="n">total_size</span> <span class="o">+=</span> <span class="n">BitSequenceCodec</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instruction_set</span><span class="p">))</span><span class="o">.</span><span class="n">encode_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset_bitmask</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">total_size</span></div>
+
+
+<div class="viewcode-block" id="Program.encode_into">
+<a class="viewcode-back" href="../../../jam.pvm.program.html#jam.pvm.program.Program.encode_into">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">encode_into</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">buffer</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">],</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Encode the program bytecode into a buffer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            buffer: The buffer to encode the program into</span>
+<span class="sd">            offset: Offset of the buffer to start encoding from</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">total_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encode_size</span><span class="p">()</span>
+        <span class="n">check_buffer_size</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">total_size</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="n">current_offset</span> <span class="o">=</span> <span class="n">offset</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">GeneralCodec</span><span class="p">()</span><span class="o">.</span><span class="n">encode_into</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jump_table</span><span class="p">),</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+        <span class="n">current_offset</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">encode_into</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+        <span class="n">current_offset</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">GeneralCodec</span><span class="p">()</span><span class="o">.</span><span class="n">encode_into</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instruction_set</span><span class="p">),</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+        <span class="n">current_offset</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="k">for</span> <span class="n">jump</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jump_table</span><span class="p">:</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">encode_into</span><span class="p">(</span><span class="n">jump</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+            <span class="n">current_offset</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="k">for</span> <span class="n">instruction</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">instruction_set</span><span class="p">:</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="n">instruction</span><span class="o">.</span><span class="n">encode_into</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+            <span class="n">current_offset</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">BitSequenceCodec</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instruction_set</span><span class="p">),</span> <span class="s2">&quot;lsb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">encode_into</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset_bitmask</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+        <span class="n">current_offset</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="k">return</span> <span class="n">current_offset</span> <span class="o">-</span> <span class="n">offset</span></div>
+
+    
+<div class="viewcode-block" id="Program.decode_from">
+<a class="viewcode-back" href="../../../jam.pvm.program.html#jam.pvm.program.Program.decode_from">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">decode_from</span><span class="p">(</span><span class="n">buffer</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">],</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Self</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Decode a program from a bytes</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            buffer (Union[bytes, bytearray]): Bytes</span>
+<span class="sd">            offset (int, optional): Where to start decoding from. Defaults to 0.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[Self, int]: Returns Program and bytes read</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">current_offset</span> <span class="o">=</span> <span class="n">offset</span>
+        <span class="n">bytes_read</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">j_len</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">GeneralCodec</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+        <span class="n">bytes_read</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="n">current_offset</span> <span class="o">+=</span> <span class="n">size</span>
+
+        <span class="n">z</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">U8</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+        <span class="n">bytes_read</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="n">current_offset</span> <span class="o">+=</span> <span class="n">size</span>
+
+        <span class="n">c_len</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">GeneralCodec</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+        <span class="n">bytes_read</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="n">current_offset</span> <span class="o">+=</span> <span class="n">size</span>
+
+        <span class="n">j</span><span class="p">:</span> <span class="n">List</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j_len</span><span class="p">):</span>
+            <span class="n">val</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+            <span class="n">bytes_read</span> <span class="o">+=</span>  <span class="n">size</span>
+            <span class="n">current_offset</span> <span class="o">+=</span> <span class="n">size</span>
+            <span class="n">j</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        
+        <span class="n">c</span><span class="p">:</span> <span class="n">List</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">c_len</span><span class="p">):</span>
+            <span class="n">val</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">U8</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">)</span>
+            <span class="n">bytes_read</span> <span class="o">+=</span>  <span class="n">size</span>
+            <span class="n">current_offset</span> <span class="o">+=</span>  <span class="n">size</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+
+        <span class="n">offset_bitmask</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">BitSequenceCodec</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">current_offset</span><span class="p">,</span> <span class="n">c_len</span><span class="p">,</span> <span class="s2">&quot;lsb&quot;</span><span class="p">)</span>
+        <span class="n">bytes_read</span> <span class="o">+=</span> <span class="n">size</span>
+        <span class="n">current_offset</span> <span class="o">+=</span>  <span class="n">size</span>
+
+        <span class="k">return</span> <span class="n">Program</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">offset_bitmask</span><span class="p">),</span> <span class="n">bytes_read</span></div>
+
+    
+<div class="viewcode-block" id="Program.from_json">
+<a class="viewcode-back" href="../../../jam.pvm.program.html#jam.pvm.program.Program.from_json">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_json</span><span class="p">(</span><span class="n">buffer</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+        <span class="n">value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">Program</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span></div>
+
+    
+<div class="viewcode-block" id="Program.execute">
+<a class="viewcode-back" href="../../../jam.pvm.program.html#jam.pvm.program.Program.execute">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">register</span><span class="p">:</span> <span class="n">Register</span><span class="p">,</span> <span class="n">initial_registers</span><span class="p">:</span> <span class="n">Registers</span><span class="p">,</span> <span class="n">gas</span><span class="p">:</span> <span class="n">Gas</span><span class="p">,</span> <span class="n">memory</span><span class="p">:</span> <span class="n">MemoryChunk</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Registers</span><span class="p">:</span>
+        <span class="c1"># TODO: Implement execute</span>
+        <span class="k">return</span> <span class="n">initial_registers</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Tessera</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../jam.html">jam package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Chainscore Labs.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

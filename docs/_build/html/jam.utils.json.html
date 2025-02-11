@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>jam.utils.json package &#8212; Tessera  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="jam.utils.json.codec module" href="jam.utils.json.codec.html" />
+    <link rel="prev" title="jam.utils.codec.utils module" href="jam.utils.codec.utils.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="jam-utils-json-package">
+<h1>jam.utils.json package<a class="headerlink" href="#jam-utils-json-package" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jam.utils.json.codec.html">jam.utils.json.codec module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.codec.html#jam.utils.json.codec.JsonCodec"><code class="docutils literal notranslate"><span class="pre">JsonCodec</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.codec.html#jam.utils.json.codec.JsonCodec._dataclass_from_json"><code class="docutils literal notranslate"><span class="pre">JsonCodec._dataclass_from_json()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.codec.html#jam.utils.json.codec.JsonCodec._dataclass_to_json"><code class="docutils literal notranslate"><span class="pre">JsonCodec._dataclass_to_json()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.codec.html#jam.utils.json.codec.JsonCodec._get_dataclass_fields"><code class="docutils literal notranslate"><span class="pre">JsonCodec._get_dataclass_fields()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.codec.html#jam.utils.json.codec.JsonCodec.from_json"><code class="docutils literal notranslate"><span class="pre">JsonCodec.from_json()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.codec.html#jam.utils.json.codec.JsonCodec.to_json"><code class="docutils literal notranslate"><span class="pre">JsonCodec.to_json()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.codec.html#jam.utils.json.codec.is_optional_type"><code class="docutils literal notranslate"><span class="pre">is_optional_type()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jam.utils.json.decorators.html">jam.utils.json.decorators module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.decorators.html#jam.utils.json.decorators.json_field"><code class="docutils literal notranslate"><span class="pre">json_field()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.decorators.html#jam.utils.json.decorators.json_field_metadata"><code class="docutils literal notranslate"><span class="pre">json_field_metadata()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.decorators.html#jam.utils.json.decorators.json_serializable"><code class="docutils literal notranslate"><span class="pre">json_serializable()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.decorators.html#jam.utils.json.decorators.with_json_metadata"><code class="docutils literal notranslate"><span class="pre">with_json_metadata()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jam.utils.json.serde.html">jam.utils.json.serde module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonDeserializationError"><code class="docutils literal notranslate"><span class="pre">JsonDeserializationError</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonDeserializationError.add_note"><code class="docutils literal notranslate"><span class="pre">JsonDeserializationError.add_note()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonDeserializationError.args"><code class="docutils literal notranslate"><span class="pre">JsonDeserializationError.args</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonDeserializationError.with_traceback"><code class="docutils literal notranslate"><span class="pre">JsonDeserializationError.with_traceback()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonFieldError"><code class="docutils literal notranslate"><span class="pre">JsonFieldError</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonFieldError.add_note"><code class="docutils literal notranslate"><span class="pre">JsonFieldError.add_note()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonFieldError.args"><code class="docutils literal notranslate"><span class="pre">JsonFieldError.args</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonFieldError.with_traceback"><code class="docutils literal notranslate"><span class="pre">JsonFieldError.with_traceback()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonFieldMetadata"><code class="docutils literal notranslate"><span class="pre">JsonFieldMetadata</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonFieldMetadata.format"><code class="docutils literal notranslate"><span class="pre">JsonFieldMetadata.format</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonFieldMetadata.name"><code class="docutils literal notranslate"><span class="pre">JsonFieldMetadata.name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonFieldMetadata.skip_if_none"><code class="docutils literal notranslate"><span class="pre">JsonFieldMetadata.skip_if_none</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonSerde"><code class="docutils literal notranslate"><span class="pre">JsonSerde</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonSerde.from_json"><code class="docutils literal notranslate"><span class="pre">JsonSerde.from_json()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonSerde.to_json"><code class="docutils literal notranslate"><span class="pre">JsonSerde.to_json()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonSerializationError"><code class="docutils literal notranslate"><span class="pre">JsonSerializationError</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonSerializationError.add_note"><code class="docutils literal notranslate"><span class="pre">JsonSerializationError.add_note()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonSerializationError.args"><code class="docutils literal notranslate"><span class="pre">JsonSerializationError.args</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonSerializationError.with_traceback"><code class="docutils literal notranslate"><span class="pre">JsonSerializationError.with_traceback()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="module-jam.utils.json">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-jam.utils.json" title="Link to this heading">¶</a></h2>
+<p>JSON serialization/deserialization module for JAM types.</p>
+<p>This module provides a unified way to convert JAM types to and from JSON.
+It supports both base types and complex dataclasses, with customizable
+field handling and metadata.</p>
+<dl>
+<dt>Basic usage:</dt><dd><p>from jam.utils.codec.json import json_serializable, json_field</p>
+<p>&#64;json_serializable
+&#64;dataclass
+class MyClass:</p>
+<blockquote>
+<div><p>field1: str = json_field(name=”jsonField1”)
+field2: int = json_field(skip_if_none=True)</p>
+</div></blockquote>
+</dd>
+<dt>Advanced usage:</dt><dd><p>&#64;json_serializable
+&#64;with_json_metadata(</p>
+<blockquote>
+<div><p>field1={‘name’: ‘jsonField1’, ‘skip_if_none’: True},
+field2={‘format’: ‘%Y-%m-%d’}</p>
+</div></blockquote>
+<p>)
+class MyClass:</p>
+<blockquote>
+<div><p>field1: str
+field2: datetime</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.utils.json.JsonCodec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">JsonCodec</span></span><a class="reference internal" href="_modules/jam/utils/json/codec.html#JsonCodec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonCodec" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Core JSON codec implementation</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonCodec._dataclass_from_json">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_dataclass_from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cls</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/codec.html#JsonCodec._dataclass_from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonCodec._dataclass_from_json" title="Link to this definition">¶</a></dt>
+<dd><p>Convert JSON dict to dataclass instance</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>)</p></li>
+<li><p><strong>cls</strong> (<em>Type</em><em>[</em><em>T</em><em>]</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>T</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonCodec._dataclass_to_json">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_dataclass_to_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/codec.html#JsonCodec._dataclass_to_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonCodec._dataclass_to_json" title="Link to this definition">¶</a></dt>
+<dd><p>Convert dataclass instance to JSON dict</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj</strong> (<em>Any</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Dict</em>[str, <em>Any</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonCodec._get_dataclass_fields">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_get_dataclass_fields</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/codec.html#JsonCodec._get_dataclass_fields"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonCodec._get_dataclass_fields" title="Link to this definition">¶</a></dt>
+<dd><p>Get and cache dataclass field information</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cls</strong> (<em>Type</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Dict</em>[str, <em>Any</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonCodec.from_json">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/codec.html#JsonCodec.from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonCodec.from_json" title="Link to this definition">¶</a></dt>
+<dd><p>Convert JSON-compatible value to target type</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>Any</em>)</p></li>
+<li><p><strong>target_type</strong> (<em>Type</em><em>[</em><em>T</em><em>]</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>T</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonCodec.to_json">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/codec.html#JsonCodec.to_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonCodec.to_json" title="Link to this definition">¶</a></dt>
+<dd><p>Convert any object to a JSON-compatible value</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj</strong> (<em>Any</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Any</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="jam.utils.json.JsonDeserializationError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">JsonDeserializationError</span></span><a class="reference internal" href="_modules/jam/utils/json/serde.html#JsonDeserializationError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonDeserializationError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Base exception for JSON deserialization errors</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonDeserializationError.add_note">
+<span class="sig-name descname"><span class="pre">add_note</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.json.JsonDeserializationError.add_note" title="Link to this definition">¶</a></dt>
+<dd><p>Exception.add_note(note) –
+add a note to the exception</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.json.JsonDeserializationError.args">
+<span class="sig-name descname"><span class="pre">args</span></span><a class="headerlink" href="#jam.utils.json.JsonDeserializationError.args" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonDeserializationError.with_traceback">
+<span class="sig-name descname"><span class="pre">with_traceback</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.json.JsonDeserializationError.with_traceback" title="Link to this definition">¶</a></dt>
+<dd><p>Exception.with_traceback(tb) –
+set self.__traceback__ to tb and return self.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="jam.utils.json.JsonFieldError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">JsonFieldError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/serde.html#JsonFieldError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonFieldError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="jam.utils.json.serde.html#jam.utils.json.serde.JsonSerializationError" title="jam.utils.json.serde.JsonSerializationError"><code class="xref py py-class docutils literal notranslate"><span class="pre">JsonSerializationError</span></code></a></p>
+<p>Exception for field-related errors during JSON conversion</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field_name</strong> (<em>str</em>)</p></li>
+<li><p><strong>field_type</strong> (<em>Type</em>)</p></li>
+<li><p><strong>message</strong> (<em>str</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonFieldError.add_note">
+<span class="sig-name descname"><span class="pre">add_note</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.json.JsonFieldError.add_note" title="Link to this definition">¶</a></dt>
+<dd><p>Exception.add_note(note) –
+add a note to the exception</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.json.JsonFieldError.args">
+<span class="sig-name descname"><span class="pre">args</span></span><a class="headerlink" href="#jam.utils.json.JsonFieldError.args" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonFieldError.with_traceback">
+<span class="sig-name descname"><span class="pre">with_traceback</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.json.JsonFieldError.with_traceback" title="Link to this definition">¶</a></dt>
+<dd><p>Exception.with_traceback(tb) –
+set self.__traceback__ to tb and return self.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.utils.json.JsonFieldMetadata">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">JsonFieldMetadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_if_none</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/serde.html#JsonFieldMetadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonFieldMetadata" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Metadata for JSON field customization</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>skip_if_none</strong> (<em>bool</em>)</p></li>
+<li><p><strong>format</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.json.JsonFieldMetadata.format">
+<span class="sig-name descname"><span class="pre">format</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.utils.json.JsonFieldMetadata.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.json.JsonFieldMetadata.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.utils.json.JsonFieldMetadata.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.json.JsonFieldMetadata.skip_if_none">
+<span class="sig-name descname"><span class="pre">skip_if_none</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#jam.utils.json.JsonFieldMetadata.skip_if_none" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.utils.json.JsonSerde">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">JsonSerde</span></span><a class="reference internal" href="_modules/jam/utils/json/serde.html#JsonSerde"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonSerde" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Mixin for JSON serialization/deserialization.
+This is designed to work alongside Codable without inheritance conflicts.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonSerde.from_json">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/serde.html#JsonSerde.from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonSerde.from_json" title="Link to this definition">¶</a></dt>
+<dd><p>Create instance from JSON-compatible value</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>Any</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>T</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonSerde.to_json">
+<span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/serde.html#JsonSerde.to_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonSerde.to_json" title="Link to this definition">¶</a></dt>
+<dd><p>Convert instance to JSON-compatible value</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>Any</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="jam.utils.json.JsonSerializationError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">JsonSerializationError</span></span><a class="reference internal" href="_modules/jam/utils/json/serde.html#JsonSerializationError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonSerializationError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Base exception for JSON serialization errors</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonSerializationError.add_note">
+<span class="sig-name descname"><span class="pre">add_note</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.json.JsonSerializationError.add_note" title="Link to this definition">¶</a></dt>
+<dd><p>Exception.add_note(note) –
+add a note to the exception</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.json.JsonSerializationError.args">
+<span class="sig-name descname"><span class="pre">args</span></span><a class="headerlink" href="#jam.utils.json.JsonSerializationError.args" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.json.JsonSerializationError.with_traceback">
+<span class="sig-name descname"><span class="pre">with_traceback</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.utils.json.JsonSerializationError.with_traceback" title="Link to this definition">¶</a></dt>
+<dd><p>Exception.with_traceback(tb) –
+set self.__traceback__ to tb and return self.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jam.utils.json.json_field">
+<span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">json_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_if_none</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/decorators.html#json_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.json_field" title="Link to this definition">¶</a></dt>
+<dd><p>Decorator for dataclass fields to customize JSON serialization.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>name: Custom JSON field name
+skip_if_none: Whether to skip this field when it’s None</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>skip_if_none</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Any</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jam.utils.json.json_field_metadata">
+<span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">json_field_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field_name</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">json_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_if_none</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/decorators.html#json_field_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.json_field_metadata" title="Link to this definition">¶</a></dt>
+<dd><p>Create metadata for a JSON field.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>field_name: Name of the field in the class
+json_name: Custom name to use in JSON
+skip_if_none: Whether to skip this field when it’s None</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field_name</strong> (<em>str</em>)</p></li>
+<li><p><strong>json_name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>skip_if_none</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Dict</em>[str, <em>Any</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jam.utils.json.json_serializable">
+<span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">json_serializable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/decorators.html#json_serializable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.json_serializable" title="Link to this definition">¶</a></dt>
+<dd><p>Decorator to make a class JSON serializable.</p>
+<p>This decorator:
+1. Makes the class use JsonSerde
+2. For dataclasses, ensures proper field metadata handling</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cls</strong> (<em>Type</em><em>[</em><em>T</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Type</em>[<em>T</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jam.utils.json.with_json_metadata">
+<span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">with_json_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">field_metadata</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/decorators.html#with_json_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.with_json_metadata" title="Link to this definition">¶</a></dt>
+<dd><p>Class decorator to add JSON metadata to fields.</p>
+<dl>
+<dt>Usage:</dt><dd><dl class="simple">
+<dt>&#64;with_json_metadata(</dt><dd><p>field1={‘name’: ‘json_field1’, ‘skip_if_none’: True},
+field2={‘name’: ‘json_field2’}</p>
+</dd>
+</dl>
+<p>)
+class MyClass:</p>
+<blockquote>
+<div><p>field1: str
+field2: str</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>field_metadata</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Tessera</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="jam.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="jam.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="jam.api.html">jam.api package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.config.html">jam.config package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.consensus.html">jam.consensus package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.core.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.crypto.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.execution.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.network.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.playground.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.pvm.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.services.html">jam.services package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.state.html">jam.state package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.storage.html">jam.storage package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.types.html">jam.types package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="jam.utils.html">jam.utils package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="jam.utils.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jam.utils.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jam.utils.html#module-jam.utils">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#module-jam">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="jam.html">jam package</a><ul>
+  <li><a href="jam.utils.html">jam.utils package</a><ul>
+      <li>Previous: <a href="jam.utils.codec.utils.html" title="previous chapter">jam.utils.codec.utils module</a></li>
+      <li>Next: <a href="jam.utils.json.codec.html" title="next chapter">jam.utils.json.codec module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Chainscore Labs.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/jam.utils.json.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

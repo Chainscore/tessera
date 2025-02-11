@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>jam.config.settings module &#8212; Tessera  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="jam.consensus package" href="jam.consensus.html" />
+    <link rel="prev" title="jam.config.logging module" href="jam.config.logging.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-jam.config.settings">
+<span id="jam-config-settings-module"></span><h1>jam.config.settings module<a class="headerlink" href="#module-jam.config.settings" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.config.settings.Settings">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.config.settings.</span></span><span class="sig-name descname"><span class="pre">Settings</span></span><a class="reference internal" href="_modules/jam/config/settings.html#Settings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.config.settings.Settings" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.Config">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Config</span></span><a class="reference internal" href="_modules/jam/config/settings.html#Settings.Config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.config.settings.Settings.Config" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.Config.env_file">
+<span class="sig-name descname"><span class="pre">env_file</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'.env'</span></em><a class="headerlink" href="#jam.config.settings.Settings.Config.env_file" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.Config.env_prefix">
+<span class="sig-name descname"><span class="pre">env_prefix</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'JAM_'</span></em><a class="headerlink" href="#jam.config.settings.Settings.Config.env_prefix" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.DB_PATH">
+<span class="sig-name descname"><span class="pre">DB_PATH</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Path</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">PosixPath('data/db')</span></em><a class="headerlink" href="#jam.config.settings.Settings.DB_PATH" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.EPOCH_LENGTH">
+<span class="sig-name descname"><span class="pre">EPOCH_LENGTH</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">12</span></em><a class="headerlink" href="#jam.config.settings.Settings.EPOCH_LENGTH" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.LISTEN_ADDRESS">
+<span class="sig-name descname"><span class="pre">LISTEN_ADDRESS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'0.0.0.0'</span></em><a class="headerlink" href="#jam.config.settings.Settings.LISTEN_ADDRESS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.LISTEN_PORT">
+<span class="sig-name descname"><span class="pre">LISTEN_PORT</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">30333</span></em><a class="headerlink" href="#jam.config.settings.Settings.LISTEN_PORT" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.MAX_ACCUMULATE_GAS">
+<span class="sig-name descname"><span class="pre">MAX_ACCUMULATE_GAS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">100000</span></em><a class="headerlink" href="#jam.config.settings.Settings.MAX_ACCUMULATE_GAS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.MAX_PEERS">
+<span class="sig-name descname"><span class="pre">MAX_PEERS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">50</span></em><a class="headerlink" href="#jam.config.settings.Settings.MAX_PEERS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.MAX_PREIMAGE_SIZE">
+<span class="sig-name descname"><span class="pre">MAX_PREIMAGE_SIZE</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4000000</span></em><a class="headerlink" href="#jam.config.settings.Settings.MAX_PREIMAGE_SIZE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.MAX_REFINE_GAS">
+<span class="sig-name descname"><span class="pre">MAX_REFINE_GAS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">500000000</span></em><a class="headerlink" href="#jam.config.settings.Settings.MAX_REFINE_GAS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.MAX_SERVICE_SIZE">
+<span class="sig-name descname"><span class="pre">MAX_SERVICE_SIZE</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4000000</span></em><a class="headerlink" href="#jam.config.settings.Settings.MAX_SERVICE_SIZE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.NODE_ID">
+<span class="sig-name descname"><span class="pre">NODE_ID</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.config.settings.Settings.NODE_ID" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.NODE_NAME">
+<span class="sig-name descname"><span class="pre">NODE_NAME</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'JAM-Node'</span></em><a class="headerlink" href="#jam.config.settings.Settings.NODE_NAME" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.PVM_MAX_MEMORY">
+<span class="sig-name descname"><span class="pre">PVM_MAX_MEMORY</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4294967296</span></em><a class="headerlink" href="#jam.config.settings.Settings.PVM_MAX_MEMORY" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.PVM_STACK_SIZE">
+<span class="sig-name descname"><span class="pre">PVM_STACK_SIZE</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1048576</span></em><a class="headerlink" href="#jam.config.settings.Settings.PVM_STACK_SIZE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.SLOT_DURATION">
+<span class="sig-name descname"><span class="pre">SLOT_DURATION</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">6</span></em><a class="headerlink" href="#jam.config.settings.Settings.SLOT_DURATION" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.config.settings.Settings.VALIDATOR_COUNT">
+<span class="sig-name descname"><span class="pre">VALIDATOR_COUNT</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">6</span></em><a class="headerlink" href="#jam.config.settings.Settings.VALIDATOR_COUNT" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Tessera</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="jam.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="jam.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="jam.api.html">jam.api package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="jam.config.html">jam.config package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="jam.config.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jam.config.html#module-jam.config">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jam.consensus.html">jam.consensus package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.core.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.crypto.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.execution.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.network.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.playground.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.pvm.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.services.html">jam.services package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.state.html">jam.state package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.storage.html">jam.storage package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.types.html">jam.types package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.html">jam.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#module-jam">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="jam.html">jam package</a><ul>
+  <li><a href="jam.config.html">jam.config package</a><ul>
+      <li>Previous: <a href="jam.config.logging.html" title="previous chapter">jam.config.logging module</a></li>
+      <li>Next: <a href="jam.consensus.html" title="next chapter">jam.consensus package</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Chainscore Labs.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/jam.config.settings.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

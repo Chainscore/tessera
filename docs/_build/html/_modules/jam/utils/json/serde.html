@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jam.utils.json.serde &#8212; Tessera  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for jam.utils.json.serde</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+
+<span class="n">T</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="JsonSerializationError">
+<a class="viewcode-back" href="../../../../jam.utils.json.serde.html#jam.utils.json.JsonSerializationError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">JsonSerializationError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base exception for JSON serialization errors&quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="JsonDeserializationError">
+<a class="viewcode-back" href="../../../../jam.utils.json.serde.html#jam.utils.json.JsonDeserializationError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">JsonDeserializationError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base exception for JSON deserialization errors&quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="JsonFieldError">
+<a class="viewcode-back" href="../../../../jam.utils.json.serde.html#jam.utils.json.JsonFieldError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">JsonFieldError</span><span class="p">(</span><span class="n">JsonSerializationError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exception for field-related errors during JSON conversion&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">field_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">field_name</span> <span class="o">=</span> <span class="n">field_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">field_type</span> <span class="o">=</span> <span class="n">field_type</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Field &#39;</span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2">&#39; (</span><span class="si">{</span><span class="n">field_type</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="JsonFieldMetadata">
+<a class="viewcode-back" href="../../../../jam.utils.json.serde.html#jam.utils.json.JsonFieldMetadata">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">JsonFieldMetadata</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Metadata for JSON field customization&quot;&quot;&quot;</span>
+    <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Custom JSON field name</span>
+    <span class="n">skip_if_none</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># Skip field if value is None</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Custom format string</span></div>
+
+
+<div class="viewcode-block" id="JsonSerde">
+<a class="viewcode-back" href="../../../../jam.utils.json.serde.html#jam.utils.json.JsonSerde">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">JsonSerde</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Mixin for JSON serialization/deserialization.</span>
+<span class="sd">    This is designed to work alongside Codable without inheritance conflicts.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="JsonSerde.to_json">
+<a class="viewcode-back" href="../../../../jam.utils.json.serde.html#jam.utils.json.JsonSerde.to_json">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert instance to JSON-compatible value&quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.codec</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonCodec</span>
+        <span class="k">return</span> <span class="n">JsonCodec</span><span class="o">.</span><span class="n">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="JsonSerde.from_json">
+<a class="viewcode-back" href="../../../../jam.utils.json.serde.html#jam.utils.json.JsonSerde.from_json">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create instance from JSON-compatible value&quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.codec</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonCodec</span>
+        <span class="k">return</span> <span class="n">JsonCodec</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span></div>
+
+    
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__json_metadata__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">JsonFieldMetadata</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get JSON metadata for fields. Override to customize field handling.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s1">&#39;__json_fields__&#39;</span><span class="p">,</span> <span class="p">{})</span> </div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Tessera</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jam.html">jam package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Chainscore Labs.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

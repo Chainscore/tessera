@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>jam.state.components.beta module &#8212; Tessera  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="jam.state.components.chi module" href="jam.state.components.chi.html" />
+    <link rel="prev" title="jam.state.components.alpha module" href="jam.state.components.alpha.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-jam.state.components.beta">
+<span id="jam-state-components-beta-module"></span><h1>jam.state.components.beta module<a class="headerlink" href="#module-jam.state.components.beta" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.state.components.beta.</span></span><span class="sig-name descname"><span class="pre">Beta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">codec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/state/components/beta.html#Beta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.state.components.beta.Beta" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="jam.types.base.sequences.vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector</span></code></a>[<a class="reference internal" href="#jam.state.components.beta.BlockHistory" title="jam.state.components.beta.BlockHistory"><code class="xref py py-class docutils literal notranslate"><span class="pre">BlockHistory</span></code></a>]</p>
+<p>Beta state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>initial</strong> (<em>Sequence</em><em>[</em><em>T</em><em>]</em>)</p></li>
+<li><p><strong>codec</strong> (<a class="reference internal" href="jam.utils.codec.codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><em>Codec</em></a><em>[</em><em>Any</em><em>] </em><em>| </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta._abc_impl">
+<span class="sig-name descname"><span class="pre">_abc_impl</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;_abc._abc_data</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#jam.state.components.beta.Beta._abc_impl" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta._element_type">
+<span class="sig-name descname"><span class="pre">_element_type</span></span><a class="headerlink" href="#jam.state.components.beta.Beta._element_type" title="Link to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#jam.state.components.beta.BlockHistory" title="jam.state.components.beta.BlockHistory"><code class="xref py py-class docutils literal notranslate"><span class="pre">BlockHistory</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta._validate_value">
+<span class="sig-name descname"><span class="pre">_validate_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta._validate_value" title="Link to this definition">¶</a></dt>
+<dd><p>Validate that a value is of the correct type.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Value to validate</p>
+</dd>
+<dt>Raises:</dt><dd><p>TypeError: If value is not of the correct type</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>T</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.append">
+<span class="sig-name descname"><span class="pre">append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.append" title="Link to this definition">¶</a></dt>
+<dd><p>Append value to end of vector.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Value to append. Must be instance of the same type as other elements.</p>
+</dd>
+<dt>Raises:</dt><dd><p>TypeError: If value is not of the correct type</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>T</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.clear" title="Link to this definition">¶</a></dt>
+<dd><p>Clear all elements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.codec">
+<span class="sig-name descname"><span class="pre">codec</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="jam.utils.codec.html#jam.utils.codec.Codec" title="jam.utils.codec.Codec"><span class="pre">Codec</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.state.components.beta.Beta.codec" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.copy">
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.copy" title="Link to this definition">¶</a></dt>
+<dd><p>Return a shallow copy of the sequence.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="jam.types.base.sequences.base.html#jam.types.base.sequences.base.BaseSequence" title="jam.types.base.sequences.base.BaseSequence"><em>BaseSequence</em></a>[<em>T</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.count">
+<span class="sig-name descname"><span class="pre">count</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.count" title="Link to this definition">¶</a></dt>
+<dd><p>Return number of occurrences of value.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Value to count</p>
+</dd>
+<dt>Returns:</dt><dd><p>Number of occurrences</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>T</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.decode_from" title="Link to this definition">¶</a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>buffer: Buffer to decode from
+offset: Starting position in buffer</p>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>Tuple containing:</dt><dd><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> (<em>bytes</em><em> | </em><em>bytearray</em><em> | </em><em>memoryview</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[<a class="reference internal" href="jam.types.base.sequences.vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><em>Vector</em></a>[<em>T</em>], int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.element_type">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">element_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.state.components.beta.Beta.element_type" title="Link to this definition">¶</a></dt>
+<dd><p>Get the type of elements in this sequence.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encode into bytes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.encode_into" title="Link to this definition">¶</a></dt>
+<dd><p>Encode into provided buffer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> (<em>bytearray</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.encode_size" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate number of bytes needed to encode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.endswith">
+<span class="sig-name descname"><span class="pre">endswith</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">suffix</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.endswith" title="Link to this definition">¶</a></dt>
+<dd><p>Check if sequence ends with suffix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>suffix</strong> (<em>Sequence</em><em>[</em><em>T</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.extend">
+<span class="sig-name descname"><span class="pre">extend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.extend" title="Link to this definition">¶</a></dt>
+<dd><p>Extend vector with values.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>values: Values to add. Must all be instances of the same type as existing elements.</p>
+</dd>
+<dt>Raises:</dt><dd><p>TypeError: If values are not all of the correct type</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>values</strong> (<em>Sequence</em><em>[</em><em>T</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.from_json">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.from_json" title="Link to this definition">¶</a></dt>
+<dd><p>Deserialize from JSON.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>Any</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="jam.types.base.sequences.base.html#jam.types.base.sequences.base.BaseSequence" title="jam.types.base.sequences.base.BaseSequence"><em>BaseSequence</em></a>[<em>T</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.index">
+<span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.index" title="Link to this definition">¶</a></dt>
+<dd><p>Return first index of value.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Value to find
+start: Start index for search
+stop: Stop index for search</p>
+</dd>
+<dt>Returns:</dt><dd><p>Index of value</p>
+</dd>
+<dt>Raises:</dt><dd><p>ValueError: If value not found</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>T</em>)</p></li>
+<li><p><strong>start</strong> (<em>int</em>)</p></li>
+<li><p><strong>stop</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.insert">
+<span class="sig-name descname"><span class="pre">insert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.insert" title="Link to this definition">¶</a></dt>
+<dd><p>Insert value at index.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>index: Index to insert at
+value: Value to insert. Must be instance of the same type as other elements.</p>
+</dd>
+<dt>Raises:</dt><dd><p>TypeError: If value is not of the correct type</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>index</strong> (<em>int</em>)</p></li>
+<li><p><strong>value</strong> (<em>T</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.pop">
+<span class="sig-name descname"><span class="pre">pop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.pop" title="Link to this definition">¶</a></dt>
+<dd><p>Remove and return item at index.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>index: Index of item to remove</p>
+</dd>
+<dt>Returns:</dt><dd><p>Removed item</p>
+</dd>
+<dt>Raises:</dt><dd><p>IndexError: If index out of range</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> (<em>int</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>T</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.remove" title="Link to this definition">¶</a></dt>
+<dd><p>Remove first occurrence of value.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>value: Value to remove</p>
+</dd>
+<dt>Raises:</dt><dd><p>ValueError: If value not found</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>T</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.reverse">
+<span class="sig-name descname"><span class="pre">reverse</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.reverse" title="Link to this definition">¶</a></dt>
+<dd><p>Reverse the vector in place.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="jam.types.base.sequences.base.html#jam.types.base.sequences.base.BaseSequence" title="jam.types.base.sequences.base.BaseSequence"><em>BaseSequence</em></a>[<em>T</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.sort">
+<span class="sig-name descname"><span class="pre">sort</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reverse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.sort" title="Link to this definition">¶</a></dt>
+<dd><p>Sort the sequence in place.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>key: Function of one argument that is used to extract a comparison key
+reverse: If True, sort in descending order</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.startswith">
+<span class="sig-name descname"><span class="pre">startswith</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefix</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.startswith" title="Link to this definition">¶</a></dt>
+<dd><p>Check if sequence starts with prefix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>prefix</strong> (<em>Sequence</em><em>[</em><em>T</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.to_json">
+<span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.Beta.to_json" title="Link to this definition">¶</a></dt>
+<dd><p>Convert instance to JSON-compatible value</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>Any</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.Beta.value">
+<span class="sig-name descname"><span class="pre">value</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.state.components.beta.Beta.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.state.components.beta.</span></span><span class="sig-name descname"><span class="pre">BlockHistory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">header_hash</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mmr_root</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_root</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">packages</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/state/components/beta.html#BlockHistory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.state.components.beta.BlockHistory" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="jam.utils.codec.codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codable</span></code></a></p>
+<p>Block history item</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>header_hash</strong> (<a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><em>ByteArray32</em></a>)</p></li>
+<li><p><strong>mmr_root</strong> (<a class="reference internal" href="jam.types.protocol.merkle.html#jam.types.protocol.merkle.MMR" title="jam.types.protocol.merkle.MMR"><em>MMR</em></a>)</p></li>
+<li><p><strong>state_root</strong> (<a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><em>ByteArray32</em></a>)</p></li>
+<li><p><strong>packages</strong> (<a class="reference internal" href="#jam.state.components.beta.PackageDict" title="jam.state.components.beta.PackageDict"><em>PackageDict</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory.codec">
+<span class="sig-name descname"><span class="pre">codec</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="jam.utils.codec.html#jam.utils.codec.Codec" title="jam.utils.codec.Codec"><span class="pre">Codec</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.state.components.beta.BlockHistory.codec" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.BlockHistory.decode_from" title="Link to this definition">¶</a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>buffer: Buffer to decode from
+offset: Starting position in buffer</p>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>Tuple containing:</dt><dd><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> (<em>bytes</em><em> | </em><em>bytearray</em><em> | </em><em>memoryview</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[<em>T</em>, int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.BlockHistory.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encode into bytes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.BlockHistory.encode_into" title="Link to this definition">¶</a></dt>
+<dd><p>Encode into provided buffer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> (<em>bytearray</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.BlockHistory.encode_size" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate number of bytes needed to encode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory.header_hash">
+<span class="sig-name descname"><span class="pre">header_hash</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><span class="pre">ByteArray32</span></a></em><a class="headerlink" href="#jam.state.components.beta.BlockHistory.header_hash" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory.mmr_root">
+<span class="sig-name descname"><span class="pre">mmr_root</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="jam.types.protocol.merkle.html#jam.types.protocol.merkle.MMR" title="jam.types.protocol.merkle.MMR"><span class="pre">MMR</span></a></em><a class="headerlink" href="#jam.state.components.beta.BlockHistory.mmr_root" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory.packages">
+<span class="sig-name descname"><span class="pre">packages</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#jam.state.components.beta.PackageDict" title="jam.state.components.beta.PackageDict"><span class="pre">PackageDict</span></a></em><a class="headerlink" href="#jam.state.components.beta.BlockHistory.packages" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory.state_root">
+<span class="sig-name descname"><span class="pre">state_root</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><span class="pre">ByteArray32</span></a></em><a class="headerlink" href="#jam.state.components.beta.BlockHistory.state_root" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.BlockHistory.value">
+<span class="sig-name descname"><span class="pre">value</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Any</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.state.components.beta.BlockHistory.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.state.components.beta.</span></span><span class="sig-name descname"><span class="pre">PackageDict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/state/components/beta.html#PackageDict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.state.components.beta.PackageDict" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="jam.types.base.dictionary.html#jam.types.base.dictionary.Dictionary" title="jam.types.base.dictionary.Dictionary"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dictionary</span></code></a>[<a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><code class="xref py py-class docutils literal notranslate"><span class="pre">ByteArray32</span></code></a>, <a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><code class="xref py py-class docutils literal notranslate"><span class="pre">ByteArray32</span></code></a>]</p>
+<p>Work Package hashes of each item reported (no more than CORE_COUNT)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>initial</strong> (<em>Mapping</em><em>[</em><em>K</em><em>, </em><em>V</em><em>] </em><em>| </em><em>None</em>)</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict._abc_impl">
+<span class="sig-name descname"><span class="pre">_abc_impl</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;_abc._abc_data</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#jam.state.components.beta.PackageDict._abc_impl" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.codec">
+<span class="sig-name descname"><span class="pre">codec</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="jam.utils.codec.html#jam.utils.codec.Codec" title="jam.utils.codec.Codec"><span class="pre">Codec</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.state.components.beta.PackageDict.codec" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.PackageDict.decode_from" title="Link to this definition">¶</a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>buffer: Buffer to decode from
+offset: Starting position in buffer</p>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>Tuple containing:</dt><dd><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> (<em>bytes</em><em> | </em><em>bytearray</em><em> | </em><em>memoryview</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[<a class="reference internal" href="jam.types.base.dictionary.html#jam.types.base.dictionary.Dictionary" title="jam.types.base.dictionary.Dictionary"><em>Dictionary</em></a>[<em>K</em>, <em>V</em>], int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.PackageDict.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encode into bytes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.PackageDict.encode_into" title="Link to this definition">¶</a></dt>
+<dd><p>Encode into provided buffer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> (<em>bytearray</em>)</p></li>
+<li><p><strong>offset</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.PackageDict.encode_size" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate number of bytes needed to encode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.from_json">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.PackageDict.from_json" title="Link to this definition">¶</a></dt>
+<dd><p>Create instance from JSON representation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>Dict</em><em>[</em><em>Any</em><em>, </em><em>Any</em><em>] </em><em>| </em><em>Sequence</em><em>[</em><em>Any</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Self</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.PackageDict.get" title="Link to this definition">¶</a></dt>
+<dd><p>Get value for key, returning default if key not found.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>key: Key to look up
+default: Value to return if key not found</p>
+</dd>
+<dt>Returns:</dt><dd><p>Value for key or default</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<em>K</em>)</p></li>
+<li><p><strong>default</strong> (<em>V</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>V</em> | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.items">
+<span class="sig-name descname"><span class="pre">items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.PackageDict.items" title="Link to this definition">¶</a></dt>
+<dd><p>Get view of (key, value) pairs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ItemsView</em>[<em>K</em>, <em>V</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.key_type">
+<span class="sig-name descname"><span class="pre">key_type</span></span><a class="headerlink" href="#jam.state.components.beta.PackageDict.key_type" title="Link to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><code class="xref py py-class docutils literal notranslate"><span class="pre">ByteArray32</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.keys">
+<span class="sig-name descname"><span class="pre">keys</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.PackageDict.keys" title="Link to this definition">¶</a></dt>
+<dd><p>Get view of keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>KeysView</em>[<em>K</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.to_json">
+<span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.PackageDict.to_json" title="Link to this definition">¶</a></dt>
+<dd><p>Convert to JSON representation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>Dict</em>[<em>Any</em>, <em>Any</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.value">
+<span class="sig-name descname"><span class="pre">value</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">K</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">V</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.state.components.beta.PackageDict.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.value_type">
+<span class="sig-name descname"><span class="pre">value_type</span></span><a class="headerlink" href="#jam.state.components.beta.PackageDict.value_type" title="Link to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><code class="xref py py-class docutils literal notranslate"><span class="pre">ByteArray32</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.state.components.beta.PackageDict.values">
+<span class="sig-name descname"><span class="pre">values</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#jam.state.components.beta.PackageDict.values" title="Link to this definition">¶</a></dt>
+<dd><p>Get view of values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ValuesView</em>[<em>V</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Tessera</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="jam.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="jam.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="jam.api.html">jam.api package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.config.html">jam.config package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.consensus.html">jam.consensus package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.core.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.crypto.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.execution.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.network.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.playground.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.pvm.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.services.html">jam.services package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="jam.state.html">jam.state package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="jam.state.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jam.state.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jam.state.html#module-jam.state">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jam.storage.html">jam.storage package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.types.html">jam.types package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.html">jam.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#module-jam">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="jam.html">jam package</a><ul>
+  <li><a href="jam.state.html">jam.state package</a><ul>
+  <li><a href="jam.state.components.html">jam.state.components package</a><ul>
+      <li>Previous: <a href="jam.state.components.alpha.html" title="previous chapter">jam.state.components.alpha module</a></li>
+      <li>Next: <a href="jam.state.components.chi.html" title="next chapter">jam.state.components.chi module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Chainscore Labs.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/jam.state.components.beta.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

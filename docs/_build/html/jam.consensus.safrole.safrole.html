@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>jam.consensus.safrole.safrole module &#8212; Tessera  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="jam.core package" href="jam.core.html" />
+    <link rel="prev" title="jam.consensus.safrole.gamma module" href="jam.consensus.safrole.gamma.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-jam.consensus.safrole.safrole">
+<span id="jam-consensus-safrole-safrole-module"></span><h1>jam.consensus.safrole.safrole module<a class="headerlink" href="#module-jam.consensus.safrole.safrole" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.consensus.safrole.safrole.Safrole">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.consensus.safrole.safrole.</span></span><span class="sig-name descname"><span class="pre">Safrole</span></span><a class="reference internal" href="_modules/jam/consensus/safrole/safrole.html#Safrole"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.safrole.Safrole" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.consensus.safrole.safrole.Safrole.arrange_fallback">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">arrange_fallback</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entropy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validators</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/consensus/safrole/safrole.html#Safrole.arrange_fallback"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.safrole.Safrole.arrange_fallback" title="Link to this definition">¶</a></dt>
+<dd><p>This function is to be called in case the ticketing system fails to accumulate valid
+tickeys.
+Args:</p>
+<blockquote>
+<div><p>Etn`2 - Upcoming eta2 or current eta1
+Kappa - List of current validators</p>
+</div></blockquote>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>GammaSFallback - Set of Bandersnatch keys</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>entropy</strong> (<a class="reference internal" href="jam.types.base.sequences.bytes.bytes.html#jam.types.base.sequences.bytes.bytes.Bytes" title="jam.types.base.sequences.bytes.bytes.Bytes"><em>Bytes</em></a>)</p></li>
+<li><p><strong>validators</strong> (<a class="reference internal" href="jam.state.components.kappa.html#jam.state.components.kappa.Kappa" title="jam.state.components.kappa.Kappa"><em>Kappa</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="jam.consensus.safrole.gamma.html#jam.consensus.safrole.gamma.GammaSFallback" title="jam.consensus.safrole.gamma.GammaSFallback"><em>GammaSFallback</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.consensus.safrole.safrole.Safrole.compute_ring_root">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compute_ring_root</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keys</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/consensus/safrole/safrole.html#Safrole.compute_ring_root"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.safrole.Safrole.compute_ring_root" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>keys</strong> (<em>List</em><em>[</em><a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><em>ByteArray32</em></a><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><em>ByteArray32</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.consensus.safrole.safrole.Safrole.ensure_tickets_order">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ensure_tickets_order</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tickets</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/consensus/safrole/safrole.html#Safrole.ensure_tickets_order"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.safrole.Safrole.ensure_tickets_order" title="Link to this definition">¶</a></dt>
+<dd><p>Ensures the tickets submitted via the extrinsic must already have been placed in order of their implied identifier.
+<a class="reference external" href="https://graypaper.fluffylabs.dev/#/5b732de/0fc7000fc800">https://graypaper.fluffylabs.dev/#/5b732de/0fc7000fc800</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>tickets</strong> (<a class="reference internal" href="jam.types.extrinsics.tickets.html#jam.types.extrinsics.tickets.TicketsExtrinsic" title="jam.types.extrinsics.tickets.TicketsExtrinsic"><em>TicketsExtrinsic</em></a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.consensus.safrole.safrole.Safrole.ensure_valid_attempt">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ensure_valid_attempt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ticket</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/consensus/safrole/safrole.html#Safrole.ensure_valid_attempt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.safrole.Safrole.ensure_valid_attempt" title="Link to this definition">¶</a></dt>
+<dd><p>Entry index should be a natural number less than N
+<a class="reference external" href="https://graypaper.fluffylabs.dev/#/5b732de/0f22000f2400">https://graypaper.fluffylabs.dev/#/5b732de/0f22000f2400</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ticket</strong> (<a class="reference internal" href="jam.types.extrinsics.tickets.html#jam.types.extrinsics.tickets.TicketEnvelope" title="jam.types.extrinsics.tickets.TicketEnvelope"><em>TicketEnvelope</em></a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.consensus.safrole.safrole.Safrole.ensure_valid_ticket_extrinsics">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ensure_valid_ticket_extrinsics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">block</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/consensus/safrole/safrole.html#Safrole.ensure_valid_ticket_extrinsics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.safrole.Safrole.ensure_valid_ticket_extrinsics" title="Link to this definition">¶</a></dt>
+<dd><p>Ensures the tickets submitted via the extrinsic are valid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>block</strong> (<a class="reference internal" href="jam.types.block.html#jam.types.block.Block" title="jam.types.block.Block"><em>Block</em></a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.consensus.safrole.safrole.Safrole.ensure_valid_vrf">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ensure_valid_vrf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ticket</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/consensus/safrole/safrole.html#Safrole.ensure_valid_vrf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.safrole.Safrole.ensure_valid_vrf" title="Link to this definition">¶</a></dt>
+<dd><p>Signature must be valid Ring-VRF proof</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ticket</strong> (<a class="reference internal" href="jam.types.extrinsics.tickets.html#jam.types.extrinsics.tickets.TicketEnvelope" title="jam.types.extrinsics.tickets.TicketEnvelope"><em>TicketEnvelope</em></a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.consensus.safrole.safrole.Safrole.transition">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">transition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pre_state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">block</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/consensus/safrole/safrole.html#Safrole.transition"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.safrole.Safrole.transition" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pre_state</strong> (<a class="reference internal" href="jam.state.state.html#jam.state.state.State" title="jam.state.state.State"><em>State</em></a>)</p></li>
+<li><p><strong>block</strong> (<a class="reference internal" href="jam.types.block.html#jam.types.block.Block" title="jam.types.block.Block"><em>Block</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="jam.state.state.html#jam.state.state.State" title="jam.state.state.State"><em>State</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.consensus.safrole.safrole.Safrole.verify_vrf">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">verify_vrf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proof</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/consensus/safrole/safrole.html#Safrole.verify_vrf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.safrole.Safrole.verify_vrf" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.consensus.safrole.safrole.Safrole.vrf_output">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">vrf_output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proof</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/consensus/safrole/safrole.html#Safrole.vrf_output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.safrole.Safrole.vrf_output" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="jam.types.base.sequences.bytes.byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><em>ByteArray32</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Tessera</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="jam.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="jam.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="jam.api.html">jam.api package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.config.html">jam.config package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="jam.consensus.html">jam.consensus package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="jam.consensus.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jam.consensus.html#module-jam.consensus">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="jam.core.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.crypto.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.execution.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.network.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.playground.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.pvm.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.services.html">jam.services package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.state.html">jam.state package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.storage.html">jam.storage package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.types.html">jam.types package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.utils.html">jam.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#module-jam">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="jam.html">jam package</a><ul>
+  <li><a href="jam.consensus.html">jam.consensus package</a><ul>
+  <li><a href="jam.consensus.safrole.html">jam.consensus.safrole package</a><ul>
+      <li>Previous: <a href="jam.consensus.safrole.gamma.html" title="previous chapter">jam.consensus.safrole.gamma module</a></li>
+      <li>Next: <a href="jam.core.html" title="next chapter">jam.core package</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Chainscore Labs.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/jam.consensus.safrole.safrole.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

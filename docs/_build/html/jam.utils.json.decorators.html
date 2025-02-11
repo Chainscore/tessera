@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>jam.utils.json.decorators module &#8212; Tessera  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="jam.utils.json.serde module" href="jam.utils.json.serde.html" />
+    <link rel="prev" title="jam.utils.json.codec module" href="jam.utils.json.codec.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-jam.utils.json.decorators">
+<span id="jam-utils-json-decorators-module"></span><h1>jam.utils.json.decorators module<a class="headerlink" href="#module-jam.utils.json.decorators" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="jam.utils.json.decorators.json_field">
+<span class="sig-prename descclassname"><span class="pre">jam.utils.json.decorators.</span></span><span class="sig-name descname"><span class="pre">json_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_if_none</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/decorators.html#json_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.decorators.json_field" title="Link to this definition">¶</a></dt>
+<dd><p>Decorator for dataclass fields to customize JSON serialization.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>name: Custom JSON field name
+skip_if_none: Whether to skip this field when it’s None</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>skip_if_none</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Any</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jam.utils.json.decorators.json_field_metadata">
+<span class="sig-prename descclassname"><span class="pre">jam.utils.json.decorators.</span></span><span class="sig-name descname"><span class="pre">json_field_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field_name</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">json_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_if_none</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/decorators.html#json_field_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.decorators.json_field_metadata" title="Link to this definition">¶</a></dt>
+<dd><p>Create metadata for a JSON field.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>field_name: Name of the field in the class
+json_name: Custom name to use in JSON
+skip_if_none: Whether to skip this field when it’s None</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field_name</strong> (<em>str</em>)</p></li>
+<li><p><strong>json_name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>skip_if_none</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Dict</em>[str, <em>Any</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jam.utils.json.decorators.json_serializable">
+<span class="sig-prename descclassname"><span class="pre">jam.utils.json.decorators.</span></span><span class="sig-name descname"><span class="pre">json_serializable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/decorators.html#json_serializable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.decorators.json_serializable" title="Link to this definition">¶</a></dt>
+<dd><p>Decorator to make a class JSON serializable.</p>
+<p>This decorator:
+1. Makes the class use JsonSerde
+2. For dataclasses, ensures proper field metadata handling</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cls</strong> (<em>Type</em><em>[</em><em>T</em><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Type</em>[<em>T</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jam.utils.json.decorators.with_json_metadata">
+<span class="sig-prename descclassname"><span class="pre">jam.utils.json.decorators.</span></span><span class="sig-name descname"><span class="pre">with_json_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">field_metadata</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/jam/utils/json/decorators.html#with_json_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.decorators.with_json_metadata" title="Link to this definition">¶</a></dt>
+<dd><p>Class decorator to add JSON metadata to fields.</p>
+<dl>
+<dt>Usage:</dt><dd><dl class="simple">
+<dt>&#64;with_json_metadata(</dt><dd><p>field1={‘name’: ‘json_field1’, ‘skip_if_none’: True},
+field2={‘name’: ‘json_field2’}</p>
+</dd>
+</dl>
+<p>)
+class MyClass:</p>
+<blockquote>
+<div><p>field1: str
+field2: str</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>field_metadata</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Tessera</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="jam.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="jam.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="jam.api.html">jam.api package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.config.html">jam.config package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.consensus.html">jam.consensus package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.core.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.crypto.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.execution.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.network.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.playground.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.pvm.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.services.html">jam.services package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.state.html">jam.state package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.storage.html">jam.storage package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jam.types.html">jam.types package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="jam.utils.html">jam.utils package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="jam.utils.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jam.utils.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="jam.utils.html#module-jam.utils">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jam.html#module-jam">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="jam.html">jam package</a><ul>
+  <li><a href="jam.utils.html">jam.utils package</a><ul>
+  <li><a href="jam.utils.json.html">jam.utils.json package</a><ul>
+      <li>Previous: <a href="jam.utils.json.codec.html" title="previous chapter">jam.utils.json.codec module</a></li>
+      <li>Next: <a href="jam.utils.json.serde.html" title="next chapter">jam.utils.json.serde module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Chainscore Labs.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/jam.utils.json.decorators.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
