@@ -2,9 +2,10 @@ name: Deploy Sphinx Docs to GitHub Pages
 
 on:
     push:
-        branches:
-            - main
-
+      branches: [ main, docs ]
+    pull_request:
+      branches: [ main ]
+  
 jobs:
     deploy:
         runs-on: ubuntu-latest
