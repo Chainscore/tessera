@@ -1,40 +1,40 @@
-name: Deploy Sphinx Docs to GitHub Pages
+name: Deploy Sphinx Docs to Azure Static Web Apps
 
 on:
-    push:
-      branches: [ main, docs ]
-    pull_request:
-      branches: [ main ]
-  
+  push:
+    branches: [ main, docs ]
+  pull_request:
+    branches: [ main ]
+
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
 
-            - name: Set up Python
-              uses: actions/setup-python@v3
-              with:
-                  python-version: '3.11'
+      - name: Install Sphinx
+        run: pip install sphinx sphinx-rtd-theme
 
-            - name: Install Sphinx
-              run: pip install sphinx
+      - name: Install Poetry
+        run: pip install poetry
 
-            - name: Install Poetry
-              run: pip install poetry
+      - name: Install dependencies via Poetry
+        run: poetry install --with dev --no-interaction --no-ansi
 
-            - name: Install dependencies via Poetry
-              run: poetry install --with dev --no-interaction --no-ansi
+      - name: Build Sphinx documentation
+        run: make html
+        working-directory: docs
 
-            - name: Build Sphinx documentation
-              run: make html
-              working-directory: docs
-
-            - name: Deploy to GitHub Pages
-              uses: peaceiris/actions-gh-pages@v3
-              with:
-                  personal_token: ${{ secrets.PERSONAL_TOKEN }}
-                  publish_dir: docs/_build/html
-                  publish_branch: docs
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: "upload"
+          app_location: "."
+          output_location: "docs/_build/html"
