@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Safrole [WIP] &mdash; Tessera 0.1.0 documentation</title>
+  <title>Safrole STF &mdash; Tessera 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
 
@@ -20,8 +20,8 @@
     <script src="../../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
-    <link rel="next" title="Safrole STF" href="stf.html" />
-    <link rel="prev" title="jam.consensus.grandpa package" href="../grandpa/index.html" /> 
+    <link rel="next" title="Safrole Errors" href="errors.html" />
+    <link rel="prev" title="Safrole [WIP]" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -90,9 +90,10 @@
       <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../../index.html">Tessera - JAM Node</a></li>
           <li class="breadcrumb-item"><a href="../index.html">Consensus</a></li>
-      <li class="breadcrumb-item active">Safrole [WIP]</li>
+          <li class="breadcrumb-item"><a href="index.html">Safrole [WIP]</a></li>
+      <li class="breadcrumb-item active">Safrole STF</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../../../../_sources/modules/jam/consensus/safrole/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../../../../_sources/modules/jam/consensus/safrole/stf.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -100,51 +101,44 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="safrole-wip">
-<h1>Safrole [WIP]<a class="headerlink" href="#safrole-wip" title="Link to this heading"></a></h1>
+  <section id="safrole-stf">
+<h1>Safrole STF<a class="headerlink" href="#safrole-stf" title="Link to this heading"></a></h1>
 <section id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
-<p>Safrole is the consensus protocol used for block production in JAN. The implementation includes:</p>
+<p>The Safrole State Transition Function (STF) defines how the protocol state evolves with each block. It handles four main types of transitions:</p>
+</section>
+<section id="timekeeping">
+<h2>1. Timekeeping<a class="headerlink" href="#timekeeping" title="Link to this heading"></a></h2>
+<p>Updates the timeslot index (τ) based on the block header timestamp.</p>
+</section>
+<section id="entropy-accumulation">
+<h2>2. Entropy Accumulation<a class="headerlink" href="#entropy-accumulation" title="Link to this heading"></a></h2>
+<p>Updates the entropy (η₀) by incorporating VRF outputs from block headers:</p>
+<div class="math notranslate nohighlight">
+\[η'₀ ≡ H(η₀ ‖ VRF_{output}(H_v))\]</div>
+</section>
+<section id="ticket-processing">
+<h2>3. Ticket Processing<a class="headerlink" href="#ticket-processing" title="Link to this heading"></a></h2>
+<p>Handles ticket extrinsics in each block:</p>
 <ul class="simple">
-<li><p>State Transition Function (STF) - Handles block processing and state updates</p></li>
-<li><p>Error Handling - Provides protocol-specific error types and handling</p></li>
-<li><p>Gamma State Component - Manages validator sets and ticket accumulation</p></li>
+<li><p>Validates ticket entries (entry index, VRF signature)</p></li>
+<li><p>Verifies tickets are not duplicated</p></li>
+<li><p>Ensures proper ordering by VRF output</p></li>
+<li><p>Accumulates valid tickets into state</p></li>
 </ul>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Components:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="stf.html">Safrole STF</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="stf.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stf.html#timekeeping">1. Timekeeping</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stf.html#entropy-accumulation">2. Entropy Accumulation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stf.html#ticket-processing">3. Ticket Processing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stf.html#epoch-transitions">4. Epoch Transitions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stf.html#api-reference">API Reference</a></li>
+</section>
+<section id="epoch-transitions">
+<h2>4. Epoch Transitions<a class="headerlink" href="#epoch-transitions" title="Link to this heading"></a></h2>
+<p>Manages state updates at epoch boundaries:</p>
+<ul class="simple">
+<li><p>Rotates validator keys: (γ’ₖ, κ’, λ’) ≡ (Φ(ι), γₖ, κ)</p></li>
+<li><p>Updates entropy values: (η’₁, η’₂, η’₃) ≡ (η₀, η₁, η₂)</p></li>
+<li><p>Updates slot sealing keys based on conditions</p></li>
+<li><p>Computes new ring root from validator set</p></li>
 </ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="errors.html">Safrole Errors</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="errors.html#jam.consensus.safrole.errors.SafroleError"><code class="docutils literal notranslate"><span class="pre">SafroleError</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="errors.html#jam.consensus.safrole.errors.SafroleErrorCode"><code class="docutils literal notranslate"><span class="pre">SafroleErrorCode</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="errors.html#error-types">Error Types</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="errors.html#safroleerrorcode">SafroleErrorCode</a></li>
-<li class="toctree-l2"><a class="reference internal" href="errors.html#safroleerror">SafroleError</a></li>
-<li class="toctree-l2"><a class="reference internal" href="errors.html#example-usage">Example Usage</a></li>
-<li class="toctree-l2"><a class="reference internal" href="errors.html#handle-them">Handle Them</a></li>
-<li class="toctree-l2"><a class="reference internal" href="errors.html#api-reference">API Reference</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="gamma.html">Gamma State Component</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="gamma.html#gammak-k">GammaK (γₖ)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gamma.html#gammaa-a">GammaA (γₐ)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gamma.html#gammaz">GammaZ (γᵧ)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gamma.html#gammas-s">GammaS (γₛ)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gamma.html#api-reference">API Reference</a></li>
-</ul>
-</li>
-</ul>
-</div>
+</section>
+<section id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h2>
 </section>
 </section>
 
@@ -152,8 +146,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../grandpa/index.html" class="btn btn-neutral float-left" title="jam.consensus.grandpa package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="stf.html" class="btn btn-neutral float-right" title="Safrole STF" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="index.html" class="btn btn-neutral float-left" title="Safrole [WIP]" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="errors.html" class="btn btn-neutral float-right" title="Safrole Errors" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

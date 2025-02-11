@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>jam.consensus.safrole.errors module &mdash; Tessera 0.1.0 documentation</title>
+  <title>Safrole Errors &mdash; Tessera 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
 
@@ -19,8 +19,8 @@
     <script src="../../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
-    <link rel="next" title="jam.consensus.safrole.gamma module" href="gamma.html" />
-    <link rel="prev" title="jam.consensus.safrole package" href="index.html" /> 
+    <link rel="next" title="Gamma State Component" href="gamma.html" />
+    <link rel="prev" title="Safrole STF" href="stf.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -44,11 +44,12 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">jam package</a><ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">Tessera - JAM Node</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="../../api/index.html">jam.api package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../config/index.html">jam.config package</a></li>
-<li class="toctree-l3 current"><a class="reference internal" href="../index.html">jam.consensus package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">Consensus</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../index.html#overview">Overview</a></li>
 <li class="toctree-l4 current"><a class="reference internal" href="../index.html#subpackages">Subpackages</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
 </ul>
@@ -58,12 +59,12 @@
 <li class="toctree-l3"><a class="reference internal" href="../../execution/index.html">jam.execution package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../network/index.html">jam.network package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../playground/index.html">jam.playground package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../pvm/index.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pvm/index.html">PVM [WIP]</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../services/index.html">jam.services package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../state/index.html">jam.state package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../storage/index.html">jam.storage package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../types/index.html">jam.types</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../utils/index.html">jam.utils package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../types/index.html">Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../utils/index.html">Utilities</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../../index.html#submodules">Submodules</a></li>
@@ -86,10 +87,10 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../../index.html">jam package</a></li>
-          <li class="breadcrumb-item"><a href="../index.html">jam.consensus package</a></li>
-          <li class="breadcrumb-item"><a href="index.html">jam.consensus.safrole package</a></li>
-      <li class="breadcrumb-item active">jam.consensus.safrole.errors module</li>
+          <li class="breadcrumb-item"><a href="../../index.html">Tessera - JAM Node</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Consensus</a></li>
+          <li class="breadcrumb-item"><a href="index.html">Safrole [WIP]</a></li>
+      <li class="breadcrumb-item active">Safrole Errors</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../../../_sources/modules/jam/consensus/safrole/errors.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -100,7 +101,7 @@
            <div itemprop="articleBody">
              
   <section id="module-jam.consensus.safrole.errors">
-<span id="jam-consensus-safrole-errors-module"></span><h1>jam.consensus.safrole.errors module<a class="headerlink" href="#module-jam.consensus.safrole.errors" title="Link to this heading"></a></h1>
+<span id="safrole-errors"></span><h1>Safrole Errors<a class="headerlink" href="#module-jam.consensus.safrole.errors" title="Link to this heading"></a></h1>
 <dl class="py exception">
 <dt class="sig sig-object py" id="jam.consensus.safrole.errors.SafroleError">
 <em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.consensus.safrole.errors.</span></span><span class="sig-name descname"><span class="pre">SafroleError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../types/base/enum.html#jam.types.base.enum.Enum" title="jam.types.base.enum.Enum"><span class="pre">Enum</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/consensus/safrole/errors.html#SafroleError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.errors.SafroleError" title="Link to this definition"></a></dt>
@@ -111,6 +112,7 @@
 <dt class="sig sig-object py" id="jam.consensus.safrole.errors.SafroleErrorCode">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.consensus.safrole.errors.</span></span><span class="sig-name descname"><span class="pre">SafroleErrorCode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names=&lt;not</span> <span class="pre">given&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/consensus/safrole/errors.html#SafroleErrorCode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.consensus.safrole.errors.SafroleErrorCode" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="../../types/base/enum.html#jam.types.base.enum.Enum" title="jam.types.base.enum.Enum"><code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></a></p>
+<p>Error codes for the Safrole consensus protocol.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="jam.consensus.safrole.errors.SafroleErrorCode.BAD_SLOT">
 <span class="sig-name descname"><span class="pre">BAD_SLOT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.consensus.safrole.errors.SafroleErrorCode.BAD_SLOT" title="Link to this definition"></a></dt>
@@ -173,13 +175,141 @@
 </dd></dl>
 
 </section>
+<section id="error-types">
+<h1>Error Types<a class="headerlink" href="#error-types" title="Link to this heading"></a></h1>
+<p>The Safrole consensus protocol defines specific error types for handling various failure cases.</p>
+<section id="safroleerrorcode">
+<h2>SafroleErrorCode<a class="headerlink" href="#safroleerrorcode" title="Link to this heading"></a></h2>
+<p>Enumeration of possible error conditions:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">BAD_SLOT</span></code> - Invalid slot number in block header</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">UNEXPECTED_TICKET</span></code> - Ticket received when not expected</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BAD_TICKET_ORDER</span></code> - Tickets not in sorted order by VRF output</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BAD_TICKET_PROOF</span></code> - Invalid VRF proof for ticket</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BAD_TICKET_ATTEMPT</span></code> - Invalid ticket attempt index</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RESERVED</span></code> - Reserved for future use</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DUPLICATE_TICKET</span></code> - Duplicate ticket submission</p></li>
+</ul>
+</section>
+<section id="safroleerror">
+<h2>SafroleError<a class="headerlink" href="#safroleerror" title="Link to this heading"></a></h2>
+<p>Base error class that wraps error codes with descriptive messages. Used throughout the protocol implementation to signal specific failure conditions.</p>
+</section>
+<section id="example-usage">
+<h2>Example Usage<a class="headerlink" href="#example-usage" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Verify ticket order</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">is_ordered</span><span class="p">(</span><span class="n">tickets</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="n">SafroleError</span><span class="p">(</span>
+        <span class="n">SafroleErrorCode</span><span class="o">.</span><span class="n">BAD_TICKET_ORDER</span><span class="p">,</span>
+        <span class="s2">&quot;Tickets must be ordered by VRF output&quot;</span>
+    <span class="p">)</span>
+
+<span class="c1"># Check for duplicates</span>
+<span class="k">if</span> <span class="n">is_duplicate</span><span class="p">(</span><span class="n">ticket</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="n">SafroleError</span><span class="p">(</span>
+        <span class="n">SafroleErrorCode</span><span class="o">.</span><span class="n">DUPLICATE_TICKET</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;Ticket </span><span class="si">{</span><span class="n">ticket</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> already exists&quot;</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="handle-them">
+<h2>Handle Them<a class="headerlink" href="#handle-them" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="n">process_tickets</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">SafroleError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="n">SafroleErrorCode</span><span class="o">.</span><span class="n">BAD_TICKET_PROOF</span><span class="p">:</span>
+        <span class="c1"># Handle invalid VRF proof</span>
+        <span class="k">pass</span>
+    <span class="k">elif</span> <span class="n">e</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="n">SafroleErrorCode</span><span class="o">.</span><span class="n">BAD_TICKET_ORDER</span><span class="p">:</span>
+        <span class="c1"># Handle ordering violation</span>
+        <span class="k">pass</span>
+</pre></div>
+</div>
+</section>
+<section id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h2>
+<dl class="py exception" id="module-0">
+<dt class="sig sig-object py" id="id0">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.consensus.safrole.errors.</span></span><span class="sig-name descname"><span class="pre">SafroleError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../types/base/enum.html#jam.types.base.enum.Enum" title="jam.types.base.enum.Enum"><span class="pre">Enum</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/consensus/safrole/errors.html#SafroleError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id0" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../../error.html#jam.error.JamError" title="jam.error.JamError"><code class="xref py py-class docutils literal notranslate"><span class="pre">JamError</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="id1">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.consensus.safrole.errors.</span></span><span class="sig-name descname"><span class="pre">SafroleErrorCode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names=&lt;not</span> <span class="pre">given&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/consensus/safrole/errors.html#SafroleErrorCode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id1" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../../types/base/enum.html#jam.types.base.enum.Enum" title="jam.types.base.enum.Enum"><code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></a></p>
+<p>Error codes for the Safrole consensus protocol.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id2">
+<span class="sig-name descname"><span class="pre">BAD_SLOT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id2" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id3">
+<span class="sig-name descname"><span class="pre">UNEXPECTED_TICKET</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id3" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id4">
+<span class="sig-name descname"><span class="pre">BAD_TICKET_ORDER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id4" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id5">
+<span class="sig-name descname"><span class="pre">BAD_TICKET_PROOF</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id5" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id6">
+<span class="sig-name descname"><span class="pre">BAD_TICKET_ATTEMPT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id6" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id7">
+<span class="sig-name descname"><span class="pre">RESERVED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id7" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id8">
+<span class="sig-name descname"><span class="pre">DUPLICATE_TICKET</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id8" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id9">
+<span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../../types/base/enum.html#jam.types.base.enum.Enum" title="jam.types.base.enum.Enum"><span class="pre">Enum</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#id9" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="jam.consensus.safrole package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="gamma.html" class="btn btn-neutral float-right" title="jam.consensus.safrole.gamma module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="stf.html" class="btn btn-neutral float-left" title="Safrole STF" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="gamma.html" class="btn btn-neutral float-right" title="Gamma State Component" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

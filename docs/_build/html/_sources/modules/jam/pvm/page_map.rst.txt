@@ -1,4 +1,4 @@
-jam.pvm.page_map module
+Page Map
 =======================
 
 .. automodule:: jam.pvm.page_map

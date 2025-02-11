@@ -54,7 +54,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../execution/index.html">jam.execution package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../network/index.html">jam.network package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../playground/index.html">jam.playground package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../pvm/index.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pvm/index.html">PVM [WIP]</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../services/index.html">jam.services package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../state/index.html">jam.state package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../storage/index.html">jam.storage package</a></li>
@@ -252,34 +252,24 @@
 </section>
 <section id="module-contents">
 <h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
-<p id="module-jam.utils.json">JSON serialization/deserialization module for JAM types.</p>
-<p>This module provides a unified way to convert JAM types to and from JSON.
-It supports both base types and complex dataclasses, with customizable
-field handling and metadata.</p>
-<dl>
-<dt>Basic usage:</dt><dd><p>from jam.utils.codec.json import json_serializable, json_field</p>
-<p>&#64;json_serializable
-&#64;dataclass
-class MyClass:</p>
-<blockquote>
-<div><p>field1: str = json_field(name=”jsonField1”)
-field2: int = json_field(skip_if_none=True)</p>
-</div></blockquote>
-</dd>
-<dt>Advanced usage:</dt><dd><p>&#64;json_serializable
-&#64;with_json_metadata(</p>
-<blockquote>
-<div><p>field1={‘name’: ‘jsonField1’, ‘skip_if_none’: True},
-field2={‘format’: ‘%Y-%m-%d’}</p>
-</div></blockquote>
-<p>)
-class MyClass:</p>
-<blockquote>
-<div><p>field1: str
-field2: datetime</p>
-</div></blockquote>
-</dd>
-</dl>
+<p id="module-jam.utils.json">JSON serialization framework integrated with JAM codec system.</p>
+<p>Core:
+* JsonCodec: Type-safe conversion engine
+* JsonSerde: Base mixin for JSON capabilities
+* JsonFieldMetadata: Field configuration</p>
+<p>Type Resolution:
+* bool -&gt; true/false
+* int -&gt; number
+* str -&gt; string
+* bytes -&gt; hex string
+* Null -&gt; null
+* Array[T] -&gt; [T, …]
+* Vector[T] -&gt; [T, …]
+* Dict[K,V] -&gt; {K: V, …}
+* Option[T] -&gt; T | null
+* Enum -&gt; value | name
+* &#64;json_serializable -&gt; object
+* JsonSerde -&gt; custom conversion</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="jam.utils.json.JsonSerde">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.json.</span></span><span class="sig-name descname"><span class="pre">JsonSerde</span></span><a class="reference internal" href="../../../../_modules/jam/utils/json/serde.html#JsonSerde"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.json.JsonSerde" title="Link to this definition"></a></dt>
