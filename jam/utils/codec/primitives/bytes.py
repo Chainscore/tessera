@@ -2,7 +2,7 @@
 
 from typing import Tuple, Union, Any
 
-from jam.utils.codec.base import Codec
+from jam.utils.codec.codec import Codec
 from jam.utils.codec.primitives.integers import GeneralCodec
 
 class BytesCodec(Codec):

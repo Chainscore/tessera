@@ -1,7 +1,7 @@
 """Unit tests for bytes type implementation."""
 
 import pytest
-from jam.types.base import Bytes
+from jam.types.base.sequences.bytes import Bytes
 
 class TestBytesType:
     """Test suite for bytes type implementation."""

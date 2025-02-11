@@ -1,9 +1,4 @@
-"""
-Codec interface.
-
-This module defines the fundamental interfaces for encoding and decoding data types.
-It provides abstract base classes that define all types of codecs.
-"""
+"""Codec interface for encoding and decoding data types."""
 
 from abc import ABC, abstractmethod
 from typing import TypeVar, Generic, Tuple, Union

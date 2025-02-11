@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>jam.types.base.choices.choice &#8212; Tessera  documentation</title>
+    <title>jam.types.base.choices.choice &#8212; Tessera 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../../../../_static/basic.css?v=686e5160" />
     <link rel="stylesheet" type="text/css" href="../../../../../_static/alabaster.css?v=27fed22d" />
-    <script src="../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../../../../genindex.html" />
@@ -39,7 +39,7 @@
 <span class="n">T</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Choice">
-<a class="viewcode-back" href="../../../../../jam.types.base.choices.choice.html#jam.types.Choice">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.choice.Choice">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Choice</span><span class="p">(</span><span class="n">Codable</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">JsonSerde</span><span class="p">,</span> <span class="n">Generic</span><span class="p">[</span><span class="n">T</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A choice is a value that can be one of several possible types.</span>
@@ -89,6 +89,8 @@
             <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">,</span> <span class="s1">&#39;codec&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;__choices__&#39;</span><span class="p">]:</span>
                 <span class="bp">cls</span><span class="o">.</span><span class="n">__choices__</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
 
+<div class="viewcode-block" id="Choice.__init__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.choice.Choice.__init__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Codable</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span> <span class="o">|</span> <span class="n">Codable</span><span class="p">[</span><span class="n">T</span><span class="p">]):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize Choice.</span>
@@ -99,11 +101,14 @@
 <span class="sd">            ValueError: If types list is empty</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__set_internal__</span><span class="p">(</span><span class="n">initial</span><span class="p">)</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">codec</span><span class="o">=</span><span class="n">ChoiceCodec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__choices__</span><span class="p">))</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">codec</span><span class="o">=</span><span class="n">ChoiceCodec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__choices__</span><span class="p">))</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Codable</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span> <span class="o">|</span> <span class="n">Codable</span><span class="p">[</span><span class="n">T</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__set_internal__</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
+<div class="viewcode-block" id="Choice.__set_internal__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.choice.Choice.__set_internal__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">__set_internal__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Codable</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span> <span class="o">|</span> <span class="n">Codable</span><span class="p">[</span><span class="n">T</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the choice value.</span>
@@ -135,9 +140,12 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Value type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="n">choice_key</span><span class="p">])</span><span class="si">}</span><span class="s2"> is not in allowed types: </span><span class="si">{</span><span class="n">choice_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         
         <span class="c1"># Set them</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span></div>
 
 
+
+<div class="viewcode-block" id="Choice.__get__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.choice.Choice.__get__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Codable</span><span class="p">[</span><span class="n">T</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the current value.</span>
@@ -145,25 +153,35 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Current value or None if not set</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span></div>
 
+
+<div class="viewcode-block" id="Choice.__eq__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.choice.Choice.__eq__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Compare for equality.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Choice</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">value</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">other</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">other</span></div>
+
         
+<div class="viewcode-block" id="Choice.__bool__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.choice.Choice.__bool__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__bool__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if the choice has a value.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span></div>
 
+
+<div class="viewcode-block" id="Choice.__repr__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.choice.Choice.__repr__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get string representation.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="si">!r}</span><span class="s2">)&quot;</span></div>
+
     
 <div class="viewcode-block" id="Choice.from_json">
-<a class="viewcode-back" href="../../../../../jam.types.base.choices.choice.html#jam.types.Choice.from_json">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.choice.Choice.from_json">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Choice[T]&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create from JSON representation.&quot;&quot;&quot;</span>
@@ -181,7 +199,7 @@
 
 
 <div class="viewcode-block" id="decodable_choice">
-<a class="viewcode-back" href="../../../../../jam.types.base.choices.choice.html#jam.types.decodable_choice">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.choice.decodable_choice">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">decodable_choice</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">Choice</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">Choice</span><span class="p">]:</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">__choices__</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Choice must have at least one type&quot;</span><span class="p">)</span>
@@ -244,7 +262,7 @@
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../../jam.html">jam package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/index.html">jam package</a></li>
 </ul>
 
 <div class="relations">

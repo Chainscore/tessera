@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>jam.types.base.choices.option &#8212; Tessera  documentation</title>
+    <title>jam.types.base.choices.option &#8212; Tessera 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../../../../_static/basic.css?v=686e5160" />
     <link rel="stylesheet" type="text/css" href="../../../../../_static/alabaster.css?v=27fed22d" />
-    <script src="../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../../../../genindex.html" />
@@ -38,7 +38,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.composite.choices</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChoiceCodec</span>
 
 <div class="viewcode-block" id="Option">
-<a class="viewcode-back" href="../../../../../jam.types.base.choices.option.html#jam.types.Option">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.Option">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Option</span><span class="p">(</span><span class="n">Choice</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An option is a choice that can be either None or a value.</span>
@@ -46,11 +46,14 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">__init_subclass__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="o">...</span>
 
+<div class="viewcode-block" id="Option.__init__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.Option.__init__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial</span><span class="p">:</span> <span class="n">Codable</span> <span class="o">=</span> <span class="n">Null</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">Option</span><span class="o">.</span><span class="n">option_to_choice</span><span class="p">(</span><span class="n">initial</span><span class="p">))</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">Option</span><span class="o">.</span><span class="n">option_to_choice</span><span class="p">(</span><span class="n">initial</span><span class="p">))</span></div>
+
 
 <div class="viewcode-block" id="Option.option_to_choice">
-<a class="viewcode-back" href="../../../../../jam.types.base.choices.option.html#jam.types.Option.option_to_choice">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.Option.option_to_choice">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">option_to_choice</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Codable</span> <span class="o">|</span> <span class="n">Nullable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Codable</span><span class="p">]:</span>
         <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Nullable</span><span class="p">):</span>
@@ -63,7 +66,7 @@
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__set__</span><span class="p">(</span><span class="n">Option</span><span class="o">.</span><span class="n">option_to_choice</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
 
 <div class="viewcode-block" id="Option.from_json">
-<a class="viewcode-back" href="../../../../../jam.types.base.choices.option.html#jam.types.Option.from_json">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.Option.from_json">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Option&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create from JSON representation.&quot;&quot;&quot;</span>
@@ -76,7 +79,7 @@
 
     
 <div class="viewcode-block" id="Option.to_json">
-<a class="viewcode-back" href="../../../../../jam.types.base.choices.option.html#jam.types.Option.to_json">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.Option.to_json">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert to JSON representation.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">Nullable</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -94,7 +97,7 @@
 
 
 <div class="viewcode-block" id="decodable_option">
-<a class="viewcode-back" href="../../../../../jam.types.base.choices.option.html#jam.types.decodable_option">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.choices.decodable_option">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">decodable_option</span><span class="p">(</span><span class="n">optional_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">Codable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">Option</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Decodable choice&quot;&quot;&quot;</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">decorator</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">Option</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">Option</span><span class="p">]:</span>
@@ -162,7 +165,7 @@
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../../jam.html">jam package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/index.html">jam package</a></li>
 </ul>
 
 <div class="relations">

@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>jam.consensus.safrole.gamma &#8212; Tessera  documentation</title>
+    <title>jam.consensus.safrole.gamma &#8212; Tessera 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/basic.css?v=686e5160" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css?v=27fed22d" />
-    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
@@ -43,7 +43,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">EPOCH_LENGTH</span><span class="p">,</span> <span class="n">VALIDATOR_COUNT</span>
 
 <div class="viewcode-block" id="GammaK">
-<a class="viewcode-back" href="../../../../jam.consensus.safrole.gamma.html#jam.consensus.safrole.gamma.GammaK">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/consensus/safrole/gamma.html#jam.consensus.safrole.gamma.GammaK">[docs]</a>
 <span class="nd">@decodable_array</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="n">VALIDATOR_COUNT</span><span class="p">,</span> <span class="n">element_type</span><span class="o">=</span><span class="n">ValidatorData</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">GammaK</span><span class="p">(</span><span class="n">Array</span><span class="p">[</span><span class="n">ValidatorData</span><span class="p">]):</span> 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Validator set&quot;&quot;&quot;</span>
@@ -51,7 +51,7 @@
 
 
 <div class="viewcode-block" id="GammaA">
-<a class="viewcode-back" href="../../../../jam.consensus.safrole.gamma.html#jam.consensus.safrole.gamma.GammaA">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/consensus/safrole/gamma.html#jam.consensus.safrole.gamma.GammaA">[docs]</a>
 <span class="nd">@decodable_vector</span><span class="p">(</span><span class="n">element_type</span><span class="o">=</span><span class="n">TicketBody</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">GammaA</span><span class="p">(</span><span class="n">Vector</span><span class="p">[</span><span class="n">TicketBody</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Ticket accumulator: set of highest scoring ticket ids to be used for the next epoch&quot;&quot;&quot;</span>
@@ -61,7 +61,7 @@
 <span class="n">GammaZ</span> <span class="o">=</span> <span class="n">BandersnatchRingRoot</span>
 
 <div class="viewcode-block" id="GammaSTickets">
-<a class="viewcode-back" href="../../../../jam.consensus.safrole.gamma.html#jam.consensus.safrole.gamma.GammaSTickets">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/consensus/safrole/gamma.html#jam.consensus.safrole.gamma.GammaSTickets">[docs]</a>
 <span class="nd">@decodable_array</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="n">EPOCH_LENGTH</span><span class="p">,</span> <span class="n">element_type</span><span class="o">=</span><span class="n">TicketBody</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">GammaSTickets</span><span class="p">(</span><span class="n">Array</span><span class="p">[</span><span class="n">TicketBody</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Current epoch&#39;s slot sealers: set of highest scoring ticket ids for this epoch&quot;&quot;&quot;</span>
@@ -69,7 +69,7 @@
 
 
 <div class="viewcode-block" id="GammaSFallback">
-<a class="viewcode-back" href="../../../../jam.consensus.safrole.gamma.html#jam.consensus.safrole.gamma.GammaSFallback">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/consensus/safrole/gamma.html#jam.consensus.safrole.gamma.GammaSFallback">[docs]</a>
 <span class="nd">@decodable_array</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="n">EPOCH_LENGTH</span><span class="p">,</span> <span class="n">element_type</span><span class="o">=</span><span class="n">BandersnatchPublic</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">GammaSFallback</span><span class="p">(</span><span class="n">Array</span><span class="p">[</span><span class="n">BandersnatchPublic</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Fallback set of slot sealers: set of public keys of the slot sealers for this epoch&quot;&quot;&quot;</span>
@@ -77,7 +77,7 @@
 
 
 <div class="viewcode-block" id="GammaS">
-<a class="viewcode-back" href="../../../../jam.consensus.safrole.gamma.html#jam.consensus.safrole.gamma.GammaS">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/consensus/safrole/gamma.html#jam.consensus.safrole.gamma.GammaS">[docs]</a>
 <span class="nd">@decodable_choice</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">GammaS</span><span class="p">(</span><span class="n">Choice</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Either the current epoch&#39;s slot sealers or the fallback set of slot sealers&quot;&quot;&quot;</span>
@@ -87,7 +87,7 @@
 
 
 <div class="viewcode-block" id="Gamma">
-<a class="viewcode-back" href="../../../../jam.consensus.safrole.gamma.html#jam.consensus.safrole.gamma.Gamma">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/consensus/safrole/gamma.html#jam.consensus.safrole.gamma.Gamma">[docs]</a>
 <span class="nd">@decodable_dataclass</span>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Gamma</span><span class="p">(</span><span class="n">Codable</span><span class="p">):</span>
@@ -126,7 +126,7 @@
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../jam.html">jam package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/index.html">jam package</a></li>
 </ul>
 
 <div class="relations">

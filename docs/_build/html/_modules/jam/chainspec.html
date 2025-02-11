@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>jam.chainspec &#8212; Tessera  documentation</title>
+    <title>jam.chainspec &#8212; Tessera 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=686e5160" />
     <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
-    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -38,7 +38,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
 
 <div class="viewcode-block" id="ChainSpec">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.ChainSpec">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/chainspec.html#jam.chainspec.ChainSpec">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ChainSpec</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Chain specification types.&quot;&quot;&quot;</span>
     <span class="n">TINY</span> <span class="o">=</span> <span class="s2">&quot;tiny&quot;</span>
@@ -52,7 +52,7 @@
 
 
 <div class="viewcode-block" id="JamConfig">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.JamConfig">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/index.html#jam.chainspec.JamConfig">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">JamConfig</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;JAM protocol configuration.&quot;&quot;&quot;</span>
@@ -68,7 +68,7 @@
     <span class="n">rotation_period</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
 
 <div class="viewcode-block" id="JamConfig.tiny">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.JamConfig.tiny">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/index.html#jam.chainspec.JamConfig.tiny">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">tiny</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;JamConfig&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create tiny chain configuration.&quot;&quot;&quot;</span>
@@ -87,7 +87,7 @@
 
 
 <div class="viewcode-block" id="JamConfig.small">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.JamConfig.small">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/index.html#jam.chainspec.JamConfig.small">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">small</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;JamConfig&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create small chain configuration.&quot;&quot;&quot;</span>
@@ -106,7 +106,7 @@
 
 
 <div class="viewcode-block" id="JamConfig.medium">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.JamConfig.medium">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/index.html#jam.chainspec.JamConfig.medium">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">medium</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;JamConfig&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create medium chain configuration.&quot;&quot;&quot;</span>
@@ -125,7 +125,7 @@
 
 
 <div class="viewcode-block" id="JamConfig.large">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.JamConfig.large">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/index.html#jam.chainspec.JamConfig.large">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">large</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;JamConfig&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create large chain configuration.&quot;&quot;&quot;</span>
@@ -144,7 +144,7 @@
 
 
 <div class="viewcode-block" id="JamConfig.xlarge">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.JamConfig.xlarge">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/index.html#jam.chainspec.JamConfig.xlarge">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">xlarge</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;JamConfig&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create xlarge chain configuration.&quot;&quot;&quot;</span>
@@ -163,7 +163,7 @@
 
 
 <div class="viewcode-block" id="JamConfig.xlarge2">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.JamConfig.xlarge2">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/index.html#jam.chainspec.JamConfig.xlarge2">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">xlarge2</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;JamConfig&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create 2xlarge chain configuration.&quot;&quot;&quot;</span>
@@ -182,7 +182,7 @@
 
 
 <div class="viewcode-block" id="JamConfig.xlarge3">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.JamConfig.xlarge3">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/index.html#jam.chainspec.JamConfig.xlarge3">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">xlarge3</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;JamConfig&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create 3xlarge chain configuration.&quot;&quot;&quot;</span>
@@ -201,7 +201,7 @@
 
 
 <div class="viewcode-block" id="JamConfig.full">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.JamConfig.full">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/index.html#jam.chainspec.JamConfig.full">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">full</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;JamConfig&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create full chain configuration.&quot;&quot;&quot;</span>
@@ -220,7 +220,7 @@
 
 
 <div class="viewcode-block" id="JamConfig.from_chain">
-<a class="viewcode-back" href="../../jam.chainspec.html#jam.JamConfig.from_chain">[docs]</a>
+<a class="viewcode-back" href="../../modules/jam/index.html#jam.chainspec.JamConfig.from_chain">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_chain</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">chain</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;JamConfig&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create configuration from chain name.&quot;&quot;&quot;</span>
@@ -278,7 +278,7 @@
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../jam.html">jam package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/jam/index.html">jam package</a></li>
 </ul>
 
 <div class="relations">

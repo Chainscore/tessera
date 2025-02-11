@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>jam.types.base.integers.fixed &#8212; Tessera  documentation</title>
+    <title>jam.types.base.integers.fixed &#8212; Tessera 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../../../../_static/basic.css?v=686e5160" />
     <link rel="stylesheet" type="text/css" href="../../../../../_static/alabaster.css?v=27fed22d" />
-    <script src="../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../../../../genindex.html" />
@@ -40,19 +40,22 @@
 <span class="n">T</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="s1">&#39;BaseInteger&#39;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="FixedInt">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.FixedInt">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/base/integers/fixed.html#jam.types.base.FixedInt">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">FixedInt</span><span class="p">(</span><span class="n">BaseInteger</span><span class="p">,</span> <span class="n">Codable</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Fixed-width integer type.&quot;&quot;&quot;</span>
     <span class="n">byte_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">has_sign</span> <span class="o">=</span> <span class="kc">False</span>
 
+<div class="viewcode-block" id="FixedInt.__init__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/base/integers/fixed.html#jam.types.base.FixedInt.__init__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="s1">&#39;BaseInteger&#39;</span><span class="p">]):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">byte_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">codec</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">byte_size</span><span class="p">)</span></div>
+
         
 <div class="viewcode-block" id="FixedInt._validate">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.FixedInt._validate">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/base/integers/fixed.html#jam.types.base.FixedInt._validate">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">_validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate the integer value is within bounds.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">byte_size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Fixed width</span>
@@ -64,7 +67,7 @@
 
 
 <div class="viewcode-block" id="decodable_int">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.decodable_int">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.decodable_int">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">decodable_int</span><span class="p">(</span><span class="n">byte_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">has_sign</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Type</span><span class="p">[</span><span class="n">FixedInt</span><span class="p">]],</span> <span class="n">Type</span><span class="p">[</span><span class="n">FixedInt</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Decorator to make a class decodable as an integer.&quot;&quot;&quot;</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">decorator</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">FixedInt</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">FixedInt</span><span class="p">]:</span>
@@ -82,79 +85,79 @@
 
 
 <div class="viewcode-block" id="U8">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.U8">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.U8">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">U8</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="I8">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.I8">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/base/integers/fixed.html#jam.types.base.I8">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">has_sign</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">I8</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="U16">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.U16">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.U16">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">U16</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="I16">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.I16">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/base/integers/fixed.html#jam.types.base.I16">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">has_sign</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">I16</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="U32">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.U32">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.U32">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">U32</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="I32">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.I32">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/base/integers/fixed.html#jam.types.base.I32">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">has_sign</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">I32</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="U64">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.U64">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.U64">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">U64</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="I64">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.I64">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/base/integers/fixed.html#jam.types.base.I64">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="n">has_sign</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">I64</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="U128">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.U128">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.U128">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">U128</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="I128">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.I128">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/base/integers/fixed.html#jam.types.base.I128">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="n">has_sign</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">I128</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="U256">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.U256">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.U256">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">32</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">U256</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="I256">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.I256">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/base/integers/fixed.html#jam.types.base.I256">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="n">has_sign</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">I256</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
 
 <div class="viewcode-block" id="U512">
-<a class="viewcode-back" href="../../../../../jam.types.base.integers.fixed.html#jam.types.U512">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.U512">[docs]</a>
 <span class="nd">@decodable_int</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">U512</span><span class="p">(</span><span class="n">FixedInt</span><span class="p">):</span> <span class="o">...</span></div>
 
@@ -187,7 +190,7 @@
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../../jam.html">jam package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/index.html">jam package</a></li>
 </ul>
 
 <div class="relations">

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>jam.types.base.choices.choice module &#8212; Tessera 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../../../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+    <link rel="next" title="jam.types.base.choices.option module" href="option.html" />
+    <link rel="prev" title="jam.types.base.choices package" href="index.html" />
+   
+  <link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-jam.types.base.choices.choice">
+<span id="jam-types-base-choices-choice-module"></span><h1>jam.types.base.choices.choice module<a class="headerlink" href="#module-jam.types.base.choices.choice" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.types.base.choices.choice.Choice">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.base.choices.choice.</span></span><span class="sig-name descname"><span class="pre">Choice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.13)"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../../../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><span class="pre">Codable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="../../../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><span class="pre">Codable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../../_modules/jam/types/base/choices/choice.html#Choice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.choices.choice.Choice" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="../../../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Codable</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code>], <a class="reference internal" href="../../../utils/json/serde.html#jam.utils.json.serde.JsonSerde" title="jam.utils.json.serde.JsonSerde"><code class="xref py py-class docutils literal notranslate"><span class="pre">JsonSerde</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code>]</p>
+<p>A choice is a value that can be one of several possible types.</p>
+<p>A Choice represents a tagged union type that can hold a value of one of several
+possible Codable types. The actual type is determined by a tag byte during
+encoding/decoding.</p>
+<dl>
+<dt>To use a choice, you need to define all possible types:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nd">@decodable_choice</span><span class="p">([</span><span class="n">U8</span><span class="p">,</span> <span class="n">U16</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">MyChoice</span><span class="p">(</span><span class="n">Choice</span><span class="p">):</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_choice</span><span class="p">:</span> <span class="n">MyChoice</span> <span class="o">=</span> <span class="n">MyChoice</span><span class="p">(</span><span class="n">U8</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">my_choice</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">U8</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">my_choice</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">U8</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+<dt>To use a optional choice, we’d pair it with Nullable:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nd">@decodable_choice</span><span class="p">([</span><span class="n">U8</span><span class="p">,</span> <span class="n">Nullable</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">OptionalU8</span><span class="p">(</span><span class="n">Choice</span><span class="p">):</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_choice</span><span class="p">:</span> <span class="n">OptionalU8</span> <span class="o">=</span> <span class="n">OptionalU8</span><span class="p">(</span><span class="n">U8</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">my_choice</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">U8</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">my_choice</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">U8</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_choice</span><span class="p">:</span> <span class="n">OptionalU8</span> <span class="o">=</span> <span class="n">OptionalU8</span><span class="p">(</span><span class="n">Null</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">my_choice</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">Nullable</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">my_choice</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span>
+</pre></div>
+</div>
+</dd>
+<dt>To use this as an enum:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nd">@decodable_choice</span><span class="p">([</span><span class="n">String</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">String</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">OutputType</span><span class="p">(</span><span class="n">Choice</span><span class="p">):</span> <span class="o">...</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.choices.choice.Choice.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.13)"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../../../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><span class="pre">Codable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="../../../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><span class="pre">Codable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../../_modules/jam/types/base/choices/choice.html#Choice.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.choices.choice.Choice.__init__" title="Link to this definition">¶</a></dt>
+<dd><p>Initialize Choice.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>initial</strong> – Mapping of initial choice name and its value. Should have only one key.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – If types list is empty</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.choices.choice.Choice.__set_internal__">
+<span class="sig-name descname"><span class="pre">__set_internal__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.13)"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../../../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><span class="pre">Codable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="../../../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><span class="pre">Codable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../../../_modules/jam/types/base/choices/choice.html#Choice.__set_internal__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.choices.choice.Choice.__set_internal__" title="Link to this definition">¶</a></dt>
+<dd><p>Set the choice value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> – Value to set. Must be instance of one of the allowed types.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – If value type is not in allowed types list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.choices.choice.Choice.__get__">
+<span class="sig-name descname"><span class="pre">__get__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../../../utils/codec/codable.html#jam.utils.codec.codable.Codable" title="jam.utils.codec.codable.Codable"><span class="pre">Codable</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../../../_modules/jam/types/base/choices/choice.html#Choice.__get__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.choices.choice.Choice.__get__" title="Link to this definition">¶</a></dt>
+<dd><p>Get the current value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Current value or None if not set</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.choices.choice.Choice.__eq__">
+<span class="sig-name descname"><span class="pre">__eq__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><span class="pre">object</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../../../../_modules/jam/types/base/choices/choice.html#Choice.__eq__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.choices.choice.Choice.__eq__" title="Link to this definition">¶</a></dt>
+<dd><p>Compare for equality.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.choices.choice.Choice.__bool__">
+<span class="sig-name descname"><span class="pre">__bool__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../../../../_modules/jam/types/base/choices/choice.html#Choice.__bool__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.choices.choice.Choice.__bool__" title="Link to this definition">¶</a></dt>
+<dd><p>Check if the choice has a value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.choices.choice.Choice.__repr__">
+<span class="sig-name descname"><span class="pre">__repr__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../../../../_modules/jam/types/base/choices/choice.html#Choice.__repr__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.choices.choice.Choice.__repr__" title="Link to this definition">¶</a></dt>
+<dd><p>Get string representation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.types.base.choices.choice.Choice.from_json">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.types.base.choices.choice.Choice" title="jam.types.base.choices.choice.Choice"><span class="pre">Choice</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../../_modules/jam/types/base/choices/choice.html#Choice.from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.choices.choice.Choice.from_json" title="Link to this definition">¶</a></dt>
+<dd><p>Create from JSON representation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="jam.types.base.choices.choice.decodable_choice">
+<span class="sig-prename descclassname"><span class="pre">jam.types.base.choices.choice.</span></span><span class="sig-name descname"><span class="pre">decodable_choice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#jam.types.base.choices.choice.Choice" title="jam.types.base.choices.choice.Choice"><span class="pre">Choice</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#jam.types.base.choices.choice.Choice" title="jam.types.base.choices.choice.Choice"><span class="pre">Choice</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../../_modules/jam/types/base/choices/choice.html#decodable_choice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.base.choices.choice.decodable_choice" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../../index.html">Tessera</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">jam package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../../index.html#subpackages">Subpackages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../index.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">jam package</a><ul>
+  <li><a href="../../index.html">jam.types package</a><ul>
+  <li><a href="../index.html">jam.types.base package</a><ul>
+  <li><a href="index.html">jam.types.base.choices package</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">jam.types.base.choices package</a></li>
+      <li>Next: <a href="option.html" title="next chapter">jam.types.base.choices.option module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Chainscore Labs.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../../../../_sources/modules/jam/types/base/choices/choice.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

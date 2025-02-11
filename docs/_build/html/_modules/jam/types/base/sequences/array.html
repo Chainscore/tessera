@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>jam.types.base.sequences.array &#8212; Tessera  documentation</title>
+    <title>jam.types.base.sequences.array &#8212; Tessera 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../../../../_static/basic.css?v=686e5160" />
     <link rel="stylesheet" type="text/css" href="../../../../../_static/alabaster.css?v=27fed22d" />
-    <script src="../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../../../../genindex.html" />
@@ -41,7 +41,7 @@
 <span class="n">T</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">Codable</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Array">
-<a class="viewcode-back" href="../../../../../jam.types.base.sequences.array.html#jam.types.Array">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Array">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Array</span><span class="p">(</span><span class="n">BaseSequence</span><span class="p">,</span> <span class="n">Generic</span><span class="p">[</span><span class="n">T</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Fixed-length array is an extension of the BaseSequence, to only allow fixed length arrays.</span>
@@ -54,6 +54,8 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="n">_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<div class="viewcode-block" id="Array.__init__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Array.__init__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span> <span class="n">codec</span><span class="p">:</span> <span class="n">Codec</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize array.</span>
@@ -70,8 +72,11 @@
         <span class="k">if</span> <span class="n">codec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">codec</span> <span class="o">=</span> <span class="n">ArrayCodec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="p">)</span>
         
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">initial</span><span class="p">,</span> <span class="n">codec</span><span class="o">=</span><span class="n">codec</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">initial</span><span class="p">,</span> <span class="n">codec</span><span class="o">=</span><span class="n">codec</span><span class="p">)</span></div>
 
+
+<div class="viewcode-block" id="Array.__setitem__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Array.__setitem__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">slice</span><span class="p">],</span> <span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">T</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Set item at index or slice.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">slice</span><span class="p">):</span>
@@ -97,40 +102,41 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_length</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Array: Index </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> out of range&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_validate_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span></div>
+
 
 <div class="viewcode-block" id="Array.append">
-<a class="viewcode-back" href="../../../../../jam.types.base.sequences.array.html#jam.types.Array.append">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Array.append">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot append to fixed-length array&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Array.pop">
-<a class="viewcode-back" href="../../../../../jam.types.base.sequences.array.html#jam.types.Array.pop">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Array.pop">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot pop from fixed-length array&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Array.insert">
-<a class="viewcode-back" href="../../../../../jam.types.base.sequences.array.html#jam.types.Array.insert">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Array.insert">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">insert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot insert into fixed-length array&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Array.remove">
-<a class="viewcode-back" href="../../../../../jam.types.base.sequences.array.html#jam.types.Array.remove">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Array.remove">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot remove from fixed-length array&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Array.clear">
-<a class="viewcode-back" href="../../../../../jam.types.base.sequences.array.html#jam.types.Array.clear">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Array.clear">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot clear fixed-length array&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Array.extend">
-<a class="viewcode-back" href="../../../../../jam.types.base.sequences.array.html#jam.types.Array.extend">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Array.extend">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">T</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot extend fixed-length array&quot;</span><span class="p">)</span></div>
 </div>
@@ -139,7 +145,7 @@
 
 
 <div class="viewcode-block" id="decodable_array">
-<a class="viewcode-back" href="../../../../../jam.types.base.sequences.array.html#jam.types.decodable_array">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.decodable_array">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">decodable_array</span><span class="p">(</span><span class="n">length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">element_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Type</span><span class="p">[</span><span class="n">Any</span><span class="p">]],</span> <span class="n">Type</span><span class="p">[</span><span class="n">Any</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Decorator that creates a fixed-length array type with a specific element type.</span>
@@ -193,7 +199,7 @@
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../../jam.html">jam package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/index.html">jam package</a></li>
 </ul>
 
 <div class="relations">

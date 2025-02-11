@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>jam.types.base.sequences.vector &#8212; Tessera  documentation</title>
+    <title>jam.types.base.sequences.vector &#8212; Tessera 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../../../../_static/basic.css?v=686e5160" />
     <link rel="stylesheet" type="text/css" href="../../../../../_static/alabaster.css?v=27fed22d" />
-    <script src="../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../../../../../genindex.html" />
@@ -41,7 +41,7 @@
 <span class="n">T</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">Codable</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Vector">
-<a class="viewcode-back" href="../../../../../jam.types.base.sequences.vector.html#jam.types.Vector">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Vector">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Vector</span><span class="p">(</span><span class="n">BaseSequence</span><span class="p">[</span><span class="n">T</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Dynamic array implementation that supports codec operations.</span>
@@ -50,14 +50,17 @@
 <span class="sd">    operations are supported. All elements must be instances of the same Codable type.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
+<div class="viewcode-block" id="Vector.__init__">
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.Vector.__init__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span> <span class="n">codec</span><span class="p">:</span> <span class="n">Codec</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">codec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">codec</span> <span class="o">=</span> <span class="n">VectorCodec</span><span class="p">()</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">initial</span><span class="p">,</span> <span class="n">codec</span><span class="o">=</span><span class="n">codec</span><span class="p">)</span></div>
+</div>
 
 
 <div class="viewcode-block" id="decodable_vector">
-<a class="viewcode-back" href="../../../../../jam.types.base.sequences.vector.html#jam.types.decodable_vector">[docs]</a>
+<a class="viewcode-back" href="../../../../../modules/jam/types/index.html#jam.types.base.decodable_vector">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">decodable_vector</span><span class="p">(</span><span class="n">element_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">max_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="mi">63</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Type</span><span class="p">[</span><span class="s1">&#39;Vector[T]&#39;</span><span class="p">]],</span> <span class="n">Type</span><span class="p">[</span><span class="s1">&#39;Vector[T]&#39;</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Decorator to make a class decodable as a vector.&quot;&quot;&quot;</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">decorator</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="s1">&#39;Vector[T]&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="s1">&#39;Vector[T]&#39;</span><span class="p">]:</span>
@@ -104,7 +107,7 @@
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../../jam.html">jam package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/index.html">jam package</a></li>
 </ul>
 
 <div class="relations">

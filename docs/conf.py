@@ -1,47 +1,60 @@
-import sys, os
-sys.path.insert(0, os.path.abspath('../'))
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
 
 project = 'Tessera'
 copyright = '2025, Chainscore Labs'
 author = 'Chainscore Labs'
 
-# -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+# The full version, including alpha/beta/rc tags
+release = '0.1.0'
 
+# Add any Sphinx extension module names here
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-    'sphinx.ext.todo',
+    'sphinx.ext.intersphinx',
 ]
 
+# Add any paths that contain templates here
 templates_path = ['_templates']
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-language = 'en'
-
-autodoc_default_options = {
-    "members": True,
-    "undoc-members": True,  # Include undocumented items
-    "inherited-members": True,  # Show inherited methods
-    "private-members": True,   # Include _private methods
-}
-
-autodoc_typehints = "description"
-
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
+# The theme to use for HTML and HTML Help pages
 html_theme = 'alabaster'
+
+# Add any paths that contain custom static files
 html_static_path = ['_static']
 
-# -- Options for todo extension ----------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/extensions/todo.html#configuration
+# Napoleon settings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True
+napoleon_include_private_with_doc = True
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = True
+napoleon_use_admonition_for_notes = True
+napoleon_use_admonition_for_references = True
+napoleon_use_ivar = True
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_type_aliases = None
 
-todo_include_todos = True
+# AutoDoc settings
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': True,
+    'exclude-members': '__weakref__'
+}
+
+# Intersphinx settings
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+}

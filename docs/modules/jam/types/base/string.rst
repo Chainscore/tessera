@@ -1,0 +1,8 @@
+jam.types.base.string module
+============================
+
+.. automodule:: jam.types.base.string
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__

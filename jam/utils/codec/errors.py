@@ -1,18 +1,14 @@
-"""
-Codec errors.
-
-All sorts of errors that can occur during encoding/decoding
-"""
+"""Error types for codec operations."""
 
 from dataclasses import dataclass
 
 class CodecError(Exception):
-    """Base class for codec-related exceptions."""
+    """Base codec exception."""
     pass
 
 @dataclass
 class BufferError(CodecError):
-    """Exception raised for buffer-related errors."""
+    """Buffer operation error with expected vs actual size."""
     expected: int
     actual: int
     message: str = "Buffer error"

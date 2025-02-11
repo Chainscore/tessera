@@ -6,7 +6,7 @@ JAM protocol specification.
 """
 
 import pytest
-from jam.utils.codec.primitives.integers import (
+from jam.utils.codec.errors import (
     EncodeError, DecodeError
 )
 
