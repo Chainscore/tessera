@@ -19,6 +19,9 @@ jobs:
               with:
                   python-version: '3.11'
 
+            - name: Install Sphinx
+              run: apt-get install python3-sphinx
+
             - name: Install Poetry
               run: pip install poetry
 
