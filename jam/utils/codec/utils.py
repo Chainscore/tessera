@@ -1,7 +1,7 @@
 
 # Common utility functions used by codec implementations
 from typing import Union
-from jam.utils.codec.base import DecodeError, EncodeError
+from jam.utils.codec.errors import DecodeError, EncodeError
 
 
 def check_buffer_size(buffer: Union[bytes, bytearray, memoryview], expected: int, offset: int = 0) -> None:

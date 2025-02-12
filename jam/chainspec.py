@@ -23,6 +23,7 @@ class JamConfig:
     num_cores: int
     slot_duration: int
     epoch_duration: int
+    ticket_submission_end: int
     contest_duration: int
     tickets_per_validator: int
     max_tickets_per_extrinsic: int
@@ -37,6 +38,7 @@ class JamConfig:
             num_cores=2,
             slot_duration=6,
             epoch_duration=12,
+            ticket_submission_end=10,
             contest_duration=10,
             tickets_per_validator=3,
             max_tickets_per_extrinsic=3,
@@ -52,6 +54,7 @@ class JamConfig:
             num_cores=8,
             slot_duration=6,
             epoch_duration=36,
+            ticket_submission_end=30,
             contest_duration=30,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
@@ -67,6 +70,7 @@ class JamConfig:
             num_cores=16,
             slot_duration=6,
             epoch_duration=60,
+            ticket_submission_end=50,
             contest_duration=50,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
@@ -82,6 +86,7 @@ class JamConfig:
             num_cores=32,
             slot_duration=6,
             epoch_duration=120,
+            ticket_submission_end=100,
             contest_duration=100,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
@@ -97,6 +102,7 @@ class JamConfig:
             num_cores=64,
             slot_duration=6,
             epoch_duration=240,
+            ticket_submission_end=200,
             contest_duration=200,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
@@ -112,6 +118,7 @@ class JamConfig:
             num_cores=128,
             slot_duration=6,
             epoch_duration=300,
+            ticket_submission_end=250,
             contest_duration=250,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
@@ -127,6 +134,7 @@ class JamConfig:
             num_cores=192,
             slot_duration=6,
             epoch_duration=600,
+            ticket_submission_end=500,
             contest_duration=500,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
@@ -142,6 +150,7 @@ class JamConfig:
             num_cores=341,
             slot_duration=6,
             epoch_duration=600,
+            ticket_submission_end=500,
             contest_duration=500,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,

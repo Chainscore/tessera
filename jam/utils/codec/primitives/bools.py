@@ -6,9 +6,9 @@ Booleans are encoded as a single byte with 0 for False and 1 for True.
 """
 
 from typing import Tuple, Union
-from ..base import Codec, EncodeError, DecodeError
+from ..errors import EncodeError, DecodeError
+from ..codec import Codec
 from ..utils import check_buffer_size, ensure_size
-
 
 class BooleanCodec(Codec[bool]):
     """

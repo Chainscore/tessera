@@ -3,7 +3,9 @@ Unit tests for boolean codec implementation.
 """
 
 import pytest
-from jam.utils.codec.primitives.bools import BooleanCodec, EncodeError, DecodeError, boolean_codec
+from jam.utils.codec.primitives.bools import BooleanCodec, EncodeError, DecodeError
+
+boolean_codec = BooleanCodec()
 
 def test_encode_size():
     """Test that encode_size always returns 1."""

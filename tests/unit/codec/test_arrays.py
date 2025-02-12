@@ -3,10 +3,10 @@ Unit tests for array codec implementation.
 """
 
 import pytest
-from typing import List, Optional, Sequence, Union
 from jam.types.base import Array
+from jam.types.base.sequences.array import decodable_array
 from jam.utils.codec.composite.arrays import ArrayCodec
-from jam.utils.codec.base import Codable, EncodeError, DecodeError
+from jam.utils.codec.errors import EncodeError, DecodeError
 from jam.types.base.boolean import Boolean
 from jam.types.base.string import String
 from jam.types.base.integers import U8
@@ -93,26 +93,13 @@ class TestArrayCodec:
 
     def test_nested_arrays(self):
         """Test encoding/decoding of nested arrays."""
-        class FixedIntArray3(Array[int], Codable):
-            """Fixed-size array of 3 integers."""
-            def __init__(self, initial: Optional[Sequence[int]] = None):
-                super().__init__(3, initial)
-            
-            @staticmethod
-            def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
-                value, size = ArrayCodec.decode_from(3, U8, buffer, offset)
-                return FixedIntArray3(value), size # type: ignore
-            
+        @decodable_array(3, U8)
+        class FixedIntArray3(Array[U8]):
+            pass
 
+        @decodable_array(2, FixedIntArray3)
         class FixedIntArray2(Array[FixedIntArray3]):
-            """Fixed-size array of 2 integers."""
-            def __init__(self, initial: Optional[Sequence[FixedIntArray3]] = None):
-                super().__init__(2, initial)
-            
-            @staticmethod
-            def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0):
-                value, size = ArrayCodec.decode_from(2, FixedIntArray3, buffer, offset)
-                return FixedIntArray2(value), size # type: ignore
+            pass
 
         inner_array_1 = FixedIntArray3([U8(1), U8(2), U8(3)])
         inner_array_2 = FixedIntArray3([U8(4), U8(5), U8(6)])

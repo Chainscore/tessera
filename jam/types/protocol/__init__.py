@@ -29,6 +29,8 @@ from jam.types.protocol.crypto import (
     BeefyRoot
 )
 
+from jam.types.protocol.merkle import MMR
+
 __all__ = [
     # Core types
     'TimeSlot', 'ValidatorIndex', 'CoreIndex', 'Gas', 'ServiceId',
@@ -51,5 +53,5 @@ __all__ = [
 
     # Crypto types
     'BandersnatchPublic', 'BandersnatchVrfSignature', 'HeaderHash',
-    'StateRoot', 'OpaqueHash', 'Entropy', 'BeefyRoot'
+    'StateRoot', 'OpaqueHash', 'Entropy', 'BeefyRoot', 'MMR'
 ] 

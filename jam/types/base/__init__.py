@@ -1,30 +1,45 @@
-"""Base types for the JAM protocol."""
-
-from jam.types.base.integers import U8, U16, U32, U64
-from jam.types.base.byte_array import (
-    ByteArray32, ByteArray64, ByteArray96,
-    ByteArray144, ByteArray784
+from jam.types.base.integers import U8, U16, U32, U64, U128, U256, U512, Int, decodable_int
+from jam.types.base.string import String
+from jam.types.base.null import Null, Nullable
+from jam.types.base.dictionary import Dictionary, decodable_dictionary
+from jam.types.base.boolean import Boolean
+from jam.types.base.bit import Bit
+from jam.types.base.choices import Choice, Option, decodable_choice, decodable_option
+from jam.types.base.sequences.array import Array, decodable_array
+from jam.types.base.sequences.vector import Vector, decodable_vector
+from jam.types.base.sequences.bytes.bit_array import BitArray, decodable_bit_array, Byte
+from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.sequences.bytes.byte_array import (
+    ByteArray8, ByteArray16, ByteArray32, ByteArray64, ByteArray96,
+    ByteArray128, ByteArray144, ByteArray256, ByteArray784
 )
-from jam.types.base.array import Array
-from jam.types.base.bytes import Bytes
-from jam.types.base.vector import Vector
-from jam.types.base.choice import Choice
-from jam.types.base.null import Null
 
 __all__ = [
     # Integer types
-    'U8', 'U16', 'U32', 'U64',
-    
-    # Fixed-size byte array types
-    'ByteArray32', 'ByteArray64', 'ByteArray96',
-    'ByteArray144', 'ByteArray784',
-    
-    # Array types
-    'Array', 'Vector',
-    
-    # Variable-length byte sequence type
-    'Bytes',
+    'Int', 'U8', 'U16', 'U32', 'U64', 'U128', 'U256', 'U512',
     
     # Choice and Null types
-    'Choice', 'Null'
+    'Choice', 'Option', 'Null', 'Nullable',
+    
+    # Dictionary type
+    'Dictionary',
+    
+    # Boolean and Bit types
+    'Boolean', 'Bit',
+    
+    # String type
+    'String',
+
+    # Sequence types
+    'Array', 'Vector',
+
+    # Byte types
+    'ByteArray8', 'ByteArray16', 'ByteArray32', 'ByteArray64', 'ByteArray96',
+    'ByteArray128', 'ByteArray144', 'ByteArray256', 'ByteArray784',
+    'BitArray', 'Byte', 'Bytes',
+    
+    # Decodable types
+    'decodable_int', 'decodable_array', 'decodable_bit_array',
+    'decodable_vector', 'decodable_dictionary', 'decodable_choice',
+    'decodable_option'
 ]

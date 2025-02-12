@@ -1,28 +1,25 @@
+"""Type-safe serialization framework 📦
+
+Core:
+* Codec[T]: Generic codec interface
+* Codable: Base class for encodable types
+* primitives: Basic type codecs
+* composite: Container type codecs
+* decorators: Automatic codec generation
+* errors: Error handling
 """
-Codecs for JAM.
 
-This module provides codec implementations encoding and decoding of various data types.
-It includes both primitive and composite types, with support for custom codec
-registration and automatic type inference.
-"""
+from .codec import Codec
+from .codable import Codable
+from .errors import CodecError, BufferError, EncodeError, DecodeError
 
-# Re-export main types and base functionality
-from .base import (
-    Codec, 
-    EncodeError, DecodeError, 
-)
+__all__ = [
+    'Codec',
+    'Codable',
+    'CodecError',
+    'BufferError',
+    'EncodeError',
+    'DecodeError'
+]
 
-# Re-export primitive codecs
-from .primitives.integers import (
-    GeneralCodec,
-    IntegerCodec
-)
-from .primitives.bools import BooleanCodec, boolean_codec
-from .primitives.strings import StringCodec, string_codec
-
-# Re-export composite type constructors
-from .composite.arrays import ArrayCodec
-from .composite.choices import ChoiceCodec
-from .composite.vectors import VectorCodec
-from .composite.dictionaries import DictionaryCodec
-from .composite.bit_sequences import BitSequenceCodec
+__version__ = '1.0.0'

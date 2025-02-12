@@ -6,7 +6,7 @@ JAM protocol specification.
 """
 
 import pytest
-from jam.utils.codec.primitives.integers import (
+from jam.utils.codec.errors import (
     EncodeError, DecodeError
 )
 
@@ -143,9 +143,7 @@ class TestGeneralNumberEncoding:
         ]
 
         for value in test_values:
-            if value > 18446744073709551615:  # u64::MAX
-                continue
-
+            print(f"Encoding value: {value}")
             encoded = Int(value).encode()
             decoded, size = Int.decode_from(encoded)
             assert decoded == value

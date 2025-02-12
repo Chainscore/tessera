@@ -1,0 +1,481 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Codec &mdash; Tessera 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="jam.utils.codec.codec" href="codec.html" />
+    <link rel="prev" title="Utilities" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            Tessera
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">Tessera - JAM Node</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../api/index.html">jam.api package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../config/index.html">jam.config package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../consensus/index.html">Consensus</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../core/index.html">jam.core package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../crypto/index.html">jam.crypto package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../execution/index.html">jam.execution package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../network/index.html">jam.network package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../playground/index.html">jam.playground package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pvm/index.html">jam.pvm package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../services/index.html">jam.services package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../state/index.html">jam.state package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../storage/index.html">jam.storage package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../types/index.html">Types</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">Utilities</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="../index.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Tessera</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Tessera - JAM Node</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Utilities</a></li>
+      <li class="breadcrumb-item active">Codec</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/modules/jam/utils/codec/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="codec">
+<h1>Codec<a class="headerlink" href="#codec" title="Link to this heading"></a></h1>
+<p>Type-safe serialization framework implementing the JAM protocol specification.</p>
+<section id="core-components">
+<h2>Core Components<a class="headerlink" href="#core-components" title="Link to this heading"></a></h2>
+<section id="codec-t">
+<h3>Codec[T]<a class="headerlink" href="#codec-t" title="Link to this heading"></a></h3>
+<p>Generic codec interface for type-safe encoding/decoding:</p>
+<ul class="simple">
+<li><p>encode(value: T) -&gt; bytes</p></li>
+<li><p>decode(buffer: bytes) -&gt; T</p></li>
+<li><p>encode_into(value: T, buffer: bytearray, offset: int) -&gt; int</p></li>
+<li><p>decode_from(buffer: bytes, offset: int) -&gt; Tuple[T, int]</p></li>
+</ul>
+</section>
+<section id="codable">
+<h3>Codable<a class="headerlink" href="#codable" title="Link to this heading"></a></h3>
+<p>Base class for encodable types:</p>
+<ul class="simple">
+<li><p>Direct codec usage</p></li>
+<li><p>Sequence-based encoding</p></li>
+<li><p>Custom encoding logic</p></li>
+<li><p>JSON serialization support</p></li>
+</ul>
+</section>
+</section>
+<section id="encoding-format">
+<h2>Encoding Format<a class="headerlink" href="#encoding-format" title="Link to this heading"></a></h2>
+<section id="length-prefixes">
+<h3>Length Prefixes<a class="headerlink" href="#length-prefixes" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>0x00-0xFC: Direct value (1 byte)</p></li>
+<li><p>0xFF: u16 value (3 bytes)</p></li>
+<li><p>0xFE: u24 value (4 bytes)</p></li>
+<li><p>0xFD: u32 value (5 bytes)</p></li>
+</ul>
+</section>
+<section id="type-encoding">
+<h3>Type Encoding<a class="headerlink" href="#type-encoding" title="Link to this heading"></a></h3>
+<p>Primitive Types:</p>
+<ul class="simple">
+<li><p>bool: Single byte (0=false, 1=true)</p></li>
+<li><p>trivial int: Fixed width unsigned integers</p></li>
+<li><p>general int: Variable length unsigned integers</p></li>
+<li><p>str: Length-prefixed UTF-8</p></li>
+<li><p>bytes: Length-prefixed raw bytes</p></li>
+<li><p>null: Zero bytes</p></li>
+</ul>
+<p>Container Types:</p>
+<ul class="simple">
+<li><p>Array[T,N]: Fixed-length [T; N]</p></li>
+<li><p>Vector[T]: Length-prefixed [len][T…]</p></li>
+<li><p>Dict[K,V]: Length-prefixed sorted pairs</p></li>
+<li><p>Option[T]: Tagged union (0=None, 1=Some(T))</p></li>
+<li><p>BitSequence: Packed bits</p></li>
+</ul>
+</section>
+</section>
+<section id="error-handling">
+<h2>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading"></a></h2>
+<section id="exception-types">
+<h3>Exception Types<a class="headerlink" href="#exception-types" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>CodecError: Base exception class</p></li>
+<li><p>BufferError: Buffer operation errors</p></li>
+<li><p>EncodeError: Encoding failures</p></li>
+<li><p>DecodeError: Decoding failures</p></li>
+</ul>
+</section>
+<section id="common-error-cases">
+<h3>Common Error Cases<a class="headerlink" href="#common-error-cases" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Buffer underflow/overflow</p></li>
+<li><p>Invalid length prefixes</p></li>
+<li><p>Type conversion errors</p></li>
+<li><p>Sequence validation errors</p></li>
+</ol>
+</section>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
+<section id="basic-usage">
+<h3>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.primitives</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegerCodec</span><span class="p">,</span> <span class="n">StringCodec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.composite</span><span class="w"> </span><span class="kn">import</span> <span class="n">VectorCodec</span>
+
+<span class="c1"># Primitive types</span>
+<span class="n">u32_codec</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">encoded_int</span> <span class="o">=</span> <span class="n">u32_codec</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>  <span class="c1"># -&gt; [2A 00 00 00]</span>
+<span class="n">decoded_int</span> <span class="o">=</span> <span class="n">u32_codec</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded_int</span><span class="p">)</span>  <span class="c1"># -&gt; 42</span>
+
+<span class="n">string_codec</span> <span class="o">=</span> <span class="n">StringCodec</span><span class="p">()</span>
+<span class="n">encoded_str</span> <span class="o">=</span> <span class="n">string_codec</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;hello&quot;</span><span class="p">)</span>  <span class="c1"># -&gt; [05 68 65 6C 6C 6F]</span>
+<span class="n">decoded_str</span> <span class="o">=</span> <span class="n">string_codec</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded_str</span><span class="p">)</span>  <span class="c1"># -&gt; &quot;hello&quot;</span>
+
+<span class="c1"># Container types</span>
+<span class="n">vec_codec</span> <span class="o">=</span> <span class="n">VectorCodec</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">u32_codec</span><span class="p">)</span>
+<span class="n">encoded_vec</span> <span class="o">=</span> <span class="n">vec_codec</span><span class="o">.</span><span class="n">encode</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>  <span class="c1"># -&gt; [02 01 00 00 00 02 00 00 00]</span>
+<span class="n">decoded_vec</span> <span class="o">=</span> <span class="n">vec_codec</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded_vec</span><span class="p">)</span>  <span class="c1"># -&gt; [1, 2]</span>
+</pre></div>
+</div>
+</section>
+<section id="custom-types">
+<h3>Custom Types<a class="headerlink" href="#custom-types" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">decodable_dataclass</span>
+
+<span class="nd">@decodable_dataclass</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Point</span><span class="p">:</span>
+    <span class="n">x</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">int</span>
+
+<span class="n">point</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">encoded</span> <span class="o">=</span> <span class="n">point</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>  <span class="c1"># -&gt; [01 00 00 00 02 00 00 00]</span>
+<span class="n">decoded</span> <span class="o">=</span> <span class="n">Point</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>  <span class="c1"># -&gt; Point(x=1, y=2)</span>
+</pre></div>
+</div>
+</section>
+<section id="id1">
+<h3>Error Handling<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="n">u32_codec</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="nb">bytes</span><span class="p">([</span><span class="mh">0x01</span><span class="p">]))</span>  <span class="c1"># Too short</span>
+<span class="k">except</span> <span class="ne">BufferError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">expected</span><span class="si">}</span><span class="s2"> bytes, got </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">actual</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">string_codec</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="nb">bytes</span><span class="p">([</span><span class="mh">0xFF</span><span class="p">,</span> <span class="mh">0x01</span><span class="p">]))</span>  <span class="c1"># Invalid UTF-8</span>
+<span class="k">except</span> <span class="n">DecodeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to decode string: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="codec.html">jam.utils.codec.codec</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="codec.html#interface">Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codec.html#methods">Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codec.html#implementation">Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codec.html#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codec.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="codable.html">jam.utils.codec.codable</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="codable.html#interface">Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codable.html#usage-patterns">Usage Patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codable.html#implementation-details">Implementation Details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codable.html#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codable.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="errors.html">jam.utils.codec.errors</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="errors.html#exception-types">Exception Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="errors.html#common-error-cases">Common Error Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="errors.html#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="errors.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="primitives/index.html">jam.utils.codec.primitives package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="primitives/index.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives/index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="composite/index.html">jam.utils.codec.composite package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="composite/index.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="composite/index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="decorators/index.html">jam.utils.codec.decorators package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="decorators/index.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decorators/index.html#module-contents">Module Contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<p id="module-jam.utils.codec">Type-safe serialization framework 📦</p>
+<p>Core:
+* Codec[T]: Generic codec interface
+* Codable: Base class for encodable types
+* primitives: Basic type codecs
+* composite: Container type codecs
+* decorators: Automatic codec generation
+* errors: Error handling</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.utils.codec.Codec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.</span></span><span class="sig-name descname"><span class="pre">Codec</span></span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codec.html#Codec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codec" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code>]</p>
+<p>Abstract base class defining the interface for encoding and decoding data.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.Codec.encode_size">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codec.html#Codec.encode_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codec.encode_size" title="Link to this definition"></a></dt>
+<dd><p>Calculate the number of bytes needed to encode the value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.Codec.encode_into">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codec.html#Codec.encode_into"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codec.encode_into" title="Link to this definition"></a></dt>
+<dd><p>Encode the value into the provided buffer at the specified offset.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.Codec.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codec.html#Codec.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codec.encode" title="Link to this definition"></a></dt>
+<dd><p>Encode the value into a new bytes object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.Codec.decode_from">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codec.html#Codec.decode_from"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codec.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode a value from the provided buffer starting at the specified offset.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.utils.codec.Codable">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.</span></span><span class="sig-name descname"><span class="pre">Codable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">codec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><span class="pre">Codec</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codable.html#Codable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codable" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code>]</p>
+<p>Base class for all codable types.</p>
+<p>Can be used in three ways:
+1. With a codec: Initialize with codec=some_codec
+2. With sequence: Initialize with enc_sequence=lambda: [field1, field2, …]
+3. With JSON: Use to_json() and from_json() for JSON serialization</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.Codable.value">
+<span class="sig-name descname"><span class="pre">value</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.utils.codec.Codable.value" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.Codable.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">codec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><span class="pre">Codec</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codable.html#Codable.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codable.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize the Codable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>codec</strong> – Optional codec to use for encoding/decoding</p></li>
+<li><p><strong>enc_sequence</strong> – Optional function that returns sequence of fields to encode</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.Codable.codec">
+<span class="sig-name descname"><span class="pre">codec</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><span class="pre">Codec</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#jam.utils.codec.Codable.codec" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.Codable.encode_size">
+<span class="sig-name descname"><span class="pre">encode_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codable.html#Codable.encode_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codable.encode_size" title="Link to this definition"></a></dt>
+<dd><p>Calculate number of bytes needed to encode.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.Codable.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codable.html#Codable.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codable.encode" title="Link to this definition"></a></dt>
+<dd><p>Encode into bytes.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.Codable.encode_into">
+<span class="sig-name descname"><span class="pre">encode_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codable.html#Codable.encode_into"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codable.encode_into" title="Link to this definition"></a></dt>
+<dd><p>Encode into provided buffer.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.Codable.decode_from">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../../_modules/jam/utils/codec/codable.html#Codable.decode_from"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.Codable.decode_from" title="Link to this definition"></a></dt>
+<dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Buffer to decode from</p></li>
+<li><p><strong>offset</strong> – Starting position in buffer</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>The decoded value</p></li>
+<li><p>Number of bytes read</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple containing</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="jam.utils.codec.CodecError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.</span></span><span class="sig-name descname"><span class="pre">CodecError</span></span><a class="reference internal" href="../../../../_modules/jam/utils/codec/errors.html#CodecError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.CodecError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>Base codec exception.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="jam.utils.codec.BufferError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.</span></span><span class="sig-name descname"><span class="pre">BufferError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">actual</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Buffer</span> <span class="pre">error'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/utils/codec/errors.html#BufferError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.BufferError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="errors.html#jam.utils.codec.errors.CodecError" title="jam.utils.codec.errors.CodecError"><code class="xref py py-class docutils literal notranslate"><span class="pre">CodecError</span></code></a></p>
+<p>Buffer operation error with expected vs actual size.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.BufferError.expected">
+<span class="sig-name descname"><span class="pre">expected</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#jam.utils.codec.BufferError.expected" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.BufferError.actual">
+<span class="sig-name descname"><span class="pre">actual</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#jam.utils.codec.BufferError.actual" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.utils.codec.BufferError.message">
+<span class="sig-name descname"><span class="pre">message</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Buffer</span> <span class="pre">error'</span></em><a class="headerlink" href="#jam.utils.codec.BufferError.message" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.utils.codec.BufferError.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">actual</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Buffer</span> <span class="pre">error'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#jam.utils.codec.BufferError.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="jam.utils.codec.EncodeError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.</span></span><span class="sig-name descname"><span class="pre">EncodeError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">actual</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Buffer</span> <span class="pre">error'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/utils/codec/errors.html#EncodeError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.EncodeError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="errors.html#jam.utils.codec.errors.BufferError" title="jam.utils.codec.errors.BufferError"><code class="xref py py-class docutils literal notranslate"><span class="pre">BufferError</span></code></a></p>
+<p>Exception raised when encoding fails.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="jam.utils.codec.DecodeError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.utils.codec.</span></span><span class="sig-name descname"><span class="pre">DecodeError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">actual</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Buffer</span> <span class="pre">error'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/jam/utils/codec/errors.html#DecodeError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.utils.codec.DecodeError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="errors.html#jam.utils.codec.errors.BufferError" title="jam.utils.codec.errors.BufferError"><code class="xref py py-class docutils literal notranslate"><span class="pre">BufferError</span></code></a></p>
+<p>Exception raised when decoding fails.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="Utilities" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="codec.html" class="btn btn-neutral float-right" title="jam.utils.codec.codec" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Chainscore Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

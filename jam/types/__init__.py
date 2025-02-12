@@ -2,9 +2,26 @@
 
 # Base types
 from jam.types.base import (
-    U8, U16, U32, U64,
-    ByteArray32, ByteArray64, ByteArray96, ByteArray144, ByteArray784,
-    Array, Bytes
+    # Integer types
+    Int, U8, U16, U32, U64, U128, U256, U512,
+    # Choice and Null types
+    Choice, Option, Null, Nullable,
+    # Dictionary type
+    Dictionary,
+    # Boolean and Bit types
+    Boolean, Bit,
+    # String type
+    String,
+    # Sequence types
+    Array, Vector,
+    # Byte types
+    ByteArray8, ByteArray16, ByteArray32, ByteArray64, ByteArray96, 
+    ByteArray128, ByteArray144, ByteArray256, ByteArray784,
+    BitArray, Byte, Bytes,
+    # Decodable types
+    decodable_int, decodable_array, decodable_bit_array,
+    decodable_vector, decodable_dictionary, decodable_choice,
+    decodable_option
 )
 
 # Crypto types
@@ -28,7 +45,7 @@ from jam.types.block import (
 
 # Header types
 from jam.types.header import (
-    Header
+    Header, TicketsMark, OffendersMark
 )
 
 # Service types
@@ -64,11 +81,6 @@ from jam.types.protocol.history import (
     Mmr, BlockInfo, BlocksHistory, ReportedWorkPackage
 )
 
-# Epoch types
-from jam.types.protocol.epoch import (
-    EpochMark
-)
-
 # Validator types
 from jam.types.protocol.validators import (
     ValidatorMetadata, ValidatorData, ValidatorsData, ValidatorArray
@@ -76,9 +88,18 @@ from jam.types.protocol.validators import (
 
 __all__ = [
     # Base types
-    'U8', 'U16', 'U32', 'U64',
-    'ByteArray32', 'ByteArray64', 'ByteArray96', 'ByteArray144', 'ByteArray784',
-    'Array', 'Bytes',
+    'Int', 'U8', 'U16', 'U32', 'U64', 'U128', 'U256', 'U512',
+    'Choice', 'Option', 'Null', 'Nullable',
+    'Dictionary',
+    'Boolean', 'Bit',
+    'String',
+    'Array', 'BitSequence', 'Vector',
+    'ByteArray8', 'ByteArray16', 'ByteArray32', 'ByteArray64', 'ByteArray96',
+    'ByteArray128', 'ByteArray144', 'ByteArray256', 'ByteArray784',
+    'BitArray', 'Byte', 'Bytes',
+    'decodable_int', 'decodable_array', 'decodable_bit_array',
+    'decodable_vector', 'decodable_dictionary', 'decodable_choice',
+    'decodable_option',
 
     # Crypto types
     'BandersnatchPublic', 'BandersnatchVrfSignature', 'BandersnatchRingVrfSignature',
@@ -94,7 +115,7 @@ __all__ = [
     'Block', 'Extrinsic',
 
     # Header types
-    'Header',
+    'Header', 'EpochMark', 'TicketsMark', 'OffendersMark',
 
     # Service types
     'ServiceInfo',
@@ -116,9 +137,6 @@ __all__ = [
 
     # History types
     'Mmr', 'BlockInfo', 'BlocksHistory', 'ReportedWorkPackage',
-
-    # Epoch types
-    'EpochMark',
 
     # Validator types
     'ValidatorMetadata', 'ValidatorData', 'ValidatorsData', 'ValidatorArray',
