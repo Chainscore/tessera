@@ -60,6 +60,7 @@ from jam.utils.constants import (
 from tests.fixtures.utils import create_dummy_bytes32, create_dummy_bytes
 from jam.state.state import State
 
+
 def create_dummy_state_components() -> Dict[str, object]:
     """Create dummy instances of all state components with realistic test data"""
     components = {}
@@ -114,16 +115,10 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Delta - Service dictionary
     storage = AccountStorage(
-        {
-            create_dummy_bytes32(): Bytes(create_dummy_bytes(32))
-            for _ in range(3)
-        }
+        {create_dummy_bytes32(): Bytes(create_dummy_bytes(32)) for _ in range(3)}
     )
     lookup = PreImageLookup(
-        {
-            create_dummy_bytes32(): Bytes(create_dummy_bytes(64))
-            for _ in range(2)
-        }
+        {create_dummy_bytes32(): Bytes(create_dummy_bytes(64)) for _ in range(2)}
     )
     timestamps = LookupTimestamps(
         {
@@ -140,19 +135,16 @@ def create_dummy_state_components() -> Dict[str, object]:
         gas_limit=Gas(5000),
         min_gas=Gas(100),
     )
-    components["delta"] = Delta(
-        {
-            ServiceId(i): account
-            for i in range(3)
-        }
-    )
+    components["delta"] = Delta({ServiceId(i): account for i in range(3)})
 
     # Simple components
     components["eta"] = Eta([OpaqueHash(create_dummy_bytes32()) for _ in range(4)])
     components["iota"] = Iota(dummy_validator_data)
     components["kappa"] = Kappa(dummy_validator_data)
     components["lambda_"] = Lambda_(dummy_validator_data)
-    components["rho"] = Rho([OptionalWorkReportState(Nullable()) for _ in range(CORE_COUNT)])
+    components["rho"] = Rho(
+        [OptionalWorkReportState(Nullable()) for _ in range(CORE_COUNT)]
+    )
     components["tau"] = Tau(0)
 
     # Phi - Authorization queue
@@ -197,6 +189,7 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     return components
 
-def create_dummy_state() -> State: 
+
+def create_dummy_state() -> State:
     """Create a complete dummy state for testing"""
     return State(**create_dummy_state_components())

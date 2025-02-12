@@ -4,6 +4,7 @@ import json
 from jam.types.protocol.core import Register
 from .types import Testcase
 
+
 def get_testcases_starting_with(prefix: str):
     data_dir = "tests/unit/pvm/data"
     for i, file in enumerate(os.listdir(data_dir)):
@@ -11,6 +12,7 @@ def get_testcases_starting_with(prefix: str):
             with open(os.path.join(data_dir, file), "r") as f:
                 data = json.loads(f.read())
                 yield Testcase.from_json(data)
+
 
 def test_inst_add_32():
     # Read all json files from /data/pvm/programs

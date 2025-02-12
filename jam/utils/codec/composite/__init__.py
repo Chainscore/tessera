@@ -17,9 +17,9 @@ from .dictionaries import DictionaryCodec
 from .bit_sequences import BitSequenceCodec
 
 __all__ = [
-    'ArrayCodec',
-    'ChoiceCodec',
-    'VectorCodec', 
-    'DictionaryCodec',
-    'BitSequenceCodec',
+    "ArrayCodec",
+    "ChoiceCodec",
+    "VectorCodec",
+    "DictionaryCodec",
+    "BitSequenceCodec",
 ]

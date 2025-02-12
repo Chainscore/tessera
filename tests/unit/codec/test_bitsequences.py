@@ -8,28 +8,33 @@ from jam.types.base.bit import Bit
 from jam.utils.codec.errors import EncodeError, DecodeError
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 
+
 class TestBitSequenceCodec:
     """Test suite for bit sequence encoding/decoding."""
-    
-    @pytest.mark.parametrize("bit_length,bits", [
-        (0, []),                      # Empty sequence
-        (1, [Bit(True)]),                  # Single bit
-        (1, [Bit(False)]),                 # Single bit
-        (2, [Bit(True), Bit(False)]),          # Two bits
-        (3, [Bit(True), Bit(False), Bit(True)]),    # Three bits
-        (8, [Bit(False)] * 8),           # Full byte
-        (8, [Bit(True)] * 8),            # Full byte
-        (8, [Bit(True)] * 7 + [Bit(False)]),  # Full byte mixed
-        (9, [Bit(True)] * 9),            # More than one byte
-        (16, [Bit(False)] * 16),         # Two full bytes
-        (16, [Bit(True), Bit(False)] * 8),    # Alternating pattern
-    ])
+
+    @pytest.mark.parametrize(
+        "bit_length,bits",
+        [
+            (0, []),  # Empty sequence
+            (1, [Bit(True)]),  # Single bit
+            (1, [Bit(False)]),  # Single bit
+            (2, [Bit(True), Bit(False)]),  # Two bits
+            (3, [Bit(True), Bit(False), Bit(True)]),  # Three bits
+            (8, [Bit(False)] * 8),  # Full byte
+            (8, [Bit(True)] * 8),  # Full byte
+            (8, [Bit(True)] * 7 + [Bit(False)]),  # Full byte mixed
+            (9, [Bit(True)] * 9),  # More than one byte
+            (16, [Bit(False)] * 16),  # Two full bytes
+            (16, [Bit(True), Bit(False)] * 8),  # Alternating pattern
+        ],
+    )
     def test_codec_roundtrip(self, bit_length, bits):
         """Test encoding and decoding roundtrip for valid values."""
-        
+
         @decodable_bit_array(bit_length)
-        class NBits(BitArray): ...
-                
+        class NBits(BitArray):
+            ...
+
         bit_seq = NBits(bits)
         encoded = bit_seq.encode()
         decoded, size = NBits.decode_from(encoded)
@@ -40,12 +45,12 @@ class TestBitSequenceCodec:
     def test_length_mismatch(self):
         """Test that sequences with wrong length raise appropriate errors."""
         codec = BitSequenceCodec(8)
-        
+
         # Too few bits
         with pytest.raises(EncodeError) as exc_info:
             codec.encode([Bit(True)] * 7)
         assert "length mismatch" in str(exc_info.value)
-            
+
         # Too many bits
         with pytest.raises(EncodeError) as exc_info:
             codec.encode([Bit(True)] * 9)
@@ -54,7 +59,7 @@ class TestBitSequenceCodec:
     def test_byte_alignment(self):
         """Test that bits are correctly packed into bytes."""
         codec = BitSequenceCodec(8, "lsb")
-        
+
         # Test sequence: [1,0,1,0,1,0,1,0] should encode to 0x55
         bits = [Bit(True), Bit(False)] * 4
         encoded = codec.encode(bits)
@@ -67,16 +72,19 @@ class TestBitSequenceCodec:
         assert len(encoded) == 1
         assert encoded[0] == 0x0F
 
-    @pytest.mark.parametrize("bit_length,expected_size", [
-        (0, 0),       # Empty sequence
-        (1, 1),       # Single bit
-        (7, 1),       # 7 bits
-        (8, 1),       # Full byte
-        (9, 2),       # Just over one byte
-        (15, 2),      # 15 bits
-        (16, 2),      # Two full bytes
-        (17, 3),      # Just over two bytes
-    ])
+    @pytest.mark.parametrize(
+        "bit_length,expected_size",
+        [
+            (0, 0),  # Empty sequence
+            (1, 1),  # Single bit
+            (7, 1),  # 7 bits
+            (8, 1),  # Full byte
+            (9, 2),  # Just over one byte
+            (15, 2),  # 15 bits
+            (16, 2),  # Two full bytes
+            (17, 3),  # Just over two bytes
+        ],
+    )
     def test_encode_size(self, bit_length, expected_size):
         """Test that encode_size returns correct sizes for different lengths."""
         codec = BitSequenceCodec(bit_length)
@@ -87,11 +95,11 @@ class TestBitSequenceCodec:
         """Test buffer bounds checking."""
         codec = BitSequenceCodec(16)
         bits = [Bit(True)] * 16
-        
+
         # Test encoding into too small buffer
         with pytest.raises(EncodeError):
             codec.encode_into(bits, bytearray(1))
-        
+
         # Test decoding from too small buffer
         encoded = codec.encode(bits)
         for i in range(len(encoded)):
@@ -102,16 +110,16 @@ class TestBitSequenceCodec:
         """Test encoding and decoding with buffer offsets."""
         codec = BitSequenceCodec(8)
         bits = [Bit(True)] * 8
-        
+
         # Create buffer with padding
         buffer = bytearray([0xFF] * 3)
-        
+
         # Test encoding at offset
         written = codec.encode_into(bits, buffer, 1)
         assert written == 1
         assert buffer[0] == 0xFF  # Padding unchanged
         assert buffer[2] == 0xFF  # Padding unchanged
-        
+
         # Test decoding at offset
         decoded, size = codec.decode_from(bit_length=len(bits), buffer=buffer, offset=1)
         assert list(decoded) == bits
@@ -120,13 +128,13 @@ class TestBitSequenceCodec:
     def test_bit_ordering(self):
         """Test that bits are ordered correctly within bytes."""
         codec = BitSequenceCodec(8, "lsb")
-        
+
         # Test pattern [1,0,0,0,0,0,0,0] should encode to 0x01 (LSB first)
-        bits = [Bit(True)] + [Bit(False)] * 7 
+        bits = [Bit(True)] + [Bit(False)] * 7
         encoded = codec.encode(bits)
         assert encoded[0] == 0x01
 
         # Test pattern [0,0,0,0,0,0,0,1] should encode to 0x80 (LSB first)
         bits = [Bit(False)] * 7 + [Bit(True)]
         encoded = codec.encode(bits)
-        assert encoded[0] == 0x80 
+        assert encoded[0] == 0x80

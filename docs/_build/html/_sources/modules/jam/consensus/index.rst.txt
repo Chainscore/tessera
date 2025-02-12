@@ -1,8 +1,12 @@
-Consensus
-=====================
+Consensus Overview
+==================
+
+This section covers the various consensus mechanisms used in Tessera, including Safrole and GRANDPA among others.
+
+Work in Progress.
 
 Overview
---------
+=====================
 
 The consensus module provides the core logic for the JAN blockchain. It includes:
 

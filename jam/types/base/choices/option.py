@@ -4,10 +4,12 @@ from jam.types.base.null import Null, Nullable
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.choices import ChoiceCodec
 
+
 class Option(Choice):
     """
     An option is a choice that can be either None or a value.
     """
+
     def __init_subclass__(cls, **kwargs):
         ...
 
@@ -25,63 +27,62 @@ class Option(Choice):
         super().__set__(Option.option_to_choice(value))
 
     @classmethod
-    def from_json(cls, data: Any) -> 'Option':
+    def from_json(cls, data: Any) -> "Option":
         """Create from JSON representation."""
         if data is None:
             return cls(Nullable())
-        
+
         value = cls.__choices__["some"].from_json(data)
         print("option from json", value)
         return cls(value)
-    
+
     def to_json(self) -> Any:
         """Convert to JSON representation."""
         if isinstance(self.value, Nullable) or self.value is None:
             return None
         return list(self.value.values())[0].to_json()
-    
+
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Option):
             return self.value == other.value
         return list(self.value.values())[0] == other
-    
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({list(self.value.values())[0]})"
 
+
 def decodable_option(optional_type: Type[Codable]) -> Type[Option]:
     """Decodable choice"""
+
     def decorator(cls: Type[Option]) -> Type[Option]:
-        cls.__choices__ = {
-            "none": Nullable,
-            "some": optional_type
-        }
+        cls.__choices__ = {"none": Nullable, "some": optional_type}
 
         @staticmethod
         def decode_from(
-            buffer: Union[bytes, bytearray, memoryview], 
-            offset: int = 0
+            buffer: Union[bytes, bytearray, memoryview], offset: int = 0
         ) -> Tuple[Option, int]:
             """
             Decode option from buffer.
-            
+
             Args:
                 optional_type: Type of the optional value
                 buffer: Source buffer
                 offset: Starting offset
-                
+
             Returns:
                 Tuple of (decoded value, bytes read)
-                
+
             Raises:
                 DecodeError: If buffer is invalid or too short
                 ValueError: If types list is empty
             """
             if len(cls.__choices__) == 0:
                 raise ValueError("Choice must have at least one type")
-            
+
             value, size = ChoiceCodec.decode_from(cls.__choices__, buffer, offset)
             return cls(list(value.values())[0]), size
-        
+
         cls.decode_from = decode_from
         return cls
+
     return decorator

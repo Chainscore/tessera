@@ -20,7 +20,7 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
     <link rel="next" title="Base Types" href="base/index.html" />
-    <link rel="prev" title="jam.storage.db module" href="../storage/db.html" /> 
+    <link rel="prev" title="Networking" href="../network/index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -42,35 +42,613 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Testing Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jam_node.html">JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../state.html">State</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Consensus</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/index.html">Consensus Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/index.html#overview">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/safrole/index.html">Safrole [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/grandpa/index.html">GRANDPA Consensus</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../authorization/index.html">Authorization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../crypto/index.html">Crypto Primitives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../execution/index.html">Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pvm/index.html">PVM [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../state/index.html">jam.state package</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Utilities</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../index.html">jam package</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="../index.html#subpackages">Subpackages</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="../api/index.html">jam.api package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../config/index.html">jam.config package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../consensus/index.html">jam.consensus package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../core/index.html">jam.core package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../crypto/index.html">jam.crypto package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../execution/index.html">jam.execution package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../network/index.html">jam.network package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../playground/index.html">jam.playground package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../pvm/index.html">jam.pvm package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../services/index.html">jam.services package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../state/index.html">jam.state package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../storage/index.html">jam.storage package</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">Types</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#module-organization">Module Organization</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#module-contents">Module Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../storage/index.html">Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../network/index.html">Networking</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-organization">Module Organization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="base/index.html">Base Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="protocol/index.html">Protocol Helper Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="extrinsics/index.html">Extrinsics Types - JAM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="work/index.html">Work Types - JAM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="block.html">Block Type - JAM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="header.html">Header Type - JAM</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../utils/index.html">jam.utils package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Int"><code class="docutils literal notranslate"><span class="pre">Int</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Int.__init__"><code class="docutils literal notranslate"><span class="pre">Int.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Int._validate"><code class="docutils literal notranslate"><span class="pre">Int._validate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Int.decode_from"><code class="docutils literal notranslate"><span class="pre">Int.decode_from()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.U8"><code class="docutils literal notranslate"><span class="pre">U8</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U8.byte_size"><code class="docutils literal notranslate"><span class="pre">U8.byte_size</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U8.decode_from"><code class="docutils literal notranslate"><span class="pre">U8.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U8.has_sign"><code class="docutils literal notranslate"><span class="pre">U8.has_sign</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.U16"><code class="docutils literal notranslate"><span class="pre">U16</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U16.byte_size"><code class="docutils literal notranslate"><span class="pre">U16.byte_size</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U16.decode_from"><code class="docutils literal notranslate"><span class="pre">U16.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U16.has_sign"><code class="docutils literal notranslate"><span class="pre">U16.has_sign</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.U32"><code class="docutils literal notranslate"><span class="pre">U32</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U32.byte_size"><code class="docutils literal notranslate"><span class="pre">U32.byte_size</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U32.decode_from"><code class="docutils literal notranslate"><span class="pre">U32.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U32.has_sign"><code class="docutils literal notranslate"><span class="pre">U32.has_sign</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.U64"><code class="docutils literal notranslate"><span class="pre">U64</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U64.byte_size"><code class="docutils literal notranslate"><span class="pre">U64.byte_size</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U64.decode_from"><code class="docutils literal notranslate"><span class="pre">U64.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U64.has_sign"><code class="docutils literal notranslate"><span class="pre">U64.has_sign</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.U128"><code class="docutils literal notranslate"><span class="pre">U128</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U128.byte_size"><code class="docutils literal notranslate"><span class="pre">U128.byte_size</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U128.decode_from"><code class="docutils literal notranslate"><span class="pre">U128.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U128.has_sign"><code class="docutils literal notranslate"><span class="pre">U128.has_sign</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.U256"><code class="docutils literal notranslate"><span class="pre">U256</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U256.byte_size"><code class="docutils literal notranslate"><span class="pre">U256.byte_size</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U256.decode_from"><code class="docutils literal notranslate"><span class="pre">U256.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U256.has_sign"><code class="docutils literal notranslate"><span class="pre">U256.has_sign</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.U512"><code class="docutils literal notranslate"><span class="pre">U512</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U512.byte_size"><code class="docutils literal notranslate"><span class="pre">U512.byte_size</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U512.decode_from"><code class="docutils literal notranslate"><span class="pre">U512.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.U512.has_sign"><code class="docutils literal notranslate"><span class="pre">U512.has_sign</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Choice"><code class="docutils literal notranslate"><span class="pre">Choice</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Choice.__init__"><code class="docutils literal notranslate"><span class="pre">Choice.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Choice.__set_internal__"><code class="docutils literal notranslate"><span class="pre">Choice.__set_internal__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Choice.__get__"><code class="docutils literal notranslate"><span class="pre">Choice.__get__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Choice.__eq__"><code class="docutils literal notranslate"><span class="pre">Choice.__eq__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Choice.__bool__"><code class="docutils literal notranslate"><span class="pre">Choice.__bool__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Choice.__repr__"><code class="docutils literal notranslate"><span class="pre">Choice.__repr__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Choice.from_json"><code class="docutils literal notranslate"><span class="pre">Choice.from_json()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Option"><code class="docutils literal notranslate"><span class="pre">Option</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Option.__init__"><code class="docutils literal notranslate"><span class="pre">Option.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Option.option_to_choice"><code class="docutils literal notranslate"><span class="pre">Option.option_to_choice()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Option.from_json"><code class="docutils literal notranslate"><span class="pre">Option.from_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Option.to_json"><code class="docutils literal notranslate"><span class="pre">Option.to_json()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Nullable"><code class="docutils literal notranslate"><span class="pre">Nullable</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Nullable.__init__"><code class="docutils literal notranslate"><span class="pre">Nullable.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Nullable.get"><code class="docutils literal notranslate"><span class="pre">Nullable.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Nullable.__repr__"><code class="docutils literal notranslate"><span class="pre">Nullable.__repr__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Nullable.__eq__"><code class="docutils literal notranslate"><span class="pre">Nullable.__eq__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Nullable.decode_from"><code class="docutils literal notranslate"><span class="pre">Nullable.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Nullable.to_json"><code class="docutils literal notranslate"><span class="pre">Nullable.to_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Nullable.from_json"><code class="docutils literal notranslate"><span class="pre">Nullable.from_json()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Dictionary"><code class="docutils literal notranslate"><span class="pre">Dictionary</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.key_type"><code class="docutils literal notranslate"><span class="pre">Dictionary.key_type</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.value_type"><code class="docutils literal notranslate"><span class="pre">Dictionary.value_type</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.__init__"><code class="docutils literal notranslate"><span class="pre">Dictionary.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.__getitem__"><code class="docutils literal notranslate"><span class="pre">Dictionary.__getitem__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.__iter__"><code class="docutils literal notranslate"><span class="pre">Dictionary.__iter__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.__len__"><code class="docutils literal notranslate"><span class="pre">Dictionary.__len__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.__eq__"><code class="docutils literal notranslate"><span class="pre">Dictionary.__eq__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.__repr__"><code class="docutils literal notranslate"><span class="pre">Dictionary.__repr__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.get"><code class="docutils literal notranslate"><span class="pre">Dictionary.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.items"><code class="docutils literal notranslate"><span class="pre">Dictionary.items()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.keys"><code class="docutils literal notranslate"><span class="pre">Dictionary.keys()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.values"><code class="docutils literal notranslate"><span class="pre">Dictionary.values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.to_json"><code class="docutils literal notranslate"><span class="pre">Dictionary.to_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Dictionary.from_json"><code class="docutils literal notranslate"><span class="pre">Dictionary.from_json()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Boolean"><code class="docutils literal notranslate"><span class="pre">Boolean</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Boolean.__init__"><code class="docutils literal notranslate"><span class="pre">Boolean.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Boolean.__bool__"><code class="docutils literal notranslate"><span class="pre">Boolean.__bool__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Boolean.__eq__"><code class="docutils literal notranslate"><span class="pre">Boolean.__eq__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Boolean.__hash__"><code class="docutils literal notranslate"><span class="pre">Boolean.__hash__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Boolean.__repr__"><code class="docutils literal notranslate"><span class="pre">Boolean.__repr__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Boolean.__bytes__"><code class="docutils literal notranslate"><span class="pre">Boolean.__bytes__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Boolean.decode_from"><code class="docutils literal notranslate"><span class="pre">Boolean.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Bit"><code class="docutils literal notranslate"><span class="pre">Bit</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Bit.__init__"><code class="docutils literal notranslate"><span class="pre">Bit.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Bit.value"><code class="docutils literal notranslate"><span class="pre">Bit.value</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Bit.to_json"><code class="docutils literal notranslate"><span class="pre">Bit.to_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Bit.from_json"><code class="docutils literal notranslate"><span class="pre">Bit.from_json()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.String"><code class="docutils literal notranslate"><span class="pre">String</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.String.__init__"><code class="docutils literal notranslate"><span class="pre">String.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.String.__str__"><code class="docutils literal notranslate"><span class="pre">String.__str__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.String.__len__"><code class="docutils literal notranslate"><span class="pre">String.__len__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.String.__getitem__"><code class="docutils literal notranslate"><span class="pre">String.__getitem__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.String.__contains__"><code class="docutils literal notranslate"><span class="pre">String.__contains__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.String.__eq__"><code class="docutils literal notranslate"><span class="pre">String.__eq__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.String.__hash__"><code class="docutils literal notranslate"><span class="pre">String.__hash__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.String.__add__"><code class="docutils literal notranslate"><span class="pre">String.__add__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.String.__repr__"><code class="docutils literal notranslate"><span class="pre">String.__repr__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.String.decode_from"><code class="docutils literal notranslate"><span class="pre">String.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Array"><code class="docutils literal notranslate"><span class="pre">Array</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Array.__init__"><code class="docutils literal notranslate"><span class="pre">Array.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Array.__setitem__"><code class="docutils literal notranslate"><span class="pre">Array.__setitem__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Array.append"><code class="docutils literal notranslate"><span class="pre">Array.append()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Array.pop"><code class="docutils literal notranslate"><span class="pre">Array.pop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Array.insert"><code class="docutils literal notranslate"><span class="pre">Array.insert()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Array.remove"><code class="docutils literal notranslate"><span class="pre">Array.remove()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Array.clear"><code class="docutils literal notranslate"><span class="pre">Array.clear()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Array.extend"><code class="docutils literal notranslate"><span class="pre">Array.extend()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Vector"><code class="docutils literal notranslate"><span class="pre">Vector</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Vector.__init__"><code class="docutils literal notranslate"><span class="pre">Vector.__init__()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ByteArray8"><code class="docutils literal notranslate"><span class="pre">ByteArray8</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ByteArray8.decode_from"><code class="docutils literal notranslate"><span class="pre">ByteArray8.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ByteArray16"><code class="docutils literal notranslate"><span class="pre">ByteArray16</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ByteArray16.decode_from"><code class="docutils literal notranslate"><span class="pre">ByteArray16.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ByteArray32"><code class="docutils literal notranslate"><span class="pre">ByteArray32</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ByteArray32.decode_from"><code class="docutils literal notranslate"><span class="pre">ByteArray32.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ByteArray64"><code class="docutils literal notranslate"><span class="pre">ByteArray64</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ByteArray64.decode_from"><code class="docutils literal notranslate"><span class="pre">ByteArray64.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ByteArray96"><code class="docutils literal notranslate"><span class="pre">ByteArray96</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ByteArray96.decode_from"><code class="docutils literal notranslate"><span class="pre">ByteArray96.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ByteArray128"><code class="docutils literal notranslate"><span class="pre">ByteArray128</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ByteArray128.decode_from"><code class="docutils literal notranslate"><span class="pre">ByteArray128.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ByteArray144"><code class="docutils literal notranslate"><span class="pre">ByteArray144</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ByteArray144.decode_from"><code class="docutils literal notranslate"><span class="pre">ByteArray144.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ByteArray256"><code class="docutils literal notranslate"><span class="pre">ByteArray256</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ByteArray256.decode_from"><code class="docutils literal notranslate"><span class="pre">ByteArray256.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ByteArray784"><code class="docutils literal notranslate"><span class="pre">ByteArray784</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ByteArray784.decode_from"><code class="docutils literal notranslate"><span class="pre">ByteArray784.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.BitArray"><code class="docutils literal notranslate"><span class="pre">BitArray</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BitArray.__init__"><code class="docutils literal notranslate"><span class="pre">BitArray.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BitArray.from_json"><code class="docutils literal notranslate"><span class="pre">BitArray.from_json()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Byte"><code class="docutils literal notranslate"><span class="pre">Byte</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Byte.decode_from"><code class="docutils literal notranslate"><span class="pre">Byte.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Bytes"><code class="docutils literal notranslate"><span class="pre">Bytes</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Bytes.__init__"><code class="docutils literal notranslate"><span class="pre">Bytes.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Bytes.hex"><code class="docutils literal notranslate"><span class="pre">Bytes.hex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Bytes.from_json"><code class="docutils literal notranslate"><span class="pre">Bytes.from_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Bytes.decode_from"><code class="docutils literal notranslate"><span class="pre">Bytes.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.decodable_int"><code class="docutils literal notranslate"><span class="pre">decodable_int()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.decodable_array"><code class="docutils literal notranslate"><span class="pre">decodable_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.decodable_bit_array"><code class="docutils literal notranslate"><span class="pre">decodable_bit_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.decodable_vector"><code class="docutils literal notranslate"><span class="pre">decodable_vector()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.decodable_dictionary"><code class="docutils literal notranslate"><span class="pre">decodable_dictionary()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.decodable_choice"><code class="docutils literal notranslate"><span class="pre">decodable_choice()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.decodable_option"><code class="docutils literal notranslate"><span class="pre">decodable_option()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.BandersnatchPublic"><code class="docutils literal notranslate"><span class="pre">BandersnatchPublic</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.BandersnatchVrfSignature"><code class="docutils literal notranslate"><span class="pre">BandersnatchVrfSignature</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.BandersnatchRingVrfSignature"><code class="docutils literal notranslate"><span class="pre">BandersnatchRingVrfSignature</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Ed25519Public"><code class="docutils literal notranslate"><span class="pre">Ed25519Public</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Ed25519Signature"><code class="docutils literal notranslate"><span class="pre">Ed25519Signature</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.BlsPublic"><code class="docutils literal notranslate"><span class="pre">BlsPublic</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.OpaqueHash"><code class="docutils literal notranslate"><span class="pre">OpaqueHash</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.HeaderHash"><code class="docutils literal notranslate"><span class="pre">HeaderHash</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.StateRoot"><code class="docutils literal notranslate"><span class="pre">StateRoot</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.BeefyRoot"><code class="docutils literal notranslate"><span class="pre">BeefyRoot</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Entropy"><code class="docutils literal notranslate"><span class="pre">Entropy</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.TimeSlot"><code class="docutils literal notranslate"><span class="pre">TimeSlot</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ValidatorIndex"><code class="docutils literal notranslate"><span class="pre">ValidatorIndex</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.CoreIndex"><code class="docutils literal notranslate"><span class="pre">CoreIndex</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Gas"><code class="docutils literal notranslate"><span class="pre">Gas</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ServiceId"><code class="docutils literal notranslate"><span class="pre">ServiceId</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.WorkPackageHash"><code class="docutils literal notranslate"><span class="pre">WorkPackageHash</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.WorkReportHash"><code class="docutils literal notranslate"><span class="pre">WorkReportHash</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ExportsRoot"><code class="docutils literal notranslate"><span class="pre">ExportsRoot</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ErasureRoot"><code class="docutils literal notranslate"><span class="pre">ErasureRoot</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Block"><code class="docutils literal notranslate"><span class="pre">Block</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Block.header"><code class="docutils literal notranslate"><span class="pre">Block.header</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Block.extrinsic"><code class="docutils literal notranslate"><span class="pre">Block.extrinsic</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Block.__init__"><code class="docutils literal notranslate"><span class="pre">Block.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Block.decode_from"><code class="docutils literal notranslate"><span class="pre">Block.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Block.encode_into"><code class="docutils literal notranslate"><span class="pre">Block.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Block.encode_size"><code class="docutils literal notranslate"><span class="pre">Block.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Extrinsic"><code class="docutils literal notranslate"><span class="pre">Extrinsic</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Extrinsic.tickets"><code class="docutils literal notranslate"><span class="pre">Extrinsic.tickets</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Extrinsic.preimages"><code class="docutils literal notranslate"><span class="pre">Extrinsic.preimages</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Extrinsic.guarantees"><code class="docutils literal notranslate"><span class="pre">Extrinsic.guarantees</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Extrinsic.assurances"><code class="docutils literal notranslate"><span class="pre">Extrinsic.assurances</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Extrinsic.disputes"><code class="docutils literal notranslate"><span class="pre">Extrinsic.disputes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Extrinsic.__init__"><code class="docutils literal notranslate"><span class="pre">Extrinsic.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Extrinsic.decode_from"><code class="docutils literal notranslate"><span class="pre">Extrinsic.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Extrinsic.encode_into"><code class="docutils literal notranslate"><span class="pre">Extrinsic.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Extrinsic.encode_size"><code class="docutils literal notranslate"><span class="pre">Extrinsic.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Header"><code class="docutils literal notranslate"><span class="pre">Header</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.parent"><code class="docutils literal notranslate"><span class="pre">Header.parent</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.parent_state_root"><code class="docutils literal notranslate"><span class="pre">Header.parent_state_root</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.extrinsic_hash"><code class="docutils literal notranslate"><span class="pre">Header.extrinsic_hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.slot"><code class="docutils literal notranslate"><span class="pre">Header.slot</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.epoch_mark"><code class="docutils literal notranslate"><span class="pre">Header.epoch_mark</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.tickets_mark"><code class="docutils literal notranslate"><span class="pre">Header.tickets_mark</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.offenders_mark"><code class="docutils literal notranslate"><span class="pre">Header.offenders_mark</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.author_index"><code class="docutils literal notranslate"><span class="pre">Header.author_index</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.entropy_source"><code class="docutils literal notranslate"><span class="pre">Header.entropy_source</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.seal"><code class="docutils literal notranslate"><span class="pre">Header.seal</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.__init__"><code class="docutils literal notranslate"><span class="pre">Header.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.decode_from"><code class="docutils literal notranslate"><span class="pre">Header.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.encode_into"><code class="docutils literal notranslate"><span class="pre">Header.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Header.encode_size"><code class="docutils literal notranslate"><span class="pre">Header.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.TicketsMark"><code class="docutils literal notranslate"><span class="pre">TicketsMark</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketsMark.decode_from"><code class="docutils literal notranslate"><span class="pre">TicketsMark.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.OffendersMark"><code class="docutils literal notranslate"><span class="pre">OffendersMark</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.OffendersMark.decode_from"><code class="docutils literal notranslate"><span class="pre">OffendersMark.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ServiceInfo"><code class="docutils literal notranslate"><span class="pre">ServiceInfo</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ServiceInfo.code_hash"><code class="docutils literal notranslate"><span class="pre">ServiceInfo.code_hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ServiceInfo.balance"><code class="docutils literal notranslate"><span class="pre">ServiceInfo.balance</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ServiceInfo.min_item_gas"><code class="docutils literal notranslate"><span class="pre">ServiceInfo.min_item_gas</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ServiceInfo.min_memo_gas"><code class="docutils literal notranslate"><span class="pre">ServiceInfo.min_memo_gas</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ServiceInfo.bytes_data"><code class="docutils literal notranslate"><span class="pre">ServiceInfo.bytes_data</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ServiceInfo.items"><code class="docutils literal notranslate"><span class="pre">ServiceInfo.items</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ServiceInfo.__init__"><code class="docutils literal notranslate"><span class="pre">ServiceInfo.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ServiceInfo.decode_from"><code class="docutils literal notranslate"><span class="pre">ServiceInfo.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ServiceInfo.encode_into"><code class="docutils literal notranslate"><span class="pre">ServiceInfo.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ServiceInfo.encode_size"><code class="docutils literal notranslate"><span class="pre">ServiceInfo.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ImportSpec"><code class="docutils literal notranslate"><span class="pre">ImportSpec</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ImportSpec.tree_root"><code class="docutils literal notranslate"><span class="pre">ImportSpec.tree_root</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ImportSpec.index"><code class="docutils literal notranslate"><span class="pre">ImportSpec.index</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ImportSpec.__init__"><code class="docutils literal notranslate"><span class="pre">ImportSpec.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ImportSpec.decode_from"><code class="docutils literal notranslate"><span class="pre">ImportSpec.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ImportSpec.encode_into"><code class="docutils literal notranslate"><span class="pre">ImportSpec.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ImportSpec.encode_size"><code class="docutils literal notranslate"><span class="pre">ImportSpec.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ExtrinsicSpec"><code class="docutils literal notranslate"><span class="pre">ExtrinsicSpec</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ExtrinsicSpec.hash"><code class="docutils literal notranslate"><span class="pre">ExtrinsicSpec.hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ExtrinsicSpec.len"><code class="docutils literal notranslate"><span class="pre">ExtrinsicSpec.len</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ExtrinsicSpec.__init__"><code class="docutils literal notranslate"><span class="pre">ExtrinsicSpec.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ExtrinsicSpec.decode_from"><code class="docutils literal notranslate"><span class="pre">ExtrinsicSpec.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ExtrinsicSpec.encode_into"><code class="docutils literal notranslate"><span class="pre">ExtrinsicSpec.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ExtrinsicSpec.encode_size"><code class="docutils literal notranslate"><span class="pre">ExtrinsicSpec.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Authorizer"><code class="docutils literal notranslate"><span class="pre">Authorizer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Authorizer.code_hash"><code class="docutils literal notranslate"><span class="pre">Authorizer.code_hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Authorizer.params"><code class="docutils literal notranslate"><span class="pre">Authorizer.params</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Authorizer.__init__"><code class="docutils literal notranslate"><span class="pre">Authorizer.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Authorizer.decode_from"><code class="docutils literal notranslate"><span class="pre">Authorizer.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Authorizer.encode_into"><code class="docutils literal notranslate"><span class="pre">Authorizer.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Authorizer.encode_size"><code class="docutils literal notranslate"><span class="pre">Authorizer.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.RefineContext"><code class="docutils literal notranslate"><span class="pre">RefineContext</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.RefineContext.anchor"><code class="docutils literal notranslate"><span class="pre">RefineContext.anchor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.RefineContext.state_root"><code class="docutils literal notranslate"><span class="pre">RefineContext.state_root</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.RefineContext.beefy_root"><code class="docutils literal notranslate"><span class="pre">RefineContext.beefy_root</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.RefineContext.lookup_anchor"><code class="docutils literal notranslate"><span class="pre">RefineContext.lookup_anchor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.RefineContext.lookup_anchor_slot"><code class="docutils literal notranslate"><span class="pre">RefineContext.lookup_anchor_slot</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.RefineContext.prerequisites"><code class="docutils literal notranslate"><span class="pre">RefineContext.prerequisites</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.RefineContext.__init__"><code class="docutils literal notranslate"><span class="pre">RefineContext.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.RefineContext.decode_from"><code class="docutils literal notranslate"><span class="pre">RefineContext.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.RefineContext.encode_into"><code class="docutils literal notranslate"><span class="pre">RefineContext.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.RefineContext.encode_size"><code class="docutils literal notranslate"><span class="pre">RefineContext.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.WorkExecResult"><code class="docutils literal notranslate"><span class="pre">WorkExecResult</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkExecResult.ok"><code class="docutils literal notranslate"><span class="pre">WorkExecResult.ok</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkExecResult.out_of_gas"><code class="docutils literal notranslate"><span class="pre">WorkExecResult.out_of_gas</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkExecResult.panic"><code class="docutils literal notranslate"><span class="pre">WorkExecResult.panic</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkExecResult.bad_code"><code class="docutils literal notranslate"><span class="pre">WorkExecResult.bad_code</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkExecResult.code_oversize"><code class="docutils literal notranslate"><span class="pre">WorkExecResult.code_oversize</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkExecResult.decode_from"><code class="docutils literal notranslate"><span class="pre">WorkExecResult.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.WorkResult"><code class="docutils literal notranslate"><span class="pre">WorkResult</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkResult.service_id"><code class="docutils literal notranslate"><span class="pre">WorkResult.service_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkResult.code_hash"><code class="docutils literal notranslate"><span class="pre">WorkResult.code_hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkResult.payload_hash"><code class="docutils literal notranslate"><span class="pre">WorkResult.payload_hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkResult.accumulate_gas"><code class="docutils literal notranslate"><span class="pre">WorkResult.accumulate_gas</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkResult.result"><code class="docutils literal notranslate"><span class="pre">WorkResult.result</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkResult.__init__"><code class="docutils literal notranslate"><span class="pre">WorkResult.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkResult.decode_from"><code class="docutils literal notranslate"><span class="pre">WorkResult.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkResult.encode_into"><code class="docutils literal notranslate"><span class="pre">WorkResult.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkResult.encode_size"><code class="docutils literal notranslate"><span class="pre">WorkResult.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.WorkItem"><code class="docutils literal notranslate"><span class="pre">WorkItem</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.service"><code class="docutils literal notranslate"><span class="pre">WorkItem.service</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.code_hash"><code class="docutils literal notranslate"><span class="pre">WorkItem.code_hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.payload"><code class="docutils literal notranslate"><span class="pre">WorkItem.payload</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.refine_gas_limit"><code class="docutils literal notranslate"><span class="pre">WorkItem.refine_gas_limit</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.accumulate_gas_limit"><code class="docutils literal notranslate"><span class="pre">WorkItem.accumulate_gas_limit</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.import_segments"><code class="docutils literal notranslate"><span class="pre">WorkItem.import_segments</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.extrinsic"><code class="docutils literal notranslate"><span class="pre">WorkItem.extrinsic</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.export_count"><code class="docutils literal notranslate"><span class="pre">WorkItem.export_count</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.__init__"><code class="docutils literal notranslate"><span class="pre">WorkItem.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.decode_from"><code class="docutils literal notranslate"><span class="pre">WorkItem.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.encode_into"><code class="docutils literal notranslate"><span class="pre">WorkItem.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkItem.encode_size"><code class="docutils literal notranslate"><span class="pre">WorkItem.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.WorkPackage"><code class="docutils literal notranslate"><span class="pre">WorkPackage</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackage.authorization"><code class="docutils literal notranslate"><span class="pre">WorkPackage.authorization</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackage.auth_code_host"><code class="docutils literal notranslate"><span class="pre">WorkPackage.auth_code_host</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackage.authorizer"><code class="docutils literal notranslate"><span class="pre">WorkPackage.authorizer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackage.context"><code class="docutils literal notranslate"><span class="pre">WorkPackage.context</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackage.items"><code class="docutils literal notranslate"><span class="pre">WorkPackage.items</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackage.__init__"><code class="docutils literal notranslate"><span class="pre">WorkPackage.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackage.decode_from"><code class="docutils literal notranslate"><span class="pre">WorkPackage.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackage.encode_into"><code class="docutils literal notranslate"><span class="pre">WorkPackage.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackage.encode_size"><code class="docutils literal notranslate"><span class="pre">WorkPackage.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.WorkReport"><code class="docutils literal notranslate"><span class="pre">WorkReport</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.package_spec"><code class="docutils literal notranslate"><span class="pre">WorkReport.package_spec</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.context"><code class="docutils literal notranslate"><span class="pre">WorkReport.context</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.core_index"><code class="docutils literal notranslate"><span class="pre">WorkReport.core_index</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.authorizer_hash"><code class="docutils literal notranslate"><span class="pre">WorkReport.authorizer_hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.auth_output"><code class="docutils literal notranslate"><span class="pre">WorkReport.auth_output</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.segment_root_lookup"><code class="docutils literal notranslate"><span class="pre">WorkReport.segment_root_lookup</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.results"><code class="docutils literal notranslate"><span class="pre">WorkReport.results</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.__init__"><code class="docutils literal notranslate"><span class="pre">WorkReport.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.decode_from"><code class="docutils literal notranslate"><span class="pre">WorkReport.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.encode_into"><code class="docutils literal notranslate"><span class="pre">WorkReport.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkReport.encode_size"><code class="docutils literal notranslate"><span class="pre">WorkReport.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.WorkPackageSpec"><code class="docutils literal notranslate"><span class="pre">WorkPackageSpec</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackageSpec.hash"><code class="docutils literal notranslate"><span class="pre">WorkPackageSpec.hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackageSpec.length"><code class="docutils literal notranslate"><span class="pre">WorkPackageSpec.length</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackageSpec.erasure_root"><code class="docutils literal notranslate"><span class="pre">WorkPackageSpec.erasure_root</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackageSpec.exports_root"><code class="docutils literal notranslate"><span class="pre">WorkPackageSpec.exports_root</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackageSpec.exports_count"><code class="docutils literal notranslate"><span class="pre">WorkPackageSpec.exports_count</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackageSpec.__init__"><code class="docutils literal notranslate"><span class="pre">WorkPackageSpec.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackageSpec.decode_from"><code class="docutils literal notranslate"><span class="pre">WorkPackageSpec.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackageSpec.encode_into"><code class="docutils literal notranslate"><span class="pre">WorkPackageSpec.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.WorkPackageSpec.encode_size"><code class="docutils literal notranslate"><span class="pre">WorkPackageSpec.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.SegmentRootLookupItem"><code class="docutils literal notranslate"><span class="pre">SegmentRootLookupItem</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.SegmentRootLookupItem.work_package_hash"><code class="docutils literal notranslate"><span class="pre">SegmentRootLookupItem.work_package_hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.SegmentRootLookupItem.segment_tree_root"><code class="docutils literal notranslate"><span class="pre">SegmentRootLookupItem.segment_tree_root</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.SegmentRootLookupItem.__init__"><code class="docutils literal notranslate"><span class="pre">SegmentRootLookupItem.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.SegmentRootLookupItem.decode_from"><code class="docutils literal notranslate"><span class="pre">SegmentRootLookupItem.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.SegmentRootLookupItem.encode_into"><code class="docutils literal notranslate"><span class="pre">SegmentRootLookupItem.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.SegmentRootLookupItem.encode_size"><code class="docutils literal notranslate"><span class="pre">SegmentRootLookupItem.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.TicketEnvelope"><code class="docutils literal notranslate"><span class="pre">TicketEnvelope</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketEnvelope.attempt"><code class="docutils literal notranslate"><span class="pre">TicketEnvelope.attempt</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketEnvelope.signature"><code class="docutils literal notranslate"><span class="pre">TicketEnvelope.signature</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketEnvelope.__init__"><code class="docutils literal notranslate"><span class="pre">TicketEnvelope.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketEnvelope.decode_from"><code class="docutils literal notranslate"><span class="pre">TicketEnvelope.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketEnvelope.encode_into"><code class="docutils literal notranslate"><span class="pre">TicketEnvelope.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketEnvelope.encode_size"><code class="docutils literal notranslate"><span class="pre">TicketEnvelope.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.TicketBody"><code class="docutils literal notranslate"><span class="pre">TicketBody</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketBody.id"><code class="docutils literal notranslate"><span class="pre">TicketBody.id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketBody.attempt"><code class="docutils literal notranslate"><span class="pre">TicketBody.attempt</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketBody.__init__"><code class="docutils literal notranslate"><span class="pre">TicketBody.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketBody.decode_from"><code class="docutils literal notranslate"><span class="pre">TicketBody.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketBody.encode_into"><code class="docutils literal notranslate"><span class="pre">TicketBody.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketBody.encode_size"><code class="docutils literal notranslate"><span class="pre">TicketBody.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.TicketsAccumulator"><code class="docutils literal notranslate"><span class="pre">TicketsAccumulator</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketsAccumulator.decode_from"><code class="docutils literal notranslate"><span class="pre">TicketsAccumulator.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.KeysAccumulator"><code class="docutils literal notranslate"><span class="pre">KeysAccumulator</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.KeysAccumulator.decode_from"><code class="docutils literal notranslate"><span class="pre">KeysAccumulator.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.TicketsExtrinsic"><code class="docutils literal notranslate"><span class="pre">TicketsExtrinsic</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.TicketsExtrinsic.decode_from"><code class="docutils literal notranslate"><span class="pre">TicketsExtrinsic.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Verdict"><code class="docutils literal notranslate"><span class="pre">Verdict</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Verdict.target"><code class="docutils literal notranslate"><span class="pre">Verdict.target</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Verdict.age"><code class="docutils literal notranslate"><span class="pre">Verdict.age</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Verdict.votes"><code class="docutils literal notranslate"><span class="pre">Verdict.votes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Verdict.__init__"><code class="docutils literal notranslate"><span class="pre">Verdict.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Verdict.decode_from"><code class="docutils literal notranslate"><span class="pre">Verdict.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Verdict.encode_into"><code class="docutils literal notranslate"><span class="pre">Verdict.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Verdict.encode_size"><code class="docutils literal notranslate"><span class="pre">Verdict.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Culprit"><code class="docutils literal notranslate"><span class="pre">Culprit</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Culprit.target"><code class="docutils literal notranslate"><span class="pre">Culprit.target</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Culprit.key"><code class="docutils literal notranslate"><span class="pre">Culprit.key</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Culprit.signature"><code class="docutils literal notranslate"><span class="pre">Culprit.signature</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Culprit.__init__"><code class="docutils literal notranslate"><span class="pre">Culprit.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Culprit.decode_from"><code class="docutils literal notranslate"><span class="pre">Culprit.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Culprit.encode_into"><code class="docutils literal notranslate"><span class="pre">Culprit.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Culprit.encode_size"><code class="docutils literal notranslate"><span class="pre">Culprit.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Judgement"><code class="docutils literal notranslate"><span class="pre">Judgement</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Judgement.vote"><code class="docutils literal notranslate"><span class="pre">Judgement.vote</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Judgement.index"><code class="docutils literal notranslate"><span class="pre">Judgement.index</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Judgement.signature"><code class="docutils literal notranslate"><span class="pre">Judgement.signature</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Judgement.__init__"><code class="docutils literal notranslate"><span class="pre">Judgement.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Judgement.decode_from"><code class="docutils literal notranslate"><span class="pre">Judgement.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Judgement.encode_into"><code class="docutils literal notranslate"><span class="pre">Judgement.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Judgement.encode_size"><code class="docutils literal notranslate"><span class="pre">Judgement.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.DisputesExtrinsic"><code class="docutils literal notranslate"><span class="pre">DisputesExtrinsic</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesExtrinsic.verdicts"><code class="docutils literal notranslate"><span class="pre">DisputesExtrinsic.verdicts</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesExtrinsic.culprits"><code class="docutils literal notranslate"><span class="pre">DisputesExtrinsic.culprits</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesExtrinsic.faults"><code class="docutils literal notranslate"><span class="pre">DisputesExtrinsic.faults</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesExtrinsic.__init__"><code class="docutils literal notranslate"><span class="pre">DisputesExtrinsic.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesExtrinsic.decode_from"><code class="docutils literal notranslate"><span class="pre">DisputesExtrinsic.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesExtrinsic.encode_into"><code class="docutils literal notranslate"><span class="pre">DisputesExtrinsic.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesExtrinsic.encode_size"><code class="docutils literal notranslate"><span class="pre">DisputesExtrinsic.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Fault"><code class="docutils literal notranslate"><span class="pre">Fault</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Fault.target"><code class="docutils literal notranslate"><span class="pre">Fault.target</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Fault.vote"><code class="docutils literal notranslate"><span class="pre">Fault.vote</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Fault.key"><code class="docutils literal notranslate"><span class="pre">Fault.key</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Fault.signature"><code class="docutils literal notranslate"><span class="pre">Fault.signature</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Fault.__init__"><code class="docutils literal notranslate"><span class="pre">Fault.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Fault.decode_from"><code class="docutils literal notranslate"><span class="pre">Fault.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Fault.encode_into"><code class="docutils literal notranslate"><span class="pre">Fault.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Fault.encode_size"><code class="docutils literal notranslate"><span class="pre">Fault.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.DisputesRecords"><code class="docutils literal notranslate"><span class="pre">DisputesRecords</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesRecords.good"><code class="docutils literal notranslate"><span class="pre">DisputesRecords.good</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesRecords.bad"><code class="docutils literal notranslate"><span class="pre">DisputesRecords.bad</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesRecords.wonky"><code class="docutils literal notranslate"><span class="pre">DisputesRecords.wonky</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesRecords.offenders"><code class="docutils literal notranslate"><span class="pre">DisputesRecords.offenders</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesRecords.__init__"><code class="docutils literal notranslate"><span class="pre">DisputesRecords.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesRecords.decode_from"><code class="docutils literal notranslate"><span class="pre">DisputesRecords.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesRecords.encode_into"><code class="docutils literal notranslate"><span class="pre">DisputesRecords.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.DisputesRecords.encode_size"><code class="docutils literal notranslate"><span class="pre">DisputesRecords.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.AvailabilityAssignment"><code class="docutils literal notranslate"><span class="pre">AvailabilityAssignment</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.AvailabilityAssignment.report"><code class="docutils literal notranslate"><span class="pre">AvailabilityAssignment.report</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.AvailabilityAssignment.timeout"><code class="docutils literal notranslate"><span class="pre">AvailabilityAssignment.timeout</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.AvailabilityAssignment.__init__"><code class="docutils literal notranslate"><span class="pre">AvailabilityAssignment.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.AvailabilityAssignment.decode_from"><code class="docutils literal notranslate"><span class="pre">AvailabilityAssignment.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.AvailabilityAssignment.encode_into"><code class="docutils literal notranslate"><span class="pre">AvailabilityAssignment.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.AvailabilityAssignment.encode_size"><code class="docutils literal notranslate"><span class="pre">AvailabilityAssignment.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.AvailabilityAssignments"><code class="docutils literal notranslate"><span class="pre">AvailabilityAssignments</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.AvailabilityAssignments.decode_from"><code class="docutils literal notranslate"><span class="pre">AvailabilityAssignments.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.Mmr"><code class="docutils literal notranslate"><span class="pre">Mmr</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.Mmr.decode_from"><code class="docutils literal notranslate"><span class="pre">Mmr.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.BlockInfo"><code class="docutils literal notranslate"><span class="pre">BlockInfo</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BlockInfo.header_hash"><code class="docutils literal notranslate"><span class="pre">BlockInfo.header_hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BlockInfo.mmr"><code class="docutils literal notranslate"><span class="pre">BlockInfo.mmr</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BlockInfo.state_root"><code class="docutils literal notranslate"><span class="pre">BlockInfo.state_root</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BlockInfo.reported"><code class="docutils literal notranslate"><span class="pre">BlockInfo.reported</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BlockInfo.__init__"><code class="docutils literal notranslate"><span class="pre">BlockInfo.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BlockInfo.decode_from"><code class="docutils literal notranslate"><span class="pre">BlockInfo.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BlockInfo.encode_into"><code class="docutils literal notranslate"><span class="pre">BlockInfo.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BlockInfo.encode_size"><code class="docutils literal notranslate"><span class="pre">BlockInfo.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.BlocksHistory"><code class="docutils literal notranslate"><span class="pre">BlocksHistory</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.BlocksHistory.decode_from"><code class="docutils literal notranslate"><span class="pre">BlocksHistory.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ReportedWorkPackage"><code class="docutils literal notranslate"><span class="pre">ReportedWorkPackage</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ReportedWorkPackage.hash"><code class="docutils literal notranslate"><span class="pre">ReportedWorkPackage.hash</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ReportedWorkPackage.exports_root"><code class="docutils literal notranslate"><span class="pre">ReportedWorkPackage.exports_root</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ReportedWorkPackage.__init__"><code class="docutils literal notranslate"><span class="pre">ReportedWorkPackage.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ReportedWorkPackage.decode_from"><code class="docutils literal notranslate"><span class="pre">ReportedWorkPackage.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ReportedWorkPackage.encode_into"><code class="docutils literal notranslate"><span class="pre">ReportedWorkPackage.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ReportedWorkPackage.encode_size"><code class="docutils literal notranslate"><span class="pre">ReportedWorkPackage.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ValidatorMetadata"><code class="docutils literal notranslate"><span class="pre">ValidatorMetadata</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ValidatorData"><code class="docutils literal notranslate"><span class="pre">ValidatorData</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ValidatorData.bandersnatch"><code class="docutils literal notranslate"><span class="pre">ValidatorData.bandersnatch</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ValidatorData.ed25519"><code class="docutils literal notranslate"><span class="pre">ValidatorData.ed25519</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ValidatorData.bls"><code class="docutils literal notranslate"><span class="pre">ValidatorData.bls</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ValidatorData.metadata"><code class="docutils literal notranslate"><span class="pre">ValidatorData.metadata</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ValidatorData.__init__"><code class="docutils literal notranslate"><span class="pre">ValidatorData.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ValidatorData.decode_from"><code class="docutils literal notranslate"><span class="pre">ValidatorData.decode_from()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ValidatorData.encode_into"><code class="docutils literal notranslate"><span class="pre">ValidatorData.encode_into()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ValidatorData.encode_size"><code class="docutils literal notranslate"><span class="pre">ValidatorData.encode_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ValidatorsData"><code class="docutils literal notranslate"><span class="pre">ValidatorsData</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ValidatorsData.decode_from"><code class="docutils literal notranslate"><span class="pre">ValidatorsData.decode_from()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.types.ValidatorArray"><code class="docutils literal notranslate"><span class="pre">ValidatorArray</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.types.ValidatorArray.decode_from"><code class="docutils literal notranslate"><span class="pre">ValidatorArray.decode_from()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/codec/index.html">Codec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/json/index.html">JsonSerde</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../CONTRIBUTING.html">Contributing to Documentation</a></li>
 </ul>
 
         </div>
@@ -87,7 +665,6 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../index.html">jam package</a></li>
       <li class="breadcrumb-item active">Types</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../../_sources/modules/jam/types/index.rst.txt" rel="nofollow"> View page source</a>
@@ -104,7 +681,7 @@
 <section id="module-organization">
 <h2>Module Organization<a class="headerlink" href="#module-organization" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
-<li><p>Base Types (<a class="reference internal" href="base/integers/base.html#module-jam.types.base.integers.base" title="jam.types.base.integers.base"><code class="xref py py-mod docutils literal notranslate"><span class="pre">base</span></code></a>):
+<li><p>Base Types (<a class="reference internal" href="base/index.html#module-jam.types.base" title="jam.types.base"><code class="xref py py-mod docutils literal notranslate"><span class="pre">base</span></code></a>):
 * Fundamental data types
 * Direct codec implementations
 * Generic type building blocks</p></li>
@@ -1523,7 +2100,7 @@ a single byte.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="jam.types.Bytes">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.</span></span><span class="sig-name descname"><span class="pre">Bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.13)"><span class="pre">Sequence</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/jam/types/base/sequences/bytes/bytes.html#Bytes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.Bytes" title="Link to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="base/sequences/index.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector</span></code></a>[<a class="reference internal" href="base/sequences/bytes/bit_array.html#jam.types.base.sequences.bytes.bit_array.Byte" title="jam.types.base.sequences.bytes.bit_array.Byte"><code class="xref py py-class docutils literal notranslate"><span class="pre">Byte</span></code></a>]</p>
+<dd><p>Bases: <a class="reference internal" href="base/sequences/vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector</span></code></a>[<a class="reference internal" href="base/sequences/bytes/bit_array.html#jam.types.base.sequences.bytes.bit_array.Byte" title="jam.types.base.sequences.bytes.bit_array.Byte"><code class="xref py py-class docutils literal notranslate"><span class="pre">Byte</span></code></a>]</p>
 <p>Variable-length byte sequence type.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="jam.types.Bytes.__init__">
@@ -1550,7 +2127,7 @@ a single byte.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="jam.types.Bytes.decode_from">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/index.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.Bytes.decode_from" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.Bytes.decode_from" title="Link to this definition"></a></dt>
 <dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1598,7 +2175,7 @@ a single byte.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="jam.types.decodable_vector">
-<span class="sig-prename descclassname"><span class="pre">jam.types.</span></span><span class="sig-name descname"><span class="pre">decodable_vector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">9223372036854775807</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.13)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/index.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/index.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/jam/types/base/sequences/vector.html#decodable_vector"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.decodable_vector" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">jam.types.</span></span><span class="sig-name descname"><span class="pre">decodable_vector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">9223372036854775807</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.13)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.13)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/jam/types/base/sequences/vector.html#decodable_vector"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.decodable_vector" title="Link to this definition"></a></dt>
 <dd><p>Decorator to make a class decodable as a vector.</p>
 </dd></dl>
 
@@ -2027,10 +2604,10 @@ a single byte.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="jam.types.OffendersMark">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.</span></span><span class="sig-name descname"><span class="pre">OffendersMark</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.13)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">codec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../utils/codec/codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><span class="pre">Codec</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/jam/types/header.html#OffendersMark"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.OffendersMark" title="Link to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="base/sequences/index.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector</span></code></a>[<a class="reference internal" href="base/sequences/bytes/byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><code class="xref py py-class docutils literal notranslate"><span class="pre">ByteArray32</span></code></a>]</p>
+<dd><p>Bases: <a class="reference internal" href="base/sequences/vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector</span></code></a>[<a class="reference internal" href="base/sequences/bytes/byte_array.html#jam.types.base.sequences.bytes.byte_array.ByteArray32" title="jam.types.base.sequences.bytes.byte_array.ByteArray32"><code class="xref py py-class docutils literal notranslate"><span class="pre">ByteArray32</span></code></a>]</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="jam.types.OffendersMark.decode_from">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/index.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.OffendersMark.decode_from" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.OffendersMark.decode_from" title="Link to this definition"></a></dt>
 <dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -3184,10 +3761,10 @@ a single byte.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="jam.types.TicketsExtrinsic">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.</span></span><span class="sig-name descname"><span class="pre">TicketsExtrinsic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.13)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">codec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../utils/codec/codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><span class="pre">Codec</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/jam/types/extrinsics/tickets.html#TicketsExtrinsic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.TicketsExtrinsic" title="Link to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="base/sequences/index.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector</span></code></a>[<a class="reference internal" href="extrinsics/tickets.html#jam.types.extrinsics.tickets.TicketEnvelope" title="jam.types.extrinsics.tickets.TicketEnvelope"><code class="xref py py-class docutils literal notranslate"><span class="pre">TicketEnvelope</span></code></a>]</p>
+<dd><p>Bases: <a class="reference internal" href="base/sequences/vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector</span></code></a>[<a class="reference internal" href="extrinsics/tickets.html#jam.types.extrinsics.tickets.TicketEnvelope" title="jam.types.extrinsics.tickets.TicketEnvelope"><code class="xref py py-class docutils literal notranslate"><span class="pre">TicketEnvelope</span></code></a>]</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="jam.types.TicketsExtrinsic.decode_from">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/index.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.TicketsExtrinsic.decode_from" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.TicketsExtrinsic.decode_from" title="Link to this definition"></a></dt>
 <dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -3753,10 +4330,10 @@ a single byte.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="jam.types.Mmr">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.types.</span></span><span class="sig-name descname"><span class="pre">Mmr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.13)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">codec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../utils/codec/codec.html#jam.utils.codec.codec.Codec" title="jam.utils.codec.codec.Codec"><span class="pre">Codec</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/jam/types/protocol/history.html#Mmr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.types.Mmr" title="Link to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="base/sequences/index.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector</span></code></a>[<a class="reference internal" href="base/choices/choice.html#jam.types.base.choices.choice.Choice" title="jam.types.base.choices.choice.Choice"><code class="xref py py-class docutils literal notranslate"><span class="pre">Choice</span></code></a>]</p>
+<dd><p>Bases: <a class="reference internal" href="base/sequences/vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector</span></code></a>[<a class="reference internal" href="base/choices/choice.html#jam.types.base.choices.choice.Choice" title="jam.types.base.choices.choice.Choice"><code class="xref py py-class docutils literal notranslate"><span class="pre">Choice</span></code></a>]</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="jam.types.Mmr.decode_from">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/index.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.Mmr.decode_from" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.13)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.13)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.13)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.13)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="base/sequences/vector.html#jam.types.base.sequences.vector.Vector" title="jam.types.base.sequences.vector.Vector"><span class="pre">Vector</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#jam.types.Mmr.decode_from" title="Link to this definition"></a></dt>
 <dd><p>Decode from buffer. Must be implemented by subclasses or added via decorator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -4105,7 +4682,7 @@ a single byte.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../storage/db.html" class="btn btn-neutral float-left" title="jam.storage.db module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../network/index.html" class="btn btn-neutral float-left" title="Networking" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="base/index.html" class="btn btn-neutral float-right" title="Base Types" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

@@ -3,14 +3,15 @@ import json
 from pathlib import Path
 from jam.types.extrinsics.disputes import DisputesExtrinsic
 
+
 def test_disputes_extrinsic_encoding():
     """Test encoding/decoding of DisputesExtrinsic against test vectors."""
     test_dir = Path(__file__).parent / "data"
-    
+
     # Load test vectors
     with open(test_dir / "disputes_extrinsic.json", "r") as f:
         disputes_json = json.load(f)
-    
+
     with open(test_dir / "disputes_extrinsic.bin", "rb") as f:
         expected_bytes = f.read()
 

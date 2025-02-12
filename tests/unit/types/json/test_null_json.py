@@ -1,18 +1,20 @@
 import pytest
 from jam.types.base.null import Null, Nullable
 
+
 def test_null_json_serialization():
     # Test Null singleton
     json_null = Null.to_json()
     assert json_null is None
     assert Nullable.from_json(json_null) == Null
-    
+
     # Test new Nullable instance
     nullable = Nullable()
     json_nullable = nullable.to_json()
     assert json_nullable is None
     assert Nullable.from_json(json_nullable) == Null
     assert Nullable.from_json(json_nullable) == nullable
+
 
 def test_null_json_invalid_input():
     # Test with invalid input types
@@ -27,6 +29,7 @@ def test_null_json_invalid_input():
 
     with pytest.raises(ValueError):
         Nullable.from_json([])  # Empty list instead of None
+
 
 def test_null_json_roundtrip():
     # Test roundtrip with Null singleton
@@ -44,6 +47,7 @@ def test_null_json_roundtrip():
     assert original == reconstructed
     assert isinstance(reconstructed, Nullable)
     assert reconstructed.get() is None
+
 
 def test_null_singleton_behavior():
     # Verify that all Nullable instances are equal

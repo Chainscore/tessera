@@ -6,12 +6,15 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.serde import JsonSerde
 
+
 @decodable_dataclass
 @dataclass
-class Page(Codable, JsonSerde): 
+class Page(Codable, JsonSerde):
     address: U32
     length: U32
     is_writable: Boolean
 
+
 @decodable_vector(Page)
-class PageMap(Vector): ...
+class PageMap(Vector):
+    ...

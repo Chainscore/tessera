@@ -9,19 +9,25 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import CORE_COUNT
 
+
 @decodable_dataclass
 @dataclass
 class WorkReportState(Codable):
     """Work report state"""
+
     report: WorkReport
     time: TimeSlot
+
 
 @decodable_option(WorkReportState)
 class OptionalWorkReportState(Choice):
     """Work report state"""
+
     ...
+
 
 @decodable_array(CORE_COUNT, OptionalWorkReportState)
 class Rho(Array[OptionalWorkReportState]):
     """Work report state array"""
+
     ...

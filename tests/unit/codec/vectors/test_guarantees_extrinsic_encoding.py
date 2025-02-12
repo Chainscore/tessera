@@ -3,14 +3,15 @@ import json
 from pathlib import Path
 from jam.types.extrinsics.guarantees import GuaranteesExtrinsic
 
+
 def test_guarantees_extrinsic_encoding():
     """Test encoding/decoding of GuaranteesExtrinsic against test vectors."""
     test_dir = Path(__file__).parent / "data"
-    
+
     # Load test vectors
     with open(test_dir / "guarantees_extrinsic.json", "r") as f:
         guarantees_json = json.load(f)
-    
+
     with open(test_dir / "guarantees_extrinsic.bin", "rb") as f:
         expected_bytes = f.read()
 

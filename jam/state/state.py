@@ -5,9 +5,10 @@ from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.crypto import Hash
 
+
 class State(Sigma):
     """State implementation that adds Merklization to Sigma"""
-    
+
     def __init__(self, **kwargs):
         """Initialize state with component kwargs"""
         super().__init__(**kwargs)
@@ -33,11 +34,11 @@ class State(Sigma):
             construct_state_key(14): Bytes(self.theta.encode()),
             construct_state_key(15): Bytes(self.xi.encode()),
         }
-    
+
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
         return self._merkle.merkelize(self.transform())
-    
+
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
         return self._merkle.get_nodes()

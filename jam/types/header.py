@@ -8,28 +8,43 @@ from jam.types.protocol.epoch import EpochMark
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import (
-    BandersnatchVrfSignature, Ed25519Public, HeaderHash, StateRoot, OpaqueHash,
+    BandersnatchVrfSignature,
+    Ed25519Public,
+    HeaderHash,
+    StateRoot,
+    OpaqueHash,
 )
 from jam.utils.constants import EPOCH_LENGTH
 from jam.utils.json.serde import JsonSerde
 
 """Fixed-length array of ticket bodies."""
+
+
 @decodable_array(length=EPOCH_LENGTH, element_type=TicketBody)
-class TicketsMark(Array[TicketBody]): ...
+class TicketsMark(Array[TicketBody]):
+    ...
+
 
 @decodable_vector(element_type=Ed25519Public)
-class OffendersMark(Vector[Ed25519Public]): ...
+class OffendersMark(Vector[Ed25519Public]):
+    ...
+
 
 @decodable_option(EpochMark)
-class OptionalEpochMark(Option): ...
+class OptionalEpochMark(Option):
+    ...
+
 
 @decodable_option(TicketsMark)
-class OptionalTicketsMark(Option): ...
+class OptionalTicketsMark(Option):
+    ...
+
 
 @decodable_dataclass
 @dataclass
 class Header(Codable, JsonSerde):
     """Block header structure."""
+
     parent: HeaderHash
     parent_state_root: StateRoot
     extrinsic_hash: OpaqueHash

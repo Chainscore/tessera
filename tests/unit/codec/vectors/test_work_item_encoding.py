@@ -3,14 +3,15 @@ import json
 from pathlib import Path
 from jam.types.work import WorkItem
 
+
 def test_work_item_encoding():
     """Test encoding/decoding of WorkItem against test vectors."""
     test_dir = Path(__file__).parent / "data"
-    
+
     # Load test vectors
     with open(test_dir / "work_item.json", "r") as f:
         item_json = json.load(f)
-    
+
     with open(test_dir / "work_item.bin", "rb") as f:
         expected_bytes = f.read()
 
@@ -25,7 +26,7 @@ def test_work_item_encoding():
     # Test decoding
     decoded, size = WorkItem.decode_from(expected_bytes)
     assert size == len(expected_bytes)
-    
+
     # Verify decoded matches original
     assert decoded.service == item.service
     assert decoded.code_hash == item.code_hash
@@ -38,4 +39,4 @@ def test_work_item_encoding():
     assert len(decoded.extrinsic) == len(item.extrinsic)
     for dec_spec, orig_spec in zip(decoded.extrinsic, item.extrinsic):
         assert dec_spec == orig_spec
-    assert decoded.export_count == item.export_count 
+    assert decoded.export_count == item.export_count

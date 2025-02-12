@@ -10,10 +10,12 @@ from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ServiceId, Gas
 from jam.utils.json.serde import JsonSerde
 
+
 @decodable_dataclass
 @dataclass
 class ImportSpec(Codable, JsonSerde):
     """Import specification structure."""
+
     tree_root: OpaqueHash
     index: U16
 
@@ -22,21 +24,26 @@ class ImportSpec(Codable, JsonSerde):
 @dataclass
 class ExtrinsicSpec(Codable, JsonSerde):
     """Extrinsic specification structure."""
+
     hash: OpaqueHash
     len: U32
 
 
 @decodable_vector(ImportSpec)
-class ImportSpecs(Vector[ImportSpec]): ...
+class ImportSpecs(Vector[ImportSpec]):
+    ...
+
 
 @decodable_vector(ExtrinsicSpec)
-class ExtrinsicSpecs(Vector[ExtrinsicSpec]): ...
+class ExtrinsicSpecs(Vector[ExtrinsicSpec]):
+    ...
 
 
 @decodable_dataclass
 @dataclass
 class WorkItem(Codable, JsonSerde):
     """Work item structure."""
+
     service: ServiceId
     code_hash: OpaqueHash
     payload: Bytes

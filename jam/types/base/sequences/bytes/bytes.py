@@ -3,13 +3,15 @@ from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.utils.byte_utils import ByteUtils, Bytable
 from jam.types.base.sequences.bytes.bit_array import Byte
 
+
 @decodable_vector(Byte)
 class Bytes(Vector[Byte]):
     """Variable-length byte sequence type."""
+
     def __init__(self, value: Bytable):
         """
         Initialize Bytes.
-        
+
         Args:
             value: Bytable which is either int, bytes, str, bytearray, memoryview, Sequence[Byte]
         """
@@ -24,6 +26,6 @@ class Bytes(Vector[Byte]):
         return bytes(self).hex()
 
     @classmethod
-    def from_json(cls, data: Any) -> 'Bytes':
+    def from_json(cls, data: Any) -> "Bytes":
         """Create from JSON representation."""
         return cls(data)

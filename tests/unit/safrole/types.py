@@ -20,12 +20,14 @@ from jam.types.protocol.validators import ValidatorArray
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 
+
 @decodable_dataclass
 @dataclass
 class Input(Codable):
     slot: U32
     entropy: ByteArray32
     extrinsic: TicketsExtrinsic
+
 
 @decodable_dataclass
 @dataclass
@@ -40,19 +42,25 @@ class PreState(Codable):
     gamma_s: GammaS
     gamma_z: GammaZ
     post_offenders: Offenders
-    
+
+
 PostState = PreState
+
 
 @decodable_dataclass
 @dataclass
 class EpochMark(Codable):
     """Epoch mark structure."""
+
     entropy: Entropy
     tickets_entropy: Entropy
     validators: ValidatorArray
 
+
 @decodable_option(EpochMark)
-class EpochMarkOption(Option): ...
+class EpochMarkOption(Option):
+    ...
+
 
 @decodable_dataclass
 @dataclass
@@ -60,10 +68,12 @@ class OutputMarks(Codable):
     epoch_mark: EpochMarkOption
     tickets_mark: OptionalTicketsMark
 
+
 @decodable_choice
-class Output(Choice): 
+class Output(Choice):
     ok: OutputMarks
     err: SafroleErrorCode
+
 
 @decodable_dataclass
 @dataclass
@@ -73,8 +83,9 @@ class Testcase(Codable):
     output: Output
     post_state: PostState
 
+
 def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testcase]:
-    data_dir = "tests/unit/safrole/data/tiny"
+    data_dir = "tests/unit/authorization/data/tiny"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
         if len(result) >= limit:

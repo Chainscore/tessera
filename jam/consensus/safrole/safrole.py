@@ -12,9 +12,14 @@ from jam.types.base.sequences.bytes.byte_array import ByteArray, ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.block import Block
 from jam.utils.byte_utils import ByteUtils
-from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END, TICKET_ENTRIES_PER_VALIDATOR
+from jam.utils.constants import (
+    EPOCH_LENGTH,
+    TICKET_SUBMISSION_END,
+    TICKET_ENTRIES_PER_VALIDATOR,
+)
 from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingRoot, Hash
 from jam.consensus.safrole.gamma import GammaK, GammaSFallback, GammaA
+
 
 class Safrole:
     @staticmethod
@@ -25,7 +30,7 @@ class Safrole:
     @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> ByteArray32:
         sorted_keys = sorted(keys)
-        data = b''
+        data = b""
         for key in sorted_keys:
             data = data + bytes(key)
         return Hash.blake2b(data)
@@ -44,7 +49,9 @@ class Safrole:
 
         # 2. Accumulate entropy
         if block.header.epoch_mark:
-            new_state.eta[0] = Hash.blake2b(bytes(new_state.eta[0]) + (bytes(block.header.epoch_mark.value.entropy)))
+            new_state.eta[0] = Hash.blake2b(
+                bytes(new_state.eta[0]) + (bytes(block.header.epoch_mark.value.entropy))
+            )
 
         # 3. Ticket Accumulation
         # Process the tickets before TICKET_SUBMISSION_END of the epoch
@@ -52,7 +59,12 @@ class Safrole:
             # Validate extrinsics
             Safrole.ensure_valid_ticket_extrinsics(block)
             # Accumulate them in gamma.a
-            new_state.gamma.a += [TicketBody(attempt=ticket.attempt, id=Safrole.vrf_output(ticket.signature)) for ticket in block.extrinsic.tickets]
+            new_state.gamma.a += [
+                TicketBody(
+                    attempt=ticket.attempt, id=Safrole.vrf_output(ticket.signature)
+                )
+                for ticket in block.extrinsic.tickets
+            ]
             new_state.gamma.a.sort(key=lambda x: x.id)
             # Remove duplicates
             new_state.gamma.a = GammaA(list(dict.fromkeys(new_state.gamma.a)))
@@ -65,13 +77,14 @@ class Safrole:
             new_state.lambda_ = Lambda_(pre_state.kappa.value)
             new_kappa = Kappa(pre_state.gamma.k)
             new_state.kappa = new_kappa
-            new_state.gamma.k = GammaK([
-                k for k in pre_state.iota
-                if k.ed25519 not in pre_state.psi.o
-            ])
+            new_state.gamma.k = GammaK(
+                [k for k in pre_state.iota if k.ed25519 not in pre_state.psi.o]
+            )
 
             # 4.2 . Shift entropy
-            new_state.eta = Eta([new_state.eta[0], new_state.eta[0], new_state.eta[1], new_state.eta[2]])
+            new_state.eta = Eta(
+                [new_state.eta[0], new_state.eta[0], new_state.eta[1], new_state.eta[2]]
+            )
 
             # 4.3. Update seal keys for this coming epoch
             if len(new_state.gamma.a) >= EPOCH_LENGTH:
@@ -80,10 +93,14 @@ class Safrole:
                 new_state.gamma.s = [t[0] for t in new_state.gamma.a[:EPOCH_LENGTH]]
             else:
                 # Else fallback: use bandersnatch keys
-                new_state.gamma.s = Safrole.arrange_fallback(new_state.eta[2], new_state.kappa)
+                new_state.gamma.s = Safrole.arrange_fallback(
+                    new_state.eta[2], new_state.kappa
+                )
 
             # 4. 4. Update ring root
-            new_state.gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in new_state.kappa])
+            new_state.gamma.z = Safrole.compute_ring_root(
+                [k.bandersnatch for k in new_state.kappa]
+            )
 
             # 4.5. Empty the ticket acc for upcoming epoch
             new_state.gamma.a = GammaA([])
@@ -106,6 +123,7 @@ class Safrole:
         Ensures the tickets submitted via the extrinsic must already have been placed in order of their implied identifier.
         https://graypaper.fluffylabs.dev/#/5b732de/0fc7000fc800
         """
+
         def sort_fn(ticket: TicketEnvelope) -> int:
             # Take VRF output of the signature and sort by it
             return Safrole.vrf_output(ticket.signature).to_int()
@@ -113,7 +131,10 @@ class Safrole:
         tickets_sorted = tickets.copy()
         tickets_sorted.sort(key=sort_fn)
         if tickets_sorted != tickets:
-            raise SafroleError(SafroleErrorCode.BAD_TICKET_ORDER, "Tickets are not in sorted order by VRF output")
+            raise SafroleError(
+                SafroleErrorCode.BAD_TICKET_ORDER,
+                "Tickets are not in sorted order by VRF output",
+            )
 
     @staticmethod
     def ensure_valid_vrf(ticket: TicketEnvelope):
@@ -121,7 +142,10 @@ class Safrole:
         Signature must be valid Ring-VRF proof
         """
         if not Safrole.verify_vrf(ticket.attempt, ticket.signature):
-            raise SafroleError(SafroleErrorCode.BAD_TICKET_PROOF, f"Ticket {ticket} VRF Proof is invalid")
+            raise SafroleError(
+                SafroleErrorCode.BAD_TICKET_PROOF,
+                f"Ticket {ticket} VRF Proof is invalid",
+            )
 
     @staticmethod
     def ensure_valid_attempt(ticket: TicketEnvelope):
@@ -130,7 +154,10 @@ class Safrole:
         https://graypaper.fluffylabs.dev/#/5b732de/0f22000f2400
         """
         if ticket.attempt >= TICKET_ENTRIES_PER_VALIDATOR:
-            raise SafroleError(SafroleErrorCode.BAD_TICKET_ATTEMPT, f"Ticket attempt {ticket.attempt} is invalid")
+            raise SafroleError(
+                SafroleErrorCode.BAD_TICKET_ATTEMPT,
+                f"Ticket attempt {ticket.attempt} is invalid",
+            )
 
     @staticmethod
     def arrange_fallback(entropy: Bytes, validators: Kappa) -> GammaSFallback:
