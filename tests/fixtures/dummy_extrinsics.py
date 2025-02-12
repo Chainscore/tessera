@@ -1,5 +1,5 @@
 from jam.types import Ed25519Signature, BandersnatchRingVrfSignature, TimeSlot, WorkResult, \
-    WorkExecResult, RefineContext, WorkPackageSpec
+    WorkExecResult, RefineContext, WorkPackageSpec, Bytes
 from jam.types.block import Extrinsic
 from jam.types.extrinsics import (
     TicketsExtrinsic, PreimagesExtrinsic,
@@ -11,20 +11,21 @@ from jam.types.extrinsics.preimages import Preimage
 from jam.types.extrinsics.guarantees import ReportGuarantee, ValidatorSignature
 from jam.types.extrinsics.assurances import AvailAssurance
 from jam.types.extrinsics.disputes import Verdict, Culprit, Fault, Judgement
-from jam.types.protocol.core import ServiceId, ValidatorIndex
+from jam.types.protocol.core import ServiceId, ValidatorIndex, Gas
 from jam.types.base.boolean import Boolean
-from jam.types.base.integers.fixed import U32
+from jam.types.base.integers.fixed import U32, U16
 from jam.types.work import WorkReport
+from jam.types.work.report import WorkResults
 from tests.fixtures.utils import create_dummy_bytes, create_dummy_bytes32
 
 def create_dummy_package_spec() -> WorkPackageSpec:
     """Create dummy package spec"""
     return WorkPackageSpec(
         hash=create_dummy_bytes32(),
-        length=42,
+        length=U32(42),
         erasure_root=create_dummy_bytes32(),
         exports_root=create_dummy_bytes32(),
-        exports_count=69
+        exports_count=U16(69)
     )
 
 def create_dummy_work_context() -> RefineContext:
@@ -34,18 +35,18 @@ def create_dummy_work_context() -> RefineContext:
         state_root=create_dummy_bytes32(),
         beefy_root=create_dummy_bytes32(),
         lookup_anchor=create_dummy_bytes32(),
-        lookup_anchor_slot=33,
+        lookup_anchor_slot=TimeSlot(33),
         prerequisites=[]
     )
 
 def create_dummy_work_result() -> WorkResult:
     """Create dummy work result"""
     return WorkResult(
-        service_id=16909060,
+        service_id=ServiceId(16909060),
         code_hash=create_dummy_bytes32(),
         payload_hash=create_dummy_bytes32(),
-        accumulate_gas=42,
-        result=WorkExecResult({"ok": create_dummy_bytes(16)})
+        accumulate_gas=Gas(42),
+        result=WorkExecResult({"ok": Bytes(create_dummy_bytes(16))})
     )
 
 def create_dummy_work_report() -> WorkReport:
@@ -55,9 +56,9 @@ def create_dummy_work_report() -> WorkReport:
         context=create_dummy_work_context(),
         core_index=3,
         authorizer_hash=create_dummy_bytes32(),
-        auth_output="0x0102030405",
+        auth_output=Bytes("0x0102030405"),
         segment_root_lookup=[],
-        results=[create_dummy_work_result()]
+        results=WorkResults([create_dummy_work_result()])
     )
 
 def create_dummy_validator_signatures() -> list[ValidatorSignature]:
