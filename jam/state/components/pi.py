@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 
 from jam.types.base.integers.general import Int
@@ -22,9 +21,12 @@ class ValidatorStat(Codable):
 @decodable_array(VALIDATOR_COUNT, ValidatorStat)
 class AllValidatorStats(Array[ValidatorStat]):
     """All validator stats"""
+
     ...
+
 
 @decodable_array(2, AllValidatorStats)
 class Pi(Array[AllValidatorStats]):
     """Pi"""
+
     ...

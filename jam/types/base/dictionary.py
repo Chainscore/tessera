@@ -1,22 +1,36 @@
 from typing import (
-    Generic, Mapping, Optional, Self, Tuple, Type, TypeVar, Union, Dict,
-    Iterator, ItemsView, KeysView, ValuesView, Any, Sequence
+    Generic,
+    Mapping,
+    Optional,
+    Self,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    Dict,
+    Iterator,
+    ItemsView,
+    KeysView,
+    ValuesView,
+    Any,
+    Sequence,
 )
 
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.dictionaries import DictionaryCodec
 from jam.utils.json import JsonSerde
 
-K = TypeVar('K', bound=Codable)
-V = TypeVar('V', bound=Codable)
+K = TypeVar("K", bound=Codable)
+V = TypeVar("V", bound=Codable)
+
 
 class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
     """
     Dictionary implementation that supports codec operations.
-    
+
     A dictionary that maps Codable keys to Codable values, providing both standard
     dictionary operations and codec functionality for serialization/deserialization.
-    
+
     Examples:
         >>> from jam.types.base.string import String
         >>> from jam.types.base.integers import Int
@@ -31,14 +45,14 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
 
     key_type: Type[K]
     value_type: Type[V]
-    
+
     def __init__(self, initial: Optional[Mapping[K, V]] = None):
         """
         Initialize dictionary.
-        
+
         Args:
             initial: Optional initial key-value pairs
-            
+
         Raises:
             TypeError: If any key or value is not Codable
         """
@@ -46,7 +60,7 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
             for key, value in initial.items():
                 if not isinstance(key, Codable) or not isinstance(value, Codable):
                     raise TypeError("Dictionary keys and values must be Codable")
-                    
+
         super().__init__(codec=DictionaryCodec())
         self.value: Dict[K, V] = {}
         if initial is not None:
@@ -78,11 +92,11 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
     def get(self, key: K, default: Optional[V] = None) -> Optional[V]:
         """
         Get value for key, returning default if key not found.
-        
+
         Args:
             key: Key to look up
             default: Value to return if key not found
-            
+
         Returns:
             Value for key or default
         """
@@ -105,25 +119,35 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
         return {k.to_json(): v.to_json() for k, v in self.items()}
 
     @classmethod
-    def from_json(cls: Type[Self], data: Dict[Any, Any]|Sequence[Any]) -> Self:
+    def from_json(cls: Type[Self], data: Dict[Any, Any] | Sequence[Any]) -> Self:
         """Create instance from JSON representation."""
         if not isinstance(data, dict):
             raise ValueError("Dictionary: JSON representation must be a dictionary")
-        return cls({cls.key_type.from_json(k): cls.value_type.from_json(v) for k, v in data.items()})
-    
-def decodable_dictionary(key_type: Type[K], value_type: Type[V]) -> Type[Dictionary[K, V]]:
+        return cls(
+            {
+                cls.key_type.from_json(k): cls.value_type.from_json(v)
+                for k, v in data.items()
+            }
+        )
+
+
+def decodable_dictionary(
+    key_type: Type[K], value_type: Type[V]
+) -> Type[Dictionary[K, V]]:
     def decorator(cls: Type[Dictionary[K, V]]) -> Type[Dictionary[K, V]]:
         cls.key_type = key_type
         cls.value_type = value_type
 
         @staticmethod
         def decode_from(
-            buffer: Union[bytes, bytearray, memoryview], 
-            offset: int = 0
-        ) -> Tuple['Dictionary[K, V]', int]:
-            value, size = DictionaryCodec.decode_from(key_type, value_type, buffer, offset)
-            return Dictionary(value), size 
-        
+            buffer: Union[bytes, bytearray, memoryview], offset: int = 0
+        ) -> Tuple["Dictionary[K, V]", int]:
+            value, size = DictionaryCodec.decode_from(
+                key_type, value_type, buffer, offset
+            )
+            return Dictionary(value), size
+
         cls.decode_from = decode_from
         return cls
+
     return decorator

@@ -1,5 +1,9 @@
-jam.consensus.grandpa package
-=============================
+GRANDPA Consensus
+=================
+
+This section documents the GRANDPA consensus mechanism used in Tessera.
+
+Work in Progress.
 
 Module Contents
 --------------

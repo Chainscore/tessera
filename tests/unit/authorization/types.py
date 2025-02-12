@@ -11,15 +11,20 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
 
+
 @decodable_dataclass
 @dataclass
 class InputWorkReport(Codable, JsonSerde):
     """Input work report structure."""
+
     core: CoreIndex
     auth_hash: OpaqueHash
 
+
 @decodable_vector(InputWorkReport)
-class InputAuths(Vector): ...
+class InputAuths(Vector):
+    ...
+
 
 @decodable_dataclass
 @dataclass
@@ -27,13 +32,16 @@ class Input(Codable, JsonSerde):
     slot: U32
     auths: InputAuths
 
+
 @decodable_dataclass
 @dataclass
 class PreState(Codable, JsonSerde):
     auth_pools: Alpha
     auth_queues: Phi
-    
+
+
 PostState = PreState
+
 
 @decodable_dataclass
 @dataclass
@@ -41,6 +49,7 @@ class Testcase(Codable, JsonSerde):
     input: Input
     pre_state: PreState
     post_state: PostState
+
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testcase]:
     data_dir = "tests/unit/authorization/data/tiny"

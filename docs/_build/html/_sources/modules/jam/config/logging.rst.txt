@@ -1,5 +1,5 @@
-jam.config.logging module
-=========================
+Logging 
+========
 
 .. automodule:: jam.config.logging
    :members:

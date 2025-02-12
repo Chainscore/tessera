@@ -11,6 +11,7 @@ from jam.types.base.boolean import Boolean
 from jam.types.base.string import String
 from jam.types.base.integers import U8
 
+
 class TestArrayCodec:
     """Test suite for array encoding/decoding."""
 
@@ -24,11 +25,14 @@ class TestArrayCodec:
         assert decoded == value
         assert size == len(encoded)
 
-    @pytest.mark.parametrize("codec,values", [
-        (ArrayCodec(3), [U8(1), U8(2), U8(3)]),
-        (ArrayCodec(2), [Boolean(True), Boolean(False)]),
-        (ArrayCodec(2), [String("hello"), String("world")]),
-    ])
+    @pytest.mark.parametrize(
+        "codec,values",
+        [
+            (ArrayCodec(3), [U8(1), U8(2), U8(3)]),
+            (ArrayCodec(2), [Boolean(True), Boolean(False)]),
+            (ArrayCodec(2), [String("hello"), String("world")]),
+        ],
+    )
     def test_various_types(self, codec, values):
         """Test array codec with various element types."""
         encoded = codec.encode(values)
@@ -40,7 +44,7 @@ class TestArrayCodec:
         """Test handling of zero-length arrays."""
         codec = ArrayCodec(0)
         value = []
-        
+
         encoded = codec.encode(value)
         decoded, size = ArrayCodec.decode_from(0, U8, encoded)
         assert decoded == value
@@ -64,11 +68,11 @@ class TestArrayCodec:
     def test_length_mismatch(self):
         """Test handling of incorrect array lengths."""
         codec = ArrayCodec(3)
-        
+
         # Too few elements
         with pytest.raises(EncodeError):
             codec.encode([U8(1), U8(2)])
-            
+
         # Too many elements
         with pytest.raises(EncodeError):
             codec.encode([U8(1), U8(2), U8(3), U8(4)])
@@ -76,15 +80,15 @@ class TestArrayCodec:
     def test_invalid_element_type(self):
         """Test handling of invalid element types during encoding."""
         codec = ArrayCodec(3)
-        
+
         with pytest.raises(EncodeError):
-            codec.encode(["not", "a", "string"]) # type: ignore
+            codec.encode(["not", "a", "string"])  # type: ignore
 
     def test_buffer_bounds(self):
         """Test buffer bounds checking."""
         codec = ArrayCodec(3)
         value = [U8(1), U8(2), U8(3)]
-        
+
         encoded = codec.encode(value)
         # Test decoding from too small buffer
         for i in range(len(encoded)):
@@ -93,6 +97,7 @@ class TestArrayCodec:
 
     def test_nested_arrays(self):
         """Test encoding/decoding of nested arrays."""
+
         @decodable_array(3, U8)
         class FixedIntArray3(Array[U8]):
             pass

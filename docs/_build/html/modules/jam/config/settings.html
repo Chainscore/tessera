@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>jam.config.settings module &mdash; Tessera 0.1.0 documentation</title>
+  <title>Settings &mdash; Tessera 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
 
@@ -19,8 +19,8 @@
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="jam.consensus package" href="../consensus/index.html" />
-    <link rel="prev" title="jam.config.logging module" href="logging.html" /> 
+    <link rel="next" title="Crypto Primitives" href="../crypto/index.html" />
+    <link rel="prev" title="Logging" href="logging.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -42,34 +42,58 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Testing Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jam_node.html">JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../state.html">State</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Consensus</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/index.html">Consensus Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/index.html#overview">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/safrole/index.html">Safrole [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/grandpa/index.html">GRANDPA Consensus</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../index.html">jam package</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="../index.html#subpackages">Subpackages</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="../api/index.html">jam.api package</a></li>
-<li class="toctree-l3 current"><a class="reference internal" href="index.html">jam.config package</a><ul class="current">
-<li class="toctree-l4 current"><a class="reference internal" href="index.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="index.html#module-contents">Module Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authorization/index.html">Authorization</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Configuration</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="logging.html">Logging</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Settings</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.config.settings.Settings"><code class="docutils literal notranslate"><span class="pre">Settings</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../consensus/index.html">jam.consensus package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../core/index.html">jam.core package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../crypto/index.html">jam.crypto package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../execution/index.html">jam.execution package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../network/index.html">jam.network package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../playground/index.html">jam.playground package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../pvm/index.html">jam.pvm package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../services/index.html">jam.services package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../state/index.html">jam.state package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../storage/index.html">jam.storage package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../types/index.html">jam.types</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../utils/index.html">jam.utils package</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#module-contents">Module Contents</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../crypto/index.html">Crypto Primitives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../execution/index.html">Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pvm/index.html">PVM [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../state/index.html">jam.state package</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Utilities</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../storage/index.html">Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../network/index.html">Networking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../types/index.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/codec/index.html">Codec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/json/index.html">JsonSerde</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../CONTRIBUTING.html">Contributing to Documentation</a></li>
 </ul>
 
         </div>
@@ -86,9 +110,8 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../index.html">jam package</a></li>
-          <li class="breadcrumb-item"><a href="index.html">jam.config package</a></li>
-      <li class="breadcrumb-item active">jam.config.settings module</li>
+          <li class="breadcrumb-item"><a href="index.html">Configuration</a></li>
+      <li class="breadcrumb-item active">Settings</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../../_sources/modules/jam/config/settings.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -99,7 +122,7 @@
            <div itemprop="articleBody">
              
   <section id="module-jam.config.settings">
-<span id="jam-config-settings-module"></span><h1>jam.config.settings module<a class="headerlink" href="#module-jam.config.settings" title="Link to this heading"></a></h1>
+<span id="settings"></span><h1>Settings<a class="headerlink" href="#module-jam.config.settings" title="Link to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="jam.config.settings.Settings">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.config.settings.</span></span><span class="sig-name descname"><span class="pre">Settings</span></span><a class="reference internal" href="../../../_modules/jam/config/settings.html#Settings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.config.settings.Settings" title="Link to this definition"></a></dt>
@@ -131,7 +154,7 @@
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="jam.config.settings.Settings.DB_PATH">
-<span class="sig-name descname"><span class="pre">DB_PATH</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.13)"><span class="pre">Path</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">PosixPath('data/db')</span></em><a class="headerlink" href="#jam.config.settings.Settings.DB_PATH" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">DB_PATH</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Path</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">PosixPath('data/db')</span></em><a class="headerlink" href="#jam.config.settings.Settings.DB_PATH" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -203,8 +226,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="logging.html" class="btn btn-neutral float-left" title="jam.config.logging module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../consensus/index.html" class="btn btn-neutral float-right" title="jam.consensus package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="logging.html" class="btn btn-neutral float-left" title="Logging" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../crypto/index.html" class="btn btn-neutral float-right" title="Crypto Primitives" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

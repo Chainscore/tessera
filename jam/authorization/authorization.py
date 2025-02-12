@@ -38,6 +38,6 @@ class Authorization:
             # Push phi[c][Ht] to alpha
             core_alpha_temp.append(new_state.phi[i][block.header.slot.value])
             alpha_temp[i] = core_alpha_temp
-        new_state.alpha = (alpha_temp)
+        new_state.alpha = alpha_temp
 
         return new_state

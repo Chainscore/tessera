@@ -12,15 +12,19 @@ ChiA = ServiceId
 """Can alter Iota"""
 ChiV = ServiceId
 
+
 @decodable_dictionary(key_type=ServiceId, value_type=Gas)
 class ChiG(Dictionary[ServiceId, Gas]):
     """Dictionary containing indices of services which automatically acc in each block w/ basic gas"""
+
     ...
+
 
 @decodable_dataclass
 @dataclass
 class Chi(Codable):
     """Chi state"""
+
     m: ChiM
     a: ChiA
     v: ChiV

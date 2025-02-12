@@ -6,31 +6,36 @@ from jam.types.base.boolean import Boolean
 from jam.types.base.null import Null, Nullable
 from jam.utils.json.serde import JsonDeserializationError
 
+
 @decodable_option(String)
 class StringOption(Option):
     pass
+
 
 @decodable_option(I64)
 class IntOption(Option):
     pass
 
+
 @decodable_option(Boolean)
 class BoolOption(Option):
     pass
+
 
 def test_option_json_serialization_none():
     # Test None value for different option types
     string_none = StringOption(Null)
     assert string_none.to_json() is None
     assert StringOption.from_json(None) == string_none
-    
+
     int_none = IntOption(Null)
     assert int_none.to_json() is None
     assert IntOption.from_json(None) == int_none
-    
+
     bool_none = BoolOption(Null)
     assert bool_none.to_json() is None
     assert BoolOption.from_json(None) == bool_none
+
 
 def test_option_json_serialization_some():
     # Test Some value for string option
@@ -51,6 +56,7 @@ def test_option_json_serialization_some():
     assert json_bool is True
     assert BoolOption.from_json(json_bool) == bool_some
 
+
 def test_option_json_invalid_input():
     # Test with invalid types for string option
     with pytest.raises(JsonDeserializationError):
@@ -70,18 +76,17 @@ def test_option_json_invalid_input():
     with pytest.raises(JsonDeserializationError):
         BoolOption.from_json(1)  # Int instead of bool
 
+
 def test_option_json_roundtrip():
     # Test roundtrip for None values
-    test_none_cases = [
-        StringOption(Null),
-        IntOption(Null),
-        BoolOption(Null)
-    ]
+    test_none_cases = [StringOption(Null), IntOption(Null), BoolOption(Null)]
 
     for original in test_none_cases:
         json_data = original.to_json()
         assert json_data is None
-        reconstructed = original.__class__.from_json(json_data, )
+        reconstructed = original.__class__.from_json(
+            json_data,
+        )
         assert reconstructed == original
         assert isinstance(list(reconstructed.value.values())[0], Nullable)
 
@@ -89,15 +94,18 @@ def test_option_json_roundtrip():
     test_some_cases = [
         (StringOption(String("test")), "test"),
         (IntOption(I64(42)), 42),
-        (BoolOption(Boolean(True)), True)
+        (BoolOption(Boolean(True)), True),
     ]
 
     for original, expected_json in test_some_cases:
         json_data = original.to_json()
         assert json_data == expected_json
-        reconstructed = original.__class__.from_json(json_data, )
+        reconstructed = original.__class__.from_json(
+            json_data,
+        )
         assert reconstructed == original
         assert not isinstance(reconstructed.value, Nullable)
+
 
 def test_option_json_special_values():
     # Test string option with special characters
@@ -118,10 +126,11 @@ def test_option_json_special_values():
     assert json_data == 2**31 - 1
     assert IntOption.from_json(json_data) == max_int
 
-    min_int = IntOption(I64(-2**31))
+    min_int = IntOption(I64(-(2**31)))
     json_data = min_int.to_json()
-    assert json_data == -2**31
+    assert json_data == -(2**31)
     assert IntOption.from_json(json_data) == min_int
+
 
 def test_option_json_comparison():
     # Test equality after serialization/deserialization

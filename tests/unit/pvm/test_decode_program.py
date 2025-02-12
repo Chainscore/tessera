@@ -2,6 +2,7 @@ import os
 import json
 from .types import Status, Testcase
 
+
 def test_decode_program():
     # Read all json files from /data/pvm/programs
     data_dir = "tests/unit/pvm/data"

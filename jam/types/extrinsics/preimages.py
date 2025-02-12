@@ -8,12 +8,16 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.core import ServiceId
 from jam.utils.json.serde import JsonSerde
 
+
 @decodable_dataclass
 @dataclass
 class Preimage(Codable, JsonSerde):
     """Preimage structure."""
+
     requester: ServiceId
     blob: Bytes
 
+
 @decodable_vector(Preimage)
-class PreimagesExtrinsic(Vector[Preimage]): ...
+class PreimagesExtrinsic(Vector[Preimage]):
+    ...

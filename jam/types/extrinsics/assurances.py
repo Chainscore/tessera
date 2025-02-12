@@ -8,17 +8,23 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import CORE_COUNT
 from jam.utils.json.serde import JsonSerde
 
+
 @decodable_bit_array(length=CORE_COUNT, bitorder="lsb")
-class AvailBitField(BitArray): ...
+class AvailBitField(BitArray):
+    ...
+
 
 @decodable_dataclass
 @dataclass
 class AvailAssurance(Codable, JsonSerde):
     """Availability assurance structure."""
+
     anchor: OpaqueHash
     bitfield: AvailBitField
     validator_index: ValidatorIndex
     signature: Ed25519Signature
 
+
 @decodable_vector(AvailAssurance)
-class AssurancesExtrinsic(Vector[AvailAssurance]): ...
+class AssurancesExtrinsic(Vector[AvailAssurance]):
+    ...

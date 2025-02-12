@@ -5,9 +5,15 @@ from jam.consensus.safrole.safrole import Safrole
 from jam.state.state import State
 from jam.types import Boolean
 from jam.types.block import Block
-from tests.unit.safrole.types import Input, PreState, Testcase, get_testcases_starting_with
+from tests.unit.safrole.types import (
+    Input,
+    PreState,
+    Testcase,
+    get_testcases_starting_with,
+)
 from tests.fixtures.dummy_state import create_dummy_state
 from tests.fixtures.dummy_block import create_dummy_block
+
 
 def create_block_from_input(input: Input) -> Block:
     """Create a block from test input"""
@@ -16,6 +22,7 @@ def create_block_from_input(input: Input) -> Block:
     block.header.slot = input.slot
     block.header.epoch_mark.entropy = input.entropy
     return block
+
 
 def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
@@ -31,6 +38,7 @@ def create_state_from_pre(pre_state: PreState) -> State:
     state.gamma.z = pre_state.gamma_z
     state.psi.o = pre_state.post_offenders
     return state
+
 
 def vector_transition(vector: Testcase) -> Boolean:
     test_state = create_state_from_pre(vector.pre_state)
@@ -58,16 +66,22 @@ def vector_transition(vector: Testcase) -> Boolean:
             assert e.code == vector.output.value
     return Boolean(True)
 
+
 def test_enact_epoch_change_with_no_tickets():
     """Test publishing tickets with no mark"""
-    vectors: List[Testcase] = get_testcases_starting_with(limit=0, prefix="enact-epoch-change-with-no-tickets")
+    vectors: List[Testcase] = get_testcases_starting_with(
+        limit=0, prefix="enact-epoch-change-with-no-tickets"
+    )
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)
         print(f"Passed testcase #{i + 1}")
 
+
 def test_publish_tickets_no_mark():
     """Test publishing tickets with no mark"""
-    vectors: List[Testcase] = get_testcases_starting_with(limit=0, prefix="publish-tickets-no-mark")
+    vectors: List[Testcase] = get_testcases_starting_with(
+        limit=0, prefix="publish-tickets-no-mark"
+    )
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)
         print(f"Passed testcase #{i + 1}")

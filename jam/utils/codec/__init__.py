@@ -14,12 +14,12 @@ from .codable import Codable
 from .errors import CodecError, BufferError, EncodeError, DecodeError
 
 __all__ = [
-    'Codec',
-    'Codable',
-    'CodecError',
-    'BufferError',
-    'EncodeError',
-    'DecodeError'
+    "Codec",
+    "Codable",
+    "CodecError",
+    "BufferError",
+    "EncodeError",
+    "DecodeError",
 ]
 
-__version__ = '1.0.0'
+__version__ = "1.0.0"
