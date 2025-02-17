@@ -1,3 +1,9 @@
+from jam.RING_VRF.curve.glv import GLV_Specs
+from jam.RING_VRF.curve.twisted_edwards.te_curve import TECurve
+from jam.RING_VRF.curve.twisted_edwards.te_affine_point import TEAffinePoint
+from jam.RING_VRF.curve.point import Point
+from typing import Self
+
 EdwardsA = -5
 EdwardsD = 0x6389c12633c267cbc66e3bf86be3b6d8cb66677177e54f92b369f2f5188d58e7
 PRIME_FIELD = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
@@ -8,30 +14,22 @@ GENERATOR = (1888617886720096049700183591764909121905708009493760951914044053976
 
 COFACTOR = 4
 
-from typing import TYPE_CHECKING
 # For GLV
 lamda = 0x13b4f3dc4a39a493edf849562b38c72bcfc49db970a5056ed13d21408783df05
 constant_b = 0x52c9f28b828426a561f00d3a63511a882ea712770d9af4d6ee0f014d172510b4
 constant_c = 0x6cc624cf865457c3a97c6efd6c17d1078456abcfff36f4e9515c806cdf650b3d
 
 
-from jam.RING_VRF.curve.glv import GLV_Specs
-from jam.RING_VRF.curve.twisted_edwards.te_curve import TECurve
-from jam.RING_VRF.curve.twisted_edwards.te_affine_point import TEAffinePoint
-
 BandersnatchGLVSpec = GLV_Specs(True, lamda, constant_b, constant_c)
 
 Bandersnatch_TE_Curve = TECurve(PRIME_FIELD, ORDER, GENERATOR[0], GENERATOR[1], COFACTOR, BandersnatchGLVSpec, EdwardsA,
                                 EdwardsD)
 
-
-
 class BandersnatchPoint(TEAffinePoint):
+    def __init__(self, x: int, y: int):
+        self.curve = Bandersnatch_TE_Curve
+        super().__init__(x, y)
 
-
-    def __init__(self):
-        super().__init__(Bandersnatch_TE_Curve)
-
-
-
-
+    @classmethod
+    def from_mont(cls, p:Point) -> Self:
+        return super().from_mont(p, PRIME_FIELD)

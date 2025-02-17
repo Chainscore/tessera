@@ -1,24 +1,22 @@
-from dataclasses import dataclass
-
-from jam.utils.conv_helper import ConversionHelper
-
-
-@dataclass
 class Point:
     x: int
     y: int
 
-    @staticmethod
-    def point_to_string(point):
+    def __init__(self, x: int, y: int):
+        self.x = x
+        self.y = y
+
+    def point_to_string(self):
         """
         Convert elliptic curve point (x, y) to compressed octet string.
         - The x-coordinate is encoded as 32 bytes.
         - The most significant bit of the last byte indicates the parity of y.
         """
-        x, y = point
-        y_bytes = bytearray(ConversionHelper.to_bytes(y))  # Convert y to byte array
+        x, y = self.x, self.y
+        y_bytes = bytearray(y.to_bytes(32, "little"))  # Convert y to byte array
         x_is_odd = x % 2  # Determine if x is odd (1) or even (0)
 
+        print(y_bytes[-1])
         # Set the MSB of the last byte to indicate parity of x
         y_bytes[-1] |= (x_is_odd << 7)
 

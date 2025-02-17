@@ -8,13 +8,13 @@ Bytable = Union[int, bool, bytes, str, bytearray, memoryview, Sequence]
 
 class ConversionHelper(HexConversion,StrConversion):
     @staticmethod
-    def to_bytes(value: Bytable) -> bytearray:
+    def to_bytes(value: Bytable, byteorder: Literal["big", "little"] = "big") -> bytearray:
         """Convert [str (hex_string), int, bool, bytes, memoryview] to bytearray"""
         if isinstance(value, str):
             byt = HexConversion.hex_to_bytes(value)
         elif isinstance(value, int):
             """If it's an integer or bool, we can convert it to bytes"""
-            byt = ConversionHelper.int_to_bytes(value)
+            byt = ConversionHelper.int_to_bytes(value, byteorder)
         else:
             """For any other type, we assume there is a __bytes__ method - if not throw an error"""
             try:
@@ -47,6 +47,7 @@ class ConversionHelper(HexConversion,StrConversion):
         """Convert integer to bytes with optional fixed length"""
         if length is None:
             length = (value.bit_length() + 7) // 8
+        print(type(value))
         return value.to_bytes(length, byteorder)
 
     @staticmethod
