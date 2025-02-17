@@ -204,7 +204,7 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
 
     def reverse(self) -> "BaseSequence[T]":
         """Reverse the vector in place."""
-        self.value = self.value.reverse()
+        self.value.reverse()
         return self
 
     def extend(self, values: Sequence[T]) -> None:
