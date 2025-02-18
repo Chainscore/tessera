@@ -20,7 +20,7 @@ class BinaryMerkle:
     def _preprocessor_fn(self, values: Vector[ByteArray32], hash_fn: Optional[Hash]) -> Vector[HashType]:
         """Constancy Preprocessor Function Implementation as defined in Equation E.7 in Section E.1.2"""
         if not hash_fn:
-            hash_fn = Hash.sha256
+            hash_fn = Hash.blake2b
 
         new_values: Vector[HashType] = Vector()
 
@@ -33,7 +33,7 @@ class BinaryMerkle:
     def _node_fn(self, values: Vector[ByteArray32], hash_fn: Optional[Hash]) -> HashType:
         """Node Function Implementation as defined in Equation E.1"""
         if not hash_fn:
-            hash_fn = Hash.sha256
+            hash_fn = Hash.blake2b
 
         if len(values) == 0:
             return self._ZERO_HASH
@@ -47,7 +47,7 @@ class BinaryMerkle:
     def wb_merkle_fn(self, values: Vector[ByteArray32], hash_fn: Optional[Hash]) -> HashType:
         """Well Balanced Binary Merkle Function Implementation as defined in Equation E.3 in Section E.1.1"""
         if not hash_fn:
-            hash_fn = Hash.sha256
+            hash_fn = Hash.blake2b
 
         if len(values) == 1:
             return hash_fn(values[0])
@@ -57,6 +57,6 @@ class BinaryMerkle:
     def cd_merkle_fn(self, values: Vector[ByteArray32], hash_fn: Optional[Hash]) -> HashType:
         """Constant Depth Binary Merkle Function Implementation as defined in Equation E.4 in Section E.1.2"""
         if not hash_fn:
-            hash_fn = Hash.sha256
+            hash_fn = Hash.blake2b
 
         return self._node_fn(self._preprocessor_fn(values, hash_fn), hash_fn)
