@@ -10,6 +10,7 @@ from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
 from jam.utils.codec.utils import check_buffer_size
 
+
 class Program(Codable):
     """This is the program blob which the PVM will execute.
 
@@ -122,6 +123,7 @@ class Program(Codable):
         return value
 
 
-    def execute(self, register: Register, initial_registers: Registers, gas: Gas, memory: MemoryChunk) -> Registers:
+    def execute(self, register:Register, initial_registers:Registers, gas:Gas, memory:MemoryChunk) -> Registers:
         # TODO: Implement execute
+
         return initial_registers
