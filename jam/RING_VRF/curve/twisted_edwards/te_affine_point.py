@@ -28,6 +28,7 @@ class TEAffinePoint(Point):
                 result = result + addend
             addend = addend.double()
             other >>= 1
+        
         return result
 
 
@@ -102,7 +103,7 @@ class TEAffinePoint(Point):
         p = R.clear_cofactor()
         return p
 
-    def clear_cofactor(self)-> Point:
+    def clear_cofactor(self)-> Self:
         """ Helps to convert the point to be on the Edwards Curve"""
 
         return self.glv_mul(self.curve.COFACTOR)
@@ -161,7 +162,7 @@ class TEAffinePoint(Point):
         rhs = (1 + self.curve.EdwardsD * pow(v, 2, self.curve.PRIME_FIELD) * pow(w, 2,self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
         return lhs == rhs
 
-    def _x_recover(self,y:int)->int:
+    def _x_recover(self, y:int)->int:
         """Recover the x coordinate from the y coordinate."""
         lhs = 1 - (y ** 2) % self.curve.PRIME_FIELD
         rhs = self.curve.EdwardsA - (self.curve.EdwardsD * (y ** 2)) % self.curve.PRIME_FIELD

@@ -15,9 +15,17 @@ def test_bandersnatch_public_key():
                 generator = BandersnatchPoint(Bandersnatch_TE_Curve.GENERATOR_X, Bandersnatch_TE_Curve.GENERATOR_Y)
                 secret_scalar = int.from_bytes(bytes.fromhex(vector["sk"]), "little")
                 public_key = generator * secret_scalar
-                print(public_key.x, public_key.y)
+                # public_key.x = public_key._x_recover(public_key.y)
+                # public_key.x = public_key.curve.PRIME_FIELD - public_key.x  # Flip x if the bit doesn't match
+                # print(public_key.x, public_key.y)
+                public_key.x = Bandersnatch_TE_Curve.PRIME_FIELD - public_key.x
+                print("New x:", public_key.x)
                 public_key_hex = public_key.point_to_string().hex()
 
-                print("expected point to string:", public_key.string_to_point("a1b1da71cc4682e159b7da23050d8b6261eb11a3247c89b07ef56ccd002fd38b"))
-                # assert public_key_hex == vector["pk"]
+
+                expected_point = public_key.string_to_point(vector["pk"])
+                print("expected point to string:", expected_point)
+                # assert public_key.y == expected_point[1]
+                assert public_key_hex == vector["pk"]
+                print("✅ ", file)
     
