@@ -1,11 +1,13 @@
 from typing import Union, Any, Tuple
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.primitives.bools import BooleanCodec
+from jam.utils.json.serde import JsonSerde
 
-class Boolean(Codable):
+
+class Boolean(Codable, JsonSerde):
     """
     Boolean type that implements the Codable interface.
-    
+
     Examples:
         >>> b = Boolean(True)
         >>> bool(b)
@@ -15,14 +17,14 @@ class Boolean(Codable):
         >>> Boolean.decode_from(b'\\x01')
         (Boolean(True), 1)
     """
-    
+
     def __init__(self, value: bool):
         """
         Initialize a Boolean.
-        
+
         Args:
             value: Python bool value
-            
+
         Raises:
             TypeError: If value is not a bool
         """
@@ -34,7 +36,7 @@ class Boolean(Codable):
     def __bool__(self) -> bool:
         """Allow using in boolean context."""
         return self.value
-    
+
     def __eq__(self, other: Any) -> bool:
         """Equal comparison."""
         if isinstance(other, Boolean):
@@ -42,29 +44,31 @@ class Boolean(Codable):
         elif isinstance(other, bool):
             return self.value == other
         return False
-    
+
     def __hash__(self) -> int:
         """Make hashable."""
         return hash(self.value)
-    
+
     def __repr__(self) -> str:
         """String representation."""
         return f"Boolean({self.value})"
-    
+
     def __bytes__(self) -> bytes:
         """Bytes representation."""
         print(f"Converting {self.value} to bytes = {bytes([1 if self.value else 0])}")
         return bytes([1 if self.value else 0])
-    
+
     @staticmethod
-    def decode_from(buffer: Union[bytes, bytearray, memoryview], offset: int = 0) -> Tuple[Any, int]:
+    def decode_from(
+        buffer: Union[bytes, bytearray, memoryview], offset: int = 0
+    ) -> Tuple[Any, int]:
         """
         Decode a Boolean from a buffer.
-        
+
         Args:
             buffer: Bytes to decode from
             offset: Starting position in buffer
-            
+
         Returns:
             Tuple of (Boolean instance, bytes read)
         """

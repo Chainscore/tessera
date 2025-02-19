@@ -3,14 +3,15 @@ import json
 from pathlib import Path
 from jam.types.work import WorkReport
 
+
 def test_work_report_encoding():
     """Test encoding/decoding of WorkReport against test vectors."""
     test_dir = Path(__file__).parent / "data"
-    
+
     # Load test vectors
     with open(test_dir / "work_report.json", "r") as f:
         report_json = json.load(f)
-    
+
     with open(test_dir / "work_report.bin", "rb") as f:
         expected_bytes = f.read()
 
@@ -25,7 +26,7 @@ def test_work_report_encoding():
     # # Test decoding
     decoded, size = WorkReport.decode_from(expected_bytes)
     assert size == len(expected_bytes)
-    
+
     # Verify decoded matches original
     assert decoded.package_spec == report.package_spec
     assert decoded.context == report.context
@@ -33,7 +34,9 @@ def test_work_report_encoding():
     assert decoded.authorizer_hash == report.authorizer_hash
     assert decoded.auth_output == report.auth_output
     assert len(decoded.segment_root_lookup) == len(report.segment_root_lookup)
-    for dec_item, orig_item in zip(decoded.segment_root_lookup, report.segment_root_lookup):
+    for dec_item, orig_item in zip(
+        decoded.segment_root_lookup, report.segment_root_lookup
+    ):
         assert dec_item == orig_item
     assert len(decoded.results) == len(report.results)
     for dec_result, orig_result in zip(decoded.results, report.results):

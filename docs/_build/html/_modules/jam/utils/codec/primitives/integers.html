@@ -1,0 +1,404 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>jam.utils.codec.primitives.integers &mdash; Tessera 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            Tessera
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/examples.html">Testing Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam_node.html">JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/state.html">State</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Consensus</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/consensus/index.html">Consensus Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/consensus/index.html#overview">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/consensus/safrole/index.html">Safrole [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/consensus/grandpa/index.html">GRANDPA Consensus</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/authorization/index.html">Authorization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/config/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/crypto/index.html">Crypto Primitives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/execution/index.html">Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/pvm/index.html">PVM [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/state/index.html">jam.state package</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Utilities</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/api/index.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/storage/index.html">Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/network/index.html">Networking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/types/index.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/utils/codec/index.html">Codec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../modules/jam/utils/json/index.html">JsonSerde</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../CONTRIBUTING.html">Contributing to Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">Tessera</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">jam.utils.codec.primitives.integers</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for jam.utils.codec.primitives.integers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Integer codec implementations for JAM protocol encoding specification.</span>
+
+<span class="sd">Implements both fixed-width integers and the general variable-length integer </span>
+<span class="sd">encoding scheme specified in JAM graypaper Appendix C.</span>
+
+<span class="sd">Fixed width integers are encoded in little-endian format.</span>
+<span class="sd">Variable length integers use the following scheme:</span>
+<span class="sd">- 0x00-0xFC: Direct value (1 byte)</span>
+<span class="sd">- 0xFD: u16 value (3 bytes) </span>
+<span class="sd">- 0xFE: u24 value (4 bytes)</span>
+<span class="sd">- 0xFF: u32 value (5 bytes)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.codec</span><span class="w"> </span><span class="kn">import</span> <span class="n">Codec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">EncodeError</span><span class="p">,</span> <span class="n">DecodeError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_buffer_size</span><span class="p">,</span> <span class="n">ensure_size</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">decimal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Decimal</span>
+
+
+<div class="viewcode-block" id="encode">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.encode">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">byte_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">byte_size</span><span class="p">,</span> <span class="s2">&quot;little&quot;</span><span class="p">,</span> <span class="n">signed</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="decode">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.decode">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">decode</span><span class="p">(</span><span class="n">buffer</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">,</span> <span class="nb">memoryview</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s2">&quot;little&quot;</span><span class="p">,</span> <span class="n">signed</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="IntegerCodec">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.IntegerCodec">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">IntegerCodec</span><span class="p">(</span><span class="n">Codec</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base codec for fixed-width integers.</span>
+
+<span class="sd">    Encodes integers in little-endian format with fixed width.</span>
+<span class="sd">    Supports both signed and unsigned values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="IntegerCodec.__init__">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.IntegerCodec.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">byte_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize codec for specific integer type.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            byte_size: Number of bytes for encoded value</span>
+<span class="sd">            python_type: Python type for values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">byte_size</span> <span class="o">=</span> <span class="n">byte_size</span></div>
+
+
+<div class="viewcode-block" id="IntegerCodec.encode_size">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.IntegerCodec.encode_size">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">encode_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get encoded size (fixed for given type).&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">byte_size</span></div>
+
+
+<div class="viewcode-block" id="IntegerCodec.encode_into">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.IntegerCodec.encode_into">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">encode_into</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">buffer</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">,</span> <span class="nb">memoryview</span><span class="p">],</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Encode integer into buffer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value: Integer to encode</span>
+<span class="sd">            buffer: Target buffer</span>
+<span class="sd">            offset: Starting offset</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Number of bytes written</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            EncodeError: If value out of bounds or buffer too small</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="mi">8</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">byte_size</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="n">EncodeError</span><span class="p">(</span>
+                <span class="n">expected</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">actual</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Integer value out of bounds&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">check_buffer_size</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">byte_size</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="n">encoded_bytes</span> <span class="o">=</span> <span class="n">encode</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">byte_size</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+            <span class="n">buffer</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+        <span class="n">buffer</span><span class="p">[</span><span class="n">offset</span> <span class="p">:</span> <span class="n">offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">byte_size</span><span class="p">]</span> <span class="o">=</span> <span class="n">encoded_bytes</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">byte_size</span></div>
+
+
+<div class="viewcode-block" id="IntegerCodec.decode_from">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.IntegerCodec.decode_from">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">decode_from</span><span class="p">(</span>
+        <span class="n">_byte_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">buffer</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">,</span> <span class="nb">memoryview</span><span class="p">],</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decode integer from buffer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            buffer: Source buffer</span>
+<span class="sd">            offset: Starting offset</span>
+<span class="sd">            context: Optional decoding context</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (decoded value, bytes read)</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            DecodeError: If buffer too small</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ensure_size</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">_byte_size</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">buffer</span><span class="p">[</span><span class="n">offset</span> <span class="p">:</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">_byte_size</span><span class="p">],</span> <span class="s2">&quot;little&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span><span class="p">,</span> <span class="n">_byte_size</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="GeneralCodec">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.GeneralCodec">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GeneralCodec</span><span class="p">(</span><span class="n">Codec</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Codec for variable-length integer encoding.</span>
+
+<span class="sd">    Implements variable length int encoding scheme</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="GeneralCodec.l">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.GeneralCodec.l">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">l</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">Decimal</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">ln</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="n">Decimal</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span> <span class="o">*</span> <span class="n">Decimal</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">ln</span><span class="p">()))</span></div>
+
+
+<div class="viewcode-block" id="GeneralCodec.encode_size">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.GeneralCodec.encode_size">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">encode_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate encoded size based on value magnitude.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">EncodeError</span><span class="p">(</span>
+                <span class="n">expected</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">actual</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">),</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Value must be an integer&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EncodeError</span><span class="p">(</span>
+                <span class="n">expected</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">actual</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Cannot encode negative values&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">7</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="mi">7</span> <span class="o">*</span> <span class="mi">9</span><span class="p">):</span>
+            <span class="k">return</span> <span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">64</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">9</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EncodeError</span><span class="p">(</span>
+                <span class="n">expected</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">actual</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Value too large for encoding&quot;</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GeneralCodec.encode_into">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.GeneralCodec.encode_into">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">encode_into</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">buffer</span><span class="p">:</span> <span class="nb">bytearray</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Encode integer using variable-length scheme.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value: Integer to encode</span>
+<span class="sd">            buffer: Target buffer</span>
+<span class="sd">            offset: Starting offset</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Number of bytes written</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            EncodeError: If value invalid or buffer too small</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">EncodeError</span><span class="p">(</span>
+                <span class="n">expected</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">actual</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">),</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Value must be an integer&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EncodeError</span><span class="p">(</span>
+                <span class="n">expected</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">actual</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Cannot encode negative values&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">7</span><span class="p">:</span>
+            <span class="n">buffer</span><span class="p">[</span><span class="n">offset</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">return</span> <span class="mi">1</span>
+
+        <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encode_size</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">check_buffer_size</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="mi">7</span> <span class="o">*</span> <span class="mi">8</span><span class="p">):</span>
+            <span class="n">_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">buffer</span><span class="p">[</span><span class="n">offset</span> <span class="p">:</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span>
+                <span class="mi">2</span><span class="o">**</span><span class="mi">8</span>
+                <span class="o">-</span> <span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="mi">8</span> <span class="o">-</span> <span class="n">_l</span><span class="p">)</span>
+                <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">Decimal</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">Decimal</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="n">_l</span> <span class="o">*</span> <span class="mi">8</span><span class="p">)))</span>
+            <span class="p">)</span>
+            <span class="n">offset</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">buffer</span><span class="p">[</span><span class="n">offset</span> <span class="p">:</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">_l</span><span class="p">]</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="p">(</span><span class="n">_l</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span>
+                <span class="n">value</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="n">_l</span> <span class="o">*</span> <span class="mi">8</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">64</span><span class="p">:</span>
+            <span class="n">buffer</span><span class="p">[</span><span class="n">offset</span> <span class="p">:</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">offset</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">buffer</span><span class="p">[</span><span class="n">offset</span> <span class="p">:</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">8</span><span class="p">]</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EncodeError</span><span class="p">(</span>
+                <span class="n">expected</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">actual</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Value too large for encoding&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">size</span></div>
+
+
+<div class="viewcode-block" id="GeneralCodec.decode_from">
+<a class="viewcode-back" href="../../../../../modules/jam/utils/codec/primitives/integers.html#jam.utils.codec.primitives.GeneralCodec.decode_from">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">decode_from</span><span class="p">(</span>
+        <span class="n">buffer</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">,</span> <span class="nb">memoryview</span><span class="p">],</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decode integer using variable-length scheme.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            buffer: Source buffer</span>
+<span class="sd">            offset: Starting offset</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (decoded value, bytes read)</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            DecodeError: If buffer too small or invalid encoding</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ensure_size</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="n">tag</span> <span class="o">=</span> <span class="n">buffer</span><span class="p">[</span><span class="n">offset</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">tag</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">7</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tag</span><span class="p">,</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">tag</span> <span class="o">==</span> <span class="mi">2</span><span class="o">**</span><span class="mi">8</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># Full 64-bit encoding</span>
+            <span class="n">ensure_size</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+            <span class="n">value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">value</span><span class="p">,</span> <span class="mi">9</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Variable length encoding</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span>
+                <span class="n">Decimal</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">Decimal</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">8</span><span class="p">)</span> <span class="o">-</span> <span class="n">Decimal</span><span class="p">(</span><span class="n">tag</span><span class="p">))</span><span class="o">.</span><span class="n">ln</span><span class="p">()</span> <span class="o">/</span> <span class="n">Decimal</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">ln</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="n">ensure_size</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+            <span class="n">alpha</span> <span class="o">=</span> <span class="n">tag</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="mi">8</span> <span class="o">-</span> <span class="n">l</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="o">**</span><span class="mi">8</span>
+            <span class="n">beta</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">IntegerCodec</span><span class="o">.</span><span class="n">decode_from</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">offset</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">alpha</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="n">l</span> <span class="o">*</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span> <span class="n">beta</span><span class="p">,</span> <span class="n">l</span> <span class="o">+</span> <span class="mi">1</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Chainscore Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

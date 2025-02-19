@@ -1,0 +1,355 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chain Specifications &mdash; Tessera 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Tessera
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Testing Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../jam_node.html">JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../state.html">State</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Consensus</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="consensus/index.html">Consensus Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus/index.html#overview">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus/safrole/index.html">Safrole [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus/grandpa/index.html">GRANDPA Consensus</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="authorization/index.html">Authorization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="crypto/index.html">Crypto Primitives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="execution/index.html">Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pvm/index.html">PVM [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="state/index.html">jam.state package</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Utilities</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="storage/index.html">Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network/index.html">Networking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="types/index.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils/codec/index.html">Codec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils/json/index.html">JsonSerde</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contributing to Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Tessera</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Chain Specifications</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/modules/jam/chainspec.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="chain-specifications">
+<h1>Chain Specifications<a class="headerlink" href="#chain-specifications" title="Link to this heading"></a></h1>
+<p>The Chain Specification is a configuration that defines all core constants of the JAM Chain.
+While the chain itself has fixed parameters as defined in the Graypaper, alternative configurations
+can be useful for testing and local deployments.</p>
+<section id="configuration-parameters">
+<h2>Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Link to this heading"></a></h2>
+<p>Each chain specification defines the following parameters (with shorthand identifiers):</p>
+<ul class="simple">
+<li><p><strong>chain</strong>
+The name of the spec.</p></li>
+<li><p><strong>num_validators (V)</strong>
+The number of validators.</p></li>
+<li><p><strong>num_cores (C)</strong>
+The number of cores.</p></li>
+<li><p><strong>slot_duration (P)</strong>
+Slot time duration in seconds.</p></li>
+<li><p><strong>epoch_duration (E)</strong>
+The number of slots in an epoch.</p></li>
+<li><p><strong>contest_duration (Y)</strong>
+The epoch in which the ticket contest ends.
+<em>Constraint</em>: Y &gt; 0 and Y &lt; E</p></li>
+<li><p><strong>tickets_per_validator (N)</strong>
+The maximum number of tickets each validator can submit. This must be configurable
+to ensure that a 2/3+1 majority of validators can complete the ticket contest successfully.
+<em>Constraint</em>: ((2/3) * V + 1) * N &gt;= E</p></li>
+<li><p><strong>rotation_period (R)</strong>
+The rotation period of validator-core assignments, measured in timeslots.</p></li>
+<li><p><strong>max_tickets_per_extrinsic (K)</strong>
+The maximum number of tickets which may be submitted in a single extrinsic.
+<em>Constraint</em>: K &gt; 0</p></li>
+</ul>
+</section>
+<section id="predefined-configurations">
+<h2>Predefined Configurations<a class="headerlink" href="#predefined-configurations" title="Link to this heading"></a></h2>
+<p>The <cite>jam.chainspec</cite> module provides several preset configurations via the <cite>JamConfig</cite>
+class. These include:</p>
+<ul class="simple">
+<li><p><cite>JamConfig.tiny()</cite></p></li>
+<li><p><cite>JamConfig.small()</cite></p></li>
+<li><p><cite>JamConfig.medium()</cite></p></li>
+<li><p><cite>JamConfig.large()</cite></p></li>
+<li><p><cite>JamConfig.xlarge()</cite></p></li>
+<li><p><cite>JamConfig.xlarge2()</cite></p></li>
+<li><p><cite>JamConfig.xlarge3()</cite></p></li>
+<li><p><cite>JamConfig.full()</cite></p></li>
+</ul>
+<p>You can obtain a configuration by calling <cite>JamConfig.from_chain(chain_name)</cite>, where
+<cite>chain_name</cite> is one of the available specification names. The configuration is typically
+selected using the environment variable <cite>JAM_CHAIN_SPEC</cite> (defaulting to “tiny” if not specified).</p>
+<p id="module-jam.chainspec">JAM protocol configuration.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.chainspec.ChainSpec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.chainspec.</span></span><span class="sig-name descname"><span class="pre">ChainSpec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names=&lt;not</span> <span class="pre">given&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jam/chainspec.html#ChainSpec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.ChainSpec" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/enum.html#enum.Enum" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></a></p>
+<p>Chain specification types.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.ChainSpec.TINY">
+<span class="sig-name descname"><span class="pre">TINY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'tiny'</span></em><a class="headerlink" href="#jam.chainspec.ChainSpec.TINY" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.ChainSpec.SMALL">
+<span class="sig-name descname"><span class="pre">SMALL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'small'</span></em><a class="headerlink" href="#jam.chainspec.ChainSpec.SMALL" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.ChainSpec.MEDIUM">
+<span class="sig-name descname"><span class="pre">MEDIUM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'medium'</span></em><a class="headerlink" href="#jam.chainspec.ChainSpec.MEDIUM" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.ChainSpec.LARGE">
+<span class="sig-name descname"><span class="pre">LARGE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'large'</span></em><a class="headerlink" href="#jam.chainspec.ChainSpec.LARGE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.ChainSpec.XLARGE">
+<span class="sig-name descname"><span class="pre">XLARGE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'xlarge'</span></em><a class="headerlink" href="#jam.chainspec.ChainSpec.XLARGE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.ChainSpec.XLARGE2">
+<span class="sig-name descname"><span class="pre">XLARGE2</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'2xlarge'</span></em><a class="headerlink" href="#jam.chainspec.ChainSpec.XLARGE2" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.ChainSpec.XLARGE3">
+<span class="sig-name descname"><span class="pre">XLARGE3</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'3xlarge'</span></em><a class="headerlink" href="#jam.chainspec.ChainSpec.XLARGE3" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.ChainSpec.FULL">
+<span class="sig-name descname"><span class="pre">FULL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'full'</span></em><a class="headerlink" href="#jam.chainspec.ChainSpec.FULL" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jam.chainspec.</span></span><span class="sig-name descname"><span class="pre">JamConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#jam.chainspec.ChainSpec" title="jam.chainspec.ChainSpec"><span class="pre">ChainSpec</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_validators</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_cores</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">slot_duration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">epoch_duration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ticket_submission_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">contest_duration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tickets_per_validator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tickets_per_extrinsic</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotation_period</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jam/chainspec.html#JamConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.JamConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>JAM protocol configuration.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.chain">
+<span class="sig-name descname"><span class="pre">chain</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#jam.chainspec.ChainSpec" title="jam.chainspec.ChainSpec"><span class="pre">ChainSpec</span></a></em><a class="headerlink" href="#jam.chainspec.JamConfig.chain" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.num_validators">
+<span class="sig-name descname"><span class="pre">num_validators</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#jam.chainspec.JamConfig.num_validators" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.num_cores">
+<span class="sig-name descname"><span class="pre">num_cores</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#jam.chainspec.JamConfig.num_cores" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.slot_duration">
+<span class="sig-name descname"><span class="pre">slot_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#jam.chainspec.JamConfig.slot_duration" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.epoch_duration">
+<span class="sig-name descname"><span class="pre">epoch_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#jam.chainspec.JamConfig.epoch_duration" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.ticket_submission_end">
+<span class="sig-name descname"><span class="pre">ticket_submission_end</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#jam.chainspec.JamConfig.ticket_submission_end" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.contest_duration">
+<span class="sig-name descname"><span class="pre">contest_duration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#jam.chainspec.JamConfig.contest_duration" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.tickets_per_validator">
+<span class="sig-name descname"><span class="pre">tickets_per_validator</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#jam.chainspec.JamConfig.tickets_per_validator" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.max_tickets_per_extrinsic">
+<span class="sig-name descname"><span class="pre">max_tickets_per_extrinsic</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><a class="headerlink" href="#jam.chainspec.JamConfig.max_tickets_per_extrinsic" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.rotation_period">
+<span class="sig-name descname"><span class="pre">rotation_period</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></em><a class="headerlink" href="#jam.chainspec.JamConfig.rotation_period" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.tiny">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tiny</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.chainspec.JamConfig" title="jam.chainspec.JamConfig"><span class="pre">JamConfig</span></a></span></span><a class="reference internal" href="../../_modules/jam/chainspec.html#JamConfig.tiny"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.JamConfig.tiny" title="Link to this definition"></a></dt>
+<dd><p>Create tiny chain configuration.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.small">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">small</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.chainspec.JamConfig" title="jam.chainspec.JamConfig"><span class="pre">JamConfig</span></a></span></span><a class="reference internal" href="../../_modules/jam/chainspec.html#JamConfig.small"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.JamConfig.small" title="Link to this definition"></a></dt>
+<dd><p>Create small chain configuration.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.medium">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">medium</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.chainspec.JamConfig" title="jam.chainspec.JamConfig"><span class="pre">JamConfig</span></a></span></span><a class="reference internal" href="../../_modules/jam/chainspec.html#JamConfig.medium"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.JamConfig.medium" title="Link to this definition"></a></dt>
+<dd><p>Create medium chain configuration.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.large">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">large</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.chainspec.JamConfig" title="jam.chainspec.JamConfig"><span class="pre">JamConfig</span></a></span></span><a class="reference internal" href="../../_modules/jam/chainspec.html#JamConfig.large"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.JamConfig.large" title="Link to this definition"></a></dt>
+<dd><p>Create large chain configuration.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.xlarge">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">xlarge</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.chainspec.JamConfig" title="jam.chainspec.JamConfig"><span class="pre">JamConfig</span></a></span></span><a class="reference internal" href="../../_modules/jam/chainspec.html#JamConfig.xlarge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.JamConfig.xlarge" title="Link to this definition"></a></dt>
+<dd><p>Create xlarge chain configuration.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.xlarge2">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">xlarge2</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.chainspec.JamConfig" title="jam.chainspec.JamConfig"><span class="pre">JamConfig</span></a></span></span><a class="reference internal" href="../../_modules/jam/chainspec.html#JamConfig.xlarge2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.JamConfig.xlarge2" title="Link to this definition"></a></dt>
+<dd><p>Create 2xlarge chain configuration.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.xlarge3">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">xlarge3</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.chainspec.JamConfig" title="jam.chainspec.JamConfig"><span class="pre">JamConfig</span></a></span></span><a class="reference internal" href="../../_modules/jam/chainspec.html#JamConfig.xlarge3"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.JamConfig.xlarge3" title="Link to this definition"></a></dt>
+<dd><p>Create 3xlarge chain configuration.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.full">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.chainspec.JamConfig" title="jam.chainspec.JamConfig"><span class="pre">JamConfig</span></a></span></span><a class="reference internal" href="../../_modules/jam/chainspec.html#JamConfig.full"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.JamConfig.full" title="Link to this definition"></a></dt>
+<dd><p>Create full chain configuration.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.from_chain">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_chain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#jam.chainspec.JamConfig" title="jam.chainspec.JamConfig"><span class="pre">JamConfig</span></a></span></span><a class="reference internal" href="../../_modules/jam/chainspec.html#JamConfig.from_chain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jam.chainspec.JamConfig.from_chain" title="Link to this definition"></a></dt>
+<dd><p>Create configuration from chain name.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jam.chainspec.JamConfig.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#jam.chainspec.ChainSpec" title="jam.chainspec.ChainSpec"><span class="pre">ChainSpec</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_validators</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_cores</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">slot_duration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">epoch_duration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ticket_submission_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">contest_duration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tickets_per_validator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tickets_per_extrinsic</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotation_period</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#jam.chainspec.JamConfig.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Chainscore Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

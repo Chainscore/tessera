@@ -4,8 +4,11 @@ import pytest
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.integers.fixed import U8
 
+
 @decodable_array(length=4, element_type=U8)  # Fixed length array of U8s for testing
-class TestArray(Array[U8]): ...
+class TestArray(Array[U8]):
+    ...
+
 
 class TestArrayTypes:
     """Test suite for array type implementations."""
@@ -30,10 +33,10 @@ class TestArrayTypes:
     def test_array_codec_roundtrip(self):
         """Test encoding and decoding roundtrip."""
         arr = TestArray([U8(1), U8(2), U8(3), U8(4)])
-        
+
         # Test encoding
         encoded = arr.encode()
-        
+
         # Test decoding
         decoded, size = TestArray.decode_from(encoded)
         assert decoded == arr
@@ -42,20 +45,20 @@ class TestArrayTypes:
     def test_array_sequence_protocol(self):
         """Test sequence protocol implementation."""
         arr = TestArray([U8(1), U8(2), U8(3), U8(4)])
-        
+
         # Test length
         assert len(arr) == 4
-        
+
         # Test iteration
         assert all(isinstance(item, U8) for item in arr)
-        
+
         # Test indexing
         assert arr[0] == U8(1)
         assert arr[-1] == U8(4)
-        
+
         # Test slicing
         assert arr[1:3] == [U8(2), U8(3)]
-        
+
         # Test index out of bounds
         with pytest.raises(IndexError):
             _ = arr[10]
@@ -63,15 +66,15 @@ class TestArrayTypes:
     def test_array_mutation(self):
         """Test array mutation operations."""
         arr = TestArray([U8(1), U8(2), U8(3), U8(4)])
-        
+
         # Test item assignment
         arr[0] = U8(5)
         assert arr[0] == U8(5)
-        
+
         # Test invalid assignment
         with pytest.raises(TypeError):
             arr[0] = 5  # Raw int instead of U8 # type: ignore
-            
+
         with pytest.raises(IndexError):
             arr[10] = U8(1)
 
@@ -80,7 +83,7 @@ class TestArrayTypes:
         arr1 = TestArray([U8(1), U8(2), U8(3), U8(4)])
         arr2 = TestArray([U8(1), U8(2), U8(3), U8(4)])
         arr3 = TestArray([U8(5), U8(6), U8(7), U8(8)])
-        
+
         assert arr1 == arr2
         assert arr1 != arr3
         assert arr1 == [U8(1), U8(2), U8(3), U8(4)]  # Compare with list of U8s

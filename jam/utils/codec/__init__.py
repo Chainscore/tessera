@@ -1,46 +1,25 @@
-"""
-Codecs for JAM.
+"""Type-safe serialization framework 📦
 
-This module provides codec implementations encoding and decoding of various data types.
-It includes both primitive and composite types, with support for custom codec
-registration and automatic type inference.
+Core:
+* Codec[T]: Generic codec interface
+* Codable: Base class for encodable types
+* primitives: Basic type codecs
+* composite: Container type codecs
+* decorators: Automatic codec generation
+* errors: Error handling
 """
 
-# Re-export main types and base functionality
 from .codec import Codec
-
-from .errors import (
-    EncodeError, DecodeError, 
-    BufferError,
-)
-
 from .codable import Codable
-
-# Re-export primitive codecs
-from .primitives import (
-    GeneralCodec,
-    IntegerCodec,
-    BooleanCodec,
-    StringCodec,
-)
-
-# Re-export composite type constructors
-from .composite import BitSequenceCodec, decodable_dataclass, ArrayCodec, ChoiceCodec, VectorCodec, DictionaryCodec
-
-from .json import JsonSerializable, encode_bytes, decode_bytes, encode_integer, decode_integer
+from .errors import CodecError, BufferError, EncodeError, DecodeError
 
 __all__ = [
+    "Codec",
     "Codable",
-    "Codec", "EncodeError", "DecodeError", "BufferError",
-    "GeneralCodec", "IntegerCodec",
-    "BooleanCodec",
-    "StringCodec",
-    "ArrayCodec",
-    "ChoiceCodec",
-    "decodable_dataclass",
-    "VectorCodec",
-    "DictionaryCodec",
-    "BitSequenceCodec",
-    "JsonCodec", "JsonSerializable", "json_serializable",
-    "encode_bytes", "decode_bytes", "encode_integer", "decode_integer"
+    "CodecError",
+    "BufferError",
+    "EncodeError",
+    "DecodeError",
 ]
+
+__version__ = "1.0.0"

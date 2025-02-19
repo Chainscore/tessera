@@ -5,9 +5,11 @@ from jam.chainspec import chain_config
 AUDIT_PERIOD = 8  # seconds between audit tranches
 SLOT_PERIOD = chain_config.slot_duration  # seconds
 EPOCH_LENGTH = chain_config.epoch_duration  # timeslots
-ROTATION_PERIOD = chain_config.rotation_period  # timeslots for validator-core assignments
+ROTATION_PERIOD = (
+    chain_config.rotation_period
+)  # timeslots for validator-core assignments
 LOOKUP_ANCHOR_MAX_AGE = 14_400  # maximum age in timeslots
-TICKET_SUBMISSION_END = 500  # slots into epoch
+TICKET_SUBMISSION_END = chain_config.ticket_submission_end  # slots into epoch
 UNAVAILABLE_WORK_EXPIRY = 5  # timeslots
 CONTEST_DURATION = chain_config.contest_duration
 
@@ -54,16 +56,16 @@ TRANSFER_MEMO_SIZE = 128  # octets
 
 # Signing context strings
 SIGNING_CONTEXTS = {
-    'available': '$jam_available',     # Ed25519 Availability assurances
-    'beefy': '$jam_beefy',            # BLS Accumulate-result-root-MMR commitment
-    'entropy': '$jam_entropy',         # On-chain entropy generation
-    'fallback_seal': '$jam_fallback_seal',  # Bandersnatch Fallback block seal
-    'guarantee': '$jam_guarantee',     # Ed25519 Guarantee statements
-    'announce': '$jam_announce',       # Ed25519 Audit announcement statements
-    'ticket_seal': '$jam_ticket_seal', # Bandersnatch RingVRF Ticket generation/block seal
-    'audit': '$jam_audit',            # Bandersnatch Audit selection entropy
-    'valid': '$jam_valid',            # Ed25519 Judgments for valid work-reports
-    'invalid': '$jam_invalid',        # Ed25519 Judgments for invalid work-reports
+    "available": "$jam_available",  # Ed25519 Availability assurances
+    "beefy": "$jam_beefy",  # BLS Accumulate-result-root-MMR commitment
+    "entropy": "$jam_entropy",  # On-chain entropy generation
+    "fallback_seal": "$jam_fallback_seal",  # Bandersnatch Fallback block seal
+    "guarantee": "$jam_guarantee",  # Ed25519 Guarantee statements
+    "announce": "$jam_announce",  # Ed25519 Audit announcement statements
+    "ticket_seal": "$jam_ticket_seal",  # Bandersnatch RingVRF Ticket generation/block seal
+    "audit": "$jam_audit",  # Bandersnatch Audit selection entropy
+    "valid": "$jam_valid",  # Ed25519 Judgments for valid work-reports
+    "invalid": "$jam_invalid",  # Ed25519 Judgments for invalid work-reports
 }
 
 # Maximum number of judgements per dispute
