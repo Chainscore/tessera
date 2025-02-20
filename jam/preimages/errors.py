@@ -1,6 +1,7 @@
 from jam.types.base.enum import Enum
+from jam.error import JamError
 
-class PreimageError(Exception):
+class PreimageError(JamError):
     pass
 
 class PreimageErrorEnum(Enum):
