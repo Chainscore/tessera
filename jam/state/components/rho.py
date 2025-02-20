@@ -8,7 +8,7 @@ from jam.types.work.report import WorkReport
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import CORE_COUNT
-
+from jam.types.base.choices.option import Option, decodable_option
 
 @decodable_dataclass
 @dataclass
@@ -20,7 +20,7 @@ class WorkReportState(Codable):
 
 
 @decodable_option(WorkReportState)
-class OptionalWorkReportState(Choice):
+class OptionalWorkReportState(Option):
     """Work report state"""
 
     ...

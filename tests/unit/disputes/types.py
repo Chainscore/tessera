@@ -9,6 +9,8 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.state.components.rho import Rho
 from jam.state.components.psi import Psi
+from jam.state.components.kappa import Kappa
+from jam.state.components.lambda_ import Lambda_
 
 from jam.utils.json import JsonSerde
 
@@ -24,10 +26,9 @@ class PreState(Codable, JsonSerde):
     psi: Psi
     rho: Rho
     tau: U32
-    kappa: List[bytes]
-    lambda: List[bytes]
+    kappa: Kappa
+    lambda: Lambda_
    
-
 
 @decodable_dataclass
 @dataclass
@@ -35,9 +36,8 @@ class PostState(Codable, JsonSerde):
     psi: Psi
     rho: Rho
     tau: U32
-    kappa: List[bytes]
-    lambda: List[bytes]
-
+    kappa: Kappa
+    lambda: Lambda_
 
 @decodable_dataclass
 @dataclass
