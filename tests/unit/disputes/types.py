@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 import os
 from typing import List, Set
@@ -27,7 +27,7 @@ class PreState(Codable, JsonSerde):
     rho: Rho
     tau: U32
     kappa: Kappa
-    lambda: Lambda_
+    lambda_: Lambda_ = field(metadata={"json_name": "lambda"})
    
 
 @decodable_dataclass
@@ -37,7 +37,7 @@ class PostState(Codable, JsonSerde):
     rho: Rho
     tau: U32
     kappa: Kappa
-    lambda: Lambda_
+    lambda_: Lambda_ = field(metadata={"json_name": "lambda"})
 
 @decodable_dataclass
 @dataclass
@@ -61,10 +61,11 @@ def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testc
         else:
             with open(os.path.join(data_dir, file), "r") as f:
                 data = json.loads(f.read())
-                print("data->", data)
+                # print("data->", data["pre_state"]["lambda"])
                 try:
                     tc = Testcase.from_json(data)
                     print(f"Decoded {file}")
+                    # print("Bhaiiii->",tc.pre_state.lambda_)
                     result.append(tc)
                 except Exception as e:
                     print(f"❌ Failed to decode {file}: {e}")

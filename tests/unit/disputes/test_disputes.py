@@ -1,6 +1,7 @@
 from typing import List
 
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
+from jam.disputes.disputes import Disputes
 from jam.state.state import State
 from jam.types import Boolean
 from jam.types.block import Block
@@ -17,40 +18,39 @@ from tests.fixtures.dummy_block import create_dummy_block
 def create_block_from_input(input: Input) -> Block:
     """Create a block from test input"""
     block = create_dummy_block()
-    block.extrinsic.disputes = input["extrinsic"]
-    block.header.slot = input["slot"]
+    block.extrinsic.disputes = input.disputes
     return block
+
+
 
 
 def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state = create_dummy_state()
-    # print("state->", state.psi.g, pre_state["psi"]["good"])
+    # print("state->", pre_state.psi['good'],state.psi.g)
     # Set psi state components
-    state.psi.g = pre_state["psi"]["good"]
-    state.psi.b = pre_state["psi"]["bad"] 
-    state.psi.w = pre_state["psi"]["wonky"]
-    state.psi.o = pre_state["psi"]["offenders"]
+    state.psi.g = pre_state.psi['good']
+    state.psi.b = pre_state.psi['bad']
+    state.psi.w = pre_state.psi['wonky']
+    state.psi.o = pre_state.psi['offenders']
         
     # Set validator sets
-    state.kappa = pre_state["kappa"]
-    state.lambda_ = pre_state["lambda"]
+    state.kappa = pre_state.kappa
+    state.lambda_ = pre_state.lambda_
     
     # Set dispute tracking
-    state.rho = pre_state["rho"]
-    state.tau = pre_state["tau"]
-    # print("state->", state)
+    state.rho = pre_state.rho
+    state.tau = pre_state.tau
     return state
 
 def vector_transition(vector: Testcase) -> Boolean:
-    
-
-    test_state = create_state_from_pre(vector.pre_state)    
-    
-
+    test_state = create_state_from_pre(vector.pre_state)  
     test_block = create_block_from_input(vector.input)
+    output=Disputes.transition(test_state,test_block)
+    
+    print("Output->", output[1])
     return Boolean(True)
-    output = Disputes.transition(test_state, test_block)
+
     # Verify state transitions
     assert output[0].psi.g == vector.post_state.good
     assert output[0].psi.b == vector.post_state.bad
@@ -70,14 +70,14 @@ def vector_transition(vector: Testcase) -> Boolean:
 def test_disputes_transition():
     """Test disputes transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        prefix="progress_with_verdicts-1"
+        prefix="progress_with_verdicts"
     )
-    # vector_transition(vectors[0])
-    # for i, vector in enumerate(vectors):
-    #     # assert vector_transition(vector)
+    # vector_transition(vectors[4])
+    for i, vector in enumerate(vectors):
+        # assert vector_transition(vector)
         
-    #     vector_transition(vector)
-    #     print(f"Passed testcase #{i + 1}")
+        vector_transition(vector)
+        # print(f"Passed testcase #{i + 1}")
 
 # def test_disputes_progress(test_file: str):
 #     """Test disputes progress with test vectors"""
