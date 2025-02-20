@@ -35,30 +35,27 @@ class TEAffinePoint(Point):
     def __add__(self, other: Point) -> Self:
         x1, y1 = self.x, self.y
         x2, y2 = other.x, other.y
-        if self== other:
+        if self == other:
             return self.double()
-
         if self == self.identity_point():
             return other
         if other == self.identity_point():
             return self
 
         x1y2 = (x1 * y2) % self.curve.PRIME_FIELD
-        y1x2 = (y1 * x2) % self.curve.PRIME_FIELD
+        x2y1 = (x2 * y1) % self.curve.PRIME_FIELD
         y1y2 = (y1 * y2) % self.curve.PRIME_FIELD
         x1x2 = (x1 * x2) % self.curve.PRIME_FIELD
         dx1x2y1y2 = (self.curve.EdwardsD * x1x2 * y1y2) % self.curve.PRIME_FIELD
 
-        x3 = ((x1y2 + y1x2) * self.mod_inverse(1 + dx1x2y1y2, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
-        y3 = ((y1y2 - self.curve.EdwardsA * x1x2) * self.mod_inverse(
-            1 - dx1x2y1y2, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
+        x3 = ((x1y2 + x2y1) * self.mod_inverse(1 + dx1x2y1y2, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
+        y3 = ((y1y2 - self.curve.EdwardsA * x1x2) * self.mod_inverse(1 - dx1x2y1y2, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
 
-        return self.__class__(x3,y3)
+        return self.__class__(x3, y3)
 
     def __neg__(self)->Self:
-        x, y = self.x, self.y
-        neg_p=Point(-x % self.curve.PRIME_FIELD, y)
-        return neg_p
+        self.x = -self.x % self.curve.PRIME_FIELD
+        return self
 
     def __sub__(self,other:Point)->Self:
         return self + ~other
@@ -78,8 +75,7 @@ class TEAffinePoint(Point):
             return self.identity_point()  # Return identity if denominator is zero
 
         x3 = (2 * x1 * y1 * self.mod_inverse(denom_x, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
-        y3 = ((y1 ** 2 - self.curve.EdwardsA * x1 ** 2) * self.mod_inverse(
-            denom_y, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
+        y3 = ((y1 ** 2 - self.curve.EdwardsA * x1 ** 2) * self.mod_inverse(denom_y, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
 
         return self.__class__(x3, y3)
 

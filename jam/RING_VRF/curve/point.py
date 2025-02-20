@@ -13,15 +13,13 @@ class Point:
         - The most significant bit of the last byte indicates the parity of y.
         """
         
+        p = self.curve.PRIME_FIELD
+        p_half = (p - 1) // 2
         x, y = self.x, self.y
-        y_bytes = bytearray(y.to_bytes(32, "little"))  # Convert y to byte array
-        x_is_odd = x % 2  # Determine if x is odd (1) or even (0)
-
-        # Set the MSB of the last byte to indicate parity of x
-        y_bytes[-1] |= (x_is_odd << 7)
-
+        y_bytes = bytearray(y.to_bytes(32, "little"))  # Encode y in little-endian
+        x_sign_bit = 1 if x >= p_half else 0  # Sign is set if x >= p/2
+        y_bytes[-1] |= (x_sign_bit << 7)
         return bytes(y_bytes)
-
 
     @staticmethod
     def _get_bit(h, i):
