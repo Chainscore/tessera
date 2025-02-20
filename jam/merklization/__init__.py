@@ -1,5 +1,5 @@
-from jam.merklization.binary_merkle import BinaryMerkle
-from jam.merklization.mountain_merkle import MountainMerkle
+from jam.merklization.binary_merkle import BMRFunctions
+from jam.merklization.mountain_merkle import MMRFunctions, MMR
 
-__all__ = ["BinaryMerkle", "MountainMerkle"]
+__all__ = ["BMRFunctions", "MMRFunctions", "MMR"]
 
