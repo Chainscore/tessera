@@ -8,38 +8,40 @@ from jam.types.base.integers.fixed import U32
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.state.components.rho import Rho
+from jam.state.components.psi import Psi
 
-
-@decodable_dataclass
-@dataclass
-class Input(Codable):
-    slot: U32
-    extrinsic: DisputesExtrinsic
-
+from jam.utils.json import JsonSerde
 
 @decodable_dataclass
 @dataclass
-class PreState(Codable):
-    good: Set[bytes]
-    bad: Set[bytes]
-    wonky: Set[bytes]
-    offenders: Offenders
+class Input(Codable, JsonSerde):
+    # slot: U32
+    disputes: DisputesExtrinsic
+
+@decodable_dataclass
+@dataclass
+class PreState(Codable, JsonSerde):
+    psi: Psi
     rho: Rho
+    tau: U32
+    kappa: List[bytes]
+    lambda: List[bytes]
+   
 
 
 @decodable_dataclass
 @dataclass
-class PostState(Codable):
-    good: Set[bytes]
-    bad: Set[bytes]
-    wonky: Set[bytes]
-    offenders: Offenders
+class PostState(Codable, JsonSerde):
+    psi: Psi
     rho: Rho
+    tau: U32
+    kappa: List[bytes]
+    lambda: List[bytes]
 
 
 @decodable_dataclass
 @dataclass
-class Testcase(Codable):
+class Testcase(Codable,JsonSerde):
     input: Input
     pre_state: PreState
     output: dict
@@ -59,6 +61,7 @@ def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testc
         else:
             with open(os.path.join(data_dir, file), "r") as f:
                 data = json.loads(f.read())
+                print("data->", data)
                 try:
                     tc = Testcase.from_json(data)
                     print(f"Decoded {file}")

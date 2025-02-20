@@ -159,11 +159,17 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Psi
     components["psi"] = Psi(
-        PsiG([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-        PsiB([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-        PsiW([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-        PsiO([Ed25519Public(create_dummy_bytes32()) for _ in range(3)]),
+        PsiG([]),  # Empty array for good work reports
+        PsiB([]),  # Empty array for bad work reports 
+        PsiW([]),  # Empty array for wonky work reports
+        PsiO([]),  # Empty array for offenders
     )
+    # components["psi"] = Psi(
+    #     PsiG([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
+    #     PsiB([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
+    #     PsiW([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
+    #     PsiO([Ed25519Public(create_dummy_bytes32()) for _ in range(3)]),
+    # )
 
     # Pi
     all_validator_stats = AllValidatorStats(
