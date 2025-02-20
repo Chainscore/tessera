@@ -1,0 +1,55 @@
+## Code Structure and Style
+- Always implement modular design with clear separation of concerns
+- Use type hints for all function parameters and return values
+- Follow PEP 8 style guidelines strictly
+- Implement proper error handling with custom exception classes
+- Use dataclasses for data structures where appropriate
+
+## Security Requirements
+- Implement input validation for all user-provided data
+- Use secure random number generation (secrets module) for any randomization
+- Sanitize all file paths and implement proper file access controls
+- Never execute raw user input as code
+- Implement proper authentication and authorization checks
+
+## Testing Standards
+- Maintain minimum 90% test coverage
+- Implement unit tests for all core functionality
+- Include integration tests for system components
+- Use property-based testing for data structures
+- Implement performance benchmarks
+
+## Documentation Requirements
+- Include detailed docstrings for all classes and functions
+- Maintain up-to-date API documentation
+- Document all dependencies and their versions
+- Include setup and deployment instructions
+- Document security considerations and threat models
+
+## Performance Optimization
+- Implement caching for frequently accessed data
+- Use asyncio for I/O-bound operations
+- Implement proper memory management
+- Profile code regularly for performance bottlenecks
+- Use appropriate data structures for operations
+
+## Code Quality
+- Maintain cyclomatic complexity below 10
+- Keep functions focused and under 50 lines
+- Implement proper logging with different log levels
+- Use type checkers (mypy) in strict mode
+- Run linters (pylint, flake8) with strict settings
+
+## Version Control
+- Use semantic versioning
+- Write descriptive commit messages
+- Maintain a clean git history
+- Tag all releases
+- Document breaking changes
+
+## AI-Specific Rules
+- Implement bias detection and mitigation
+- Include model versioning and tracking
+- Document model limitations and assumptions
+- Implement fallback mechanisms
+- Monitor and log AI decisions
