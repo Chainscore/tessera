@@ -128,6 +128,9 @@ class Choice(Codable[T], JsonSerde, Generic[T]):
         """
         return self.value
 
+    def get_value(self):
+        return self.value[list(self.value.keys())[0]]
+
     def __eq__(self, other: object) -> bool:
         """Compare for equality."""
         if isinstance(other, Choice):
