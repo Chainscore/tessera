@@ -1,7 +1,6 @@
 from jam.preimages.errors import PreimageError, PreimageErrorEnum
 from jam.state.components.delta import LookupTable
 from jam.state.state import State
-from jam.types import Bytes
 from jam.types.block import Block
 from jam.types.extrinsics.preimages import PreimagesExtrinsic, Preimage
 from jam.types.protocol.crypto import Hash
@@ -20,7 +19,7 @@ class Preimages:
             # If the preimage to add does not have lookup metadata, throw unneeded error
             lookup_key = LookupTable(Hash.sha256(preimage.blob), len(preimage.blob))
             if lookup_key not in account.timestamps:
-                raise PreimageError(PreimageErrorEnum.PREIMAGE_UNNEEDED,"Preimage metadata does not exist")
+                raise PreimageError(PreimageErrorEnum.PREIMAGE_UNNEEDED, "Preimage metadata does not exist")
         return pre_state
 
     @staticmethod
@@ -32,4 +31,4 @@ class Preimages:
         sorted_preimages.sort(key=sort_fn)
         print([sort_fn(pr) for pr in sorted_preimages])
         if sorted_preimages != preimages:
-            raise PreimageError(PreimageErrorEnum.PREIMAGE_NOT_SORTED_UNIQUE,"Preimages must be sorted")
+            raise PreimageError(PreimageErrorEnum.PREIMAGE_NOT_SORTED_UNIQUE, "Preimages must be sorted")
