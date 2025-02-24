@@ -7,4 +7,4 @@ from tests.fixtures.dummy_header import create_dummy_header
 
 
 def create_dummy_block() -> Block:
-    return Block(header=create_dummy_header(),accumulation_root=ByteArray32([0]*32), extrinsic=create_dummy_extrinsics())
+    return Block(header=create_dummy_header(), extrinsic=create_dummy_extrinsics())

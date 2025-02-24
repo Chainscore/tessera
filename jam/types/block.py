@@ -33,5 +33,4 @@ class Block(Codable, JsonSerde):
     """Block structure."""
 
     header: Header
-    accumulation_root:OpaqueHash
     extrinsic: Extrinsic
