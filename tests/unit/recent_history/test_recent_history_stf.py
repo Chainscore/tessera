@@ -7,7 +7,8 @@ from tests.unit.recent_history.types import get_testcases_starting_with, Testcas
 from tests.unit.recent_history.transformations import vector_transition
 
 def test_tiny():
-    """Test publishing tickets with no mark"""
+    """Test for Beta State Transition Function on given test vectors """
+
     vectors: List[Testcase] = get_testcases_starting_with(limit=4)
     for i, vector in enumerate(vectors):
 
@@ -15,14 +16,14 @@ def test_tiny():
         print(f"Passed testcase #{i + 1}")
 
 
-def test_recent_history_demo():
+def test_mmr():
+    """Test for MMR Functions on given test vectors """
 
     mmr_functions = MMRFunctions()
 
     # Tests
 
     # Test Case 1:
-
     h1: ByteArray32 = ByteArray32("0x8720b97ddd6acc0f6eb66e095524038675a4e4067adc10ec39939eaefc47d842")
     mmr1 = MMR([])
     res1 = mmr_functions.append_fn(mmr1, h1, Hash.keccak256)
@@ -34,7 +35,6 @@ def test_recent_history_demo():
     print("Test Case 1", res1 == op1)
 
     # Test Case 2:
-
     h2: ByteArray32 = ByteArray32("0x7507515a48439dc58bc318c48a120b656136699f42bfd2bd45473becba53462d")
 
     val2_1 = OptionHash(ByteArray32("0x8720b97ddd6acc0f6eb66e095524038675a4e4067adc10ec39939eaefc47d842"))
@@ -49,7 +49,6 @@ def test_recent_history_demo():
     print("Test Case 2", res2 == op2)
 
     # Test Case 3:
-
     h3: ByteArray32 = ByteArray32("0x8223d5eaa57ccef85993b7180a593577fd38a65fb41e4bcea2933d8b202905f0")
 
     val3_1 = OptionHash(ByteArray32("0xf986bfeff7411437ca6a23163a96b5582e6739f261e697dc6f3c05a1ada1ed0c"))
@@ -68,7 +67,6 @@ def test_recent_history_demo():
     print("Test Case 3", res3 == op3)
 
     # Test Case 4:
-
     h4: ByteArray32 = ByteArray32("0xa983417440b618f29ed0b7fa65212fce2d363cb2b2c18871a05c4f67217290b0")
 
     val4_1 = OptionHash(Null)

@@ -2,8 +2,7 @@ import os
 import json
 
 from jam.state.state import State
-from jam.merklization import OptionHash, MMR
-from jam.types import String, ByteArray32
+from jam.merklization import MMR
 from jam.types.base.sequences.vector import decodable_vector, Vector
 from jam.utils.codec import Codable
 from jam.utils.json import JsonSerde
@@ -19,14 +18,16 @@ from typing import List
 
 @decodable_dataclass
 @dataclass
-class WorkReport(Codable, JsonSerde):
-    """Input work report structure."""
+class WorkPackage(Codable, JsonSerde):
+    """Input Work Packages Structure"""
 
     hash: OpaqueHash
     exports_root: OpaqueHash
 
-@decodable_vector(WorkReport)
+@decodable_vector(WorkPackage)
 class PackageDictInput(Vector):
+    """Work Packages Input for Recent History"""
+
     def to_dict(self)->PackageDict:
         package_dict: PackageDict[WorkPackageHash, SegmentRoot] = PackageDict()
 
@@ -40,19 +41,17 @@ class PackageDictInput(Vector):
 @decodable_dataclass
 @dataclass
 class MMRInput(Codable, JsonSerde):
+    """Input Structure for MMR Peaks in Block History for Recent History"""
     peaks: MMR
 
-
     def to_mmr(self) -> MMR:
-
-
         return self.peaks
 
 
 @decodable_dataclass
 @dataclass
 class BlockHistoryInput(Codable, JsonSerde):
-    """Block History item"""
+    """Block History Item in test vectors for Recent History"""
 
     header_hash: HeaderHash
     mmr: MMRInput
@@ -63,6 +62,8 @@ class BlockHistoryInput(Codable, JsonSerde):
 @decodable_dataclass
 @dataclass
 class Input(Codable, JsonSerde):
+    """Input format in test vectors for Recent History"""
+
     header_hash:OpaqueHash
     parent_state_root:OpaqueHash
     accumulate_root:OpaqueHash
@@ -71,10 +72,12 @@ class Input(Codable, JsonSerde):
 
 @decodable_vector(BlockHistoryInput)
 class BetaInput(Vector[BlockHistoryInput]):
+    """Beta format in test vectors for Recent History"""
 
     def to_beta(self)->Beta:
-        b= Beta([])
+        """Function to convert Beta from Input Format to System Format"""
 
+        b= Beta([])
         for h in self:
             block_history = BlockHistory(h.header_hash, h.mmr.peaks, h.state_root, h.reported.to_dict())
             b.append(block_history)
@@ -84,6 +87,7 @@ class BetaInput(Vector[BlockHistoryInput]):
 @decodable_dataclass
 @dataclass
 class PreState(Codable, JsonSerde):
+    """Pre State format in test vectors for Recent History"""
     beta:BetaInput
 
     def to_state(self) -> State:
@@ -96,12 +100,15 @@ PostState = PreState
 @decodable_dataclass
 @dataclass
 class Testcase(Codable, JsonSerde):
+    """Testcase format in test vectors for Recent History"""
     input: Input
     pre_state: PreState
     post_state: PostState
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 6) -> List[Testcase]:
-    data_dir = "/home/rahulcsl/jam/jam-node/tests/unit/recent_history/data/tiny"
+    """Read test vectors from data module"""
+
+    data_dir = "./data/tiny"
     result = []
 
     for index, file in enumerate(os.listdir(data_dir)):
