@@ -70,8 +70,11 @@ def vector_transition(vector: Testcase) -> Boolean:
 def test_disputes_transition():
     """Test disputes transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        # prefix="progress_with_bad_signatures"
-        prefix="progress_with_faults-6"
+        prefix="progress_with_verdicts-1"
+        # prefix="progress_with_verdicts-3"
+
+        # prefix="progress_with_verdicts-4"
+        # prefix="progress_invalidates_avail_assignments-1"
     )
     # vector_transition(vectors[4])
     for i, vector in enumerate(vectors):

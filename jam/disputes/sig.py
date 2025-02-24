@@ -44,7 +44,45 @@ class Disputes:
             return vk.verify(signature_bytes, message_bytes)
         except Exception:
             return False
+    @staticmethod
+    def generate_fault_signature(private_key: str, vote: bool, target: str) -> str:
+        """
+        Generate an Ed25519 signature for a fault using a private key.
 
+            Args:
+            private_key: Hex-encoded private key (without '0x') for signing.
+            vote: Boolean indicating the fault vote (True or False).
+            target: Hex-encoded target hash (with '0x') to be signed.
+
+        Returns:
+            str: Hex-encoded signature (without '0x').
+        """
+        # a = bytes(private_key)
+        # obj=Ed25519PrivateKey.from_private_bytes(a)
+        # vote_byte = b'\x01' if vote else b'\x00'
+            # byte_target = ByteUtils.bitarray_to_bytes(target[2:])  # Remove '0x' prefix and convert to bytes
+            # message_bytes = vote_byte + byte_target
+            # sign_bytes=obj.sign(message_bytes)
+            # sign_hex=sign_bytes.hex()
+            # print(sign_hex)
+            
+        try:
+            # Convert private key from hex string to bytes
+            private_key_bytes = bytes(private_key)
+            private_key_obj = Ed25519PrivateKey.from_private_bytes(private_key_bytes)
+            # Construct the message: vote (1 byte) + target (32 bytes)
+            vote_byte = b'$jam_valid' if vote else b'$jam_invalid'
+            target_bytes = ByteUtils.bitarray_to_bytes(target[2:])  # Remove '0x' prefix
+            message_bytes = vote_byte + target_bytes
+
+            # Generate the signature (64 bytes for Ed25519)
+            signature_bytes = private_key_obj.sign(message_bytes)
+            signature_hex = signature_bytes.hex()  # Convert to hex string
+            return signature_hex
+        except Exception as e:
+            # raise ValueError(f"Failed to generate signature: {str(e)}")
+            return None
+        
     @staticmethod
     def transition(pre_state: State, block: Block) -> Tuple[State, dict]:
         """
