@@ -1,50 +1,58 @@
-from dataclasses import dataclass
-import json
 import os
-from typing import List
-from jam.state.components.alpha import Alpha
-from jam.state.components.phi import Phi
-from jam.types import CoreIndex, Vector, decodable_vector, WorkPackageHash
-from jam.types.base.integers.fixed import U32
-from jam.merklization import MMR
-from jam.types.protocol.core import SegmentRoot
-from jam.types.protocol.crypto import Entropy, OpaqueHash, HeaderHash, StateRoot
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde
-from jam.state.components.beta import PackageDict, Beta, BlockHistory
+import json
 
+from jam.state.state import State
+from jam.merklization import OptionHash, MMR
+from jam.types import String, ByteArray32
+from jam.types.base.sequences.vector import decodable_vector, Vector
+from jam.utils.codec import Codable
+from jam.utils.json import JsonSerde
+from jam.utils.codec.decorators import decodable_dataclass
+from jam.types.protocol.crypto import OpaqueHash, HeaderHash, StateRoot
+from dataclasses import dataclass
+from jam.state.components.beta import PackageDict, Beta, BlockHistory
+from jam.types.protocol.core import (
+    SegmentRoot,
+    WorkPackageHash,
+)
+from typing import List
 
 @decodable_dataclass
 @dataclass
-class InputReported(Codable, JsonSerde):
+class WorkReport(Codable, JsonSerde):
     """Input work report structure."""
 
     hash: OpaqueHash
     exports_root: OpaqueHash
 
-@decodable_vector(InputReported)
+@decodable_vector(WorkReport)
 class PackageDictInput(Vector):
-    def __convert_package__(self)->PackageDict:
-        package_Dict: PackageDict[WorkPackageHash, SegmentRoot] = PackageDict()
+    def to_dict(self)->PackageDict:
+        package_dict: PackageDict[WorkPackageHash, SegmentRoot] = PackageDict()
 
-        for x in self:
-            a = x.hash
-            b= x.exports_root
-            package_Dict[a]=b
+        for pair in self:
+            key = pair.hash
+            value = pair.exports_root
+            package_dict[key]=value
 
-        return package_Dict
+        return package_dict
+
+@decodable_dataclass
+@dataclass
+class MMRInput(Codable, JsonSerde):
+    peaks: MMR
 
 
-class MMRInput:
-    peaks:MMR
-    def __convertmmr__(self)->MMR:
+    def to_mmr(self) -> MMR:
+
+
         return self.peaks
+
 
 @decodable_dataclass
 @dataclass
 class BlockHistoryInput(Codable, JsonSerde):
-    """Block history item"""
+    """Block History item"""
 
     header_hash: HeaderHash
     mmr: MMRInput
@@ -63,41 +71,27 @@ class Input(Codable, JsonSerde):
 
 @decodable_vector(BlockHistoryInput)
 class BetaInput(Vector[BlockHistoryInput]):
-    def __convert__(self)->Beta:
-        b= Beta()
-        # print("l15", self.value)
-        for x in self:
-            # print("l15dagger", x)
-            block_history = BlockHistory(x.value, x.mmr.__convertmmr__(), x.state_root, x.reported.__convert_package__())
-            # block_history.header_hash=x.header_hash
-            # block_history.state_root = x.state_root
-            # block_history.mmr=x.mmr.__convertmmr__()
-            # block_history.packages= x.reported.__convert_package__()
-            # print("daggertest", block_history)
 
+    def to_beta(self)->Beta:
+        b= Beta([])
+
+        for h in self:
+            block_history = BlockHistory(h.header_hash, h.mmr.peaks, h.state_root, h.reported.to_dict())
             b.append(block_history)
 
-
         return b
-
 
 @decodable_dataclass
 @dataclass
 class PreState(Codable, JsonSerde):
-
     beta:BetaInput
-    # for x in beta:
-    #     x.:BlockHistoryInput.header_hash
-    #     x.state_root:BlockHistoryInput.state_root
-    #     x.reported:BlockHistoryInput.packages
-    #     x.mmr.peaks:BlockHistoryInput.mmr_root
 
+    def to_state(self) -> State:
+        state = State()
+        state.beta = self.beta.to_beta()
+        return state
 
 PostState = PreState
-
-
-
-
 
 @decodable_dataclass
 @dataclass
@@ -106,11 +100,10 @@ class Testcase(Codable, JsonSerde):
     pre_state: PreState
     post_state: PostState
 
-
 def get_testcases_starting_with(prefix: str = "", limit: int = 6) -> List[Testcase]:
-    # data_dir = "tests/unit/recent_history/data/tiny"
     data_dir = "/home/rahulcsl/jam/jam-node/tests/unit/recent_history/data/tiny"
     result = []
+
     for index, file in enumerate(os.listdir(data_dir)):
         if len(result) >= limit:
             continue
@@ -124,7 +117,6 @@ def get_testcases_starting_with(prefix: str = "", limit: int = 6) -> List[Testca
 
                 try:
                     tc = Testcase.from_json(data)
-
                     print(f"Decoded {tc}")
                     result.append(tc)
                 except Exception as e:
