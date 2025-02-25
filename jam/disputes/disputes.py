@@ -1,4 +1,4 @@
-import hashlib
+# import hashlib
 from dataclasses import dataclass
 import dataclasses
 from typing import List, Set, Tuple
@@ -90,15 +90,13 @@ class Disputes:
         disputes = block.extrinsic.disputes
         output = {"err": None, "ok": None}
         offenders_mark = set()  # Use set to ensure uniqueness
-        current_epoch = new_state.tau // EPOCH_LENGTH
-        valid_ages = [current_epoch, current_epoch - 1]
-        print("valid_ages",valid_ages)
+        current_epoch = new_state.tau // EPOCH_LENGTH        
+        valid_ages = [current_epoch, current_epoch] if current_epoch == 0 else [current_epoch, current_epoch - 1]
         # Ensure psi sets are treated as sets, not lists
         new_state.psi.g = set(new_state.psi.g)
         new_state.psi.b = set(new_state.psi.b)
         new_state.psi.w = set(new_state.psi.w)
         new_state.psi.o = set(new_state.psi.o)
-        
         # Verify signatures for all faults
         for fault in disputes.faults:
             message_bytes = b'jam_valid' if fault.vote else b'jam_invalid'
@@ -118,7 +116,7 @@ class Disputes:
         # Verify signatures for all votes in each verdict
         for verdict in disputes.verdicts:
             if verdict.age not in valid_ages:
-                return new_state, {"err": "bad_verdict_age"}
+                return new_state, {"err": "bad_judgement_age"}
             for vote in verdict.votes:
                 # Get the public key from the validator key-set
                 if verdict.age==valid_ages[0]:
@@ -135,7 +133,7 @@ class Disputes:
 
                 # Verify the signature
                 if not Disputes.verify_signature(public_key, message_bytes, verdict.target, signature):
-                    print(f"Signature verification failed for vote index {vote.index}")
+                    # print(f"Signature verification failed for vote index {vote.index}")
                     return new_state, {"err": "bad_vote_signature"}
                 # else:
                 #     print(f"Signature verified for vote index {vote.index}")
@@ -148,10 +146,6 @@ class Disputes:
         for verdict in disputes.verdicts:
             if str(verdict.target) in new_state.psi.g or str(verdict.target) in new_state.psi.b or str(verdict.target) in new_state.psi.w:
                 return new_state, {"err": "already_judged"}
-            # if verdict.age > new_state.tau:  # Dispute from future
-            #     return new_state, {"err": "invalid_age"}
-            # if verdict.age < MINIMUM_JUDGEMENT_AGE:  # Too recent
-            #     return new_state, {"err": "bad_judgement_age"}
         
         # Verify culprits are sorted by key (ascending order)
         for i in range(len(disputes.culprits) - 1):
@@ -228,5 +222,6 @@ class Disputes:
 
         # Return success with sorted offenders mark if any offenders were added
         if offenders_mark:
+            new_state.psi.o.update(offenders_mark)
             return new_state, {"ok": {"offenders_mark": offenders_mark}}
         return new_state, {"ok": {"offenders_mark": []}}

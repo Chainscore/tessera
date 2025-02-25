@@ -33,7 +33,7 @@ class Option(Choice):
             return cls(Nullable())
 
         value = cls.__choices__["some"].from_json(data)
-        print("option from json", value)
+        #--print("option from json", value)
         return cls(value)
 
     def to_json(self) -> Any:
