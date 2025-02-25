@@ -1,268 +1,366 @@
-from jam.ring_vrf.curve.twisted_edwards.te_curve import TECurve
-from jam.ring_vrf.curve.point import Point
-from typing import Tuple
-from typing import Self
+from __future__ import annotations
 
-class TEAffinePoint(Point):
-    curve: TECurve
+from dataclasses import dataclass
+from typing import TypeVar, Tuple, Self
 
-    def __init__(self, x: int, y: int):
-        super().__init__(x, y)
-        if not self.is_on_curve():
-            raise AssertionError
+from ..point import Point, PointProtocol
+from .te_curve import TECurve
 
-    def __mul__(self, other: int) -> Point:
-        if self.curve.glv.is_glv:
-            return self.glv_mul(other)
-        return self.scalar_mul(other)
+C = TypeVar('C', bound=TECurve)
 
-
-    def identity_point(self)->Self:
-        return self.__class__(0,1)
-
-    def scalar_mul(self, other: int) -> Self:
-        result = self.identity_point()
-        addend = self
-        while other:
-            if other & 1:
-                result = result + addend
-            addend = addend.double()
-            other >>= 1
+@dataclass(frozen=True)
+class TEAffinePoint(Point[C]):
+    """
+    Twisted Edwards Curve Point in Affine Coordinates.
+    
+    This class implements point operations on a Twisted Edwards curve using affine coordinates.
+    Twisted Edwards curves have the form: ax² + y² = 1 + dx²y²
+    
+    Attributes:
+        x: x-coordinate
+        y: y-coordinate
+        curve: The Twisted Edwards curve this point belongs to
+    """
+    
+    def __post_init__(self) -> None:
+        """Validate point after initialization."""
+        super().__post_init__()
+        if not isinstance(self.curve, TECurve):
+            raise TypeError("Curve must be a Twisted Edwards curve")
+    
+    def is_on_curve(self) -> bool:
+        """
+        Check if point lies on the Twisted Edwards curve.
         
-        return result
-
-
-    def __add__(self, other: Point) -> Self:
-        x1, y1 = self.x, self.y
-        x2, y2 = other.x, other.y
+        Returns:
+            bool: True if point satisfies curve equation
+        """
+        # ax² + y² = 1 + dx²y²
+        v, w = self.x, self.y
+        p = self.curve.PRIME_FIELD
+        
+        lhs = (self.curve.EdwardsA * pow(v, 2, p) + pow(w, 2, p)) % p
+        rhs = (1 + self.curve.EdwardsD * pow(v, 2, p) * pow(w, 2, p)) % p
+        
+        return lhs == rhs
+    
+    def __add__(self, other: PointProtocol[C]) -> Self:
+        """
+        Add two points using Twisted Edwards addition formulas.
+        
+        Args:
+            other: Point to add
+            
+        Returns:
+            TEAffinePoint: Result of addition
+            
+        Raises:
+            TypeError: If other is not a TEAffinePoint
+        """
+        if not isinstance(other, TEAffinePoint):
+            raise TypeError("Can only add TEAffinePoints")
+            
         if self == other:
             return self.double()
+            
         if self == self.identity_point():
             return other
+            
         if other == self.identity_point():
             return self
-
-        x1y2 = (x1 * y2) % self.curve.PRIME_FIELD
-        x2y1 = (x2 * y1) % self.curve.PRIME_FIELD
-        y1y2 = (y1 * y2) % self.curve.PRIME_FIELD
-        x1x2 = (x1 * x2) % self.curve.PRIME_FIELD
-        dx1x2y1y2 = (self.curve.EdwardsD * x1x2 * y1y2) % self.curve.PRIME_FIELD
-
-        x3 = ((x1y2 + x2y1) * self.mod_inverse(1 + dx1x2y1y2, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
-        y3 = ((y1y2 - self.curve.EdwardsA * x1x2) * self.mod_inverse(1 - dx1x2y1y2, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
-
-        return self.__class__(x3, y3)
-
-    def __neg__(self)->Self:
-        self.x = -self.x % self.curve.PRIME_FIELD
-        return self
-
-    def __sub__(self,other:Point)->Self:
-        return self + ~other
-
-
-    def double(self)->Self:
+            
+        p = self.curve.PRIME_FIELD
         x1, y1 = self.x, self.y
-
-        # Check if the point is at infinity (identity element)
-        if y1 == 0:
-            return self.identity_point()  # Return the identity point in twisted Edwards form
-
-        # Calculate new coordinates using the doubling formula
-        denom_x = (self.curve.EdwardsA * x1 ** 2 + y1 ** 2) % self.curve.PRIME_FIELD
-        denom_y = (2 - self.curve.EdwardsA * x1 ** 2 - y1 ** 2) % self.curve.PRIME_FIELD
-        if denom_x == 0 or denom_y == 0:
-            return self.identity_point()  # Return identity if denominator is zero
-
-        x3 = (2 * x1 * y1 * self.mod_inverse(denom_x, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
-        y3 = ((y1 ** 2 - self.curve.EdwardsA * x1 ** 2) * self.mod_inverse(denom_y, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
-
+        x2, y2 = other.x, other.y
+        
+        # Compute intermediate values
+        x1y2 = (x1 * y2) % p
+        x2y1 = (x2 * y1) % p
+        y1y2 = (y1 * y2) % p
+        x1x2 = (x1 * x2) % p
+        dx1x2y1y2 = (self.curve.EdwardsD * x1x2 * y1y2) % p
+        
+        # Compute result coordinates
+        x3 = ((x1y2 + x2y1) * self.mod_inverse(1 + dx1x2y1y2)) % p
+        y3 = ((y1y2 - self.curve.EdwardsA * x1x2) * 
+              self.mod_inverse(1 - dx1x2y1y2)) % p
+        
         return self.__class__(x3, y3)
-
-    @staticmethod
-    def mod_inverse(val: int, field: int) -> int:
-        """Finds the Mod Inverse Using Fermat's little Theorem"""
-
-        if pow(val, field - 1, field) != 1:
-            raise ValueError("No inverse exists")
-        return pow(val, field - 2, field)
-
-
-    #shuld we call the encode to curve here
-    def encode_to_curve(self, alpha_string: bytes, salt:bytes = b'') -> Point:
-        string_to_be_hashed = salt + alpha_string
-        u = self.curve.hash_to_field(string_to_be_hashed, 2)
-
-        q0 = self.map_to_curve(u[0])
-        print("q0", q0.x, q0.y)
-        q1 = self.map_to_curve(u[1])
-        print("q1", q1.x, q1.y)
-        R = q0 + q1
-        p = R.clear_cofactor()
-
-        print("encode_to_curve, p", p.x, p.y)
-        return p
-
-    def clear_cofactor(self)-> Self:
-        """ Helps to convert the point to be on the Edwards Curve"""
-
-        return self.glv_mul(self.curve.COFACTOR)
-
-
-    def map_to_curve(self, u):  # defined in te_affine_point
-
-        p = self.map_to_curve_ell2(u)
-        tep = self.from_mont(p)
-        return tep
-
-
-    @classmethod
-    def from_mont(cls, p:Point, field: int) -> Self:
-        (s, t) = (p.x, p.y)
-        # 1. tv1 = s + 1
-        tv1 = (s + 1) % field
-
-        # 2. tv2 = tv1 * t        # (s + 1) * t
-        tv2 = (tv1 * t) % field
-
-        # 3. tv2 = inv0(tv2)      # 1 / ((s + 1) * t)
-        try:
-            tv2 = cls.mod_inverse(tv2, field)
-        except ValueError:
-            tv2 = 0  # Handle the exceptional case where inverse doesn't exist
-
-        # 4. v = tv2 * tv1        # 1 / t
-        v = (tv2 * tv1) % field
-
-        # 5. v = v * s            # s / t
-        v = (v * s) % field
-
-        # 6. w = tv2 * t          # 1 / (s + 1)
-        w = (tv2 * t) % field
-
-        # 7. tv1 = s - 1
-        tv1 = (s - 1) % field
-
-        # 8. w = w * tv1          # (s - 1) / (s + 1)
-        w = (w * tv1) % field
-
-        # 9. e = tv2 == 0
-        e = tv2 == 0
-
-        # 10. w = CMOV(w, 1, e)   # handle exceptional case
-        w = 1 if e else w
-
-        # 11. return (v, w)
-        return cls(v,w)
-
-
-    def is_on_curve(self) -> bool:
-        v, w = self.x, self.y
-        lhs = (self.curve.EdwardsA * pow(v, 2, self.curve.PRIME_FIELD) + pow(w, 2,self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
-        rhs = (1 + self.curve.EdwardsD * pow(v, 2, self.curve.PRIME_FIELD) * pow(w, 2,self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
-        return lhs == rhs
-
-    def _x_recover(self, y:int)->int:
-        """Recover the x coordinate from the y coordinate."""
-        lhs = 1 - (y ** 2) % self.curve.PRIME_FIELD
-        rhs = self.curve.EdwardsA - (self.curve.EdwardsD * (y ** 2)) % self.curve.PRIME_FIELD
-        val = self.mod_inverse(rhs, self.curve.PRIME_FIELD)
-        do_sqrt = lhs * val % self.curve.PRIME_FIELD
-        x = self.curve.mod_sqrt(do_sqrt) % self.curve.PRIME_FIELD
-        return x
-
-
-    def calculate_j_k(self) -> Tuple[int, int]:
-        # J = 2(a + d)/(a - d)
-        # K = 4/(a - d)
-        denom = (self.curve.EdwardsA - self.curve.EdwardsD) % self.curve.PRIME_FIELD
-        denom_inv = self.mod_inverse(denom, self.curve.PRIME_FIELD)
-
-        J = (2 * (self.curve.EdwardsA + self.curve.EdwardsD) * denom_inv) % self.curve.PRIME_FIELD
-        K = (4 * denom_inv) % self.curve.PRIME_FIELD
-        return J, K
-
-    def map_to_curve_ell2(self, u:int) -> Point:
+    
+    def __neg__(self) -> Self:
         """
-        Args:
-            u:
+        Negate a point.
+        
         Returns:
-            Point on Montgomery Curve
+            TEAffinePoint: Negated point
         """
-        J,K = self.calculate_j_k()
-        Z = self.curve.find_z_ell2()
-        c1 = (J * self.mod_inverse(K, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
-        c2 = self.mod_inverse(pow(K, 2, self.curve.PRIME_FIELD), self.curve.PRIME_FIELD) % self.curve.PRIME_FIELD
-
-        # Step 1-2: Compute tv1 = Z * u^2
-        tv1 = pow(u, 2, self.curve.PRIME_FIELD)  # u^2
-        tv1 = (Z * tv1) % self.curve.PRIME_FIELD
-
-        # Step 3-4: Handle exceptional case
-        e1 = (tv1 == -1)  # Check if tv1 == -1
-        tv1 = self.curve.CMOV(tv1, 0, e1)  # If tv1 == -1, set tv1 = 0
-
-        # Step 5-7: Compute x1
-        x1 = (tv1 + 1) % self.curve.PRIME_FIELD
-        x1 = self.mod_inverse(x1, self.curve.PRIME_FIELD)   
-        x1 = (-c1 * x1) % self.curve.PRIME_FIELD  # x1 = -(J / K) / (1 + Z * u^2)
-
-        # Step 8-11: Compute gx1
-        gx1 = (x1 + c1) % self.curve.PRIME_FIELD
-        gx1 = (gx1 * x1) % self.curve.PRIME_FIELD
-        gx1 = (gx1 + c2) % self.curve.PRIME_FIELD
-        gx1 = (gx1 * x1) % self.curve.PRIME_FIELD  # gx1 = x1^3 + (J / K) * x1^2 + x1 / K^2
-
-        # Step 12: Compute x2
-        x2 = (-x1 - c1) % self.curve.PRIME_FIELD
-
-        # Step 13: Compute gx2
-        gx2 = (tv1 * gx1) % self.curve.PRIME_FIELD
-
-        # Step 14-16: Choose x and y2 based on gx1 square test
-        e2 = self.curve.is_square(gx1)
-        x = self.curve.CMOV(x2, x1, e2)  # If is_square(gx1), choose x1; else choose x2
-        y2 = self.curve.CMOV(gx2, gx1, e2)
-
-        # Step 17: Compute sqrt(y2) with fallback for non-square cases
-        y = self.curve.mod_sqrt(y2)
-
-        # Step 18-19: Adjust sign of y
-        e3 = (self.curve.sgn0(y) == 1)
-        y = self.curve.CMOV(y, -y % self.curve.PRIME_FIELD, e2 ^ e3)  # Ensure correct sign
-
-        # Step 20-21: Scale coordinates
-        s = (x * K) % self.curve.PRIME_FIELD
-        t = (y * K) % self.curve.PRIME_FIELD
-
-        s_t=(s,t)
-
-        # Step 22: Return final mapped point
-        return Point(*s_t)
-
-    def glv_mul(self, other: int) -> Self:
+        return self.__class__(-self.x % self.curve.PRIME_FIELD, self.y)
+    
+    def __sub__(self, other: PointProtocol[C]) -> Self:
+        """
+        Subtract two points.
+        
+        Args:
+            other: Point to subtract
+            
+        Returns:
+            TEAffinePoint: Result of subtraction
+        """
+        return self + (-other)
+    
+    def double(self) -> Self:
+        """
+        Double a point using specialized doubling formulas.
+        
+        Returns:
+            TEAffinePoint: 2P
+        """
+        x1, y1 = self.x, self.y
+        p = self.curve.PRIME_FIELD
+        
+        # Check for identity point
+        if y1 == 0:
+            return self.identity_point()
+        
+        # Calculate denominators
+        denom_x = (self.curve.EdwardsA * x1**2 + y1**2) % p
+        denom_y = (2 - self.curve.EdwardsA * x1**2 - y1**2) % p
+        
+        if denom_x == 0 or denom_y == 0:
+            return self.identity_point()
+        
+        # Calculate new coordinates
+        x3 = (2 * x1 * y1 * self.mod_inverse(denom_x)) % p
+        y3 = ((y1**2 - self.curve.EdwardsA * x1**2) * 
+              self.mod_inverse(denom_y)) % p
+        
+        return self.__class__(x3, y3)
+    
+    def __mul__(self, scalar: int) -> Self:
+        """
+        Scalar multiplication using either GLV or double-and-add.
+        
+        Args:
+            scalar: Integer to multiply by
+            
+        Returns:
+            TEAffinePoint: Scalar multiplication result
+        """
+        if self.curve.glv.is_enabled:
+            return self.glv_mul(scalar)
+        return self.scalar_mul(scalar)
+    
+    def scalar_mul(self, scalar: int) -> Self:
+        """
+        Basic double-and-add scalar multiplication.
+        
+        Args:
+            scalar: Integer to multiply by
+            
+        Returns:
+            TEAffinePoint: Scalar multiplication result
+        """
+        result = self.identity_point()
+        addend = self
+        scalar = scalar % self.curve.ORDER
+        
+        while scalar:
+            if scalar & 1:
+                result = result + addend
+            addend = addend.double()
+            scalar >>= 1
+        
+        return result
+    
+    def glv_mul(self, scalar: int) -> Self:
+        """
+        GLV scalar multiplication using endomorphism.
+        
+        Args:
+            scalar: Integer to multiply by
+            
+        Returns:
+            TEAffinePoint: Scalar multiplication result
+        """
         n = self.curve.ORDER
-        v1, v2 = self.curve.glv.find_short_vectors(n, self.curve.glv.lamda)
-        k1, k2 = self.curve.glv.decompose_scalar(other % n, v1, v2, n)
-        phsi = self.compute_endomorphism()
-        kp = self.scalar_mul(k1) + phsi.scalar_mul(k2)
-        return kp
-
+        k1, k2 = self.curve.glv.decompose_scalar(scalar % n, n)
+        phi = self.compute_endomorphism()
+        
+        return self.scalar_mul(k1) + phi.scalar_mul(k2)
+    
     def compute_endomorphism(self) -> Self:
-        return self.scalar_mul(self.curve.glv.lamda)
-
-    def string_to_point(self, octet_string):
-        if isinstance(octet_string, str):  # Convert hex string to bytes
-            octet_string = bytes.fromhex(octet_string)
-
-        # Extract y-coordinate (ignore MSB of the first byte)
-        y = int.from_bytes(octet_string, 'little') & ((1 << 255) - 1)
-
-        # Recover x-coordinate
-        x = self._x_recover(y)
-
-        # Check if extracted LSB of x matches the stored bit
-        if x & 1 != self._get_bit(octet_string, 256 - 1):
-            x = self.curve.PRIME_FIELD - x  # Flip x if the bit doesn't match
-
-        return self.__class__(x, y)
+        """
+        Compute the GLV endomorphism of this point.
+        
+        Returns:
+            TEAffinePoint: Result of endomorphism
+        """
+        return self.scalar_mul(self.curve.glv.lambda_param)
+    
+    def identity_point(self) -> Self:
+        """
+        Get the identity point (0, 1) of the curve.
+        
+        Returns:
+            TEAffinePoint: Identity point
+        """
+        return self.__class__(0, 1)
+    
+    @classmethod
+    def encode_to_curve(cls, alpha_string: bytes, salt: bytes = b'') -> Self:
+        """
+        Encode a string to a curve point using Elligator 2.
+        
+        Args:
+            alpha_string: String to encode
+            salt: Optional salt for the encoding
+            
+        Returns:
+            TEAffinePoint: Resulting curve point
+        """
+        string_to_hash = salt + alpha_string
+        u = cls.curve.hash_to_field(string_to_hash, 2)
+        
+        q0 = cls.map_to_curve(u[0])
+        q1 = cls.map_to_curve(u[1])
+        R = q0 + q1
+        
+        return R.clear_cofactor()
+    
+    def clear_cofactor(self) -> Self:
+        """
+        Clear the cofactor to ensure point is in prime-order subgroup.
+        
+        Returns:
+            TEAffinePoint: Point in prime-order subgroup
+        """
+        return self.glv_mul(self.curve.COFACTOR)
+    
+    @classmethod
+    def map_to_curve(cls, u: int) -> Self:
+        """
+        Map a field element to a curve point using Elligator 2.
+        
+        Args:
+            u: Field element to map
+            
+        Returns:
+            TEAffinePoint: Resulting curve point
+        """
+        s, t = cls.map_to_curve_ell2(u)
+        return cls.from_mont(s, t)
+    
+    @classmethod
+    def from_mont(cls, s: int, t: int) -> Self:
+        """
+        Convert from Montgomery to Twisted Edwards coordinates.
+        
+        Args:
+            s: Montgomery s-coordinate
+            t: Montgomery t-coordinate
+            
+        Returns:
+            TEAffinePoint: Point in Twisted Edwards coordinates
+        """
+        field = cls.curve.PRIME_FIELD
+        
+        # Convert coordinates
+        tv1 = (s + 1) % field
+        tv2 = (tv1 * t) % field
+        
+        try:
+            tv2 = cls.mod_inverse(tv2)
+        except ValueError:
+            tv2 = 0
+            
+        v = (tv2 * tv1 * s) % field
+        w = (tv2 * t * (s - 1)) % field
+        
+        # Handle exceptional case
+        w = 1 if tv2 == 0 else w
+        
+        return cls(v, w)
+    
+    @classmethod
+    def mod_inverse(cls, val: int) -> int:
+        """
+        Compute modular multiplicative inverse.
+        
+        Args:
+            val: Value to invert
+            field: Modulus
+            
+        Returns:
+            int: Modular inverse
+            
+        Raises:
+            ValueError: If inverse doesn't exist
+        """
+        if pow(val, cls.curve.PRIME_FIELD - 1, cls.curve.PRIME_FIELD) != 1:
+            raise ValueError("No inverse exists")
+        return pow(val, cls.curve.PRIME_FIELD - 2, cls.curve.PRIME_FIELD)
+    
+    @classmethod
+    def calculate_j_k(cls) -> Tuple[int, int]:
+        """
+        Calculate curve parameters J and K for Elligator 2.
+        
+        Returns:
+            Tuple[int, int]: J and K parameters
+        """
+        p = cls.curve.PRIME_FIELD
+        denom = (cls.curve.EdwardsA - cls.curve.EdwardsD) % p
+        denom_inv = cls.mod_inverse(denom)
+        
+        J = (2 * (cls.curve.EdwardsA + cls.curve.EdwardsD) * denom_inv) % p
+        K = (4 * denom_inv) % p
+        
+        return J, K
+    
+    @classmethod
+    def map_to_curve_ell2(cls, u: int) -> Tuple[int, int]:
+        """
+        Elligator 2 map to curve implementation.
+        
+        Args:
+            u: Field element to map
+            
+        Returns:
+            Point: Point on Montgomery curve
+        """
+        J, K = cls.calculate_j_k()
+        Z = cls.curve.Z
+        p = cls.curve.PRIME_FIELD
+        
+        # Compute constants
+        c1 = (J * cls.mod_inverse(K)) % p
+        c2 = cls.mod_inverse(K * K) % p
+        
+        # Main mapping computation
+        tv1 = (Z * u * u) % p
+        e1 = tv1 == -1
+        tv1 = 0 if e1 else tv1
+        
+        x1 = (-c1 * cls.mod_inverse(tv1 + 1)) % p
+        gx1 = (((x1 + c1) * x1 + c2) * x1) % p
+        
+        x2 = (-x1 - c1) % p
+        gx2 = (tv1 * gx1) % p
+        
+        # Choose correct values
+        e2 = cls.curve.is_square(gx1)
+        x = x2 if not e2 else x1
+        y2 = gx2 if not e2 else gx1
+        
+        # Compute square root
+        y = cls.curve.mod_sqrt(y2)
+        
+        # Adjust sign
+        e3 = (y & 1) == 1
+        y = -y % p if e2 ^ e3 else y
+        
+        # Scale coordinates
+        s = (x * K) % p
+        t = (y * K) % p
+        
+        return (s, t)

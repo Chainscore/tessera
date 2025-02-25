@@ -1,73 +1,148 @@
-from jam.ring_vrf.curve.glv import GLV_Specs
-from typing import List
+from __future__ import annotations
+
 import math
-from dataclasses import  dataclass
 import hashlib
-import random
+from dataclasses import dataclass
+from typing import List, Protocol, ClassVar, Final
+from jam.ring_vrf.curve.point import Point
 
+from .glv import GLVSpecs  # Renamed from GLV_Specs
 
-@dataclass
-class Curve:
+class CurveProtocol(Protocol):
+    """Protocol defining the interface for elliptic curves."""
     PRIME_FIELD: int
     ORDER: int
     GENERATOR_X: int
     GENERATOR_Y: int
     COFACTOR: int
-    glv: GLV_Specs
-    # Used for Encoding to Curve
-    m = 1
-    k = 128
+    Z: int
+    
+    def hash_to_field(self, msg: bytes, count: int) -> List[int]: ...
+    def map_to_curve(self, u: int) -> 'Point': ...
+    def is_square(self, val: int) -> bool: ...
+    def mod_sqrt(self, val: int) -> int: ...
 
-    SUITE_STRING = "Bandersnatch_SHA-512_ELL2"
-    DST = ("ECVRF_"+"Bandersnatch_XMD:SHA-512_ELL2_RO_"+ SUITE_STRING).encode()
-
-    def calc_l(self):
-        L = math.ceil((math.ceil(math.log2(self.PRIME_FIELD)) + self.k) / 8)
-        return L
-
+@dataclass(frozen=True)
+class Curve:
+    """
+    Base implementation of an elliptic curve.
+    
+    This class provides the core functionality for elliptic curve operations,
+    particularly focused on hash-to-curve operations as specified in the 
+    IETF draft-irtf-cfrg-hash-to-curve.
+    
+    Attributes:
+        PRIME_FIELD: The prime field characteristic
+        ORDER: The order of the curve
+        GENERATOR_X: X-coordinate of the generator point
+        GENERATOR_Y: Y-coordinate of the generator point
+        COFACTOR: The cofactor of the curve
+        glv: GLV optimization parameters
+    """
+    
+    # Curve Parameters
+    PRIME_FIELD: Final[int]
+    ORDER: Final[int]
+    GENERATOR_X: Final[int]
+    GENERATOR_Y: Final[int]
+    COFACTOR: Final[int]
+    glv: GLVSpecs
+    Z: Final[int]
+    
+    # Hash to Curve Parameters
+    M: ClassVar[int] = 1  # Degree of field extension
+    K: ClassVar[int] = 128  # Security parameter
+    
+    # Suite String Parameters
+    SUITE_STRING: ClassVar[str] = "Bandersnatch_SHA-512_ELL2"
+    DST: ClassVar[bytes] = f"ECVRF_Bandersnatch_XMD:SHA-512_ELL2_RO_{SUITE_STRING}".encode()
+    
+    def __post_init__(self) -> None:
+        """Validate curve parameters after initialization."""
+        if not self._validate_parameters():
+            raise ValueError("Invalid curve parameters")
+    
+    def _validate_parameters(self) -> bool:
+        """
+        Validate the curve parameters.
+        
+        Returns:
+            bool: True if parameters are valid, False otherwise
+        """
+        return (
+            self.PRIME_FIELD > 0 and
+            self.ORDER > 0 and
+            0 <= self.GENERATOR_X < self.PRIME_FIELD and
+            0 <= self.GENERATOR_Y < self.PRIME_FIELD and
+            self.COFACTOR > 0
+        )
+    
     @property
-    def L(self):
-        return self.calc_l()
-
-    def hash_to_field(self, msg: str, count: int) -> List[int]:
-
-        len_in_bytes = count * self.m * self.L
-
-        # Step 2: Expand the message
-        uniform_bytes = self.expand_message_xmd(msg, len_in_bytes)
-
-        # Step 3: Convert uniform_bytes to field elements
-        u_values = []
+    def L(self) -> int:
+        """
+        Calculate the length parameter for hash-to-field operations.
+        
+        Returns:
+            int: The calculated L parameter
+        """
+        return math.ceil((math.ceil(math.log2(self.PRIME_FIELD)) + self.K) / 8)
+    
+    def hash_to_field(self, msg: bytes, count: int) -> List[int]:
+        """
+        Hash an arbitrary string to one or more field elements.
+        
+        Args:
+            msg: The message to hash
+            count: Number of field elements to generate
+            
+        Returns:
+            List[int]: List of field elements
+            
+        Raises:
+            ValueError: If count is negative or msg is None
+        """
+        if count < 0:
+            raise ValueError("Count must be non-negative")
+        if msg is None:
+            raise ValueError("Message cannot be None")
+            
+        len_in_bytes = count * self.M * self.L
+        uniform_bytes = self._expand_message_xmd(msg, len_in_bytes)
+        
+        u_values: List[int] = []
         for i in range(count):
-            for j in range(self.m):
-                elm_offset = self.L * (j + i * self.m)
+            for j in range(self.M):
+                elm_offset = self.L * (j + i * self.M)
                 tv = uniform_bytes[elm_offset:elm_offset + self.L]
-                e_j = self.OS2IP(tv) % self.PRIME_FIELD  # Convert bytes to integer and reduce mod p
+                e_j = int.from_bytes(tv, 'big') % self.PRIME_FIELD
                 u_values.append(e_j)
-
-            # Store each field element tuple
-
-        # print("Hash to field:",u_values)
-
-        # Step 4: Return the computed field elements
+                
         return u_values
-
-
-
-    def expand_message_xmd(self, msg, len_in_bytes:int) -> bytes:
-
+    
+    def _expand_message_xmd(self, msg: bytes, len_in_bytes: int) -> bytes:
+        """
+        Expand a message using XMD (eXpandable Message Digest).
+        
+        Args:
+            msg: The message to expand
+            len_in_bytes: Desired length of the output in bytes
+            
+        Returns:
+            bytes: The expanded message
+            
+        Raises:
+            ValueError: If the input parameters are invalid
+        """
         hash_fn = hashlib.sha512
         b_in_bytes = hash_fn().digest_size
-        s_in_bytes = hash_fn().block_size
-
         ell = math.ceil(len_in_bytes / b_in_bytes)
-
+        
         if ell > 255 or len_in_bytes > 65535 or len(self.DST) > 255:
             raise ValueError("Invalid input size parameters")
 
         DST_prime = self.DST + self.I2OSP(len(self.DST), 1)
 
-        Z_pad = self.I2OSP(0, self.calc_l())
+        Z_pad = self.I2OSP(0, self.L)
 
         l_i_b_str = self.I2OSP(len_in_bytes, 2)
 
@@ -86,8 +161,6 @@ class Curve:
 
         return uniform_bytes[:len_in_bytes]
 
-
-
     # Inferface to be implemented by each curve
     def map_to_curve(self, u):
         ...
@@ -104,41 +177,53 @@ class Curve:
         return x % 2
 
 
-
     def find_z_ell2(self) -> int:
         return 5
 
-    def is_square(self,val:int)->bool:
+    def is_square(self, val:int)->bool:
         if val == 0:
             return True
-        return pow(val, (self.PRIME_FIELD - 1) // 2, self.PRIME_FIELD)==1
-
-
-    def mod_sqrt(self,a:int)->int:
-        if a == 0:
+        return pow(val, (self.PRIME_FIELD - 1) // 2, self.PRIME_FIELD) == 1
+    
+    def mod_sqrt(self, val: int) -> int:
+        """
+        Compute the square root modulo prime field.
+        
+        Args:
+            val: Value to compute square root of
+            
+        Returns:
+            int: Square root of val modulo prime field
+            
+        Raises:
+            ValueError: If no square root exists
+        """
+        if val == 0:
             return 0
-        if not self.is_square(a):
+            
+        if not self.is_square(val):
             raise ValueError("No square root exists")
-
+            
+        # Tonelli-Shanks algorithm
         q = self.PRIME_FIELD - 1
         s = 0
         while q % 2 == 0:
             q //= 2
             s += 1
-
+            
         if s == 1:
-            return pow(a, (self.PRIME_FIELD + 1) // 4, self.PRIME_FIELD)
-
+            return pow(val, (self.PRIME_FIELD + 1) // 4, self.PRIME_FIELD)
+            
+        # Find quadratic non-residue
         z = 2
         while self.is_square(z):
             z += 1
-
+            
         m = s
         c = pow(z, q, self.PRIME_FIELD)
-        t = pow(a, q, self.PRIME_FIELD)
-        r = pow(a, (q + 1) // 2, self.PRIME_FIELD)
-
-
+        t = pow(val, q, self.PRIME_FIELD)
+        r = pow(val, (q + 1) // 2, self.PRIME_FIELD)
+        
         while t != 1:
             i = 0
             temp = t
@@ -146,21 +231,15 @@ class Curve:
                 temp = (temp * temp) % self.PRIME_FIELD
                 i += 1
                 if i == m:
-                    return 0
-
+                    raise ValueError("No square root exists")
+                    
             b = pow(c, 1 << (m - i - 1), self.PRIME_FIELD)
             m = i
             c = (b * b) % self.PRIME_FIELD
             t = (t * c) % self.PRIME_FIELD
             r = (r * b) % self.PRIME_FIELD
-
+            
         return r
-
-
-    @staticmethod
-    def generate_random_point() -> int:
-        return random.randint(1, Curve.PRIME_FIELD - 1)
-
 
     @staticmethod
     def sha512(data: bytes) -> bytes:
