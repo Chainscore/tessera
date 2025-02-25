@@ -118,7 +118,6 @@ class IETF_VRF(VRF):
         # Compute proof points
         U = generator * s - public_key * c
         V = input_point * s - output_point * c
-        
         # Verify challenge
         expected_c = self.challenge(
             [public_key, input_point, output_point, U, V],

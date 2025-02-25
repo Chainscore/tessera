@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Protocol, TypeVar, Generic, Final, ClassVar
+from typing import Protocol, TypeVar, Generic, Final, ClassVar, Union
 
 C = TypeVar('C', bound='CurveProtocol')
 
@@ -95,7 +95,7 @@ class Point(Generic[C]):
         return bytes(y_bytes)
 
     @classmethod
-    def string_to_point(cls, encoded: bytes, curve: C) -> 'Point[C]':
+    def string_to_point(cls, octet_string: Union[str, bytes]) -> 'Point[C]':
         """
         Convert compressed octet string back to point.
         
@@ -109,37 +109,34 @@ class Point(Generic[C]):
         Raises:
             ValueError: If encoding is invalid
         """
-        if len(encoded) != cls.ENCODING_LENGTH + 1:
-            raise ValueError("Invalid encoding length")
-            
-        header = encoded[0]
-        if header not in (2, 3):
-            raise ValueError("Invalid header byte")
-            
-        x = int.from_bytes(encoded[1:], 'big')
-        if x >= curve.PRIME_FIELD:
-            raise ValueError("x-coordinate out of range")
-            
-        # Recover y-coordinate (implementation depends on curve)
-        y = cls._recover_y(x, header & 1, curve)
-        
-        return cls(x, y, curve)
+        if isinstance(octet_string, str):  # Convert hex string to bytes
+            octet_string = bytes.fromhex(octet_string)
+
+        y = int.from_bytes(octet_string, 'little') & ((1 << 255) - 1)
+
+        # Recover x-coordinate
+        x = cls._x_recover(y)
+        x_parity = (octet_string[-1] >> 7)
+        p_half = (cls.curve.PRIME_FIELD - 1) // 2
+
+        # Check if extracted LSB of x matches the stored bit
+        if (x < p_half) == x_parity:
+            x = cls.curve.PRIME_FIELD - x  # Flip x if the bit doesn't match
+        return cls(x, y)
     
-    @staticmethod
-    def _recover_y(x: int, y_parity: int, curve: C) -> int:
+    @classmethod
+    def _x_recover(cls, y: int) -> int:
         """
-        Recover y-coordinate from x and parity.
+        Recover x-coordinate from y.
         
         Args:
-            x: x-coordinate
-            y_parity: Parity of y (0 or 1)
-            curve: Curve parameters
+            y: y-coordinate
             
         Returns:
-            int: Recovered y-coordinate
+            int: Recovered x-coordinate
             
         Raises:
-            ValueError: If y cannot be recovered
+            ValueError: If x cannot be recovered
         """
         raise NotImplementedError("Must be implemented by subclass")
     

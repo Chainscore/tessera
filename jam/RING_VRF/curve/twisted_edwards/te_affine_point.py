@@ -283,3 +283,15 @@ class TEAffinePoint(Point[C]):
         w = 1 if tv2 == 0 else w
 
         return cls(v, w)
+
+    @classmethod
+    def _x_recover(cls, y: int) -> int:
+        """
+        Recover x-coordinate from y.
+        """
+        lhs = 1 - (y ** 2) % cls.curve.PRIME_FIELD
+        rhs = cls.curve.EdwardsA - (cls.curve.EdwardsD * (y ** 2)) % cls.curve.PRIME_FIELD
+        val = cls.curve.mod_inverse(rhs)
+        do_sqrt = lhs * val % cls.curve.PRIME_FIELD
+        x = cls.curve.mod_sqrt(do_sqrt) % cls.curve.PRIME_FIELD
+        return x
