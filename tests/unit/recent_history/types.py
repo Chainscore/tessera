@@ -108,7 +108,7 @@ class Testcase(Codable, JsonSerde):
 def get_testcases_starting_with(prefix: str = "", limit: int = 6) -> List[Testcase]:
     """Read test vectors from data module"""
 
-    data_dir = "./data/tiny"
+    data_dir = "tests/unit/recent_history/data/tiny"
     result = []
 
     for index, file in enumerate(os.listdir(data_dir)):
