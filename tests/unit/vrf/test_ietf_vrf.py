@@ -5,7 +5,7 @@ from jam.ring_vrf.ietf.ietf import IETF_VRF
 
 def test_prove_bandersnatch_ed_sha512_ell2_ietf():
     ...
-    data_dir = "tests/unit/vrf/data/ark-vrf/ietf"
+    data_dir = "tests/unit/vrf/data/ark-vrf"
     limit = 10000
     for i, file in enumerate(os.listdir(data_dir)):
         print(file)

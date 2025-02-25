@@ -3,24 +3,8 @@ from __future__ import annotations
 import math
 import hashlib
 from dataclasses import dataclass
-from typing import List, Protocol, ClassVar, Final
-from jam.ring_vrf.curve.point import Point
-
-from .glv import GLVSpecs  # Renamed from GLV_Specs
-
-class CurveProtocol(Protocol):
-    """Protocol defining the interface for elliptic curves."""
-    PRIME_FIELD: int
-    ORDER: int
-    GENERATOR_X: int
-    GENERATOR_Y: int
-    COFACTOR: int
-    Z: int
-    
-    def hash_to_field(self, msg: bytes, count: int) -> List[int]: ...
-    def map_to_curve(self, u: int) -> 'Point': ...
-    def is_square(self, val: int) -> bool: ...
-    def mod_sqrt(self, val: int) -> int: ...
+from typing import List, ClassVar, Final
+from jam.ring_vrf.curve.glv import GLVSpecs
 
 @dataclass(frozen=True)
 class Curve:
@@ -38,6 +22,7 @@ class Curve:
         GENERATOR_Y: Y-coordinate of the generator point
         COFACTOR: The cofactor of the curve
         glv: GLV optimization parameters
+        Z: The Z parameter for the curve
     """
     
     # Curve Parameters
@@ -107,7 +92,7 @@ class Curve:
             raise ValueError("Message cannot be None")
             
         len_in_bytes = count * self.M * self.L
-        uniform_bytes = self._expand_message_xmd(msg, len_in_bytes)
+        uniform_bytes = self.expand_message_xmd(msg, len_in_bytes)
         
         u_values: List[int] = []
         for i in range(count):
@@ -119,7 +104,7 @@ class Curve:
                 
         return u_values
     
-    def _expand_message_xmd(self, msg: bytes, len_in_bytes: int) -> bytes:
+    def expand_message_xmd(self, msg: bytes, len_in_bytes: int) -> bytes:
         """
         Expand a message using XMD (eXpandable Message Digest).
         
@@ -161,11 +146,24 @@ class Curve:
 
         return uniform_bytes[:len_in_bytes]
 
-    # Inferface to be implemented by each curve
-    def map_to_curve(self, u):
-        ...
-
-
+    def mod_inverse(self, val: int) -> int:
+        """
+        Compute modular multiplicative inverse.
+        
+        Args:
+            val: Value to invert
+            field: Modulus
+            
+        Returns:
+            int: Modular inverse
+            
+        Raises:
+            ValueError: If inverse doesn't exist
+        """
+        if pow(val, self.PRIME_FIELD - 1, self.PRIME_FIELD) != 1:
+            raise ValueError("No inverse exists")
+        return pow(val, self.PRIME_FIELD - 2, self.PRIME_FIELD)
+    
     @staticmethod
     def CMOV(a:int, b:int, cond:int)->int:
         """Constant-time conditional move: if cond is True, return b; else return a."""
@@ -176,7 +174,6 @@ class Curve:
         """Return the sign of x: 1 if odd, 0 if even."""
         return x % 2
 
-
     def find_z_ell2(self) -> int:
         return 5
 
@@ -184,7 +181,7 @@ class Curve:
         if val == 0:
             return True
         return pow(val, (self.PRIME_FIELD - 1) // 2, self.PRIME_FIELD) == 1
-    
+
     def mod_sqrt(self, val: int) -> int:
         """
         Compute the square root modulo prime field.

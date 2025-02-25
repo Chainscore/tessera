@@ -6,7 +6,6 @@ from typing import Final, Self
 from ..glv import GLVSpecs
 from ..twisted_edwards.te_curve import TECurve
 from ..twisted_edwards.te_affine_point import TEAffinePoint
-from ..point import Point
 
 @dataclass(frozen=True)
 class BandersnatchParams:

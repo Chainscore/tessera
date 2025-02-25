@@ -4,9 +4,8 @@ from .test_e2c import BigInt, process_field_elements
 
 def test_nonce():
     data = b""
-    generator = BandersnatchPoint(Bandersnatch_TE_Curve.GENERATOR_X, Bandersnatch_TE_Curve.GENERATOR_Y)
     
-    input_point = generator.encode_to_curve(data, b"")
+    input_point = BandersnatchPoint.encode_to_curve(data, b"")
     assert input_point.x == 23177656040451240103938304363591821492951015767333712630108457573549787226093
     assert input_point.y == 78284803470694319592756962928195357281227187761612519520494432739017353925
 

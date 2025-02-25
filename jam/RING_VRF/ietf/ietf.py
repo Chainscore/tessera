@@ -18,7 +18,7 @@ class IETFVRFProof:
     """
     challenge: int
     response: int
-    
+
 class IETF_VRF(VRF):
     """
     IETF specification compliant VRF implementation.
@@ -64,7 +64,7 @@ class IETF_VRF(VRF):
         )
         
         # Encode input to curve point
-        input_point = generator.encode_to_curve(alpha, salt)
+        input_point = BandersnatchPoint.encode_to_curve(alpha, salt)
         
         # Compute output point and public key
         output_point = input_point * secret_key
@@ -77,11 +77,7 @@ class IETF_VRF(VRF):
         
         # Generate challenge
         c = self.challenge(
-            public_key,
-            input_point,
-            output_point,
-            U,
-            V,
+            [public_key, input_point, output_point, U, V],
             additional_data
         )
         
@@ -125,11 +121,7 @@ class IETF_VRF(VRF):
         
         # Verify challenge
         expected_c = self.challenge(
-            public_key,
-            input_point,
-            output_point,
-            U,
-            V,
+            [public_key, input_point, output_point, U, V],
             additional_data
         )
         

@@ -14,7 +14,7 @@ from jam.ring_vrf.curve.specs.bandersnatch import (
 
 # Test data paths
 TEST_DATA_DIR = Path("tests/unit/vrf/data")
-ARK_VRF_DIR = TEST_DATA_DIR / "ark-vrf/ietf"
+ARK_VRF_DIR = TEST_DATA_DIR / "ark-vrf"
 COLORFUL_NOTION_DIR = TEST_DATA_DIR / "colorful-notion"
 
 def load_test_vectors(file_path: Path) -> List[Dict[str, Any]]:

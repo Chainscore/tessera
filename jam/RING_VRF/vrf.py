@@ -69,11 +69,7 @@ class VRF(ABC):
     
     def challenge(
         self,
-        Y: Point,
-        I: Point,
-        O: Point,
-        U: Point,
-        V: Point,
+        points: List[Point],
         additional_data: bytes
     ) -> int:
         """
@@ -95,7 +91,7 @@ class VRF(ABC):
         challenge_string = str0
         
         # Add point encodings
-        for P in [Y, I, O, U, V]:
+        for P in points:
             challenge_string += P.point_to_string()
             
         # Add additional data and finalize

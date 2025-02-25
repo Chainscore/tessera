@@ -26,11 +26,10 @@ def test_h2f():
 
 def test_m2c():
     data = bytes("foo", "utf-8")
-    generator = BandersnatchPoint(Bandersnatch_TE_Curve.GENERATOR_X, Bandersnatch_TE_Curve.GENERATOR_Y)
     
     u = Bandersnatch_TE_Curve.hash_to_field(data, 2)
-    p0 = generator.map_to_curve(u[0])
-    p1 = generator.map_to_curve(u[1])
+    p0 = BandersnatchPoint.map_to_curve(u[0])
+    p1 = BandersnatchPoint.map_to_curve(u[1])
 
     # Test vector from specification
     assert p0.x == 45311200032263316917859627542467284358670199398458214934254495151428460867180
@@ -42,9 +41,8 @@ def test_m2c():
 
 def test_e2c():
     data = bytes("foo", "utf-8")
-    generator = BandersnatchPoint(Bandersnatch_TE_Curve.GENERATOR_X, Bandersnatch_TE_Curve.GENERATOR_Y)
     
-    u = generator.encode_to_curve(data, b"")
+    u = BandersnatchPoint.encode_to_curve(data)
     
     # Test vector from specification
     assert u.x == 26037012954893424526367048031037997009889535281273781660989300420960588198291
