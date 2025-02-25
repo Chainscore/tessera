@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+
+from jam.types import Option
 from jam.types.base import Choice
 from jam.types.base.choices.option import decodable_option
 from jam.types.base.null import Null
@@ -20,7 +22,7 @@ class WorkReportState(Codable):
 
 
 @decodable_option(WorkReportState)
-class OptionalWorkReportState(Choice):
+class OptionalWorkReportState(Option):
     """Work report state"""
 
     ...
