@@ -1,6 +1,5 @@
 
 from jam.ring_vrf.vrf import VRF
-from jam.ring_vrf.curve.specs.bandersnatch import Bandersnatch_TE_Curve
 from typing import Tuple
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
 from jam.ring_vrf.curve.curve import Curve
@@ -17,7 +16,6 @@ class IETF_VRF(VRF):
         
         # Encode input octet-string to a curve point using Elligator-2
         input_point = generator.encode_to_curve(alpha, salt)
-        print("input_point", input_point.x, input_point.y)
         
         # Compute output point and public key
         output_point = input_point * secret_key
@@ -45,8 +43,4 @@ class IETF_VRF(VRF):
         U = s* (self.curve.GENERATOR_Y, self.curve.GENERATOR_Y) - c* public_key
         V = s* input_point - c*output_point
         return c == VRF.challenge(public_key, input_point, output_point, U, V, additional_data)
-
-
-
-# ietf_vrf = IETF_VRF(Bandersnatch_TE_Curve.PRIME_FIELD,Bandersnatch_TE_Curve.COFACTOR,Bandersnatch_TE_Curve.GENERATOR_X,Bandersnatch_TE_Curve.GENERATOR_Y,Bandersnatch_TE_Curve.ORDER,Bandersnatch_TE_Curve.glv)
 

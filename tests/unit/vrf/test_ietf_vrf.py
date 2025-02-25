@@ -21,6 +21,6 @@ def test_bandersnatch_ed_sha512_ell2_ietf():
                 vrf = IETF_VRF(Bandersnatch_TE_Curve)
                 output_point, proof = vrf.proof(bytes.fromhex(vector["alpha"]), secret_scalar, bytes.fromhex(vector["ad"]))
                 assert output_point.point_to_string().hex() == vector["gamma"]
-                # assert proof[0] == int.from_bytes(bytes.fromhex(vector["proof_c"]), "little")
-                # assert proof[1] == int.from_bytes(bytes.fromhex(vector["proof_s"]), "little")
+                assert proof[0] == int.from_bytes(bytes.fromhex(vector["proof_c"]), "little")
+                assert proof[1] == int.from_bytes(bytes.fromhex(vector["proof_s"]), "little")
                 print(f"✅ Testcase {i + 1} of {file}")

@@ -14,6 +14,7 @@ class VRF(Curve):
         sk_encoded = secret_key.to_bytes(32, 'little')
         hashed_sk = bytes(Hash.sha512(sk_encoded))
         sk_hash = hashed_sk[32:64]  # Use second half of the SHA-512 output
+
         
         # Stage 2: Concatenate the hashed key and input point's octet string
         point_octet = input_point.point_to_string()
@@ -32,7 +33,6 @@ class VRF(Curve):
         """Produce the challenge scalar c"""
         # Step 1: Create the initial string with the suite ID and version
         str0 = self.curve.SUITE_STRING.encode() + bytes([0x02])
-        
         # Step 2: Concatenate the input points into strn
         strn = str0
         for P in [Y, I, O, U, V]:
@@ -40,11 +40,11 @@ class VRF(Curve):
         
         # Step 3: Hash strn || ad || 0x00 to generate the hash
         hash_input = strn + ad + bytes([0x00])
-        h = bytes(Hash.sha512(hash_input))
-        
+        h = bytes(Hash.sha512(hash_input))[:32]
+
         # Step 4: Interpret the first 32 bytes as a little-endian integer
-        c = int.from_bytes(h[:32], 'little')
-        
+        c = int.from_bytes(h, 'big') % self.curve.ORDER
+
         return c
 
     def proof(self, *arg):
