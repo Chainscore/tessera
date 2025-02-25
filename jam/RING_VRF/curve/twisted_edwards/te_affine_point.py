@@ -1,5 +1,5 @@
-from jam.RING_VRF.curve.twisted_edwards.te_curve import TECurve
-from jam.RING_VRF.curve.point import Point
+from jam.ring_vrf.curve.twisted_edwards.te_curve import TECurve
+from jam.ring_vrf.curve.point import Point
 from typing import Tuple
 from typing import Self
 
@@ -89,14 +89,18 @@ class TEAffinePoint(Point):
 
 
     #shuld we call the encode to curve here
-    def encode_to_curve(self, alpha_string: str, encode_to_curve_salt="") -> Point:
-        string_to_be_hashed = alpha_string + encode_to_curve_salt
+    def encode_to_curve(self, alpha_string: bytes, salt:bytes = b'') -> Point:
+        string_to_be_hashed = salt + alpha_string
         u = self.curve.hash_to_field(string_to_be_hashed, 2)
 
         q0 = self.map_to_curve(u[0])
+        print("q0", q0.x, q0.y)
         q1 = self.map_to_curve(u[1])
+        print("q1", q1.x, q1.y)
         R = q0 + q1
         p = R.clear_cofactor()
+
+        print("encode_to_curve, p", p.x, p.y)
         return p
 
     def clear_cofactor(self)-> Self:
@@ -172,7 +176,7 @@ class TEAffinePoint(Point):
         # J = 2(a + d)/(a - d)
         # K = 4/(a - d)
         denom = (self.curve.EdwardsA - self.curve.EdwardsD) % self.curve.PRIME_FIELD
-        denom_inv = self.mod_inverse(denom)
+        denom_inv = self.mod_inverse(denom, self.curve.PRIME_FIELD)
 
         J = (2 * (self.curve.EdwardsA + self.curve.EdwardsD) * denom_inv) % self.curve.PRIME_FIELD
         K = (4 * denom_inv) % self.curve.PRIME_FIELD
@@ -185,11 +189,10 @@ class TEAffinePoint(Point):
         Returns:
             Point on Montgomery Curve
         """
-        J,K=self.calculate_j_k()
-        Z=self.curve.find_z_ell2()
-
-        c1 = (J * self.mod_inverse(K)) % self.curve.PRIME_FIELD
-        c2 = self.mod_inverse(pow(K, 2, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
+        J,K = self.calculate_j_k()
+        Z = self.curve.find_z_ell2()
+        c1 = (J * self.mod_inverse(K, self.curve.PRIME_FIELD)) % self.curve.PRIME_FIELD
+        c2 = self.mod_inverse(pow(K, 2, self.curve.PRIME_FIELD), self.curve.PRIME_FIELD) % self.curve.PRIME_FIELD
 
         # Step 1-2: Compute tv1 = Z * u^2
         tv1 = pow(u, 2, self.curve.PRIME_FIELD)  # u^2
@@ -201,7 +204,7 @@ class TEAffinePoint(Point):
 
         # Step 5-7: Compute x1
         x1 = (tv1 + 1) % self.curve.PRIME_FIELD
-        x1 = self.mod_inverse(x1)
+        x1 = self.mod_inverse(x1, self.curve.PRIME_FIELD)   
         x1 = (-c1 * x1) % self.curve.PRIME_FIELD  # x1 = -(J / K) / (1 + Z * u^2)
 
         # Step 8-11: Compute gx1
@@ -262,6 +265,4 @@ class TEAffinePoint(Point):
         if x & 1 != self._get_bit(octet_string, 256 - 1):
             x = self.curve.PRIME_FIELD - x  # Flip x if the bit doesn't match
 
-        point = [x, y]
-        return point
-
+        return self.__class__(x, y)

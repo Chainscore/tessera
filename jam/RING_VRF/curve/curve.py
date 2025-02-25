@@ -1,4 +1,4 @@
-from jam.RING_VRF.curve.glv import GLV_Specs
+from jam.ring_vrf.curve.glv import GLV_Specs
 from typing import List
 import math
 from dataclasses import  dataclass
@@ -67,7 +67,7 @@ class Curve:
 
         DST_prime = self.DST + self.I2OSP(len(self.DST), 1)
 
-        Z_pad = self.I2OSP(0, s_in_bytes)
+        Z_pad = self.I2OSP(0, self.calc_l())
 
         l_i_b_str = self.I2OSP(len_in_bytes, 2)
 
@@ -181,12 +181,12 @@ class Curve:
     def I2OSP(value:int, length:int)->bytes:
         if value >= 256 ** length:
             raise ValueError("integer too large")
-        return value.to_bytes(length, 'little')
+        return value.to_bytes(length, 'big')
 
 
     @staticmethod
     def OS2IP(octets:bytearray)->int:
-        return int.from_bytes(octets, 'little')
+        return int.from_bytes(octets, 'big')
 
 
     @staticmethod

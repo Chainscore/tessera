@@ -1,28 +1,42 @@
 
-from jam.RING_VRF.vrf import VRF
-from jam.RING_VRF.curve.specs.bandersnatch import Bandersnatch_TE_Curve
+from jam.ring_vrf.vrf import VRF
+from jam.ring_vrf.curve.specs.bandersnatch import Bandersnatch_TE_Curve
 from typing import Tuple
-from dataclasses import  dataclass
-@dataclass
+from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
+from jam.ring_vrf.curve.curve import Curve
+
 class IETF_VRF(VRF):
-    curve = Bandersnatch_TE_Curve
+    curve: Curve
 
+    def __init__(self, curve: Curve):
+        self.curve = curve
 
-    def proof(self, alpha, secret_key,additional_data):
-        input_point = self.curve.encode_to_curve(alpha)
-        O = secret_key* input_point
-        Y = secret_key* (self.curve.GENERATOR_X,self.curve.GENERATOR_Y)
-        # print("Inside Generate Proof: Op-H",Utilities.point_to_string(O).hex())
-        # print("Inside generate Proof:Public Key-PK",Utilities.point_to_string(Y).hex()
-        # print("y_normal:",Y)
-        # y_g = Curve.TwistedEdwardCurve.mul_by_glv(secret_key, constants.GENERATOR)
-        # print("y_glv:",y_g)
-        k = VRF.generate_nonce(secret_key, input_point)
-        U, V = k* (self.curve.GENERATOR_X,self.curve.GENERATOR_Y), k*input_point
-        c = VRF.challenge(Y, input_point, O, U, V, additional_data)
-        s = (k + c * secret_key) % self.curve.ORDER
-        return O, (c, s)
-
+    def proof(self, alpha: bytes, secret_key: int, additional_data: bytes, salt: bytes = b'') -> Tuple[BandersnatchPoint, Tuple[int, int]]:
+        """Produce a VRF proof"""
+        generator = BandersnatchPoint(self.curve.GENERATOR_X, self.curve.GENERATOR_Y)
+        
+        # Encode input octet-string to a curve point using Elligator-2
+        input_point = generator.encode_to_curve(alpha, salt)
+        print("input_point", input_point.x, input_point.y)
+        
+        # Compute output point and public key
+        output_point = input_point * secret_key
+        public_key = generator * secret_key
+        
+        # Generate deterministic nonce
+        nonce = self.generate_nonce(secret_key, input_point)
+        
+        # Compute U = k*G and V = k*I
+        U = generator * nonce
+        V = input_point * nonce
+        
+        # Compute challenge c
+        c = self.challenge(public_key, input_point, output_point, U, V, additional_data)
+        
+        # Compute proof components
+        s = (nonce + c * secret_key) % self.curve.ORDER
+        
+        return output_point, (c, s)
 
     def verify(self,public_key: Tuple[int, int], input_point: Tuple[int, int],additional_data:bytes, output_point: Tuple[int, int],proof: Tuple[int, int]) -> bool:
         """Verify a VRF ticket"""
@@ -34,5 +48,5 @@ class IETF_VRF(VRF):
 
 
 
-ietf_vrf = IETF_VRF(Bandersnatch_TE_Curve.PRIME_FIELD,Bandersnatch_TE_Curve.COFACTOR,Bandersnatch_TE_Curve.GENERATOR_X,Bandersnatch_TE_Curve.GENERATOR_Y,Bandersnatch_TE_Curve.ORDER,Bandersnatch_TE_Curve.glv)
+# ietf_vrf = IETF_VRF(Bandersnatch_TE_Curve.PRIME_FIELD,Bandersnatch_TE_Curve.COFACTOR,Bandersnatch_TE_Curve.GENERATOR_X,Bandersnatch_TE_Curve.GENERATOR_Y,Bandersnatch_TE_Curve.ORDER,Bandersnatch_TE_Curve.glv)
 

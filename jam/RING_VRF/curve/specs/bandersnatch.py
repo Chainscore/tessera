@@ -1,7 +1,7 @@
-from jam.RING_VRF.curve.glv import GLV_Specs
-from jam.RING_VRF.curve.twisted_edwards.te_curve import TECurve
-from jam.RING_VRF.curve.twisted_edwards.te_affine_point import TEAffinePoint
-from jam.RING_VRF.curve.point import Point
+from jam.ring_vrf.curve.glv import GLV_Specs
+from jam.ring_vrf.curve.twisted_edwards.te_curve import TECurve
+from jam.ring_vrf.curve.twisted_edwards.te_affine_point import TEAffinePoint
+from jam.ring_vrf.curve.point import Point
 from typing import Self
 
 EdwardsA = -5
