@@ -103,8 +103,6 @@ class TECurve(Curve):
         t = (y * K) % p
         
         return (s, t)
-
-    
     
     @property
     def curve_equation(self) -> str:
