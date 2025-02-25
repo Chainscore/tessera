@@ -57,10 +57,10 @@ class Disputes:
             # message_bytes = bytes(vote_byte) + ByteUtils.bitarray_to_bytes(message[2:])
             msg_bytes = bytes(message_bytes) + bytes(target)
             public_key_obj.verify(signature_bytes, msg_bytes)
-            print("Signature verified successfully")
+            # print("Signature verified successfully")
             return True
         except InvalidSignature:
-            print("InvalidSignature")
+            # print("InvalidSignature")
             return False
         except Exception as e:
             print(f"Signature verification failed: {e}")
@@ -90,9 +90,9 @@ class Disputes:
         disputes = block.extrinsic.disputes
         output = {"err": None, "ok": None}
         offenders_mark = set()  # Use set to ensure uniqueness
-        # current_epoch = new_state.tau // EPOCH_LENGTH
-        # valid_ages = [current_epoch, current_epoch - 1]
-        # print("valid_ages",new_state.)
+        current_epoch = new_state.tau // EPOCH_LENGTH
+        valid_ages = [current_epoch, current_epoch - 1]
+        print("valid_ages",valid_ages)
         # Ensure psi sets are treated as sets, not lists
         new_state.psi.g = set(new_state.psi.g)
         new_state.psi.b = set(new_state.psi.b)
@@ -104,23 +104,29 @@ class Disputes:
             message_bytes = b'jam_valid' if fault.vote else b'jam_invalid'
             if not Disputes.verify_signature(fault.key, message_bytes, fault.target, fault.signature):
                 return new_state, {"err": "bad_fault_signature"}
-            else:
-                print("Passed fault signature!!")
+            # else:
+            #     print("Passed fault signature!!")
         
         # Verify signatures for all culprits
         for culprit in disputes.culprits:
             message_bytes = b'jam_guarantee'
             if not Disputes.verify_signature(culprit.key, message_bytes, culprit.target, culprit.signature):
                 return new_state, {"err": "bad_culprit_signature"}
-            else:
-                print("Passed culprit signature!!")
+            # else:
+            #     print("Passed culprit signature!!")
         
         # Verify signatures for all votes in each verdict
         for verdict in disputes.verdicts:
+            if verdict.age not in valid_ages:
+                return new_state, {"err": "bad_verdict_age"}
             for vote in verdict.votes:
                 # Get the public key from the validator key-set
-                validator = pre_state.kappa[vote.index]
-                public_key = validator.ed25519
+                if verdict.age==valid_ages[0]:
+                    validator = pre_state.kappa[vote.index]
+                    public_key = validator.ed25519
+                else:
+                    validator = pre_state.lambda_[vote.index]
+                    public_key = validator.ed25519
 
                 # Get the vote value and message
                 message_bytes = b'jam_valid' if vote.vote else b'jam_invalid'
@@ -131,8 +137,8 @@ class Disputes:
                 if not Disputes.verify_signature(public_key, message_bytes, verdict.target, signature):
                     print(f"Signature verification failed for vote index {vote.index}")
                     return new_state, {"err": "bad_vote_signature"}
-                else:
-                    print(f"Signature verified for vote index {vote.index}")
+                # else:
+                #     print(f"Signature verified for vote index {vote.index}")
         # Verify verdicts are sorted by target (ascending order)
         for i in range(len(disputes.verdicts) - 1):
             if disputes.verdicts[i].target >= disputes.verdicts[i + 1].target:

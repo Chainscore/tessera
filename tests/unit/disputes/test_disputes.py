@@ -70,7 +70,7 @@ def vector_transition(vector: Testcase) -> Boolean:
 def test_disputes_transition():
     """Test disputes transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        prefix="progress_with_verdicts-1"
+        prefix="progress_with_verdict_signatures_from_previous_set"
         # prefix="progress_with_verdicts-3"
 
         # prefix="progress_with_verdicts-4"
