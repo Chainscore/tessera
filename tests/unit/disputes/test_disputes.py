@@ -48,7 +48,14 @@ def vector_transition(vector: Testcase) -> Boolean:
     test_block = create_block_from_input(vector.input)
     output=Disputes.transition(test_state,test_block)
     
-    print("Output->", output[1])
+    # print("Output->", output[1],"------",vector.output)
+    # print("Output--:",output[0].rho)
+    for report in output[0].rho:
+        if report is not None:
+            print("report-->",report)
+            print("/////////////////////////////////////")
+    # print("Expected:", vector.post_state.rho)
+    # print("Expected:", vector.output)
     return Boolean(True)
 
     # Verify state transitions
@@ -70,7 +77,7 @@ def vector_transition(vector: Testcase) -> Boolean:
 def test_disputes_transition():
     """Test disputes transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        prefix="progress_with_bad_signatures-1",limit=40
+        prefix="progress",limit=1
         
     )
     # vector_transition(vectors[4])

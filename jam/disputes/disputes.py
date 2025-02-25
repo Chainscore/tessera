@@ -89,7 +89,7 @@ class Disputes:
         new_state = dataclasses.replace(pre_state)
         disputes = block.extrinsic.disputes
         output = {"err": None, "ok": None}
-        offenders_mark = set()  # Use set to ensure uniqueness
+        offenders_mark = []  # Use set to ensure uniqueness
         current_epoch = new_state.tau // EPOCH_LENGTH        
         valid_ages = [current_epoch, current_epoch] if current_epoch == 0 else [current_epoch, current_epoch - 1]
         # Ensure psi sets are treated as sets, not lists
@@ -101,7 +101,7 @@ class Disputes:
         for fault in disputes.faults:
             message_bytes = b'jam_valid' if fault.vote else b'jam_invalid'
             if not Disputes.verify_signature(fault.key, message_bytes, fault.target, fault.signature):
-                return new_state, {"err": "bad_fault_signature"}
+                return new_state, {"err": "bad_signature"}
             # else:
             #     print("Passed fault signature!!")
         
@@ -109,7 +109,7 @@ class Disputes:
         for culprit in disputes.culprits:
             message_bytes = b'jam_guarantee'
             if not Disputes.verify_signature(culprit.key, message_bytes, culprit.target, culprit.signature):
-                return new_state, {"err": "bad_culprit_signature"}
+                return new_state, {"err": "bad_signature"}
             # else:
             #     print("Passed culprit signature!!")
         
@@ -134,7 +134,7 @@ class Disputes:
                 # Verify the signature
                 if not Disputes.verify_signature(public_key, message_bytes, verdict.target, signature):
                     # print(f"Signature verification failed for vote index {vote.index}")
-                    return new_state, {"err": "bad_vote_signature"}
+                    return new_state, {"err": "bad_signature"}
                 # else:
                 #     print(f"Signature verified for vote index {vote.index}")
         # Verify verdicts are sorted by target (ascending order)
@@ -165,7 +165,7 @@ class Disputes:
             if str(culprit.key) in new_state.psi.o:
                 return new_state, {"err": "offender_already_reported"}
             new_state.psi.o.add(culprit.key)
-            offenders_mark.add(culprit.key)
+            offenders_mark.append(culprit.key)
             culprit_counts[culprit.target] = culprit_counts.get(culprit.target, 0) + 1
 
         # Process faults and check for offenders already reported
@@ -174,8 +174,9 @@ class Disputes:
             if str(fault.key) in new_state.psi.o:
                 return new_state, {"err": "offender_already_reported"}
             new_state.psi.o.add(fault.key)
-            offenders_mark.add(fault.key)
+            offenders_mark.append(fault.key)
             fault_counts[fault.target] = fault_counts.get(fault.target, 0) + 1
+        # print("offenders->",offenders_mark)
 
         # Process verdicts with constraints
         for verdict in disputes.verdicts:
@@ -214,7 +215,7 @@ class Disputes:
                     new_state.psi.b.add(verdict.target)
 
             # Wonky verdict (mixed votes meeting wonky threshold)
-            elif positive_votes > 0 and positive_votes < VALIDATORS_SUPER_MAJORITY:
+            elif positive_votes == VALIDATORS_WONKY: # Condition for wonky verdict EXACTLY
                 if verdict.target not in new_state.psi.w:
                     new_state.psi.w.add(verdict.target)
             else:
