@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from jam.types.base.integers.general import Int
+from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -10,12 +10,12 @@ from jam.utils.constants import VALIDATOR_COUNT
 @decodable_dataclass
 @dataclass
 class ValidatorStat(Codable):
-    num_blocks: Int
-    num_tickets: Int
-    num_preimages: Int
-    num_octets: Int
-    num_reports: Int
-    num_avail: Int
+    blocks: U32
+    tickets: U32
+    pre_images: U32
+    pre_images_size: U32
+    guarantees: U32
+    assurances: U32
 
 
 @decodable_array(VALIDATOR_COUNT, ValidatorStat)
