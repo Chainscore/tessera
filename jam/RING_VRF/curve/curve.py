@@ -106,16 +106,7 @@ class Curve:
 
 
     def find_z_ell2(self) -> int:
-
-        ctr = 18886178867200960497001835917649091219057080094937609519140440539760939937304  # generator value :0x664197ccb667315e6064e4ee81ad8c3586d5dcba508b7d150f3e12da9e666c2a
-        while True:
-            for z_cand in (ctr % self.PRIME_FIELD, -ctr % self.PRIME_FIELD):
-                if not self.is_square(z_cand):
-                    # print(z_cand)
-                    # print("expec:",18886178867200960497001835917649091219057080094937609519140440539760939937304)
-                    return z_cand
-            ctr += 1
-
+        return 5
 
     def is_square(self,val:int)->bool:
         if val == 0:

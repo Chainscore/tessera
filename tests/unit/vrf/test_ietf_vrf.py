@@ -17,12 +17,10 @@ def test_bandersnatch_ed_sha512_ell2_ietf():
             data = json.loads(f.read())
             for i, vector in enumerate(data):
                 print(vector)
-                # secret_scalar = int.from_bytes(bytes.fromhex(vector["sk"]), "little") % Bandersnatch_TE_Curve.ORDER
-                # vrf = IETF_VRF(Bandersnatch_TE_Curve)
-                # output_point, proof = vrf.proof(bytes.fromhex(vector["alpha"]), secret_scalar, bytes.fromhex(vector["ad"]))
-                # assert output_point.point_to_string().hex() == vector["gamma"]
-                # print("proof_c we generated: ", proof[0])
-                # print("proof_c from vector: ", int.from_bytes(bytes.fromhex(vector["proof_c"]), "little"))
+                secret_scalar = int.from_bytes(bytes.fromhex(vector["sk"]), "little") % Bandersnatch_TE_Curve.ORDER
+                vrf = IETF_VRF(Bandersnatch_TE_Curve)
+                output_point, proof = vrf.proof(bytes.fromhex(vector["alpha"]), secret_scalar, bytes.fromhex(vector["ad"]))
+                assert output_point.point_to_string().hex() == vector["gamma"]
                 # assert proof[0] == int.from_bytes(bytes.fromhex(vector["proof_c"]), "little")
                 # assert proof[1] == int.from_bytes(bytes.fromhex(vector["proof_s"]), "little")
-                # print(f"✅ Testcase {i + 1} of {file}")
+                print(f"✅ Testcase {i + 1} of {file}")
