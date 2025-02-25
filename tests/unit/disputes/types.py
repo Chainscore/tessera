@@ -17,7 +17,6 @@ from jam.utils.json import JsonSerde
 @decodable_dataclass
 @dataclass
 class Input(Codable, JsonSerde):
-    # slot: U32
     disputes: DisputesExtrinsic
 
 @decodable_dataclass
