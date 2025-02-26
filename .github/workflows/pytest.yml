@@ -39,7 +39,7 @@ jobs:
       run: pip install pytest
 
     - name: Activate Poetry Shell
-      run: poetry shell
+      run: eval $(poetry env activate)
 
     - name: Run tests
       run: |
