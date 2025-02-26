@@ -1,4 +1,5 @@
 import dataclasses
+from copy import deepcopy
 
 from jam.state.components.pi import ValidatorStat
 from jam.state.state import State
@@ -11,8 +12,8 @@ def create_empty_validator_stat():
     return ValidatorStat(
         blocks=0,
         tickets=0,
-        preimages=0,
-        preimages_size=0,
+        pre_images=0,
+        pre_images_size=0,
         guarantees=0,
         assurances=0,
     )
@@ -43,23 +44,23 @@ class Statistics:
         is_new_epoch = e != e_dash
 
         if is_new_epoch:
-            pi_last = dataclasses.replace(new_state.pi[0])
-            pi_curr = dataclasses.replace(new_state.pi[0])
+            pi_last = deepcopy(new_state.pi[0])
+            pi_curr = deepcopy(new_state.pi[0])
 
             for i in range(len(pi_curr)):
                 pi_curr[i] = create_empty_validator_stat()
         else:
-            pi_curr = dataclasses.replace(new_state.pi[0])
-            pi_last = dataclasses.replace(new_state.pi[1])
+            pi_curr = deepcopy(new_state.pi[0])
+            pi_last = deepcopy(new_state.pi[1])
 
         author_index = block.header.author_index
 
         pi_curr[author_index].blocks += 1
         pi_curr[author_index].tickets += len(block.extrinsic.tickets)
-        pi_curr[author_index].preimages += len(block.extrinsic.preimages)
+        pi_curr[author_index].pre_images += len(block.extrinsic.preimages)
 
         for preimage in block.extrinsic.preimages:
-            pi_curr[author_index].preimages_size += len(preimage.blob)
+            pi_curr[author_index].pre_images_size += len(preimage.blob)
 
         for guarantee in block.extrinsic.guarantees:
             signatures = guarantee.signatures

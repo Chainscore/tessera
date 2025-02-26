@@ -3,7 +3,6 @@ import os
 from dataclasses import dataclass
 from typing import List
 
-from jam.state.components.pi import AllValidatorStats as BaseStats
 from jam.state.components.tau import Tau
 from jam.types.base import Nullable
 from jam.types.base.integers.fixed import U32
@@ -30,11 +29,7 @@ class ValidatorStat(Codable, JsonSerde):
 class AllValidatorStats(Array[ValidatorStat]):
     """All validator stats"""
 
-    def to_base(self) -> BaseStats:
-        new_stats = BaseStats(())
-        for i in self:
-            print("help")
-        return new_stats
+    ...
 
 
 @decodable_dataclass
