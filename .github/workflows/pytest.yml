@@ -41,6 +41,9 @@ jobs:
     - name: Activate Poetry Shell
       run: eval $(poetry env activate)
 
+    - name: Check poetry info
+      run: poetry env info
+
     - name: Run tests
       run: |
         pytest tests/
