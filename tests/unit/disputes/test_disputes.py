@@ -13,7 +13,7 @@ from tests.unit.disputes.types import (
 )
 from tests.fixtures.dummy_state import create_dummy_state
 from tests.fixtures.dummy_block import create_dummy_block
-
+from jam.disputes.error import DisputesError
 
 def create_block_from_input(input: Input) -> Block:
     """Create a block from test input"""
@@ -46,27 +46,22 @@ def vector_transition(vector: Testcase) -> Boolean:
     """
     test_state = create_state_from_pre(vector.pre_state)  
     test_block = create_block_from_input(vector.input)
-    output=Disputes.transition(test_state,test_block)
     try:
-        
-        if 'err' in vector.output:
-            assert output[1]['err'] == vector.output['err']
-        elif 'ok' in vector.output:
-            for i in range(len(vector.output['ok']['offenders_mark'])):
-                assert str(vector.output['ok']['offenders_mark'][i])==str(output[1]['ok']['offenders_mark'][i])
-        assert output[0].psi.g == vector.post_state.psi.good
-        assert output[0].psi.b == vector.post_state.psi.bad
-        assert output[0].psi.w == vector.post_state.psi.wonky
-        assert output[0].psi.o == vector.post_state.psi.offenders
-        assert output[0].rho == vector.post_state.rho
-        assert output[0].tau == vector.post_state.tau
+        output=Disputes.transition(test_state,test_block)
+        for i in vector.output['ok']['offenders_mark']:
+            assert str(i) in str(output.psi.o)
+        assert output.psi.g == vector.post_state.psi.good
+        assert output.psi.b == vector.post_state.psi.bad
+        assert output.psi.w == vector.post_state.psi.wonky
+        assert output.psi.o == vector.post_state.psi.offenders
+        assert output.rho == vector.post_state.rho
+        assert output.tau == vector.post_state.tau
         return Boolean(True)
-
-    except Exception as e:
-        return Boolean(False)
-
-
-
+    except DisputesError as e:
+        assert e.code._value_==vector.output['err']
+        return Boolean(True)
+    return Boolean(False)
+        
 
 def test_disputes_transition():
     """Test disputes transition with various test vectors"""
