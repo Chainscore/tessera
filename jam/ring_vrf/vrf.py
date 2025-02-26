@@ -103,10 +103,7 @@ class VRF(ABC):
     @abstractmethod
     def prove(
         self,
-        alpha: bytes,
-        secret_key: int,
-        additional_data: bytes,
-        salt: bytes = b''
+        *args
     ) -> Tuple[Point, Tuple[int, int]]:
         """
         Generate VRF proof.
@@ -125,11 +122,7 @@ class VRF(ABC):
     @abstractmethod
     def verify(
         self,
-        public_key: Point,
-        input_point: Point,
-        additional_data: bytes,
-        output_point: Point,
-        proof: Tuple[int, int]
+        *args
     ) -> bool:
         """
         Verify VRF proof.
