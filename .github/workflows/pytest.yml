@@ -21,11 +21,16 @@ jobs:
     - name: Install Poetry
       run: pip install poetry
 
-    - name: Debug - List files in root
-      run: ls -lah
+    - name: Ensure a Clean Poetry Install
+      run: |
+        poetry cache clear --all pypi || true  # Clears cached dependencies
+        rm -rf $(poetry env info --path) || true  # Removes existing virtualenv (if any)
 
-    - name: Clean Install dependencies via Poetry
-      run: rm poetry.lock && poetry install --with dev --no-interaction --no-ansi
+    - name: Install Dependencies via Poetry
+      run: poetry install --with dev --no-interaction --no-ansi --no-root
+
+#    - name: Clean Install dependencies via Poetry
+#      run: rm poetry.lock && poetry install --with dev --no-interaction --no-ansi
 
 #    - name: Install dependencies via Poetry
 #      run: poetry install --with dev --no-interaction --no-ansi
