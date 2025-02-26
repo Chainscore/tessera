@@ -4,9 +4,12 @@ import dataclasses
 from typing import List, Set, Tuple
 from math import floor
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+from jam.state.components.rho import OptionalWorkReportState
+from jam.state.components.rho import Null
 # from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
-
+from jam.types.protocol.crypto import Hash
 
 from cryptography.exceptions import InvalidSignature
 
@@ -91,13 +94,17 @@ class Disputes:
         current_epoch = new_state.tau // EPOCH_LENGTH        
         valid_ages = [current_epoch, current_epoch] if current_epoch == 0 else [current_epoch, current_epoch - 1]
         
-        new_state.psi.g=set(new_state.psi.g)
-        new_state.psi.b=set(new_state.psi.b)
-        new_state.psi.w=set(new_state.psi.w)
-        new_state.psi.o=set(new_state.psi.o)
+        # new_state.psi.g=set(new_state.psi.g)
+        # new_state.psi.b=set(new_state.psi.b)
+        # new_state.psi.w=set(new_state.psi.w)
+        # new_state.psi.o=set(new_state.psi.o)
+        good_set=set()
+        bad_set=set()
+        wonky_set=set()
+        offenders_set=set()
         
         
-        # Verify signatures for all faults
+        
         for fault in disputes.faults:
             message_bytes = b'jam_valid' if fault.vote else b'jam_invalid'
             if not Disputes.verify_signature(fault.key, message_bytes, fault.target, fault.signature):
@@ -167,6 +174,7 @@ class Disputes:
             # new_state.psi.o.append(culprit.key)
             if culprit.key not in offenders_mark:
                 offenders_mark.append(culprit.key)
+                offenders_set.add(culprit.key)
             culprit_counts[culprit.target] = culprit_counts.get(culprit.target, 0) + 1
 
         # Process faults and check for offenders already reported
@@ -177,6 +185,7 @@ class Disputes:
             # new_state.psi.o.append(fault.key)
             if fault.key not in offenders_mark:
                 offenders_mark.append(fault.key)
+                offenders_set.add(fault.key)
             fault_counts[fault.target] = fault_counts.get(fault.target, 0) + 1
         # print("offenders->",offenders_mark)
 
@@ -202,7 +211,7 @@ class Disputes:
                     if fault.target == verdict.target and fault.vote:
                         return pre_state, {"err": "fault_verdict_wrong"}
                 if verdict.target not in new_state.psi.g:
-                    new_state.psi.g.add(verdict.target)
+                    good_set.add(verdict.target)
 
             # Solely invalid verdict (all negative votes)
             elif positive_votes == 0:
@@ -214,18 +223,46 @@ class Disputes:
                     if fault.target == verdict.target and not fault.vote:
                         return pre_state, {"err": "fault_verdict_wrong"}
                 if verdict.target not in new_state.psi.b:
-                    new_state.psi.b.add(verdict.target)
+                    bad_set.add(verdict.target)
 
             # Wonky verdict (mixed votes meeting wonky threshold)
             elif positive_votes == VALIDATORS_WONKY: # Condition for wonky verdict EXACTLY
                 if verdict.target not in new_state.psi.w:
-                    new_state.psi.w.add(verdict.target)
+                    wonky_set.add(verdict.target)
             else:
                 return pre_state, {"err": "bad_vote_split"}
+        # print(new_state.rho)
+        for i in range(len(new_state.rho)):
+            if new_state.rho[i]is not None:
+                # print(new_state.rho[i])
+                try:
+                    targett=Hash.blake2b(new_state.rho[i].value['some'].report.encode())
+                    if targett in bad_set:
+                        # print(i,targett)
+                        new_state.rho[i]=OptionalWorkReportState(Null)
+                    if targett in wonky_set:
+                        # print(i,targett)
+                        new_state.rho[i]=OptionalWorkReportState(Null)
+                except:
+                    pass
+                     
+        
+        # print("HashedValue->", ))
 
         # Return success with sorted offenders mark if any offenders were added
-        if offenders_mark:
-            for i in offenders_mark:
-                new_state.psi.o.add(i)
-            return new_state, {"ok": {"offenders_mark": offenders_mark}}
-        return new_state, {"ok": {"offenders_mark": []}}
+        offenders_set=sorted(offenders_set)
+        for i in good_set:
+            if i not in new_state.psi.g:
+                new_state.psi.g.append(i)
+        for i in bad_set:
+            if i not in new_state.psi.b:
+                new_state.psi.b.append(i)
+        for i in wonky_set:
+            if i not in new_state.psi.w:
+                new_state.psi.w.append(i)
+        for i in offenders_set:
+            if i not in new_state.psi.o:
+                new_state.psi.o.append(i)
+            
+        return new_state, {"ok": {"offenders_mark": offenders_mark}}
+        

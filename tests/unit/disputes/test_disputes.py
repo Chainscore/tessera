@@ -47,57 +47,38 @@ def vector_transition(vector: Testcase) -> Boolean:
     test_state = create_state_from_pre(vector.pre_state)  
     test_block = create_block_from_input(vector.input)
     output=Disputes.transition(test_state,test_block)
-    
-    # print(output[0].psi.o==vector.post_state.psi.offenders)
     try:
-        # if vector.output['ok']:
-        #     for i in range(len(vector.output['ok']['offenders_mark'])):
-        #         assert str(vector.output['ok']['offenders_mark'][i])==str(output[1]['ok']['offenders_mark'][i])
-        # print(" ",output[1],"\n",vector.output)
+        
         if 'err' in vector.output:
             assert output[1]['err'] == vector.output['err']
         elif 'ok' in vector.output:
             for i in range(len(vector.output['ok']['offenders_mark'])):
                 assert str(vector.output['ok']['offenders_mark'][i])==str(output[1]['ok']['offenders_mark'][i])
-        assert output[0].psi.g == set(vector.post_state.psi.good)
-        assert output[0].psi.b == set(vector.post_state.psi.bad)
-        assert output[0].psi.w == set(vector.post_state.psi.wonky)
-        assert output[0].psi.o == set(vector.post_state.psi.offenders)
+        assert output[0].psi.g == vector.post_state.psi.good
+        assert output[0].psi.b == vector.post_state.psi.bad
+        assert output[0].psi.w == vector.post_state.psi.wonky
+        assert output[0].psi.o == vector.post_state.psi.offenders
+        assert output[0].rho == vector.post_state.rho
+        assert output[0].tau == vector.post_state.tau
+        return Boolean(True)
 
-        # print("rho->",output[0].rho == vector.post_state.rho)
-        # print("tau->",output[0].tau == vector.post_state.tau)
     except Exception as e:
-        # print("Error->",e)
         return Boolean(False)
-    
-    # print("Mine->",output[0].psi.g,vector.post_state.psi['good'])
-    # print("Output->",(vector.post_state.psi['good'][0][2:]))
 
-    return Boolean(True)
 
-    # Verify state transitions
-    
-    
-    # Verify output matches expected
-    if "err" in vector.output:
-        assert output[1]["err"] == vector.output["err"]
-    else:
-        assert output[1]["ok"] == vector.output["ok"]
-        
-    return Boolean(True)
 
 
 def test_disputes_transition():
     """Test disputes transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        prefix="progress",limit=50
+        prefix="progress",limit=100
         
     )
     # vector_transition(vectors[4])
     for i, vector in enumerate(vectors):
         # assert vector_transition(vector)
+        # print("Pass hogaya" if vector_transition(vector) else "Fail hogaya")
         print(vector_transition(vector))
-        # vector_transition(vector)
 
 if __name__ == "__main__":
     test_disputes_transition()

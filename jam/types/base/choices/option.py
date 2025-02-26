@@ -49,7 +49,8 @@ class Option(Choice):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({list(self.value.values())[0]})"
-
+    
+    
 
 def decodable_option(optional_type: Type[Codable]) -> Type[Option]:
     """Decodable choice"""
