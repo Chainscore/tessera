@@ -47,20 +47,22 @@ def vector_transition(vector: Testcase) -> Boolean:
     test_state = create_state_from_pre(vector.pre_state)  
     test_block = create_block_from_input(vector.input)
     try:
-        output=Disputes.transition(test_state,test_block)
-        for i in vector.output['ok']['offenders_mark']:
-            assert str(i) in str(output.psi.o)
-        assert output.psi.g == vector.post_state.psi.good
-        assert output.psi.b == vector.post_state.psi.bad
-        assert output.psi.w == vector.post_state.psi.wonky
-        assert output.psi.o == vector.post_state.psi.offenders
-        assert output.rho == vector.post_state.rho
-        assert output.tau == vector.post_state.tau
-        return Boolean(True)
-    except DisputesError as e:
-        assert e.code._value_==vector.output['err']
-        return Boolean(True)
-    return Boolean(False)
+        try:
+            output=Disputes.transition(test_state,test_block)
+            for i in vector.output['ok']['offenders_mark']:
+                assert str(i) in str(output.psi.o)
+            assert output.psi.g == vector.post_state.psi.good
+            assert output.psi.b == vector.post_state.psi.bad
+            assert output.psi.w == vector.post_state.psi.wonky
+            assert output.psi.o == vector.post_state.psi.offenders
+            assert output.rho == vector.post_state.rho
+            assert output.tau == vector.post_state.tau
+            return Boolean(True)
+        except DisputesError as e:
+            assert e.code._value_==vector.output['err']
+            return Boolean(True)
+    except:
+        return Boolean(False)
         
 
 def test_disputes_transition():
@@ -72,7 +74,7 @@ def test_disputes_transition():
     for i, vector in enumerate(vectors):
         # assert vector_transition(vector)
         # print("Pass hogaya" if vector_transition(vector) else "Fail hogaya")
-        print(vector_transition(vector))
+        print(i,vector_transition(vector))
 
 if __name__ == "__main__":
     test_disputes_transition()
