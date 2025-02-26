@@ -68,13 +68,12 @@ def vector_transition(vector: Testcase) -> Boolean:
 def test_disputes_transition():
     """Test disputes transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        prefix="progress_with_faults-3",limit=1
-        
+        prefix="progress",limit=100
     )
     for i, vector in enumerate(vectors):
-        # assert vector_transition(vector)
+        assert vector_transition(vector)
         # print("Pass hogaya" if vector_transition(vector) else "Fail hogaya")
-        print(i,vector_transition(vector))
+        # print(i,vector_transition(vector))
 
 if __name__ == "__main__":
     test_disputes_transition()

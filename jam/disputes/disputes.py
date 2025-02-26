@@ -29,11 +29,7 @@ MINIMUM_CULPRITS_FOR_BAD = 2  # At least 2 culprits for solely invalid verdicts
 
 @dataclass
 class Disputes:
-    
-    @staticmethod
-    def is_sorted_by_key(arr:List[Fault], key="key")->bool:
-        return all(arr[i][key] <= arr[i+1][key] for i in range(len(arr) - 1))
-    
+
     @staticmethod
     def verify_signature(public_key: ByteArray32, message_bytes:bytes, target: bytes, signature: ByteArray64) -> bool:
         """
@@ -152,17 +148,13 @@ class Disputes:
         
         # 6. Validate faults and culprits
         # Verify faults are sorted by key (ascending order)
-        # for i in range(len(disputes.faults) - 1):
-        #     if disputes.faults[i].key >= disputes.faults[i + 1].key:
-        #         raise DisputesError(
-        #                 DisputesErrorCode.FAULTS_NOT_SORTED_UNIQUE
-        #             )
-        # if not Disputes.is_sorted_by_key(disputes.faults, key="key"):
-        #     raise DisputesError(
-        #             DisputesErrorCode.FAULTS_NOT_SORTED_UNIQUE
-        #         )
+        for i in range(len(disputes.faults) - 1):
+            if disputes.faults[i].key >= disputes.faults[i + 1].key:
+                raise DisputesError(
+                        DisputesErrorCode.FAULTS_NOT_SORTED_UNIQUE
+                    )
         
-        print("faults",disputes.faults[0]['key'])
+        
         
         # Process culprits and check for offenders already reported
         culprit_counts = {}  # Track culprits per target
