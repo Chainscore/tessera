@@ -38,11 +38,14 @@ jobs:
     - name: Install PyTest
       run: pip install pytest
 
-    - name: Activate Poetry Shell
-      run: eval $(poetry env activate)
+    - name: Install Pycryptodome
+      run: pip install pycryptodome
 
-    - name: Check poetry info
-      run: poetry env info
+#    - name: Activate Poetry Shell
+#      run: eval $(poetry env activate)
+#
+#    - name: Check poetry info
+#      run: poetry env info
 
     - name: Run tests
       run: |
