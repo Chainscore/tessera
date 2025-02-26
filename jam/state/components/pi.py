@@ -5,11 +5,12 @@ from jam.types.base.sequences.array import Array, decodable_array
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import VALIDATOR_COUNT
+from jam.utils.json import JsonSerde
 
 
 @decodable_dataclass
 @dataclass
-class ValidatorStat(Codable):
+class ValidatorStat(Codable, JsonSerde):
     blocks: U32
     tickets: U32
     pre_images: U32

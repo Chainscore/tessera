@@ -32,7 +32,6 @@ class Statistics:
         Returns:
             State after transition
         """
-        # Make a copy of the state
         new_state = dataclasses.replace(pre_state)
 
         if len(new_state.pi) != 2:
