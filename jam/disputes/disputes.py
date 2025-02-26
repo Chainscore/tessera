@@ -5,14 +5,10 @@ from typing import List, Set, Tuple
 from math import floor
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from jam.state.components.rho import OptionalWorkReportState
-from jam.state.components.rho import Null
-# from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from jam.state.components.rho import OptionalWorkReportState,Null
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
 from jam.types.protocol.crypto import Hash
-
 from cryptography.exceptions import InvalidSignature
-
 from jam.types.block import Block
 from jam.state.state import State
 from jam.types.extrinsics.disputes import (
@@ -30,7 +26,6 @@ from jam.utils.constants import VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY, EPO
 MINIMUM_FAULTS_FOR_GOOD = 1  # At least 1 fault for solely valid verdicts
 MINIMUM_CULPRITS_FOR_BAD = 2  # At least 2 culprits for solely invalid verdicts
 
-# TODO: Add a check for the age of the verdicts
 
 @dataclass
 class Disputes:
@@ -44,25 +39,19 @@ class Disputes:
             public_key: ByteArray32 containing the Ed25519 public key (32 bytes).
             message_bytes: Bytes of the message that was signed.
             signature: ByteArray64 containing the Ed25519 signature (64 bytes).
-
+            target: Bytes of the target that was signed.
         Returns:
             bool: True if the signature is valid, False otherwise.
         """
         
-        # print("message_bytes---->",message,bytes(message))
         try:
             public_key_bytes = bytes(public_key)  # Convert ByteArray32 to bytes
             signature_bytes = bytes(signature)    # Convert ByteArray64 to bytes
             public_key_obj = Ed25519PublicKey.from_public_bytes(public_key_bytes)
-            # Convert vote to byte representation
-            # vote_byte = b'jam_valid' if vote else b'jam_invalid'
-            # message_bytes = bytes(vote_byte) + ByteUtils.bitarray_to_bytes(message[2:])
             msg_bytes = bytes(message_bytes) + bytes(target)
             public_key_obj.verify(signature_bytes, msg_bytes)
-            # print("Signature verified successfully")
             return True
         except InvalidSignature:
-            # print("InvalidSignature")
             return False
         except Exception as e:
             print(f"Signature verification failed: {e}")
@@ -73,9 +62,13 @@ class Disputes:
         Transition the state with Disputes logic, enforcing verdict constraints.
 
         Processes verdicts, culprits, and faults from the disputes extrinsic, updates the
-        state's psi component, and ensures formal constraints:
+        state's psi component, removes the wrong targets from the core(rho) array and ensures the following constraints:
+
+        Formal constraints:
         - Solely valid verdicts require at least one fault.
         - Solely invalid verdicts require at least two culprits.
+        - Verdicts/faults must be sorted by target and votes as per the validator index and culprits must be sorted by key.
+        - Verdicts/faults/culprits signatures must be valid.
 
         Args:
             pre_state: State before transition
@@ -83,17 +76,21 @@ class Disputes:
             
         Returns:
             Tuple containing:
-            - Updated state after processing disputes
+            - Updated state after processing disputes (rho array updated with correct targets and disputes state updated)
             - Output dictionary with 'ok' or 'err' status and details
         """
         # Make a copy of the state
         new_state = dataclasses.replace(pre_state)
         disputes = block.extrinsic.disputes
+        #output status
         output = {"err": None, "ok": None}
         offenders_mark = []  
-        current_epoch = new_state.tau // EPOCH_LENGTH        
+        #epoch Index
+        current_epoch = new_state.tau // EPOCH_LENGTH     
+        # Valid ages are the current epoch(kappa) and the previous epoch (lambda)
         valid_ages = [current_epoch, current_epoch] if current_epoch == 0 else [current_epoch, current_epoch - 1]
         
+
         # new_state.psi.g=set(new_state.psi.g)
         # new_state.psi.b=set(new_state.psi.b)
         # new_state.psi.w=set(new_state.psi.w)
@@ -104,23 +101,19 @@ class Disputes:
         offenders_set=set()
         
         
-        
+        # Verifying fault signatures
         for fault in disputes.faults:
             message_bytes = b'jam_valid' if fault.vote else b'jam_invalid'
             if not Disputes.verify_signature(fault.key, message_bytes, fault.target, fault.signature):
                 return pre_state, {"err": "bad_signature"}
-            # else:
-            #     print("Passed fault signature!!")
-        
-        # Verify signatures for all culprits
+            
+        # Verifying culprit signatures
         for culprit in disputes.culprits:
             message_bytes = b'jam_guarantee'
             if not Disputes.verify_signature(culprit.key, message_bytes, culprit.target, culprit.signature):
                 return pre_state, {"err": "bad_signature"}
-            # else:
-            #     print("Passed culprit signature!!")
         
-        # Verify signatures for all votes in each verdict
+        # Verifying verdicts are sorted by target
         for verdict in disputes.verdicts:
             if verdict.age not in valid_ages:
                 return new_state, {"err": "bad_judgement_age"}
@@ -140,10 +133,8 @@ class Disputes:
 
                 # Verify the signature
                 if not Disputes.verify_signature(public_key, message_bytes, verdict.target, signature):
-                    # print(f"Signature verification failed for vote index {vote.index}")
                     return pre_state, {"err": "bad_signature"}
-                # else:
-                #     print(f"Signature verified for vote index {vote.index}")
+                
         # Verify verdicts are sorted by target (ascending order)
         for i in range(len(disputes.verdicts) - 1):
             if disputes.verdicts[i].target >= disputes.verdicts[i + 1].target:
@@ -187,7 +178,6 @@ class Disputes:
                 offenders_mark.append(fault.key)
                 offenders_set.add(fault.key)
             fault_counts[fault.target] = fault_counts.get(fault.target, 0) + 1
-        # print("offenders->",offenders_mark)
 
         # Process verdicts with constraints
         for verdict in disputes.verdicts:
@@ -195,9 +185,7 @@ class Disputes:
             for i in range(len(verdict.votes) - 1):
                 if verdict.votes[i].index >= verdict.votes[i + 1].index:
                     return pre_state, {"err": "judgements_not_sorted_unique"}
-            # Check if dispute is too old
-            # if disputes.verdicts[0].age > (new_state.tau//(EPOCH_LENGTH*100)) :
-            #     return new_state, {"err": "dispute_too_old"}
+            
             positive_votes = sum(1 for judgment in verdict.votes if judgment.vote)
             total_votes = len(verdict.votes)
 
@@ -231,25 +219,23 @@ class Disputes:
                     wonky_set.add(verdict.target)
             else:
                 return pre_state, {"err": "bad_vote_split"}
-        # print(new_state.rho)
+        
+        # TODO: Change the rho array when the new types are implemented.
+        # Removing the wrong targets from the rho array
         for i in range(len(new_state.rho)):
             if new_state.rho[i]is not None:
-                # print(new_state.rho[i])
                 try:
                     targett=Hash.blake2b(new_state.rho[i].value['some'].report.encode())
                     if targett in bad_set:
-                        # print(i,targett)
                         new_state.rho[i]=OptionalWorkReportState(Null)
                     if targett in wonky_set:
-                        # print(i,targett)
                         new_state.rho[i]=OptionalWorkReportState(Null)
                 except:
                     pass
                      
         
-        # print("HashedValue->", ))
 
-        # Return success with sorted offenders mark if any offenders were added
+        # Update of the Disputes states
         offenders_set=sorted(offenders_set)
         for i in good_set:
             if i not in new_state.psi.g:
@@ -263,6 +249,6 @@ class Disputes:
         for i in offenders_set:
             if i not in new_state.psi.o:
                 new_state.psi.o.append(i)
-            
+        # Return success with offenders mark
         return new_state, {"ok": {"offenders_mark": offenders_mark}}
         

@@ -22,12 +22,9 @@ def create_block_from_input(input: Input) -> Block:
     return block
 
 
-
-
 def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state = create_dummy_state()
-    # print("state->", pre_state.psi['good'],state.psi.g)
     # Set psi state components
     state.psi.g = pre_state.psi.good
     state.psi.b = pre_state.psi.bad
@@ -44,6 +41,9 @@ def create_state_from_pre(pre_state: PreState) -> State:
     return state
 
 def vector_transition(vector: Testcase) -> Boolean:
+    """
+    Test the transition of disputes
+    """
     test_state = create_state_from_pre(vector.pre_state)  
     test_block = create_block_from_input(vector.input)
     output=Disputes.transition(test_state,test_block)
@@ -74,7 +74,6 @@ def test_disputes_transition():
         prefix="progress",limit=100
         
     )
-    # vector_transition(vectors[4])
     for i, vector in enumerate(vectors):
         # assert vector_transition(vector)
         # print("Pass hogaya" if vector_transition(vector) else "Fail hogaya")
