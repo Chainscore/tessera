@@ -169,12 +169,12 @@ def create_dummy_state_components() -> Dict[str, object]:
     all_validator_stats = AllValidatorStats(
         [
             ValidatorStat(
-                num_blocks=Int(1),
-                num_tickets=Int(1),
-                num_preimages=Int(1),
-                num_octets=Int(1),
-                num_reports=Int(1),
-                num_avail=Int(1),
+                blocks=Int(1),
+                tickets=Int(1),
+                pre_images=Int(1),
+                pre_images_size=Int(1),
+                guarantees=Int(1),
+                assurances=Int(1),
             )
             for _ in range(VALIDATOR_COUNT)
         ]
