@@ -70,8 +70,9 @@ def vector_transition(vector: Testcase) -> Boolean:
 def test_enact_epoch_change_with_no_tickets():
     """Test publishing tickets with no mark"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        limit=0, prefix="enact-epoch-change-with-no-tickets"
+        limit=10, prefix="enact-epoch-change-with-no-tickets"
     )
+    print("vectors->", vectors)
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)
         print(f"Passed testcase #{i + 1}")
@@ -85,3 +86,4 @@ def test_publish_tickets_no_mark():
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)
         print(f"Passed testcase #{i + 1}")
+test_enact_epoch_change_with_no_tickets()
