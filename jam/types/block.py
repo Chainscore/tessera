@@ -1,5 +1,8 @@
 from dataclasses import dataclass
+
+from jam.types import OpaqueHash
 from jam.types.header import Header
+from jam.types.work.refine_context import OpaqueHashes
 from jam.utils.codec.codable import Codable
 from jam.types.extrinsics import (
     TicketsExtrinsic,

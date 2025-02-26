@@ -21,7 +21,7 @@ class BlockHistory(Codable):
     """Block history item"""
 
     header_hash: HeaderHash
-    mmr_root: MMR
+    mmr: MMR
     state_root: StateRoot
     packages: PackageDict
 

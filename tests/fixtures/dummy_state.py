@@ -48,7 +48,7 @@ from jam.types.protocol.core import (
     ServiceId,
     WorkReportHash,
 )
-from jam.types.protocol.merkle import MMR
+from jam.merklization import MMR
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.utils.constants import (
     CORE_COUNT,
@@ -80,7 +80,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     block = BlockHistory(
         header_hash=HeaderHash(create_dummy_bytes32()),
-        mmr_root=MMR([create_dummy_bytes32()]),
+        mmr=MMR([]),
         state_root=StateRoot(create_dummy_bytes32()),
         packages=package_dict,
     )
@@ -169,12 +169,12 @@ def create_dummy_state_components() -> Dict[str, object]:
     all_validator_stats = AllValidatorStats(
         [
             ValidatorStat(
-                num_blocks=Int(1),
-                num_tickets=Int(1),
-                num_preimages=Int(1),
-                num_octets=Int(1),
-                num_reports=Int(1),
-                num_avail=Int(1),
+                blocks=Int(1),
+                tickets=Int(1),
+                pre_images=Int(1),
+                pre_images_size=Int(1),
+                guarantees=Int(1),
+                assurances=Int(1),
             )
             for _ in range(VALIDATOR_COUNT)
         ]
