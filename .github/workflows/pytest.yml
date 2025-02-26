@@ -21,6 +21,9 @@ jobs:
     - name: Install Poetry
       run: pip install poetry
 
+    - name: Debug - List files in root
+      run: ls -lah
+
     - name: Clean Install dependencies via Poetry
       run: rm poetry.lock && poetry install --with dev --no-interaction --no-ansi
 
