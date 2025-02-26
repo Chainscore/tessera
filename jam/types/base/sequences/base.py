@@ -106,6 +106,9 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
 
     def __setitem__(self, index: int, value: T) -> None:
         """Set item at index."""
+        if not isinstance(index, int):
+            index = int(index)
+
         if not 0 <= index < len(self.value):
             raise IndexError(f"Index {index} out of range")
 
@@ -204,7 +207,7 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
 
     def reverse(self) -> "BaseSequence[T]":
         """Reverse the vector in place."""
-        self.value = self.value.reverse()
+        self.value.reverse()
         return self
 
     def extend(self, values: Sequence[T]) -> None:
