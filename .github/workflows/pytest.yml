@@ -21,35 +21,8 @@ jobs:
     - name: Install Poetry
       run: pip install poetry
 
-#    - name: Ensure a Clean Poetry Install
-#      run: |
-#        poetry cache clear --all pypi || true  # Clears cached dependencies
-#        rm -rf $(poetry env info --path) || true  # Removes existing virtualenv (if any)
-#
-#    - name: Install Dependencies via Poetry
-#      run: poetry install --with dev --no-interaction --no-ansi --no-root
-
-#    - name: Clean Install dependencies via Poetry
-#      run: rm poetry.lock && poetry install --with dev --no-interaction --no-ansi
-
     - name: Install dependencies via Poetry
       run: poetry install --with dev --no-interaction --no-ansi
-
-#    - name: Install PyTest
-#      run: pip install pytest
-#
-#    - name: Install Pycryptodome
-#      run: pip install pycryptodome
-
-#    - name: Activate Poetry Shell
-#      run: eval $(poetry env activate)
-#
-#    - name: Check poetry info
-#      run: poetry env info
-
-#    - name: Run tests
-#      run: |
-#        pytest tests/
 
     - name: Run tests
       run: poetry run pytest tests/
