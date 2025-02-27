@@ -1,74 +1,84 @@
+from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.rho import WorkReportState
 from jam.state.state import State
-from jam.types import Block, decodable_choice, ServiceId
+from jam.types import Block, decodable_choice, ServiceId, Boolean
 import  dataclasses
 from dataclasses import dataclass, replace
+from jam.types.extrinsics.guarantees import GuaranteesExtrinsic
 
 from jam.types.extrinsics import GuaranteesExtrinsic
 from jam.utils.constants import ACCUMULATION_GAS, CORE_COUNT
 
 def generate_report(report : GuaranteesExtrinsic)->WorkReportState.report:
-    WorkReport: GuaranteesExtrinsic
+    Guarantee: GuaranteesExtrinsic
     # for x in report:
     #     WorkReport.time = x.slot
     #     WorkReport.report = x.report
 
-    WorkReport[0].report.package_spec.hash= report[0].report.package_spec.hash
-    WorkReport[0].report.package_spec.length = report[0].report.package_spec.length
-    WorkReport[0].report.package_spec.erasure_root = report[0].report.package_spec.erasure_root
-    WorkReport[0].report.package_spec.exports_root = report[0].report.package_spec.exports_root
-    WorkReport[0].report.package_spec.exports_count = report[0].report.package_spec.exports_count
+    Guarantee[0].report.package_spec.hash= report[0].report.package_spec.hash
+    Guarantee[0].report.package_spec.length = report[0].report.package_spec.length
+    Guarantee[0].report.package_spec.erasure_root = report[0].report.package_spec.erasure_root
+    Guarantee[0].report.package_spec.exports_root = report[0].report.package_spec.exports_root
+    Guarantee[0].report.package_spec.exports_count = report[0].report.package_spec.exports_count
 
-    WorkReport[0].report.context.anchor = report[0].report.context.anchor
-    WorkReport[0].report.context.state_root = report[0].report.context.state_root
-    WorkReport[0].report.context.beefy_root = report[0].report.context.beefy_root
-    WorkReport[0].report.context.lookup_anchor = report[0].report.context.lookup_anchor
-    WorkReport[0].report.context.lookup_anchor_slot = report[0].report.context.lookup_anchor_slot
-    WorkReport[0].report.context.lookup_anchor_slot = report[0].report.context.lookup_anchor_slot
+    Guarantee[0].report.context.anchor = report[0].report.context.anchor
+    Guarantee[0].report.context.state_root = report[0].report.context.state_root
+    Guarantee[0].report.context.beefy_root = report[0].report.context.beefy_root
+    Guarantee[0].report.context.lookup_anchor = report[0].report.context.lookup_anchor
+    Guarantee[0].report.context.lookup_anchor_slot = report[0].report.context.lookup_anchor_slot
+    Guarantee[0].report.context.lookup_anchor_slot = report[0].report.context.lookup_anchor_slot
+    Guarantee[0].report.core_index = report[0].report.core_index
+    Guarantee[0].report.authorizer_hash = report[0].report.authorizer_hash
+    Guarantee[0].report.auth_output = report[0].report.auth_output
+    Guarantee[0].report.segment_root_lookup = report[0].report.segment_root_lookup
 
-
-    WorkReport[0].report.core_index = report[0].report.core_index
-    WorkReport[0].report.authorizer_hash = report[0].report.authorizer_hash
-    WorkReport[0].report.auth_output = report[0].report.auth_output
-    WorkReport[0].report.segment_root_lookup = report[0].report.segment_root_lookup
-
-    for x,y in zip(WorkReport[0].report.results,report[0].report.results):
+    for x, y in zip(Guarantee[0].report.results, report[0].report.results):
         x.service_id = y.service_id
         x.code_hash = y.code_hash
         x.payload_hash = y.payload_hash
         x.accumulate_gas = y.accumulate_gas
-        x.result = y.resultWorkReport.report.results,report[0].report.results
+        x.result = y.resultWorkReport.report.results, report[0].report.results
 
-    WorkReport[0].slot = report[0].slot
+    Guarantee[0].slot = report[0].slot
 
-    for x,y in zip(WorkReport[0].signatures,report[0].signatures):
+    for x, y in zip(Guarantee[0].signatures, report[0].signatures):
         x.validator_index = y.validator_index
         x.signature = y.signature
 
-
     # input.slot remaining
 
+    return Guarantee
 
 
-    return WorkReport
 
+class Reporting:
 
-class Report:
     @staticmethod
     def transition(self, pre_state:State, block:Block)->State:
         new_state:State = dataclasses.replace(pre_state)
-        # # State.rho
+
+        Reporting.valid_report_fn(wr)
+
+        # State.rho
         # if new_state.rho[0] is not None:
         #     new_state.rho[0].report == workreport()
         # else:
         #     new_state.rho[0].time == slot
 
-        n = WorkReportState(
-            generate_report(Block.extrinsic.guarantees),
-            block.extrinsic.guarantees[0].slot
-        )
+
+        valid_report_fn (self,pre_state.alpha[0].AuthorizationPool)
+
+        n = WorkReportState(generate_report(Block.extrinsic.guarantees),block.extrinsic.guarantees[0].slot)
         generate_report(Block.extrinsic.guarantees)
         return new_state
+
+    @staticmethod
+    def valid_report_fn(auth_pool: AuthorizationPool)->Boolean:
+        report_auth_hash = Block.extrinsic.guarantees[0].report.authorizer_hash
+        core_index = Block.extrinsic.guarantees[0].report.core_index
+        if report_auth_hash not in auth_pool[core_index]:
+            raise ReportError(code, "Work report not found in core auth pool")
+
 
     @decodable_choice
     def package_ava_fn(self, availabilitly:())->{}:
@@ -109,8 +119,8 @@ class Report:
 
 
 
-
-test_instance = Rho
-    # Call the function and print the result
-result = test_instance.transition(State, Block )
-print(result)
+#
+# test_instance = Rho
+#     # Call the function and print the result
+# result = test_instance.transition(State, Block )
+# print(result)
