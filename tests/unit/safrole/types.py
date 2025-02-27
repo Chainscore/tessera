@@ -19,7 +19,7 @@ from jam.types.protocol.crypto import Entropy
 from jam.types.protocol.validators import ValidatorArray
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-
+from jam.utils.json import JsonSerde
 
 @decodable_dataclass
 @dataclass
@@ -77,7 +77,7 @@ class Output(Choice):
 
 @decodable_dataclass
 @dataclass
-class Testcase(Codable):
+class Testcase(Codable, JsonSerde):
     input: Input
     pre_state: PreState
     output: Output
