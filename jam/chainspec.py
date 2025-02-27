@@ -1,8 +1,9 @@
 """JAM protocol configuration."""
+
+import os
 from dataclasses import dataclass
 from enum import Enum
-import os
-from typing import Dict, Optional
+from typing import Optional
 
 
 class ChainSpec(Enum):
