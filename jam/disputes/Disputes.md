@@ -12,12 +12,11 @@ $$
 
 ### Constraints
 
-- **Valid Verdicts Constraint**: A verdict that is solely valid (i.e., all votes are positive) must have at least one fault.
-- **Invalid Verdicts Constraint**: A verdict that is solely invalid (i.e., all votes are negative) must have at least two culprits.
+- **Valid Verdicts Constraint**: A verdict that is solely valid (i.e., all votes are positive) must have at least one fault and two culprits..
 - **Sorting Requirements**:
-  - Verdicts and faults must be sorted by target in ascending order.
+  - Verdicts must be sorted by target in ascending order.
   - Votes within verdicts must be sorted by validator index in ascending order.
-  - Culprits must be sorted by key in ascending order.
+  - Culprits and faults must be sorted by key in ascending order.
 - **Signature Verification**: All signatures (for verdicts, faults, and culprits) must be valid according to the defined ed25519 verification logic.
 
 ### Function Signature
@@ -52,9 +51,9 @@ $$
 \psi = (\psi_g, \psi_b, \psi_w, \psi_o)
 $$
 
-- **good_set (ψ_g)**: Stores keys of validators with good verdicts.
-- **bad_set (ψ_b)**: Stores keys of validators with bad verdicts.
-- **wonky_set (ψ_w)**: Stores keys of validators whose verdicts are uncertain (wonky).
+- **good_set (ψ_g)**: Stores keys of validators with good verdicts.(positive votes=2/3V +1)
+- **bad_set (ψ_b)**: Stores keys of validators with bad verdicts.(positive votes=0)
+- **wonky_set (ψ_w)**: Stores keys of validators whose verdicts are uncertain (wonky).(positive votes=1/3V)
 - **offenders_set (ψ_o)**: Stores keys of validators who have been determined to be offenders (e.g., based on faults or culprits).
 
 ## 4. Verify Signature
@@ -75,7 +74,7 @@ This function is used to ensure that all signatures in verdicts, faults, and cul
 ## 6. Validate Faults and Culprits
 
 - **Sorting**:
-  - Faults must be sorted by target (ascending order).
+  - Faults must be sorted by key (ascending order).
   - Culprits must be sorted by key (ascending order).
 - **Duplication**: Ensure that culprits are not already reported.
   
@@ -85,13 +84,20 @@ This function is used to ensure that all signatures in verdicts, faults, and cul
 - **Contradictory Faults**: Ensure that fault verdicts are not contradictory.
 - **Vote Count Classification**: Count the positive votes to classify a verdict as good, bad, or wonky.  
   - If the vote split is unexpected, throw a `bad_vote_split` error.
-- **Minimum Count Checks**: Verify that the number of faults and/or culprits meets the required counts:
-  - Solely valid verdicts must have at least one fault.
-  - Solely invalid verdicts must have at least two culprits.
+- **Minimum Count Checks**: Verify that the number of faults and culprits meets the required counts:
+  - Solely valid verdicts must have at least one fault and two culprits.
 
 ## 8. Remove Wrong Targets from the ρ Array
 
 - After processing the disputes, remove any work reports from the ρ array that have been judged as wrong (i.e., targets that appear in the bad or wonky sets).
+$$
+\forall c \in \mathbb{N}_C : \rho^\dagger[c] = 
+\begin{cases}
+\emptyset & \text{if } \{(\mathcal{H}(\rho[c]_w), t) \in V, t < \lfloor\frac{2}{3}V\rfloor\} \\
+\rho[c] & \text{otherwise}
+\end{cases}
+$$
+
 
 ## 9. Update Disputes State and Return New State
 
