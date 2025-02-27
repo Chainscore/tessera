@@ -4,10 +4,11 @@ from jam.state.merkle.merkle import StateMerkle
 from jam.types.base.sequences.bytes.byte_array import ByteArray32, ByteArray64
 from jam.types.base.sequences.bytes.bytes import Bytes
 
+
 def test_trie_vector():
     """Test that the trie vector is encoded and decoded correctly."""
     test_dir = Path(__file__).parent
-    
+
     # Load test vectors
     with open(test_dir / "trie.json", "r") as f:
         vectors_json = json.load(f)

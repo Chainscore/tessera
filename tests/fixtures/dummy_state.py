@@ -48,7 +48,7 @@ from jam.types.protocol.core import (
     ServiceId,
     WorkReportHash,
 )
-from jam.types.protocol.merkle import MMR
+from jam.merklization import MMR
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.utils.constants import (
     CORE_COUNT,
@@ -59,6 +59,7 @@ from jam.utils.constants import (
 )
 from tests.fixtures.utils import create_dummy_bytes32, create_dummy_bytes
 from jam.state.state import State
+
 
 def create_dummy_state_components() -> Dict[str, object]:
     """Create dummy instances of all state components with realistic test data"""
@@ -79,7 +80,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     block = BlockHistory(
         header_hash=HeaderHash(create_dummy_bytes32()),
-        mmr_root=MMR([create_dummy_bytes32()]),
+        mmr=MMR([]),
         state_root=StateRoot(create_dummy_bytes32()),
         packages=package_dict,
     )
@@ -114,16 +115,10 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Delta - Service dictionary
     storage = AccountStorage(
-        {
-            create_dummy_bytes32(): Bytes(create_dummy_bytes(32))
-            for _ in range(3)
-        }
+        {create_dummy_bytes32(): Bytes(create_dummy_bytes(32)) for _ in range(3)}
     )
     lookup = PreImageLookup(
-        {
-            create_dummy_bytes32(): Bytes(create_dummy_bytes(64))
-            for _ in range(2)
-        }
+        {create_dummy_bytes32(): Bytes(create_dummy_bytes(64)) for _ in range(2)}
     )
     timestamps = LookupTimestamps(
         {
@@ -140,19 +135,16 @@ def create_dummy_state_components() -> Dict[str, object]:
         gas_limit=Gas(5000),
         min_gas=Gas(100),
     )
-    components["delta"] = Delta(
-        {
-            ServiceId(i): account
-            for i in range(3)
-        }
-    )
+    components["delta"] = Delta({ServiceId(i): account for i in range(3)})
 
     # Simple components
     components["eta"] = Eta([OpaqueHash(create_dummy_bytes32()) for _ in range(4)])
     components["iota"] = Iota(dummy_validator_data)
     components["kappa"] = Kappa(dummy_validator_data)
     components["lambda_"] = Lambda_(dummy_validator_data)
-    components["rho"] = Rho([OptionalWorkReportState(Nullable()) for _ in range(CORE_COUNT)])
+    components["rho"] = Rho(
+        [OptionalWorkReportState(Nullable()) for _ in range(CORE_COUNT)]
+    )
     components["tau"] = Tau(0)
 
     # Phi - Authorization queue
@@ -167,22 +159,28 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Psi
     components["psi"] = Psi(
-        PsiG([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-        PsiB([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-        PsiW([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-        PsiO([Ed25519Public(create_dummy_bytes32()) for _ in range(3)]),
+        PsiG([]),  # Empty array for good work reports
+        PsiB([]),  # Empty array for bad work reports 
+        PsiW([]),  # Empty array for wonky work reports
+        PsiO([]),  # Empty array for offenders
     )
+    # components["psi"] = Psi(
+    #     PsiG([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
+    #     PsiB([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
+    #     PsiW([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
+    #     PsiO([Ed25519Public(create_dummy_bytes32()) for _ in range(3)]),
+    # )
 
     # Pi
     all_validator_stats = AllValidatorStats(
         [
             ValidatorStat(
-                num_blocks=Int(1),
-                num_tickets=Int(1),
-                num_preimages=Int(1),
-                num_octets=Int(1),
-                num_reports=Int(1),
-                num_avail=Int(1),
+                blocks=Int(1),
+                tickets=Int(1),
+                pre_images=Int(1),
+                pre_images_size=Int(1),
+                guarantees=Int(1),
+                assurances=Int(1),
             )
             for _ in range(VALIDATOR_COUNT)
         ]
@@ -197,6 +195,7 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     return components
 
-def create_dummy_state() -> State: 
+
+def create_dummy_state() -> State:
     """Create a complete dummy state for testing"""
     return State(**create_dummy_state_components())

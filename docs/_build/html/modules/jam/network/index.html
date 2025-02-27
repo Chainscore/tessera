@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>jam.network package &mdash; Tessera 0.1.0 documentation</title>
+  <title>Networking &mdash; Tessera 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
 
@@ -19,8 +19,8 @@
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="jam.playground package" href="../playground/index.html" />
-    <link rel="prev" title="jam.execution package" href="../execution/index.html" /> 
+    <link rel="next" title="Types" href="../types/index.html" />
+    <link rel="prev" title="jam.storage.db module" href="../storage/db.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -42,33 +42,52 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jam_node.html">JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../state.html">State</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Consensus</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/index.html">Consensus Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/index.html#overview">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/safrole/index.html">Safrole [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../consensus/grandpa/index.html">GRANDPA Consensus</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../authorization/index.html">Authorization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config/index.html">JAM Config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../crypto/index.html">JAM Crypto</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../execution/index.html">Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pvm/index.html">PVM [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../state/index.html">jam.state package</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Utilities</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../index.html">jam package</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="../index.html#subpackages">Subpackages</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="../api/index.html">jam.api package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../config/index.html">jam.config package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../consensus/index.html">jam.consensus package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../core/index.html">jam.core package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../crypto/index.html">jam.crypto package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../execution/index.html">jam.execution package</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">jam.network package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#module-contents">Module Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">jam.api package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html#jam-api">JAM API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../storage/index.html">JAM Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../storage/index.html#jam-storage-package">jam.storage package</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Networking</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-contents">Module Contents</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../playground/index.html">jam.playground package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../pvm/index.html">jam.pvm package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../services/index.html">jam.services package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../state/index.html">jam.state package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../storage/index.html">jam.storage package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../types/index.html">jam.types</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../utils/index.html">jam.utils package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../types/index.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/codec/index.html">Codec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/json/index.html">JsonSerde</a></li>
 </ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
-</ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../CONTRIBUTING.html">Contributing to Documentation</a></li>
 </ul>
 
         </div>
@@ -85,8 +104,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../index.html">jam package</a></li>
-      <li class="breadcrumb-item active">jam.network package</li>
+      <li class="breadcrumb-item active">Networking</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../../_sources/modules/jam/network/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -96,8 +114,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="jam-network-package">
-<h1>jam.network package<a class="headerlink" href="#jam-network-package" title="Link to this heading"></a></h1>
+  <section id="networking">
+<h1>Networking<a class="headerlink" href="#networking" title="Link to this heading"></a></h1>
+<p>This section covers network connectivity in Tessera, including P2P communication, node discovery, and data synchronization.</p>
+<p>Work in Progress.</p>
 <section id="module-contents">
 <h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
 <span class="target" id="module-jam.network"></span></section>
@@ -107,8 +127,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../execution/index.html" class="btn btn-neutral float-left" title="jam.execution package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../playground/index.html" class="btn btn-neutral float-right" title="jam.playground package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../storage/db.html" class="btn btn-neutral float-left" title="jam.storage.db module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../types/index.html" class="btn btn-neutral float-right" title="Types" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

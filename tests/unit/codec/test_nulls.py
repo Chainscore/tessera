@@ -7,6 +7,7 @@ from jam.types.base.null import Null, Nullable
 from jam.utils.codec import EncodeError, DecodeError, Codable
 from jam.utils.codec.primitives.nulls import NullCodec
 
+
 class TestNullCodec:
     """Test suite for null encoding/decoding."""
 
@@ -36,15 +37,15 @@ class TestNullCodec:
         """Test handling of non-None values."""
         codec = NullCodec()
         invalid_values = [
-            42,              # int
-            "not null",      # str
-            [],             # list
-            {},             # dict
-            True,           # bool
-            b"",            # bytes
-            Nullable(),         # Null instance
+            42,  # int
+            "not null",  # str
+            [],  # list
+            {},  # dict
+            True,  # bool
+            b"",  # bytes
+            Nullable(),  # Null instance
         ]
-        
+
         for value in invalid_values:
             with pytest.raises(EncodeError) as exc_info:
                 codec.encode(value)
@@ -73,6 +74,7 @@ class TestNullCodec:
         codec2 = NullCodec
         assert codec1 is codec2  # Same instance
         assert codec1 is NullCodec  # Same as global instance
+
 
 class TestNull:
     """Test suite for Null type."""
@@ -107,10 +109,10 @@ class TestNull:
     def test_buffer_operations(self):
         """Test buffer operations."""
         null = Nullable()
-        
+
         # Test encode_size
         assert null.encode_size() == 0
-        
+
         # Test encode_into
         buffer = bytearray([0xFF] * 10)
         written = null.encode_into(buffer, 5)
@@ -123,4 +125,4 @@ class TestNull:
         decoded, size = Null.decode_from(buffer, 5)
         assert isinstance(decoded, Nullable)
         assert size == 0
-        assert buffer == bytearray([0xFF] * 10)  # Buffer unchanged 
+        assert buffer == bytearray([0xFF] * 10)  # Buffer unchanged

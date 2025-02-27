@@ -39,9 +39,47 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="modules/jam/index.html">Tessera - JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/examples.html">Testing Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam_node.html">JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/state.html">State</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Consensus</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/consensus/index.html">Consensus Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/consensus/index.html#overview">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/consensus/safrole/index.html">Safrole [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/consensus/grandpa/index.html">GRANDPA Consensus</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/authorization/index.html">Authorization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/config/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/crypto/index.html">Crypto Primitives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/execution/index.html">Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/pvm/index.html">PVM [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/state/index.html">jam.state package</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Utilities</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/api/index.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/storage/index.html">Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/network/index.html">Networking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/types/index.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/utils/codec/index.html">Codec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/jam/utils/json/index.html">JsonSerde</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing to Documentation</a></li>
 </ul>
 
         </div>
@@ -821,6 +859,8 @@
         <li><a href="modules/jam/types/base/sequences/base.html#jam.types.base.sequences.base.BaseSequence.append">(jam.types.base.sequences.base.BaseSequence method)</a>
 </li>
       </ul></li>
+      <li><a href="modules/jam/consensus/safrole/stf.html#jam.consensus.safrole.safrole.Safrole.arrange_fallback">arrange_fallback() (jam.consensus.safrole.safrole.Safrole static method)</a>
+</li>
       <li><a href="modules/jam/types/index.html#jam.types.Array">Array (class in jam.types)</a>
 
       <ul>
@@ -885,6 +925,8 @@
         <li><a href="modules/jam/types/header.html#jam.types.header.Header.author_index">(jam.types.header.Header attribute)</a>
 </li>
       </ul></li>
+      <li><a href="modules/jam/authorization/authorization.html#jam.authorization.authorization.Authorization">Authorization (class in jam.authorization.authorization)</a>, <a href="modules/jam/authorization/index.html#jam.authorization.authorization.Authorization">[1]</a>
+</li>
       <li><a href="modules/jam/types/work/package.html#jam.types.work.package.WorkPackage.authorization">authorization (jam.types.work.package.WorkPackage attribute)</a>
 
       <ul>
@@ -1450,6 +1492,8 @@
 </li>
       </ul></li>
       <li><a href="modules/jam/utils/codec/errors.html#jam.utils.codec.errors.CodecError">CodecError</a>, <a href="modules/jam/utils/codec/index.html#jam.utils.codec.CodecError">[1]</a>
+</li>
+      <li><a href="modules/jam/consensus/safrole/stf.html#jam.consensus.safrole.safrole.Safrole.compute_ring_root">compute_ring_root() (jam.consensus.safrole.safrole.Safrole static method)</a>
 </li>
       <li><a href="modules/jam/state/utils/key_constructor.html#jam.state.utils.key_constructor.construct_state_key">construct_state_key() (in module jam.state.utils.key_constructor)</a>
 </li>
@@ -2801,7 +2845,15 @@
 </li>
       <li><a href="modules/jam/utils/codec/utils.html#jam.utils.codec.utils.ensure_size">ensure_size() (in module jam.utils.codec.utils)</a>
 </li>
+      <li><a href="modules/jam/consensus/safrole/stf.html#jam.consensus.safrole.safrole.Safrole.ensure_tickets_order">ensure_tickets_order() (jam.consensus.safrole.safrole.Safrole static method)</a>
+</li>
+      <li><a href="modules/jam/consensus/safrole/stf.html#jam.consensus.safrole.safrole.Safrole.ensure_valid_attempt">ensure_valid_attempt() (jam.consensus.safrole.safrole.Safrole static method)</a>
+</li>
       <li><a href="modules/jam/utils/byte_utils.html#jam.utils.byte_utils.ByteUtils.ensure_valid_sequence">ensure_valid_sequence() (jam.utils.byte_utils.ByteUtils static method)</a>
+</li>
+      <li><a href="modules/jam/consensus/safrole/stf.html#jam.consensus.safrole.safrole.Safrole.ensure_valid_ticket_extrinsics">ensure_valid_ticket_extrinsics() (jam.consensus.safrole.safrole.Safrole static method)</a>
+</li>
+      <li><a href="modules/jam/consensus/safrole/stf.html#jam.consensus.safrole.safrole.Safrole.ensure_valid_vrf">ensure_valid_vrf() (jam.consensus.safrole.safrole.Safrole static method)</a>
 </li>
       <li><a href="modules/jam/types/index.html#jam.types.Entropy">Entropy (in module jam.types)</a>
 
@@ -3113,8 +3165,6 @@
       </ul></li>
       <li><a href="modules/jam/state/state.html#jam.state.state.State.generate_root">generate_root() (jam.state.state.State method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/jam/types/base/index.html#jam.types.base.Dictionary.get">get() (jam.types.base.Dictionary method)</a>
 
       <ul>
@@ -3129,6 +3179,10 @@
         <li><a href="modules/jam/types/index.html#jam.types.Nullable.get">(jam.types.Nullable method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/jam/config/logging.html#jam.config.logging.get_logger">get_logger() (in module jam.config.logging)</a>
+</li>
       <li><a href="modules/jam/state/state.html#jam.state.state.State.get_merkle_nodes">get_merkle_nodes() (jam.state.state.State method)</a>
 </li>
       <li><a href="modules/jam/state/merkle/merkle.html#jam.state.merkle.merkle.StateMerkle.get_nodes">get_nodes() (jam.state.merkle.merkle.StateMerkle method)</a>
@@ -3450,6 +3504,13 @@
 </li>
       </ul></li>
       <li>
+    jam.authorization.authorization
+
+      <ul>
+        <li><a href="modules/jam/authorization/authorization.html#module-jam.authorization.authorization">module</a>, <a href="modules/jam/authorization/index.html#module-jam.authorization.authorization">[1]</a>
+</li>
+      </ul></li>
+      <li>
     jam.chainspec
 
       <ul>
@@ -3461,6 +3522,13 @@
 
       <ul>
         <li><a href="modules/jam/config/index.html#module-jam.config">module</a>
+</li>
+      </ul></li>
+      <li>
+    jam.config.logging
+
+      <ul>
+        <li><a href="modules/jam/config/logging.html#module-jam.config.logging">module</a>
 </li>
       </ul></li>
       <li>
@@ -3496,6 +3564,13 @@
 
       <ul>
         <li><a href="modules/jam/consensus/safrole/gamma.html#module-jam.consensus.safrole.gamma">module</a>
+</li>
+      </ul></li>
+      <li>
+    jam.consensus.safrole.safrole
+
+      <ul>
+        <li><a href="modules/jam/consensus/safrole/stf.html#module-jam.consensus.safrole.safrole">module</a>
 </li>
       </ul></li>
       <li>
@@ -3862,6 +3937,8 @@
         <li><a href="modules/jam/types/base/sequences/base.html#module-jam.types.base.sequences.base">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     jam.types.base.sequences.bytes
 
@@ -3869,8 +3946,6 @@
         <li><a href="modules/jam/types/base/sequences/bytes/index.html#module-jam.types.base.sequences.bytes">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     jam.types.base.sequences.bytes.bit_array
 
@@ -4546,9 +4621,13 @@
 </li>
         <li><a href="modules/jam/api/index.html#module-jam.api">jam.api</a>
 </li>
+        <li><a href="modules/jam/authorization/authorization.html#module-jam.authorization.authorization">jam.authorization.authorization</a>, <a href="modules/jam/authorization/index.html#module-jam.authorization.authorization">[1]</a>
+</li>
         <li><a href="modules/jam/chainspec.html#module-jam.chainspec">jam.chainspec</a>
 </li>
         <li><a href="modules/jam/config/index.html#module-jam.config">jam.config</a>
+</li>
+        <li><a href="modules/jam/config/logging.html#module-jam.config.logging">jam.config.logging</a>
 </li>
         <li><a href="modules/jam/config/settings.html#module-jam.config.settings">jam.config.settings</a>
 </li>
@@ -4559,6 +4638,8 @@
         <li><a href="modules/jam/consensus/safrole/errors.html#module-0">jam.consensus.safrole.errors</a>, <a href="modules/jam/consensus/safrole/errors.html#module-jam.consensus.safrole.errors">[1]</a>
 </li>
         <li><a href="modules/jam/consensus/safrole/gamma.html#module-jam.consensus.safrole.gamma">jam.consensus.safrole.gamma</a>
+</li>
+        <li><a href="modules/jam/consensus/safrole/stf.html#module-jam.consensus.safrole.safrole">jam.consensus.safrole.safrole</a>
 </li>
         <li><a href="modules/jam/core/index.html#module-jam.core">jam.core</a>
 </li>
@@ -5159,6 +5240,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/jam/consensus/safrole/gamma.html#jam.consensus.safrole.gamma.Gamma.s">s (jam.consensus.safrole.gamma.Gamma attribute)</a>
 </li>
+      <li><a href="modules/jam/consensus/safrole/stf.html#jam.consensus.safrole.safrole.Safrole">Safrole (class in jam.consensus.safrole.safrole)</a>
+</li>
       <li><a href="modules/jam/consensus/safrole/errors.html#id0">SafroleError</a>, <a href="modules/jam/consensus/safrole/errors.html#jam.consensus.safrole.errors.SafroleError">[1]</a>
 </li>
       <li><a href="modules/jam/consensus/safrole/errors.html#id1">SafroleErrorCode (class in jam.consensus.safrole.errors)</a>, <a href="modules/jam/consensus/safrole/errors.html#jam.consensus.safrole.errors.SafroleErrorCode">[1]</a>
@@ -5228,6 +5311,8 @@
       <li><a href="modules/jam/config/settings.html#jam.config.settings.Settings">Settings (class in jam.config.settings)</a>
 </li>
       <li><a href="modules/jam/config/settings.html#jam.config.settings.Settings.Config">Settings.Config (class in jam.config.settings)</a>
+</li>
+      <li><a href="modules/jam/config/logging.html#jam.config.logging.setup_logging">setup_logging() (in module jam.config.logging)</a>
 </li>
       <li><a href="modules/jam/types/protocol/crypto.html#jam.types.protocol.crypto.Hash.sha256">sha256() (jam.types.protocol.crypto.Hash static method)</a>
 </li>
@@ -5457,10 +5542,10 @@
         <li><a href="modules/jam/types/header.html#jam.types.header.TicketsMark">(class in jam.types.header)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/jam/state/components/rho.html#jam.state.components.rho.WorkReportState.time">time (jam.state.components.rho.WorkReportState attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/jam/types/index.html#jam.types.AvailabilityAssignment.timeout">timeout (jam.types.AvailabilityAssignment attribute)</a>
 
       <ul>
@@ -5537,6 +5622,12 @@
       </ul></li>
       <li><a href="modules/jam/state/state.html#jam.state.state.State.transform">transform() (jam.state.state.State method)</a>
 </li>
+      <li><a href="modules/jam/authorization/authorization.html#jam.authorization.authorization.Authorization.transition">transition() (jam.authorization.authorization.Authorization static method)</a>, <a href="modules/jam/authorization/index.html#jam.authorization.authorization.Authorization.transition">[1]</a>
+
+      <ul>
+        <li><a href="modules/jam/consensus/safrole/stf.html#jam.consensus.safrole.safrole.Safrole.transition">(jam.consensus.safrole.safrole.Safrole static method)</a>
+</li>
+      </ul></li>
       <li><a href="modules/jam/types/index.html#jam.types.ImportSpec.tree_root">tree_root (jam.types.ImportSpec attribute)</a>
 
       <ul>
@@ -5773,6 +5864,8 @@
         <li><a href="modules/jam/types/extrinsics/index.html#jam.types.extrinsics.DisputesExtrinsic.verdicts">(jam.types.extrinsics.DisputesExtrinsic attribute)</a>
 </li>
       </ul></li>
+      <li><a href="modules/jam/consensus/safrole/stf.html#jam.consensus.safrole.safrole.Safrole.verify_vrf">verify_vrf() (jam.consensus.safrole.safrole.Safrole static method)</a>
+</li>
       <li><a href="modules/jam/types/extrinsics/disputes.html#jam.types.extrinsics.disputes.Fault.vote">vote (jam.types.extrinsics.disputes.Fault attribute)</a>
 
       <ul>
@@ -5795,6 +5888,8 @@
         <li><a href="modules/jam/types/index.html#jam.types.Verdict.votes">(jam.types.Verdict attribute)</a>
 </li>
       </ul></li>
+      <li><a href="modules/jam/consensus/safrole/stf.html#jam.consensus.safrole.safrole.Safrole.vrf_output">vrf_output() (jam.consensus.safrole.safrole.Safrole static method)</a>
+</li>
   </ul></td>
 </tr></table>
 

@@ -1,8 +1,7 @@
-jam.crypto package
+Crypto Primitives
 ==================
 
-Module Contents
---------------
+This section outlines the cryptographic primitives and utilities used in Tessera.
 
 .. automodule:: jam.crypto
    :members:

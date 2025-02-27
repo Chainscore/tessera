@@ -1,6 +1,7 @@
 from typing import Any
 from jam.types.base.enum import Enum
 
+
 class JamError(Exception):
     def __init__(self, code: Enum, message: str = None, *args: Any) -> None:
         self.code = code

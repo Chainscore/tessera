@@ -9,15 +9,20 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 
 ServiceCodeHash = ByteArray32
 
+
 @decodable_dictionary(ByteArray32, Bytes)
 class AccountStorage(Dictionary[ByteArray32, Bytes]):
     """Storage dictionary"""
+
     ...
+
 
 @decodable_dictionary(ByteArray32, Bytes)
 class PreImageLookup(Dictionary[ByteArray32, Bytes]):
     """Lookup dictionary"""
+
     ...
+
 
 @decodable_dataclass
 @dataclass
@@ -25,15 +30,20 @@ class LookupTable(Codable):
     data: ByteArray32
     length: BlobLength
 
+
 @decodable_array(length=3, element_type=U32)
 class Timestamps(Array[U32]):
     """Lookup timestamps"""
+
     ...
+
 
 @decodable_dictionary(ByteArray32, Timestamps)
 class LookupTimestamps(Dictionary[ByteArray32, Timestamps]):
     """Lookup timestamps"""
+
     ...
+
 
 @decodable_dataclass
 @dataclass
@@ -46,12 +56,15 @@ class AccountData(Codable):
     gas_limit: Gas
     min_gas: Gas
 
+
 @decodable_dictionary(ServiceId, AccountData)
 class Delta(Dictionary[ServiceId, AccountData]):
     """Delta state"""
+
     ...
 
-#TODO - : Confirm these types + usage
+
+# TODO - : Confirm these types + usage
 """Number of items in the account storage"""
 Ai = U32
 

@@ -4,12 +4,13 @@ from jam.utils.codec import Codable
 from jam.utils.codec.primitives.nulls import NullCodec
 from jam.utils.json import JsonSerde
 
+
 class Nullable(Codable, JsonSerde):
     """
     Null value implementation.
-    
+
     A Null represents the absence of a value. It is encoded as an empty byte sequence.
-    
+
     Examples:
         >>> null = Null()
         >>> encoded = null.encode()
@@ -18,7 +19,7 @@ class Nullable(Codable, JsonSerde):
         >>> assert decoded == null
         >>> assert size == 0
     """
-    
+
     def __init__(self):
         """Initialize Null value."""
         super().__init__(codec=NullCodec())
@@ -27,11 +28,14 @@ class Nullable(Codable, JsonSerde):
     def get(self) -> None:
         """
         Get the null value.
-        
+
         Returns:
             None
         """
         return None
+
+    def __bytes__(self):
+        return bytes(0)
 
     def __repr__(self) -> str:
         """Get string representation."""
@@ -45,16 +49,15 @@ class Nullable(Codable, JsonSerde):
 
     @staticmethod
     def decode_from(
-        buffer: Union[bytes, bytearray, memoryview], 
-        offset: int = 0
-    ) -> Tuple['Nullable', int]:
+        buffer: Union[bytes, bytearray, memoryview], offset: int = 0
+    ) -> Tuple["Nullable", int]:
         """
         Decode null value from buffer.
-        
+
         Args:
             buffer: Source buffer
             offset: Starting offset
-            
+
         Returns:
             Tuple of (decoded null value, bytes read)
         """
@@ -66,10 +69,11 @@ class Nullable(Codable, JsonSerde):
         return None
 
     @classmethod
-    def from_json(cls, data: Any) -> 'Nullable':
+    def from_json(cls, data: Any) -> "Nullable":
         """Create from JSON representation."""
         if data is not None:
             raise ValueError("Null value must be None")
         return Nullable()
+
 
 Null = Nullable()

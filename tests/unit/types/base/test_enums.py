@@ -9,13 +9,16 @@ from jam.utils.json.serde import JsonDeserializationError
 @decodable_enum
 class TestEnum(Enum):
     """Test enum class."""
+
     A = "a"
     B = "b"
     C = "c"
 
+
 @decodable_enum
 class LargeEnum(Enum):
     """Test enum with many values."""
+
     V0 = 0
     V1 = 1
     V2 = 2
@@ -34,6 +37,7 @@ class LargeEnum(Enum):
     V15 = 15
     V16 = 16
     V17 = 17
+
 
 class TestEnumTypes:
     """Test suite for enum type implementations."""
@@ -121,5 +125,5 @@ class TestEnumTypes:
 
     def test_decorator_functionality(self):
         """Test that decodable_enum decorator adds required methods."""
-        assert hasattr(TestEnum, 'decode_from')
+        assert hasattr(TestEnum, "decode_from")
         assert callable(TestEnum.decode_from)

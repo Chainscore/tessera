@@ -8,19 +8,16 @@ This module provides codecs for primitive types including:
 - Bit sequences
 """
 
-from .integers import (
-    GeneralCodec,
-    IntegerCodec
-)
+from .integers import GeneralCodec, IntegerCodec
 from .bools import BooleanCodec
 from .strings import StringCodec
 
 __all__ = [
     # Integer codecs
-    'IntegerCodec',
-    'GeneralCodec',
+    "IntegerCodec",
+    "GeneralCodec",
     # Boolean codec
-    'BooleanCodec',
+    "BooleanCodec",
     # String codec
-    'StringCodec',
+    "StringCodec",
 ]

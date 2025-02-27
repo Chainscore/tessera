@@ -1,5 +1,5 @@
-jam.config.settings module
-==========================
+Settings
+========
 
 .. automodule:: jam.config.settings
    :members:
