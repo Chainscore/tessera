@@ -85,6 +85,7 @@ class Accumulation:
         """
         prioritized_queue = WorkReports([])
 
+
         return prioritized_queue
 
     @staticmethod
@@ -126,8 +127,22 @@ class Accumulation:
 
         accumulatable_wr = AllReadyWRs([])
 
-        # for i, q in nu:
+        q_right = nu[m:]
+        q_left = nu[:m]
 
+        for wrs in q_right:
+            accumulatable_wr.extend(wrs)
+
+        for wrs in q_left:
+            accumulatable_wr.extend(wrs)
+
+        accumulatable_wr.extend(queued_reports)
+
+        star_work_reports = cls.queue_edit_fn(accumulatable_wr, cls.mapping_fn(immediate_reports))
+
+
+
+        # ----------------------
         # Section 12.2 Execution
 
 
