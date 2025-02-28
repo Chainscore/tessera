@@ -1,3 +1,6 @@
+from Cython.Compiler.Errors import message
+from mesonbuild.dependencies.boost import boost_libraries
+
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.rho import WorkReportState
 from jam.state.state import State
@@ -8,6 +11,10 @@ from jam.types.extrinsics.guarantees import GuaranteesExtrinsic
 
 from jam.types.extrinsics import GuaranteesExtrinsic
 from jam.utils.constants import ACCUMULATION_GAS, CORE_COUNT
+from jam.report.error import ReportingError, ReportingErrorCode
+from jam.types.protocol.availability import AvailabilityAssignments
+from jam.utils.constants import CORE_COUNT
+from jam.utils.constants import VALIDATOR_COUNT
 
 def generate_report(report : GuaranteesExtrinsic)->WorkReportState.report:
     Guarantee: GuaranteesExtrinsic
@@ -57,8 +64,6 @@ class Reporting:
     def transition(self, pre_state:State, block:Block)->State:
         new_state:State = dataclasses.replace(pre_state)
 
-        Reporting.valid_report_fn(wr)
-
         # State.rho
         # if new_state.rho[0] is not None:
         #     new_state.rho[0].report == workreport()
@@ -66,19 +71,71 @@ class Reporting:
         #     new_state.rho[0].time == slot
 
 
-        valid_report_fn (self,pre_state.alpha[0].AuthorizationPool)
+        Reporting.valid_report_fn(pre_state.alpha[0].AuthorizationPool)
 
         n = WorkReportState(generate_report(Block.extrinsic.guarantees),block.extrinsic.guarantees[0].slot)
         generate_report(Block.extrinsic.guarantees)
         return new_state
 
     @staticmethod
-    def valid_report_fn(auth_pool: AuthorizationPool)->Boolean:
-        report_auth_hash = Block.extrinsic.guarantees[0].report.authorizer_hash
-        core_index = Block.extrinsic.guarantees[0].report.core_index
-        if report_auth_hash not in auth_pool[core_index]:
-            raise ReportError(code, "Work report not found in core auth pool")
+    def valid_report_fn(auth_pool: AuthorizationPool,block:Block) -> Boolean:
+        for x in block.extrinsic.guarantees:
+            report_auth_hash = x.report.authorizer_hash
+            core_index = x.report.core_index
+            if report_auth_hash not in auth_pool[core_index]:
+                raise ReportingError(
+                    ReportingErrorCode.NOT_AUTHERIZED,
+                    "Work Report's authorizer_hash not exist in AuthorizationPool"
+                )
 
+    @staticmethod
+    def validator_index(avail_assignments:AvailabilityAssignments, block:Block):
+        for x in block.extrinsic.guarantees:
+            for y in x.signatures:
+                if y.validator_index > VALIDATOR_COUNT:
+                    raise ReportingError (
+                        ReportingErrorCode.BAD_VALIDATOR_INDEX,
+                        "validator index(signature) is out of range"
+                    )
+
+    @staticmethod
+    def not_enough_guarantee(block:Block):
+        for x in block.extrinsic.guarantees:
+            credential_len = len(x.signatures)-1
+            if credential_len <= 2:
+                raise ReportingError (
+                    ReportingErrorCode.NOT_ENOUGH_GUARANTEE,
+                    "Work report don't have enough validator signature"
+                )
+
+    @staticmethod
+    def not_sort_grnt_idx(block : Block):
+        for x in block.extrinsic.guarantees:
+            for y in x.signatures:
+                if y.validator_index >= y.validator_index +1:
+                    raise ReportingError (
+                        ReportingErrorCode.NOT_SORTED_GUARANTOR,
+                        "Work Report's Validator(make report valid or invalid) are not in sorted order in credential"
+                    )
+
+    @staticmethod
+    def bad_core_index(block : Block):
+        for x in block.extrinsic.guarantees:
+            if x.report.core_index > CORE_COUNT:
+                raise ReportingError (
+                    ReportingErrorCode.BAD_CORE_INDEX,
+                    "Core index value is more then CORE_COUNT"
+                )
+
+
+    @staticmethod
+    def check_report_output(block : Block):
+        for x in block.extrinsic.guarantees:
+            output = x.report.auth_output
+
+
+    @staticmethod
+    def valid_signature():
 
     @decodable_choice
     def package_ava_fn(self, availabilitly:())->{}:
@@ -102,16 +159,6 @@ class Reporting:
             if not sum <= ACCUMULATION_GAS:
                 return 'err'
 
-
-    def workreport(self, block:Block ) :
-        # self.package_ava = self.package_ava_fn(package_ava)
-        # self.refinement = self.refinement_fn(refinement)
-        # self.core_index = core_index
-        # self.auth_hash = auth_hash
-        # self.auth_output = auth_output
-        # self.segment_root_lookup = segment_root_lookup
-        # self.result = self.result_fn()
-        block.extrinsic.guarantees[0].report.
 
 
 
