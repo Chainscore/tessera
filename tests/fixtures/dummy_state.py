@@ -23,7 +23,7 @@ from jam.state.components.psi import Psi, PsiB, PsiG, PsiO, PsiW
 from jam.state.components.rho import OptionalWorkReportState, Rho
 from jam.state.components.phi import AuthorizationQueue, Phi
 from jam.state.components.tau import Tau
-from jam.state.components.theta import AllReadyWRs, Theta
+from jam.state.components.nu import AllReadyWRs, Nu
 from jam.state.components.xi import Xi
 from jam.types import TicketBody
 
@@ -187,8 +187,8 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     components["pi"] = Pi([all_validator_stats for _ in range(2)])
 
-    # Theta and Xi
-    components["theta"] = Theta([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
+    # Nu and Xi
+    components["nu"] = Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
     components["xi"] = Xi(
         [WorkPackageHash(create_dummy_bytes32()) for _ in range(EPOCH_LENGTH)]
     )
