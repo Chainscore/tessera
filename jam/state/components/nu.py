@@ -23,7 +23,7 @@ class AllReadyWRs(Vector[ReadyWR]):
 
 
 @decodable_array(EPOCH_LENGTH, AllReadyWRs)
-class Theta(Array[AllReadyWRs]):
-    """Theta"""
+class Nu(Array[AllReadyWRs]):
+    """Nu"""
 
     ...
