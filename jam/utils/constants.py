@@ -56,16 +56,16 @@ TRANSFER_MEMO_SIZE = 128  # octets
 
 # Signing context strings
 SIGNING_CONTEXTS = {
-    "available": "$jam_available",  # Ed25519 Availability assurances
-    "beefy": "$jam_beefy",  # BLS Accumulate-result-root-MMR commitment
-    "entropy": "$jam_entropy",  # On-chain entropy generation
-    "fallback_seal": "$jam_fallback_seal",  # Bandersnatch Fallback block seal
-    "guarantee": "$jam_guarantee",  # Ed25519 Guarantee statements
-    "announce": "$jam_announce",  # Ed25519 Audit announcement statements
-    "ticket_seal": "$jam_ticket_seal",  # Bandersnatch RingVRF Ticket generation/block seal
-    "audit": "$jam_audit",  # Bandersnatch Audit selection entropy
-    "valid": "$jam_valid",  # Ed25519 Judgments for valid work-reports
-    "invalid": "$jam_invalid",  # Ed25519 Judgments for invalid work-reports
+    "available": b"jam_available",  # Ed25519 Availability assurances
+    "beefy": b"jam_beefy",  # BLS Accumulate-result-root-MMR commitment
+    "entropy": b"jam_entropy",  # On-chain entropy generation
+    "fallback_seal": b"jam_fallback_seal",  # Bandersnatch Fallback block seal
+    "guarantee": b"jam_guarantee",  # Ed25519 Guarantee statements
+    "announce": b"jam_announce",  # Ed25519 Audit announcement statements
+    "ticket_seal": b"jam_ticket_seal",  # Bandersnatch RingVRF Ticket generation/block seal
+    "audit": b"jam_audit",  # Bandersnatch Audit selection entropy
+    "valid": b"jam_valid",  # Ed25519 Judgments for valid work-reports
+    "invalid": b"jam_invalid",  # Ed25519 Judgments for invalid work-reports
 }
 
 # Maximum number of judgements per dispute

@@ -26,6 +26,9 @@ class Option(Choice):
     def __set__(self, value: Codable | Nullable):
         super().__set__(Option.option_to_choice(value))
 
+    def __get__(self) -> Codable | Nullable:
+        return list(self.value.values())[0]
+
     @classmethod
     def from_json(cls, data: Any) -> "Option":
         """Create from JSON representation."""
@@ -39,15 +42,15 @@ class Option(Choice):
         """Convert to JSON representation."""
         if isinstance(self.value, Nullable) or self.value is None:
             return None
-        return list(self.value.values())[0].to_json()
+        return self.__get__().to_json()
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Option):
             return self.value == other.value
-        return list(self.value.values())[0] == other
+        return self.__get__() == other
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({list(self.value.values())[0]})"
+        return f"{self.__class__.__name__}({self.__get__()})"
 
 
 def decodable_option(optional_type: Type[Codable]) -> Type[Option]:

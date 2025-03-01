@@ -3,9 +3,9 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.codec import Codec
 from jam.utils.json import JsonSerde
 from jam.utils.json.serde import JsonDeserializationError
+from jam.types.base.choices.option import Option
 
 T = TypeVar("T", bound=Codable)
-
 
 class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
     """
@@ -38,11 +38,16 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
 
     def __getitem__(self, index: Union[int, slice]) -> Union[T, Sequence[T]]:
         """Get item at index."""
-        return self.value[index]
+        item = self.value[index]
+        # Special case for Option
+        if isinstance(item, Option):
+            return item.__get__()
+        # Return the item as is
+        return item
 
     def __iter__(self):
         """Iterate over elements."""
-        return iter(self.value)
+        return iter([self.__getitem__(i) for i in range(len(self))])
 
     def __repr__(self) -> str:
         """Get string representation."""

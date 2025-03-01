@@ -10,16 +10,21 @@ from jam.state.components.rho import Rho
 from jam.assurances.errors import AssurancesErrorCode
 from jam.types.work.report import WorkReport
 from jam.types import Vector, decodable_vector
+from jam.types.protocol.core import TimeSlot, OpaqueHash
+from jam.state.components.kappa import Kappa
 
 @decodable_dataclass
 @dataclass
 class Input(Codable, JsonSerde):
     assurances: AssurancesExtrinsic
+    slot: TimeSlot
+    parent: OpaqueHash
 
 @decodable_dataclass
 @dataclass
 class PreState(Codable, JsonSerde):
     avail_assignments: Rho
+    curr_validators: Kappa
 
 PostState = PreState
 
