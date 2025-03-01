@@ -23,10 +23,6 @@ jobs:
 
     - name: Install dependencies via Poetry
       run: poetry install --with dev --no-interaction --no-ansi
-    
-    - name: Install PyTest
-      run: pip install pytest
-    
+
     - name: Run tests
-      run: |
-        pytest tests/
+      run: poetry run pytest tests/

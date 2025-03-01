@@ -10,6 +10,7 @@ from jam.utils.constants import CORE_COUNT
 from jam.types.base.choices.option import Option
 from jam.utils.json import JsonSerde
 
+
 @decodable_dataclass
 @dataclass
 class WorkReportState(Codable, JsonSerde):
