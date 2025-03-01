@@ -16,7 +16,7 @@ from tests.unit.assurances.types import (
 )
 from tests.fixtures.dummy_state import create_dummy_state
 from tests.fixtures.dummy_block import create_dummy_block
-
+from jam.assurances.assurances import Assurances
 
 def create_block_from_input(input: Input) -> Block:
     """Create a block from test input"""
@@ -35,11 +35,11 @@ def create_state_from_pre(pre_state: PreState) -> State:
 def vector_transition(vector: Testcase) -> Boolean:
     test_state = create_state_from_pre(vector.pre_state)
     test_block = create_block_from_input(vector.input)
-    # try:
-    #     output = Assurances.transition(test_state, test_block)
-    # except Exception as e:
-    #     print("Failed XXX", e)
-    #     return Boolean(False)
+    try:
+        output = Assurances.transition(test_state, test_block)
+    except Exception as e:
+        print("Failed XXX", e)
+        return Boolean(False)
     return Boolean(True)
 
 

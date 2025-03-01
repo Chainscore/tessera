@@ -43,6 +43,7 @@ class Output(Codable, JsonSerde):
 class Testcase(Codable, JsonSerde):
     input: Input
     pre_state: PreState
+    output: Output
     post_state: PostState
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testcase]:
