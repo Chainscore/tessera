@@ -1,4 +1,5 @@
 from typing import Any, Dict, Tuple, Type, Union
+
 from jam.types.base.choices.choice import Choice
 from jam.types.base.null import Null, Nullable
 from jam.utils.codec.codable import Codable
@@ -26,7 +27,7 @@ class Option(Choice):
     def __set__(self, value: Codable | Nullable):
         super().__set__(Option.option_to_choice(value))
 
-    def __get__(self) -> Codable | Nullable:
+    def get_value(self) -> Codable | Nullable:
         return list(self.value.values())[0]
 
     @classmethod
@@ -42,15 +43,15 @@ class Option(Choice):
         """Convert to JSON representation."""
         if isinstance(self.value, Nullable) or self.value is None:
             return None
-        return self.__get__().to_json()
+        return self.get_value().to_json()
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Option):
             return self.value == other.value
-        return self.__get__() == other
+        return self.get_value() == other
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.__get__()})"
+        return f"{self.__class__.__name__}({self.get_value()})"
 
 
 def decodable_option(optional_type: Type[Codable]) -> Type[Option]:
