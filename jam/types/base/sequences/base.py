@@ -1,4 +1,6 @@
 from typing import Any, Generic, List, Optional, Sequence, Type, TypeVar, Union
+
+from jam.types.base.choices.option import Option
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.codec import Codec
 from jam.utils.json import JsonSerde
@@ -38,11 +40,16 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
 
     def __getitem__(self, index: Union[int, slice]) -> Union[T, Sequence[T]]:
         """Get item at index."""
-        return self.value[index]
+        item = self.value[index]
+        # Special case for Option
+        # if isinstance(item, Option):
+        #     return item.__get__()
+        # Return the item as is
+        return item
 
     def __iter__(self):
         """Iterate over elements."""
-        return iter(self.value)
+        return iter([self.__getitem__(i) for i in range(len(self))])
 
     def __repr__(self) -> str:
         """Get string representation."""
@@ -60,6 +67,7 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
         """
         if self._element_type is None:
             self._element_type = type(value)
+
         elif not str(type(value)) == str(self._element_type):
             raise TypeError(
                 f"Value {value} must be instance of {self._element_type}. Debug: {str(type(value)) == str(self._element_type)}"

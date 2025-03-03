@@ -1,81 +1,111 @@
-# Disputes State Transitions:
+# Disputes State Transitions
 
-## 1. **Disputes Transition**
+## 1. Disputes Transition
+
+The disputes transition updates the state based on the disputes extrinsic from a block. It processes verdicts, culprits, and faults, updates the state's ψ component, and removes wrong targets from the core (ρ) array. If any error is encountered during the process, a `DisputesError` is raised with the appropriate error code.
+
+Formally, the transition is defined as:
 
 $$
-    \text{new\_state} \equiv \text{Disputes.transition(pre\_state, block)}
+\text{new\_state} \equiv \text{Disputes.transition(pre\_state, block)}
 $$
 
+### Constraints
 
-###   Transition the state with Disputes logic, enforcing verdict/fault/culprit constraints.
+- **Valid Verdicts Constraint**: A verdict that is solely valid (i.e., all votes are positive) must have at least one fault and two culprits..
+- **Sorting Requirements**:
+  - Verdicts must be sorted by target in ascending order.
+  - Votes within verdicts must be sorted by validator index in ascending order.
+  - Culprits and faults must be sorted by key in ascending order.
+- **Signature Verification**: All signatures (for verdicts, faults, and culprits) must be valid according to the defined ed25519 verification logic.
 
-        Processes verdicts, culprits, and faults from the disputes extrinsic, updates the
-        state's psi component, removes the wrong targets from the core(rho) array and ensures the following constraints:
+### Function Signature
 
-        Formal constraints:
-        - Solely valid verdicts require at least one fault.
-        - Solely invalid verdicts require at least two culprits.
-        - Verdicts/faults must be sorted by target and votes as per the validator index and culprits must be sorted by key.
-        - Verdicts/faults/culprits signatures must be valid.
+- **Arguments**:
+  - `pre_state`: The state before the transition.
+  - `block`: The block containing the disputes extrinsic.
+- **Returns**:
+  - The updated state after processing disputes. The ρ array is updated with the correct targets, and the disputes state (ψ) is updated.
+  - In case of an error, a `DisputesError` is raised with an appropriate error code.
 
-        Args:
-            pre_state: State before transition
-            block: Block containing disputes extrinsic
+## 2. Valid Age
 
-        Returns:
-            - Updated state after processing disputes (rho array updated with correct targets and disputes state updated)
-            - If any error is encountered, raise a DisputesError with the appropriate error code
+The valid age of a dispute is determined by the current epoch (from `kappa`) and the previous epoch (from `lambda`). Its acceptable range is defined as follows:
 
-## 2. **Valid Age**
+- Calculate the current epoch as:
+  $$
+  \text{current\_epoch} = \frac{\text{new\_state.tau}}{\text{EPOCH\_LENGTH}}
+  $$
+- The valid age must satisfy:
+  $$
+  \text{current\_epoch} - 1 \leq \text{valid\_age} \leq \text{current\_epoch}
+  $$
 
-The valid age is the current epoch(kappa) and the previous epoch (lambda)
-Its range should be current_epoch = new_state.tau // EPOCH_LENGTH 
-    current_epoch - 1 <= valid_age <= current_epoch
+For further details, see the [Graypaper documentation](https://graypaper.fluffylabs.dev/#/5b732de/12dc0012f900).
 
-https://graypaper.fluffylabs.dev/#/5b732de/12dc0012f900
+## 3. ψ (Psi) Sets
 
+The disputes state component ψ consists of four sets:
 
-## 3. **Psi sets**
-### psi consits of 4 sets:
-$$\psi= (\psi_g, \psi_b, \psi_w, \psi_o)$$
-### update psi:
-- good_set(stores keys of good validators)
-- bad_set(stores keys of bad validators)
-- wonky_set(stores keys of wonky validators)
-- offenders_set(stores keys of offenders validators)
+$$
+\psi = (\psi_g, \psi_b, \psi_w, \psi_o)
+$$
 
-## 4. **Verify Signature**
+- **good_set (ψ_g)**: Stores keys of validators with good verdicts.(positive votes=2/3V +1)
+- **bad_set (ψ_b)**: Stores keys of validators with bad verdicts.(positive votes=0)
+- **wonky_set (ψ_w)**: Stores keys of validators whose verdicts are uncertain (wonky).(positive votes=1/3V)
+- **offenders_set (ψ_o)**: Stores keys of validators who have been determined to be offenders (e.g., based on faults or culprits).
 
-Faults and Culprits and Vote signatures(ed25519) are verified as per their logic with the help of the following function:
+## 4. Verify Signature
+
+Fault, culprit, and vote signatures (using ed25519) must be verified with the following function:
 
 $$
 \text{Disputes.verify\_signature(key, message, target, signature)}
 $$
 
-## 5. **Validate verdicts**
+This function is used to ensure that all signatures in verdicts, faults, and culprits are valid.
 
-- Verify verdicts are sorted by target (ascending order)
-- Check if verdicts are already judged and validate age
+## 5. Validate Verdicts
 
-## 6. **Validate faults and culprits**
+- **Sorting**: Verify that verdicts are sorted by target in ascending order.
+- **Judgement and Age**: Check if verdicts are already judged and if their age is within the valid range.
 
-- Verify faults are sorted by target (ascending order)
-- Verify culprits are sorted by key (ascending order)
-- Check if culprits are already reported
+## 6. Validate Faults and Culprits
 
-## 7. **Process verdicts with constraints**
+- **Sorting**:
+  - Faults must be sorted by key (ascending order).
+  - Culprits must be sorted by key (ascending order).
+- **Duplication**: Ensure that culprits are not already reported.
+  
+## 7. Process Verdicts with Constraints
 
-- Verify votes are sorted by index (ascending order)
-- Verify Fault verdicts are not contradictory
-- Count positive votes and put it as good/bad/wonky or throw it as "bad_vote_split" error
-- Check the fault/culprit> required_counts
+- **Vote Sorting**: Verify that votes within each verdict are sorted by validator index in ascending order.
+- **Contradictory Faults**: Ensure that fault verdicts are not contradictory.
+- **Vote Count Classification**: Count the positive votes to classify a verdict as good, bad, or wonky.  
+  - If the vote split is unexpected, throw a `bad_vote_split` error.
+- **Minimum Count Checks**: Verify that the number of faults and culprits meets the required counts:
+  - Solely valid verdicts must have at least one fault and two culprits.
 
-## 8. **Remove wrong targets from the rho array**
+## 8. Remove Wrong Targets from the ρ Array
 
-- Removed wrong targets from the rho array
+- After processing the disputes, remove any work reports from the ρ array that have been judged as wrong (i.e., targets that appear in the bad or wonky sets).
+$$
+\forall c \in \mathbb{N}_C : \rho^\dagger[c] = 
+\begin{cases}
+\emptyset & \text{if } \{(\mathcal{H}(\rho[c]_w), t) \in V, t < \lfloor\frac{2}{3}V\rfloor\} \\
+\rho[c] & \text{otherwise}
+\end{cases}
+$$
 
-## 9. **Update of the Disputes states and return the new state**
 
-- Update the Disputes states
-- TODO: Change the rho array when the new types are implemented.
-- Return the new state
+## 9. Update Disputes State and Return New State
+
+- Update the ψ sets and the ρ array in the state according to the processed disputes.
+- **Note**: There is a TODO to change the ρ array when new types are implemented.
+- Finally, return the updated state.
+
+---
+
+This documentation provides a high-level overview of the disputes state transition logic, its formal constraints, and the steps involved in processing disputes. Each step ensures that the disputes data (verdicts, faults, and culprits) is validated, signatures are checked, and the state is updated accordingly.
+

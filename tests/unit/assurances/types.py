@@ -1,57 +1,58 @@
+from dataclasses import dataclass
 import json
 import os
-from dataclasses import dataclass
 from typing import List
-
-from jam.chainspec import CHAIN_SPEC
-from jam.state.components.pi import AllValidatorStats
-from jam.state.components.tau import Tau
-from jam.types.base import Nullable
-from jam.types.base.integers.fixed import U32
-from jam.types.block import Extrinsic
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
-
-
-@decodable_dataclass
-@dataclass
-class Pi(Codable, JsonSerde):
-    """Test Pi structure."""
-
-    current: AllValidatorStats
-    last: AllValidatorStats
-
+from jam.types.extrinsics.assurances import AssurancesExtrinsic
+from jam.state.components.rho import Rho
+from jam.assurances.errors import AssurancesErrorCode
+from jam.types.work.report import WorkReport
+from jam.types import Vector, decodable_vector
+from jam.types.protocol.core import TimeSlot, OpaqueHash
+from jam.state.components.kappa import Kappa
 
 @decodable_dataclass
 @dataclass
 class Input(Codable, JsonSerde):
-    slot: U32
-    author_index: U32
-    extrinsic: Extrinsic
-
+    assurances: AssurancesExtrinsic
+    slot: TimeSlot
+    parent: OpaqueHash
 
 @decodable_dataclass
 @dataclass
 class PreState(Codable, JsonSerde):
-    pi: Pi
-    tau: Tau
-
+    avail_assignments: Rho
+    curr_validators: Kappa
 
 PostState = PreState
 
+@decodable_vector(WorkReport)
+class WorkOutputVector(Vector[WorkReport]):
+    ...
+
+@decodable_dataclass
+@dataclass
+class OkOutput(Codable, JsonSerde):
+    reported: WorkOutputVector
+
+@decodable_dataclass
+@dataclass
+class Output(Codable, JsonSerde):
+    err: AssurancesErrorCode
+    ok: OkOutput
 
 @decodable_dataclass
 @dataclass
 class Testcase(Codable, JsonSerde):
     input: Input
-    output: Nullable
     pre_state: PreState
+    output: Output
     post_state: PostState
 
-
 def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testcase]:
-    data_dir = f"tests/unit/statistics/data/{CHAIN_SPEC}"
+    data_dir = "tests/unit/assurances/data/tiny"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
         if len(result) >= limit:
