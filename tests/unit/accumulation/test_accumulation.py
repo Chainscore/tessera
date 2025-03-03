@@ -12,6 +12,7 @@ from tests.unit.accumulation.types import (
     get_testcases_starting_with,
 )
 from jam.accumulation.accumulation import Accumulation
+from jam.state.components.delta import Delta, AccountData
 
 def create_block_from_input(input: Input) -> Block:
     """Create a block from test input"""
@@ -33,8 +34,19 @@ def create_state_from_pre(pre_state: PreState) -> State:
     for i in pre_state.privileges.always_acc:
         chiG[i]=pre_state.privileges.always_acc[i]
     state.chi.g=chiG
+    #
+    # state.delta = Delta() # Create a new empty Delta dictionary
     for i in pre_state.accounts:
-        state.delta[i.id]=i.data
+        state.delta[i.id]=AccountData(
+            storage=i.data.service.items, #keeping size here for the timing
+            lookup=i.data.preimages,
+            timestamps=i.data.service.bytes,
+            code_hash=i.data.service.code_hash,
+            balance=i.data.service.balance,
+            gas_limit=i.data.service.min_item_gas,
+            min_gas=i.data.service.min_memo_gas
+        )
+    print("pre_state->",state.delta.keys())
     # Set theta state components
     return state
 

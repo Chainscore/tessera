@@ -145,6 +145,7 @@ class Accumulation:
 
         star_work_reports = cls.queue_edit_fn(accumulatable_wr, cls.mapping_fn(immediate_reports))
         
+        # print("star_work_reports->",star_work_reports)
 
         # ----------------------
         # Section 12.2 Execution
