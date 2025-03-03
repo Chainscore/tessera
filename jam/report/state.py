@@ -12,7 +12,7 @@ from jam.types.extrinsics.guarantees import GuaranteesExtrinsic
 
 from jam.types.extrinsics import GuaranteesExtrinsic
 from jam.types.work.report import WorkResults
-from jam.utils.constants import ACCUMULATION_GAS, CORE_COUNT
+from jam.utils.constants import ACCUMULATION_GAS, CORE_COUNT, MAX_DEPENDENCIES
 from jam.report.error import ReportingError, ReportingErrorCode
 from jam.types.protocol.availability import AvailabilityAssignments
 from jam.utils.constants import CORE_COUNT
@@ -84,6 +84,43 @@ class Reporting:
         Reporting.result_fn(n.report.results,new_state)
         return new_state
 
+
+    @staticmethod
+    def check_dependecies(block : Block):
+        for x in block.extrinsic.guarantees:
+            segment_depd = len(x.report.segment_root_lookup)
+            prerequisite = len(x.report.context.lookup_anchor_slot)
+            if (segment_depd + prerequisite) > MAX_DEPENDENCIES:
+                raise ReportingError (
+                    ReportingErrorCode.TOO_MANY_DEPENDENCIES,
+                    "Work package has too many dependencies(segment_lookup + prerequisite) "
+                )
+
+
+
+    @staticmethod
+    def guarantee_order(block :Block):
+        for i in range(len(block.extrinsic.guarantees)):
+            if block.extrinsic.guarantees[i].report.core_index == block.extrinsic.guarantees[i+1].report.core_index:
+                raise ReportingError (
+                    ReportingErrorCode.OUT_OF_ORDER_GUARANTEE,
+                    "Core index for each guarantee is not in unique"
+                )
+
+    @staticmethod
+    def not_sort_grnt_idx(block: Block):
+        for i in block.extrinsic.guarantees:
+            for j in range(len(i.signatures)):
+                if i.signatures[j].validator_index >= i.signatures[j+1].validator_index:
+                    raise ReportingError (
+                        ReportingErrorCode.NOT_SORTED_GUARANTOR,
+                        "Signature's validator index order is not sorted"
+                    )
+
+    @staticmethod
+    def furute_report_slot():
+
+
     @staticmethod
     def valid_report_fn(auth_pool: AuthorizationPool,block:Block) -> Boolean:
         for x in block.extrinsic.guarantees:
@@ -115,15 +152,7 @@ class Reporting:
                     "Work report don't have enough validator signature"
                 )
 
-    @staticmethod
-    def not_sort_grnt_idx(block : Block):
-        for x in block.extrinsic.guarantees:
-            for y in x.signatures:
-                if y.validator_index >= y.validator_index +1:
-                    raise ReportingError (
-                        ReportingErrorCode.NOT_SORTED_GUARANTOR,
-                        "Work Report's Validator(make report valid or invalid) are not in sorted order in credential"
-                    )
+
 
     @staticmethod
     def bad_core_index(block : Block):
@@ -136,18 +165,18 @@ class Reporting:
 
 
     @staticmethod
-    def check_report_output(block : Block):
+    def duplicate_pkg_recent_hstry(block : Block, state: State):
+        hashes = []
         for x in block.extrinsic.guarantees:
-            output = x.report.auth_output
+            hashes.append(x.report.package_spec.hash)
+            hashes.append(x.report.authorizer_hash)
+            for i in state.beta:
+                if hashes not in i.packages:
+                    raise ReportingError (
+                        ReportingErrorCode.DUPLICATE_PACKAGE_IN_RECENT_HISTORY,
+                        "Work package is already executed in recent-block's history"
+                    )
 
-
-    @staticmethod
-    def valid_signature():
-        ...
-
-    @decodable_choice
-    def package_ava_fn(self, availabilitly:())->{}:
-        ...
 
 
     @staticmethod
@@ -175,11 +204,6 @@ class Reporting:
                 for x in context.prerequisites:
                     if x not in hashes:
                         return 'err'
-
-
-
-
-
 
 
     def segement_root_lookup(self):
@@ -220,19 +244,28 @@ class Reporting:
     def workreport_package( block:Block ) :
         hashes = []
 
-
         # storing package_spec hash of all reports in hashes
         for x in block.extrinsic.guarantees:
-            hashes.append(x.report.package_spec.hash)
+            if x.report.package_spec.hash not in hashes:
+                hashes.append(x.report.package_spec.hash)
+            else :
+                raise ReportingError(
+                    ReportingErrorCode.DUPLICATE_PACKAGE_IN_REPORT,
+                    "Two work reports of the same package(no duplicate work-package hash)"
+                )
+
+        # @staticmethod
+        # def ensure_assurances_unique(assurances: List[AvailAssurance]) -> None:
+        #     """Ensure the assurances are unique using Python's set"""
+        #     if len(assurances) != len(set(assurance.validator_index for assurance in assurances)):
+        #         raise AssurancesError(AssurancesErrorCode.NOT_SORTED_OR_UNIQUE_ASSURERS,
+        #                               "Assurances are not unique by validator index")
+
 
 
         for x in block.extrinsic.guarantees:
             if x.report.package_spec.hash in hashes:
                 return 'err'
-
-
-
-
 
 
     @staticmethod
@@ -247,11 +280,6 @@ class Reporting:
         for x in block.extrinsic.guarantees:
             if x.slot > block.header.slot:
                 return 'err'
-
-
-
-
-
 
 
 
