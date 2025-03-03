@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 from typing import List
 
+from jam.chainspec import CHAIN_SPEC
 from jam.state.components.pi import AllValidatorStats
 from jam.state.components.tau import Tau
 from jam.types.base import Nullable
@@ -50,7 +51,7 @@ class Testcase(Codable, JsonSerde):
 
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testcase]:
-    data_dir = "tests/unit/statistics/data/tiny"
+    data_dir = f"tests/unit/statistics/data/{CHAIN_SPEC}"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
         if len(result) >= limit:
