@@ -64,7 +64,7 @@ def generate_report(report : GuaranteesExtrinsic)->GuaranteesExtrinsic:
 class Reporting:
 
     @staticmethod
-    def transition(self, pre_state:State, block:Block)->State:
+    def transition(pre_state:State, block:Block)->State:
         new_state:State = dataclasses.replace(pre_state)
 
         Reporting.valid_report_fn()
