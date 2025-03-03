@@ -52,6 +52,8 @@ def decodable_dataclass(cls: Type[T]) -> Type[T]:
 
     def __eq__(self, other: object) -> bool:
         # Compare all fields and values, return true if all are equal
+        if not isinstance(other, cls):
+            return False
         return all(
             getattr(self, field.name) == getattr(other, field.name)
             for field in fields(self)
