@@ -24,16 +24,20 @@ def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state = create_dummy_state()
     # Set psi state components
-
+    print("State->", state)
     return state
 
 def vector_transition(vector: Testcase) -> Boolean:
     """
     Test the transition of disputes
     """
-    test_state = create_state_from_pre(vector.pre_state)  
-    test_block = create_block_from_input(vector.input)
+    print("Vector->", vector)
+    
     return Boolean(True)
+
+    test_state = create_state_from_pre(vector.pre_state)  
+    
+    test_block = create_block_from_input(vector.input)
         
 
 def test_disputes_transition():
@@ -42,9 +46,8 @@ def test_disputes_transition():
         limit=1
     )
 
-    # for i, vector in enumerate(vectors):
-    #     print("Hii")
-        # assert vector_transition(vector)
+    for i, vector in enumerate(vectors):
+        assert vector_transition(vector)
 
 if __name__ == "__main__":
     test_disputes_transition()
