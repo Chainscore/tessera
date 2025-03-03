@@ -17,6 +17,7 @@ def create_block_from_input(input: Input) -> Block:
     """Create a block from test input"""
     block = create_dummy_block()
     block.extrinsic.guarantees.reports = input.reports
+    block.header.slot=input.slot
     return block
 
 def create_state_from_pre(pre_state: PreState) -> State:
@@ -24,7 +25,7 @@ def create_state_from_pre(pre_state: PreState) -> State:
     state = create_dummy_state()
     state.theta = pre_state.ready_queue
     state.xi=pre_state.accumulated
-    state.tau=pre_state.slot
+    # state.tau=pre_state.slot
     state.chi.m=pre_state.privileges.bless
     state.chi.a=pre_state.privileges.assign
     state.chi.v=pre_state.privileges.designate
@@ -32,7 +33,8 @@ def create_state_from_pre(pre_state: PreState) -> State:
     for i in pre_state.privileges.always_acc:
         chiG[i]=pre_state.privileges.always_acc[i]
     state.chi.g=chiG
-    print("theta->",state.chi)
+    for i in pre_state.accounts:
+        state.delta[i.id]=i.data
     # Set theta state components
     return state
 

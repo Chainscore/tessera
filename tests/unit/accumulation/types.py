@@ -15,7 +15,9 @@ from jam.types.protocol.crypto import WorkReportHash
 from jam.state.components.chi import Chi
 from jam.types.protocol.service import ServiceInfo
 from jam.types.protocol.crypto import Entropy
-from jam.types.protocol.core import ServiceId
+from jam.types.protocol.core import ServiceId,Gas,U64
+from jam.types.base.sequences.bytes import Bytes
+
 from typing import Optional
 
 @decodable_vector(AllReadyWRs)
@@ -28,8 +30,40 @@ class WorkDependencies(Vector[WorkReportHash]):
 class Accumulated(Vector[WorkDependencies]):
     ...
 
-@decodable_vector(ServiceInfo)
-class Accounts(Vector[ServiceInfo]):
+@decodable_dataclass
+@dataclass
+class customService(Codable,JsonSerde):
+    code_hash:OpaqueHash
+    balance:U64
+    min_item_gas:Gas
+    min_memo_gas:Gas
+    bytes:U64
+    items:U32
+
+@decodable_dataclass
+@dataclass
+class customPreimage(Codable,JsonSerde):
+    hash:OpaqueHash
+    blob:Bytes
+
+@decodable_vector(customPreimage)
+class preimages(Vector[customPreimage]):
+    ...
+
+@decodable_dataclass
+@dataclass
+class accContents(Codable,JsonSerde):
+    service:customService
+    preimages:preimages
+    
+@decodable_dataclass
+@dataclass
+class AccountData(Codable,JsonSerde):
+    id:ServiceId
+    data:accContents
+
+@decodable_vector(AccountData)
+class Accounts(Vector[AccountData]):
     ...
 @decodable_vector(ServiceId)
 class AlwaysAcc(Vector[ServiceId]):
