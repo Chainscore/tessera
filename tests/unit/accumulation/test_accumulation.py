@@ -22,16 +22,29 @@ def create_block_from_input(input: Input) -> Block:
 def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state = create_dummy_state()
-    # Set psi state components
+    state.theta = pre_state.ready_queue
+    state.xi=pre_state.accumulated
+    state.tau=pre_state.slot
+    state.chi.m=pre_state.privileges.bless
+    state.chi.a=pre_state.privileges.assign
+    state.chi.v=pre_state.privileges.designate
+    chiG={}
+    for i in pre_state.privileges.always_acc:
+        chiG[i]=pre_state.privileges.always_acc[i]
+    state.chi.g=chiG
+    print("theta->",state.chi)
+    # Set theta state components
     return state
 
 def vector_transition(vector: Testcase) -> Boolean:
     """
     Test the transition of disputes
     """    
-    test_state = create_state_from_pre(vector.pre_state)
     test_block = create_block_from_input(vector.input)
+    test_state = create_state_from_pre(vector.pre_state)
     
+    # print("theta->",type(test_state.theta))
+    # print("blockguarantee->",type(test_block.extrinsic.guarantees))
     state=Accumulation.transition(test_state,test_block)
     return Boolean(True)
 
@@ -41,7 +54,7 @@ def vector_transition(vector: Testcase) -> Boolean:
 def test_disputes_transition():
     """Test disputes transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        limit=1
+        "enqueue_and_unlock_chain_wraps",limit=1
     )
 
     for i, vector in enumerate(vectors):

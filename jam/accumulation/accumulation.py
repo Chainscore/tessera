@@ -1,9 +1,10 @@
+# import dataclasses
+# from dataclasses import dataclass
 from jam.state.components.theta import Theta, AllReadyWRs, ReadyWR
 from jam.state.state import State
 from jam.types import Block
 from jam.types.work.report import WorkDependencies, WorkReports, SegmentRootLookup
 from jam.utils.constants import EPOCH_LENGTH
-
 
 class Accumulation:
     @staticmethod
@@ -111,11 +112,14 @@ class Accumulation:
     @classmethod
     def transition(cls, pre_state: State, block: Block):
 
+        # new_state = dataclasses.replace(pre_state)
+        # disputes = block.extrinsic.disputes
+
         # Section 12.1: History & Queuing
 
         theta = pre_state.theta # Ready for Accumulation
         xi_union = pre_state.xi # Accumulated Packages History
-
+        # print("Theta->", theta,block.extrinsic.guarantees)
         work_reports = WorkReports([]) # Latest Work Reports to accumulate
         
         for rg in block.extrinsic.guarantees:
@@ -140,7 +144,7 @@ class Accumulation:
         accumulatable_wr.extend(queued_reports)
 
         star_work_reports = cls.queue_edit_fn(accumulatable_wr, cls.mapping_fn(immediate_reports))
-        print("Star Work Reports->", star_work_reports)
+        
 
         # ----------------------
         # Section 12.2 Execution
