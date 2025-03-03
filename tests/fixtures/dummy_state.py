@@ -25,6 +25,7 @@ from jam.state.components.phi import AuthorizationQueue, Phi
 from jam.state.components.tau import Tau
 from jam.state.components.theta import AllReadyWRs, Theta
 from jam.state.components.xi import Xi
+# from jam.state.components.nu import Nu
 from jam.types import TicketBody
 
 from jam.types.base import Bytes
@@ -189,6 +190,8 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Theta and Xi
     components["theta"] = Theta([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
+    # components["nu"] = Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
+
     components["xi"] = Xi(
         [WorkPackageHash(create_dummy_bytes32()) for _ in range(EPOCH_LENGTH)]
     )

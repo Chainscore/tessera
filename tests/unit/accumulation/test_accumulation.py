@@ -11,18 +11,18 @@ from tests.unit.accumulation.types import (
     Testcase,
     get_testcases_starting_with,
 )
+from jam.accumulation.accumulation import Accumulation
 
 def create_block_from_input(input: Input) -> Block:
     """Create a block from test input"""
     block = create_dummy_block()
-    block.extrinsic.guarantees = input.reports
+    block.extrinsic.guarantees.reports = input.reports
     return block
 
 def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state = create_dummy_state()
     # Set psi state components
-    print("State->", state)
     return state
 
 def vector_transition(vector: Testcase) -> Boolean:
@@ -31,7 +31,8 @@ def vector_transition(vector: Testcase) -> Boolean:
     """    
     test_state = create_state_from_pre(vector.pre_state)
     test_block = create_block_from_input(vector.input)
-
+    
+    state=Accumulation.transition(test_state,test_block)
     return Boolean(True)
 
     
