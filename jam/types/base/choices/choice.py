@@ -128,6 +128,9 @@ class Choice(Codable[T], JsonSerde, Generic[T]):
         """
         return self.value
 
+    def get_value(self):
+        return self.value[list(self.value.keys())[0]]
+
     def __eq__(self, other: object) -> bool:
         """Compare for equality."""
         if isinstance(other, Choice):
@@ -152,7 +155,6 @@ class Choice(Codable[T], JsonSerde, Generic[T]):
         last_error = None
         # Go through all the choices and try to decode the data
         choice_key = list(data.keys())[0]
-        print("Inferring choice from JSON:", choice_key, list(cls.__choices__.keys()))
         if choice_key in list(cls.__choices__.keys()):
             indexOfChoice = list(cls.__choices__.keys()).index(choice_key)
             choice_type = list(cls.__choices__.values())[indexOfChoice]

@@ -70,6 +70,10 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
         """Get value for key."""
         return self.value[key]
 
+    def __setitem__(self, key: K, value: V) -> None:
+        """Set value for key."""
+        self.value[key] = value
+
     def __iter__(self) -> Iterator[K]:
         """Iterate over keys."""
         return iter(self.value)
