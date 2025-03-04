@@ -1,34 +1,91 @@
+import dataclasses
+from copy import deepcopy
+
 from jam.preimages.errors import PreimageError, PreimageErrorEnum
 from jam.state.components.delta import LookupTable
 from jam.state.state import State
 from jam.types.block import Block
-from jam.types.extrinsics.preimages import PreimagesExtrinsic, Preimage
+from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
 from jam.types.protocol.crypto import Hash
 
 
 class Preimages:
     @staticmethod
     def transition(pre_state: State, block: Block) -> State:
-        Preimages.ensure_sorted(block.extrinsic.preimages)
+        """
+        Transition the state with Preimages logic.
+
+        Args:
+            pre_state: State before transition
+            block: Block
+
+        Returns:
+            State after transition
+        """
+        Preimages.ensure_sorted_unique(block.extrinsic.preimages)
+
+        new_state = dataclasses.replace(pre_state)
 
         # Go through each preimage in the block
         for preimage in block.extrinsic.preimages:
             # Find the account
-            account = pre_state.delta[preimage.requester]
-            # Add the preimage to the account
+            account = new_state.delta[preimage.requester]
             # If the preimage to add does not have lookup metadata, throw unneeded error
-            lookup_key = LookupTable(Hash.sha256(preimage.blob), len(preimage.blob))
-            if lookup_key not in account.timestamps:
-                raise PreimageError(PreimageErrorEnum.PREIMAGE_UNNEEDED, "Preimage metadata does not exist")
-        return pre_state
+            hashed_blob = Hash.blake2b(preimage.blob)
+            lookup_key = LookupTable(hashed_blob, len(preimage.blob))
+            if (
+                lookup_key not in account.timestamps
+                or len(account.timestamps[lookup_key]) != 0
+            ):
+                raise PreimageError(
+                    PreimageErrorEnum.PREIMAGE_UNNEEDED,
+                    "Preimage metadata does not exist",
+                )
+
+        for preimage in block.extrinsic.preimages:
+            # Add the preimage to the account
+            account = new_state.delta[preimage.requester]
+            hashed_blob = Hash.blake2b(preimage.blob)
+            lookup_key = LookupTable(hashed_blob, len(preimage.blob))
+
+            account.lookup[hashed_blob] = preimage.blob
+            account.timestamps[lookup_key].append(block.header.slot)
+
+        return new_state
 
     @staticmethod
-    def ensure_sorted(preimages: PreimagesExtrinsic):
+    def ensure_sorted_unique(preimages: PreimagesExtrinsic):
+        """
+        Checks if the extrinsic array is ordered and does not contain any duplicates
+
+        Args:
+            preimages: Preimages extrinsic
+
+        Returns:
+            True or False
+        """
+
         def sort_fn(preimage: Preimage):
             # Take VRF output of the signature and sort by it
-            return (int(preimage.requester), int.from_bytes(bytes(preimage.blob), 'little'))
-        sorted_preimages = preimages.copy()
+            return (
+                int(preimage.requester),
+                str(preimage.blob),
+            )
+
+        sorted_preimages = deepcopy(preimages)
         sorted_preimages.sort(key=sort_fn)
-        print([sort_fn(pr) for pr in sorted_preimages])
+
+        # Check for duplicates in adjacent entries
+        for i in range(1, len(sorted_preimages)):
+            prev = sorted_preimages[i - 1]
+            curr = sorted_preimages[i]
+            if prev.requester == curr.requester and prev.blob == curr.blob:
+                raise PreimageError(
+                    PreimageErrorEnum.PREIMAGE_NOT_SORTED_UNIQUE,
+                    "Duplicate preimage found",
+                )
+
         if sorted_preimages != preimages:
-            raise PreimageError(PreimageErrorEnum.PREIMAGE_NOT_SORTED_UNIQUE, "Preimages must be sorted")
+            raise PreimageError(
+                PreimageErrorEnum.PREIMAGE_NOT_SORTED_UNIQUE, "Preimages must be sorted"
+            )
