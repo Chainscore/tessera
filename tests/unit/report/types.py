@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from jam.state.components.alpha import Alpha
 from jam.state.components.beta import Beta
 from jam.state.components.eta import Eta
-from jam.state.components.psi import Psi
+from jam.state.components.psi import Psi, PsiO
 from jam.types import decodable_vector, Array, Vector, U64
 from jam.types.extrinsics import GuaranteesExtrinsic
 from jam.types.work.refine_context import OpaqueHashes
@@ -20,13 +20,14 @@ from jam.types.protocol.core import Balance,Gas
 import json
 import os
 from typing import List
+from jam.types.protocol.core import TimeSlot
 
 
 @decodable_dataclass
 @dataclass
 class Input(Codable, JsonSerde):
     guarantees: GuaranteesExtrinsic
-    slot : U32
+    slot : TimeSlot
 
 
 @decodable_dataclass
@@ -41,11 +42,17 @@ class InputService(Codable,JsonSerde):
 
 
 
+
+@decodable_dataclass
+@dataclass
+class InputServices(Codable, JsonSerde):
+    service:InputService
+
 @decodable_dataclass
 @dataclass
 class InputAccData(Codable, JsonSerde):
     id: U64
-    data: InputService
+    data: InputServices
 
 
 
@@ -61,11 +68,10 @@ class PreState(Codable, JsonSerde):
     curr_validators: Kappa
     prev_validators: Lambda_
     entropy: Eta
-    offenders: Psi.offenders
-    recent_blocks: Beta
+    offenders: PsiO
+    recent_blocks: BetaInput
     auth_pools: Alpha
     accounts: InputAccount
-
 
 
 PostState = PreState
@@ -75,12 +81,13 @@ PostState = PreState
 class Testcase(Codable, JsonSerde):
     input: Input
     pre_state: PreState
+    output: dict
     post_state: PostState
 
 
 
-def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testcase]:
-    data_dir = "tests/unit/reports/data/tiny"
+def get_testcases_starting_with(prefix: str = "", limit: int = 1) -> List[Testcase]:
+    data_dir = "/home/rahulcsl/jam/jam-node/tests/unit/report/data/tiny"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
         if len(result) >= limit:

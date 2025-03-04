@@ -1,3 +1,4 @@
+from jam.report.error import ReportingError
 from jam.report.state import Reporting
 from jam.state.components.delta import AccountData
 from jam.state.state import State
@@ -12,12 +13,12 @@ def create_block_from_input(input:Input) -> Block:
 
     block = create_dummy_block()
     block.extrinsic.guarantees = input.guarantees
-    block.header.slot - input.slot
+    block.header.slot = input.slot
 
     return block
 
 
-def delta_func(pre_state : PreState)-> State.delta:
+def delta_func(pre_state : PreState)-> Dictionary():
 
     account_dict: Dictionary[ServiceId, AccountData]= Dictionary()
     for x in pre_state.accounts:
@@ -31,12 +32,15 @@ def delta_func(pre_state : PreState)-> State.delta:
 def create_state_from_pre(pre_state: PreState) -> State:
 
     state: State = create_dummy_state()
+    state.rho = pre_state.avail_assignments
     state.kappa = pre_state.curr_validators
     state.lambda_ = pre_state.prev_validators
     state.eta = pre_state.entropy
     state.psi.offenders = pre_state.offenders
     state.beta = pre_state.recent_blocks
+    # print('d1',pre_state.auth_pools)
     state.alpha = pre_state.auth_pools
+    # print('d2',state.alpha)
     state.delta = delta_func(pre_state)
 
     return  state
@@ -46,24 +50,37 @@ def create_state_from_pre(pre_state: PreState) -> State:
 
 def vector_transition(vector:Testcase) -> Boolean:
     test_state = create_state_from_pre(vector.pre_state)
+    # print('pre_state', test_state)
     test_block = create_block_from_input(vector.input)
-    hashes = []
-    State.alpha
-    for x in vector.post_state.avail_assignments:
-        hashes.append(x.report.package_spec.hash)
+    # print('block',test_block)
+    # hashes = []
+    # State.alpha
+    # for x in vector.post_state.avail_assignments:
+    #     hashes.append(x.report.package_spec.hash)
 
+    post_state = create_state_from_pre(vector.post_state)
+    # output = Reporting.transition(test_state,test_block)
+    # print('output.rho',output)
+    # print('ouuuuuttt',vector.output['err'])
     try:
-        output = Reporting.transition(test_state,test_block)
-        for x in output.ok.reported:
-            if x.work_package_hash == vector.post_state.avail_assignments
-            if any(item == x.work_package_hash for item in vector.post_state.avail_assignments[0])
-        # if any(x["work_package_hash"] == )
+        output = Reporting.transition(test_state, test_block)
+        # print('hiii')
+    except ReportingError as e:
+        print('eeeeeerrrrr',e.code._value_)
+        assert e.code._value_ == vector.output['err']
+
+    # assert output == post_state
+        # for x in output.ok.reported:
+        #     if x.work_package_hash == vector.post_state.avail_assignments
+        #     if any(item == x.work_package_hash for item in vector.post_state.avail_assignments[0])
+        # # if any(x["work_package_hash"] ==
+        return Boolean(True)
 
 
 
 def test_tiny():
     """Test publishing tickets with no mark"""
-    vectors: List[Testcase] = get_testcases_starting_with(limit=3)
+    vectors: List[Testcase] = get_testcases_starting_with(limit=9)
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)
         print(f"Passed testcase #{i + 1}")

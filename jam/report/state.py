@@ -1,11 +1,9 @@
-from Cython.Compiler.Errors import message
-from mesonbuild.dependencies.boost import boost_libraries
-
+from jam.report.check import auth_pool
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.rho import WorkReportState
 from jam.state.state import State
 from jam.types import Block, decodable_choice, ServiceId, Boolean, Vector, AvailabilityAssignments, \
-    AvailabilityAssignment, Null
+    AvailabilityAssignment, Null, String, U64, U16
 import  dataclasses
 from dataclasses import dataclass, replace
 from jam.types.extrinsics.guarantees import GuaranteesExtrinsic
@@ -66,8 +64,55 @@ class Reporting:
     @staticmethod
     def transition(pre_state:State, block:Block)->State:
         new_state:State = dataclasses.replace(pre_state)
+        header_hashes = []
 
-        Reporting.valid_report_fn()
+        # for x in new_state.beta:
+        #     header_hashes.append(x.header_hash)
+        #
+        # results = block.extrinsic.guarantees
+        #
+        #
+        #
+        # for x in block.extrinsic.guarantees:
+        #     context = x.report.context
+        #     # print('hhhhhh', context.anchor, new_state.beta)
+        #     if context.anchor not in header_hashes:
+        #         print(U64(x.report.core_index))
+        #         raise ReportingError(
+        #             ReportingErrorCode.ANCHOR_NOT_RECENT,
+        #             "Anchor not present in recent blocks hash"
+        #         )
+            # if context.beefy_root not in pre_state.rho:
+            #     print('hhhh1')
+            #     raise ReportingError(
+            #         ReportingErrorCode.BAD_BEEFY_MMR_ROOT
+            #     )
+
+        # print('hhh')
+
+
+
+        # for x in results:
+        #     for y in x.report.results:
+        #         print('hehe')
+        #         if y.code_hash != pre_state.delta[y.service_id].code_hash:
+        #             print(y.code_hash)
+        #             print(pre_state.delta[y.service_id].code_hash)
+        #             print(y.code_hash == pre_state.delta[y.service_id].code_hash)
+        #             raise ReportingError(
+        #                 ReportingErrorCode.BAD_CODE_HASH
+        #             )
+
+        Reporting.refinement_fn(pre_state,block)
+        Reporting.bad_core_index(block)
+        Reporting.result_fn(pre_state,block)
+        Reporting.validator_index(block)
+        Reporting.core_engaged(pre_state,block)
+        Reporting.duplicate_pkg_recent_history(pre_state,block)
+
+        # Reporting.refinement_fn(pre_state,block)
+        # Reporting.result_fn(pre_state, block)
+        # Reporting.valid_report_fn()
 
         # State.rho
         # if new_state.rho[0] is not None:
@@ -76,12 +121,12 @@ class Reporting:
         #     new_state.rho[0].time == slot
 
 
-        Reporting.valid_report_fn (pre_state.alpha[0].AuthorizationPool)
-
-        n = WorkReportState(generate_report(Block.extrinsic.guarantees),block.header.slot)
-        generate_report(Block.extrinsic.guarantees)
-        new_state.rho = n
-        Reporting.result_fn(n.report.results,new_state)
+        # Reporting.valid_report_fn (pre_state, block)
+        #
+        # n = WorkReportState(generate_report(block.extrinsic.guarantees),block.header.slot)
+        # generate_report(Block.extrinsic.guarantees)
+        # new_state.rho = n
+        # Reporting.result_fn(n.report.results,new_state)
         return new_state
 
 
@@ -119,10 +164,11 @@ class Reporting:
 
     @staticmethod
     def furute_report_slot():
-
+        ...
 
     @staticmethod
-    def valid_report_fn(auth_pool: AuthorizationPool,block:Block) -> Boolean:
+    def valid_report_fn(state: State,block:Block) -> Boolean:
+        auth_pool = state.alpha
         for x in block.extrinsic.guarantees:
             report_auth_hash = x.report.authorizer_hash
             core_index = x.report.core_index
@@ -133,10 +179,10 @@ class Reporting:
                 )
 
     @staticmethod
-    def validator_index(avail_assignments:AvailabilityAssignments, block:Block):
+    def validator_index( block:Block):
         for x in block.extrinsic.guarantees:
             for y in x.signatures:
-                if y.validator_index > VALIDATOR_COUNT:
+                if y.validator_index >= VALIDATOR_COUNT:
                     raise ReportingError (
                         ReportingErrorCode.BAD_VALIDATOR_INDEX,
                         "validator index(signature) is out of range"
@@ -157,6 +203,7 @@ class Reporting:
     @staticmethod
     def bad_core_index(block : Block):
         for x in block.extrinsic.guarantees:
+            print('coreindex')
             if x.report.core_index > CORE_COUNT:
                 raise ReportingError (
                     ReportingErrorCode.BAD_CORE_INDEX,
@@ -165,13 +212,16 @@ class Reporting:
 
 
     @staticmethod
-    def duplicate_pkg_recent_hstry(block : Block, state: State):
+    def duplicate_pkg_recent_history(state: State,block : Block):
         hashes = []
         for x in block.extrinsic.guarantees:
             hashes.append(x.report.package_spec.hash)
             hashes.append(x.report.authorizer_hash)
-            for i in state.beta:
-                if hashes not in i.packages:
+
+        for i in state.beta:
+                print('in duplicate package')
+                print('packages',hashes)
+                if i.packages in hashes:
                     raise ReportingError (
                         ReportingErrorCode.DUPLICATE_PACKAGE_IN_RECENT_HISTORY,
                         "Work package is already executed in recent-block's history"
@@ -183,34 +233,74 @@ class Reporting:
     def refinement_fn(state:State,block:Block):
 
         hashes = []
-
-        for report in state.rho:
+        #
+        for report in block.extrinsic.guarantees:
+        #     report.
             hashes.append(report.report.package_spec.hash)
+
+        header_hashes = []
+
+        for x in state.beta:
+            header_hashes.append(x.header_hash)
 
 
         for y in block.extrinsic.guarantees:
             context = y.report.context
 
-            if context.anchor not in state.beta:
-                return 'err'
+            if context.anchor not in header_hashes:
+                raise ReportingError(
+                    ReportingErrorCode.ANCHOR_NOT_RECENT
+                )
 
-            if not any(item["state_root"] == context.state_root for item in state.beta):
-                return 'err'
 
-            if context.lookup_anchor not in state.beta[:context.lookup_anchor_slot]:
-                return 'err'
+            if not any(item.state_root == context.state_root for item in state.beta):
+                raise ReportingError(
+                    ReportingErrorCode.BAD_STATE_ROOT
+                )
 
+            # else:
+            #     raise ReportingError(
+            #         ReportingErrorCode.BAD_BEEFY_MMR_ROOT
+            #     )
+
+            # if context.lookup_anchor not in state.beta[:context.lookup_anchor_slot]:
+            #     return 'err'
+
+
+
+            # In this we are cheking if prerequisites array is not null , then
+            # its hashes must match with package spec hash of previous reports
             if context.prerequisites is not None:
                 for x in context.prerequisites:
                     if x not in hashes:
-                        return 'err'
+                        raise ReportingError(
+                            ReportingErrorCode.DEPENDENCY_MISSING
+                        )
 
 
     def segement_root_lookup(self):
         ...
 
     @staticmethod
-    def result_fn(results: WorkResults,state:State,):
+    def result_fn(state:State,block:Block):
+
+        results = block.extrinsic.guarantees
+
+        for x in results:
+            for y in x.report.results:
+                if y.service_id not in state.delta:
+                    print("service")
+                    raise ReportingError(
+                        ReportingErrorCode.BAD_SERVICE_ID
+                    )
+                print('in code hash')
+                if y.code_hash != state.delta[y.service_id].code_hash:
+                    raise ReportingError(
+                        ReportingErrorCode.BAD_CODE_HASH
+                    )
+                print('outside service id')
+
+
 
         # for x in transition().rho:
         #     for y in x.report.results:
@@ -220,25 +310,24 @@ class Reporting:
         #     if not sum <= ACCUMULATION_GAS:
         #         return 'err'
 
-        total_accumulate_gas = 0
-        for x in results:
+        # total_accumulate_gas = 0
+        # for x in results:
+        #
+        #     # checking if code hash in results is available in state code hash or not
+        #     if x.code_hash != state.delta[0].code_hash:
+        #         return 'err'
 
-            # checking if code hash in results is avialable in state code hash or not
-            if x.code_hash != State.delta[0].code_hash:
-                return 'err'
 
-            if x.service_id not in State.delta:
-                return 'err'
-
-            if x.accumulate_gas <= state.delta[0].min_gas:
-                return 'err'
-
-            total_accumulate_gas = total_accumulate_gas + x.accumulate_gas
-
-        if total_accumulate_gas >= ACCUMULATION_GAS:
-            return 'err'
-
-        state.beta[0]
+        #
+        #     if x.accumulate_gas <= state.delta[0].min_gas:
+        #         return 'err'
+        #
+        #     total_accumulate_gas = total_accumulate_gas + x.accumulate_gas
+        #
+        # if total_accumulate_gas >= ACCUMULATION_GAS:
+        #     return 'err'
+        #
+        # state.beta[0]
 
     @staticmethod
     def workreport_package( block:Block ) :
@@ -269,10 +358,13 @@ class Reporting:
 
 
     @staticmethod
-    def core_engaged(block:Block, state:State):
+    def core_engaged(state:State,block:Block):
         for x in block.extrinsic.guarantees:
-            if state.rho[x.report.core_index] is not Null:
-                return 'err'
+            print(x.report.core_index,state.rho[x.report.core_index] == Null)
+            if state.rho[x.report.core_index] != Null:
+                raise ReportingError(
+                    ReportingErrorCode.CORE_ENGAGED
+                )
 
 
     @staticmethod
