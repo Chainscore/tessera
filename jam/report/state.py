@@ -92,8 +92,10 @@ class Reporting:
 
 
 
-        Reporting.valid_report_fn()
-
+        # Reporting.valid_report_fn()
+        Reporting.refinement_fn(pre_state,block)
+        Reporting.result_fn(pre_state, block)
+        Reporting.duplicate_pkg_recent_history(pre_state, block)
         # State.rho
         # if new_state.rho[0] is not None:
         #     new_state.rho[0].report == workreport()
@@ -121,8 +123,6 @@ class Reporting:
                     "Work package has too many dependencies(segment_lookup + prerequisite) "
                 )
 
-
-
     @staticmethod
     def guarantee_order(block :Block):
         for i in range(len(block.extrinsic.guarantees)):
@@ -141,8 +141,6 @@ class Reporting:
                         ReportingErrorCode.NOT_SORTED_GUARANTOR,
                         "Signature's validator index order is not sorted"
                     )
-
-
 
     @staticmethod
     def valid_report_fn(state: State,block:Block) -> Boolean:
@@ -176,8 +174,6 @@ class Reporting:
                     "Work report don't have enough validator signature"
                 )
 
-
-
     @staticmethod
     def bad_core_index(block : Block):
         for x in block.extrinsic.guarantees:
@@ -188,15 +184,13 @@ class Reporting:
                     "Core index value is more then CORE_COUNT"
                 )
 
-
     @staticmethod
-    def duplicate_pkg_recent_history(state: State,block : Block):
+    def duplicate_pkg_recent_history(pre_state:State, block:Block):
         hashes = []
         for x in block.extrinsic.guarantees:
             hashes.append(x.report.package_spec.hash)
-            hashes.append(x.report.authorizer_hash)
 
-        for i in state.beta:
+        for i in pre_state.beta:
                 print('in duplicate package')
                 print('packages',hashes)
                 if i.packages in hashes:
@@ -204,8 +198,6 @@ class Reporting:
                         ReportingErrorCode.DUPLICATE_PACKAGE_IN_RECENT_HISTORY,
                         "Work package is already executed in recent-block's history"
                     )
-
-
 
     @staticmethod
     def refinement_fn(state:State,block:Block):
@@ -255,7 +247,6 @@ class Reporting:
                             ReportingErrorCode.DEPENDENCY_MISSING
                         )
 
-
     def segement_root_lookup(self):
         ...
 
@@ -277,8 +268,6 @@ class Reporting:
                         ReportingErrorCode.BAD_CODE_HASH
                     )
                 print('outside service id')
-
-
 
         # for x in transition().rho:
         #     for y in x.report.results:
@@ -334,7 +323,6 @@ class Reporting:
             if x.report.package_spec.hash in hashes:
                 return 'err'
 
-
     @staticmethod
     def core_engaged(state:State,block:Block):
         for x in block.extrinsic.guarantees:
@@ -344,16 +332,8 @@ class Reporting:
                     ReportingErrorCode.CORE_ENGAGED
                 )
 
-
     @staticmethod
     def future_report(block:Block, state:State):
         for x in block.extrinsic.guarantees:
             if x.slot > block.header.slot:
                 return 'err'
-
-
-
-# test_instance = Rho
-#     # Call the function and print the result
-# result = test_instance.transition(State, Block )
-# print(result)

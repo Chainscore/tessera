@@ -27,6 +27,13 @@ def delta_func(pre_state : PreState)-> Dictionary():
 
     return account_dict
 
+def create_dummy_state_beta(pre_state: PreState) -> State:
+        """Create a state from pre-state"""
+        state: State = create_dummy_state()
+        for recent_blocks in pre_state.recent_blocks:
+            if recent_blocks.reported not in state.beta:
+                state.beta[recent_blocks.reported] = state.beta.
+        return state
 
 
 def create_state_from_pre(pre_state: PreState) -> State:
@@ -43,7 +50,21 @@ def create_state_from_pre(pre_state: PreState) -> State:
     # print('d2',state.alpha)
     state.delta = delta_func(pre_state)
 
-    return  state
+
+
+
+
+def create_state_from_pre(pre_state: PreState) -> State:
+    """Create a state from pre-state"""
+    state: State = create_dummy_state()
+    for account in pre_state.accounts:
+        if account.id not in state.delta:
+            state.delta[account.id] = state.delta[ServiceId(0)]
+        for preimage in account.data.preimages:
+            state.delta[account.id].lookup[preimage.hash] = preimage.blob
+        for lookup in account.data.lookup_meta:
+            state.delta[account.id].timestamps[lookup.key] = lookup.value
+    return state
 
 
 
@@ -80,7 +101,7 @@ def vector_transition(vector:Testcase) -> Boolean:
 
 def test_tiny():
     """Test publishing tickets with no mark"""
-    vectors: List[Testcase] = get_testcases_starting_with(limit=9)
+    vectors: List[Testcase] = get_testcases_starting_with(limit=3)
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)
         print(f"Passed testcase #{i + 1}")

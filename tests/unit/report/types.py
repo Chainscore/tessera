@@ -87,7 +87,7 @@ class Testcase(Codable, JsonSerde):
 
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 1) -> List[Testcase]:
-    data_dir = "/home/rahulcsl/jam/jam-node/tests/unit/report/data/tiny"
+    data_dir = "/home/dikshant441/Desktop/jam/jam-node/tests/unit/report/data/tiny/"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
         if len(result) >= limit:
