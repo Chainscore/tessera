@@ -92,27 +92,7 @@ class Reporting:
 
 
 
-        # for x in results:
-        #     for y in x.report.results:
-        #         print('hehe')
-        #         if y.code_hash != pre_state.delta[y.service_id].code_hash:
-        #             print(y.code_hash)
-        #             print(pre_state.delta[y.service_id].code_hash)
-        #             print(y.code_hash == pre_state.delta[y.service_id].code_hash)
-        #             raise ReportingError(
-        #                 ReportingErrorCode.BAD_CODE_HASH
-        #             )
-
-        Reporting.refinement_fn(pre_state,block)
-        Reporting.bad_core_index(block)
-        Reporting.result_fn(pre_state,block)
-        Reporting.validator_index(block)
-        Reporting.core_engaged(pre_state,block)
-        Reporting.duplicate_pkg_recent_history(pre_state,block)
-
-        # Reporting.refinement_fn(pre_state,block)
-        # Reporting.result_fn(pre_state, block)
-        # Reporting.valid_report_fn()
+        Reporting.valid_report_fn()
 
         # State.rho
         # if new_state.rho[0] is not None:
@@ -121,9 +101,9 @@ class Reporting:
         #     new_state.rho[0].time == slot
 
 
-        # Reporting.valid_report_fn (pre_state, block)
+        # Reporting.valid_report_fn (pre_state.alpha[0].AuthorizationPool)
         #
-        # n = WorkReportState(generate_report(block.extrinsic.guarantees),block.header.slot)
+        # n = WorkReportState(generate_report(Block.extrinsic.guarantees),block.header.slot)
         # generate_report(Block.extrinsic.guarantees)
         # new_state.rho = n
         # Reporting.result_fn(n.report.results,new_state)
@@ -162,9 +142,7 @@ class Reporting:
                         "Signature's validator index order is not sorted"
                     )
 
-    @staticmethod
-    def furute_report_slot():
-        ...
+
 
     @staticmethod
     def valid_report_fn(state: State,block:Block) -> Boolean:
