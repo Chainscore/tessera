@@ -9,16 +9,43 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.utils.json import JsonSerde
-from jam.types.protocol.crypto import OpaqueHash
 from jam.types.work.report import WorkReport
 from jam.types.protocol.crypto import WorkReportHash
 from jam.state.components.chi import Chi
 from jam.types.protocol.service import ServiceInfo
 from jam.types.protocol.crypto import Entropy
-from jam.types.protocol.core import ServiceId,Gas,U64
-from jam.types.base.sequences.bytes import Bytes
+from jam.types.protocol.core import ServiceId,Gas,U64,OpaqueHash,Balance
+from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.state.components.delta import Delta
+from jam.state.components.iota import Iota
+from jam.state.components.xi import Xi
 
 from typing import Optional
+
+
+@decodable_dataclass
+@dataclass
+class DeferredTransfer(Codable,JsonSerde):
+    sender: ServiceId
+    receiver: ServiceId
+    amount: Balance
+    memo: Bytes
+    gas: Gas
+
+@dataclass
+class stateContext(Codable,JsonSerde):
+    service_accounts: Delta
+    validator_keys: Iota
+    authorizer_keys: Xi
+    privileges: Chi
+
+@dataclass
+class AcclOutput(Codable,JsonSerde):
+    service_id: ServiceId
+    hash: OpaqueHash
+@decodable_vector(AcclOutput)  # It should be a set
+class AcclOutputs(Vector[AcclOutput]):
+    ...
 
 @decodable_vector(AllReadyWRs)
 class ReadyQueue(Vector[AllReadyWRs]):
@@ -65,8 +92,14 @@ class AccountData(Codable,JsonSerde):
 @decodable_vector(AccountData)
 class Accounts(Vector[AccountData]):
     ...
-@decodable_vector(ServiceId)
-class AlwaysAcc(Vector[ServiceId]):
+@decodable_dataclass
+@dataclass
+class AlwaysAcc(Codable,JsonSerde):
+    service_id: ServiceId
+    gas: Gas
+
+@decodable_vector(AlwaysAcc)
+class AlwaysAcc(Vector[AlwaysAcc]):
     ...
 
 @decodable_vector(WorkReport)

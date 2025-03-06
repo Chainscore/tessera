@@ -13,11 +13,15 @@ from tests.unit.accumulation.types import (
 )
 from jam.accumulation.accumulation import Accumulation
 from jam.state.components.delta import Delta, AccountData
+from jam.types.extrinsics.guarantees import ReportGuarantee
+from tests.fixtures.dummy_extrinsics import create_dummy_validator_signatures
 
 def create_block_from_input(input: Input) -> Block:
     """Create a block from test input"""
     block = create_dummy_block()
-    block.extrinsic.guarantees.reports = input.reports
+    block.extrinsic.guarantees = []
+    for i in input.reports:
+        block.extrinsic.guarantees.append(ReportGuarantee(report=i,slot=input.slot,signatures=create_dummy_validator_signatures()))
     block.header.slot=input.slot
     return block
 
@@ -26,7 +30,8 @@ def create_state_from_pre(pre_state: PreState) -> State:
     state = create_dummy_state()
     state.theta = pre_state.ready_queue
     state.xi=pre_state.accumulated
-    # state.tau=pre_state.slot
+    state.eta[0]=pre_state.entropy
+    # Not sure about altering first element of eta
     state.chi.m=pre_state.privileges.bless
     state.chi.a=pre_state.privileges.assign
     state.chi.v=pre_state.privileges.designate
@@ -34,8 +39,8 @@ def create_state_from_pre(pre_state: PreState) -> State:
     for i in pre_state.privileges.always_acc:
         chiG[i]=pre_state.privileges.always_acc[i]
     state.chi.g=chiG
-    #
-    # state.delta = Delta() # Create a new empty Delta dictionary
+    
+    # Set delta state components
     for i in pre_state.accounts:
         state.delta[i.id]=AccountData(
             storage=i.data.service.items, #keeping size here for the timing
@@ -46,8 +51,7 @@ def create_state_from_pre(pre_state: PreState) -> State:
             gas_limit=i.data.service.min_item_gas,
             min_gas=i.data.service.min_memo_gas
         )
-    print("pre_state->",state.delta.keys())
-    # Set theta state components
+    
     return state
 
 def vector_transition(vector: Testcase) -> Boolean:
@@ -68,10 +72,11 @@ def vector_transition(vector: Testcase) -> Boolean:
 def test_disputes_transition():
     """Test disputes transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        "enqueue_and_unlock_chain_wraps",limit=1
+        "enqueue_and_unlock_chain_wraps-3",limit=1
+        # "",limit=20
     )
-
     for i, vector in enumerate(vectors):
+       
         assert vector_transition(vector)
 
 if __name__ == "__main__":
