@@ -146,14 +146,15 @@ class Choice(Codable[T], JsonSerde, Generic[T]):
         """Get string representation."""
         return f"{self.__class__.__name__}({self.value!r})"
 
+    def get_value(self):
+        return self.value[list(self.value.keys())[0]]
+        
     @classmethod
     def from_json(cls, data: Any) -> "Choice[T]":
         """Create from JSON representation."""
         last_error = None
         # Go through all the choices and try to decode the data
         choice_key = list(data.keys())[0]
-        
-        #--print("Inferring choice from JSON:", choice_key, list(cls.__choices__.keys()))
         if choice_key in list(cls.__choices__.keys()):
             indexOfChoice = list(cls.__choices__.keys()).index(choice_key)
             choice_type = list(cls.__choices__.values())[indexOfChoice]

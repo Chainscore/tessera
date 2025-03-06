@@ -22,7 +22,7 @@ class ArrayCodec(Codec[Sequence[Codable]]):
     The length is fixed and known at encoding/decoding time.
     """
 
-    MAX_SIZE = 1000
+    MAX_SIZE = 1024
     length: int
 
     def __init__(self, length: int):

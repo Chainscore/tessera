@@ -93,6 +93,10 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
         items = [f"{k!r}: {v!r}" for k, v in self.value.items()]
         return f"Dictionary({{{', '.join(items)}}})"
 
+    def __setitem__(self, key: K, value: V) -> None:
+        """Set value for key."""
+        self.value[key] = value
+
     def get(self, key: K, default: Optional[V] = None) -> Optional[V]:
         """
         Get value for key, returning default if key not found.
