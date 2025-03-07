@@ -9,7 +9,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.utils.json import JsonSerde
-from jam.types.work.report import WorkReport
+from jam.types.work.report import WorkReport,WorkExecResult,WorkPackageSpec
 from jam.types.protocol.crypto import WorkReportHash
 from jam.state.components.chi import Chi
 from jam.types.protocol.service import ServiceInfo
@@ -20,7 +20,17 @@ from jam.state.components.delta import Delta
 from jam.state.components.iota import Iota
 from jam.state.components.xi import Xi
 
+
 from typing import Optional
+
+
+@decodable_dataclass
+@dataclass
+class gasPrivilages(Codable,JsonSerde):
+    o:WorkExecResult
+    l:OpaqueHash
+    a:Bytes
+    k:WorkPackageSpec
 
 
 @decodable_dataclass
@@ -31,6 +41,10 @@ class DeferredTransfer(Codable,JsonSerde):
     amount: Balance
     memo: Bytes
     gas: Gas
+
+@decodable_vector(DeferredTransfer)
+class DeferredTransfers(Vector[DeferredTransfer]):
+    ...
 
 @dataclass
 class stateContext(Codable,JsonSerde):
