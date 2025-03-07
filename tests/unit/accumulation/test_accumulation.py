@@ -13,6 +13,8 @@ from tests.unit.accumulation.types import (
 )
 from jam.accumulation.accumulation import Accumulation
 from jam.state.components.delta import Delta, AccountData
+from jam.state.components.theta import Theta
+from jam.state.components.xi import Xi
 from jam.types.extrinsics.guarantees import ReportGuarantee
 from tests.fixtures.dummy_extrinsics import create_dummy_validator_signatures
 
@@ -28,8 +30,12 @@ def create_block_from_input(input: Input) -> Block:
 def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state = create_dummy_state()
-    state.theta = pre_state.ready_queue
-    state.xi=pre_state.accumulated
+    state.theta = Theta(pre_state.ready_queue)
+    index=0
+    for i in range(len(pre_state.accumulated)):
+        for j in pre_state.accumulated[i]:
+            state.xi[index]=j
+        index+=1  
     state.eta[0]=pre_state.entropy
     # Not sure about altering first element of eta
     state.chi.m=pre_state.privileges.bless
@@ -41,6 +47,10 @@ def create_state_from_pre(pre_state: PreState) -> State:
     state.chi.g=chiG
     
     # Set delta state components
+    state.delta=Delta()
+    
+
+    
     for i in pre_state.accounts:
         state.delta[i.id]=AccountData(
             storage=i.data.service.items, #keeping size here for the timing

@@ -8,6 +8,8 @@ from jam.types.base.integers.fixed import U32
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.base.sequences.vector import Vector, decodable_vector
+from jam.types.base.sequences.array import Array, decodable_array
+from jam.utils.constants import EPOCH_LENGTH
 from jam.utils.json import JsonSerde
 from jam.types.work.report import WorkReport,WorkExecResult,WorkPackageSpec
 from jam.types.protocol.crypto import WorkReportHash
@@ -24,14 +26,18 @@ from jam.state.components.xi import Xi
 from typing import Optional
 
 
+
 @decodable_dataclass
 @dataclass
-class gasPrivilages(Codable,JsonSerde):
+class gasPrivilage(Codable,JsonSerde):
     o:WorkExecResult
     l:OpaqueHash
     a:Bytes
     k:WorkPackageSpec
-
+    
+@decodable_vector(gasPrivilage)
+class gasPrivilages(Vector[gasPrivilage]):
+    ...
 
 @decodable_dataclass
 @dataclass
@@ -67,8 +73,8 @@ class ReadyQueue(Vector[AllReadyWRs]):
 @decodable_vector(WorkReportHash)
 class WorkDependencies(Vector[WorkReportHash]):
     ...
-@decodable_vector(WorkDependencies)
-class Accumulated(Vector[WorkDependencies]):
+@decodable_array(EPOCH_LENGTH,WorkDependencies)
+class Accumulated(Array[WorkDependencies]):
     ...
 
 @decodable_dataclass
