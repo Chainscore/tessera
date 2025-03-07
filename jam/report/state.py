@@ -15,6 +15,11 @@ from jam.report.error import ReportingError, ReportingErrorCode
 from jam.types.protocol.availability import AvailabilityAssignments
 from jam.utils.constants import CORE_COUNT
 from jam.utils.constants import VALIDATOR_COUNT
+from math import floor
+from jam.utils.shuffle import shuffle
+from jam.types import  decodable_vector, U32, Vector
+from jam.types.header import HeaderHash
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 def generate_report(report : GuaranteesExtrinsic)->GuaranteesExtrinsic:
     guarantees: GuaranteesExtrinsic=Vector(GuaranteesExtrinsic)
@@ -92,17 +97,8 @@ class Reporting:
 
 
 
-        # for x in results:
-        #     for y in x.report.results:
-        #         print('hehe')
-        #         if y.code_hash != pre_state.delta[y.service_id].code_hash:
-        #             print(y.code_hash)
-        #             print(pre_state.delta[y.service_id].code_hash)
-        #             print(y.code_hash == pre_state.delta[y.service_id].code_hash)
-        #             raise ReportingError(
-        #                 ReportingErrorCode.BAD_CODE_HASH
-        #             )
-
+        # Reporting.valid_report_fn()
+        Reporting.bad_signature(pre_state, block)
         Reporting.refinement_fn(pre_state,block)
         Reporting.bad_core_index(block)
         Reporting.result_fn(pre_state,block)
@@ -154,8 +150,6 @@ class Reporting:
                     ReportingErrorCode.TOO_MANY_DEPENDENCIES,
                     "Work package has too many dependencies(segment_lookup + prerequisite) "
                 )
-
-
 
     @staticmethod
     def guarantee_order(block :Block):
@@ -251,6 +245,28 @@ class Reporting:
                             ReportingErrorCode.DUPLICATE_PACKAGE
                         )
 
+    @staticmethod
+    def bad_signature(pre_state: State, block: Block):
+        for x in block.extrinsic.guarantees:
+            for y in x.signatures:
+                curr_validator_ed25519_key = pre_state.kappa[y.validator_index].ed25519
+                public_key_byte = bytes(curr_validator_ed25519_key)
+                signature_byte = bytes(y.signature)
+                # guarantor_signature_bytes = bytes(signature)
+                work_report_byte = bytes(x.report.package_spec)
+                match = work_report_byte + public_key_byte
+                if public_key_obj.verify(signature_byte, match) == False:
+                    raise ReportingError(
+                        ReportingErrorCode.BAD_SIGNATURE,
+                        "signature doesn't match with the validator public key"
+                    )
+                # print(guarantor_signature_bytes)
+                # print(parent_hash_bytes)
+                # try:
+                #     a=verifiable_obj.verify(signature,parent_hash_bytes)
+                #     print("hogaya",a)
+                # except:
+                #     print("failed")
 
     @staticmethod
     def refinement_fn(state:State,block:Block):
