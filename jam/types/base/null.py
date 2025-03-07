@@ -34,6 +34,9 @@ class Nullable(Codable, JsonSerde):
         """
         return None
 
+    def __bytes__(self):
+        return bytes(0)
+
     def __repr__(self) -> str:
         """Get string representation."""
         return "Null"

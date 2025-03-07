@@ -46,7 +46,7 @@ def create_dummy_header() -> Header:
         tickets_mark=TicketsMark(
             [
                 TicketBody(
-                    id=TicketId(create_dummy_bytes32()), attempt=TicketAttempt(i)
+                    id=TicketId(create_dummy_bytes32()), attempt=TicketAttempt(0)
                 )
                 for i in range(EPOCH_LENGTH)
             ]

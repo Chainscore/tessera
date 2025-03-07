@@ -43,6 +43,32 @@ class Hash:
             data = bytes(data)
         return ByteArray32(sha256(data).digest())
 
+    @staticmethod
+    def sha512(data: bytes) -> ByteArray64:
+        """SHA512 hash function"""
+        from hashlib import sha512
+        if not isinstance(data, bytes):
+            data = bytes(data)
+        return ByteArray64(sha512(data).digest())
+
+    @staticmethod
+    def sha3256(data: bytes) -> ByteArray32:
+        """SHA3_256 hash function"""
+        from hashlib import sha3_256
+
+        if not isinstance(data, bytes):
+            data = bytes(data)
+        return ByteArray32(sha3_256(data).digest())
+
+    @staticmethod
+    def keccak256(data: bytes) -> ByteArray32:
+        """SHA256 hash function"""
+        from Crypto.Hash import keccak
+
+        if not isinstance(data, bytes):
+            data = bytes(data)
+        return ByteArray32(keccak.new(digest_bits=256).update(data).digest())
+
 
 # Hash types
 HeaderHash = ByteArray32
