@@ -105,7 +105,7 @@ class Testcase(Codable, JsonSerde):
     pre_state: PreState
     post_state: PostState
 
-def get_testcases_starting_with(prefix: str = "", limit: int = 6) -> List[Testcase]:
+def get_testcases_starting_with(prefix: str = "", limit: int = 0) -> List[Testcase]:
     """Read test vectors from data module"""
 
     data_dir = "tests/unit/recent_history/data/tiny"

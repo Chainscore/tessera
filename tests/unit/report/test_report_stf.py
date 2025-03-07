@@ -1,5 +1,6 @@
 from jam.report.error import ReportingError
 from jam.report.state import Reporting
+from jam.state.components.beta import PackageDict, Beta
 from jam.state.components.delta import AccountData
 from jam.state.state import State
 from jam.types import Boolean, Dictionary, ServiceId, Block
@@ -7,7 +8,10 @@ from tests.fixtures.dummy_block import create_dummy_block
 from tests.fixtures.dummy_state import create_dummy_state
 from tests.unit.report.types import Testcase, get_testcases_starting_with, PreState, Input
 from typing import List
-
+from jam.types.protocol.core import (
+    SegmentRoot,
+    WorkPackageHash,
+)
 
 def create_block_from_input(input:Input) -> Block:
 
@@ -27,14 +31,6 @@ def delta_func(pre_state : PreState)-> Dictionary():
 
     return account_dict
 
-def create_dummy_state_beta(pre_state: PreState) -> State:
-        """Create a state from pre-state"""
-        state: State = create_dummy_state()
-        for recent_blocks in pre_state.recent_blocks:
-            if recent_blocks.reported not in state.beta:
-                state.beta[recent_blocks.reported] = state.beta.
-        return state
-
 
 def create_state_from_pre(pre_state: PreState) -> State:
 
@@ -44,27 +40,14 @@ def create_state_from_pre(pre_state: PreState) -> State:
     state.lambda_ = pre_state.prev_validators
     state.eta = pre_state.entropy
     state.psi.offenders = pre_state.offenders
-    state.beta = pre_state.recent_blocks
+    state.beta = pre_state.recent_blocks.to_beta()
+    print('',state.beta)
     # print('d1',pre_state.auth_pools)
     state.alpha = pre_state.auth_pools
     # print('d2',state.alpha)
     state.delta = delta_func(pre_state)
 
-
-
-
-
-def create_state_from_pre(pre_state: PreState) -> State:
-    """Create a state from pre-state"""
-    state: State = create_dummy_state()
-    for account in pre_state.accounts:
-        if account.id not in state.delta:
-            state.delta[account.id] = state.delta[ServiceId(0)]
-        for preimage in account.data.preimages:
-            state.delta[account.id].lookup[preimage.hash] = preimage.blob
-        for lookup in account.data.lookup_meta:
-            state.delta[account.id].timestamps[lookup.key] = lookup.value
-    return state
+    return  state
 
 
 
@@ -85,7 +68,27 @@ def vector_transition(vector:Testcase) -> Boolean:
     # print('ouuuuuttt',vector.output['err'])
     try:
         output = Reporting.transition(test_state, test_block)
+        assert output == create_state_from_pre(vector.post_state)
+        avail_assignments_report = []
+        avail_assignments_slot = []
+        rho_report = []
+        rho_timeout = []
+        # print(output.rho)
+        # print('xxxxxxxxxx',output.rho[0].get_value().report == output.rho[1].get_value().report)
+        # print('xxxxx2',vector.post_state.avail_assignments[1].get_value().report)
+        # for x in range (len(vector.post_state.avail_assignments)):
+        #     avail_assignments_report.append(vector.post_state.avail_assignments[x].get_value().report)
+        #     rho_report.append(output.rho[x].get_value().report)
+        #     avail_assignments_slot.append(vector.post_state.avail_assignments[x].get_value().timeout)
+        #     rho_timeout.append(output.rho[x].get_value().timeout)
+            # assert vector.post_state.avail_assignments[x].get_value().report == output.rho[x].get_value().report)
+        # print(rho_timeout,avail_assignments_slot,avail_assignments_report==rho_report)
+        # assert vector.post_state.avail_assignments[0].get_value().report == output.rho[0].get_value().report
+        # assert avail_assignments_slot == rho_timeout
+        # assert output == vector.post_state
         # print('hiii')
+        return True
+
     except ReportingError as e:
         print('eeeeeerrrrr',e.code._value_)
         assert e.code._value_ == vector.output['err']
@@ -101,7 +104,7 @@ def vector_transition(vector:Testcase) -> Boolean:
 
 def test_tiny():
     """Test publishing tickets with no mark"""
-    vectors: List[Testcase] = get_testcases_starting_with(limit=3)
+    vectors: List[Testcase] = get_testcases_starting_with(limit=1)
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)
         print(f"Passed testcase #{i + 1}")

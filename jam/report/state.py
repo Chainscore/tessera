@@ -1,9 +1,9 @@
 from jam.report.check import auth_pool
 from jam.state.components.alpha import Alpha, AuthorizationPool
-from jam.state.components.rho import WorkReportState
+from jam.state.components.rho import WorkReportState, OptionalWorkReportState
 from jam.state.state import State
 from jam.types import Block, decodable_choice, ServiceId, Boolean, Vector, AvailabilityAssignments, \
-    AvailabilityAssignment, Null, String, U64, U16
+    AvailabilityAssignment, Null, String, U64, U16, Bytes
 import  dataclasses
 from dataclasses import dataclass, replace
 from jam.types.extrinsics.guarantees import GuaranteesExtrinsic
@@ -92,10 +92,42 @@ class Reporting:
 
 
 
-        # Reporting.valid_report_fn()
+        # for x in results:
+        #     for y in x.report.results:
+        #         print('hehe')
+        #         if y.code_hash != pre_state.delta[y.service_id].code_hash:
+        #             print(y.code_hash)
+        #             print(pre_state.delta[y.service_id].code_hash)
+        #             print(y.code_hash == pre_state.delta[y.service_id].code_hash)
+        #             raise ReportingError(
+        #                 ReportingErrorCode.BAD_CODE_HASH
+        #             )
+
         Reporting.refinement_fn(pre_state,block)
-        Reporting.result_fn(pre_state, block)
-        Reporting.duplicate_pkg_recent_history(pre_state, block)
+        Reporting.bad_core_index(block)
+        Reporting.result_fn(pre_state,block)
+        Reporting.validator_index(block)
+        # Reporting.core_engaged(pre_state,block)
+        Reporting.duplicate_pkg_recent_history(pre_state,block)
+
+        Reporting.future_report(block)
+        Reporting.not_enough_guarantee(block)
+        Reporting.valid_report_fn(pre_state,block)
+        Reporting.not_sort_grnt_idx(block)
+        Reporting.duplicate_pkg_report(pre_state, block)
+        Reporting.guarantee_order(block)
+        Reporting.check_multiple_reports(pre_state,block)
+        Reporting.check_multiple_dependencies(pre_state,block)
+        Reporting.big_work_report_output(pre_state, block)
+        Reporting.check_dependencies(block)
+
+
+        # Reporting.refinement_fn(pre_state,block)
+        # Reporting.result_fn(pre_state, block)
+        # Reporting.valid_report_fn()
+
+        # Reporting.result_fn(pre_state, block)
+        # Reporting.duplicate_pkg_recent_history(pre_state, block)
         # State.rho
         # if new_state.rho[0] is not None:
         #     new_state.rho[0].report == workreport()
@@ -103,9 +135,9 @@ class Reporting:
         #     new_state.rho[0].time == slot
 
 
-        # Reporting.valid_report_fn (pre_state.alpha[0].AuthorizationPool)
+        # Reporting.valid_report_fn (pre_state, block)
         #
-        # n = WorkReportState(generate_report(Block.extrinsic.guarantees),block.header.slot)
+        # n = WorkReportState(generate_report(block.extrinsic.guarantees),block.header.slot)
         # generate_report(Block.extrinsic.guarantees)
         # new_state.rho = n
         # Reporting.result_fn(n.report.results,new_state)
@@ -113,19 +145,21 @@ class Reporting:
 
 
     @staticmethod
-    def check_dependecies(block : Block):
+    def check_dependencies(block : Block):
         for x in block.extrinsic.guarantees:
             segment_depd = len(x.report.segment_root_lookup)
-            prerequisite = len(x.report.context.lookup_anchor_slot)
+            prerequisite = len(x.report.context.prerequisites)
             if (segment_depd + prerequisite) > MAX_DEPENDENCIES:
                 raise ReportingError (
                     ReportingErrorCode.TOO_MANY_DEPENDENCIES,
                     "Work package has too many dependencies(segment_lookup + prerequisite) "
                 )
 
+
+
     @staticmethod
     def guarantee_order(block :Block):
-        for i in range(len(block.extrinsic.guarantees)):
+        for i in range(len(block.extrinsic.guarantees)-1):  # added -1 as index was getting out of range for some test cases
             if block.extrinsic.guarantees[i].report.core_index == block.extrinsic.guarantees[i+1].report.core_index:
                 raise ReportingError (
                     ReportingErrorCode.OUT_OF_ORDER_GUARANTEE,
@@ -135,22 +169,22 @@ class Reporting:
     @staticmethod
     def not_sort_grnt_idx(block: Block):
         for i in block.extrinsic.guarantees:
-            for j in range(len(i.signatures)):
+            for j in range(len(i.signatures)-1):
                 if i.signatures[j].validator_index >= i.signatures[j+1].validator_index:
                     raise ReportingError (
-                        ReportingErrorCode.NOT_SORTED_GUARANTOR,
+                        ReportingErrorCode.NOT_SORTED_OR_UNIQUE_GUARANTORS,
                         "Signature's validator index order is not sorted"
                     )
 
     @staticmethod
-    def valid_report_fn(state: State,block:Block) -> Boolean:
+    def valid_report_fn(state: State,block:Block):
         auth_pool = state.alpha
         for x in block.extrinsic.guarantees:
             report_auth_hash = x.report.authorizer_hash
             core_index = x.report.core_index
             if report_auth_hash not in auth_pool[core_index]:
                 raise ReportingError(
-                    ReportingErrorCode.NOT_AUTHERIZED,
+                    ReportingErrorCode.CORE_UNAUTHORIZED,
                     "Work Report's authorizer_hash not exist in AuthorizationPool"
                 )
 
@@ -167,10 +201,11 @@ class Reporting:
     @staticmethod
     def not_enough_guarantee(block:Block):
         for x in block.extrinsic.guarantees:
-            credential_len = len(x.signatures)-1
-            if credential_len <= 2:
+            credential_len = len(x.signatures)   #removed -1
+            print('credential length',credential_len)
+            if credential_len < 2:
                 raise ReportingError (
-                    ReportingErrorCode.NOT_ENOUGH_GUARANTEE,
+                    ReportingErrorCode.INSUFFICIENT_GURANTEE,
                     "Work report don't have enough validator signature"
                 )
 
@@ -185,22 +220,46 @@ class Reporting:
                 )
 
     @staticmethod
-    def duplicate_pkg_recent_history(pre_state:State, block:Block):
+    def duplicate_pkg_recent_history(state: State,block : Block):
         hashes = []
         for x in block.extrinsic.guarantees:
             hashes.append(x.report.package_spec.hash)
 
-        for i in pre_state.beta:
+        for i in state.beta:
                 print('in duplicate package')
-                print('packages',hashes)
-                if i.packages in hashes:
+                print('packages',hashes[0],i.packages)
+                # if i.packages in hashes:
+                if any(key in hashes for key in i.packages.keys()):
+                    print('inside recent history')
                     raise ReportingError (
-                        ReportingErrorCode.DUPLICATE_PACKAGE_IN_RECENT_HISTORY,
+                        ReportingErrorCode.DUPLICATE_PACKAGE,
                         "Work package is already executed in recent-block's history"
                     )
 
+
+    @staticmethod
+    def duplicate_pkg_report(state: State , block :Block):
+        print('ddduppp')
+        if len(block.extrinsic.guarantees)>1:
+            for x in range (len(block.extrinsic.guarantees)):
+                print('dduuppp1',x,len(block.extrinsic.guarantees))
+                for y in range(x+1, len(block.extrinsic.guarantees)): # removed -1 as it was causing error index out of range
+                    print('x=',x,'y=',y,'length of gurant',len(block.extrinsic.guarantees))
+                    # print('in duplicate package',block.extrinsic.guarantees[x].report.package_spec.hash,block.extrinsic.guarantees[y].report.package_spec.hash)
+                    if block.extrinsic.guarantees[x].report.package_spec.hash == block.extrinsic.guarantees[y].report.package_spec.hash:
+                        raise ReportingError(
+                            ReportingErrorCode.DUPLICATE_PACKAGE
+                        )
+
+
     @staticmethod
     def refinement_fn(state:State,block:Block):
+
+        work_package_hashes = []
+
+        for x in state.beta:
+            for key in x.packages:
+                work_package_hashes.append(key)
 
         hashes = []
         #
@@ -213,11 +272,12 @@ class Reporting:
         for x in state.beta:
             header_hashes.append(x.header_hash)
 
-
+        print(header_hashes)
         for y in block.extrinsic.guarantees:
             context = y.report.context
 
             if context.anchor not in header_hashes:
+                print(context.anchor)
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT
                 )
@@ -238,11 +298,20 @@ class Reporting:
 
 
 
-            # In this we are cheking if prerequisites array is not null , then
+            # In this we are checking if prerequisites array is not null , then
             # its hashes must match with package spec hash of previous reports
-            if context.prerequisites is not None:
-                for x in context.prerequisites:
-                    if x not in hashes:
+            if context.prerequisites != Null : # changed from is not None to != Null
+                # print(context.prerequisites != Null)
+                 for x in context.prerequisites:
+                    print('x = ',x,'work package',work_package_hashes,'hashes ',hashes)
+                    if x not in  hashes and x not in work_package_hashes:
+                        raise ReportingError(
+                            ReportingErrorCode.DEPENDENCY_MISSING
+                        )
+            print('segment')
+            if  y.report.segment_root_lookup != Null:
+                for x in y.report.segment_root_lookup:
+                    if x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes:
                         raise ReportingError(
                             ReportingErrorCode.DEPENDENCY_MISSING
                         )
@@ -254,8 +323,9 @@ class Reporting:
     def result_fn(state:State,block:Block):
 
         results = block.extrinsic.guarantees
-
+        total_accumulate_gas = 0
         for x in results:
+
             for y in x.report.results:
                 if y.service_id not in state.delta:
                     print("service")
@@ -269,6 +339,31 @@ class Reporting:
                     )
                 print('outside service id')
 
+                if y.accumulate_gas < state.delta[y.service_id].min_gas:
+                    raise ReportingError(
+                        ReportingErrorCode.SERVICE_ITEM_GAS_TOO_LOW
+                    )
+
+                total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
+
+
+
+
+        if total_accumulate_gas > ACCUMULATION_GAS:
+            # print('in high work report gas',total_accumulate_gas)
+            for core in range(len(block.extrinsic.guarantees)):
+                # print('core value',core)
+                    # print(state.rho.)
+                state.rho[core] = OptionalWorkReportState(
+                    WorkReportState(
+                        report=block.extrinsic.guarantees[core].report,
+                        timeout=block.extrinsic.guarantees[core].slot
+                        )
+                    )
+                # print(core,'---> ',state.rho[core])
+                # print(core,'--->',block.extrinsic.guarantees[core].report)
+        return state
+
         # for x in transition().rho:
         #     for y in x.report.results:
         #         if not y.accumulate_gas >= transition().delta[ServiceId].min_gas:
@@ -277,7 +372,7 @@ class Reporting:
         #     if not sum <= ACCUMULATION_GAS:
         #         return 'err'
 
-        # total_accumulate_gas = 0
+        #
         # for x in results:
         #
         #     # checking if code hash in results is available in state code hash or not
@@ -333,7 +428,81 @@ class Reporting:
                 )
 
     @staticmethod
-    def future_report(block:Block, state:State):
+    def future_report(block:Block):
         for x in block.extrinsic.guarantees:
             if x.slot > block.header.slot:
-                return 'err'
+                raise ReportingError(
+                    ReportingErrorCode.FUTURE_REPORT_SLOT
+                )
+
+    @staticmethod
+    def high_work_report_gas(state:State, block:Block):
+        total_gas =0
+        service_id = 0
+        for x in block.extrinsic.guarantees:
+            for y in x.report.results:
+                service_id = y.service_id
+                total_gas = total_gas + y.accumulate_gas
+        if state.delta[service_id].balance < total_gas:
+
+          print('gas limit ')
+
+    #     for x in state.delta:
+
+    @staticmethod
+    def check_multiple_reports(state:State, block:Block):
+        if len(block.extrinsic.guarantees) >1:
+            for core in range(len(block.extrinsic.guarantees)):
+                # print('core value',core)
+                    # print(state.rho.)
+                state.rho[core] = OptionalWorkReportState(
+                    WorkReportState(
+                        report=block.extrinsic.guarantees[core].report,
+                        timeout=block.extrinsic.guarantees[core].slot
+                        )
+                    )
+            return state
+
+    @staticmethod
+    def check_multiple_dependencies(state:State, block:Block):
+        for x in block.extrinsic.guarantees:
+            if len(x.report.context.prerequisites)> 0 and len(x.report.segment_root_lookup)>0:
+                for core in range(len(block.extrinsic.guarantees)):
+                        # print('core value',core)
+                        # print(state.rho.)
+                    state.rho[core] = OptionalWorkReportState(
+                            WorkReportState(
+                                report=block.extrinsic.guarantees[core].report,
+                                timeout=block.extrinsic.guarantees[core].slot
+                            )
+                        )
+        return state
+
+
+    @staticmethod
+    def big_work_report_output(state:State, block:Block):
+        work_report_output = Bytes(0)
+
+        for x in block.extrinsic.guarantees:
+
+            work_report_output = work_report_output + x.report.auth_output
+
+            for y in x.report.results:
+                # print('result value',y.result.get_value())
+                work_report_output = work_report_output + y.result.get_value()
+        # print(work_report_output < Bytes(48 * (2 ** 10)))
+        if work_report_output < Bytes(48 * (2 ** 10)):
+            for core in range(len(block.extrinsic.guarantees)):
+                # print('core value',core)
+                # print(state.rho.)
+                state.rho[core] = OptionalWorkReportState(
+                    WorkReportState(
+                        report=block.extrinsic.guarantees[core].report,
+                        timeout=block.extrinsic.guarantees[core].slot
+                    )
+                )
+        return state
+        # print('total output',work_report_output)
+
+
+

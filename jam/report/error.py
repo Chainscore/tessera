@@ -10,13 +10,13 @@ class ReportingError(JamError):
 class ReportingErrorCode(Enum):
     """Error codes for the Reporting STF protocol."""
 
-    NOT_AUTHERIZED = "not_autherized"  # Work package not executed
+    CORE_UNAUTHORIZED = "core_unauthorized"  # Work package not executed
     BAD_VALIDATOR_INDEX = "bad_validator_index"  # validator index is not valid
     NOT_ENOUGH_GUARANTEE = "not_enough_guarantee"  # Work report don't have enough validator
-    NOT_SORTED_GUARANTOR = "not_sorted_guarantor"  # work Report's guarantee Validators are not sorted
+    NOT_SORTED_OR_UNIQUE_GUARANTORS = "not_sorted_or_unique_guarantors"  # work Report's guarantee Validators are not sorted
     BAD_CORE_INDEX = "bad_core_index" # core index in not exist
     DUPLICATE_PACKAGE_IN_REPORT = "duplicate_package_in_report" # two same package exist in report
-    DUPLICATE_PACKAGE_IN_RECENT_HISTORY = "dupliate_package_in_recent_history" # work package exist in recent block
+    DUPLICATE_PACKAGE_IN_RECENT_HISTORY = "duplicate_package_in_recent_history" # work package exist in recent block
     OUT_OF_ORDER_GUARANTEE = "out_of_order_guarantee" # core-index not in order
     TOO_MANY_DEPENDENCIES = "too_many_dependencies" # work package has may dependencies
     ANCHOR_NOT_RECENT = "anchor_not_recent" # anchor not present in recent blocks
@@ -26,3 +26,7 @@ class ReportingErrorCode(Enum):
     BAD_SERVICE_ID = "bad_service_id"
     CORE_ENGAGED = "core_engaged"
     DEPENDENCY_MISSING = "dependency_missing"
+    DUPLICATE_PACKAGE = "duplicate_package"
+    FUTURE_REPORT_SLOT = "future_report_slot"
+    INSUFFICIENT_GURANTEE = "insufficient_guarantees"
+    SERVICE_ITEM_GAS_TOO_LOW = "service_item_gas_too_low"
