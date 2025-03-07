@@ -122,7 +122,7 @@ class Point(Generic[C]):
         # Check if extracted LSB of x matches the stored bit
         if (x < p_half) == x_parity:
             x = cls.curve.PRIME_FIELD - x  # Flip x if the bit doesn't match
-        return cls(x, y)
+        return cls(x, y, cls.curve)
     
     @classmethod
     def _x_recover(cls, y: int) -> int:
