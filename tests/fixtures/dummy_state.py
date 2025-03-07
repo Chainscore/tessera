@@ -1,68 +1,68 @@
-import pytest
 from typing import Dict
 
+import pytest
+
+from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
+from jam.merklization import MMR
 from jam.state.components.alpha import Alpha, AuthorizationPool, AuthorizerHash
 from jam.state.components.beta import Beta, BlockHistory, PackageDict
 from jam.state.components.chi import Chi, ChiG
-from jam.state.components.eta import Eta
-from jam.consensus.safrole.gamma import Gamma, GammaK, GammaA, GammaS, GammaSTickets
 from jam.state.components.delta import (
-    Delta,
     AccountData,
     AccountStorage,
-    PreImageLookup,
+    Delta,
     LookupTimestamps,
-    Timestamps,
+    PreImageLookup,
     ServiceCodeHash,
+    Timestamps,
 )
+from jam.state.components.eta import Eta
 from jam.state.components.iota import Iota
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
+from jam.state.components.phi import AuthorizationQueue, Phi
 from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat
 from jam.state.components.psi import Psi, PsiB, PsiG, PsiO, PsiW
 from jam.state.components.rho import OptionalWorkReportState, Rho
-from jam.state.components.phi import AuthorizationQueue, Phi
 from jam.state.components.tau import Tau
 from jam.state.components.theta import AllReadyWRs, Theta
 from jam.state.components.xi import Xi
+from jam.state.state import State
 from jam.types import TicketBody
-
 from jam.types.base import Bytes
 from jam.types.base.integers.fixed import U32
 from jam.types.base.integers.general import Int
 from jam.types.base.null import Nullable
+from jam.types.protocol.core import (
+    Balance,
+    Gas,
+    SegmentRoot,
+    ServiceId,
+    WorkPackageHash,
+)
 from jam.types.protocol.crypto import (
+    BandersnatchPublic,
+    BandersnatchRingRoot,
     BlsPublic,
     Ed25519Public,
     HeaderHash,
-    StateRoot,
     OpaqueHash,
-    BandersnatchPublic,
-    BandersnatchRingRoot,
+    StateRoot,
 )
-from jam.types.protocol.core import (
-    SegmentRoot,
-    WorkPackageHash,
-    Balance,
-    Gas,
-    ServiceId,
-    WorkReportHash,
-)
-from jam.types.protocol.merkle import MMR
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.utils.constants import (
     CORE_COUNT,
+    EPOCH_LENGTH,
     MAX_AUTH_POOL_ITEMS,
     MAX_AUTH_QUEUE_ITEMS,
     VALIDATOR_COUNT,
-    EPOCH_LENGTH,
 )
-from tests.fixtures.utils import create_dummy_bytes32, create_dummy_bytes
-from jam.state.state import State
+from tests.fixtures.utils import create_dummy_bytes, create_dummy_bytes32
+
 
 def create_dummy_state_components() -> Dict[str, object]:
     """Create dummy instances of all state components with realistic test data"""
-    components = {}
+    components: Dict[str, object] = {}
 
     # Alpha - Array of authorization pools
     auth_pool = AuthorizationPool(
@@ -79,7 +79,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     block = BlockHistory(
         header_hash=HeaderHash(create_dummy_bytes32()),
-        mmr_root=MMR([create_dummy_bytes32()]),
+        mmr=MMR([]),
         state_root=StateRoot(create_dummy_bytes32()),
         packages=package_dict,
     )
@@ -114,16 +114,10 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Delta - Service dictionary
     storage = AccountStorage(
-        {
-            create_dummy_bytes32(): Bytes(create_dummy_bytes(32))
-            for _ in range(3)
-        }
+        {create_dummy_bytes32(): Bytes(create_dummy_bytes(32)) for _ in range(3)}
     )
     lookup = PreImageLookup(
-        {
-            create_dummy_bytes32(): Bytes(create_dummy_bytes(64))
-            for _ in range(2)
-        }
+        {create_dummy_bytes32(): Bytes(create_dummy_bytes(64)) for _ in range(2)}
     )
     timestamps = LookupTimestamps(
         {
@@ -140,19 +134,16 @@ def create_dummy_state_components() -> Dict[str, object]:
         gas_limit=Gas(5000),
         min_gas=Gas(100),
     )
-    components["delta"] = Delta(
-        {
-            ServiceId(i): account
-            for i in range(3)
-        }
-    )
+    components["delta"] = Delta({ServiceId(i): account for i in range(3)})
 
     # Simple components
     components["eta"] = Eta([OpaqueHash(create_dummy_bytes32()) for _ in range(4)])
     components["iota"] = Iota(dummy_validator_data)
     components["kappa"] = Kappa(dummy_validator_data)
     components["lambda_"] = Lambda_(dummy_validator_data)
-    components["rho"] = Rho([OptionalWorkReportState(Nullable()) for _ in range(CORE_COUNT)])
+    components["rho"] = Rho(
+        [OptionalWorkReportState(Nullable()) for _ in range(CORE_COUNT)]
+    )
     components["tau"] = Tau(0)
 
     # Phi - Authorization queue
@@ -167,22 +158,28 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Psi
     components["psi"] = Psi(
-        PsiG([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-        PsiB([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-        PsiW([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-        PsiO([Ed25519Public(create_dummy_bytes32()) for _ in range(3)]),
+        PsiG([]),  # Empty array for good work reports
+        PsiB([]),  # Empty array for bad work reports
+        PsiW([]),  # Empty array for wonky work reports
+        PsiO([]),  # Empty array for offenders
     )
+    # components["psi"] = Psi(
+    #     PsiG([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
+    #     PsiB([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
+    #     PsiW([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
+    #     PsiO([Ed25519Public(create_dummy_bytes32()) for _ in range(3)]),
+    # )
 
     # Pi
     all_validator_stats = AllValidatorStats(
         [
             ValidatorStat(
-                num_blocks=Int(1),
-                num_tickets=Int(1),
-                num_preimages=Int(1),
-                num_octets=Int(1),
-                num_reports=Int(1),
-                num_avail=Int(1),
+                blocks=Int(1),
+                tickets=Int(1),
+                pre_images=Int(1),
+                pre_images_size=Int(1),
+                guarantees=Int(1),
+                assurances=Int(1),
             )
             for _ in range(VALIDATOR_COUNT)
         ]
@@ -197,6 +194,7 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     return components
 
-def create_dummy_state() -> State: 
+
+def create_dummy_state() -> State:
     """Create a complete dummy state for testing"""
     return State(**create_dummy_state_components())

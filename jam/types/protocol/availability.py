@@ -8,13 +8,19 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import CORE_COUNT
 from jam.utils.json.serde import JsonSerde
 
+
 @decodable_dataclass
 @dataclass
 class AvailabilityAssignment(Codable, JsonSerde):
     """Availability assignment structure."""
+
     report: WorkReport
     timeout: U32
 
+
 """Fixed-size array of availability assignments."""
+
+
 @decodable_array(length=CORE_COUNT, element_type=Choice)
-class AvailabilityAssignments(Array[Choice]): ...
+class AvailabilityAssignments(Array[Choice]):
+    ...

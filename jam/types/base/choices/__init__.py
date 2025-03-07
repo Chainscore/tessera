@@ -3,8 +3,9 @@ from .option import Option, decodable_option
 
 __all__ = [
     # Choice types
-    'Choice', 'Option',
-    
+    "Choice",
+    "Option",
     # Decodable types
-    'decodable_choice', 'decodable_option'
+    "decodable_choice",
+    "decodable_option",
 ]

@@ -1,4 +1,3 @@
-
 from typing import List, Self, Tuple, Union
 from jam.pvm.memory import MemoryChunk
 from jam.pvm.register import Registers
@@ -10,6 +9,7 @@ from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
 from jam.utils.codec.utils import check_buffer_size
 
+
 class Program(Codable):
     """This is the program blob which the PVM will execute.
 
@@ -20,17 +20,24 @@ class Program(Codable):
         offset_bitmask: Bitsequence of size len(instruction_set) that defines which blob is an opcode
 
     """
+
     z: U8
     jump_table: List[int]
     instruction_set: List[U8]
     offset_bitmask: List[Bit]
 
-    def __init__(self, z: U8, jump_table: List[int], instruction_set: List[U8], offset_bitmask: List[Bit]):
+    def __init__(
+        self,
+        z: U8,
+        jump_table: List[int],
+        instruction_set: List[U8],
+        offset_bitmask: List[Bit],
+    ):
         self.z = z
         self.jump_table = jump_table
         self.instruction_set = instruction_set
         self.offset_bitmask = offset_bitmask
-        
+
     def encode_size(self) -> int:
         total_size = 0
         total_size += GeneralCodec().encode_size(len(self.jump_table))
@@ -40,7 +47,9 @@ class Program(Codable):
             total_size += IntegerCodec(self.z.value).encode_size(jump)
         for instruction in self.instruction_set:
             total_size += instruction.encode_size()
-        total_size += BitSequenceCodec(len(self.instruction_set)).encode_size(self.offset_bitmask)
+        total_size += BitSequenceCodec(len(self.instruction_set)).encode_size(
+            self.offset_bitmask
+        )
         return total_size
 
     def encode_into(self, buffer: Union[bytes, bytearray], offset: int = 0) -> int:
@@ -57,7 +66,9 @@ class Program(Codable):
         current_offset += size
         size = self.z.encode_into(buffer, current_offset)
         current_offset += size
-        size = GeneralCodec().encode_into(len(self.instruction_set), buffer, current_offset)
+        size = GeneralCodec().encode_into(
+            len(self.instruction_set), buffer, current_offset
+        )
         current_offset += size
         for jump in self.jump_table:
             size = IntegerCodec(self.z.value).encode_into(jump, buffer, current_offset)
@@ -65,12 +76,16 @@ class Program(Codable):
         for instruction in self.instruction_set:
             size = instruction.encode_into(buffer, current_offset)
             current_offset += size
-        size = BitSequenceCodec(len(self.instruction_set), "lsb").encode_into(self.offset_bitmask, buffer, current_offset)
+        size = BitSequenceCodec(len(self.instruction_set), "lsb").encode_into(
+            self.offset_bitmask, buffer, current_offset
+        )
         current_offset += size
         return current_offset - offset
-    
+
     @staticmethod
-    def decode_from(buffer: Union[bytes, bytearray], offset: int = 0) -> Tuple[Self, int]:
+    def decode_from(
+        buffer: Union[bytes, bytearray], offset: int = 0
+    ) -> Tuple[Self, int]:
         """Decode a program from a bytes
 
         Args:
@@ -98,28 +113,37 @@ class Program(Codable):
         j: List = []
         for _ in range(j_len):
             val, size = IntegerCodec.decode_from(z.value, buffer, current_offset)
-            bytes_read +=  size
+            bytes_read += size
             current_offset += size
             j.append(val)
-        
+
         c: List = []
         for _ in range(c_len):
             val, size = U8.decode_from(buffer, current_offset)
-            bytes_read +=  size
-            current_offset +=  size
+            bytes_read += size
+            current_offset += size
             c.append(val)
 
-        offset_bitmask, size = BitSequenceCodec.decode_from(buffer, current_offset, c_len, "lsb")
+        offset_bitmask, size = BitSequenceCodec.decode_from(
+            buffer, current_offset, c_len, "lsb"
+        )
         bytes_read += size
-        current_offset +=  size
+        current_offset += size
 
         return Program(z, j, c, offset_bitmask), bytes_read
-    
+
     @staticmethod
     def from_json(buffer: Union[bytes, bytearray]) -> Self:
         value, _ = Program.decode_from(buffer)
         return value
-    
-    def execute(self, register: Register, initial_registers: Registers, gas: Gas, memory: MemoryChunk) -> Registers:
+
+
+    def execute(
+        self,
+        register: Register,
+        initial_registers: Registers,
+        gas: Gas,
+        memory: MemoryChunk,
+    ) -> Registers:
         # TODO: Implement execute
         return initial_registers

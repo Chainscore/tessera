@@ -6,11 +6,14 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.serde import JsonSerde
 
+
 @decodable_dataclass
 @dataclass
-class Memory(Codable, JsonSerde): 
+class Memory(Codable, JsonSerde):
     address: U32
     contents: Bytes
 
+
 @decodable_vector(Memory)
-class MemoryChunk(Vector): ...
+class MemoryChunk(Vector):
+    ...

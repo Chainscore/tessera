@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Consensus &mdash; Tessera 0.1.0 documentation</title>
+  <title>Consensus Overview &mdash; Tessera 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
 
@@ -20,8 +20,8 @@
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="jam.consensus.grandpa package" href="grandpa/index.html" />
-    <link rel="prev" title="jam.config.settings module" href="../config/settings.html" /> 
+    <link rel="next" title="GRANDPA Consensus" href="grandpa/index.html" />
+    <link rel="prev" title="State" href="../../state.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -43,35 +43,56 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jam_node.html">JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../state.html">State</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Consensus</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Tessera - JAM Node</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="../index.html#subpackages">Subpackages</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="../api/index.html">jam.api package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../config/index.html">jam.config package</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">Consensus</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#overview">Overview</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#subpackages">Subpackages</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#module-contents">Module Contents</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Consensus Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#overview">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="grandpa/index.html">GRANDPA Consensus</a></li>
+<li class="toctree-l3"><a class="reference internal" href="safrole/index.html">Safrole [WIP]</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../core/index.html">jam.core package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../crypto/index.html">jam.crypto package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../execution/index.html">jam.execution package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../network/index.html">jam.network package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../playground/index.html">jam.playground package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../pvm/index.html">PVM [WIP]</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../services/index.html">jam.services package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../state/index.html">jam.state package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../storage/index.html">jam.storage package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../types/index.html">Types</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-contents">Module Contents</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="safrole/index.html">Safrole [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="grandpa/index.html">GRANDPA Consensus</a></li>
 </ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../authorization/index.html">Authorization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config/index.html">JAM Config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config/index.html#jam-config-package">jam.config package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../crypto/index.html">JAM Crypto</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../execution/index.html">Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pvm/index.html">PVM [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../state/index.html">jam.state package</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Utilities</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">jam.api package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../storage/index.html">jam.storage package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../network/index.html">jam.network package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../types/index.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/codec/index.html">Codec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/json/index.html">JsonSerde</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../CONTRIBUTING.html">Contributing to Documentation</a></li>
 </ul>
 
         </div>
@@ -88,8 +109,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../index.html">Tessera - JAM Node</a></li>
-      <li class="breadcrumb-item active">Consensus</li>
+      <li class="breadcrumb-item active">Consensus Overview</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../../_sources/modules/jam/consensus/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -99,21 +119,23 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="consensus">
-<h1>Consensus<a class="headerlink" href="#consensus" title="Link to this heading"></a></h1>
+  <section id="consensus-overview">
+<h1>Consensus Overview<a class="headerlink" href="#consensus-overview" title="Link to this heading"></a></h1>
+<p>This section covers the various consensus mechanisms used in Tessera, including Safrole and GRANDPA among others.</p>
+<p>Work in Progress.</p>
+</section>
 <section id="overview">
-<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
 <p>The consensus module provides the core logic for the JAN blockchain. It includes:</p>
 <ul class="simple">
 <li><p>Safrole: For block production and validator selection</p></li>
 <li><p>Grandpa: For finality -to avoid forks</p></li>
 </ul>
-</section>
 <section id="subpackages">
 <h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading"></a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="grandpa/index.html">jam.consensus.grandpa package</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="grandpa/index.html">GRANDPA Consensus</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="grandpa/index.html#module-contents">Module Contents</a></li>
 </ul>
 </li>
@@ -133,8 +155,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../config/settings.html" class="btn btn-neutral float-left" title="jam.config.settings module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="grandpa/index.html" class="btn btn-neutral float-right" title="jam.consensus.grandpa package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../../state.html" class="btn btn-neutral float-left" title="State" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="grandpa/index.html" class="btn btn-neutral float-right" title="GRANDPA Consensus" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

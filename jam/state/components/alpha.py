@@ -5,12 +5,16 @@ from jam.utils.constants import CORE_COUNT, MAX_AUTH_POOL_ITEMS
 
 AuthorizerHash = OpaqueHash
 
+
 @decodable_vector(element_type=AuthorizerHash)
-class AuthorizationPool(Vector[AuthorizerHash]): 
+class AuthorizationPool(Vector[AuthorizerHash]):
     """Authorization pool to have upto MAX_AUTH_POOL_ITEMS auth hashes"""
+
     ...
 
+
 @decodable_array(length=CORE_COUNT, element_type=AuthorizationPool)
-class Alpha(Array[AuthorizationPool]): 
+class Alpha(Array[AuthorizationPool]):
     """α Alpha is an array of authorization pools for all cores"""
+
     ...

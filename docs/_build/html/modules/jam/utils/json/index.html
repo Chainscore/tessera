@@ -42,35 +42,108 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Testing Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jam_node.html">JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../state.html">State</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Consensus</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../consensus/index.html">Consensus Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../consensus/index.html#overview">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../consensus/safrole/index.html">Safrole [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../consensus/grandpa/index.html">GRANDPA Consensus</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../authorization/index.html">Authorization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../crypto/index.html">Crypto Primitives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../execution/index.html">Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pvm/index.html">PVM [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../state/index.html">jam.state package</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Utilities</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">Tessera - JAM Node</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="../../api/index.html">jam.api package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../config/index.html">jam.config package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../consensus/index.html">Consensus</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../core/index.html">jam.core package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../crypto/index.html">jam.crypto package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../execution/index.html">jam.execution package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../network/index.html">jam.network package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../playground/index.html">jam.playground package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../pvm/index.html">PVM [WIP]</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../services/index.html">jam.services package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../state/index.html">jam.state package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../storage/index.html">jam.storage package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../types/index.html">Types</a></li>
-<li class="toctree-l3 current"><a class="reference internal" href="../index.html">Utilities</a><ul class="current">
-<li class="toctree-l4 current"><a class="reference internal" href="../index.html#subpackages">Subpackages</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../index.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../index.html#module-contents">Module Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../storage/index.html">Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../network/index.html">Networking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../types/index.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../codec/index.html">Codec</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">JsonSerde</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#core-components">Core Components</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#jsoncodec">JsonCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">JsonSerde</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#decorators">Decorators</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#type-resolution">Type Resolution</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#primitive-types">Primitive Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#container-types">Container Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#custom-types">Custom Types</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#error-handling">Error Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-examples">Usage Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#basic-usage">Basic Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#field-customization">Field Customization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Error Handling</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="codec.html">jam.utils.json.codec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="serde.html">jam.utils.json.serde</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decorators.html">jam.utils.json.decorators module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#jam.utils.json.JsonSerde"><code class="docutils literal notranslate"><span class="pre">JsonSerde</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonSerde.to_json"><code class="docutils literal notranslate"><span class="pre">JsonSerde.to_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonSerde.from_json"><code class="docutils literal notranslate"><span class="pre">JsonSerde.from_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonSerde.__json_metadata__"><code class="docutils literal notranslate"><span class="pre">JsonSerde.__json_metadata__()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.utils.json.JsonCodec"><code class="docutils literal notranslate"><span class="pre">JsonCodec</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonCodec.to_json"><code class="docutils literal notranslate"><span class="pre">JsonCodec.to_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonCodec.from_json"><code class="docutils literal notranslate"><span class="pre">JsonCodec.from_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonCodec._get_dataclass_fields"><code class="docutils literal notranslate"><span class="pre">JsonCodec._get_dataclass_fields()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonCodec._dataclass_to_json"><code class="docutils literal notranslate"><span class="pre">JsonCodec._dataclass_to_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonCodec._dataclass_from_json"><code class="docutils literal notranslate"><span class="pre">JsonCodec._dataclass_from_json()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.utils.json.json_serializable"><code class="docutils literal notranslate"><span class="pre">json_serializable()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.utils.json.json_field"><code class="docutils literal notranslate"><span class="pre">json_field()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.utils.json.json_field_metadata"><code class="docutils literal notranslate"><span class="pre">json_field_metadata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.utils.json.with_json_metadata"><code class="docutils literal notranslate"><span class="pre">with_json_metadata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.utils.json.JsonSerializationError"><code class="docutils literal notranslate"><span class="pre">JsonSerializationError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.utils.json.JsonDeserializationError"><code class="docutils literal notranslate"><span class="pre">JsonDeserializationError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.utils.json.JsonFieldError"><code class="docutils literal notranslate"><span class="pre">JsonFieldError</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonFieldError.__init__"><code class="docutils literal notranslate"><span class="pre">JsonFieldError.__init__()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#jam.utils.json.JsonFieldMetadata"><code class="docutils literal notranslate"><span class="pre">JsonFieldMetadata</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonFieldMetadata.name"><code class="docutils literal notranslate"><span class="pre">JsonFieldMetadata.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonFieldMetadata.skip_if_none"><code class="docutils literal notranslate"><span class="pre">JsonFieldMetadata.skip_if_none</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonFieldMetadata.format"><code class="docutils literal notranslate"><span class="pre">JsonFieldMetadata.format</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#jam.utils.json.JsonFieldMetadata.__init__"><code class="docutils literal notranslate"><span class="pre">JsonFieldMetadata.__init__()</span></code></a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../../index.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../index.html#module-contents">Module Contents</a></li>
 </ul>
 </li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../CONTRIBUTING.html">Contributing to Documentation</a></li>
 </ul>
 
         </div>
@@ -87,8 +160,6 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../../index.html">Tessera - JAM Node</a></li>
-          <li class="breadcrumb-item"><a href="../index.html">Utilities</a></li>
       <li class="breadcrumb-item active">JsonSerde</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../../../_sources/modules/jam/utils/json/index.rst.txt" rel="nofollow"> View page source</a>

@@ -4,4 +4,5 @@ from jam.utils.constants import EPOCH_LENGTH
 
 
 @decodable_array(EPOCH_LENGTH, WorkPackageHash)
-class Xi(Array[WorkPackageHash]): ...
+class Xi(Array[WorkPackageHash]):
+    ...

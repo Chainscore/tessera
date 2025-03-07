@@ -10,13 +10,17 @@ from jam.types.base.integers import Int
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.errors import DecodeError
 
-T = TypeVar('T', bound=Codable)
+T = TypeVar("T", bound=Codable)
+
 
 @decodable_option(Int)
-class OptionalInt(Option): ...
+class OptionalInt(Option):
+    ...
+
 
 @decodable_option(Boolean)
-class OptionalBoolean(Option): ...
+class OptionalBoolean(Option):
+    ...
 
 
 class TestOption:
@@ -103,7 +107,7 @@ class TestOption:
         # Test with None
         opt_none = OptionalInt()
         assert opt_none.encode_size() == 1  # Just tag byte
-        
+
         buffer = bytearray([0xFF] * 10)
         written = opt_none.encode_into(buffer, 5)
         assert written == 1
@@ -113,7 +117,7 @@ class TestOption:
         opt_value = OptionalInt(Int(42))
         size = opt_value.encode_size()
         assert size > 1  # Tag byte + encoded value
-        
+
         buffer = bytearray([0xFF] * 10)
         written = opt_value.encode_into(buffer, 5)
         assert written == size
@@ -125,13 +129,13 @@ class TestOption:
         buffer = bytearray([0xFF] * 10)
         opt_none = OptionalInt()
         opt_value = OptionalInt(Int(42))
-        
+
         # Write None at offset 2
         opt_none.encode_into(buffer, 2)
         decoded_none, size_none = OptionalInt.decode_from(buffer=buffer, offset=2)
         assert isinstance(decoded_none, Option)
         assert decoded_none == None
-        
+
         # Write Some at offset 5
         opt_value.encode_into(buffer, 5)
         decoded_value, size_value = OptionalInt.decode_from(buffer=buffer, offset=5)
@@ -148,4 +152,4 @@ class TestOption:
         # Truncated buffer for Some value
         buffer = bytearray([1])  # Tag for Some but no value
         with pytest.raises(DecodeError):
-            OptionalInt.decode_from(buffer=buffer) 
+            OptionalInt.decode_from(buffer=buffer)

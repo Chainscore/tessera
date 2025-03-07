@@ -1,33 +1,35 @@
 from typing import Union, Any, TypeVar, cast
 from jam.utils.json import JsonSerde
 
-T = TypeVar('T', bound='BaseInteger')
+T = TypeVar("T", bound="BaseInteger")
+
 
 class BaseInteger(JsonSerde):
     """Base integer type"""
+
     value: int
-    
-    def __init__(self, value: Union[int, 'BaseInteger']):
+
+    def __init__(self, value: Union[int, "BaseInteger"]):
         """Initialize an integer."""
         if not isinstance(value, (int, BaseInteger)):
             raise TypeError(f"Expected int or BaseInteger, got {type(value)}")
         if isinstance(value, BaseInteger):
             value = value.value
-        value = int(value)  
+        value = int(value)
         self.value = value
-    
+
     def __int__(self) -> int:
         """Allow conversion to int."""
         return self.value
-    
+
     def to_int(self) -> int:
         """Allow conversion to int."""
         return self.value
-    
+
     def __index__(self) -> int:
         """Allow use in slicing."""
         return self.value
-    
+
     def __hash__(self) -> int:
         """Make hashable."""
         return hash(self.value)
@@ -37,22 +39,22 @@ class BaseInteger(JsonSerde):
         if isinstance(other, (BaseInteger, int)):
             return self.value == int(other)
         return NotImplemented
-    
+
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, (BaseInteger, int)):
             return self.value < int(other)
         return NotImplemented
-    
+
     def __le__(self, other: Any) -> bool:
         if isinstance(other, (BaseInteger, int)):
             return self.value <= int(other)
         return NotImplemented
-    
+
     def __gt__(self, other: Any) -> bool:
         if isinstance(other, (BaseInteger, int)):
             return self.value > int(other)
         return NotImplemented
-    
+
     def __ge__(self, other: Any) -> bool:
         if isinstance(other, (BaseInteger, int)):
             return self.value >= int(other)
@@ -64,36 +66,36 @@ class BaseInteger(JsonSerde):
             result = self.value + int(other)
             return cast(T, self.__class__(result))
         return NotImplemented
-    
+
     def __sub__(self: T, other: Any) -> T:
         if isinstance(other, (BaseInteger, int)):
             result = self.value - int(other)
             return cast(T, self.__class__(result))
         return NotImplemented
-    
+
     def __mul__(self: T, other: Any) -> T:
         if isinstance(other, (BaseInteger, int)):
             result = self.value * int(other)
             return cast(T, self.__class__(result))
         return NotImplemented
-    
+
     def __truediv__(self: T, other: Any) -> float:
         if isinstance(other, (BaseInteger, int)):
             return self.value / int(other)
         return NotImplemented
-    
+
     def __floordiv__(self: T, other: Any) -> T:
         if isinstance(other, (BaseInteger, int)):
             result = self.value // int(other)
             return cast(T, self.__class__(result))
         return NotImplemented
-    
+
     def __mod__(self: T, other: Any) -> T:
         if isinstance(other, (BaseInteger, int)):
             result = self.value % int(other)
             return cast(T, self.__class__(result))
         return NotImplemented
-    
+
     def __pow__(self: T, other: Any) -> T:
         if isinstance(other, (BaseInteger, int)):
             result = pow(self.value, int(other))
@@ -106,25 +108,25 @@ class BaseInteger(JsonSerde):
             result = self.value & int(other)
             return cast(T, self.__class__(result))
         return NotImplemented
-    
+
     def __or__(self: T, other: Any) -> T:
         if isinstance(other, (BaseInteger, int)):
             result = self.value | int(other)
             return cast(T, self.__class__(result))
         return NotImplemented
-    
+
     def __xor__(self: T, other: Any) -> T:
         if isinstance(other, (BaseInteger, int)):
             result = self.value ^ int(other)
             return cast(T, self.__class__(result))
         return NotImplemented
-    
+
     def __lshift__(self: T, other: Any) -> T:
         if isinstance(other, (BaseInteger, int)):
             result = self.value << int(other)
             return cast(T, self.__class__(result))
         return NotImplemented
-    
+
     def __rshift__(self: T, other: Any) -> T:
         if isinstance(other, (BaseInteger, int)):
             result = self.value >> int(other)
@@ -142,9 +144,7 @@ class BaseInteger(JsonSerde):
     __rand__ = __and__
     __ror__ = __or__
     __rxor__ = __xor__
-    
+
     def __repr__(self) -> str:
         """String representation."""
         return f"{self.__class__.__name__}({self.value})"
-    
-

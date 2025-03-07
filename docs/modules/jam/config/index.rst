@@ -1,5 +1,7 @@
-jam.config package
-==================
+Configuration
+==========
+
+This module handles configuration management for Tessera, including reading configuration files, validating parameters, and setting up defaults.
 
 Submodules
 ----------

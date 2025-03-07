@@ -39,9 +39,47 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/index.html">Tessera - JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/examples.html">Testing Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam_node.html">JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/state.html">State</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Consensus</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/consensus/index.html">Consensus Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/consensus/index.html#overview">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/consensus/safrole/index.html">Safrole [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/consensus/grandpa/index.html">GRANDPA Consensus</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/authorization/index.html">Authorization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/config/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/crypto/index.html">Crypto Primitives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/execution/index.html">Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/pvm/index.html">PVM [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/state/index.html">jam.state package</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Utilities</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/api/index.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/storage/index.html">Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/network/index.html">Networking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/types/index.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/utils/codec/index.html">Codec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules/jam/utils/json/index.html">JsonSerde</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../CONTRIBUTING.html">Contributing to Documentation</a></li>
 </ul>
 
         </div>
@@ -72,9 +110,12 @@
 <span></span><span class="kn">from</span><span class="w"> </span><span class="nn">jam.error</span><span class="w"> </span><span class="kn">import</span> <span class="n">JamError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">jam.types.base.enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">decodable_enum</span>
 
+
 <div class="viewcode-block" id="SafroleError">
 <a class="viewcode-back" href="../../../../modules/jam/consensus/safrole/errors.html#jam.consensus.safrole.errors.SafroleError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">SafroleError</span><span class="p">(</span><span class="n">JamError</span><span class="p">):</span> <span class="o">...</span></div>
+<span class="k">class</span><span class="w"> </span><span class="nc">SafroleError</span><span class="p">(</span><span class="n">JamError</span><span class="p">):</span>
+    <span class="o">...</span></div>
+
 
 
 <div class="viewcode-block" id="SafroleErrorCode">
@@ -82,6 +123,7 @@
 <span class="nd">@decodable_enum</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">SafroleErrorCode</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Error codes for the Safrole consensus protocol.&quot;&quot;&quot;</span>
+
     <span class="n">BAD_SLOT</span> <span class="o">=</span> <span class="s2">&quot;bad_slot&quot;</span>  <span class="c1"># Invalid slot number</span>
     <span class="n">UNEXPECTED_TICKET</span> <span class="o">=</span> <span class="s2">&quot;unexpected_ticket&quot;</span>  <span class="c1"># Ticket received when not expected</span>
     <span class="n">BAD_TICKET_ORDER</span> <span class="o">=</span> <span class="s2">&quot;bad_ticket_order&quot;</span>  <span class="c1"># Tickets not in sorted order by VRF output</span>

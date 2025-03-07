@@ -1,11 +1,14 @@
 """JAM protocol configuration."""
+
+import os
 from dataclasses import dataclass
 from enum import Enum
-import os
-from typing import Dict, Optional
+from typing import Optional
+
 
 class ChainSpec(Enum):
     """Chain specification types."""
+
     TINY = "tiny"
     SMALL = "small"
     MEDIUM = "medium"
@@ -15,9 +18,11 @@ class ChainSpec(Enum):
     XLARGE3 = "3xlarge"
     FULL = "full"
 
+
 @dataclass
 class JamConfig:
     """JAM protocol configuration."""
+
     chain: ChainSpec
     num_validators: int
     num_cores: int
@@ -30,7 +35,7 @@ class JamConfig:
     rotation_period: Optional[int]
 
     @classmethod
-    def tiny(cls) -> 'JamConfig':
+    def tiny(cls) -> "JamConfig":
         """Create tiny chain configuration."""
         return cls(
             chain=ChainSpec.TINY,
@@ -42,11 +47,11 @@ class JamConfig:
             contest_duration=10,
             tickets_per_validator=3,
             max_tickets_per_extrinsic=3,
-            rotation_period=4
+            rotation_period=4,
         )
 
     @classmethod
-    def small(cls) -> 'JamConfig':
+    def small(cls) -> "JamConfig":
         """Create small chain configuration."""
         return cls(
             chain=ChainSpec.SMALL,
@@ -58,11 +63,11 @@ class JamConfig:
             contest_duration=30,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None  # TODO
+            rotation_period=None,  # TODO
         )
 
     @classmethod
-    def medium(cls) -> 'JamConfig':
+    def medium(cls) -> "JamConfig":
         """Create medium chain configuration."""
         return cls(
             chain=ChainSpec.MEDIUM,
@@ -74,11 +79,11 @@ class JamConfig:
             contest_duration=50,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None  # TODO
+            rotation_period=None,  # TODO
         )
 
     @classmethod
-    def large(cls) -> 'JamConfig':
+    def large(cls) -> "JamConfig":
         """Create large chain configuration."""
         return cls(
             chain=ChainSpec.LARGE,
@@ -90,11 +95,11 @@ class JamConfig:
             contest_duration=100,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None  # TODO
+            rotation_period=None,  # TODO
         )
 
     @classmethod
-    def xlarge(cls) -> 'JamConfig':
+    def xlarge(cls) -> "JamConfig":
         """Create xlarge chain configuration."""
         return cls(
             chain=ChainSpec.XLARGE,
@@ -106,11 +111,11 @@ class JamConfig:
             contest_duration=200,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None  # TODO
+            rotation_period=None,  # TODO
         )
 
     @classmethod
-    def xlarge2(cls) -> 'JamConfig':
+    def xlarge2(cls) -> "JamConfig":
         """Create 2xlarge chain configuration."""
         return cls(
             chain=ChainSpec.XLARGE2,
@@ -122,11 +127,11 @@ class JamConfig:
             contest_duration=250,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
-            rotation_period=None  # TODO
+            rotation_period=None,  # TODO
         )
 
     @classmethod
-    def xlarge3(cls) -> 'JamConfig':
+    def xlarge3(cls) -> "JamConfig":
         """Create 3xlarge chain configuration."""
         return cls(
             chain=ChainSpec.XLARGE3,
@@ -138,11 +143,11 @@ class JamConfig:
             contest_duration=500,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
-            rotation_period=None  # TODO
+            rotation_period=None,  # TODO
         )
 
     @classmethod
-    def full(cls) -> 'JamConfig':
+    def full(cls) -> "JamConfig":
         """Create full chain configuration."""
         return cls(
             chain=ChainSpec.FULL,
@@ -154,11 +159,11 @@ class JamConfig:
             contest_duration=500,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
-            rotation_period=10
+            rotation_period=10,
         )
 
     @classmethod
-    def from_chain(cls, chain: str) -> 'JamConfig':
+    def from_chain(cls, chain: str) -> "JamConfig":
         """Create configuration from chain name."""
         chain_map = {
             ChainSpec.TINY.value: cls.tiny,
@@ -172,8 +177,7 @@ class JamConfig:
         }
         if chain not in chain_map:
             raise ValueError(f"Unknown chain spec: {chain}")
-        return chain_map[chain]() 
-    
+        return chain_map[chain]()
 
 
 # Default to tiny chain if not specified

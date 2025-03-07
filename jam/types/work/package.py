@@ -11,20 +11,26 @@ from jam.types.work.item import WorkItem
 from jam.types.work.refine_context import RefineContext
 from jam.utils.json.serde import JsonSerde
 
+
 @decodable_dataclass
 @dataclass
 class Authorizer(Codable, JsonSerde):
     """Authorizer structure."""
+
     code_hash: OpaqueHash
     params: Bytes
 
+
 @decodable_vector(WorkItem)
-class WorkItems(Vector[WorkItem]): ...
+class WorkItems(Vector[WorkItem]):
+    ...
+
 
 @decodable_dataclass
 @dataclass
 class WorkPackage(Codable, JsonSerde):
     """Work package structure."""
+
     authorization: Bytes
     auth_code_host: ServiceId
     authorizer: Authorizer

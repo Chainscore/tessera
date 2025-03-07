@@ -1,0 +1,336 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Testing Guide &mdash; Tessera 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Architecture" href="architecture.html" />
+    <link rel="prev" title="Quickstart" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Tessera
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Testing Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#test-structure">Test Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#testing-tools">Testing Tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-tests">Running Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#writing-tests">Writing Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-fixtures">Using Fixtures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#property-based-testing">Property-Based Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mocking">Mocking</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#best-practices">Best Practices</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam_node.html">JAM Node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="state.html">State</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Consensus</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jam/consensus/index.html">Consensus Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/consensus/index.html#overview">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/consensus/safrole/index.html">Safrole [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/consensus/grandpa/index.html">GRANDPA Consensus</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jam/authorization/index.html">Authorization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/config/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/crypto/index.html">Crypto Primitives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/execution/index.html">Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/pvm/index.html">PVM [WIP]</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/state/index.html">jam.state package</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Utilities</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jam/api/index.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/storage/index.html">Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/network/index.html">Networking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/types/index.html">Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/utils/codec/index.html">Codec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jam/utils/json/index.html">JsonSerde</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../CONTRIBUTING.html">Contributing to Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Tessera</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Testing Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/modules/examples.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="testing-guide">
+<h1>Testing Guide<a class="headerlink" href="#testing-guide" title="Link to this heading"></a></h1>
+<p>This guide covers testing practices and methodologies used in Tessera development.</p>
+<section id="test-structure">
+<h2>Test Structure<a class="headerlink" href="#test-structure" title="Link to this heading"></a></h2>
+<p>The test suite is organized into three main categories:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>tests/
+├── fixtures/       # Shared test fixtures and utilities
+├── integration/    # End-to-end and integration tests
+└── unit/          # Unit tests for individual components
+</pre></div>
+</div>
+</section>
+<section id="testing-tools">
+<h2>Testing Tools<a class="headerlink" href="#testing-tools" title="Link to this heading"></a></h2>
+<p>Tessera uses these testing tools:</p>
+<ul class="simple">
+<li><p><strong>pytest</strong>: Main testing framework</p></li>
+<li><p><strong>pytest-cov</strong>: Code coverage reporting</p></li>
+<li><p><strong>pytest-asyncio</strong>: Async test support</p></li>
+<li><p><strong>hypothesis</strong>: Property-based testing</p></li>
+</ul>
+</section>
+<section id="running-tests">
+<h2>Running Tests<a class="headerlink" href="#running-tests" title="Link to this heading"></a></h2>
+<p>Basic Usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run all tests</span>
+<span class="n">pytest</span>
+
+<span class="c1"># Run with verbose output</span>
+<span class="n">pytest</span> <span class="o">-</span><span class="n">v</span>
+
+<span class="c1"># Run specific test file</span>
+<span class="n">pytest</span> <span class="n">tests</span><span class="o">/</span><span class="n">unit</span><span class="o">/</span><span class="n">test_state</span><span class="o">.</span><span class="n">py</span>
+
+<span class="c1"># Run specific test function</span>
+<span class="n">pytest</span> <span class="n">tests</span><span class="o">/</span><span class="n">unit</span><span class="o">/</span><span class="n">test_state</span><span class="o">.</span><span class="n">py</span><span class="p">::</span><span class="n">test_state_transition</span>
+</pre></div>
+</div>
+<p>Coverage Reports:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generate coverage report</span>
+<span class="n">pytest</span> <span class="o">--</span><span class="n">cov</span><span class="o">=</span><span class="n">jam</span>
+
+<span class="c1"># Generate HTML report</span>
+<span class="n">pytest</span> <span class="o">--</span><span class="n">cov</span><span class="o">=</span><span class="n">jam</span> <span class="o">--</span><span class="n">cov</span><span class="o">-</span><span class="n">report</span><span class="o">=</span><span class="n">html</span>
+
+<span class="c1"># View report in browser</span>
+<span class="nb">open</span> <span class="n">htmlcov</span><span class="o">/</span><span class="n">index</span><span class="o">.</span><span class="n">html</span>
+</pre></div>
+</div>
+</section>
+<section id="writing-tests">
+<h2>Writing Tests<a class="headerlink" href="#writing-tests" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p>Unit Tests:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># tests/unit/test_feature.py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.feature</span><span class="w"> </span><span class="kn">import</span> <span class="n">Feature</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_feature_behavior</span><span class="p">():</span>
+    <span class="c1"># Arrange</span>
+    <span class="n">feature</span> <span class="o">=</span> <span class="n">Feature</span><span class="p">()</span>
+
+    <span class="c1"># Act</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">feature</span><span class="o">.</span><span class="n">process</span><span class="p">()</span>
+
+    <span class="c1"># Assert</span>
+    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="n">expected</span>
+</pre></div>
+</div>
+</li>
+<li><p>Integration Tests:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># tests/integration/test_workflow.py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.workflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">Workflow</span>
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">asyncio</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_end_to_end</span><span class="p">():</span>
+    <span class="c1"># Setup</span>
+    <span class="n">workflow</span> <span class="o">=</span> <span class="n">Workflow</span><span class="p">()</span>
+
+    <span class="c1"># Execute</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">workflow</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+    <span class="c1"># Verify</span>
+    <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;success&quot;</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="using-fixtures">
+<h2>Using Fixtures<a class="headerlink" href="#using-fixtures" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p>Create Fixtures:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># tests/fixtures/conftest.py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_data</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;value&quot;</span>
+    <span class="p">}</span>
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_resource</span><span class="p">():</span>
+    <span class="n">resource</span> <span class="o">=</span> <span class="k">await</span> <span class="n">setup_resource</span><span class="p">()</span>
+    <span class="k">yield</span> <span class="n">resource</span>
+    <span class="k">await</span> <span class="n">cleanup_resource</span><span class="p">()</span>
+</pre></div>
+</div>
+</li>
+<li><p>Use Fixtures:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># tests/unit/test_feature.py</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_with_fixture</span><span class="p">(</span><span class="n">test_data</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="n">process</span><span class="p">(</span><span class="n">test_data</span><span class="p">)</span> <span class="o">==</span> <span class="n">expected</span>
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">asyncio</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_async</span><span class="p">(</span><span class="n">async_resource</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">async_resource</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">result</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="property-based-testing">
+<h2>Property-Based Testing<a class="headerlink" href="#property-based-testing" title="Link to this heading"></a></h2>
+<p>Using Hypothesis:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">hypothesis</span><span class="w"> </span><span class="kn">import</span> <span class="n">given</span><span class="p">,</span> <span class="n">strategies</span> <span class="k">as</span> <span class="n">st</span>
+
+<span class="nd">@given</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">integers</span><span class="p">(),</span> <span class="n">st</span><span class="o">.</span><span class="n">integers</span><span class="p">())</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_addition_properties</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="n">add</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>  <span class="c1"># Commutative</span>
+    <span class="k">assert</span> <span class="n">add</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="n">result</span>  <span class="c1"># Identity</span>
+</pre></div>
+</div>
+</section>
+<section id="mocking">
+<h2>Mocking<a class="headerlink" href="#mocking" title="Link to this heading"></a></h2>
+<p>Using pytest-mock:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_with_mock</span><span class="p">(</span><span class="n">mocker</span><span class="p">):</span>
+    <span class="c1"># Create mock</span>
+    <span class="n">mock_db</span> <span class="o">=</span> <span class="n">mocker</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s1">&#39;jam.database.Database&#39;</span><span class="p">)</span>
+    <span class="n">mock_db</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">expected_result</span>
+
+    <span class="c1"># Use mock</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">process_data</span><span class="p">()</span>
+
+    <span class="c1"># Verify</span>
+    <span class="n">mock_db</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">assert_called_once</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="n">expected_result</span>
+</pre></div>
+</div>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Test Organization:
+* One test file per module
+* Clear test names describing behavior
+* Group related tests in classes</p></li>
+<li><p>Test Design:
+* Follow Arrange-Act-Assert pattern
+* Test edge cases and error conditions
+* Keep tests focused and isolated</p></li>
+<li><p>Fixtures:
+* Use fixtures for common setup
+* Clean up resources properly
+* Share fixtures via conftest.py</p></li>
+<li><p>Coverage:
+* Aim for high test coverage
+* Focus on critical paths
+* Don’t sacrifice quality for coverage</p></li>
+<li><p>Performance:
+* Keep tests fast
+* Use async testing where appropriate
+* Minimize external dependencies</p></li>
+</ol>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Quickstart" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="architecture.html" class="btn btn-neutral float-right" title="Architecture" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Chainscore Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

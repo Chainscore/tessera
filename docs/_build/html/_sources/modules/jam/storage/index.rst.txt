@@ -1,5 +1,9 @@
-jam.storage package
-===================
+Storage
+===========
+
+This section documents the storage layer of Tessera, including databases, caches, and data persistence mechanisms.
+
+Work in Progress.
 
 Submodules
 ----------
