@@ -1,6 +1,3 @@
-import pytest
-
-from jam.types import ByteArray32
 from jam.types.block import Block
 from tests.fixtures.dummy_extrinsics import create_dummy_extrinsics
 from tests.fixtures.dummy_header import create_dummy_header

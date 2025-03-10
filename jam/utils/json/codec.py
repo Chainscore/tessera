@@ -45,6 +45,8 @@ class JsonCodec:
     @staticmethod
     def from_json(data: Any, target_type: Type[T]) -> T:
         """Convert JSON-compatible value to target type."""
+        print("from_json", target_type, data)
+
         try:
             # Handle None
             if data is None:
@@ -67,11 +69,14 @@ class JsonCodec:
                 return JsonCodec.from_json(data, get_args(target_type)[0])
 
             # Handle sequences
-            if target_type is list:
-                return target_type([item for item in data])
+            if isinstance(target_type, (list, tuple, Sequence)):
+                if len(get_args(target_type)) == 0:
+                    return target_type(data)
+                else:
+                    return target_type([JsonCodec.from_json(item, get_args(target_type)[0]) for item in data])
 
             # Handle mappings
-            if target_type is dict:
+            if target_type is Sequence:
                 key_type, value_type = get_args(target_type)
                 return target_type(
                     {
@@ -87,6 +92,8 @@ class JsonCodec:
                 return JsonCodec._dataclass_from_json(data, target_type)
 
             try:
+                if target_type is Dict:
+                    return dict(data)
                 return target_type(data)
             except Exception as e:
                 raise JsonDeserializationError(
@@ -106,7 +113,7 @@ class JsonCodec:
             field.name: {
                 "type": field.type,
                 "metadata": getattr(field, "metadata", {}),
-                "default": field.default,
+                "default": field.default or None,
                 "default_factory": field.default_factory,
             }
             for field in fields(cls)
@@ -116,21 +123,28 @@ class JsonCodec:
     def _dataclass_to_json(obj: Any) -> Dict[str, Any]:
         """Convert dataclass instance to JSON dict"""
         result = {}
-        field_info = JsonCodec._get_dataclass_fields(type(obj))
+        field_info = getattr(obj, "metadata", {})
 
-        for field_name, info in field_info.items():
+        for field in fields(obj):
+            field_name = field.name
+            field_type = field.type
+            
+            meta_json_name = field_info.get(field_name, {}).get("json_name", field_name)
+            meta_skip_if_none = field_info.get(field_name, {}).get("skip_if_none", False)
+            meta_default = field_info.get(field_name, {}).get("default", None)
+
             value = getattr(obj, field_name)
             # Skip None values if specified in metadata
-            if value is None and info["metadata"].get("skip_if_none", False):
+            if value is None and meta_skip_if_none:
                 continue
-
+            
             # Use custom field name if specified
-            json_name = info["metadata"].get("json_name", field_name)
+            json_name = meta_json_name
             try:
-                result[json_name] = JsonCodec.to_json(value)
+                result[json_name] = to_json(value)
             except Exception as e:
-                raise JsonFieldError(field_name, info["type"], str(e))
-
+                raise JsonFieldError(field_name, field_type, str(e))
+            
         return result
 
     @staticmethod
@@ -141,52 +155,67 @@ class JsonCodec:
                 f"Expected dict for {cls.__name__}, got {type(data)}"
             )
 
-        field_info = JsonCodec._get_dataclass_fields(cls)
+        field_info = getattr(cls, "metadata", {})
         field_values = {}
 
-        for field_name, info in field_info.items():
-            # Check both original and custom field names
-            json_name = info["metadata"].get("json_name", field_name)
-            skip_if_none = info["metadata"].get("skip_if_none", False)
+        # Loop through all fields in the dataclass to fill data for each field
+        for field in fields(cls):
+            field_name = field.name
+            field_type = field.type
 
-            if json_name not in data:
-                if skip_if_none or is_optional_type(info["type"]):
+            meta_json_name = field_info.get(field_name, {}).get("json_name", field_name)
+            meta_skip_if_none = field_info.get(field_name, {}).get("skip_if_none", False)
+            meta_default = field_info.get(field_name, {}).get("default", None)
+
+            # Field processing
+
+            # If the field is not present in the JSON data, check if it has an alternative name in the metadata
+            # Or if it has a default value, or if it is optional
+            if field_name not in data:
+                # Check if it has an alternative name in the metadata. if the alt value exists
+                if meta_json_name in data:
+                    field_values[field_name] = from_json(data[meta_json_name], field_type)
+                # Check if the field has a default value
+                elif meta_default is not None:
+                    field_values[field_name] = meta_default
+                # Check if the field is optional
+                elif meta_skip_if_none or is_optional_type(field_type):
                     field_values[field_name] = None
-                elif is_optional_type(info["type"]):
-                    field_values[field_name] = None
-                elif info["default"] is not None:  # Has default value
-                    field_values[field_name] = info["default"]
-                elif info["default_factory"] is not None:
-                    field_values[field_name] = info["default_factory"]()
+                # Raise an error if the field is not optional and has no default value
                 else:
                     raise JsonFieldError(
-                        field_name, info["type"], "Missing required field"
+                        field_name, field_type, "Missing required field"
                     )
+            # If the field is present in the JSON data
+            # Wrap and assign the value to the field
             else:
                 try:
-                    if hasattr(info["type"], "from_json"):
-                        field_values[field_name] = info["type"].from_json(
-                            data[json_name]
-                        )
-                    else:
-                        field_values[field_name] = data[json_name]
+                    field_values[field_name] = from_json(data[meta_json_name], field_type)
 
                     # Not check the type of the field
-                    if type(field_values[field_name]) is dict:
-                        # TODO: Dict is a special case, which we cannot check isinstance
-                        # We need to check the type of the field
-                        continue
-                    if not isinstance(field_values[field_name], info["type"]):
+                    if not isinstance(field_values[field_name], field_type):
                         raise JsonFieldError(
                             field_name,
-                            info["type"],
-                            f"Expected {info['type']}, got {type(field_values[field_name])}",
+                            field_type,
+                            f"Expected {field_type}, got {type(field_values[field_name])}",
                         )
                 except Exception as e:
-                    raise JsonFieldError(field_name, info["type"], str(e))
-
+                    raise JsonFieldError(field_name, field_type, str(e))
         return cls(**field_values)
 
+def from_json(data: Any, target_type: Type[T]) -> T:
+    """Convert JSON-compatible value to target type."""
+    if hasattr(target_type, "from_json"):
+        return target_type.from_json(data)
+    else:
+        return JsonCodec.from_json(data, target_type)
+    
+def to_json(obj: Any) -> Any:
+    """Convert object to JSON-compatible value."""
+    if hasattr(obj, "to_json"):
+        return obj.to_json()
+    else:
+        return JsonCodec.to_json(obj)
 
 def is_optional_type(tp) -> bool:
     """Check if type hint is Optional[T]."""

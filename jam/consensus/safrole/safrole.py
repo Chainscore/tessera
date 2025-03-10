@@ -1,23 +1,21 @@
-from typing import List, Union
-
 import dataclasses
-
+from typing import List
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 from jam.state.components.eta import Eta
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
+from .gamma import GammaS
 from jam.state.state import State
 from jam.types import TicketBody, U32, TicketsExtrinsic, TicketEnvelope
-from jam.types.base.sequences.bytes.byte_array import ByteArray, ByteArray32
+from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.block import Block
-from jam.utils.byte_utils import ByteUtils
 from jam.utils.constants import (
     EPOCH_LENGTH,
     TICKET_SUBMISSION_END,
     TICKET_ENTRIES_PER_VALIDATOR,
 )
-from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingRoot, Hash
+from jam.types.protocol.crypto import BandersnatchPublic, Hash
 from jam.consensus.safrole.gamma import GammaK, GammaSFallback, GammaA
 
 
@@ -45,12 +43,12 @@ class Safrole:
         new_state = dataclasses.replace(pre_state)
 
         # 1. Timekeeping
-        new_state.tau = block.header.slot
-
-        # 2. Accumulate entropy
-        if block.header.epoch_mark:
-            new_state.eta[0] = Hash.blake2b(
-                bytes(new_state.eta[0]) + (bytes(block.header.epoch_mark.value.entropy))
+        if block.header.slot > new_state.tau:
+            new_state.tau = block.header.slot
+        else:
+            raise SafroleError(
+                SafroleErrorCode.BAD_SLOT,
+                f"Slot {block.header.slot} is less than current tau {new_state.tau}",
             )
 
         # 3. Ticket Accumulation
@@ -67,7 +65,7 @@ class Safrole:
             ]
             new_state.gamma.a.sort(key=lambda x: x.id)
             # Remove duplicates
-            new_state.gamma.a = GammaA(list(dict.fromkeys(new_state.gamma.a)))
+            new_state.gamma.a = GammaA(set(new_state.gamma.a))
 
         # 4. Epoch transition
         old_epoch = int(pre_state.tau) // EPOCH_LENGTH
@@ -104,6 +102,12 @@ class Safrole:
 
             # 4.5. Empty the ticket acc for upcoming epoch
             new_state.gamma.a = GammaA([])
+
+        # 2. Accumulate entropy
+        if block.header.epoch_mark:
+            new_state.eta[0] = Hash.blake2b(
+                bytes(new_state.eta[0]) + (bytes(block.header.epoch_mark.get_value().entropy))
+            )
 
         return new_state
 
@@ -160,7 +164,7 @@ class Safrole:
             )
 
     @staticmethod
-    def arrange_fallback(entropy: Bytes, validators: Kappa) -> GammaSFallback:
+    def arrange_fallback(entropy: Bytes, validators: Kappa) -> GammaS:
         """
         This function is to be called in case the ticketing system fails to accumulate valid
         tickeys.
@@ -177,4 +181,4 @@ class Safrole:
             hashed = Hash.blake2b(bytes(entropy) + U32(i).encode())
             index, _ = U32.decode_from(bytes(Bytes(hashed[:4])))
             fallback.append(validators[int(index) % len(validators)].bandersnatch)
-        return GammaSFallback(fallback)
+        return GammaS(GammaSFallback(fallback))
