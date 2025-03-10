@@ -3,36 +3,129 @@ import json
 import os
 from typing import List
 
-# from jam.types.extrinsics.disputes import DisputesExtrinsic, Offenders
+from jam.state.components.nu import AllReadyWRs
 from jam.types.base.integers.fixed import U32
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.base.sequences.vector import Vector, decodable_vector
+from jam.types.base.sequences.array import Array, decodable_array
+from jam.utils.constants import EPOCH_LENGTH
 from jam.utils.json import JsonSerde
-from jam.types.work.report import WorkReports
-from jam.types.protocol.crypto import OpaqueHash
-from jam.state.components.nu import AllReadyWRs
-from jam.types.work.report import WorkDependencies
+from jam.types.work.report import WorkReport,WorkExecResult,WorkPackageSpec
+from jam.types.protocol.crypto import WorkReportHash
 from jam.state.components.chi import Chi
 from jam.types.protocol.service import ServiceInfo
 from jam.types.protocol.crypto import Entropy
-from jam.types.protocol.core import ServiceId
+from jam.types.protocol.core import ServiceId,Gas,U64,OpaqueHash,Balance
+from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.state.components.delta import Delta
+from jam.state.components.iota import Iota
+from jam.state.components.xi import Xi
+
+
 from typing import Optional
+
+
+
+@decodable_dataclass
+@dataclass
+class gasPrivilage(Codable,JsonSerde):
+    o:WorkExecResult
+    l:OpaqueHash
+    a:Bytes
+    k:WorkPackageSpec
+    
+@decodable_vector(gasPrivilage)
+class gasPrivilages(Vector[gasPrivilage]):
+    ...
+
+@decodable_dataclass
+@dataclass
+class DeferredTransfer(Codable,JsonSerde):
+    sender: ServiceId
+    receiver: ServiceId
+    amount: Balance
+    memo: Bytes
+    gas: Gas
+
+@decodable_vector(DeferredTransfer)
+class DeferredTransfers(Vector[DeferredTransfer]):
+    ...
+
+@dataclass
+class stateContext(Codable,JsonSerde):
+    service_accounts: Delta
+    validator_keys: Iota
+    authorizer_keys: Xi
+    privileges: Chi
+
+@dataclass
+class AcclOutput(Codable,JsonSerde):
+    service_id: ServiceId
+    hash: OpaqueHash
+@decodable_vector(AcclOutput)  # It should be a set
+class AcclOutputs(Vector[AcclOutput]):
+    ...
 
 @decodable_vector(AllReadyWRs)
 class ReadyQueue(Vector[AllReadyWRs]):
     ...
-
-@decodable_vector(WorkDependencies)
-class Accumulated(Vector[WorkDependencies]):
+@decodable_vector(WorkReportHash)
+class WorkDependencies(Vector[WorkReportHash]):
+    ...
+@decodable_array(EPOCH_LENGTH,WorkDependencies)
+class Accumulated(Array[WorkDependencies]):
     ...
 
-@decodable_vector(ServiceInfo)
-class Accounts(Vector[ServiceInfo]):
+@decodable_dataclass
+@dataclass
+class customService(Codable,JsonSerde):
+    code_hash:OpaqueHash
+    balance:U64
+    min_item_gas:Gas
+    min_memo_gas:Gas
+    bytes:U64
+    items:U32
+
+@decodable_dataclass
+@dataclass
+class customPreimage(Codable,JsonSerde):
+    hash:OpaqueHash
+    blob:Bytes
+
+@decodable_vector(customPreimage)
+class preimages(Vector[customPreimage]):
     ...
-@decodable_vector(ServiceId)
-class AlwaysAcc(Vector[ServiceId]):
+
+@decodable_dataclass
+@dataclass
+class accContents(Codable,JsonSerde):
+    service:customService
+    preimages:preimages
+    
+@decodable_dataclass
+@dataclass
+class AccountData(Codable,JsonSerde):
+    id:ServiceId
+    data:accContents
+
+@decodable_vector(AccountData)
+class Accounts(Vector[AccountData]):
     ...
+@decodable_dataclass
+@dataclass
+class AlwaysAcc(Codable,JsonSerde):
+    service_id: ServiceId
+    gas: Gas
+
+@decodable_vector(AlwaysAcc)
+class AlwaysAcc(Vector[AlwaysAcc]):
+    ...
+
+@decodable_vector(WorkReport)
+class WorkReports(Vector[WorkReport]):
+    ...
+
 
 @decodable_dataclass
 @dataclass
@@ -76,6 +169,7 @@ class Testcase(Codable,JsonSerde):
     post_state: PostState
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testcase]:
+    # data_dir="/home/akki/Codes/JAM/JamBhai/jam-node/tests/unit/accumulation/tiny"
     data_dir = "tests/unit/accumulation/tiny"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
