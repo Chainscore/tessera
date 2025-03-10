@@ -4,6 +4,7 @@ import os
 from typing import List
 
 from jam.state.components.nu import AllReadyWRs
+from jam.state.components.phi import Phi
 from jam.types.base.integers.fixed import U32
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -20,8 +21,6 @@ from jam.types.protocol.core import ServiceId,Gas,U64,OpaqueHash,Balance
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.state.components.delta import Delta
 from jam.state.components.iota import Iota
-from jam.state.components.xi import Xi
-
 
 
 from typing import Optional
@@ -57,13 +56,14 @@ class DeferredTransfers(Vector[DeferredTransfer]):
 class stateContext(Codable,JsonSerde):
     service_accounts: Delta
     validator_keys: Iota
-    authorizer_keys: Xi
+    authorizer_keys: Phi
     privileges: Chi
 
 @dataclass
 class AcclOutput(Codable,JsonSerde):
     service_id: ServiceId
     hash: OpaqueHash
+
 @decodable_vector(AcclOutput)  # It should be a set
 class AcclOutputs(Vector[AcclOutput]):
     ...
@@ -115,12 +115,12 @@ class Accounts(Vector[AccountData]):
     ...
 @decodable_dataclass
 @dataclass
-class AlwaysAcc(Codable,JsonSerde):
+class Acc(Codable,JsonSerde):
     service_id: ServiceId
     gas: Gas
 
-@decodable_vector(AlwaysAcc)
-class AlwaysAcc(Vector[AlwaysAcc]):
+@decodable_vector(Acc)
+class AlwaysAcc(Vector[Acc]):
     ...
 
 @decodable_vector(WorkReport)

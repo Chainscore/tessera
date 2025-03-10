@@ -4,6 +4,7 @@ from jam.types.base.integers.fixed import U32, U64
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.bytes import ByteArray32, Bytes
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
+from jam.types.protocol.crypto import Hash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 
@@ -27,9 +28,11 @@ class PreImageLookup(Dictionary[ByteArray32, Bytes]):
 @decodable_dataclass
 @dataclass
 class LookupTable(Codable):
-    data: ByteArray32
+    hash: ByteArray32
     length: BlobLength
 
+    def __hash__(self) -> int:
+        return int.from_bytes(bytes(Hash.sha256(bytes(self.hash) + bytes(self.length))))
 
 @decodable_array(length=3, element_type=U32)
 class Timestamps(Array[U32]):
@@ -38,8 +41,8 @@ class Timestamps(Array[U32]):
     ...
 
 
-@decodable_dictionary(ByteArray32, Timestamps)
-class LookupTimestamps(Dictionary[ByteArray32, Timestamps]):
+@decodable_dictionary(LookupTable, Timestamps)
+class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
     """Lookup timestamps"""
 
     ...

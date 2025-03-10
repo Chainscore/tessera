@@ -1,5 +1,6 @@
 from typing import List
 
+from jam.state.components.chi import ChiG
 # from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 # from jam.disputes.disputes import Disputes
 from jam.state.state import State
@@ -11,11 +12,11 @@ from tests.unit.accumulation.types import (
     Input,
     PreState,
     Testcase,
-    get_testcases_starting_with,
+    get_testcases_starting_with, preimages,
 )
 
 from jam.accumulation.accumulation import Accumulation
-from jam.state.components.delta import Delta, AccountData
+from jam.state.components.delta import Delta, AccountData, AccountStorage, PreImageLookup, LookupTimestamps
 from jam.state.components.nu import Nu
 from jam.state.components.xi import Xi
 from jam.types.extrinsics.guarantees import ReportGuarantee
@@ -31,37 +32,41 @@ def create_block_from_input(input: Input) -> Block:
     block.header.slot=input.slot
     return block
 
+def package_preimages(preimages: preimages) -> PreImageLookup:
+    lookup = PreImageLookup({})
+
+    for pi in preimages:
+        lookup[pi.hash] = pi.blob
+    return lookup
+
 def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state = create_dummy_state()
     state.nu = Nu(pre_state.ready_queue)
-    index=0
-    state.xi=Xi(pre_state.accumulated)
-    # for i in range(len(pre_state.accumulated)):
-    #     for j in pre_state.accumulated[i]:
-    #         state.xi[index]=j
-    #     index+=1  
-    # state.xi=pre_state.accumulated
-    state.eta[0]=pre_state.entropy
+    state.xi = Xi(pre_state.accumulated)
+    state.eta[0] = pre_state.entropy
+
     # Not sure about altering first element of eta
+
     state.chi.m=pre_state.privileges.bless
     state.chi.a=pre_state.privileges.assign
     state.chi.v=pre_state.privileges.designate
-    chiG={}
+
+    chi_g={}
     for i in pre_state.privileges.always_acc:
-        chiG[i]=pre_state.privileges.always_acc[i]
-    state.chi.g=chiG
+        chi_g[i]=pre_state.privileges.always_acc[i.service_id]
+    state.chi.g = ChiG(chi_g)
     
     # Set delta state components
-    state.delta=Delta()
-    
+    state.delta=Delta({})
 
-    
     for i in pre_state.accounts:
         state.delta[i.id]=AccountData(
-            storage=i.data.service.items, #keeping size here for the timing
-            lookup=i.data.preimages,
-            timestamps=i.data.service.bytes,
+            # storage=i.data.service.items, #keeping size here for the timing
+            storage=AccountStorage({}),
+            lookup=package_preimages(i.data.preimages),
+
+            timestamps=LookupTimestamps({}),
             code_hash=i.data.service.code_hash,
             balance=i.data.service.balance,
             gas_limit=i.data.service.min_item_gas,
