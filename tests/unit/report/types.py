@@ -86,9 +86,8 @@ class Testcase(Codable, JsonSerde):
 
 
 
-def get_testcases_starting_with(prefix: str = "high_work_report_gas-1.json", limit: int = 13) -> List[Testcase]:
-    data_dir = "/home/rahulcsl/jam/jam-node/tests/unit/report/data/tiny/"
-
+def get_testcases_starting_with(prefix: str = "reports_with_dependencies-1.json", limit: int = 1) -> List[Testcase]:
+    data_dir = "/home/dikshant441/Desktop/jam/jam-node/tests/unit/report/data/tiny/"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
         if len(result) >= limit:

@@ -14,13 +14,33 @@ from jam.types.work.report import WorkResults
 from jam.utils.constants import ACCUMULATION_GAS, CORE_COUNT, MAX_DEPENDENCIES, TOTAL_GAS, SIGNING_CONTEXTS
 from jam.report.error import ReportingError, ReportingErrorCode
 from jam.types.protocol.availability import AvailabilityAssignments
-from jam.utils.constants import CORE_COUNT
-from jam.utils.constants import VALIDATOR_COUNT
+from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
 from math import floor
 from jam.utils.shuffle import shuffle
 from jam.types import  decodable_vector, U32, Vector
 from jam.types.header import HeaderHash
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+@decodable_vector(element_type=U32)
+class U32Vector(Vector): ...
+
+def rotate(nums : U32Vector, k: int) -> U32Vector :
+    n = len(nums)
+    k %= n
+    if k == 0:
+        return
+    i = 0
+    j = (i + k) % n
+    prev = nums[i]
+    for _ in range(n):
+        nums[j], prev = prev, nums[j]
+        if j == i:
+            i += 1
+            j = (i + k) % n
+            prev = nums[i]
+            continue
+        j = (j + k) % n
+    return nums
 
 def generate_report(report : GuaranteesExtrinsic)->GuaranteesExtrinsic:
     guarantees: GuaranteesExtrinsic=Vector(GuaranteesExtrinsic)
@@ -99,6 +119,24 @@ class Reporting:
 
 
         # Reporting.valid_report_fn()
+        Reporting.report_curr_roatation(pre_state, block)
+        # Reporting.refinement_fn(pre_state,block)
+        # Reporting.bad_core_index(block)
+        # Reporting.result_fn(pre_state,block)
+        # Reporting.validator_index(block)
+        # # Reporting.core_engaged(pre_state,block)
+        # Reporting.duplicate_pkg_recent_history(pre_state,block)
+        #
+        # Reporting.future_report(block)
+        # Reporting.not_enough_guarantee(block)
+        # Reporting.valid_report_fn(pre_state,block)
+        # Reporting.not_sort_grnt_idx(block)
+        # Reporting.duplicate_pkg_report(pre_state, block)
+        # Reporting.guarantee_order(block)
+        # Reporting.check_multiple_reports(pre_state,block)
+        # Reporting.check_multiple_dependencies(pre_state,block)
+        # Reporting.big_work_report_output(pre_state, block)
+        # Reporting.check_dependencies(block)
         Reporting.bad_signature(pre_state, block)
         Reporting.refinement_fn(pre_state,block)
         Reporting.bad_core_index(block)
@@ -246,21 +284,127 @@ class Reporting:
                             ReportingErrorCode.DUPLICATE_PACKAGE
                         )
 
-    @staticmethod
-    def bad_signature(pre_state: State, block: Block):
+    def report_roatation(pre_state: State, block: Block):
+
+        # 1. curr report rotation
+        array_validator: U32Vector = U32Vector([])
+        for i in range(VALIDATOR_COUNT):
+            array_validator.append(U32(i))
+        print("array_validator =>", array_validator)
+
+        # validator assignment to the validator
+        cores_assign: U32Vector = U32Vector([])
+        for i in range(VALIDATOR_COUNT):
+            val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
+            cores_assign.append(U32(val_core))
+        print("cores_assign => ", cores_assign)
+
+        # entropy = pre_state.eta[2]
+        entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+        h = bytes.fromhex(entropy[2:])
+        print("entropy => ", h )
+
+        # suffled validator assignment array
+        shuffle_array = shuffle(h, cores_assign)
+        print("cores_assign => ", cores_assign)
+
+        curr_report_timeslot = None
         for x in block.extrinsic.guarantees:
+            curr_report_timeslot = x.slot
+        print("curr_report_timeslot =>", curr_report_timeslot)
+
+        time_slot = curr_report_timeslot % EPOCH_LENGTH
+        print("time_slot => ", time_slot)
+
+        # rotation phase (number of rotation for each validator group on cores)
+        rotation_phase = floor((time_slot % EPOCH_LENGTH) / ROTATION_PERIOD)
+        print("rotation_phase => ", rotation_phase)
+
+        # rotate validator across the core index
+        # rotated_array = rotate(shuffle_array, rotation_phase)
+        # print("shuffled array with rotation =>", rotated_array)
+
+        # Initialize an empty dictionary to store the mapping between core and validator
+        mapping = {}
+
+        for i in range(len(array_validator)):
+            key = shuffle_array[i]  # Grouping key from rotated_array
+            value = array_validator[i]  # Value from arr_validator
+
+            # If the key is not in the mapping, initialize it as an empty set
+            if key not in mapping:
+                mapping[key] = set()
+
+            # Add the value (index from arr_validator) to the set for this key
+            mapping[key].add(value)
+
+        # Sort the keys of the dictionary (0, 1) and create a new ordered dictionary
+        mapping = {k: mapping[k] for k in sorted(mapping.keys())}
+        print("assign core to validator", mapping)
+        # output => {0:{1, 4, 5}, 1:{0, 2, 3}}
+        # mapping[0] = [1, 4, 5]
+        # mapping[1] = [0, 2, 3]
+
+        # array of assign validator for each core
+        guarantee_validator_index = []
+
+        for x in block.extrinsic.guarantees:
+            index_set = set()
             for y in x.signatures:
-                curr_validator_ed25519_key = pre_state.kappa[y.validator_index].ed25519
-                public_key_byte = bytes(curr_validator_ed25519_key)
-                signature_byte = bytes(y.signature)
-                # guarantor_signature_bytes = bytes(signature)
-                work_report_byte = bytes(x.report.package_spec)
-                match = work_report_byte + public_key_byte
-                if public_key_obj.verify(signature_byte, match) == False:
-                    raise ReportingError(
-                        ReportingErrorCode.BAD_SIGNATURE,
-                        "signature doesn't match with the validator public key"
+                index_set.add(y.validator_index)
+            guarantee_validator_index.append(index_set)
+
+        print("guarantee_validator_index => ", guarantee_validator_index)
+
+        guarantor_length = len(block.extrinsic.guarantees)
+        print("guarantor_length => ", guarantor_length)
+
+        for i in range(guarantor_length):
+            print(mapping[i] == guarantee_validator_index[i])
+            if mapping[i] == guarantee_validator_index[i]:
+                print('inside if')
+                for i in range(len(block.extrinsic.guarantees)):
+                    print('core value')
+                    # print(state.rho.)
+                    pre_state.rho[i] = OptionalWorkReportState(
+                        WorkReportState(
+                            report=block.extrinsic.guarantees[i].report,
+                            timeout=block.extrinsic.guarantees[i].slot
+                        )
                     )
+
+        return pre_state
+
+
+
+
+        # add_validator = []
+
+        # Iterate through each group of signatures
+        # for group in signatures:
+        #     validator_set = set()
+        #     for signature in group:
+        #         validator_set.add(signature["validator_index"])
+        #     add_validator.append(validator_set)
+        #
+        # print("add_validator =", add_validator)
+        # print(add_validator[0])
+
+    # @staticmethod
+    # def bad_signature(pre_state: State, block: Block):
+    #     for x in block.extrinsic.guarantees:
+    #         for y in x.signatures:
+    #             curr_validator_ed25519_key = pre_state.kappa[y.validator_index].ed25519
+    #             public_key_byte = bytes(curr_validator_ed25519_key)
+    #             signature_byte = bytes(y.signature)
+    #             # guarantor_signature_bytes = bytes(signature)
+    #             work_report_byte = bytes(x.report.package_spec)
+    #             match = work_report_byte + public_key_byte
+    #             if public_key_obj.verify(signature_byte, match) == False:
+    #                 raise ReportingError(
+    #                     ReportingErrorCode.BAD_SIGNATURE,
+    #                     "signature doesn't match with the validator public key"
+    #                 )
                 # print(guarantor_signature_bytes)
                 # print(parent_hash_bytes)
                 # try:
