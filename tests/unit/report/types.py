@@ -86,7 +86,7 @@ class Testcase(Codable, JsonSerde):
 
 
 
-def get_testcases_starting_with(prefix: str = "too_many_dependencies-1.json", limit: int = 1) -> List[Testcase]:
+def get_testcases_starting_with(prefix: str = "high_work_report_gas-1.json", limit: int = 13) -> List[Testcase]:
     data_dir = "/home/rahulcsl/jam/jam-node/tests/unit/report/data/tiny/"
 
     result = []

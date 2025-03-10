@@ -1,3 +1,4 @@
+from jam.merklization import MMRFunctions
 from jam.report.check import auth_pool
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.rho import WorkReportState, OptionalWorkReportState
@@ -9,8 +10,9 @@ from dataclasses import dataclass, replace
 from jam.types.extrinsics.guarantees import GuaranteesExtrinsic
 
 from jam.types.extrinsics import GuaranteesExtrinsic
+from jam.types.protocol.crypto import Hash
 from jam.types.work.report import WorkResults
-from jam.utils.constants import ACCUMULATION_GAS, CORE_COUNT, MAX_DEPENDENCIES
+from jam.utils.constants import ACCUMULATION_GAS, CORE_COUNT, MAX_DEPENDENCIES, TOTAL_GAS, SIGNING_CONTEXTS
 from jam.report.error import ReportingError, ReportingErrorCode
 from jam.types.protocol.availability import AvailabilityAssignments
 from jam.utils.constants import CORE_COUNT
@@ -102,12 +104,12 @@ class Reporting:
         #             raise ReportingError(
         #                 ReportingErrorCode.BAD_CODE_HASH
         #             )
-
+        Reporting.core_engaged(pre_state, block)
         Reporting.refinement_fn(pre_state,block)
         Reporting.bad_core_index(block)
         Reporting.result_fn(pre_state,block)
         Reporting.validator_index(block)
-        # Reporting.core_engaged(pre_state,block)
+
         Reporting.duplicate_pkg_recent_history(pre_state,block)
 
         Reporting.future_report(block)
@@ -116,7 +118,7 @@ class Reporting:
         Reporting.not_sort_grnt_idx(block)
         Reporting.duplicate_pkg_report(pre_state, block)
         Reporting.guarantee_order(block)
-        Reporting.check_multiple_reports(pre_state,block)
+        # Reporting.check_multiple_reports(pre_state,block)
         Reporting.check_multiple_dependencies(pre_state,block)
         Reporting.big_work_report_output(pre_state, block)
         Reporting.check_dependencies(block)
@@ -143,7 +145,7 @@ class Reporting:
         # Reporting.result_fn(n.report.results,new_state)
         return new_state
 
-
+    # for too_many_dependencies-1.json
     @staticmethod
     def check_dependencies(block : Block):
         for x in block.extrinsic.guarantees:
@@ -300,7 +302,7 @@ class Reporting:
 
             # In this we are checking if prerequisites array is not null , then
             # its hashes must match with package spec hash of previous reports
-            if context.prerequisites != Null : # changed from is not None to != Null
+            if context.prerequisites != Null or y.report.segment_root_lookup != Null: # changed from is not None to != Null
                 # print(context.prerequisites != Null)
                  for x in context.prerequisites:
                     print('x = ',x,'work package',work_package_hashes,'hashes ',hashes)
@@ -309,11 +311,14 @@ class Reporting:
                             ReportingErrorCode.DEPENDENCY_MISSING
                         )
             print('segment')
+            # segment_root_lookup_invalid-1.json
             if  y.report.segment_root_lookup != Null:
+                print('segment 2')
                 for x in y.report.segment_root_lookup:
-                    if x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes:
+                    print(x.segment_tree_root != y.report.package_spec.exports_root)
+                    if x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes or x.segment_tree_root != y.report.package_spec.exports_root:
                         raise ReportingError(
-                            ReportingErrorCode.DEPENDENCY_MISSING
+                            ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID
                         )
 
     def segement_root_lookup(self):
@@ -323,9 +328,11 @@ class Reporting:
     def result_fn(state:State,block:Block):
 
         results = block.extrinsic.guarantees
-        total_accumulate_gas = 0
-        for x in results:
+        print(SIGNING_CONTEXTS['beefy'])
+        print('mmmmrrr',Hash.keccak256((MMRFunctions.encode_mmr(state.beta[6].mmr))))
 
+        for x in results:
+            total_accumulate_gas = 0
             for y in x.report.results:
                 if y.service_id not in state.delta:
                     print("service")
@@ -347,21 +354,27 @@ class Reporting:
                 total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
 
 
-
-
-        if total_accumulate_gas > ACCUMULATION_GAS:
-            # print('in high work report gas',total_accumulate_gas)
-            for core in range(len(block.extrinsic.guarantees)):
-                # print('core value',core)
-                    # print(state.rho.)
-                state.rho[core] = OptionalWorkReportState(
-                    WorkReportState(
-                        report=block.extrinsic.guarantees[core].report,
-                        timeout=block.extrinsic.guarantees[core].slot
+            print('high gas',total_accumulate_gas , ACCUMULATION_GAS )
+            if total_accumulate_gas > ACCUMULATION_GAS:
+                print(state.beta)
+                print(Hash.keccak256(bytes(0xf5df0c11416d43c55b43e096572d450b7780ed0fd7b540f26c8ded8e0d41e183)))
+                raise ReportingError(
+                    ReportingErrorCode.WORK_REPORT_GAS_TOO_HIGH
+                )
+            if total_accumulate_gas <= ACCUMULATION_GAS:
+                # print('in high work report gas',total_accumulate_gas)
+                print('high work report gas case')
+                for core in range(len(block.extrinsic.guarantees)):
+                    # print('core value',core)
+                        # print(state.rho.)
+                    state.rho[core] = OptionalWorkReportState(
+                        WorkReportState(
+                            report=block.extrinsic.guarantees[core].report,
+                            timeout=block.extrinsic.guarantees[core].slot
+                            )
                         )
-                    )
-                # print(core,'---> ',state.rho[core])
-                # print(core,'--->',block.extrinsic.guarantees[core].report)
+                    # print(core,'---> ',state.rho[core])
+                    # print(core,'--->',block.extrinsic.guarantees[core].report)
         return state
 
         # for x in transition().rho:
@@ -420,12 +433,15 @@ class Reporting:
 
     @staticmethod
     def core_engaged(state:State,block:Block):
+
         for x in block.extrinsic.guarantees:
-            print(x.report.core_index,state.rho[x.report.core_index] == Null)
-            if state.rho[x.report.core_index] != Null:
-                raise ReportingError(
-                    ReportingErrorCode.CORE_ENGAGED
-                )
+            print('xxxxxcore')
+            # print(x.report.core_index,state.rho[x.report.core_index])
+            if x.report.core_index <= 2:
+                if state.rho[x.report.core_index] != Null:
+                    raise ReportingError(
+                        ReportingErrorCode.CORE_ENGAGED
+                    )
 
     @staticmethod
     def future_report(block:Block):
@@ -443,25 +459,25 @@ class Reporting:
             for y in x.report.results:
                 service_id = y.service_id
                 total_gas = total_gas + y.accumulate_gas
-        if state.delta[service_id].balance < total_gas:
+        if state.delta[service_id].min_gas < total_gas:
 
           print('gas limit ')
 
     #     for x in state.delta:
 
     @staticmethod
-    def check_multiple_reports(state:State, block:Block):
-        if len(block.extrinsic.guarantees) >1:
-            for core in range(len(block.extrinsic.guarantees)):
-                # print('core value',core)
-                    # print(state.rho.)
-                state.rho[core] = OptionalWorkReportState(
-                    WorkReportState(
-                        report=block.extrinsic.guarantees[core].report,
-                        timeout=block.extrinsic.guarantees[core].slot
-                        )
-                    )
-            return state
+    # def check_multiple_reports(state:State, block:Block):
+    #     if len(block.extrinsic.guarantees) >1:
+    #         for core in range(len(block.extrinsic.guarantees)):
+    #             # print('core value',core)
+    #                 # print(state.rho.)
+    #             state.rho[core] = OptionalWorkReportState(
+    #                 WorkReportState(
+    #                     report=block.extrinsic.guarantees[core].report,
+    #                     timeout=block.extrinsic.guarantees[core].slot
+    #                     )
+    #                 )
+    #         return state
 
     @staticmethod
     def check_multiple_dependencies(state:State, block:Block):
@@ -488,10 +504,11 @@ class Reporting:
             work_report_output = work_report_output + x.report.auth_output
 
             for y in x.report.results:
-                # print('result value',y.result.get_value())
                 work_report_output = work_report_output + y.result.get_value()
-        # print(work_report_output < Bytes(48 * (2 ** 10)))
+
+
         if work_report_output < Bytes(48 * (2 ** 10)):
+            print('big work report output case')
             for core in range(len(block.extrinsic.guarantees)):
                 # print('core value',core)
                 # print(state.rho.)

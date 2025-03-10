@@ -68,6 +68,7 @@ def vector_transition(vector:Testcase) -> Boolean:
     # print('ouuuuuttt',vector.output['err'])
     try:
         output = Reporting.transition(test_state, test_block)
+        print('State transition')
         assert output == create_state_from_pre(vector.post_state)
         avail_assignments_report = []
         avail_assignments_slot = []

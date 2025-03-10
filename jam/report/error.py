@@ -30,3 +30,5 @@ class ReportingErrorCode(Enum):
     FUTURE_REPORT_SLOT = "future_report_slot"
     INSUFFICIENT_GURANTEE = "insufficient_guarantees"
     SERVICE_ITEM_GAS_TOO_LOW = "service_item_gas_too_low"
+    SEGMENT_ROOT_LOOKUP_INVALID= "segment_root_lookup_invalid"
+    WORK_REPORT_GAS_TOO_HIGH= "work_report_gas_too_high"
