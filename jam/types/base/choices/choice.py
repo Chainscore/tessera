@@ -146,6 +146,9 @@ class Choice(Codable[T], JsonSerde, Generic[T]):
         """Get string representation."""
         return f"{self.__class__.__name__}({self.value!r})"
 
+    def get_value(self):
+        return self.value[list(self.value.keys())[0]]
+        
     @classmethod
     def from_json(cls, data: Any) -> "Choice[T]":
         """Create from JSON representation."""
