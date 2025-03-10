@@ -1,10 +1,3 @@
-# import dataclasses
-# from dataclasses import dataclass
-from jam.state.components.theta import Theta, AllReadyWRs, ReadyWR
-from jam.state.state import State
-from jam.types import Block
-from jam.types.work.report import WorkDependencies, WorkReports, SegmentRootLookup
-from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
 from jam.state.components.chi import ChiG
 from jam.state.components.tau import Tau
 from jam.types.protocol.core import Gas,ServiceId,OpaqueHash,Balance
@@ -16,6 +9,11 @@ from jam.state.components.iota import Iota
 from jam.state.components.xi import Xi
 from jam.state.components.chi import Chi,ChiA,ChiG,ChiM,ChiV
 import copy
+from jam.state.components.nu import Nu, AllReadyWRs, ReadyWR
+from jam.state.state import State
+from jam.types import Block
+from jam.types.work.report import WorkDependencies, WorkReports, SegmentRootLookup
+from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
 
 class Accumulation:
     @staticmethod
@@ -92,8 +90,9 @@ class Accumulation:
         Returns:
             Prioritized Work Reports in order
         """
+
         prioritized_queue = WorkReports([])
-       
+
         return prioritized_queue
 
     @staticmethod
@@ -306,19 +305,16 @@ class Accumulation:
     @staticmethod
     def wr_si_specific(pre_state: State,block: Block)-> WorkReports:
         return WorkReports([])
-        
+
     @classmethod
     def transition(cls, pre_state: State, block: Block):
 
-        # new_state = dataclasses.replace(pre_state)
-        # disputes = block.extrinsic.disputes
-
         # Section 12.1: History & Queuing
 
-        theta = pre_state.theta # Ready for Accumulation
+        nu = pre_state.nu # Ready for Accumulation
         xi_union = pre_state.xi # Accumulated Packages History
+
         work_reports = WorkReports([]) # Latest Work Reports to accumulate
-        
         for rg in block.extrinsic.guarantees:
             work_reports.append(rg.report)
 
@@ -329,8 +325,8 @@ class Accumulation:
 
         accumulatable_wr = AllReadyWRs([])
 
-        q_right = theta[m:]
-        q_left = theta[:m]
+        q_right = nu[m:]
+        q_left = nu[:m]
 
         for wrs in q_right:
             accumulatable_wr.extend(wrs)
@@ -368,6 +364,3 @@ class Accumulation:
 
         # Section 12.4 Preimage Integration
 
-
-
-        ...

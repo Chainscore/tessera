@@ -3,7 +3,7 @@ import json
 import os
 from typing import List
 
-from jam.state.components.theta import AllReadyWRs
+from jam.state.components.nu import AllReadyWRs
 from jam.types.base.integers.fixed import U32
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass

@@ -1,5 +1,7 @@
 from typing import List
 
+# from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
+# from jam.disputes.disputes import Disputes
 from jam.state.state import State
 from jam.types import Boolean
 from jam.types.block import Block
@@ -11,12 +13,14 @@ from tests.unit.accumulation.types import (
     Testcase,
     get_testcases_starting_with,
 )
+
 from jam.accumulation.accumulation import Accumulation
 from jam.state.components.delta import Delta, AccountData
-from jam.state.components.theta import Theta
+from jam.state.components.nu import Nu
 from jam.state.components.xi import Xi
 from jam.types.extrinsics.guarantees import ReportGuarantee
 from tests.fixtures.dummy_extrinsics import create_dummy_validator_signatures
+
 
 def create_block_from_input(input: Input) -> Block:
     """Create a block from test input"""
@@ -30,7 +34,7 @@ def create_block_from_input(input: Input) -> Block:
 def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state = create_dummy_state()
-    state.theta = Theta(pre_state.ready_queue)
+    state.nu = Nu(pre_state.ready_queue)
     index=0
     for i in range(len(pre_state.accumulated)):
         for j in pre_state.accumulated[i]:
@@ -71,8 +75,6 @@ def vector_transition(vector: Testcase) -> Boolean:
     test_block = create_block_from_input(vector.input)
     test_state = create_state_from_pre(vector.pre_state)
     
-    # print("theta->",type(test_state.theta))
-    # print("blockguarantee->",type(test_block.extrinsic.guarantees))
     state=Accumulation.transition(test_state,test_block)
     return Boolean(True)
 
