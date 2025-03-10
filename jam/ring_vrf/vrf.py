@@ -122,7 +122,7 @@ class VRF(ABC):
         Returns:
             Tuple[Point, int, int]: (gamma, C, S)
         """
-        ptLen = qLen = cLen = 64
+        ptLen = qLen = cLen = 32
         gamma_string = pi_string[:ptLen]
         c_string = pi_string[ptLen:ptLen + cLen]
         s_string = pi_string[ptLen + cLen:ptLen + cLen + qLen]
@@ -134,7 +134,7 @@ class VRF(ABC):
             assert False, "S out of bounds"
         return gamma, C, S
 
-    def ecvrf_proof_to_hash(self, gamma: Point, C: int, S: int) -> bytes:
+    def ecvrf_proof_to_hash(self, pi_string: bytes) -> bytes:
         """Convert VRF proof to hash.
 
         Args:
@@ -143,13 +143,24 @@ class VRF(ABC):
         Returns:
             bytes: Hash of VRF proof
         """
-        # gamma, C, S = self.ecvrf_decode_proof(pi_string)
+        gamma, C, S = self.ecvrf_decode_proof(pi_string)
+        return self.proof_to_hash(gamma)
+    
+    def proof_to_hash(self, gamma: Point) -> bytes:
+        """Convert VRF proof to hash.
+
+        Args:
+            gamma: VRF output point
+
+        Returns:
+            bytes: Hash of VRF proof
+        """
         proof_to_hash_domain_separator_front = b"\x03"
         proof_to_hash_domain_separator_back = b"\x00"
         beta_string = Hash.sha512(
             self.curve.SUITE_STRING.encode() + 
             proof_to_hash_domain_separator_front + 
-            (gamma * self.curve.COFACTOR).point_to_string() + 
+            (gamma).point_to_string() + 
             proof_to_hash_domain_separator_back
         )
         return bytes(beta_string)
