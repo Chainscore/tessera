@@ -4,7 +4,7 @@ from jam.types.protocol.core import Gas,ServiceId,OpaqueHash,Balance
 from tests.unit.accumulation.types import DeferredTransfer, AcclOutput, AcclOutputs,stateContext,DeferredTransfers,gasPrivilages,gasPrivilage
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.work.report import WorkReport,WorkExecResult,WorkPackageSpec
-from jam.state.components.delta import Delta
+from jam.state.components.delta import Delta,AccountData
 from jam.state.components.iota import Iota
 from jam.state.components.xi import Xi
 from jam.state.components.chi import Chi,ChiA,ChiG,ChiM,ChiV
@@ -153,7 +153,6 @@ class Accumulation:
         for i in accl_Outputs_end:
             if i not in accl_Outputs_star:
                 accl_Outputs_star.append(i)
-        print("j",j)
         return [index+j,partial_state_end,deferred_transfers_star,accl_Outputs_star]
         # return [0,partial_state_star,deferred_transfers_star,accl_Outputs_star]
 
@@ -299,6 +298,23 @@ class Accumulation:
     @staticmethod
     def psiA(partial_state: stateContext,Tau:Tau,service_id: ServiceId,g:Gas,p:gasPrivilages) -> tuple[stateContext,DeferredTransfers,OpaqueHash,Gas]:
         return [partial_state, [], None, g]
+    @staticmethod
+    def psiT(AccountData: AccountData,time:Tau,service_id: ServiceId,deffered_transfers: DeferredTransfers)-> AccountData:
+        if deffered_transfers is not None:
+            return AccountData
+        else:
+            return AccountData
+    # @staticmethod
+    # def double_dagger_fn(delta_dagger: Delta,time:Tau,service_id: ServiceId,deffered_transfers: DeferredTransfers)-> Delta:
+    #     return Delta(delta_dagger)
+
+    @staticmethod
+    def selection_fn(deferred_transfers: DeferredTransfers,service_id: ServiceId)-> DeferredTransfers:
+        service_transfers = DeferredTransfers([])
+        for i in deferred_transfers:
+            if i.receiver==service_id:
+                service_transfers.append(i)
+        return service_transfers
     
     @staticmethod
     def wr_si_specific(pre_state: State,block: Block)-> WorkReports:
@@ -339,6 +355,9 @@ class Accumulation:
         star_work_reports = WorkReports(immediate_reports)
         star_work_reports.extend(updated_wrs)
 
+        # ----------------------
+        # Section 12.2 Execution
+       
         partial_state = stateContext(service_accounts=pre_state.delta,validator_keys=pre_state.iota,authorizer_keys=pre_state.phi,privileges=pre_state.chi)
         # accumulated_gas accumulated from ChiG_services
         service_gas=0
@@ -346,21 +365,14 @@ class Accumulation:
             service_gas+=pre_state.chi.g[i]
 
         gaslimit=max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT)+service_gas))
-
-        # TEST: single service accumulation
-        # [partial_state,DeferredTransfer,OpaqueHash,Gas]=Accumulation.singleAccumulation(partial_state,work_reports,pre_state.chi.g,ServiceId(1729))
-
-        # TEST: parallel service accumulation
-        
-        [work_accl_no,partial_state,deferred_transfers,beefy_map]=Accumulation.SequentialAccumulation(Gas(gaslimit),work_reports,partial_state,pre_state.chi.g)
-        # print(gas,partial_state,deferred_transfers,accl_Outputs)
-        # print(work_accl_no)
-        # ----------------------
-        # Section 12.2 Execution
-
+        [work_accl_no,updated_state,deferred_transfers,beefy_protocol_map]=Accumulation.SequentialAccumulation(Gas(gaslimit),star_work_reports,partial_state,pre_state.chi.g)
 
         # Section 12.3 Deferred Transfers & State Integration
-
+        # delta_double_dagger=Accumulation.psiT(updated_state.service_accounts,block.header.slot,service_id,deferred_transfers)
+        for s in updated_state.service_accounts:
+            specific_transfers=Accumulation.selection_fn(deferred_transfers,s)
+            # delta_double_dagger
+            updated_state.service_accounts[s]=Accumulation.psiT(updated_state.service_accounts[s],block.header.slot,s,specific_transfers)
 
         # Section 12.4 Preimage Integration
 

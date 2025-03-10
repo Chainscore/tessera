@@ -12,7 +12,7 @@ from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.utils.constants import EPOCH_LENGTH
 from jam.utils.json import JsonSerde
-from jam.types.work.report import WorkReport,WorkExecResult,WorkPackageSpec
+from jam.types.work.report import WorkReport,WorkExecResult,WorkPackageSpec,WorkDependencies
 from jam.types.protocol.crypto import WorkReportHash
 from jam.state.components.chi import Chi
 from jam.types.protocol.service import ServiceInfo
@@ -21,6 +21,7 @@ from jam.types.protocol.core import ServiceId,Gas,U64,OpaqueHash,Balance
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.state.components.delta import Delta
 from jam.state.components.iota import Iota
+
 
 from typing import Optional
 
@@ -70,9 +71,9 @@ class AcclOutputs(Vector[AcclOutput]):
 @decodable_vector(AllReadyWRs)
 class ReadyQueue(Vector[AllReadyWRs]):
     ...
-@decodable_vector(WorkReportHash)
-class WorkDependencies(Vector[WorkReportHash]):
-    ...
+# @decodable_vector(WorkReportHash)
+# class WorkDependencies(Vector[WorkReportHash]):
+#     ...
 @decodable_array(EPOCH_LENGTH,WorkDependencies)
 class Accumulated(Array[WorkDependencies]):
     ...
