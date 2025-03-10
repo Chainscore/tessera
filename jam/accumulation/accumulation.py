@@ -275,8 +275,6 @@ class Accumulation:
     #                 )
     #                 return updated_partial_state.service_accounts
 
-            
-        
     @staticmethod
     def singleAccumulation(partial_state: stateContext,work_reports: WorkReports,freeAccServices: ChiG,service_id: ServiceId)-> tuple[stateContext,DeferredTransfers,OpaqueHash,Gas]:
         g=0
@@ -338,15 +336,15 @@ class Accumulation:
         intermediate_queue = cls.queue_edit_fn(accumulatable_wr, cls.mapping_fn(immediate_reports))
         updated_wrs = cls.priority_queue_fn(intermediate_queue)
 
-
         star_work_reports = WorkReports(immediate_reports)
         star_work_reports.extend(updated_wrs)
 
-        partial_state = stateContext(service_accounts=pre_state.delta,validator_keys=pre_state.iota,authorizer_keys=pre_state.xi,privileges=pre_state.chi)
+        partial_state = stateContext(service_accounts=pre_state.delta,validator_keys=pre_state.iota,authorizer_keys=pre_state.phi,privileges=pre_state.chi)
         # accumulated_gas accumulated from ChiG_services
         service_gas=0
         for i in pre_state.chi.g:
             service_gas+=pre_state.chi.g[i]
+
         gaslimit=max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT)+service_gas))
 
         # TEST: single service accumulation
