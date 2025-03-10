@@ -16,7 +16,6 @@ from tests.unit.accumulation.types import (
 
 from jam.accumulation.accumulation import Accumulation
 from jam.state.components.delta import Delta, AccountData
-# from jam.state.components.theta import Theta
 from jam.state.components.nu import Nu
 from jam.state.components.xi import Xi
 from jam.types.extrinsics.guarantees import ReportGuarantee
@@ -76,8 +75,6 @@ def vector_transition(vector: Testcase) -> Boolean:
     test_block = create_block_from_input(vector.input)
     test_state = create_state_from_pre(vector.pre_state)
     
-    # print("theta->",type(test_state.theta))
-    # print("blockguarantee->",type(test_block.extrinsic.guarantees))
     state=Accumulation.transition(test_state,test_block)
     return Boolean(True)
 
