@@ -1,7 +1,7 @@
 from jam.state.components.chi import ChiG
 from jam.state.components.tau import Tau
 from jam.types.protocol.core import Gas,ServiceId,OpaqueHash,Balance
-from tests.unit.accumulation.types import DeferredTransfer,AcclOutputs,stateContext,DeferredTransfers,gasPrivilages,gasPrivilage
+from tests.unit.accumulation.types import DeferredTransfer, AcclOutput, AcclOutputs,stateContext,DeferredTransfers,gasPrivilages,gasPrivilage
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.work.report import WorkReport,WorkExecResult,WorkPackageSpec
 from jam.state.components.delta import Delta
@@ -335,11 +335,13 @@ class Accumulation:
             accumulatable_wr.extend(wrs)
 
         accumulatable_wr.extend(queued_reports)
+        intermediate_queue = cls.queue_edit_fn(accumulatable_wr, cls.mapping_fn(immediate_reports))
+        updated_wrs = cls.priority_queue_fn(intermediate_queue)
 
-        star_work_reports = cls.queue_edit_fn(accumulatable_wr, cls.mapping_fn(immediate_reports))
-        
-        
-        
+
+        star_work_reports = WorkReports(immediate_reports)
+        star_work_reports.extend(updated_wrs)
+
         partial_state = stateContext(service_accounts=pre_state.delta,validator_keys=pre_state.iota,authorizer_keys=pre_state.xi,privileges=pre_state.chi)
         # accumulated_gas accumulated from ChiG_services
         service_gas=0
