@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Protocol, Tuple, TypeVar
+from typing import Dict, List, Optional, Protocol, Tuple, Type, TypeVar
 
 from jam.types.protocol.crypto import Hash
+from jam.utils.conv_helper import ConversionHelper
 
 from .curve.curve import Curve
 from .curve.point import Point
@@ -14,7 +15,9 @@ P = TypeVar("P", bound=Point)
 
 class VRFProtocol(Protocol[C, P]):
     """Protocol defining the interface for VRF implementations."""
-
+    curve: C
+    point_type: Type[P]
+    
     @abstractmethod
     def prove(
         self, alpha: bytes, secret_key: int, additional_data: bytes
@@ -42,8 +45,10 @@ class VRF(ABC):
     This class provides the core functionality for VRF operations,
     following the IETF specification.
     """
+    curve: C
+    point_type: Type[P]
 
-    def __init__(self, curve: C):
+    def __init__(self, curve: C, point_type: Type[P]):
         """
         Initialize VRF with a curve.
 
@@ -51,6 +56,7 @@ class VRF(ABC):
             curve: Elliptic curve to use for VRF operations
         """
         self.curve = curve
+        self.point_type = point_type
 
     def generate_nonce(self, secret_key: int, input_point: Point) -> int:
         """
@@ -106,6 +112,47 @@ class VRF(ABC):
         challenge_hash = bytes(Hash.sha512(hash_input))[:32]
 
         return int.from_bytes(challenge_hash, "big") % self.curve.ORDER
+    
+    def ecvrf_decode_proof(self, pi_string: bytes) -> Tuple[Point, int, int]:
+        """Decode VRF proof.
+
+        Args:
+            pi_string: VRF proof
+
+        Returns:
+            Tuple[Point, int, int]: (gamma, C, S)
+        """
+        ptLen = qLen = cLen = 64
+        gamma_string = pi_string[:ptLen]
+        c_string = pi_string[ptLen:ptLen + cLen]
+        s_string = pi_string[ptLen + cLen:ptLen + cLen + qLen]
+        
+        gamma = self.point_type.string_to_point(gamma_string)
+        C = ConversionHelper.to_int(c_string) % self.curve.ORDER
+        S = ConversionHelper.to_int(s_string) % self.curve.ORDER
+        if S >= self.curve.PRIME_FIELD:
+            assert False, "S out of bounds"
+        return gamma, C, S
+
+    def ecvrf_proof_to_hash(self, gamma: Point, C: int, S: int) -> bytes:
+        """Convert VRF proof to hash.
+
+        Args:
+            pi_string: VRF proof
+
+        Returns:
+            bytes: Hash of VRF proof
+        """
+        # gamma, C, S = self.ecvrf_decode_proof(pi_string)
+        proof_to_hash_domain_separator_front = b"\x03"
+        proof_to_hash_domain_separator_back = b"\x00"
+        beta_string = Hash.sha512(
+            self.curve.SUITE_STRING.encode() + 
+            proof_to_hash_domain_separator_front + 
+            (gamma * self.curve.COFACTOR).point_to_string() + 
+            proof_to_hash_domain_separator_back
+        )
+        return bytes(beta_string)
 
     @abstractmethod
     def prove(self, *args) -> Tuple[Point, Tuple[int, int]]:
