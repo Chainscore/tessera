@@ -36,10 +36,12 @@ def create_state_from_pre(pre_state: PreState) -> State:
     state = create_dummy_state()
     state.nu = Nu(pre_state.ready_queue)
     index=0
-    for i in range(len(pre_state.accumulated)):
-        for j in pre_state.accumulated[i]:
-            state.xi[index]=j
-        index+=1  
+    state.xi=Xi(pre_state.accumulated)
+    # for i in range(len(pre_state.accumulated)):
+    #     for j in pre_state.accumulated[i]:
+    #         state.xi[index]=j
+    #     index+=1  
+    # state.xi=pre_state.accumulated
     state.eta[0]=pre_state.entropy
     # Not sure about altering first element of eta
     state.chi.m=pre_state.privileges.bless
