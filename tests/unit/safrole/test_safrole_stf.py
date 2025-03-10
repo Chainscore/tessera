@@ -42,11 +42,20 @@ def vector_transition(vector: Testcase) -> Boolean:
 #         vector_transition(vector)
 #         print(f"Passed testcase #{i + 1}")
 
+# def test_enact_epoch_change_with_padding():
+#     """Test publishing tickets with no mark"""
+#     vectors: List[Testcase] = get_testcases_starting_with(
+#         limit=10, prefix="enact-epoch-change-with-padding"
+#     )
+#     for i, vector in enumerate(vectors):
+#         vector_transition(vector)
+#         print(f"Passed testcase #{i + 1}")
+
 
 # def test_publish_tickets_no_mark():
 #     """Test publishing tickets with no mark"""
 #     vectors: List[Testcase] = get_testcases_starting_with(
-#         limit=10, prefix="publish-tickets-no-mark"
+#         limit=4, prefix="publish-tickets-no-mark"
 #     )
 #     for i, vector in enumerate(vectors):
 #         vector_transition(vector)
