@@ -86,7 +86,7 @@ class Testcase(Codable, JsonSerde):
 
 
 
-def get_testcases_starting_with(prefix: str = "reports_with_dependencies-1.json", limit: int = 1) -> List[Testcase]:
+def get_testcases_starting_with(prefix: str = "bad_validator_index-1.json", limit: int = 1) -> List[Testcase]:
     data_dir = "/home/dikshant441/Desktop/jam/jam-node/tests/unit/report/data/tiny/"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
