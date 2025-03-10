@@ -60,3 +60,10 @@ def vector_transition(vector: Testcase) -> Boolean:
 #     for i, vector in enumerate(vectors):
 #         vector_transition(vector)
 #         print(f"Passed testcase #{i + 1}")
+
+
+# def main():
+#     test_enact_epoch_change_with_padding()
+
+# if __name__ == "__main__":
+#     main()

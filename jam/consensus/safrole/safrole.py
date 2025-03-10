@@ -17,7 +17,7 @@ from jam.utils.constants import (
 )
 from jam.types.protocol.crypto import BandersnatchPublic, Hash
 from jam.consensus.safrole.gamma import GammaK, GammaSFallback, GammaA
-
+from jam.types.protocol.validators import ValidatorData
 
 class Safrole:
     @staticmethod
@@ -75,9 +75,19 @@ class Safrole:
             new_state.lambda_ = Lambda_(pre_state.kappa.value)
             new_kappa = Kappa(pre_state.gamma.k)
             new_state.kappa = new_kappa
-            new_state.gamma.k = GammaK(
-                [k for k in pre_state.iota if k.ed25519 not in pre_state.psi.o]
-            )
+            filtered_validators=[]
+            for k in pre_state.iota:
+                if k.ed25519 in pre_state.psi.o:
+                    # Offender found, replace with default ValidatorData
+                    filtered_validators.append(ValidatorData(bandersnatch=ByteArray32(bytes(32)), ed25519=ByteArray32(bytes(32)), bls=k.bls, metadata=k.metadata))
+                else:
+                    # Not an offender, keep the original validator data
+                    filtered_validators.append(k)
+            
+            new_state.gamma.k = GammaK(filtered_validators)
+            # new_state.gamma.k = GammaK(
+            #     [k for k in pre_state.iota if k.ed25519 not in pre_state.psi.o]
+            # )
 
             # 4.2 . Shift entropy
             new_state.eta = Eta(
