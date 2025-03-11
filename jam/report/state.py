@@ -1,13 +1,5 @@
 from jam.merklization import MMRFunctions
-# from libxsltmod import xsltSetLoaderFunc
-# from py_ecc.bls import G1, G2, multiply, add
-from spwd import struct_spwd
 
-from libxsltmod import xsltSetLoaderFunc
-from virtualenv.app_data import ReadOnlyAppData
-
-from jam.report.check import auth_pool
-from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.rho import WorkReportState, OptionalWorkReportState
 from jam.state.state import State
 from jam.types import Block, decodable_choice, ServiceId, Boolean, Vector, AvailabilityAssignments, \
@@ -120,16 +112,16 @@ class Reporting:
         #
         Reporting.bad_core_index(block)
         Reporting.result_fn(pre_state,block)
-        Reporting.validator_index(block)
+        Reporting.bad_validator_index(block)
 
         Reporting.duplicate_pkg_recent_history(pre_state,block)
 
         Reporting.future_report(block)
-        Reporting.not_enough_guarantee(block)
+        Reporting.no_enough_guarantee(block)
         Reporting.valid_report_fn(pre_state,block)
-        Reporting.not_sort_grnt_idx(block)
-        Reporting.duplicate_pkg_report(pre_state, block)
-        Reporting.guarantee_order(block)
+        Reporting.verify_guarantor_order(block)
+        Reporting.duplicate_pkg_report( block)
+        Reporting.verify_guarantees_order(block)
         # Reporting.check_multiple_reports(pre_state,block)
         Reporting.check_multiple_dependencies(pre_state,block)
         Reporting.report_last_rotation(block)
