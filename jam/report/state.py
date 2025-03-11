@@ -109,10 +109,10 @@ class Reporting:
         # Reporting.valid_report_fn()
         # Reporting.report_rotation(pre_state, block)
         # # Reporting.bad_signature(pre_state, block)
-        # Reporting.refinement_fn(pre_state, block)
-        # Reporting.core_engaged(pre_state, block)
+        Reporting.refinement_fn(pre_state, block)
+        Reporting.core_engaged(pre_state, block)
         #
-        # Reporting.bad_core_index(block)
+        Reporting.bad_core_index(block)
         Reporting.result_fn(pre_state,block)
         Reporting.validator_index(block)
 
@@ -127,6 +127,8 @@ class Reporting:
         # Reporting.check_multiple_reports(pre_state,block)
         Reporting.check_multiple_dependencies(pre_state,block)
         Reporting.big_work_report_output(pre_state, block)
+        Reporting.report_rotation(pre_state, block)
+
         # Reporting.check_dependencies(block)
 
 
@@ -183,16 +185,24 @@ class Reporting:
                     )
 
     @staticmethod
-    def valid_report_fn(state: State,block:Block):
-        auth_pool = state.alpha
+    def valid_report_fn(state: State, block: Block):
         for x in block.extrinsic.guarantees:
             report_auth_hash = x.report.authorizer_hash
             core_index = x.report.core_index
-            if report_auth_hash not in auth_pool[core_index]:
-                raise ReportingError(
-                    ReportingErrorCode.CORE_UNAUTHORIZED,
-                    "Work Report's authorizer_hash not exist in AuthorizationPool"
-                )
+            auth_pool = state.alpha
+            print(core_index)
+            # print('auth pool length', (state.alpha[core_index]))
+            if core_index <2:
+                if len(state.alpha[core_index]) == 0:
+                    raise ReportingError(
+                        ReportingErrorCode.CORE_UNAUTHORIZED,
+                        "Pool for that particular core_index in Authorization pool is empty"
+                    )
+                if report_auth_hash not in auth_pool[core_index]:
+                    raise ReportingError(
+                        ReportingErrorCode.CORE_UNAUTHORIZED,
+                        "Work Report's authorizer_hash not exist in AuthorizationPool"
+                    )
 
     @staticmethod
     def validator_index( block:Block):

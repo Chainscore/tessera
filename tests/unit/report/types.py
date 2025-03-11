@@ -87,11 +87,12 @@ class Testcase(Codable, JsonSerde):
 
 
 def get_testcases_starting_with(prefix: str = "too_big_work_report_output-1.json", limit: int = 0) -> List[Testcase]:
-    # data_dir = "/home/rahulcsl/jam/jam-node/tests/unit/report/data/tiny/"
-    data_dir = "./data/tiny/"
+    data_dir = "/home/rahulcsl/jam/jam-node/tests/unit/report/data/tiny/"
 
     result = []
+    position = 1
     for index, file in enumerate(os.listdir(data_dir)):
+
         if len(result) >= limit:
             continue
         elif not file.startswith(prefix):
@@ -103,9 +104,10 @@ def get_testcases_starting_with(prefix: str = "too_big_work_report_output-1.json
                 data = json.loads(f.read())
                 try:
                     tc = Testcase.from_json(data)
-                    print(f"Decoded {file}")
+                    print(f"Decoded {position}{file}")
                     result.append(tc)
                 except Exception as e:
                     print(f"❌ Failed to decode {file}: {e}")
                     continue
+        position = position + 1
     return result

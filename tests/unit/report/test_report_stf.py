@@ -1,4 +1,4 @@
-from jam.report.error import ReportingError
+from jam.report.error import ReportingError, ReportingErrorCode
 from jam.report.state import Reporting
 from jam.state.components.beta import PackageDict, Beta
 from jam.state.components.delta import AccountData
@@ -91,6 +91,8 @@ def vector_transition(vector:Testcase) -> Boolean:
         return True
 
     except ReportingError as e:
+        if e.code._value_ == ReportingErrorCode.BAD_BEEFY_MMR_ROOT:
+            pass
         print('eeeeeerrrrr',e.code._value_)
         assert e.code._value_ == vector.output['err']
 
@@ -105,7 +107,7 @@ def vector_transition(vector:Testcase) -> Boolean:
 
 def test_tiny():
     """Test publishing tickets with no mark"""
-    vectors: List[Testcase] = get_testcases_starting_with(limit=19)
+    vectors: List[Testcase] = get_testcases_starting_with(limit=38)
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)
         print(f"Passed testcase #{i + 1}")
