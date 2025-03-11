@@ -12,7 +12,7 @@ def setup_logging() -> None:
             structlog.dev.ConsoleRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(
-            structlog.get_logger().level
+            "notset"
         ),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
