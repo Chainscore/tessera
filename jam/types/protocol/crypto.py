@@ -44,6 +44,14 @@ class Hash:
         return ByteArray32(sha256(data).digest())
 
     @staticmethod
+    def sha512(data: bytes) -> ByteArray64:
+        """SHA512 hash function"""
+        from hashlib import sha512
+        if not isinstance(data, bytes):
+            data = bytes(data)
+        return ByteArray64(sha512(data).digest())
+
+    @staticmethod
     def sha3256(data: bytes) -> ByteArray32:
         """SHA3_256 hash function"""
         from hashlib import sha3_256

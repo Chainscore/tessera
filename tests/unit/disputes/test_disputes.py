@@ -1,6 +1,8 @@
+import os
 from typing import List
 
-from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
+import pytest
+
 from jam.disputes.disputes import Disputes
 from jam.disputes.error import DisputesError
 from jam.state.state import State
@@ -27,10 +29,10 @@ def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state = create_dummy_state()
     # Set psi state components
-    state.psi.g = pre_state.psi.good
-    state.psi.b = pre_state.psi.bad
-    state.psi.w = pre_state.psi.wonky
-    state.psi.o = pre_state.psi.offenders
+    state.psi.good = pre_state.psi.good
+    state.psi.bad = pre_state.psi.bad
+    state.psi.wonky = pre_state.psi.wonky
+    state.psi.offenders = pre_state.psi.offenders
 
     # Set validator sets
     state.kappa = pre_state.kappa
@@ -51,11 +53,11 @@ def vector_transition(vector: Testcase) -> Boolean:
     try:
         output = Disputes.transition(test_state, test_block)
         for i in vector.output["ok"]["offenders_mark"]:
-            assert str(i) in str(output.psi.o)
-        assert output.psi.g == vector.post_state.psi.good
-        assert output.psi.b == vector.post_state.psi.bad
-        assert output.psi.w == vector.post_state.psi.wonky
-        assert output.psi.o == vector.post_state.psi.offenders
+            assert str(i) in str(output.psi.offenders)
+        assert output.psi.good == vector.post_state.psi.good
+        assert output.psi.bad == vector.post_state.psi.bad
+        assert output.psi.wonky == vector.post_state.psi.wonky
+        assert output.psi.offenders == vector.post_state.psi.offenders
         assert output.rho == vector.post_state.rho
         assert output.tau == vector.post_state.tau
     except DisputesError as e:
@@ -65,6 +67,7 @@ def vector_transition(vector: Testcase) -> Boolean:
         assert False
 
 
+@pytest.mark.skipif("RUNALL" not in os.environ, reason="takes too long")
 def test_disputes_transition():
     """Test disputes transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(limit=30)
@@ -75,26 +78,3 @@ def test_disputes_transition():
 
 if __name__ == "__main__":
     test_disputes_transition()
-
-
-# def test_disputes_progress(test_file: str):
-#     """Test disputes progress with test vectors"""
-#     test_data = load_test_data(test_file)
-
-#     # Create initial state
-#     pre_state = create_state_from_pre(test_data.pre_state)
-
-#     # Create block with disputes extrinsic
-#     block = create_dummy_block()
-#     block.extrinsic.disputes = test_data.input.extrinsic
-#     block.header.slot = test_data.input.slot
-
-#     # Process disputes
-#     result = process_disputes(pre_state, block)
-
-#     # Verify output matches expected
-#     if test_data.output.ok:
-#         assert result.ok
-#         assert result.ok.offenders_mark == test_data.output.ok.offenders_mark
-#     else:
-#         assert result.err == test_data.output.err
