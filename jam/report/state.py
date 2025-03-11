@@ -77,6 +77,8 @@ def generate_report(report : GuaranteesExtrinsic)->GuaranteesExtrinsic:
 
     return guarantees
 
+
+
 class Reporting:
 
     @staticmethod
@@ -84,26 +86,64 @@ class Reporting:
         new_state:State = dataclasses.replace(pre_state)
         header_hashes = []
 
-        # Reporting.bad_signature(pre_state, block)
-        Reporting.bad_core_index(block)
-        # Reporting.bad_validator_index(block)
-        # Reporting.no_enough_guarantee(block)
-        # Reporting.too_many_dependencies(block)
-        # Reporting.verify_guarantor_order(block)
-        # Reporting.verify_guarantees_order(block)
-        # Reporting.valid_report_fn(pre_state, block)
-        # Reporting.duplicate_pkg_recent_history(pre_state, block)
-        # Reporting.report_rotation(pre_state, block)
+        # for x in new_state.beta:
+        #     header_hashes.append(x.header_hash)
         #
-        # Reporting.refinement_fn(pre_state, block)
-        # Reporting.core_engaged(pre_state, block)
-        # Reporting.result_fn(pre_state, block)
+        # results = block.extrinsic.guarantees
+        #
+        #
+        #
+        # for x in block.extrinsic.guarantees:
+        #     context = x.report.context
+        #     # print('hhhhhh', context.anchor, new_state.beta)
+        #     if context.anchor not in header_hashes:
+        #         print(U64(x.report.core_index))
+        #         raise ReportingError(
+        #             ReportingErrorCode.ANCHOR_NOT_RECENT,
+        #             "Anchor not present in recent blocks hash"
+        #         )
+            # if context.beefy_root not in pre_state.rho:
+            #     print('hhhh1')
+            #     raise ReportingError(
+            #         ReportingErrorCode.BAD_BEEFY_MMR_ROOT
+            #     )
 
-        # Reporting.future_report(block)
-        # Reporting.high_work_report_gas(pre_state, block)
-        # Reporting.check_multiple_dependencies(block)
-        # Reporting.big_work_report_output(pre_state, block)
+        # print('hhh')
+
+
+
+        # Reporting.valid_report_fn()
+        # Reporting.report_rotation(pre_state, block)
+        # # Reporting.bad_signature(pre_state, block)
+        Reporting.refinement_fn(pre_state, block)
+        Reporting.core_engaged(pre_state, block)
         #
+        Reporting.bad_core_index(block)
+        Reporting.result_fn(pre_state,block)
+        Reporting.validator_index(block)
+
+        Reporting.duplicate_pkg_recent_history(pre_state,block)
+
+        Reporting.future_report(block)
+        Reporting.not_enough_guarantee(block)
+        Reporting.valid_report_fn(pre_state,block)
+        Reporting.not_sort_grnt_idx(block)
+        Reporting.duplicate_pkg_report(pre_state, block)
+        Reporting.guarantee_order(block)
+        # Reporting.check_multiple_reports(pre_state,block)
+        Reporting.check_multiple_dependencies(pre_state,block)
+        Reporting.report_last_rotation(block)
+
+        Reporting.big_work_report_output(pre_state, block)
+        # Reporting.report_rotation(pre_state, block)
+
+        # Reporting.check_dependencies(block)
+
+
+        # Reporting.refinement_fn(pre_state,block)
+        # Reporting.result_fn(pre_state, block)
+        # Reporting.valid_report_fn()
+
         # Reporting.result_fn(pre_state, block)
         # Reporting.duplicate_pkg_recent_history(pre_state, block)
         # State.rho
@@ -218,6 +258,7 @@ class Reporting:
                         "Work package is already executed in recent-block's history"
                     )
 
+
     @staticmethod
     def duplicate_pkg_report( block :Block):
         print('ddduppp')
@@ -231,6 +272,16 @@ class Reporting:
                         raise ReportingError(
                             ReportingErrorCode.DUPLICATE_PACKAGE
                         )
+
+    @staticmethod
+    def report_last_rotation(block :Block):
+        for x in block.extrinsic.guarantees:
+            if x.slot != block.header.slot :
+                if block.header.slot - x.slot > 7:
+                    raise ReportingError(
+                        ReportingErrorCode.REPORT_EPOCH_BEFORE_LAST,
+                        "Guarantee work report slot not in recent slots (block history)"
+                    )
 
     @staticmethod
     def report_rotation(state: State, block: Block):
@@ -270,14 +321,7 @@ class Reporting:
             if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
                 epoch_entropy = state.eta[3]
 
-        # <------ Work report's guarantee slot is old with respect to recent history block slots ----->
-        for x in block.extrinsic.guarantees:
-            if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
-                if block.header.slot - x.slot > 7:
-                    raise ReportingError (
-                        ReportingErrorCode.REPORT_EPOCH_BEFORE_LAST,
-                        "Guarantee work report slot not in recent slots (block history)"
-                    )
+
 
         entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
         h = bytes.fromhex(entropy[2:])
@@ -382,22 +426,28 @@ class Reporting:
         # print("add_validator =", add_validator)
         # print(add_validator[0])
 
-    @staticmethod
+    # @staticmethod
     # def bad_signature(pre_state: State, block: Block):
     #     for x in block.extrinsic.guarantees:
-    #
-    #         new_hash = Hash.blake2b(bytes(x.report))
-    #         print("Encode work hash =>", bytes(new_hash))
-    #         # for y in x.signatures:
-    #         #     curr_validator_ed25519_key = pre_state.kappa[y.validator_index].ed25519
-    #         #     public_key_byte = bytes(curr_validator_ed25519_key)
-    #
-    #             # print(curr_validator_ed25519_key,"<=>",  public_key_byte)
-    #             # print(y.signature)
+    #         for y in x.signatures:
+    #             curr_validator_ed25519_key = pre_state.kappa[y.validator_index].ed25519
+    #             public_key_byte = bytes(curr_validator_ed25519_key)
     #             signature_byte = bytes(y.signature)
     #             # guarantor_signature_bytes = bytes(signature)
-    #             # work_report_byte = bytes(x.report.package_spec)
-    #             # match = work_report_byte + public_key_byte
+    #             work_report_byte = bytes(x.report.package_spec)
+    #             match = work_report_byte + public_key_byte
+    #             if public_key_obj.verify(signature_byte, match) == False:
+    #                 raise ReportingError(
+    #                     ReportingErrorCode.BAD_SIGNATURE,
+    #                     "signature doesn't match with the validator public key"
+    #                 )
+                # print(guarantor_signature_bytes)
+                # print(parent_hash_bytes)
+                # try:
+                #     a=verifiable_obj.verify(signature,parent_hash_bytes)
+                #     print("hogaya",a)
+                # except:
+                #     print("failed")
 
     @staticmethod
     def refinement_fn(state:State,block:Block):
@@ -479,8 +529,6 @@ class Reporting:
 
         results = block.extrinsic.guarantees
         # print(SIGNING_CONTEXTS['beefy'])
-        # print('mmmmrrr',Hash.keccak256((MMRFunctions.encode_mmr(state.beta[6].mmr))))
-        # print(SIGNING_CONTEXTS['beefy'])
         a = (Hash.keccak256(bytes(state.beta[6].mmr[0].get_value())+ bytes(state.beta[6].mmr[1].get_value())))
         b = Hash.keccak256(bytes(state.beta[6].mmr[2].get_value())+bytes(state.beta[6].mmr[3].get_value()))
         # print(a,b)
@@ -490,7 +538,7 @@ class Reporting:
         # print("mmr value", state.beta[-1].mmr)
         # print('encode', state.beta[-1].mmr.encode().hex())
 
-        print("peak value", MMRFunc.super_peak(state.beta[-1].mmr))
+        # print("peak value", MMRFunc.super_peak(state.beta[-1].mmr))
 
 
         # print('peak value',MMRFunc.super_peak(state.beta[6].mmr), block.extrinsic.guarantees[0].report.context.beefy_root)
@@ -605,7 +653,6 @@ class Reporting:
             print('xxxxxcore')
             # print(x.report.core_index,state.rho[x.report.core_index])
             if x.report.core_index <= 2:
-                print('core engaged',state.rho[x.report.core_index])
                 if state.rho[x.report.core_index] != Null:
                     raise ReportingError(
                         ReportingErrorCode.CORE_ENGAGED
