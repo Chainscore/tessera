@@ -41,7 +41,7 @@ def create_state_from_pre(pre_state: PreState) -> State:
     state.eta = pre_state.entropy
     state.psi.offenders = pre_state.offenders
     state.beta = pre_state.recent_blocks.to_beta()
-    print('',state.beta)
+    # print('',state.beta)
     # print('d1',pre_state.auth_pools)
     state.alpha = pre_state.auth_pools
     # print('d2',state.alpha)

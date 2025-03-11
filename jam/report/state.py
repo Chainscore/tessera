@@ -1,6 +1,11 @@
 from jam.merklization import MMRFunctions
 # from libxsltmod import xsltSetLoaderFunc
 # from py_ecc.bls import G1, G2, multiply, add
+from spwd import struct_spwd
+
+from libxsltmod import xsltSetLoaderFunc
+from virtualenv.app_data import ReadOnlyAppData
+
 from jam.report.check import auth_pool
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.rho import WorkReportState, OptionalWorkReportState
@@ -24,6 +29,7 @@ from jam.types import  decodable_vector, U32, Vector
 from jam.types.header import HeaderHash, TimeSlot
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from collections import deque
+from jam.utils.codec.primitives.integers import encode
 
 @decodable_vector(element_type=U32)
 class U32Vector(Vector): ...
@@ -71,8 +77,6 @@ def generate_report(report : GuaranteesExtrinsic)->GuaranteesExtrinsic:
 
     return guarantees
 
-
-
 class Reporting:
 
     @staticmethod
@@ -80,62 +84,26 @@ class Reporting:
         new_state:State = dataclasses.replace(pre_state)
         header_hashes = []
 
-        # for x in new_state.beta:
-        #     header_hashes.append(x.header_hash)
-        #
-        # results = block.extrinsic.guarantees
-        #
-        #
-        #
-        # for x in block.extrinsic.guarantees:
-        #     context = x.report.context
-        #     # print('hhhhhh', context.anchor, new_state.beta)
-        #     if context.anchor not in header_hashes:
-        #         print(U64(x.report.core_index))
-        #         raise ReportingError(
-        #             ReportingErrorCode.ANCHOR_NOT_RECENT,
-        #             "Anchor not present in recent blocks hash"
-        #         )
-            # if context.beefy_root not in pre_state.rho:
-            #     print('hhhh1')
-            #     raise ReportingError(
-            #         ReportingErrorCode.BAD_BEEFY_MMR_ROOT
-            #     )
-
-        # print('hhh')
-
-
-
-        # Reporting.valid_report_fn()
-        # Reporting.report_rotation(pre_state, block)
-        # # Reporting.bad_signature(pre_state, block)
-        Reporting.refinement_fn(pre_state, block)
-        Reporting.core_engaged(pre_state, block)
-        #
+        # Reporting.bad_signature(pre_state, block)
         Reporting.bad_core_index(block)
-        Reporting.result_fn(pre_state,block)
-        Reporting.validator_index(block)
-
-        Reporting.duplicate_pkg_recent_history(pre_state,block)
-
-        Reporting.future_report(block)
-        Reporting.not_enough_guarantee(block)
-        Reporting.valid_report_fn(pre_state,block)
-        Reporting.not_sort_grnt_idx(block)
-        Reporting.duplicate_pkg_report(pre_state, block)
-        Reporting.guarantee_order(block)
-        # Reporting.check_multiple_reports(pre_state,block)
-        Reporting.check_multiple_dependencies(pre_state,block)
-        Reporting.big_work_report_output(pre_state, block)
-        Reporting.report_rotation(pre_state, block)
-
-        # Reporting.check_dependencies(block)
-
-
-        # Reporting.refinement_fn(pre_state,block)
+        # Reporting.bad_validator_index(block)
+        # Reporting.no_enough_guarantee(block)
+        # Reporting.too_many_dependencies(block)
+        # Reporting.verify_guarantor_order(block)
+        # Reporting.verify_guarantees_order(block)
+        # Reporting.valid_report_fn(pre_state, block)
+        # Reporting.duplicate_pkg_recent_history(pre_state, block)
+        # Reporting.report_rotation(pre_state, block)
+        #
+        # Reporting.refinement_fn(pre_state, block)
+        # Reporting.core_engaged(pre_state, block)
         # Reporting.result_fn(pre_state, block)
-        # Reporting.valid_report_fn()
 
+        # Reporting.future_report(block)
+        # Reporting.high_work_report_gas(pre_state, block)
+        # Reporting.check_multiple_dependencies(block)
+        # Reporting.big_work_report_output(pre_state, block)
+        #
         # Reporting.result_fn(pre_state, block)
         # Reporting.duplicate_pkg_recent_history(pre_state, block)
         # State.rho
@@ -153,29 +121,58 @@ class Reporting:
         # Reporting.result_fn(n.report.results,new_state)
         return new_state
 
-    # for too_many_dependencies-1.json
     @staticmethod
-    def check_dependencies(block : Block):
+    def bad_core_index(block: Block):
         for x in block.extrinsic.guarantees:
-            segment_depd = len(x.report.segment_root_lookup)
-            prerequisite = len(x.report.context.prerequisites)
-            if (segment_depd + prerequisite) > MAX_DEPENDENCIES:
-                raise ReportingError (
-                    ReportingErrorCode.TOO_MANY_DEPENDENCIES,
-                    "Work package has too many dependencies(segment_lookup + prerequisite) "
+            if x.report.core_index >= CORE_COUNT:
+                raise ReportingError(
+                    ReportingErrorCode.BAD_CORE_INDEX,
+                    "Core index value is more then CORE_COUNT"
                 )
 
     @staticmethod
-    def guarantee_order(block :Block):
-        for i in range(len(block.extrinsic.guarantees)-1):  # added -1 as index was getting out of range for some test cases
-            if block.extrinsic.guarantees[i].report.core_index == block.extrinsic.guarantees[i+1].report.core_index:
+    def bad_validator_index(block : Block):
+        for x in block.extrinsic.guarantees:
+            for y in x.signatures:
+                if y.validator_index >= VALIDATOR_COUNT:
+                    raise ReportingError(
+                        ReportingErrorCode.BAD_VALIDATOR_INDEX,
+                        "validator index(signature) is out of range"
+                    )
+
+    @staticmethod
+    def no_enough_guarantee(block:Block):
+        for x in block.extrinsic.guarantees:
+            credential_len = len(x.signatures)
+            print('credential length',credential_len)
+            if credential_len < 2:
+                raise ReportingError (
+                    ReportingErrorCode.INSUFFICIENT_GURANTEE,
+                    "Work report don't have enough validator signature"
+                )
+
+    @staticmethod
+    def too_many_dependencies(block : Block):
+        for x in block.extrinsic.guarantees:
+            segment_root = len(x.report.segment_root_lookup)
+            prerequisite = len(x.report.context.prerequisites)
+            if (segment_root + prerequisite) > MAX_DEPENDENCIES:
+                raise ReportingError (
+                    ReportingErrorCode.TOO_MANY_DEPENDENCIES,
+                    "Work report has many dependencies(segment_lookup + prerequisite) "
+                )
+
+    @staticmethod
+    def verify_guarantees_order(block :Block):
+        for i in range(len(block.extrinsic.guarantees)-1):
+            if block.extrinsic.guarantees[i].report.core_index >= block.extrinsic.guarantees[i+1].report.core_index:
                 raise ReportingError (
                     ReportingErrorCode.OUT_OF_ORDER_GUARANTEE,
                     "Core index for each guarantee is not in unique"
                 )
 
     @staticmethod
-    def not_sort_grnt_idx(block: Block):
+    def verify_guarantor_order(block: Block):
         for i in block.extrinsic.guarantees:
             for j in range(len(i.signatures)-1):
                 if i.signatures[j].validator_index >= i.signatures[j+1].validator_index:
@@ -185,7 +182,7 @@ class Reporting:
                     )
 
     @staticmethod
-    def valid_report_fn(state: State, block: Block):
+    def valid_report_fn(state: State, block:Block):
         for x in block.extrinsic.guarantees:
             report_auth_hash = x.report.authorizer_hash
             core_index = x.report.core_index
@@ -205,37 +202,6 @@ class Reporting:
                     )
 
     @staticmethod
-    def validator_index( block:Block):
-        for x in block.extrinsic.guarantees:
-            for y in x.signatures:
-                if y.validator_index >= VALIDATOR_COUNT:
-                    raise ReportingError (
-                        ReportingErrorCode.BAD_VALIDATOR_INDEX,
-                        "validator index(signature) is out of range"
-                    )
-
-    @staticmethod
-    def not_enough_guarantee(block:Block):
-        for x in block.extrinsic.guarantees:
-            credential_len = len(x.signatures)   #removed -1
-            print('credential length',credential_len)
-            if credential_len < 2:
-                raise ReportingError (
-                    ReportingErrorCode.INSUFFICIENT_GURANTEE,
-                    "Work report don't have enough validator signature"
-                )
-
-    @staticmethod
-    def bad_core_index(block : Block):
-        for x in block.extrinsic.guarantees:
-            print('coreindex')
-            if x.report.core_index > CORE_COUNT:
-                raise ReportingError (
-                    ReportingErrorCode.BAD_CORE_INDEX,
-                    "Core index value is more then CORE_COUNT"
-                )
-
-    @staticmethod
     def duplicate_pkg_recent_history(state: State,block : Block):
         hashes = []
         for x in block.extrinsic.guarantees:
@@ -252,9 +218,8 @@ class Reporting:
                         "Work package is already executed in recent-block's history"
                     )
 
-
     @staticmethod
-    def duplicate_pkg_report(state: State , block :Block):
+    def duplicate_pkg_report( block :Block):
         print('ddduppp')
         if len(block.extrinsic.guarantees)>1:
             for x in range (len(block.extrinsic.guarantees)):
@@ -268,7 +233,7 @@ class Reporting:
                         )
 
     @staticmethod
-    def report_rotation(pre_state: State, block: Block):
+    def report_rotation(state: State, block: Block):
 
         # ------- validator order ---------
         array_validator: U32Vector = U32Vector([])
@@ -287,17 +252,23 @@ class Reporting:
         epoch_entropy = None
         for x in block.extrinsic.guarantees:
             if x.slot == block.header.slot:
-                epoch_entropy = pre_state.eta[2]
+                epoch_entropy = state.eta[2]
+
+        # < ------------- Entropy for current epoch and same rotation ----------------->
+        epoch_entropy = None
+        for x in block.extrinsic.guarantees:
+            if x.slot != block.header.slot and floor(block.header.slot) == floor(x.slot):
+                epoch_entropy = state.eta[2]
 
         # <------------- Entropy for previous rotation in same epoc ------------------>
         for x in block.extrinsic.guarantees:
             if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
-                epoch_entropy = pre_state.eta[2]
+                epoch_entropy = state.eta[2]
 
         # <------------- Entropy for previous rotation but in last epoch ------------------>
         for x in block.extrinsic.guarantees:
             if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
-                epoch_entropy = pre_state.eta[3]
+                epoch_entropy = state.eta[3]
 
         # <------ Work report's guarantee slot is old with respect to recent history block slots ----->
         for x in block.extrinsic.guarantees:
@@ -382,14 +353,19 @@ class Reporting:
             if guarantee_validator_index[key] == mapping.get(key):
                     # print('core value',core)
                     # print(state.rho.)
-                    pre_state.rho[key] = OptionalWorkReportState(
+                    state.rho[key] = OptionalWorkReportState(
                         WorkReportState(
                             report=block.extrinsic.guarantees[key].report,
                             timeout=block.extrinsic.guarantees[key].slot
                         )
                     )
+            else:
+                raise ReportingError (
+                    ReportingErrorCode.WRONG_ASSIGNMENT,
+                    "Assign wrong validator to the core"
+                )
 
-        return pre_state
+        return state
 
 
 
@@ -406,28 +382,22 @@ class Reporting:
         # print("add_validator =", add_validator)
         # print(add_validator[0])
 
-    # @staticmethod
+    @staticmethod
     # def bad_signature(pre_state: State, block: Block):
     #     for x in block.extrinsic.guarantees:
-    #         for y in x.signatures:
-    #             curr_validator_ed25519_key = pre_state.kappa[y.validator_index].ed25519
-    #             public_key_byte = bytes(curr_validator_ed25519_key)
+    #
+    #         new_hash = Hash.blake2b(bytes(x.report))
+    #         print("Encode work hash =>", bytes(new_hash))
+    #         # for y in x.signatures:
+    #         #     curr_validator_ed25519_key = pre_state.kappa[y.validator_index].ed25519
+    #         #     public_key_byte = bytes(curr_validator_ed25519_key)
+    #
+    #             # print(curr_validator_ed25519_key,"<=>",  public_key_byte)
+    #             # print(y.signature)
     #             signature_byte = bytes(y.signature)
     #             # guarantor_signature_bytes = bytes(signature)
-    #             work_report_byte = bytes(x.report.package_spec)
-    #             match = work_report_byte + public_key_byte
-    #             if public_key_obj.verify(signature_byte, match) == False:
-    #                 raise ReportingError(
-    #                     ReportingErrorCode.BAD_SIGNATURE,
-    #                     "signature doesn't match with the validator public key"
-    #                 )
-                # print(guarantor_signature_bytes)
-                # print(parent_hash_bytes)
-                # try:
-                #     a=verifiable_obj.verify(signature,parent_hash_bytes)
-                #     print("hogaya",a)
-                # except:
-                #     print("failed")
+    #             # work_report_byte = bytes(x.report.package_spec)
+    #             # match = work_report_byte + public_key_byte
 
     @staticmethod
     def refinement_fn(state:State,block:Block):
@@ -504,13 +474,12 @@ class Reporting:
                             ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID
                         )
 
-    def segement_root_lookup(self):
-        ...
-
     @staticmethod
     def result_fn(state:State,block:Block):
 
         results = block.extrinsic.guarantees
+        # print(SIGNING_CONTEXTS['beefy'])
+        # print('mmmmrrr',Hash.keccak256((MMRFunctions.encode_mmr(state.beta[6].mmr))))
         # print(SIGNING_CONTEXTS['beefy'])
         a = (Hash.keccak256(bytes(state.beta[6].mmr[0].get_value())+ bytes(state.beta[6].mmr[1].get_value())))
         b = Hash.keccak256(bytes(state.beta[6].mmr[2].get_value())+bytes(state.beta[6].mmr[3].get_value()))
@@ -636,6 +605,7 @@ class Reporting:
             print('xxxxxcore')
             # print(x.report.core_index,state.rho[x.report.core_index])
             if x.report.core_index <= 2:
+                print('core engaged',state.rho[x.report.core_index])
                 if state.rho[x.report.core_index] != Null:
                     raise ReportingError(
                         ReportingErrorCode.CORE_ENGAGED
@@ -649,17 +619,17 @@ class Reporting:
                     ReportingErrorCode.FUTURE_REPORT_SLOT
                 )
 
-    @staticmethod
-    def high_work_report_gas(state:State, block:Block):
-        total_gas =0
-        service_id = 0
-        for x in block.extrinsic.guarantees:
-            for y in x.report.results:
-                service_id = y.service_id
-                total_gas = total_gas + y.accumulate_gas
-        if state.delta[service_id].min_gas < total_gas:
-
-          print('gas limit ')
+    # @staticmethod
+    # def high_work_report_gas(state:State, block:Block):
+    #     total_gas =0
+    #     service_id = 0
+    #     for x in block.extrinsic.guarantees:
+    #         for y in x.report.results:
+    #             service_id = y.service_id
+    #             total_gas = total_gas + y.accumulate_gas
+    #     if state.delta[service_id].min_gas < total_gas:
+    #
+    #       print('gas limit ')
 
     #     for x in state.delta:
 

@@ -34,3 +34,4 @@ class ReportingErrorCode(Enum):
     WORK_REPORT_GAS_TOO_HIGH= "work_report_gas_too_high"
     REPORT_EPOCH_BEFORE_LAST="report_epoch_before_last"
     WORK_REPORT_TOO_BIG = "work_report_too_big"
+    WRONG_ASSIGNMENT = "wrong_assignment"
