@@ -4,7 +4,7 @@ from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 from jam.state.components.eta import Eta
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
-from .gamma import GammaS
+from .gamma import GammaS, GammaSTickets
 from jam.state.state import State
 from jam.types import TicketBody, U32, TicketsExtrinsic, TicketEnvelope
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
@@ -14,6 +14,7 @@ from jam.utils.constants import (
     EPOCH_LENGTH,
     TICKET_SUBMISSION_END,
     TICKET_ENTRIES_PER_VALIDATOR,
+    MAX_TICKETS_PER_EXTRINSIC
 )
 from jam.types.protocol.crypto import BandersnatchPublic, Hash
 from jam.consensus.safrole.gamma import GammaK, GammaSFallback, GammaA
@@ -66,7 +67,8 @@ class Safrole:
             new_state.gamma.a.sort(key=lambda x: x.id)
             # Remove duplicates
             new_state.gamma.a = GammaA(set(new_state.gamma.a))
-
+        else:
+            Safrole.ensure_valid_tickets_count_after_epoch_end(block)
         # 4. Epoch transition
         old_epoch = int(pre_state.tau) // EPOCH_LENGTH
         new_epoch = int(block.header.slot) // EPOCH_LENGTH
@@ -130,6 +132,8 @@ class Safrole:
         for ticket in block.extrinsic.tickets:
             Safrole.ensure_valid_vrf(ticket)
             Safrole.ensure_valid_attempt(ticket)
+        Safrole.ensure_valid_tickets_count_before_epoch_end(block)
+        
 
     @staticmethod
     def ensure_tickets_order(tickets: TicketsExtrinsic):
@@ -148,6 +152,24 @@ class Safrole:
             raise SafroleError(
                 SafroleErrorCode.BAD_TICKET_ORDER,
                 "Tickets are not in sorted order by VRF output",
+            )
+    # Custom for equ 6.30 check
+    
+    # Process the tickets before TICKET_SUBMISSION_END of the epoch
+    @staticmethod
+    def ensure_valid_tickets_count_before_epoch_end(block: Block):
+        if len(block.extrinsic.tickets) > MAX_TICKETS_PER_EXTRINSIC:
+            raise SafroleError(
+                SafroleErrorCode.BAD_TICKET_COUNT,
+                f"Tickets count {len(block.extrinsic.tickets)} is invalid",
+            )
+    # Process the tickets after TICKET_SUBMISSION_END of the epoch
+    @staticmethod
+    def ensure_valid_tickets_count_after_epoch_end(block: Block):
+        if len(block.extrinsic.tickets) > 0:
+            raise SafroleError(
+                SafroleErrorCode.BAD_TICKET_COUNT,
+                f"Tickets count {len(block.extrinsic.tickets)} is invalid",
             )
 
     @staticmethod
