@@ -1,3 +1,4 @@
+from jam.merklization import MMRFunctions
 from libxsltmod import xsltSetLoaderFunc
 
 from jam.report.check import auth_pool
@@ -26,6 +27,8 @@ from collections import deque
 
 @decodable_vector(element_type=U32)
 class U32Vector(Vector): ...
+from jam.types.header import HeaderHash
+# from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 def generate_report(report : GuaranteesExtrinsic)->GuaranteesExtrinsic:
     guarantees: GuaranteesExtrinsic=Vector(GuaranteesExtrinsic)
@@ -105,7 +108,25 @@ class Reporting:
 
         # Reporting.valid_report_fn()
         Reporting.report_rotation(pre_state, block)
+        # Reporting.bad_signature(pre_state, block)
+        Reporting.core_engaged(pre_state, block)
+        Reporting.refinement_fn(pre_state,block)
+        Reporting.bad_core_index(block)
+        Reporting.result_fn(pre_state,block)
+        Reporting.validator_index(block)
 
+        Reporting.duplicate_pkg_recent_history(pre_state,block)
+
+        Reporting.future_report(block)
+        Reporting.not_enough_guarantee(block)
+        Reporting.valid_report_fn(pre_state,block)
+        Reporting.not_sort_grnt_idx(block)
+        Reporting.duplicate_pkg_report(pre_state, block)
+        Reporting.guarantee_order(block)
+        # Reporting.check_multiple_reports(pre_state,block)
+        Reporting.check_multiple_dependencies(pre_state,block)
+        Reporting.big_work_report_output(pre_state, block)
+        # Reporting.check_dependencies(block)
 
 
         # Reporting.refinement_fn(pre_state,block)
@@ -400,11 +421,19 @@ class Reporting:
     @staticmethod
     def refinement_fn(state:State,block:Block):
 
+        exports_root = []
+
+
+
+
         work_package_hashes = []
 
         for x in state.beta:
             for key in x.packages:
                 work_package_hashes.append(key)
+            for y in x.packages:
+                # print('segment root',x.packages[y])
+                exports_root.append(x.packages[y])
 
         hashes = []
         #
@@ -459,7 +488,7 @@ class Reporting:
                 print('segment 2')
                 for x in y.report.segment_root_lookup:
                     print(x.segment_tree_root != y.report.package_spec.exports_root)
-                    if x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes or x.segment_tree_root != y.report.package_spec.exports_root:
+                    if x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes and (x.segment_tree_root != y.report.package_spec.exports_root and x.segment_tree_root != exports_root):
                         raise ReportingError(
                             ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID
                         )
@@ -472,6 +501,15 @@ class Reporting:
 
         results = block.extrinsic.guarantees
         print(SIGNING_CONTEXTS['beefy'])
+        a = (Hash.keccak256(bytes(state.beta[6].mmr[0].get_value())+ bytes(state.beta[6].mmr[1].get_value())))
+        b = Hash.keccak256(bytes(state.beta[6].mmr[2].get_value())+bytes(state.beta[6].mmr[3].get_value()))
+        print(a,b)
+        # print(Hash.keccak256(Bytes(4c31a1024d553c6f5eb90a26f9c53507d6d58b7be1197c0f86054b084353de5f7f64e54f8be039cea06582eb38e7f36f924c1f59a0f3043b4df6f140cccd6ddfd7cc7a7751048dbe8d0232b5d0273acd874e56c19e41a2e09b590ca00e59908d)))
+        a = bytes("jam_beefy", 'utf-8')
+        MMRFunc = MMRFunctions()
+        print('peak value',MMRFunc.super_peak(state.beta[6].mmr), block.extrinsic.guarantees[0].report.context.beefy_root)
+        print('dsfadfas',(a + bytes(Hash.keccak256(state.beta[6].mmr.encode()))).hex())
+        print('hashhhe',Hash.keccak256(bytes((state.beta[6].mmr[0]).get_value()) + bytes(state.beta[6].mmr[2].get_value()) + bytes(state.beta[6].mmr[3].get_value()) + bytes(state.beta[6].mmr[1].get_value())))
         print('mmmmrrr',Hash.keccak256((MMRFunctions.encode_mmr(state.beta[6].mmr))))
 
         for x in results:
@@ -518,7 +556,7 @@ class Reporting:
                         )
                     # print(core,'---> ',state.rho[core])
                     # print(core,'--->',block.extrinsic.guarantees[core].report)
-        return state
+                return state
 
         # for x in transition().rho:
         #     for y in x.report.results:
@@ -649,7 +687,12 @@ class Reporting:
             for y in x.report.results:
                 work_report_output = work_report_output + y.result.get_value()
         # print(work_report_output < Bytes(48 * (2 ** 10)))
-        if work_report_output < Bytes(48 * (2 ** 10)):
+        print(len(work_report_output),48*(2**10))
+        if len(work_report_output) > (48 * (2**10)):
+            raise ReportingError(
+                ReportingErrorCode.WORK_REPORT_TOO_BIG
+            )
+        if len(work_report_output) < (48 * (2 ** 10)):
             for core in range(len(block.extrinsic.guarantees)):
                 # print('core value',core)
                 # print(state.rho.)

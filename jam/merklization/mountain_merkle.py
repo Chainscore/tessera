@@ -152,7 +152,11 @@ class MMRFunctions:
 
         else:
             mmr_dash = mmr[:-1]
-            if mmr[-1] is not Null:
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(self.super_peak(mmr_dash)) + bytes(mmr[-1]))
+            # print(mmr[-1] != OptionHash(Null))
+            if mmr[-1] != OptionHash(Null):
+                # print('mmmmrrrr',mmr_dash,bytes(mmr[-1].get_value()))
+                return Hash.keccak256(self._PEAK_PREFIX + bytes(self.super_peak(mmr_dash)) + bytes(mmr[-1].get_value()))
             else:
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(self.super_peak(mmr_dash)))
+                # print(type(self.super_peak(mmr_dash)))
+                a = self.super_peak(mmr_dash)
+                return Hash.keccak256(self._PEAK_PREFIX + bytes(a.get_value()))

@@ -105,7 +105,7 @@ def vector_transition(vector:Testcase) -> Boolean:
 
 def test_tiny():
     """Test publishing tickets with no mark"""
-    vectors: List[Testcase] = get_testcases_starting_with(limit=1)
+    vectors: List[Testcase] = get_testcases_starting_with(limit=19)
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)
         print(f"Passed testcase #{i + 1}")
