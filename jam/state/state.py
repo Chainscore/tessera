@@ -65,8 +65,9 @@ class State(Sigma):
                 """
 
         # section 11 (assurance and the Reporting)
-        self = Safrole.transition(self, block)
-        recent_block_history_state = RecentHistory.transition(self, block, ByteArray32([0] * 32))
+        genesis_state = self.value
+        block_production_state = Safrole.transition(genesis_state, block)
+        recent_block_history_state = RecentHistory.transition(block_production_state, block, ByteArray32([0] * 32))
         authorization_state = Authorization.transition(recent_block_history_state, block)
         disputes_state = Disputes.transition(authorization_state, block)
         assurance_state = Assurances.transition(disputes_state, block)
@@ -75,6 +76,4 @@ class State(Sigma):
         preimage_state = Preimages.transition(assurance_state, block)
         statistics_state = Statistics.transition(preimage_state, block)
 
-        final_state = statistics_state
-
-        return final_state
+        self.value = statistics_state
