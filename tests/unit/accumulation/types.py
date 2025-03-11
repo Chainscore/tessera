@@ -53,7 +53,7 @@ class DeferredTransfers(Vector[DeferredTransfer]):
     ...
 
 @dataclass
-class stateContext(Codable,JsonSerde):
+class StateContext(Codable,JsonSerde):
     service_accounts: Delta
     validator_keys: Iota
     authorizer_keys: Phi
@@ -65,7 +65,7 @@ class AcclOutput(Codable,JsonSerde):
     hash: OpaqueHash
 
 @decodable_vector(AcclOutput)  # It should be a set
-class AcclOutputs(Vector[AcclOutput]):
+class AccCommitmentMap(Vector[AcclOutput]):
     ...
 
 @decodable_vector(AllReadyWRs)
@@ -171,7 +171,8 @@ class Testcase(Codable,JsonSerde):
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testcase]:
     # data_dir="/home/akki/Codes/JAM/JamBhai/jam-node/tests/unit/accumulation/tiny"
-    data_dir = "tests/unit/accumulation/tiny"
+    # data_dir = "tests/unit/accumulation/tiny"
+    data_dir = "./tiny"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
         # print("File->", file)

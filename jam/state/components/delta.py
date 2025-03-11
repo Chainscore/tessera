@@ -40,9 +40,6 @@ class Timestamps(Vector[U32]):
     """Lookup timestamps"""
     ...
 
-
-@decodable_dictionary(LookupTable, Timestamps)
-class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
 @decodable_dictionary(LookupTable, Timestamps)
 class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
     """Lookup timestamps"""
