@@ -26,18 +26,19 @@ def master_transition_state (pre_state : State, block: Block) -> State:
            returns new_state
             """
 
+    state = pre_state
     #section 11 (assurance and the Reporting)
-    block_production_state = Safrole.transition(pre_state, block)
-    recent_block_history_state = RecentHistory.transition(block_production_state, block, ByteArray32([0]*32))
-    authorization_state  = Authorization.transition(recent_block_history_state, block)
-    disputes_state = Disputes.transition(authorization_state, block)
-    assurance_state = Assurances.transition(disputes_state, block)
+    # state = Safrole.transition(pre_state, block)
+    state = RecentHistory.transition(state, block, ByteArray32([0]*32)) # NOTE::Working
+    state  = Authorization.transition(state, block) 
+    state = Disputes.transition(state, block) # NOTE::Working
+    state = Assurances.transition(state, block)
     # reporting_state = Report.transition(assurance_state, block) ## TODO: update with latest state oreders.
-    # accumulation_state = accumulate.transition(reporting_state, block)
-    preimage_state = Preimages.transition(assurance_state, block)
-    statistics_state = Statistics.transition(preimage_state, block)
+    # accumulation_state = accumulate.transition(reporting_state, block) ## TODO:
+    state = Preimages.transition(state, block)
+    state = Statistics.transition(state, block) # NOTE::Working
 
-    final_state = statistics_state
+    final_state = state
 
     return final_state
 

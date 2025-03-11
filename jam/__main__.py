@@ -6,6 +6,8 @@ import uvloop
 from jam.config.logging import get_logger, setup_logging
 from jam.config.settings import settings
 from jam.state.state import State
+from jam.state.utils.master_state import master_transition_state
+from jam.types.block import Block
 from tests.fixtures.dummy_state import create_dummy_state
 
 logger = get_logger(__name__)
@@ -20,6 +22,7 @@ async def main(
     logger.info(
         "Starting JAM node",
         msg=custom_arg,
+        rpc_url=rpc_url,
         node_name=settings.NODE_NAME,
         listen_address=settings.LISTEN_ADDRESS,
         listen_port=settings.LISTEN_PORT,
@@ -29,29 +32,39 @@ async def main(
         async with aiohttp.ClientSession() as session:
             # Initialize components
             # TODO: Add initialization code
+            current_state = genesis
+            current_slot = start_slot
 
             # Start main loop
             while True:
-                await asyncio.sleep(6)
+                await asyncio.sleep(1)
                 logger.info("LOOP running")
 
                 # Make request to the blocks endpoint if rpc_url is provided
                 if rpc_url:
                     try:
-                        blocks_url = f"{rpc_url}?slot={start_slot}"
+                        blocks_url = f"{rpc_url}?slot={current_slot}"
                         logger.info("BLOCK", url=blocks_url)
                         async with session.get(blocks_url) as response:
                             if response.status == 200:
                                 data = await response.json()
+                                block = Block.from_json(data)
                                 logger.info("Received blocks data", data=data)
+                                current_state = master_transition_state(
+                                    current_state, block
+                                )
+                                current_slot += 1
+
                             else:
                                 logger.warning(
                                     "Failed to get blocks data",
                                     status_code=response.status,
                                     reason=response.reason,
                                 )
+                                break
                     except aiohttp.ClientError as e:
                         logger.error("HTTP request failed", error=str(e))
+                        break
 
     except KeyboardInterrupt:
         logger.info("Shutting down JAM node")
