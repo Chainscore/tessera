@@ -1,6 +1,6 @@
 from jam.merklization import MMRFunctions
-from libxsltmod import xsltSetLoaderFunc
-
+# from libxsltmod import xsltSetLoaderFunc
+# from py_ecc.bls import G1, G2, multiply, add
 from jam.report.check import auth_pool
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.rho import WorkReportState, OptionalWorkReportState
@@ -107,11 +107,12 @@ class Reporting:
 
 
         # Reporting.valid_report_fn()
-        Reporting.report_rotation(pre_state, block)
-        # Reporting.bad_signature(pre_state, block)
-        Reporting.core_engaged(pre_state, block)
-        Reporting.refinement_fn(pre_state,block)
-        Reporting.bad_core_index(block)
+        # Reporting.report_rotation(pre_state, block)
+        # # Reporting.bad_signature(pre_state, block)
+        # Reporting.refinement_fn(pre_state, block)
+        # Reporting.core_engaged(pre_state, block)
+        #
+        # Reporting.bad_core_index(block)
         Reporting.result_fn(pre_state,block)
         Reporting.validator_index(block)
 
@@ -500,17 +501,18 @@ class Reporting:
     def result_fn(state:State,block:Block):
 
         results = block.extrinsic.guarantees
-        print(SIGNING_CONTEXTS['beefy'])
+        # print(SIGNING_CONTEXTS['beefy'])
         a = (Hash.keccak256(bytes(state.beta[6].mmr[0].get_value())+ bytes(state.beta[6].mmr[1].get_value())))
         b = Hash.keccak256(bytes(state.beta[6].mmr[2].get_value())+bytes(state.beta[6].mmr[3].get_value()))
-        print(a,b)
+        # print(a,b)
         # print(Hash.keccak256(Bytes(4c31a1024d553c6f5eb90a26f9c53507d6d58b7be1197c0f86054b084353de5f7f64e54f8be039cea06582eb38e7f36f924c1f59a0f3043b4df6f140cccd6ddfd7cc7a7751048dbe8d0232b5d0273acd874e56c19e41a2e09b590ca00e59908d)))
         a = bytes("jam_beefy", 'utf-8')
         MMRFunc = MMRFunctions()
+        # print("mmr value", state.beta[-1].mmr)
         print('peak value',MMRFunc.super_peak(state.beta[6].mmr), block.extrinsic.guarantees[0].report.context.beefy_root)
-        print('dsfadfas',(a + bytes(Hash.keccak256(state.beta[6].mmr.encode()))).hex())
-        print('hashhhe',Hash.keccak256(bytes((state.beta[6].mmr[0]).get_value()) + bytes(state.beta[6].mmr[2].get_value()) + bytes(state.beta[6].mmr[3].get_value()) + bytes(state.beta[6].mmr[1].get_value())))
-        print('mmmmrrr',Hash.keccak256((MMRFunctions.encode_mmr(state.beta[6].mmr))))
+        # print('signature value',(a + bytes(Hash.keccak256(state.beta[6].mmr.encode()))).hex())
+        # print('hashhhe',Hash.keccak256(bytes((state.beta[6].mmr[0]).get_value()) + bytes(state.beta[6].mmr[2].get_value()) + bytes(state.beta[6].mmr[3].get_value()) + bytes(state.beta[6].mmr[1].get_value())))
+        # print('mmmmrrr',Hash.keccak256((MMRFunctions.encode_mmr(state.beta[6].mmr))))
 
         for x in results:
             total_accumulate_gas = 0
