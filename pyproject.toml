@@ -21,6 +21,8 @@ astroid = "2.15.8"
 sympy = "1.13.1"
 cryptography = "44.0.1"
 pycryptodome = "^3.21.0"
+uvloop = "^0.21.0"
+structlog = "^25.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"

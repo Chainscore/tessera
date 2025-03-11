@@ -40,6 +40,7 @@ from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
 )
+from jam.types.work.report import WorkDependencies
 from jam.types.protocol.core import (
     SegmentRoot,
     WorkPackageHash,
@@ -189,8 +190,9 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Theta and Xi
     components["theta"] = Theta([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
+   
     components["xi"] = Xi(
-        [WorkPackageHash(create_dummy_bytes32()) for _ in range(EPOCH_LENGTH)]
+        [WorkDependencies([]) for _ in range(EPOCH_LENGTH)]
     )
 
     return components
