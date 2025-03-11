@@ -23,7 +23,7 @@ class MMRFunctions:
 
     def __init__(self):
         super().__init__()
-        self._ZERO_HASH = OpaqueHash(ByteArray32([0] * 32))
+        self._ZERO_HASH = OpaqueHash([0] * 32)
         self._PEAK_PREFIX = bytes('peak', 'utf-8')
 
     @staticmethod
@@ -147,26 +147,20 @@ class MMRFunctions:
         if len(mmr) == 0:
             return self._ZERO_HASH
 
-        elif len(mmr) == 1 and mmr[0] != OptionHash(Null):
-            print("run")
-            return mmr[0]
+        elif len(mmr) == 1:
+            if mmr[0] == OptionHash(Null):
+                return self._ZERO_HASH
+            else:
+                return mmr[0]
+                # return OpaqueHash(mmr[0].get_value())
 
         else:
             mmr_dash = mmr[:-1]
 
-            print("dsdd",mmr, mmr_dash)
-            val = OptionHash(self.super_peak(mmr_dash))
+            val = (self.super_peak(mmr_dash))
 
-            print("chalja idhar", val, mmr[-1])
             if val != OptionHash(Null) and mmr[-1] != OptionHash(Null):
-                print("chala")
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(val.get_value()) + bytes(mmr[-1].get_value()))
+                return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(mmr[-1].get_value()))
 
-            # if mmr[-1].get_value() != Null:
-            #     val = self.super_peak(mmr_dash)
-            #     if val != OptionHash(Null):
-            #         return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(mmr[-1].get_value()))
-            #
-            # else:
-            #     a = self.super_peak(mmr_dash)
-            #     return Hash.keccak256(self._PEAK_PREFIX + bytes(a.get_value()))
+            elif val != OptionHash(Null) and mmr[-1] == OptionHash(Null):
+                return Hash.keccak256(self._PEAK_PREFIX + bytes(val.get_value()))

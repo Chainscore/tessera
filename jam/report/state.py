@@ -509,7 +509,12 @@ class Reporting:
         a = bytes("jam_beefy", 'utf-8')
         MMRFunc = MMRFunctions()
         # print("mmr value", state.beta[-1].mmr)
-        print('peak value',MMRFunc.super_peak(state.beta[6].mmr), block.extrinsic.guarantees[0].report.context.beefy_root)
+        # print('encode', state.beta[-1].mmr.encode().hex())
+
+        print("peak value", MMRFunc.super_peak(state.beta[-1].mmr))
+
+
+        # print('peak value',MMRFunc.super_peak(state.beta[6].mmr), block.extrinsic.guarantees[0].report.context.beefy_root)
         # print('signature value',(a + bytes(Hash.keccak256(state.beta[6].mmr.encode()))).hex())
         # print('hashhhe',Hash.keccak256(bytes((state.beta[6].mmr[0]).get_value()) + bytes(state.beta[6].mmr[2].get_value()) + bytes(state.beta[6].mmr[3].get_value()) + bytes(state.beta[6].mmr[1].get_value())))
         # print('mmmmrrr',Hash.keccak256((MMRFunctions.encode_mmr(state.beta[6].mmr))))
