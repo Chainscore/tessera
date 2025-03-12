@@ -1,21 +1,18 @@
+import copy
 import dataclasses
 
 from jam.merklization import OptionHash
-from jam.state.components.chi import ChiG
-from jam.state.components.tau import Tau
-from jam.types.protocol.core import Gas,ServiceId,OpaqueHash,Balance
-from tests.unit.accumulation.types import DeferredTransfer, AcclOutput, AccCommitmentMap, DeferredTransfers, gasPrivilages, gasPrivilage, StateContext
-from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.work.report import WorkReport,WorkExecResult,WorkPackageSpec
-from jam.state.components.delta import Delta,AccountData
-from jam.state.components.iota import Iota
-from jam.state.components.xi import Xi
-from jam.state.components.chi import Chi,ChiA,ChiG,ChiM,ChiV
-import copy
-from jam.state.components.nu import Nu, AllReadyWRs, ReadyWR
-from jam.state.state import State
 from jam.types import Block, Null
-from jam.types.work.report import WorkDependencies, WorkReports, SegmentRootLookup
+from jam.types.protocol.core import Gas,ServiceId
+from tests.unit.accumulation.types import AcclOutput, AccCommitmentMap, DeferredTransfers, StateContext, OperandTuples, OperandTuple
+from jam.state.components.delta import Delta,AccountData
+from jam.state.components.phi import Phi
+from jam.state.components.tau import Tau
+from jam.state.components.iota import Iota
+from jam.state.components.chi import ChiA, ChiG, ChiM, ChiV
+from jam.state.components.nu import AllReadyWRs, ReadyWR
+from jam.state.state import State
+from jam.types.work.report import WorkDependencies, WorkReports, SegmentRootLookup, WorkReport
 from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
 
 class Accumulation:
@@ -40,27 +37,26 @@ class Accumulation:
         return filtered_reports
 
     @staticmethod
-    def queue_creator_fn(work_reports: WorkReports) -> AllReadyWRs:
+    def queue_creator_fn(work_report: WorkReport) -> ReadyWR:
         """
         Function D defined in Eq 12.6
-        Takes work reports & returns queued work reports with dependencies
+        Takes work report & returns ready work report with dependencies
 
         Args:
-            work_reports: All work reports
+            work_report: work report
 
         Returns:
-            Queued WRs
+            Ready WR
         """
 
-        queued_wr = AllReadyWRs([])
-        for wr in work_reports:
-            dependencies = WorkDependencies(wr.context.prerequisites)
-            for segment_item in wr.segment_root_lookup:
+        dependencies = WorkDependencies(work_report.context.prerequisites)
+        for segment_item in work_report.segment_root_lookup:
+            if segment_item.work_package_hash not in dependencies:
                 dependencies.append(segment_item.work_package_hash)
-            work_report = ReadyWR(report=wr, dependencies=dependencies)
-            queued_wr.append(work_report)
 
-        return queued_wr
+        ready_wr = ReadyWR(report=work_report, dependencies=dependencies)
+
+        return ready_wr
 
     @staticmethod
     def queue_edit_fn(accumulation_queue: AllReadyWRs, removable_packages: WorkDependencies) -> AllReadyWRs:
@@ -99,6 +95,7 @@ class Accumulation:
             if r.dependencies == WorkDependencies([]):
                 g.append(r.report)
 
+        print("g", g)
         if g == WorkReports([]):
             return g
 
@@ -134,7 +131,8 @@ class Accumulation:
             gas_limit: Gas,
             work_reports: WorkReports,
             partial_state: StateContext,
-            services: ChiG
+            services: ChiG,
+            timeslot: Tau
     ) -> tuple[int, StateContext, DeferredTransfers, AccCommitmentMap]:
         """
         Outer accumulation function ∆+ defined in Eq 12.16
@@ -147,7 +145,8 @@ class Accumulation:
             work_reports (WorkReports): A collection of work reports that are ready to be accumulated.
             partial_state (StateContext): The state context before accumulation, which includes service accounts and other mutable components.
             services (ChiG): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
-        
+            timeslot (Tau): Curr TimeSlot τ′
+
         Returns:
             A tuple (int, StateContext, DeferredTransfer, AccCommitmentMap) where:
             Integer: Number of work results successfully accumulated.
@@ -169,11 +168,11 @@ class Accumulation:
             return 0, partial_state, DeferredTransfers([]), AccCommitmentMap([])
 
         work_reports_start = work_reports[:index]
-        [gas_star, partial_state_star, deferred_transfers_star, accl_outputs_star] = Accumulation.parallel_accumulation(partial_state, work_reports_start, services)
+        [gas_star, partial_state_star, deferred_transfers_star, accl_outputs_star] = Accumulation.parallel_accumulation(partial_state, work_reports_start, services, timeslot)
 
         work_reports_end = work_reports[index:]
         gas_diff = gas_limit-gas_star
-        [j, partial_state_dash, deferred_transfers, accl_outputs] = Accumulation.seq_accumulation(gas_diff, work_reports_end, partial_state_star, ChiG({}))
+        [j, partial_state_dash, deferred_transfers, accl_outputs] = Accumulation.seq_accumulation(gas_diff, work_reports_end, partial_state_star, ChiG({}), timeslot)
 
         deferred_transfers_star.extend(deferred_transfers)
 
@@ -188,7 +187,8 @@ class Accumulation:
     def parallel_accumulation(
             initial_state: StateContext,
             work_reports: WorkReports,
-            services: ChiG
+            services: ChiG,
+            timeslot: Tau
     ) ->  tuple[Gas, StateContext, DeferredTransfers, AccCommitmentMap]:
         """
         Parallelized accumulation function ∆* defined in Eq 12.17
@@ -200,6 +200,7 @@ class Accumulation:
             initial_state (StateContext): The state context before accumulation, which includes service accounts and other mutable components.
             work_reports (WorkReports): A collection of work reports that are ready to be accumulated.
             services (ChiG): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
+            timeslot (Tau): Curr TimeSlot τ′
 
         Returns:
             A tuple (int, StateContext, DeferredTransfer, AccCommitmentMap) where:
@@ -228,18 +229,18 @@ class Accumulation:
                 s.append(i)
 
         for i in s:
-            [updated_partial_state, df_list, accl_output, gas] = Accumulation.single_accumulation(state, work_reports, services, ServiceId(i))
+            [updated_partial_state, df_list, accl_output, gas] = Accumulation.single_accumulation(state, work_reports, services, ServiceId(i), timeslot)
             u+=gas
             if accl_output is not None:
                 accl_output_array.append(AcclOutput(service_id=i, hash=accl_output))
-            for i in df_list:
-                t_cap.append(i)
+            for t in df_list:
+                t_cap.append(t)
             state=updated_partial_state
 
         t_cap.sort(key=lambda x: x.sender)
         d=Delta(state.service_accounts)
         i=Iota(state.validator_keys)
-        q=Xi(state.authorizer_keys)
+        q=Phi(state.authorizer_keys)
         m=ChiM(state.privileges.m)
         a=ChiA(state.privileges.a)
         v=ChiV(state.privileges.v)
@@ -247,17 +248,17 @@ class Accumulation:
         n=Delta({})
         m_set=[]
 
-        [updated_partial_state, df_list, accl_output, gas] = Accumulation.single_accumulation(state,work_reports,services,ServiceId(m))
+        [updated_partial_state, df_list, accl_output, gas] = Accumulation.single_accumulation(state, work_reports, services, ServiceId(m), timeslot)
         x_dash=updated_partial_state.privileges
 
-        [updated_partial_state, df_list, accl_output, gas] = Accumulation.single_accumulation(state,work_reports,services,ServiceId(a))
+        [updated_partial_state, df_list, accl_output, gas] = Accumulation.single_accumulation(state, work_reports, services, ServiceId(a), timeslot)
         i_dash=updated_partial_state.validator_keys
 
-        [updated_partial_state, df_list, accl_output, gas] = Accumulation.single_accumulation(state,work_reports,services,ServiceId(v))
+        [updated_partial_state, df_list, accl_output, gas] = Accumulation.single_accumulation(state, work_reports, services, ServiceId(v), timeslot)
         q_dash=updated_partial_state.authorizer_keys
 
         for i in s:
-            [updated_partial_state, df_list, accl_output, gas] = Accumulation.single_accumulation(state,work_reports,services,ServiceId(i))
+            [updated_partial_state, df_list, accl_output, gas] = Accumulation.single_accumulation(state, work_reports, services, ServiceId(i), timeslot)
             d1 = updated_partial_state.service_accounts
             d2 = copy.deepcopy(d1)
             d_keys = copy.deepcopy(d)
@@ -293,7 +294,8 @@ class Accumulation:
             initial_state: StateContext,
             work_reports: WorkReports,
             services: ChiG,
-            service_id: ServiceId
+            service_id: ServiceId,
+            timeslot: Tau
     )-> tuple[StateContext, DeferredTransfers, OptionHash, Gas]:
         """
         Single-Service accumulation function ∆1 defined in Eq 12.19
@@ -305,6 +307,7 @@ class Accumulation:
             work_reports (WorkReports): A collection of work reports that are ready to be accumulated.
             services (ChiG): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
             service_id (ServiceId): Index of Particular Service
+            timeslot (Tau): Curr TimeSlot τ′
 
         Returns:
             A tuple (StateContext, DeferredTransfer, AccOutput, Gas) where:
@@ -320,7 +323,7 @@ class Accumulation:
         for i in work_reports:
             for j in i.results:
                 if j.service_id == service_id:
-                    p.append(gasPrivilage(o=j.result, l=j.payload_hash, a=i.auth_output, k=i.package_spec))
+                    p.append(OperandTuple(o=j.result, l=j.payload_hash, a=i.auth_output, k=i.package_spec.hash))
         
         for i in services:
             if i==service_id:
@@ -332,8 +335,7 @@ class Accumulation:
                 if j.service_id==service_id:
                     g+=j.accumulate_gas
 
-        t = Tau(42)
-        [posterior_state, transfers, optional_hash, gas] = Accumulation.psi_a(initial_state, t, service_id, g, p)
+        [posterior_state, transfers, optional_hash, gas] = Accumulation.psi_a(initial_state, timeslot, service_id, g, p)
 
         return posterior_state, transfers, optional_hash, gas
         
@@ -343,12 +345,12 @@ class Accumulation:
             tau: Tau,
             service_id: ServiceId,
             g: Gas,
-            p: gasPrivilages
+            p: OperandTuples
     ) -> tuple[StateContext, DeferredTransfers, OptionHash, Gas]:
         return partial_state, DeferredTransfers([]), OptionHash(Null), g
 
     @staticmethod
-    def psi_t(delta: Delta, time:Tau, service_id: ServiceId, deferred_transfers: DeferredTransfers)-> AccountData:
+    def psi_t(delta: Delta, time:Tau, service_id: ServiceId, deferred_transfers: DeferredTransfers)-> Delta:
         return delta
 
     @staticmethod
@@ -386,14 +388,71 @@ class Accumulation:
         new_state: State = dataclasses.replace(pre_state)
 
         nu = new_state.nu # Ready for Accumulation
-        xi_union = new_state.xi # Accumulated Packages Hist                                                                                       ory
+        xi_union = WorkDependencies([]) # Accumulated Packages List
+
+        for ep in new_state.xi:
+            xi_union.extend(ep)
+
+        # PRINT LINE -------------------
+        ixi = []
+        for ix in xi_union:
+            ixi.append(ix)
+        print("Initial Acc Queue", ixi)
+        # ------------------------------
+
+        # PRINT LINE -------------------
+        ixi = []
+        for ix in nu:
+            for wr in ix:
+                ixi.append(wr.report.package_spec.hash)
+            ixi.append("break")
+        print("Initial Ready Queue", ixi)
+        # ------------------------------
 
         work_reports = WorkReports([]) # Latest Work Reports to accumulate
         for rg in block.extrinsic.guarantees:
             work_reports.append(rg.report)
 
+        # PRINT LINE -------------------
+        pwr = []
+        for wr in work_reports:
+            pwr.append(wr.package_spec.hash)
+        print("Work Reports", pwr)
+        # ------------------------------
+
+
         immediate_reports = cls.filter_wr_fn(work_reports)
-        queued_reports = cls.queue_edit_fn(cls.queue_creator_fn(work_reports), xi_union)
+
+        # PRINT LINE -------------------
+        iwr = []
+        for wr in immediate_reports:
+            iwr.append(wr.package_spec.hash)
+        print("Immediate Reports", iwr)
+        # ------------------------------
+
+        queued_wr = AllReadyWRs([])
+
+        for wr in work_reports:
+            if len(wr.context.prerequisites) > 0 or wr.segment_root_lookup != SegmentRootLookup([]):
+                print("length", wr.segment_root_lookup)
+                rq = cls.queue_creator_fn(wr)
+                queued_wr.append(rq)
+
+        # PRINT LINE -------------------
+        qwr = []
+        for wr in queued_wr:
+            qwr.append(wr.report.package_spec.hash)
+        print("Queued Tmp Reports", qwr)
+        # ------------------------------
+
+        queued_reports = cls.queue_edit_fn(queued_wr, xi_union)
+
+        # PRINT LINE -------------------
+        qwr = []
+        for wr in queued_reports:
+            qwr.append(wr.report.package_spec.hash)
+        print("Queued Reports", qwr)
+        # ------------------------------
 
         m = block.header.slot % EPOCH_LENGTH
 
@@ -402,6 +461,9 @@ class Accumulation:
         q_right = nu[m:]
         q_left = nu[:m]
 
+        print("q", q_right, q_left, queued_reports)
+        print("m", m)
+
         for wrs in q_right:
             accumulatable_wr.extend(wrs)
 
@@ -409,61 +471,132 @@ class Accumulation:
             accumulatable_wr.extend(wrs)
 
         accumulatable_wr.extend(queued_reports)
+
+        # PRINT LINE -------------------
+        awr = []
+        for wr in accumulatable_wr:
+            awr.append(wr.report.package_spec.hash)
+        print("Accumulatable Reports", awr)
+        # ------------------------------
+
+        # q
         intermediate_queue = cls.queue_edit_fn(accumulatable_wr, cls.mapping_fn(immediate_reports))
+
+        # PRINT LINE -------------------
+        iq = []
+        for wr in intermediate_queue:
+            iq.append(wr.report.package_spec.hash)
+        print("Intermediate Queue", iq)
+        # ------------------------------
+
+        # Q(q)
         updated_wrs = cls.priority_queue_fn(intermediate_queue)
 
+        # PRINT LINE -------------------
+        uwr = []
+        for wr in updated_wrs:
+            uwr.append(wr.package_spec.hash)
+        print("Updated WRs", uwr)
+        # ------------------------------
+
+        # W! ⌢ Q(q)
         star_work_reports = WorkReports(immediate_reports)
         star_work_reports.extend(updated_wrs)
 
-        # ----------------------
-        # Section 12.2 Execution
-        # ----------------------
+        # PRINT LINE -------------------
+        swr = []
+        for wr in star_work_reports:
+            swr.append(wr.package_spec.hash)
+        print("Star Work Reports", swr)
+        # ------------------------------
 
-        partial_state = StateContext(service_accounts=pre_state.delta, validator_keys=pre_state.iota, authorizer_keys=pre_state.phi, privileges=pre_state.chi)
-
-        # accumulated_gas accumulated from ChiG_services
-        service_gas=0
-        for i in pre_state.chi.g:
-            service_gas+=pre_state.chi.g[i]
-
-        gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT)+service_gas))
-        [work_accl_no, updated_state, deferred_transfers, commitment_map] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, pre_state.chi.g)
-
-        # Update Delta Dagger, Chi, Iota, Phi
-        new_state.delta = updated_state.service_accounts
-        new_state.chi = updated_state.privileges
-        new_state.iota = updated_state.validator_keys
-        new_state.phi = updated_state.authorizer_keys
-
-
-        # ----------------------
-        # Section 12.3 Deferred Transfers & State Integration
-        # ----------------------
-
-        for s in updated_state.service_accounts:
-            specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
-            # delta_double_dagger
-            updated_state.service_accounts[s] = Accumulation.psi_t(updated_state.service_accounts[s], block.header.slot, s, specific_transfers)
-
-        # Update Delta Double Dagger
-        new_state.delta = updated_state.service_accounts
+        # TODO: Testing without on chain accumulation
+        # # ----------------------
+        # # Section 12.2 Execution
+        # # ----------------------
+        #
+        # partial_state = StateContext(service_accounts=pre_state.delta, validator_keys=pre_state.iota, authorizer_keys=pre_state.phi, privileges=pre_state.chi)
+        #
+        # # accumulated_gas accumulated from ChiG_services
+        # service_gas=0
+        # for i in pre_state.chi.g:
+        #     service_gas+=pre_state.chi.g[i]
+        #
+        # gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT)+service_gas))
+        # [work_accl_no, updated_state, deferred_transfers, commitment_map] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, pre_state.chi.g, block.header.slot)
+        #
+        # # Update Delta Dagger, Chi, Iota, Phi
+        # new_state.delta = updated_state.service_accounts
+        # new_state.chi = updated_state.privileges
+        # new_state.iota = updated_state.validator_keys
+        # new_state.phi = updated_state.authorizer_keys
+        #
+        #
+        # # ----------------------
+        # # Section 12.3 Deferred Transfers & State Integration
+        # # ----------------------
+        #
+        # # Update Delta Double Dagger
+        # for s in new_state.delta:
+        #     specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
+        #     # delta_double_dagger
+        #     new_state.delta[s] = Accumulation.psi_t(new_state.delta, block.header.slot, s, specific_transfers)
 
         # Updating Accumulated History, Xi
-        new_state.xi[EPOCH_LENGTH-1] =  cls.mapping_fn(star_work_reports)
+
+
+
+
 
         for i in range(EPOCH_LENGTH-1):
             new_state.xi[i] = new_state.xi[i+1]
 
+        new_state.xi[EPOCH_LENGTH-1] =  cls.mapping_fn(star_work_reports)
+
+        # PRINT LINE -------------------
+        xir = []
+        for vwr in new_state.xi[EPOCH_LENGTH - 1]:
+            for wr in vwr:
+                xir.append(wr)
+            xir.append("Break")
+
+        print("nth xi", xir)
+        # ------------------------------
+
         timeslot_difference = block.header.slot - pre_state.tau
+        # print("τ′", block.header.slot, "τ", pre_state.tau, "τ′-τ", timeslot_difference)
+        # print("m", m)
 
         # Updating Ready Queue, Nu
         for i in range(EPOCH_LENGTH):
+            ind = (m + EPOCH_LENGTH - i) % EPOCH_LENGTH
+            # print("m", m, "i", i, "sum", (m+EPOCH_LENGTH-i), "ind", ind)
             if i == 0:
-                new_state.nu[m-i] = cls.queue_edit_fn(queued_reports, new_state.xi[-1])
+                new_state.nu[ind] = cls.queue_edit_fn(queued_reports, new_state.xi[EPOCH_LENGTH-1])
             elif 1 <= i < timeslot_difference:
-                new_state.nu[m-i] = AllReadyWRs([])
+                new_state.nu[ind] = AllReadyWRs([])
             elif i >= timeslot_difference:
-                new_state.nu[m-i] = cls.queue_edit_fn(new_state.nu[m-i], new_state.xi[-1])
+                new_state.nu[ind] = cls.queue_edit_fn(new_state.nu[ind], new_state.xi[EPOCH_LENGTH-1])
+
+        # PRINT LINE -------------------
+        rq = []
+        for wrq in new_state.nu:
+            for wr in wrq:
+                rq.append(wr.report.package_spec.hash)
+            rq.append("br")
+
+        print("Ready Queue", rq)
+        # ------------------------------
+
+        # PRINT LINE -------------------
+        wrq = []
+        for wr in new_state.xi:
+            for wri in wr:
+                wrq.append(wri)
+            wrq.append("br")
+
+        print("Accumulated Queue", wrq)
+        # ------------------------------
 
         return new_state
 

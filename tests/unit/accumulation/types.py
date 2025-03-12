@@ -1,10 +1,11 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import json
 import os
 from typing import List
 
-from jam.state.components.nu import AllReadyWRs
+from jam.state.components.nu import AllReadyWRs, Nu
 from jam.state.components.phi import Phi
+from jam.state.components.xi import Xi
 from jam.types.base.integers.fixed import U32
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -12,10 +13,8 @@ from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.utils.constants import EPOCH_LENGTH
 from jam.utils.json import JsonSerde
-from jam.types.work.report import WorkReport,WorkExecResult,WorkPackageSpec,WorkDependencies
-from jam.types.protocol.crypto import WorkReportHash
+from jam.types.work.report import WorkPackageHash, WorkDependencies, WorkExecResult, WorkReports
 from jam.state.components.chi import Chi
-from jam.types.protocol.service import ServiceInfo
 from jam.types.protocol.crypto import Entropy
 from jam.types.protocol.core import ServiceId,Gas,U64,OpaqueHash,Balance
 from jam.types.base.sequences.bytes.bytes import Bytes
@@ -29,19 +28,19 @@ from typing import Optional
 
 @decodable_dataclass
 @dataclass
-class gasPrivilage(Codable,JsonSerde):
-    o:WorkExecResult
-    l:OpaqueHash
-    a:Bytes
-    k:WorkPackageSpec
+class OperandTuple(Codable, JsonSerde):
+    o: WorkExecResult
+    l: OpaqueHash
+    a: Bytes
+    k: WorkPackageHash
     
-@decodable_vector(gasPrivilage)
-class gasPrivilages(Vector[gasPrivilage]):
+@decodable_vector(OperandTuple)
+class OperandTuples(Vector[OperandTuple]):
     ...
 
 @decodable_dataclass
 @dataclass
-class DeferredTransfer(Codable,JsonSerde):
+class DeferredTransfer(Codable, JsonSerde):
     sender: ServiceId
     receiver: ServiceId
     amount: Balance
@@ -68,51 +67,50 @@ class AcclOutput(Codable,JsonSerde):
 class AccCommitmentMap(Vector[AcclOutput]):
     ...
 
-@decodable_vector(AllReadyWRs)
-class ReadyQueue(Vector[AllReadyWRs]):
-    ...
-# @decodable_vector(WorkReportHash)
-# class WorkDependencies(Vector[WorkReportHash]):
+# @decodable_vector(AllReadyWRs)
+# class ReadyQueue(Vector[AllReadyWRs]):
 #     ...
-@decodable_array(EPOCH_LENGTH,WorkDependencies)
-class Accumulated(Array[WorkDependencies]):
+#
+# @decodable_array(EPOCH_LENGTH,WorkDependencies)
+# class Accumulated(Array[WorkDependencies]):
+#     ...
+
+@decodable_dataclass
+@dataclass
+class InputService(Codable,JsonSerde):
+    code_hash: OpaqueHash
+    balance: U64
+    min_item_gas: Gas
+    min_memo_gas: Gas
+    bytes: U64
+    items: U32
+
+@decodable_dataclass
+@dataclass
+class InputPreimage(Codable,JsonSerde):
+    hash: OpaqueHash
+    blob: Bytes
+
+@decodable_vector(InputPreimage)
+class InputPreimages(Vector[InputPreimage]):
     ...
 
-@decodable_dataclass
-@dataclass
-class customService(Codable,JsonSerde):
-    code_hash:OpaqueHash
-    balance:U64
-    min_item_gas:Gas
-    min_memo_gas:Gas
-    bytes:U64
-    items:U32
-
-@decodable_dataclass
-@dataclass
-class customPreimage(Codable,JsonSerde):
-    hash:OpaqueHash
-    blob:Bytes
-
-@decodable_vector(customPreimage)
-class preimages(Vector[customPreimage]):
-    ...
-
-@decodable_dataclass
-@dataclass
-class accContents(Codable,JsonSerde):
-    service:customService
-    preimages:preimages
-    
 @decodable_dataclass
 @dataclass
 class AccountData(Codable,JsonSerde):
+    service: InputService
+    preimages: InputPreimages
+    
+@decodable_dataclass
+@dataclass
+class Account(Codable,JsonSerde):
     id:ServiceId
-    data:accContents
+    data:AccountData
 
-@decodable_vector(AccountData)
-class Accounts(Vector[AccountData]):
+@decodable_vector(Account)
+class Accounts(Vector[Account]):
     ...
+
 @decodable_dataclass
 @dataclass
 class Acc(Codable,JsonSerde):
@@ -122,11 +120,6 @@ class Acc(Codable,JsonSerde):
 @decodable_vector(Acc)
 class AlwaysAcc(Vector[Acc]):
     ...
-
-@decodable_vector(WorkReport)
-class WorkReports(Vector[WorkReport]):
-    ...
-
 
 @decodable_dataclass
 @dataclass
@@ -147,8 +140,8 @@ class ChiCustom(Codable, JsonSerde):
 class PreState(Codable, JsonSerde):
     slot: U32
     entropy: Entropy
-    ready_queue: ReadyQueue
-    accumulated: Accumulated
+    ready_queue: Nu
+    accumulated: Xi
     privileges: ChiCustom
     accounts: Accounts
 
@@ -185,11 +178,9 @@ def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testc
         else:
             with open(os.path.join(data_dir, file), "r") as f:
                 data = json.loads(f.read())
-                # print("ReadyQueue->", data["pre_state"]["ready_queue"])
                 try:
                     tc = Testcase.from_json(data)
                     print(f"Decoded {file}")
-                    # print("Bhaiiii->",tc.pre_state.lambda_)
                     result.append(tc)
                 except Exception as e:
                     print(f"❌ Failed to decode {file}: {e}")
