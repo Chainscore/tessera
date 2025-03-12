@@ -10,7 +10,7 @@ def hash(data):
 
 
 def hex(data):
-    return ''.join(f'{x:02x}' for x in data)
+    return "".join(f"{x:02x}" for x in data)
 
 
 def compute_shuffle_eq329(s, r):
@@ -75,11 +75,11 @@ def inputs_Eq331():
 
 
 def to_le_bytes(n, k):
-    return n.to_bytes(k, 'little')
+    return n.to_bytes(k, "little")
 
 
 def from_le_bytes(b):
-    return int.from_bytes(b, 'little')
+    return int.from_bytes(b, "little")
 
 
 def compute_q(h, l):
@@ -87,7 +87,7 @@ def compute_q(h, l):
     for i in range(l):
         preimage = bytes(h.copy()) + to_le_bytes(i // 8, 4)
         offset = 4 * i % 32
-        slice = hash(preimage)[offset:offset + 4]
+        slice = hash(preimage)[offset : offset + 4]
         result.append(from_le_bytes(slice))
 
     return result
@@ -108,17 +108,17 @@ def test_vectors_eq331():
     for term in inputs_Eq331():
         s, r = term
         output = compute_shuffle_eq331(s, r)
-        assert (is_permutation(s, output))
+        assert is_permutation(s, output)
 
         yield {
-            'input': len(s),
-            'entropy': hex(r),
-            'output': output,
+            "input": len(s),
+            "entropy": hex(r),
+            "output": output,
         }
 
 
 def main():
-    json.dump(list(test_vectors_eq331()), sys.stdout, indent='    ')
+    json.dump(list(test_vectors_eq331()), sys.stdout, indent="    ")
 
 
 main()

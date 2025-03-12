@@ -1,9 +1,8 @@
 import pytest
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, Optional
-
-from jam.utils.json import json_serializable, json_field, with_json_metadata
-from jam.utils.json.serde import JsonDeserializationError, JsonFieldError, JsonSerde
+from jam.utils.json import with_json_metadata
+from jam.utils.json.serde import JsonFieldError, JsonSerde
 from jam.types.base.string import String
 from jam.types.base.boolean import Boolean
 from jam.types.base.integers.fixed import I32 as Int32
@@ -12,17 +11,22 @@ from jam.types.base.dictionary import Dictionary, decodable_dictionary
 
 
 # Simple dataclass for basic testing
-@json_serializable
+@with_json_metadata(
+    name={"name": "fullName"},
+    age={"skip_if_none": True},
+    active={"default": True}
+)
 @dataclass
-class Person:
-    name: str = json_field(name="fullName")
-    age: int = json_field(skip_if_none=True)
-    active: bool = True
+class Person(JsonSerde):
+    name: str
+    age: int
+    active: bool
 
 
 # Dataclass with custom field handling
 @with_json_metadata(
-    title={"name": "displayTitle", "skip_if_none": True}, description={"name": "desc"}
+    title={"name": "displayTitle", "skip_if_none": True}, 
+    description={"name": "desc"}
 )
 @dataclass
 class Document(JsonSerde):
@@ -42,17 +46,20 @@ class StringIntDict(Dictionary[String, Int32]):
     ...
 
 
+@with_json_metadata(
+    metadata={"name": "metadata", "skip_if_none": True}
+)
 @dataclass
 class ComplexData(JsonSerde):
     strings: StringVector
     numbers: StringIntDict
-    flags: Dict[str, Boolean]
-    metadata: Optional[Dict[str, str]] = field(default_factory=dict)
+    flags: Dict
+    metadata: Optional[Dict]
 
 
 def test_simple_dataclass_serialization():
     # Test basic serialization
-    person = Person(name="John Doe", age=30)
+    person = Person(name="John Doe", age=30, active=True)
     json_data = person.to_json()
 
     assert isinstance(json_data, dict)
@@ -62,7 +69,6 @@ def test_simple_dataclass_serialization():
 
     # Test deserialization
     reconstructed = Person.from_json(json_data)
-    print("reconstructed", reconstructed)
     assert reconstructed == person
     assert reconstructed.name == "John Doe"
     assert reconstructed.age == 30
@@ -71,7 +77,7 @@ def test_simple_dataclass_serialization():
 
 def test_dataclass_field_options():
     # Test field with skip_if_none=True
-    person = Person(name="John Doe", age=None)
+    person = Person(name="John Doe", age=None, active=True)
     json_data = person.to_json()
     assert "age" not in json_data
     assert json_data["fullName"] == "John Doe"
@@ -123,13 +129,14 @@ def test_nested_dataclass():
     assert json_data["metadata"] == {"key": "value"}
 
     # Test deserialization
+    print("json_data", json_data)
     reconstructed = ComplexData.from_json(json_data)
     assert reconstructed == data
 
 
 def test_dataclass_invalid_input():
     # Test missing required field
-    with pytest.raises(JsonDeserializationError):
+    with pytest.raises(JsonFieldError):
         Person.from_json({"age": 30})  # Missing name
 
     # Test invalid field type
@@ -148,12 +155,14 @@ def test_dataclass_invalid_input():
 
 
 def test_dataclass_inheritance():
-    @json_serializable
     @dataclass(kw_only=True)
-    class BaseClass:
-        id: str = json_field(name="identifier")
+    class BaseClass(JsonSerde):
+        id: str
 
-    @json_serializable
+    @with_json_metadata(
+        id={"name": "identifier"},
+        name={"name": "fullName"}
+    )
     @dataclass
     class DerivedClass(BaseClass):
         name: str
@@ -162,8 +171,10 @@ def test_dataclass_inheritance():
     obj = DerivedClass(id="123", name="test")
     json_data = obj.to_json()
 
+    print("json_data", json_data)
+
     assert json_data["identifier"] == "123"
-    assert json_data["name"] == "test"
+    assert json_data["fullName"] == "test"
 
     reconstructed = DerivedClass.from_json(json_data)
     assert reconstructed == obj
@@ -172,41 +183,49 @@ def test_dataclass_inheritance():
 
 
 def test_dataclass_optional_fields():
-    @json_serializable
+    @with_json_metadata(
+        required={"name": "required"},
+        optional_str={"skip_if_none": True},
+        with_default={"default": 42}
+    )
     @dataclass
     class OptionalFields(JsonSerde):
         required: str
-        optional: Optional[str] = None
+        optional_str: Optional[str] = None
         with_default: int = 42
 
     # Test with all fields
-    obj1 = OptionalFields("required", "optional", 100)
+    obj1 = OptionalFields("required", "optional_str", 100)
     json_data = obj1.to_json()
     assert json_data["required"] == "required"
-    assert json_data["optional"] == "optional"
+    assert json_data["optional_str"] == "optional_str"
     assert json_data["with_default"] == 100
 
     # Test with optional field as None
     obj2 = OptionalFields("required")
     json_data = obj2.to_json()
     assert json_data["required"] == "required"
-    assert json_data["optional"] is None
+    assert json_data.get("optional_str") is None
     assert json_data["with_default"] == 42
 
     # Test deserialization with missing optional field
     reconstructed = OptionalFields.from_json({"required": "test"})
     assert reconstructed.required == "test"
-    assert reconstructed.optional is None
+    assert reconstructed.optional_str is None
     assert reconstructed.with_default == 42
 
 
 def test_dataclass_field_metadata():
-    @json_serializable
+    @with_json_metadata(
+        field1={"name": "jsonField1", "skip_if_none": True},
+        field2={"name": "jsonField2", "skip_if_none": True, "default": None},
+        field3={"name": "jsonField3"}
+    )
     @dataclass
     class MetadataTest(JsonSerde):
-        field1: str = json_field(name="jsonField1", skip_if_none=True)
-        field2: Optional[str] = json_field(name="jsonField2", skip_if_none=True)
-        field3: str = json_field(name="jsonField3")
+        field1: str
+        field2: Optional[str]
+        field3: str
 
     # Test skip_if_none behavior
     obj = MetadataTest(field1=None, field2=None, field3="test")
