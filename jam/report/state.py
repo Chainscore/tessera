@@ -1,38 +1,33 @@
-from jam.merklization import MMRFunctions
+from xml.dom import NoModificationAllowedErr
 
+from jam.merklization import MMRFunctions
 from jam.state.components.rho import WorkReportState, OptionalWorkReportState
 from jam.state.state import State
 from jam.types import Block, decodable_choice, ServiceId, Boolean, Vector, AvailabilityAssignments, \
     AvailabilityAssignment, Null, String, U64, U16, Bytes
 import  dataclasses
-from dataclasses import dataclass, replace
-from jam.types.extrinsics.guarantees import GuaranteesExtrinsic
-
 from jam.types.extrinsics import GuaranteesExtrinsic
 from jam.types.protocol.crypto import Hash
-from jam.types.work.report import WorkResults
-from jam.utils.constants import ACCUMULATION_GAS, CORE_COUNT, MAX_DEPENDENCIES, TOTAL_GAS, SIGNING_CONTEXTS
+from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, SIGNING_CONTEXTS
 from jam.report.error import ReportingError, ReportingErrorCode
-from jam.types.protocol.availability import AvailabilityAssignments
 from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
 from math import floor
 from jam.utils.shuffle import shuffle
 from jam.types import  decodable_vector, U32, Vector
 from jam.types.header import HeaderHash, TimeSlot
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from collections import deque
 from jam.utils.codec.primitives.integers import encode
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.exceptions import InvalidSignature
+
 
 @decodable_vector(element_type=U32)
 class U32Vector(Vector): ...
 from jam.types.header import HeaderHash
-# from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 def generate_report(report : GuaranteesExtrinsic)->GuaranteesExtrinsic:
     guarantees: GuaranteesExtrinsic=Vector(GuaranteesExtrinsic)
-    # for x in report:
-    #     WorkReport.time = x.slot
-    #     WorkReport.report = x.report
+
     for guarantee in guarantees:
         guarantee.report.package_spec.hash= report[0].report.package_spec.hash
         guarantee.report.package_spec.length = report[0].report.package_spec.length
@@ -69,88 +64,34 @@ def generate_report(report : GuaranteesExtrinsic)->GuaranteesExtrinsic:
 
     return guarantees
 
-
-
 class Reporting:
 
     @staticmethod
     def transition(pre_state:State, block:Block)->State:
         new_state:State = dataclasses.replace(pre_state)
-        header_hashes = []
-
-        # for x in new_state.beta:
-        #     header_hashes.append(x.header_hash)
-        #
-        # results = block.extrinsic.guarantees
-        #
-        #
-        #
-        # for x in block.extrinsic.guarantees:
-        #     context = x.report.context
-        #     # print('hhhhhh', context.anchor, new_state.beta)
-        #     if context.anchor not in header_hashes:
-        #         print(U64(x.report.core_index))
-        #         raise ReportingError(
-        #             ReportingErrorCode.ANCHOR_NOT_RECENT,
-        #             "Anchor not present in recent blocks hash"
-        #         )
-            # if context.beefy_root not in pre_state.rho:
-            #     print('hhhh1')
-            #     raise ReportingError(
-            #         ReportingErrorCode.BAD_BEEFY_MMR_ROOT
-            #     )
-
-        # print('hhh')
 
 
-
-        # Reporting.valid_report_fn()
-        # Reporting.report_rotation(pre_state, block)
-        # # Reporting.bad_signature(pre_state, block)
         Reporting.refinement_fn(pre_state, block)
         Reporting.core_engaged(pre_state, block)
-        #
         Reporting.bad_core_index(block)
         Reporting.result_fn(pre_state,block)
         Reporting.bad_validator_index(block)
-
         Reporting.duplicate_pkg_recent_history(pre_state,block)
-
         Reporting.future_report(block)
         Reporting.no_enough_guarantee(block)
         Reporting.valid_report_fn(pre_state,block)
         Reporting.verify_guarantor_order(block)
         Reporting.duplicate_pkg_report( block)
         Reporting.verify_guarantees_order(block)
-        # Reporting.check_multiple_reports(pre_state,block)
         Reporting.check_multiple_dependencies(pre_state,block)
         Reporting.report_last_rotation(block)
-
+        # Reporting.prev_rotation(pre_state, block)
         Reporting.big_work_report_output(pre_state, block)
-        # Reporting.report_rotation(pre_state, block)
-
-        # Reporting.check_dependencies(block)
-
-
-        # Reporting.refinement_fn(pre_state,block)
-        # Reporting.result_fn(pre_state, block)
-        # Reporting.valid_report_fn()
-
-        # Reporting.result_fn(pre_state, block)
-        # Reporting.duplicate_pkg_recent_history(pre_state, block)
-        # State.rho
-        # if new_state.rho[0] is not None:
-        #     new_state.rho[0].report == workreport()
-        # else:
-        #     new_state.rho[0].time == slot
+        Reporting.too_many_dependencies(block)
+        Reporting.bad_signature(pre_state, block)
+        Reporting.wrong_assignment(pre_state, block)
 
 
-        # Reporting.valid_report_fn (pre_state, block)
-        #
-        # n = WorkReportState(generate_report(block.extrinsic.guarantees),block.header.slot)
-        # generate_report(Block.extrinsic.guarantees)
-        # new_state.rho = n
-        # Reporting.result_fn(n.report.results,new_state)
         return new_state
 
     @staticmethod
@@ -187,8 +128,11 @@ class Reporting:
     def too_many_dependencies(block : Block):
         for x in block.extrinsic.guarantees:
             segment_root = len(x.report.segment_root_lookup)
+            print("segment_root_lookuo", segment_root)
             prerequisite = len(x.report.context.prerequisites)
+            print("prerequisite", prerequisite)
             if (segment_root + prerequisite) > MAX_DEPENDENCIES:
+                print((segment_root + prerequisite) > MAX_DEPENDENCIES)
                 raise ReportingError (
                     ReportingErrorCode.TOO_MANY_DEPENDENCIES,
                     "Work report has many dependencies(segment_lookup + prerequisite) "
@@ -250,7 +194,6 @@ class Reporting:
                         "Work package is already executed in recent-block's history"
                     )
 
-
     @staticmethod
     def duplicate_pkg_report( block :Block):
         print('ddduppp')
@@ -295,28 +238,27 @@ class Reporting:
         epoch_entropy = None
         for x in block.extrinsic.guarantees:
             if x.slot == block.header.slot:
-                epoch_entropy = state.eta[2]
-
-        # < ------------- Entropy for current epoch and same rotation ----------------->
-        epoch_entropy = None
-        for x in block.extrinsic.guarantees:
-            if x.slot != block.header.slot and floor(block.header.slot) == floor(x.slot):
-                epoch_entropy = state.eta[2]
+                # epoch_entropy = state.eta[2]
+                epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
 
         # <------------- Entropy for previous rotation in same epoc ------------------>
         for x in block.extrinsic.guarantees:
             if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
-                epoch_entropy = state.eta[2]
+                # epoch_entropy = state.eta[2]
+                epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+
 
         # <------------- Entropy for previous rotation but in last epoch ------------------>
         for x in block.extrinsic.guarantees:
             if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
-                epoch_entropy = state.eta[3]
+                # epoch_entropy = state.eta[3]
+                epoch_entropy = "0x8c039ff7caa17ccebfcadc44bd9fce6a4b6699c4d03de2e3349aa1dc11193cd7"
 
 
 
-        entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
-        h = bytes.fromhex(entropy[2:])
+
+        # entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+        h = bytes.fromhex(epoch_entropy[2:])
         print("entropy => ", h )
 
         # ------- shuffle validator with respect to the given entropy -------
@@ -392,16 +334,10 @@ class Reporting:
                     state.rho[key] = OptionalWorkReportState(
                         WorkReportState(
                             report=block.extrinsic.guarantees[key].report,
-                            timeout=block.extrinsic.guarantees[key].slot
+                            timeout=block.header.slot
                         )
                     )
-            else:
-                raise ReportingError (
-                    ReportingErrorCode.WRONG_ASSIGNMENT,
-                    "Assign wrong validator to the core"
-                )
-
-        return state
+            return state
 
 
 
@@ -418,28 +354,261 @@ class Reporting:
         # print("add_validator =", add_validator)
         # print(add_validator[0])
 
-    # @staticmethod
-    # def bad_signature(pre_state: State, block: Block):
-    #     for x in block.extrinsic.guarantees:
-    #         for y in x.signatures:
-    #             curr_validator_ed25519_key = pre_state.kappa[y.validator_index].ed25519
-    #             public_key_byte = bytes(curr_validator_ed25519_key)
-    #             signature_byte = bytes(y.signature)
-    #             # guarantor_signature_bytes = bytes(signature)
-    #             work_report_byte = bytes(x.report.package_spec)
-    #             match = work_report_byte + public_key_byte
-    #             if public_key_obj.verify(signature_byte, match) == False:
-    #                 raise ReportingError(
-    #                     ReportingErrorCode.BAD_SIGNATURE,
-    #                     "signature doesn't match with the validator public key"
-    #                 )
-                # print(guarantor_signature_bytes)
-                # print(parent_hash_bytes)
-                # try:
-                #     a=verifiable_obj.verify(signature,parent_hash_bytes)
-                #     print("hogaya",a)
-                # except:
-                #     print("failed")
+    @staticmethod
+    def prev_rotation(state: State, block: Block):
+
+        # ------- validator order ---------
+        array_validator: U32Vector = U32Vector([])
+        for i in range(VALIDATOR_COUNT):
+            array_validator.append(U32(i))
+        print("array_validator =>", array_validator)
+
+        # ------- validator assignment to the cores -------
+        validator_assign: U32Vector = U32Vector([])
+        for i in range(VALIDATOR_COUNT):
+            val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
+            validator_assign.append(U32(val_core))
+        print("cores_assign => ", validator_assign)
+
+        # <------------- Entropy for current epoch ------------------>
+        epoch_entropy = None
+        # for x in block.extrinsic.guarantees:
+        #     if x.slot == block.header.slot:
+        #         # epoch_entropy = state.eta[2]
+        #         epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+
+        # <------------- Entropy for previous rotation in same epoc ------------------>
+        # for x in block.extrinsic.guarantees:
+        #     if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
+        #         # epoch_entropy = state.eta[2]
+        #         epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+
+
+        # <------------- Entropy for previous rotation but in last epoch ------------------>
+        for x in block.extrinsic.guarantees:
+            if x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
+                epoch_entropy = state.eta[3]
+                # epoch_entropy = "0x8c039ff7caa17ccebfcadc44bd9fce6a4b6699c4d03de2e3349aa1dc11193cd7"
+
+        # entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+        h = bytes.fromhex(epoch_entropy[2:])
+        # print("entropy => ", h )
+
+        # ------- shuffle validator with respect to the given entropy -------
+        core_assign = shuffle(h, validator_assign)
+        print("cores_assign => ", core_assign)
+
+        # Initialize an empty dictionary to store the mapping between core and validator
+        mapping = {}
+
+        for i in range(len(array_validator)):
+            key = core_assign[i]  # Grouping key from rotated_array
+            value = array_validator[i]  # Value from arr_validator
+
+            # If the key is not in the mapping, initialize it as an empty set
+            if key not in mapping:
+                mapping[key] = set()
+
+            # Add the value (index from arr_validator) to the set for this key
+            mapping[key].add(value)
+
+        # Sort the keys of the dictionary (0, 1) and create a new ordered dictionary
+        mapping = {k: mapping[k] for k in sorted(mapping.keys())}
+        print("assign core to validator", mapping)
+        # output => {0:{1, 4, 5}, 1:{0, 2, 3}}
+        # mapping[0] = {1, 4, 5}  type set
+        # mapping[1] = {0, 2, 3}  type set
+
+
+        # rotation phase (number of rotation between cores)
+        work_report_slot = None
+        for x in block.extrinsic.guarantees:
+            work_report_slot = x.slot
+        print("curr_report_timeslot =>", work_report_slot)
+        rotation_phase = floor((work_report_slot % EPOCH_LENGTH) / ROTATION_PERIOD)
+        print("rotation_phase => ", rotation_phase)
+
+        keys = list(mapping.keys())  # Get the sorted keys (0, 1)
+        print(keys)
+        values = [mapping[k] for k in keys]  # Extract the values as a list
+
+        # Use deque for rotation
+        values = deque(values)
+        values.rotate(-rotation_phase)  # Rotate left (-) or right (+)
+
+        # Reconstruct the mapping
+        mapping =  {keys[i]: values[i] for i in range(len(keys))}
+        print("mapping after rotaion", mapping)
+
+
+        # array of assign validator for each core
+        guarantee_validator_index = {}
+
+        for x in block.extrinsic.guarantees:
+            key = x.report.core_index
+            value = set()
+            for y in x.signatures:
+                value.add(y.validator_index)
+
+            guarantee_validator_index[key] =  value
+
+        guarantee_validator_index = {k: guarantee_validator_index[k] for k in (guarantee_validator_index.keys()) }
+
+        print("guarantee_validator_index => ", guarantee_validator_index)
+
+        guarantor_length = len(block.extrinsic.guarantees)
+        print("guarantor_length => ", guarantor_length)
+
+        for key in guarantee_validator_index:
+            print("hjhjvgvdhgvvdhgdhgdhhvhvdhv", guarantee_validator_index[key] == mapping.get(key))
+            if guarantee_validator_index[key] == mapping.get(key):
+                print("hhheeeelooooo")
+                # print(state.rho.)
+                print(block.extrinsic.guarantees[key].slot,key)
+                state.rho[key] = OptionalWorkReportState(
+                    WorkReportState(
+                        report=block.extrinsic.guarantees[key].report,
+                        timeout=block.header.slot
+                    )
+                )
+                return state
+
+    @staticmethod
+    def wrong_assignment(state: State, block: Block):
+
+        # ------- validator order ---------
+        array_validator: U32Vector = U32Vector([])
+        for i in range(VALIDATOR_COUNT):
+            array_validator.append(U32(i))
+        print("array_validator =>", array_validator)
+
+        # ------- validator assignment to the cores -------
+        validator_assign: U32Vector = U32Vector([])
+        for i in range(VALIDATOR_COUNT):
+            val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
+            validator_assign.append(U32(val_core))
+        print("cores_assign => ", validator_assign)
+
+        # <------------- Entropy for current epoch ------------------>
+        epoch_entropy = None
+        for x in block.extrinsic.guarantees:
+            if x.slot == block.header.slot:
+                # epoch_entropy = state.eta[2]
+                epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+
+        # # <------------- Entropy for previous rotation in same epoc ------------------>
+        # for x in block.extrinsic.guarantees:
+        #     if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
+        #         # epoch_entropy = state.eta[2]
+        #         epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+        #
+        #
+        # # <------------- Entropy for previous rotation but in last epoch ------------------>
+        # for x in block.extrinsic.guarantees:
+        #     if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
+        #         # epoch_entropy = state.eta[3]
+        #         epoch_entropy = "0x8c039ff7caa17ccebfcadc44bd9fce6a4b6699c4d03de2e3349aa1dc11193cd7"
+
+
+
+
+        # entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+        h = bytes.fromhex(epoch_entropy[2:])
+        print("entropy => ", h )
+
+        # ------- shuffle validator with respect to the given entropy -------
+        core_assign = shuffle(h, validator_assign)
+        print("cores_assign => ", core_assign)
+
+        # Initialize an empty dictionary to store the mapping between core and validator
+        mapping = {}
+
+        for i in range(len(array_validator)):
+            key = core_assign[i]  # Grouping key from rotated_array
+            value = array_validator[i]  # Value from arr_validator
+
+            # If the key is not in the mapping, initialize it as an empty set
+            if key not in mapping:
+                mapping[key] = set()
+
+            # Add the value (index from arr_validator) to the set for this key
+            mapping[key].add(value)
+
+        # Sort the keys of the dictionary (0, 1) and create a new ordered dictionary
+        mapping = {k: mapping[k] for k in sorted(mapping.keys())}
+        print("assign core to validator", mapping)
+        # output => {0:{1, 4, 5}, 1:{0, 2, 3}}
+        # mapping[0] = {1, 4, 5}  type set
+        # mapping[1] = {0, 2, 3}  type set
+
+
+        # rotation phase (number of rotation between cores)
+        work_report_slot = None
+        for x in block.extrinsic.guarantees:
+            work_report_slot = x.slot
+        print("curr_report_timeslot =>", work_report_slot)
+        rotation_phase = floor((work_report_slot % EPOCH_LENGTH) / ROTATION_PERIOD)
+        print("rotation_phase => ", rotation_phase)
+
+        keys = list(mapping.keys())  # Get the sorted keys (0, 1)
+        print(keys)
+        values = [mapping[k] for k in keys]  # Extract the values as a list
+
+        # Use deque for rotation
+        values = deque(values)
+        values.rotate(-rotation_phase)  # Rotate left (-) or right (+)
+
+        # Reconstruct the mapping
+        mapping =  {keys[i]: values[i] for i in range(len(keys))}
+        print("mapping after rotaion", mapping)
+
+        # array of assign validator for each core
+        guarantee_validator_index = {}
+
+        for x in block.extrinsic.guarantees:
+            key = x.report.core_index
+            value = set()
+            for y in x.signatures:
+                value.add(y.validator_index)
+
+            guarantee_validator_index[key] =  value
+
+        guarantee_validator_index = {k: guarantee_validator_index[k] for k in (guarantee_validator_index.keys()) }
+
+        print("guarantee_validator_index => ", guarantee_validator_index)
+
+        guarantor_length = len(block.extrinsic.guarantees)
+        print("guarantor_length => ", guarantor_length)
+
+        for key in guarantee_validator_index:
+            print(len(guarantee_validator_index[key]))
+            if len(guarantee_validator_index[key]) == 3:
+                if guarantee_validator_index[key] != mapping.get(key):
+                    print("----------------------------------------------------------------------")
+                    raise ReportingError (
+                        ReportingErrorCode.WRONG_ASSIGNMENT,
+                        "Assign wrong validator to the core"
+                    )
+
+    @staticmethod
+    def bad_signature(state: State, block: Block):
+        for x in block.extrinsic.guarantees:
+            for y in x.signatures:
+                public_key = None
+                # take curr
+                if x.slot == block.header.slot or x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
+                    public_key = state.kappa[y.validator_index].ed25519
+                elif x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
+                    public_key = state.lambda_[y.validator_index].ed25519
+                signature = y.signature
+                try:
+                    # print(Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(bytes(signature),SIGNING_CONTEXTS['guarantee'] + bytes(Hash.blake2b(x.report.encode()))))
+                    Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(bytes(signature),SIGNING_CONTEXTS['guarantee'] + bytes(Hash.blake2b(x.report.encode())))
+                except InvalidSignature:
+                    raise ReportingError(
+                        ReportingErrorCode.BAD_SIGNATURE,
+                        "signature doesn't match with the public key"
+                    )
 
     @staticmethod
     def refinement_fn(state:State,block:Block):
@@ -454,9 +623,10 @@ class Reporting:
         for x in state.beta:
             for key in x.packages:
                 work_package_hashes.append(key)
-            for y in x.packages:
-                # print('segment root',x.packages[y])
-                exports_root.append(x.packages[y])
+            for key in x.packages:
+
+                # print('segment root',x.packages.values())
+                exports_root.append(x.packages[key])
 
         hashes = []
         #
@@ -508,10 +678,11 @@ class Reporting:
             print('segment')
             # segment_root_lookup_invalid-1.json
             if  y.report.segment_root_lookup != Null:
-                print('segment 2')
+                # print('segment 2',exports_root)
                 for x in y.report.segment_root_lookup:
-                    print(x.segment_tree_root != y.report.package_spec.exports_root)
-                    if x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes and (x.segment_tree_root != y.report.package_spec.exports_root and x.segment_tree_root != exports_root):
+                    # print(x.segment_tree_root != y.report.package_spec.exports_root)
+                    # print(x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes and (x.segment_tree_root != y.report.package_spec.exports_root and x.segment_tree_root != exports_root))
+                    if x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes or (x.segment_tree_root != y.report.package_spec.exports_root and x.segment_tree_root not in exports_root):
                         raise ReportingError(
                             ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID
                         )
@@ -563,8 +734,8 @@ class Reporting:
 
             print('high gas',total_accumulate_gas , ACCUMULATION_GAS )
             if total_accumulate_gas > ACCUMULATION_GAS:
-                print(state.beta)
-                print(Hash.keccak256(bytes(0xf5df0c11416d43c55b43e096572d450b7780ed0fd7b540f26c8ded8e0d41e183)))
+                # print(state.beta)
+                # print(Hash.keccak256(bytes(0xf5df0c11416d43c55b43e096572d450b7780ed0fd7b540f26c8ded8e0d41e183)))
                 raise ReportingError(
                     ReportingErrorCode.WORK_REPORT_GAS_TOO_HIGH
                 )
@@ -577,7 +748,7 @@ class Reporting:
                     state.rho[core] = OptionalWorkReportState(
                         WorkReportState(
                             report=block.extrinsic.guarantees[core].report,
-                            timeout=block.extrinsic.guarantees[core].slot
+                            timeout=block.header.slot
                             )
                         )
                     # print(core,'---> ',state.rho[core])
@@ -640,7 +811,6 @@ class Reporting:
 
     @staticmethod
     def core_engaged(state:State,block:Block):
-
         for x in block.extrinsic.guarantees:
             print('xxxxxcore')
             # print(x.report.core_index,state.rho[x.report.core_index])
@@ -657,20 +827,6 @@ class Reporting:
                 raise ReportingError(
                     ReportingErrorCode.FUTURE_REPORT_SLOT
                 )
-
-    # @staticmethod
-    # def high_work_report_gas(state:State, block:Block):
-    #     total_gas =0
-    #     service_id = 0
-    #     for x in block.extrinsic.guarantees:
-    #         for y in x.report.results:
-    #             service_id = y.service_id
-    #             total_gas = total_gas + y.accumulate_gas
-    #     if state.delta[service_id].min_gas < total_gas:
-    #
-    #       print('gas limit ')
-
-    #     for x in state.delta:
 
     @staticmethod
     # def check_multiple_reports(state:State, block:Block):
@@ -696,11 +852,10 @@ class Reporting:
                     state.rho[core] = OptionalWorkReportState(
                             WorkReportState(
                                 report=block.extrinsic.guarantees[core].report,
-                                timeout=block.extrinsic.guarantees[core].slot
+                                timeout=block.header.slot
                             )
                         )
         return state
-
 
     @staticmethod
     def big_work_report_output(state:State, block:Block):
@@ -718,14 +873,14 @@ class Reporting:
             raise ReportingError(
                 ReportingErrorCode.WORK_REPORT_TOO_BIG
             )
-        if len(work_report_output) < (48 * (2 ** 10)):
+        if len(work_report_output) <= (48 * (2 ** 10)):
             for core in range(len(block.extrinsic.guarantees)):
                 # print('core value',core)
                 # print(state.rho.)
                 state.rho[core] = OptionalWorkReportState(
                     WorkReportState(
                         report=block.extrinsic.guarantees[core].report,
-                        timeout=block.extrinsic.guarantees[core].slot
+                        timeout=block.header.slot
                     )
                 )
         return state
