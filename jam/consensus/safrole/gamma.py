@@ -6,7 +6,6 @@ from jam.types.extrinsics.tickets import TicketBody
 from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
-    BandersnatchRingVrfSignature,
 )
 from jam.types.protocol.validators import ValidatorData
 from jam.utils.codec.codable import Codable

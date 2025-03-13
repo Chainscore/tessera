@@ -17,3 +17,6 @@ class SafroleErrorCode(Enum):
     BAD_TICKET_ATTEMPT = "bad_ticket_attempt"  # Invalid ticket attempt index
     RESERVED = "reserved"  # Reserved for future use
     DUPLICATE_TICKET = "duplicate_ticket"  # Duplicate ticket submission
+    
+    #Custom for equ 6.30
+    BAD_TICKET_COUNT = "bad_ticket_count"  # Invalid ticket count 

@@ -1,6 +1,4 @@
 from typing import Any, Generic, List, Optional, Sequence, Type, TypeVar, Union
-
-from jam.types.base.choices.option import Option
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.codec import Codec
 from jam.utils.json import JsonSerde
