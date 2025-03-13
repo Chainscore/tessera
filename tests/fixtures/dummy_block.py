@@ -1,4 +1,3 @@
-import pytest
 from jam.types.block import Block
 from tests.fixtures.dummy_extrinsics import create_dummy_extrinsics
 from tests.fixtures.dummy_header import create_dummy_header

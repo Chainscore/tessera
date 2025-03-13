@@ -67,3 +67,7 @@ def test_tiny():
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)
         print(f"Passed testcase #{i + 1}")
+
+
+# if __name__ == "__main__":
+#     test_tiny()

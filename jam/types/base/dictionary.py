@@ -70,6 +70,10 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
         """Get value for key."""
         return self.value[key]
 
+    def __setitem__(self, key: K, value: V) -> None:
+        """Set value for key."""
+        self.value[key] = value
+
     def __iter__(self) -> Iterator[K]:
         """Iterate over keys."""
         return iter(self.value)
@@ -88,6 +92,10 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
         """Get string representation."""
         items = [f"{k!r}: {v!r}" for k, v in self.value.items()]
         return f"Dictionary({{{', '.join(items)}}})"
+
+    def __setitem__(self, key: K, value: V) -> None:
+        """Set value for key."""
+        self.value[key] = value
 
     def get(self, key: K, default: Optional[V] = None) -> Optional[V]:
         """

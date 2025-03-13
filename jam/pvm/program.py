@@ -2,17 +2,16 @@ from typing import List, Self, Tuple, Union
 from jam.pvm.memory import MemoryChunk
 from jam.pvm.register import Registers
 from jam.types.base.bit import Bit
-from jam.types.base.integers.fixed import U8, U32
+from jam.types.base.integers.fixed import U8
 from jam.types.protocol.core import Gas, Register
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
 from jam.utils.codec.utils import check_buffer_size
-from jam.pvm.page_map import PageMap
-from jam.pvm.extract import Execution
+from jam.utils.json.serde import JsonSerde
 
 
-class Program(Codable):
+class Program(Codable, JsonSerde):
     """This is the program blob which the PVM will execute.
 
     Args:
@@ -24,9 +23,9 @@ class Program(Codable):
     """
 
     z: U8
-    jump_table: List[int]
-    instruction_set: List[U8]
-    offset_bitmask: List[Bit]
+    jump_table: List
+    instruction_set: List
+    offset_bitmask: List
 
     def __init__(
         self,
@@ -139,15 +138,13 @@ class Program(Codable):
         value, _ = Program.decode_from(buffer)
         return value
 
+
     def execute(
         self,
+        register: Register,
         initial_registers: Registers,
-        gas: U32,
+        gas: Gas,
         memory: MemoryChunk,
-        pc: U32,
-        page_map: PageMap
-    ) -> (Registers, MemoryChunk, U32):
+    ) -> Registers:
         # TODO: Implement execute
-        pvm_execution = Execution(initial_registers, gas, memory, pc, page_map, program=self)
-        res = pvm_execution.process_program()
-        return res
+        return initial_registers

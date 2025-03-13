@@ -53,12 +53,12 @@ class TestArrayCodec:
     def test_maximum_size(self):
         """Test array size limits."""
         # Test maximum allowed size
-        codec = ArrayCodec(1000)
-        assert codec.length == 1000
+        codec = ArrayCodec(1024)
+        assert codec.length == 1024
 
         # Test exceeding maximum size
         with pytest.raises(ValueError):
-            ArrayCodec(1001)
+            ArrayCodec(1025)
 
     def test_negative_length(self):
         """Test that negative lengths are rejected."""
