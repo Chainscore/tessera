@@ -19,6 +19,7 @@ from collections import deque
 from jam.utils.codec.primitives.integers import encode
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
+from jam.utils.byte_utils import ByteUtils
 
 
 @decodable_vector(element_type=U32)
@@ -83,13 +84,20 @@ class Reporting:
         Reporting.verify_guarantor_order(block)
         Reporting.duplicate_pkg_report( block)
         Reporting.verify_guarantees_order(block)
-        Reporting.check_multiple_dependencies(pre_state,block)
         Reporting.report_last_rotation(block)
-        # Reporting.prev_rotation(pre_state, block)
+        # Reporting.curr_prev_rotation(pre_state, block)
         Reporting.big_work_report_output(pre_state, block)
         Reporting.too_many_dependencies(block)
         Reporting.bad_signature(pre_state, block)
         Reporting.wrong_assignment(pre_state, block)
+
+        for x in block.extrinsic.guarantees:
+            pre_state.rho[x.report.core_index] = OptionalWorkReportState(
+                WorkReportState(
+                    report=block.extrinsic.guarantees[x.report.core_index].report,
+                    timeout=block.header.slot
+                )
+            )
 
 
         return new_state
@@ -117,7 +125,7 @@ class Reporting:
     def no_enough_guarantee(block:Block):
         for x in block.extrinsic.guarantees:
             credential_len = len(x.signatures)
-            print('credential length',credential_len)
+            # print('credential length',credential_len)
             if credential_len < 2:
                 raise ReportingError (
                     ReportingErrorCode.INSUFFICIENT_GURANTEE,
@@ -128,11 +136,11 @@ class Reporting:
     def too_many_dependencies(block : Block):
         for x in block.extrinsic.guarantees:
             segment_root = len(x.report.segment_root_lookup)
-            print("segment_root_lookuo", segment_root)
+            # print("segment_root_lookuo", segment_root)
             prerequisite = len(x.report.context.prerequisites)
-            print("prerequisite", prerequisite)
+            # print("prerequisite", prerequisite)
             if (segment_root + prerequisite) > MAX_DEPENDENCIES:
-                print((segment_root + prerequisite) > MAX_DEPENDENCIES)
+                # print((segment_root + prerequisite) > MAX_DEPENDENCIES)
                 raise ReportingError (
                     ReportingErrorCode.TOO_MANY_DEPENDENCIES,
                     "Work report has many dependencies(segment_lookup + prerequisite) "
@@ -163,7 +171,7 @@ class Reporting:
             report_auth_hash = x.report.authorizer_hash
             core_index = x.report.core_index
             auth_pool = state.alpha
-            print(core_index)
+            # print(core_index)
             # print('auth pool length', (state.alpha[core_index]))
             if core_index <2:
                 if len(state.alpha[core_index]) == 0:
@@ -184,11 +192,11 @@ class Reporting:
             hashes.append(x.report.package_spec.hash)
 
         for i in state.beta:
-                print('in duplicate package')
-                print('packages',hashes[0],i.packages)
+                # print('in duplicate package')
+                # print('packages',hashes[0],i.packages)
                 # if i.packages in hashes:
                 if any(key in hashes for key in i.packages.keys()):
-                    print('inside recent history')
+                    # print('inside recent history')
                     raise ReportingError (
                         ReportingErrorCode.DUPLICATE_PACKAGE,
                         "Work package is already executed in recent-block's history"
@@ -196,12 +204,12 @@ class Reporting:
 
     @staticmethod
     def duplicate_pkg_report( block :Block):
-        print('ddduppp')
+        # print('ddduppp')
         if len(block.extrinsic.guarantees)>1:
             for x in range (len(block.extrinsic.guarantees)):
-                print('dduuppp1',x,len(block.extrinsic.guarantees))
+                # print('dduuppp1',x,len(block.extrinsic.guarantees))
                 for y in range(x+1, len(block.extrinsic.guarantees)): # removed -1 as it was causing error index out of range
-                    print('x=',x,'y=',y,'length of gurant',len(block.extrinsic.guarantees))
+                    # print('x=',x,'y=',y,'length of gurant',len(block.extrinsic.guarantees))
                     # print('in duplicate package',block.extrinsic.guarantees[x].report.package_spec.hash,block.extrinsic.guarantees[y].report.package_spec.hash)
                     if block.extrinsic.guarantees[x].report.package_spec.hash == block.extrinsic.guarantees[y].report.package_spec.hash:
                         raise ReportingError(
@@ -219,259 +227,122 @@ class Reporting:
                     )
 
     @staticmethod
-    def report_rotation(state: State, block: Block):
-
-        # ------- validator order ---------
-        array_validator: U32Vector = U32Vector([])
-        for i in range(VALIDATOR_COUNT):
-            array_validator.append(U32(i))
-        print("array_validator =>", array_validator)
-
-        # ------- validator assignment to the cores -------
-        validator_assign: U32Vector = U32Vector([])
-        for i in range(VALIDATOR_COUNT):
-            val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
-            validator_assign.append(U32(val_core))
-        print("cores_assign => ", validator_assign)
-
-        # <------------- Entropy for current epoch ------------------>
-        epoch_entropy = None
-        for x in block.extrinsic.guarantees:
-            if x.slot == block.header.slot:
-                # epoch_entropy = state.eta[2]
-                epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
-
-        # <------------- Entropy for previous rotation in same epoc ------------------>
-        for x in block.extrinsic.guarantees:
-            if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
-                # epoch_entropy = state.eta[2]
-                epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
-
-
-        # <------------- Entropy for previous rotation but in last epoch ------------------>
-        for x in block.extrinsic.guarantees:
-            if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
-                # epoch_entropy = state.eta[3]
-                epoch_entropy = "0x8c039ff7caa17ccebfcadc44bd9fce6a4b6699c4d03de2e3349aa1dc11193cd7"
-
-
-
-
-        # entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
-        h = bytes.fromhex(epoch_entropy[2:])
-        print("entropy => ", h )
-
-        # ------- shuffle validator with respect to the given entropy -------
-        core_assign = shuffle(h, validator_assign)
-        print("cores_assign => ", core_assign)
-
-        # Initialize an empty dictionary to store the mapping between core and validator
-        mapping = {}
-
-        for i in range(len(array_validator)):
-            key = core_assign[i]  # Grouping key from rotated_array
-            value = array_validator[i]  # Value from arr_validator
-
-            # If the key is not in the mapping, initialize it as an empty set
-            if key not in mapping:
-                mapping[key] = set()
-
-            # Add the value (index from arr_validator) to the set for this key
-            mapping[key].add(value)
-
-        # Sort the keys of the dictionary (0, 1) and create a new ordered dictionary
-        mapping = {k: mapping[k] for k in sorted(mapping.keys())}
-        print("assign core to validator", mapping)
-        # output => {0:{1, 4, 5}, 1:{0, 2, 3}}
-        # mapping[0] = {1, 4, 5}  type set
-        # mapping[1] = {0, 2, 3}  type set
-
-
-        # rotation phase (number of rotation between cores)
-        work_report_slot = None
-        for x in block.extrinsic.guarantees:
-            work_report_slot = x.slot
-        print("curr_report_timeslot =>", work_report_slot)
-        rotation_phase = floor((work_report_slot % EPOCH_LENGTH) / ROTATION_PERIOD)
-        print("rotation_phase => ", rotation_phase)
-
-        keys = list(mapping.keys())  # Get the sorted keys (0, 1)
-        print(keys)
-        values = [mapping[k] for k in keys]  # Extract the values as a list
-
-        # Use deque for rotation
-        values = deque(values)
-        values.rotate(-rotation_phase)  # Rotate left (-) or right (+)
-
-        # Reconstruct the mapping
-        mapping =  {keys[i]: values[i] for i in range(len(keys))}
-        print("mapping after rotaion", mapping)
-
-
-        # array of assign validator for each core
-        guarantee_validator_index = {}
-
-        for x in block.extrinsic.guarantees:
-            key = x.report.core_index
-            value = set()
-            for y in x.signatures:
-                value.add(y.validator_index)
-
-            guarantee_validator_index[key] =  value
-
-        guarantee_validator_index = {k: guarantee_validator_index[k] for k in (guarantee_validator_index.keys()) }
-
-        print("guarantee_validator_index => ", guarantee_validator_index)
-
-        guarantor_length = len(block.extrinsic.guarantees)
-        print("guarantor_length => ", guarantor_length)
-
-
-        for key in guarantee_validator_index:
-            if guarantee_validator_index[key] == mapping.get(key):
-                    # print('core value',core)
-                    # print(state.rho.)
-                    state.rho[key] = OptionalWorkReportState(
-                        WorkReportState(
-                            report=block.extrinsic.guarantees[key].report,
-                            timeout=block.header.slot
-                        )
-                    )
-            return state
-
-
-
-
-        # add_validator = []
-
-        # Iterate through each group of signatures
-        # for group in signatures:
-        #     validator_set = set()
-        #     for signature in group:
-        #         validator_set.add(signature["validator_index"])
-        #     add_validator.append(validator_set)
-        #
-        # print("add_validator =", add_validator)
-        # print(add_validator[0])
-
-    @staticmethod
-    def prev_rotation(state: State, block: Block):
-
-        # ------- validator order ---------
-        array_validator: U32Vector = U32Vector([])
-        for i in range(VALIDATOR_COUNT):
-            array_validator.append(U32(i))
-        print("array_validator =>", array_validator)
-
-        # ------- validator assignment to the cores -------
-        validator_assign: U32Vector = U32Vector([])
-        for i in range(VALIDATOR_COUNT):
-            val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
-            validator_assign.append(U32(val_core))
-        print("cores_assign => ", validator_assign)
-
-        # <------------- Entropy for current epoch ------------------>
-        epoch_entropy = None
-        # for x in block.extrinsic.guarantees:
-        #     if x.slot == block.header.slot:
-        #         # epoch_entropy = state.eta[2]
-        #         epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
-
-        # <------------- Entropy for previous rotation in same epoc ------------------>
-        # for x in block.extrinsic.guarantees:
-        #     if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
-        #         # epoch_entropy = state.eta[2]
-        #         epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
-
-
-        # <------------- Entropy for previous rotation but in last epoch ------------------>
-        for x in block.extrinsic.guarantees:
-            if x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
-                epoch_entropy = state.eta[3]
-                # epoch_entropy = "0x8c039ff7caa17ccebfcadc44bd9fce6a4b6699c4d03de2e3349aa1dc11193cd7"
-
-        # entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
-        h = bytes.fromhex(epoch_entropy[2:])
-        # print("entropy => ", h )
-
-        # ------- shuffle validator with respect to the given entropy -------
-        core_assign = shuffle(h, validator_assign)
-        print("cores_assign => ", core_assign)
-
-        # Initialize an empty dictionary to store the mapping between core and validator
-        mapping = {}
-
-        for i in range(len(array_validator)):
-            key = core_assign[i]  # Grouping key from rotated_array
-            value = array_validator[i]  # Value from arr_validator
-
-            # If the key is not in the mapping, initialize it as an empty set
-            if key not in mapping:
-                mapping[key] = set()
-
-            # Add the value (index from arr_validator) to the set for this key
-            mapping[key].add(value)
-
-        # Sort the keys of the dictionary (0, 1) and create a new ordered dictionary
-        mapping = {k: mapping[k] for k in sorted(mapping.keys())}
-        print("assign core to validator", mapping)
-        # output => {0:{1, 4, 5}, 1:{0, 2, 3}}
-        # mapping[0] = {1, 4, 5}  type set
-        # mapping[1] = {0, 2, 3}  type set
-
-
-        # rotation phase (number of rotation between cores)
-        work_report_slot = None
-        for x in block.extrinsic.guarantees:
-            work_report_slot = x.slot
-        print("curr_report_timeslot =>", work_report_slot)
-        rotation_phase = floor((work_report_slot % EPOCH_LENGTH) / ROTATION_PERIOD)
-        print("rotation_phase => ", rotation_phase)
-
-        keys = list(mapping.keys())  # Get the sorted keys (0, 1)
-        print(keys)
-        values = [mapping[k] for k in keys]  # Extract the values as a list
-
-        # Use deque for rotation
-        values = deque(values)
-        values.rotate(-rotation_phase)  # Rotate left (-) or right (+)
-
-        # Reconstruct the mapping
-        mapping =  {keys[i]: values[i] for i in range(len(keys))}
-        print("mapping after rotaion", mapping)
-
-
-        # array of assign validator for each core
-        guarantee_validator_index = {}
-
-        for x in block.extrinsic.guarantees:
-            key = x.report.core_index
-            value = set()
-            for y in x.signatures:
-                value.add(y.validator_index)
-
-            guarantee_validator_index[key] =  value
-
-        guarantee_validator_index = {k: guarantee_validator_index[k] for k in (guarantee_validator_index.keys()) }
-
-        print("guarantee_validator_index => ", guarantee_validator_index)
-
-        guarantor_length = len(block.extrinsic.guarantees)
-        print("guarantor_length => ", guarantor_length)
-
-        for key in guarantee_validator_index:
-            print("hjhjvgvdhgvvdhgdhgdhhvhvdhv", guarantee_validator_index[key] == mapping.get(key))
-            if guarantee_validator_index[key] == mapping.get(key):
-                print("hhheeeelooooo")
-                # print(state.rho.)
-                print(block.extrinsic.guarantees[key].slot,key)
-                state.rho[key] = OptionalWorkReportState(
-                    WorkReportState(
-                        report=block.extrinsic.guarantees[key].report,
-                        timeout=block.header.slot
-                    )
-                )
-                return state
+    # def curr_prev_rotation(state: State, block: Block):
+    #
+    #     # ------- validator order ---------
+    #     array_validator: U32Vector = U32Vector([])
+    #     for i in range(VALIDATOR_COUNT):
+    #         array_validator.append(U32(i))
+    #     print("array_validator =>", array_validator)
+    #
+    #     # ------- validator assignment to the cores -------
+    #     validator_assign: U32Vector = U32Vector([])
+    #     for i in range(VALIDATOR_COUNT):
+    #         val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
+    #         validator_assign.append(U32(val_core))
+    #     print("cores_assign => ", validator_assign)
+    #
+    #     # <------------- Entropy for current epoch ------------------>
+    #     epoch_entropy = None
+    #     for x in block.extrinsic.guarantees:
+    #         if x.slot == block.header.slot:
+    #             epoch_entropy = state.eta[2]
+    #             # epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+    #
+    #             print("both same",epoch_entropy)
+    #
+    #     # <------------- Entropy for previous rotation in same epoc ------------------>
+    #     for x in block.extrinsic.guarantees:
+    #         if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
+    #             epoch_entropy = state.eta[2]
+    #             # epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+    #             print("not same but epoc same",epoch_entropy)
+    #
+    #     # <------------- Entropy for previous rotation but in last epoch ------------------>
+    #     for x in block.extrinsic.guarantees:
+    #         if x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
+    #             epoch_entropy = state.eta[3]
+    #             # epoch_entropy = "0x8c039ff7caa17ccebfcadc44bd9fce6a4b6699c4d03de2e3349aa1dc11193cd7"
+    #
+    #     print(epoch_entropy.encode().hex())
+    #
+    #     # ------- shuffle validator with respect to the given entropy -------
+    #     core_assign = shuffle(epoch_entropy.encode().hex(), validator_assign)
+    #     print("cores_assign => ", core_assign)
+    #
+    #     # Initialize an empty dictionary to store the mapping between core and validator
+    #     mapping = {}
+    #
+    #     for i in range(len(array_validator)):
+    #         key = core_assign[i]  # Grouping key from rotated_array
+    #         value = array_validator[i]  # Value from arr_validator
+    #
+    #         # If the key is not in the mapping, initialize it as an empty set
+    #         if key not in mapping:
+    #             mapping[key] = set()
+    #
+    #         # Add the value (index from arr_validator) to the set for this key
+    #         mapping[key].add(value)
+    #
+    #     # Sort the keys of the dictionary (0, 1) and create a new ordered dictionary
+    #     mapping = {k: mapping[k] for k in sorted(mapping.keys())}
+    #     print("assign core to validator", mapping)
+    #     # output => {0:{1, 4, 5}, 1:{0, 2, 3}}
+    #     # mapping[0] = {1, 4, 5}  type set
+    #     # mapping[1] = {0, 2, 3}  type set
+    #
+    #
+    #     # rotation phase (number of rotation between cores)
+    #     work_report_slot = None
+    #     for x in block.extrinsic.guarantees:
+    #         work_report_slot = x.slot
+    #     print("curr_report_timeslot =>", work_report_slot)
+    #     rotation_phase = floor((work_report_slot % EPOCH_LENGTH) / ROTATION_PERIOD)
+    #     print("rotation_phase => ", rotation_phase)
+    #
+    #     keys = list(mapping.keys())  # Get the sorted keys (0, 1)
+    #     print(keys)
+    #     values = [mapping[k] for k in keys]  # Extract the values as a list
+    #
+    #     # Use deque for rotation
+    #     values = deque(values)
+    #     values.rotate(-rotation_phase)  # Rotate left (-) or right (+)
+    #
+    #     # Reconstruct the mapping
+    #     mapping =  {keys[i]: values[i] for i in range(len(keys))}
+    #     print("mapping after rotaion", mapping)
+    #
+    #
+    #     # array of assign validator for each core
+    #     guarantee_validator_index = {}
+    #
+    #     for x in block.extrinsic.guarantees:
+    #         key = x.report.core_index
+    #         value = set()
+    #         for y in x.signatures:
+    #             value.add(y.validator_index)
+    #
+    #         guarantee_validator_index[key] =  value
+    #
+    #     guarantee_validator_index = {k: guarantee_validator_index[k] for k in (guarantee_validator_index.keys()) }
+    #
+    #     print("guarantee_validator_index => ", guarantee_validator_index)
+    #
+    #     guarantor_length = len(block.extrinsic.guarantees)
+    #     print("guarantor_length => ", guarantor_length)
+    #
+    #
+    #     for key in guarantee_validator_index:
+    #         if guarantee_validator_index[key] == mapping.get(key):
+    #                 # print('core value',core)
+    #                 # print(state.rho.)
+    #                 state.rho[key] = OptionalWorkReportState(
+    #                     WorkReportState(
+    #                         report=block.extrinsic.guarantees[key].report,
+    #                         timeout=block.header.slot
+    #                     )
+    #                 )
+    #         return state
 
     @staticmethod
     def wrong_assignment(state: State, block: Block):
@@ -480,63 +351,58 @@ class Reporting:
         array_validator: U32Vector = U32Vector([])
         for i in range(VALIDATOR_COUNT):
             array_validator.append(U32(i))
-        print("array_validator =>", array_validator)
+        # print("array_validator =>", array_validator)
 
         # ------- validator assignment to the cores -------
         validator_assign: U32Vector = U32Vector([])
         for i in range(VALIDATOR_COUNT):
             val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
             validator_assign.append(U32(val_core))
-        print("cores_assign => ", validator_assign)
+        # print("cores_assign => ", validator_assign)
 
         # <------------- Entropy for current epoch ------------------>
         epoch_entropy = None
         for x in block.extrinsic.guarantees:
             if x.slot == block.header.slot:
-                # epoch_entropy = state.eta[2]
-                epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+                epoch_entropy = state.eta[2]
+                # epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+                # print("both same", epoch_entropy)
 
-        # # <------------- Entropy for previous rotation in same epoc ------------------>
-        # for x in block.extrinsic.guarantees:
-        #     if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
-        #         # epoch_entropy = state.eta[2]
-        #         epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
-        #
-        #
-        # # <------------- Entropy for previous rotation but in last epoch ------------------>
-        # for x in block.extrinsic.guarantees:
-        #     if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
-        #         # epoch_entropy = state.eta[3]
-        #         epoch_entropy = "0x8c039ff7caa17ccebfcadc44bd9fce6a4b6699c4d03de2e3349aa1dc11193cd7"
+        # <------------- Entropy for previous rotation in same epoc ------------------>
+        for x in block.extrinsic.guarantees:
+            if x.slot != TimeSlot and floor((block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH) == floor(
+                    block.header.slot / EPOCH_LENGTH):
+                epoch_entropy = state.eta[2]
+                # epoch_entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
+                # print("not same but epoc same", epoch_entropy)
 
+        # <------------- Entropy for previous rotation but in last epoch ------------------>
+        for x in block.extrinsic.guarantees:
+            if x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH) != floor(
+                    block.header.slot / EPOCH_LENGTH):
+                epoch_entropy = state.eta[3]
+                # epoch_entropy = "0x8c039ff7caa17ccebfcadc44bd9fce6a4b6699c4d03de2e3349aa1dc11193cd7"
 
-
-
-        # entropy = "0x7b0aa1735e5ba58d3236316c671fe4f00ed366ee72417c9ed02a53a8019e85b8"
-        h = bytes.fromhex(epoch_entropy[2:])
-        print("entropy => ", h )
+        # print(epoch_entropy.encode().hex())
 
         # ------- shuffle validator with respect to the given entropy -------
-        core_assign = shuffle(h, validator_assign)
-        print("cores_assign => ", core_assign)
+        core_assign = shuffle(epoch_entropy.encode().hex(), validator_assign)
+        # print("cores_assign => ", core_assign)
 
         # Initialize an empty dictionary to store the mapping between core and validator
         mapping = {}
 
         for i in range(len(array_validator)):
-            key = core_assign[i]  # Grouping key from rotated_array
-            value = array_validator[i]  # Value from arr_validator
+            key = core_assign[i]
+            value = array_validator[i]
 
-            # If the key is not in the mapping, initialize it as an empty set
             if key not in mapping:
                 mapping[key] = set()
 
-            # Add the value (index from arr_validator) to the set for this key
             mapping[key].add(value)
 
-        # Sort the keys of the dictionary (0, 1) and create a new ordered dictionary
         mapping = {k: mapping[k] for k in sorted(mapping.keys())}
-        print("assign core to validator", mapping)
+        # print("assign core to validator", mapping)
         # output => {0:{1, 4, 5}, 1:{0, 2, 3}}
         # mapping[0] = {1, 4, 5}  type set
         # mapping[1] = {0, 2, 3}  type set
@@ -546,21 +412,19 @@ class Reporting:
         work_report_slot = None
         for x in block.extrinsic.guarantees:
             work_report_slot = x.slot
-        print("curr_report_timeslot =>", work_report_slot)
+        # print("curr_report_timeslot =>", work_report_slot)
         rotation_phase = floor((work_report_slot % EPOCH_LENGTH) / ROTATION_PERIOD)
-        print("rotation_phase => ", rotation_phase)
+        # print("rotation_phase => ", rotation_phase)
 
         keys = list(mapping.keys())  # Get the sorted keys (0, 1)
-        print(keys)
+        # print(keys)
         values = [mapping[k] for k in keys]  # Extract the values as a list
 
-        # Use deque for rotation
         values = deque(values)
-        values.rotate(-rotation_phase)  # Rotate left (-) or right (+)
+        values.rotate(-rotation_phase)
 
-        # Reconstruct the mapping
         mapping =  {keys[i]: values[i] for i in range(len(keys))}
-        print("mapping after rotaion", mapping)
+        # print("mapping after rotaion", mapping)
 
         # array of assign validator for each core
         guarantee_validator_index = {}
@@ -575,16 +439,15 @@ class Reporting:
 
         guarantee_validator_index = {k: guarantee_validator_index[k] for k in (guarantee_validator_index.keys()) }
 
-        print("guarantee_validator_index => ", guarantee_validator_index)
+        # print("guarantee_validator_index => ", guarantee_validator_index)
 
         guarantor_length = len(block.extrinsic.guarantees)
-        print("guarantor_length => ", guarantor_length)
+        # print("guarantor_length => ", guarantor_length)
 
         for key in guarantee_validator_index:
-            print(len(guarantee_validator_index[key]))
+            # print(len(guarantee_validator_index[key]))
             if len(guarantee_validator_index[key]) == 3:
                 if guarantee_validator_index[key] != mapping.get(key):
-                    print("----------------------------------------------------------------------")
                     raise ReportingError (
                         ReportingErrorCode.WRONG_ASSIGNMENT,
                         "Assign wrong validator to the core"
@@ -614,10 +477,6 @@ class Reporting:
     def refinement_fn(state:State,block:Block):
 
         exports_root = []
-
-
-
-
         work_package_hashes = []
 
         for x in state.beta:
@@ -639,12 +498,12 @@ class Reporting:
         for x in state.beta:
             header_hashes.append(x.header_hash)
 
-        print(header_hashes)
+        # print(header_hashes)
         for y in block.extrinsic.guarantees:
             context = y.report.context
 
             if context.anchor not in header_hashes:
-                print(context.anchor)
+                # print(context.anchor)
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT
                 )
@@ -670,12 +529,12 @@ class Reporting:
             if context.prerequisites != Null or y.report.segment_root_lookup != Null: # changed from is not None to != Null
                 # print(context.prerequisites != Null)
                  for x in context.prerequisites:
-                    print('x = ',x,'work package',work_package_hashes,'hashes ',hashes)
+                    # print('x = ',x,'work package',work_package_hashes,'hashes ',hashes)
                     if x not in  hashes and x not in work_package_hashes:
                         raise ReportingError(
                             ReportingErrorCode.DEPENDENCY_MISSING
                         )
-            print('segment')
+            # print('segment')
             # segment_root_lookup_invalid-1.json
             if  y.report.segment_root_lookup != Null:
                 # print('segment 2',exports_root)
@@ -713,16 +572,16 @@ class Reporting:
             total_accumulate_gas = 0
             for y in x.report.results:
                 if y.service_id not in state.delta:
-                    print("service")
+                    # print("service")
                     raise ReportingError(
                         ReportingErrorCode.BAD_SERVICE_ID
                     )
-                print('in code hash')
+                # print('in code hash')
                 if y.code_hash != state.delta[y.service_id].code_hash:
                     raise ReportingError(
                         ReportingErrorCode.BAD_CODE_HASH
                     )
-                print('outside service id')
+                # print('outside service id')
 
                 if y.accumulate_gas < state.delta[y.service_id].min_gas:
                     raise ReportingError(
@@ -732,28 +591,29 @@ class Reporting:
                 total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
 
 
-            print('high gas',total_accumulate_gas , ACCUMULATION_GAS )
+            # print('high gas',total_accumulate_gas , ACCUMULATION_GAS )
             if total_accumulate_gas > ACCUMULATION_GAS:
                 # print(state.beta)
                 # print(Hash.keccak256(bytes(0xf5df0c11416d43c55b43e096572d450b7780ed0fd7b540f26c8ded8e0d41e183)))
                 raise ReportingError(
                     ReportingErrorCode.WORK_REPORT_GAS_TOO_HIGH
                 )
-            if total_accumulate_gas <= ACCUMULATION_GAS:
-                # print('in high work report gas',total_accumulate_gas)
-                print('high work report gas case')
-                for core in range(len(block.extrinsic.guarantees)):
-                    # print('core value',core)
-                        # print(state.rho.)
-                    state.rho[core] = OptionalWorkReportState(
-                        WorkReportState(
-                            report=block.extrinsic.guarantees[core].report,
-                            timeout=block.header.slot
-                            )
-                        )
-                    # print(core,'---> ',state.rho[core])
-                    # print(core,'--->',block.extrinsic.guarantees[core].report)
-                return state
+            # if total_accumulate_gas <= ACCUMULATION_GAS:
+            #     # print('in high work report gas',total_accumulate_gas)
+            #     print('high work report gas case')
+            #     for core in range(len(block.extrinsic.guarantees)):
+            #         # print('core value',core)
+            #             # print(state.rho.)
+            #         state.rho[core] = OptionalWorkReportState(
+            #             WorkReportState(
+            #                 report=block.extrinsic.guarantees[core].report,
+            #                 timeout=block.header.slot
+
+            #                 )
+            #             )
+            #         # print(core,'---> ',state.rho[core])
+            #         # print(core,'--->',block.extrinsic.guarantees[core].report)
+            #     return state
 
         # for x in transition().rho:
         #     for y in x.report.results:
@@ -812,7 +672,7 @@ class Reporting:
     @staticmethod
     def core_engaged(state:State,block:Block):
         for x in block.extrinsic.guarantees:
-            print('xxxxxcore')
+            # print('xxxxxcore')
             # print(x.report.core_index,state.rho[x.report.core_index])
             if x.report.core_index <= 2:
                 if state.rho[x.report.core_index] != Null:
@@ -843,21 +703,6 @@ class Reporting:
     #         return state
 
     @staticmethod
-    def check_multiple_dependencies(state:State, block:Block):
-        for x in block.extrinsic.guarantees:
-            if len(x.report.context.prerequisites)> 0 and len(x.report.segment_root_lookup)>0:
-                for core in range(len(block.extrinsic.guarantees)):
-                        # print('core value',core)
-                        # print(state.rho.)
-                    state.rho[core] = OptionalWorkReportState(
-                            WorkReportState(
-                                report=block.extrinsic.guarantees[core].report,
-                                timeout=block.header.slot
-                            )
-                        )
-        return state
-
-    @staticmethod
     def big_work_report_output(state:State, block:Block):
         work_report_output = Bytes(0)
 
@@ -868,22 +713,22 @@ class Reporting:
             for y in x.report.results:
                 work_report_output = work_report_output + y.result.get_value()
         # print(work_report_output < Bytes(48 * (2 ** 10)))
-        print(len(work_report_output),48*(2**10))
+        # print(len(work_report_output),48*(2**10))
         if len(work_report_output) > (48 * (2**10)):
             raise ReportingError(
                 ReportingErrorCode.WORK_REPORT_TOO_BIG
             )
-        if len(work_report_output) <= (48 * (2 ** 10)):
-            for core in range(len(block.extrinsic.guarantees)):
-                # print('core value',core)
-                # print(state.rho.)
-                state.rho[core] = OptionalWorkReportState(
-                    WorkReportState(
-                        report=block.extrinsic.guarantees[core].report,
-                        timeout=block.header.slot
-                    )
-                )
-        return state
+        # if len(work_report_output) <= (48 * (2 ** 10)):
+        #     for core in range(len(block.extrinsic.guarantees)):
+        #         # print('core value',core)
+        #         # print(state.rho.)
+        #         state.rho[core] = OptionalWorkReportState(
+        #             WorkReportState(
+        #                 report=block.extrinsic.guarantees[core].report,
+        #                 timeout=block.header.slot
+        #             )
+        #         )
+        # return state
         # print('total output',work_report_output)
 
 

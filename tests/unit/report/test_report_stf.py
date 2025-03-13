@@ -68,7 +68,7 @@ def vector_transition(vector:Testcase) -> Boolean:
     # print('ouuuuuttt',vector.output['err'])
     try:
         output = Reporting.transition(test_state, test_block)
-        print('State transition')
+        # print('State transition')
         assert output == create_state_from_pre(vector.post_state)
         avail_assignments_report = []
         avail_assignments_slot = []
@@ -93,7 +93,7 @@ def vector_transition(vector:Testcase) -> Boolean:
     except ReportingError as e:
         if e.code._value_ == ReportingErrorCode.BAD_BEEFY_MMR_ROOT:
             pass
-        print('eeeeeerrrrr',e.code._value_)
+        # print('eeeeeerrrrr',e.code._value_)
         assert e.code._value_ == vector.output['err']
 
     # assert output == post_state
