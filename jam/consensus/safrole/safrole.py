@@ -16,7 +16,9 @@ from jam.utils.constants import (
     TICKET_ENTRIES_PER_VALIDATOR,
     MAX_TICKETS_PER_EXTRINSIC
 )
-from jam.types.protocol.crypto import BandersnatchPublic, Hash
+from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchVrfSignature, Hash
+from jam.ring_vrf.ietf.ietf import IETF_VRF
+from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.consensus.safrole.gamma import GammaK, GammaSFallback, GammaA
 from jam.types.protocol.validators import ValidatorData
 
@@ -27,17 +29,19 @@ class Safrole:
         return True
 
     @staticmethod
-    def compute_ring_root(keys: List[BandersnatchPublic]) -> ByteArray32:
+    def compute_ring_root(keys: List[BandersnatchPublic]) -> bytes:
+        # TODO - Implementation of KZG_commitment(⟦HB⟧) once the module is added
         sorted_keys = sorted(keys)
         data = b""
         for key in sorted_keys:
             data = data + bytes(key)
-        return Hash.blake2b(data)
+        return data[:72]
 
     @staticmethod
-    def vrf_output(proof) -> ByteArray32:
-        # TODO: Implement VRF output after VRF module is added
-        return Hash.blake2b(proof)
+    def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
+        # TODO - Use Ring VRF class once it's implemented
+        vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+        return ByteArray32(vrf.proof_to_hash(BandersnatchPoint.string_to_point(bytes(signature)[:32]))[:32])
 
     @staticmethod
     def transition(pre_state: State, block: Block) -> State:
@@ -53,8 +57,9 @@ class Safrole:
             )
 
         # 3. Ticket Accumulation
+        ticket_submission_active = (pre_state.tau % EPOCH_LENGTH) < TICKET_SUBMISSION_END
         # Process the tickets before TICKET_SUBMISSION_END of the epoch
-        if (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END:
+        if ticket_submission_active:
             # Validate extrinsics
             Safrole.ensure_valid_ticket_extrinsics(block)
             # Accumulate them in gamma.a
@@ -65,13 +70,15 @@ class Safrole:
                 for ticket in block.extrinsic.tickets
             ]
             new_state.gamma.a.sort(key=lambda x: x.id)
+            new_state.gamma.a = new_state.gamma.a[:EPOCH_LENGTH]
             # Remove duplicates
-            new_state.gamma.a = GammaA(set(new_state.gamma.a))
+            new_state.gamma.a = GammaA(new_state.gamma.a)
         else:
             Safrole.ensure_valid_tickets_count_after_epoch_end(block)
         # 4. Epoch transition
         old_epoch = int(pre_state.tau) // EPOCH_LENGTH
         new_epoch = int(block.header.slot) // EPOCH_LENGTH
+        epoch_jump = new_epoch - old_epoch
         if new_epoch > old_epoch:
             # 4.1. Rotate validators
             new_state.lambda_ = Lambda_(pre_state.kappa.value)
@@ -87,9 +94,6 @@ class Safrole:
                     filtered_validators.append(k)
             
             new_state.gamma.k = GammaK(filtered_validators)
-            # new_state.gamma.k = GammaK(
-            #     [k for k in pre_state.iota if k.ed25519 not in pre_state.psi.o]
-            # )
 
             # 4.2 . Shift entropy
             new_state.eta = Eta(
@@ -97,10 +101,15 @@ class Safrole:
             )
 
             # 4.3. Update seal keys for this coming epoch
-            if len(new_state.gamma.a) >= EPOCH_LENGTH:
+            if len(new_state.gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and not ticket_submission_active:
                 # If we have sufficient tickets accumulated,
                 # use outside-in sequencer and place the ticket in gamma.s
-                new_state.gamma.s = [t[0] for t in new_state.gamma.a[:EPOCH_LENGTH]]
+                acc_tickets = []
+                for i in range(len(new_state.gamma.a) // 2):
+                    acc_tickets.append(new_state.gamma.a[i])
+                    acc_tickets.append(new_state.gamma.a[len(new_state.gamma.a) - 1 - i])
+                new_state.gamma.s = GammaS(GammaSTickets(acc_tickets))
+            
             else:
                 # Else fallback: use bandersnatch keys
                 new_state.gamma.s = Safrole.arrange_fallback(
@@ -110,7 +119,7 @@ class Safrole:
             # 4. 4. Update ring root
             new_state.gamma.z = Safrole.compute_ring_root(
                 [k.bandersnatch for k in new_state.kappa]
-            )
+            ).hex()
 
             # 4.5. Empty the ticket acc for upcoming epoch
             new_state.gamma.a = GammaA([])
