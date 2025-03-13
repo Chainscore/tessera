@@ -49,18 +49,17 @@ class DictionaryCodec(Codec[Mapping[K, V]], Generic[K, V]):
             EncodeError: If key/value invalid or buffer too small
         """
         # Encode key
-        try:
-            written = key.encode_into(buffer, offset)
-        except AttributeError:
-            raise EncodeError(0, 0, f"Expected Codable, got {type(key).__name__}")
+        if isinstance(key, tuple):
+            key_bytes = b"".join([k.encode_into(buffer, offset) for k in key])
+        else:
+            key_bytes = key.encode_into(buffer, offset)
 
-        # Encode value
-        try:
-            written += value.encode_into(buffer, offset + written)
-        except AttributeError:
-            raise EncodeError(0, 0, f"Expected Codable, got {type(value).__name__}")
+        if isinstance(value, list):  # Assuming list of Codable values
+            value_bytes = b"".join([v.encode_into(buffer, offset) for v in value])
+        else:
+            value_bytes = value.encode_into(buffer, offset)
 
-        return buffer[offset : offset + written], written
+        return key_bytes + value_bytes, len(key_bytes + value_bytes)
 
     def encode_size(self, value: Mapping[Codable[K], Codable[V]]) -> int:
         """

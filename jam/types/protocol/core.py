@@ -1,4 +1,4 @@
-from jam.types.base.integers import U16, U32, U64
+from jam.types.base.integers import U16, U32, U64, U128
 from jam.types.protocol.crypto import OpaqueHash
 
 # Simple type aliases

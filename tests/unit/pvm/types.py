@@ -11,12 +11,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.decorators import json_field, json_serializable
 from jam.utils.json.serde import JsonSerde
-
-
-class Status(Enum):
-    PANIC = "panic"
-    HALT = "halt"
-    PAGE_FAULT = "page-fault"
+from jam.pvm.extract import Status
 
 
 @json_serializable
