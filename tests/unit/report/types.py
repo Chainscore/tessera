@@ -87,7 +87,7 @@ class Testcase(Codable, JsonSerde):
 
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 0) -> List[Testcase]:
-    data_dir = "/home/dikshant441/Desktop/jam/jam-node/tests/unit/report/data/tiny"
+    data_dir = "/tests/unit/report/data/tiny"
 
     result = []
     position = 1
