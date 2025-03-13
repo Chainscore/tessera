@@ -146,7 +146,7 @@ class VRF(ABC):
         gamma, C, S = self.ecvrf_decode_proof(pi_string)
         return self.proof_to_hash(gamma)
     
-    def proof_to_hash(self, gamma: Point) -> bytes:
+    def proof_to_hash(self, gamma: Point, mul_cofactor: bool = False) -> bytes:
         """Convert VRF proof to hash.
 
         Args:
@@ -160,7 +160,13 @@ class VRF(ABC):
         beta_string = Hash.sha512(
             self.curve.SUITE_STRING.encode() + 
             proof_to_hash_domain_separator_front + 
-            (gamma).point_to_string() + 
+            (
+                gamma
+                # In some cases, we don't want to multiply by the cofactor.
+                # https://github.com/davxy/ark-ec-vrfs/issues/52
+                if not mul_cofactor
+                else gamma * self.curve.COFACTOR
+            ).point_to_string() + 
             proof_to_hash_domain_separator_back
         )
         return bytes(beta_string)
