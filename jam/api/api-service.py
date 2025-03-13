@@ -17,6 +17,7 @@ from tests.unit.statistics.types import Testcase, PreState
 from jam.types.block import Block
 from jam.consensus.safrole.safrole import Safrole
 from jam.recent_history.recent_history import RecentHistory
+from jam.utils.shuffle import shuffle
 
 app = FastAPI()
 
@@ -26,17 +27,25 @@ app = FastAPI()
 #         "output": {"state": post_state},
 #         "flags": {"size": "tiny", "active": True}
 #     }
-class InputData(BaseModel):
+class InputDataSafarole(BaseModel):
     block : Any
     state : Any
 
-class RequestData(BaseModel):
-    input: InputData
+class InputDataShuffle(BaseModel):
+    input : Any
+    entropy: Any
 
+
+class RequestDataSafarole(BaseModel):
+    input: InputDataSafarole
+
+
+class RequestDataShuffle(BaseModel):
+    input: InputDataShuffle
     print("Runs")
 
 @app.post("/api/v1/safrole/validate")
-async def vaildate_safarole(request_data: RequestData):
+async def vaildate_safarole(request_data: RequestDataSafarole):
     # data = json.loads
     try:
 
@@ -49,3 +58,17 @@ async def vaildate_safarole(request_data: RequestData):
         print("Failed XXX", e)
         return Boolean(False)
     return Boolean(True)
+
+@app.post("/api/v1/shuffle/validate")
+async def vaildate_shuffle(request_data: RequestDataShuffle):
+    # data = json.loads
+    try:
+        print(request_data.input.entropy)
+        test_entropy = request_data.input.entropy.e
+        output = shuffle(request_data.input.input, request_data.input.entropy)
+        print("rinfs")
+    except Exception as e:
+        print("Failed XXX", e)
+        return Boolean(False)
+    return Boolean(True)
+
