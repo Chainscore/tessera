@@ -9,7 +9,7 @@ def test_nonce():
     assert input_point.x == 23177656040451240103938304363591821492951015767333712630108457573549787226093
     assert input_point.y == 78284803470694319592756962928195357281227187761612519520494432739017353925
 
-    vrf = IETF_VRF(Bandersnatch_TE_Curve)
+    vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
 
     secret_key = int.from_bytes(bytes.fromhex("3d6406500d4009fdf2604546093665911e753f2213570a29521fd88bc30ede18"), "little")
 

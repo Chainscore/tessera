@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final, Optional, Tuple
+from typing import Final, Optional, Tuple, Type
+from jam.ring_vrf.curve.point import Point
 
 from ..curve.curve import Curve
 from ..curve.specs.bandersnatch import BandersnatchPoint
@@ -36,14 +37,14 @@ class PedersenVRF(VRF):
     ] = 0xAA5F60F3B3126FA406972D2023EE03BF281022209D13882199113619D57FFA54
     B_Base = BandersnatchPoint(BBx, BBy)
 
-    def __init__(self, curve: Curve):
+    def __init__(self, curve: Curve, point_type: Type[Point]):
         """
         Initialize Pedersen VRF with a curve.
 
         Args:
             curve: Elliptic curve to use (should be Bandersnatch)
         """
-        super().__init__(curve)
+        super().__init__(curve, point_type)
         if not isinstance(curve, Curve):
             raise TypeError("Curve must be a valid elliptic curve")
 

@@ -28,7 +28,7 @@ def test_prove_bandersnatch_ed_sha512_ell2_pedersen():
                     int.from_bytes(bytes.fromhex(vector["sk"]), "little")
                     % Bandersnatch_TE_Curve.ORDER
                 )
-                vrf = PedersenVRF(Bandersnatch_TE_Curve)
+                vrf = PedersenVRF(Bandersnatch_TE_Curve, BandersnatchPoint)
                 blinding_factor = (
                     int.from_bytes(bytes.fromhex(vector["blinding"]), "little")
                     % Bandersnatch_TE_Curve.ORDER
@@ -49,6 +49,7 @@ def test_prove_bandersnatch_ed_sha512_ell2_pedersen():
                 assert proof[4] == int.from_bytes(
                     bytes.fromhex(vector["proof_sb"]), "little"
                 )
+                assert vrf.proof_to_hash(output_point).hex() == vector["beta"]
                 print(f"✅ Testcase {i + 1} of {file}")
 
 
@@ -71,7 +72,7 @@ def test_verify_bandersnatch_ed_sha512_ell2_ietf():
                     % Bandersnatch_TE_Curve.ORDER
                 )
 
-                vrf = PedersenVRF(Bandersnatch_TE_Curve)
+                vrf = PedersenVRF(Bandersnatch_TE_Curve, BandersnatchPoint)
 
                 blinding_factor = (
                     int.from_bytes(bytes.fromhex(vector["blinding"]), "little")
