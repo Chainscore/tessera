@@ -1,11 +1,12 @@
 import copy
 import dataclasses
+from copy import deepcopy
 
 from jam.merklization import OptionHash
 from jam.types import Block, Null
 from jam.types.protocol.core import Gas,ServiceId
 from tests.unit.accumulation.types import AcclOutput, AccCommitmentMap, DeferredTransfers, StateContext, OperandTuples, OperandTuple
-from jam.state.components.delta import Delta,AccountData
+from jam.state.components.delta import Delta, AccountData
 from jam.state.components.phi import Phi
 from jam.state.components.tau import Tau
 from jam.state.components.iota import Iota
@@ -49,7 +50,7 @@ class Accumulation:
             Ready WR
         """
 
-        dependencies = WorkDependencies(work_report.context.prerequisites)
+        dependencies = deepcopy(work_report.context.prerequisites)
         for segment_item in work_report.segment_root_lookup:
             if segment_item.work_package_hash not in dependencies:
                 dependencies.append(segment_item.work_package_hash)
@@ -74,7 +75,14 @@ class Accumulation:
         updated_queue = AllReadyWRs([])
         for wr in accumulation_queue:
             if wr.report.package_spec.hash not in removable_packages:
-                updated_queue.append(wr)
+                dependencies = WorkDependencies([])
+                for dep in wr.dependencies:
+                    if dep not in removable_packages:
+                        dependencies.append(dep)
+
+                updated_wr = ReadyWR(report=wr.report, dependencies=dependencies)
+                updated_queue.append(updated_wr)
+
         return updated_queue
 
     @classmethod
@@ -92,11 +100,10 @@ class Accumulation:
 
         g = WorkReports([])
         for r in accumulation_queue:
-            if r.dependencies == WorkDependencies([]):
+            if len(r.dependencies) == 0:
                 g.append(r.report)
 
-        print("g", g)
-        if g == WorkReports([]):
+        if len(g) == 0:
             return g
 
         else:
@@ -420,6 +427,7 @@ class Accumulation:
         print("Work Reports", pwr)
         # ------------------------------
 
+        print("Work Reports og", work_reports)
 
         immediate_reports = cls.filter_wr_fn(work_reports)
 
@@ -443,6 +451,7 @@ class Accumulation:
         for wr in queued_wr:
             qwr.append(wr.report.package_spec.hash)
         print("Queued Tmp Reports", qwr)
+        print("Queued TmpW Reports", queued_wr)
         # ------------------------------
 
         queued_reports = cls.queue_edit_fn(queued_wr, xi_union)
@@ -485,7 +494,7 @@ class Accumulation:
         # PRINT LINE -------------------
         iq = []
         for wr in intermediate_queue:
-            iq.append(wr.report.package_spec.hash)
+            iq.append((wr.report.package_spec.hash, wr.dependencies))
         print("Intermediate Queue", iq)
         # ------------------------------
 
@@ -564,7 +573,7 @@ class Accumulation:
         # ------------------------------
 
         timeslot_difference = block.header.slot - pre_state.tau
-        # print("τ′", block.header.slot, "τ", pre_state.tau, "τ′-τ", timeslot_difference)
+        print("τ′", block.header.slot, "τ", pre_state.tau, "τ′-τ", timeslot_difference)
         # print("m", m)
 
         # Updating Ready Queue, Nu
@@ -574,9 +583,25 @@ class Accumulation:
             if i == 0:
                 new_state.nu[ind] = cls.queue_edit_fn(queued_reports, new_state.xi[EPOCH_LENGTH-1])
             elif 1 <= i < timeslot_difference:
+                print("run")
                 new_state.nu[ind] = AllReadyWRs([])
             elif i >= timeslot_difference:
+                # print("idhar run")
+                # # PRINT LINE -------------------
+                # rq = []
+                # for wr in new_state.nu[ind]:
+                #     rq.append(wr.report.package_spec.hash)
+                #
+                # print("old nu ind", rq)
+                # # ------------------------------
                 new_state.nu[ind] = cls.queue_edit_fn(new_state.nu[ind], new_state.xi[EPOCH_LENGTH-1])
+                # # PRINT LINE -------------------
+                # rq = []
+                # for wr in new_state.nu[ind]:
+                #     rq.append(wr.report.package_spec.hash)
+                #
+                # print("new nu ind", rq)
+                # # ------------------------------
 
         # PRINT LINE -------------------
         rq = []
@@ -597,6 +622,7 @@ class Accumulation:
 
         print("Accumulated Queue", wrq)
         # ------------------------------
+        print("Ready v Queue", new_state.nu)
 
         return new_state
 

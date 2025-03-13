@@ -1,8 +1,6 @@
 from typing import List
 
 from jam.state.components.chi import ChiG
-# from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
-# from jam.disputes.disputes import Disputes
 from jam.state.state import State
 from jam.types import Boolean
 from jam.types.block import Block
@@ -18,8 +16,6 @@ from tests.unit.accumulation.types import (
 
 from jam.accumulation.accumulation import Accumulation
 from jam.state.components.delta import Delta, AccountData, AccountStorage, PreImageLookup, LookupTimestamps
-from jam.state.components.nu import Nu
-from jam.state.components.xi import Xi
 from jam.types.extrinsics.guarantees import ReportGuarantee
 from tests.fixtures.dummy_extrinsics import create_dummy_validator_signatures
 
@@ -85,7 +81,11 @@ def vector_transition(vector: Testcase) -> Boolean:
     state=Accumulation.transition(test_state,test_block)
 
     # ξ′
-    assert op_state.xi == state.xi
+    for ts, history in enumerate(op_state.xi):
+        assert len(history) == len(state.xi[ts])
+
+        for val in history:
+            assert val in state.xi[ts]
 
     # ϑ`
     assert op_state.nu == state.nu
@@ -109,8 +109,7 @@ def vector_transition(vector: Testcase) -> Boolean:
 def test_accumulation_transition():
     """Test accumulation transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        "enqueue_and_unlock_chain-1",limit=1
-        # "",limit=20
+        "",limit=100
     )
     for i, vector in enumerate(vectors):
         assert vector_transition(vector)

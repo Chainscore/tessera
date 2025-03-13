@@ -165,7 +165,8 @@ class Testcase(Codable,JsonSerde):
 def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testcase]:
     # data_dir="/home/akki/Codes/JAM/JamBhai/jam-node/tests/unit/accumulation/tiny"
     # data_dir = "tests/unit/accumulation/tiny"
-    data_dir = "./tiny"
+    # data_dir = "./tiny"
+    data_dir = "./tiny_1203"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
         # print("File->", file)
