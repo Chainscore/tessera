@@ -29,6 +29,7 @@ class Accumulation:
         Returns:
             Filtered WRs
         """
+
         filtered_reports = WorkReports([])
 
         for wr in work_reports:
@@ -72,6 +73,7 @@ class Accumulation:
         Returns:
             Updated WR Queue
         """
+
         updated_queue = AllReadyWRs([])
         for wr in accumulation_queue:
             if wr.report.package_spec.hash not in removable_packages:
@@ -387,91 +389,80 @@ class Accumulation:
 
     @classmethod
     def transition(cls, pre_state: State, block: Block):
+        """
+        Transition the state's Delta, Xi, Nu, Chi, Iota, Phi components, calculate BEEFY Commitment Map.
+        Includes 4 steps
+
+        Step 1:
+            Filter work reports into immediately-accumulatable reports and to-be-queued reports
+            Defined in eqn 12.4 - 12.5
+
+        Step 2:
+            Process to-be-queued reports and update ready to be accumulated work reports
+            Defined in eqn 12.11
+
+        Step 3:
+            Accumulate the reports & update the Chi, Delta, Iota, Phi state components
+            Defined in eqn 12.21 - 12.24
+
+        Step 4:
+            Update accumulation and ready queues, i.e., Xi, Nu state components
+            Defined in eqn 12.25 - 12.27
+
+
+
+        Source:
+            https://graypaper.fluffylabs.dev/#/85129da/159902159902?v=0.6.3
+
+        Args:
+            pre_state: State before transition
+            block: Block
+
+        Returns:
+            State after transition
+        """
 
         # ----------------------
-        # Section 12.1: History & Queuing
+        # Section 12.1: History & Queuing (Step 1 & 2)
         # ----------------------
 
         new_state: State = dataclasses.replace(pre_state)
 
-        nu = new_state.nu # Ready for Accumulation
-        xi_union = WorkDependencies([]) # Accumulated Packages List
+        # Ready Queue
+        nu = new_state.nu
+
+        # Accumulated Queue
+        xi_union = WorkDependencies([])
 
         for ep in new_state.xi:
             xi_union.extend(ep)
 
-        # PRINT LINE -------------------
-        ixi = []
-        for ix in xi_union:
-            ixi.append(ix)
-        print("Initial Acc Queue", ixi)
-        # ------------------------------
-
-        # PRINT LINE -------------------
-        ixi = []
-        for ix in nu:
-            for wr in ix:
-                ixi.append(wr.report.package_spec.hash)
-            ixi.append("break")
-        print("Initial Ready Queue", ixi)
-        # ------------------------------
-
-        work_reports = WorkReports([]) # Latest Work Reports to accumulate
+        # Latest Work Reports to Process
+        work_reports = WorkReports([])
         for rg in block.extrinsic.guarantees:
             work_reports.append(rg.report)
 
-        # PRINT LINE -------------------
-        pwr = []
-        for wr in work_reports:
-            pwr.append(wr.package_spec.hash)
-        print("Work Reports", pwr)
-        # ------------------------------
-
-        print("Work Reports og", work_reports)
-
+        # Reports to be processed Immediately, Eq 12.4
         immediate_reports = cls.filter_wr_fn(work_reports)
 
-        # PRINT LINE -------------------
-        iwr = []
-        for wr in immediate_reports:
-            iwr.append(wr.package_spec.hash)
-        print("Immediate Reports", iwr)
-        # ------------------------------
 
         queued_wr = AllReadyWRs([])
 
         for wr in work_reports:
             if len(wr.context.prerequisites) > 0 or wr.segment_root_lookup != SegmentRootLookup([]):
-                print("length", wr.segment_root_lookup)
                 rq = cls.queue_creator_fn(wr)
                 queued_wr.append(rq)
 
-        # PRINT LINE -------------------
-        qwr = []
-        for wr in queued_wr:
-            qwr.append(wr.report.package_spec.hash)
-        print("Queued Tmp Reports", qwr)
-        print("Queued TmpW Reports", queued_wr)
-        # ------------------------------
-
+        # Reports to be queued, Eq 12.5
         queued_reports = cls.queue_edit_fn(queued_wr, xi_union)
 
-        # PRINT LINE -------------------
-        qwr = []
-        for wr in queued_reports:
-            qwr.append(wr.report.package_spec.hash)
-        print("Queued Reports", qwr)
-        # ------------------------------
-
+        # Calculate current timeslot index, Eq 12.10
         m = block.header.slot % EPOCH_LENGTH
 
         accumulatable_wr = AllReadyWRs([])
 
         q_right = nu[m:]
         q_left = nu[:m]
-
-        print("q", q_right, q_left, queued_reports)
-        print("m", m)
 
         for wrs in q_right:
             accumulatable_wr.extend(wrs)
@@ -481,47 +472,24 @@ class Accumulation:
 
         accumulatable_wr.extend(queued_reports)
 
-        # PRINT LINE -------------------
-        awr = []
-        for wr in accumulatable_wr:
-            awr.append(wr.report.package_spec.hash)
-        print("Accumulatable Reports", awr)
-        # ------------------------------
 
-        # q
+        # Calculate available wrs queue, q, Eq 12.12
         intermediate_queue = cls.queue_edit_fn(accumulatable_wr, cls.mapping_fn(immediate_reports))
 
-        # PRINT LINE -------------------
-        iq = []
-        for wr in intermediate_queue:
-            iq.append((wr.report.package_spec.hash, wr.dependencies))
-        print("Intermediate Queue", iq)
-        # ------------------------------
 
-        # Q(q)
-        updated_wrs = cls.priority_queue_fn(intermediate_queue)
+        # Calculate accumulatable wrs queue, Q(q)
+        accumulatable_wrs = cls.priority_queue_fn(intermediate_queue)
 
-        # PRINT LINE -------------------
-        uwr = []
-        for wr in updated_wrs:
-            uwr.append(wr.package_spec.hash)
-        print("Updated WRs", uwr)
-        # ------------------------------
 
-        # W! ⌢ Q(q)
-        star_work_reports = WorkReports(immediate_reports)
-        star_work_reports.extend(updated_wrs)
+        # Evaluate ready to accumulate WRs, W! ⌢ Q(q), Eq 12.11
+        star_work_reports = WorkReports([])
+        star_work_reports.extend(immediate_reports)
+        star_work_reports.extend(accumulatable_wrs)
 
-        # PRINT LINE -------------------
-        swr = []
-        for wr in star_work_reports:
-            swr.append(wr.package_spec.hash)
-        print("Star Work Reports", swr)
-        # ------------------------------
 
         # TODO: Testing without on chain accumulation
         # # ----------------------
-        # # Section 12.2 Execution
+        # # Section 12.2 Execution (Step 3)
         # # ----------------------
         #
         # partial_state = StateContext(service_accounts=pre_state.delta, validator_keys=pre_state.iota, authorizer_keys=pre_state.phi, privileges=pre_state.chi)
@@ -542,7 +510,7 @@ class Accumulation:
         #
         #
         # # ----------------------
-        # # Section 12.3 Deferred Transfers & State Integration
+        # # Section 12.3 Deferred Transfers & State Integration (Step 4)
         # # ----------------------
         #
         # # Update Delta Double Dagger
@@ -551,81 +519,28 @@ class Accumulation:
         #     # delta_double_dagger
         #     new_state.delta[s] = Accumulation.psi_t(new_state.delta, block.header.slot, s, specific_transfers)
 
-        # Updating Accumulated History, Xi
 
-
-
-
-
+        # Update Accumulated History, Xi
         for i in range(EPOCH_LENGTH-1):
             new_state.xi[i] = new_state.xi[i+1]
 
         new_state.xi[EPOCH_LENGTH-1] =  cls.mapping_fn(star_work_reports)
 
-        # PRINT LINE -------------------
-        xir = []
-        for vwr in new_state.xi[EPOCH_LENGTH - 1]:
-            for wr in vwr:
-                xir.append(wr)
-            xir.append("Break")
-
-        print("nth xi", xir)
-        # ------------------------------
-
         timeslot_difference = block.header.slot - pre_state.tau
-        print("τ′", block.header.slot, "τ", pre_state.tau, "τ′-τ", timeslot_difference)
-        # print("m", m)
 
-        # Updating Ready Queue, Nu
+        # Update Ready Queue, Nu
         for i in range(EPOCH_LENGTH):
             ind = (m + EPOCH_LENGTH - i) % EPOCH_LENGTH
-            # print("m", m, "i", i, "sum", (m+EPOCH_LENGTH-i), "ind", ind)
             if i == 0:
                 new_state.nu[ind] = cls.queue_edit_fn(queued_reports, new_state.xi[EPOCH_LENGTH-1])
             elif 1 <= i < timeslot_difference:
-                print("run")
                 new_state.nu[ind] = AllReadyWRs([])
             elif i >= timeslot_difference:
-                # print("idhar run")
-                # # PRINT LINE -------------------
-                # rq = []
-                # for wr in new_state.nu[ind]:
-                #     rq.append(wr.report.package_spec.hash)
-                #
-                # print("old nu ind", rq)
-                # # ------------------------------
                 new_state.nu[ind] = cls.queue_edit_fn(new_state.nu[ind], new_state.xi[EPOCH_LENGTH-1])
-                # # PRINT LINE -------------------
-                # rq = []
-                # for wr in new_state.nu[ind]:
-                #     rq.append(wr.report.package_spec.hash)
-                #
-                # print("new nu ind", rq)
-                # # ------------------------------
-
-        # PRINT LINE -------------------
-        rq = []
-        for wrq in new_state.nu:
-            for wr in wrq:
-                rq.append(wr.report.package_spec.hash)
-            rq.append("br")
-
-        print("Ready Queue", rq)
-        # ------------------------------
-
-        # PRINT LINE -------------------
-        wrq = []
-        for wr in new_state.xi:
-            for wri in wr:
-                wrq.append(wri)
-            wrq.append("br")
-
-        print("Accumulated Queue", wrq)
-        # ------------------------------
-        print("Ready v Queue", new_state.nu)
-
-        return new_state
 
         # ----------------------
         # Section 12.4 Preimage Integration : In Different Module
         # ----------------------
+
+        return new_state
+
