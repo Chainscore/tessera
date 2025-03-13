@@ -1,0 +1,200 @@
+import asyncio
+import json
+from dataclasses import dataclass
+from typing import Optional
+
+from jam.__main__ import main
+from jam.consensus.safrole.gamma import GammaA, GammaK, GammaS, GammaZ
+from jam.state.components.alpha import Alpha
+from jam.state.components.chi import ChiA, ChiG, ChiM, ChiV
+from jam.state.components.delta import (
+    AccountData,
+    AccountStorage,
+    Delta,
+    LookupTable,
+    LookupTimestamps,
+    PreImageLookup,
+    Timestamps,
+)
+from jam.state.components.eta import Eta
+from jam.state.components.iota import Iota
+from jam.state.components.kappa import Kappa
+from jam.state.components.lambda_ import Lambda_
+from jam.state.components.phi import Phi
+from jam.state.components.pi import Pi
+from jam.state.components.psi import Psi
+from jam.state.components.rho import Rho
+from jam.state.components.tau import Tau
+from jam.state.components.theta import Theta
+from jam.state.components.xi import Xi
+from jam.state.state import State
+from jam.types.base import Bytes
+from jam.types.base.integers.fixed import U32
+from jam.types.base.sequences.vector import Vector, decodable_vector
+from jam.types.protocol.core import U64, Gas, OpaqueHash
+from jam.utils.codec.codable import Codable
+from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from jam.utils.json import JsonSerde
+from tests.fixtures.dummy_state import create_dummy_state
+from tests.unit.recent_history.types import BetaInput
+from tests.unit.statistics.types import Pi as TestPi
+
+
+@decodable_dataclass
+@dataclass
+class DunaGamme(Codable, JsonSerde):
+    gamma_k: GammaK
+    gamma_a: GammaA
+    gamma_s: GammaS
+    gamma_z: GammaZ
+
+
+@decodable_dataclass
+@dataclass
+class DunaChi(Codable, JsonSerde):
+    chi_m: ChiM
+    chi_a: ChiA
+    chi_v: ChiV
+    chi_g: ChiG
+
+
+@decodable_dataclass
+@dataclass
+class CustomPreimage(Codable, JsonSerde):
+    hash: OpaqueHash
+    blob: Bytes
+
+
+@decodable_vector(CustomPreimage)
+class CustomPreimages(Vector): ...
+
+
+@decodable_vector(U32, 3)
+class LookupMetaValue(Vector): ...
+
+
+@decodable_dataclass
+@dataclass
+class CustomLookupMeta(Codable, JsonSerde):
+    key: LookupTable
+    value: Timestamps
+
+
+@decodable_vector(CustomLookupMeta)
+class CustomLookupMetas(Vector): ...
+
+
+@decodable_dataclass
+@dataclass
+class CustomService(Codable, JsonSerde):
+    code_hash: OpaqueHash
+    balance: U64
+    min_item_gas: Gas
+    min_memo_gas: Gas
+    bytes: U64
+    items: U32
+
+
+@decodable_dataclass
+@dataclass
+class CustomAccountData(Codable, JsonSerde):
+    preimages: CustomPreimages
+    lookup_meta: CustomLookupMetas
+    service: CustomService
+    storage: Optional[AccountStorage] = None
+
+
+@decodable_dataclass
+@dataclass
+class Account(Codable, JsonSerde):
+    id: U32
+    data: CustomAccountData
+
+
+@decodable_vector(Account)
+class DunaDelta(Vector): ...
+
+
+@decodable_dataclass
+@dataclass
+class DunaState(Codable, JsonSerde):
+    alpha: Alpha
+    varphi: Phi
+    beta: BetaInput
+    gamma: DunaGamme
+    psi: Psi
+    eta: Eta
+    iota: Iota
+    kappa: Kappa
+    lambda_: Lambda_
+    rho: Rho
+    tau: Tau
+    chi: DunaChi
+    pi: TestPi
+    theta: Theta
+    xi: Xi
+    accounts: DunaDelta
+
+    def to_state(self) -> State:
+        state = create_dummy_state()
+        state.alpha = self.alpha
+        state.phi = self.varphi
+        state.beta = self.beta.to_beta()
+        state.gamma.k = self.gamma.gamma_k
+        state.gamma.a = self.gamma.gamma_a
+        state.gamma.s = self.gamma.gamma_s
+        state.gamma.z = self.gamma.gamma_z
+        state.psi = self.psi
+        state.eta = self.eta
+        state.iota = self.iota
+        state.kappa = self.kappa
+        state.lambda_ = self.lambda_
+        state.rho = self.rho
+        state.tau = self.tau
+        state.chi.m = self.chi.chi_m
+        state.chi.a = self.chi.chi_a
+        state.chi.v = self.chi.chi_v
+        state.chi.g = self.chi.chi_g
+        state.pi = Pi([self.pi.current, self.pi.last])
+        state.theta = self.theta
+        state.xi = self.xi
+
+        state.delta = Delta({})
+
+        for i in self.accounts:
+            state.delta[i.id] = AccountData(
+                storage=AccountStorage({}),
+                code_hash=i.data.service.code_hash,
+                balance=i.data.service.balance,
+                gas_limit=i.data.service.min_item_gas,
+                min_gas=i.data.service.min_memo_gas,
+                lookup=PreImageLookup({}),
+                timestamps=LookupTimestamps({}),
+            )
+            for preimage in i.data.preimages:
+                state.delta[i.id].lookup[preimage.hash] = preimage.blob
+            for lookup in i.data.lookup_meta:
+                state.delta[i.id].timestamps[lookup.key] = lookup.value
+
+        return state
+
+
+genesis_file = "tests/integration/jam-duna/state_snapshots/genesis.json"
+with open(genesis_file, "r") as file:
+    genesis_data = json.loads(file.read())
+
+    try:
+        tc = DunaState.from_json(genesis_data)
+        print(f"Decoded {file}")
+    except Exception as e:
+        print(f"❌ Failed to decode {file}: {e}")
+
+rpc_url = "http://localhost:3001/blocks"
+start_slot = 13
+initial_state = tc.to_state()
+
+if __name__ == "__main__":
+    # print(genesis_data)
+    asyncio.run(main("from jam duna", initial_state, start_slot, rpc_url))
+
+# Command to run file: 'python tests/integration/jam-duna/jam_duna.py'
