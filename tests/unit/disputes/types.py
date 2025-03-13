@@ -48,8 +48,8 @@ class Testcase(Codable,JsonSerde):
 
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testcase]:
-    # data_dir = "tests/unit/disputes/data/tiny"
-    data_dir = "./data/tiny"
+    data_dir = "tests/unit/disputes/data/tiny"
+    # data_dir = "./data/tiny"
     result = []
     for index, file in enumerate(os.listdir(data_dir)):
         if len(result) >= limit:
