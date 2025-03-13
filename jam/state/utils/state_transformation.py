@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from jam.consensus.safrole.gamma import GammaA, GammaK, GammaS, GammaZ
 from jam.state.components.alpha import Alpha
@@ -26,12 +25,14 @@ from jam.state.components.theta import Theta
 from jam.state.components.xi import Xi
 from jam.state.state import State
 from jam.types.base import Bytes
+from jam.types.base.choices.option import Option, decodable_option
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.core import U64, Gas, OpaqueHash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
+from jam.utils.json.decorators import with_json_metadata
 from tests.fixtures.dummy_state import create_dummy_state
 from tests.unit.recent_history.types import BetaInput as TestBeta
 from tests.unit.statistics.types import Pi as TestPi
@@ -92,13 +93,23 @@ class CustomService(Codable, JsonSerde):
     items: U32
 
 
+@decodable_option(AccountStorage)
+class OptionStorage(Option): ...
+
+
+@with_json_metadata(
+    preimages={"skip_if_none": True},
+    lookup_meta={"skip_if_none": True},
+    service={"skip_if_none": True},
+    storage={"skip_if_none": True},
+)
 @decodable_dataclass
 @dataclass
 class CustomAccountData(Codable, JsonSerde):
     preimages: CustomPreimages
     lookup_meta: CustomLookupMetas
     service: CustomService
-    storage: Optional[AccountStorage] = None
+    storage: OptionStorage
 
 
 @decodable_dataclass
@@ -112,25 +123,45 @@ class Account(Codable, JsonSerde):
 class DunaDelta(Vector): ...
 
 
+@with_json_metadata(
+    alpha={"skip_if_none": True},
+    varphi={"skip_if_none": True},
+    beta={"skip_if_none": True},
+    gamma={"skip_if_none": True},
+    psi={"skip_if_none": True},
+    eta={"skip_if_none": True},
+    iota={"skip_if_none": True},
+    kappa={"skip_if_none": True},
+    lambda_={"name": "lambda", "skip_if_none": True},
+    rho={"skip_if_none": True},
+    tau={"skip_if_none": True},
+    chi={"skip_if_none": True},
+    pi={"skip_if_none": True},
+    theta={"skip_if_none": True},
+    xi={"skip_if_none": True},
+    accounts={"skip_if_none": True},
+)
 @decodable_dataclass
 @dataclass
 class GeneralState(Codable, JsonSerde):
-    alpha: Optional[Alpha] = None
-    varphi: Optional[Phi] = None
-    beta: Optional[TestBeta] = None
-    gamma: Optional[DunaGamma] = None
-    psi: Optional[Psi] = None
-    eta: Optional[Eta] = None
-    iota: Optional[Iota] = None
-    kappa: Optional[Kappa] = None
-    lambda_: Optional[Lambda_] = None
-    rho: Optional[Rho] = None
-    tau: Optional[Tau] = None
-    chi: Optional[DunaChi] = None
-    pi: Optional[TestPi] = None
-    theta: Optional[Theta] = None
-    xi: Optional[Xi] = None
-    accounts: Optional[DunaDelta] = None
+    alpha: Alpha
+    varphi: Phi
+    beta: TestBeta
+    gamma: DunaGamma
+    psi: Psi
+    eta: Eta
+    iota: Iota
+    kappa: Kappa
+    lambda_: Lambda_
+    rho: Rho
+    tau: Tau
+    chi: DunaChi
+    pi: TestPi
+    theta: Theta
+    xi: Xi
+    accounts: DunaDelta
+
+    # TODO: Fix parsing error when Delta incomplete
 
     def to_state(self) -> State:
         state = create_dummy_state()
@@ -162,7 +193,7 @@ class GeneralState(Codable, JsonSerde):
         if self.kappa:
             state.kappa = self.kappa
 
-        if self.lambda__:
+        if self.lambda_:
             state.lambda_ = self.lambda_
 
         if self.rho:
@@ -205,3 +236,21 @@ class GeneralState(Codable, JsonSerde):
                     state.delta[i.id].timestamps[lookup.key] = lookup.value
 
         return state
+
+
+# NOTE: remove before merging with main
+# genesis_file = "jam/state/utils/temp_json.json"
+# genesis_file = "jam/state/utils/temp_json2.json"
+# with open(genesis_file, "r") as file:
+#     genesis_data = json.loads(file.read())
+#
+#     try:
+#         tc = GeneralState.from_json(genesis_data)
+#         print("DECODED", tc)
+#         print(f"Decoded {file}")
+#         # print(tc.to_state())
+#     except Exception as e:
+#         print(f"❌ Failed to decode {file}: {e}")
+#     parsed = tc.to_state()
+#     print("")
+#     print("ARORA", parsed)
