@@ -5,7 +5,7 @@ setup:
 	./scripts/setup.sh
 
 test:
-	pytest tests/
+	poetry run pytest tests/
 
 lint:
 	flake8 jam tests

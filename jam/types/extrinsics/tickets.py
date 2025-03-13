@@ -12,6 +12,7 @@ from jam.types.protocol.crypto import (
 )
 from jam.utils.constants import EPOCH_LENGTH, MAX_TICKETS_PER_EXTRINSIC
 from jam.utils.json.serde import JsonSerde
+from jam.types.protocol.crypto import Hash
 
 TicketId = OpaqueHash
 TicketAttempt = U8
@@ -33,6 +34,9 @@ class TicketBody(Codable, JsonSerde):
 
     id: TicketId  # This is the VRF output of TicketEnvelope.signature https://graypaper.fluffylabs.dev/#/5f542d7/0f84000fbd00
     attempt: TicketAttempt
+
+    def __hash__(self) -> int:
+        return int.from_bytes(bytes(Hash.blake2b(bytearray(bytes(self.id)) + bytes(self.attempt))))
 
 
 @decodable_array(length=EPOCH_LENGTH, element_type=TicketBody)

@@ -8,9 +8,10 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
 from jam.utils.codec.utils import check_buffer_size
+from jam.utils.json.serde import JsonSerde
 
 
-class Program(Codable):
+class Program(Codable, JsonSerde):
     """This is the program blob which the PVM will execute.
 
     Args:
@@ -22,9 +23,9 @@ class Program(Codable):
     """
 
     z: U8
-    jump_table: List[int]
-    instruction_set: List[U8]
-    offset_bitmask: List[Bit]
+    jump_table: List
+    instruction_set: List
+    offset_bitmask: List
 
     def __init__(
         self,
