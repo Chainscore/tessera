@@ -133,9 +133,9 @@ class Disputes:
         # Check if verdicts are already judged and validate age
         for verdict in disputes.verdicts:
             if (
-                verdict.target in new_state.psi.g
-                or verdict.target in new_state.psi.b
-                or verdict.target in new_state.psi.w
+                verdict.target in new_state.psi.good
+                or verdict.target in new_state.psi.bad
+                or verdict.target in new_state.psi.wonky
             ):
                 raise DisputesError(DisputesErrorCode.ALREADY_JUDGED)
 
@@ -158,9 +158,9 @@ class Disputes:
         # Process culprits and check for offenders already reported
         culprit_counts = {}  # Track culprits per target
         for culprit in disputes.culprits:
-            if culprit.key in new_state.psi.o:
+            if culprit.key in new_state.psi.offenders:
                 raise DisputesError(DisputesErrorCode.OFFENDER_ALREADY_REPORTED)
-            # new_state.psi.o.append(culprit.key)
+            # new_state.psi.offenders.append(culprit.key)
             if culprit.key not in offenders_set:
                 offenders_set.add(culprit.key)
             culprit_counts[culprit.target] = culprit_counts.get(culprit.target, 0) + 1
@@ -168,9 +168,9 @@ class Disputes:
         # Process faults and check for offenders already reported
         fault_counts = {}  # Track faults per target
         for fault in disputes.faults:
-            if fault.key in new_state.psi.o:
+            if fault.key in new_state.psi.offenders:
                 raise DisputesError(DisputesErrorCode.OFFENDER_ALREADY_REPORTED)
-            # new_state.psi.o.append(fault.key)
+            # new_state.psi.offenders.append(fault.key)
             if fault.key not in offenders_set:
                 offenders_set.add(fault.key)
             fault_counts[fault.target] = fault_counts.get(fault.target, 0) + 1
@@ -198,7 +198,7 @@ class Disputes:
                 for fault in disputes.faults:
                     if fault.target == verdict.target and fault.vote:
                         raise DisputesError(DisputesErrorCode.FAULT_VERDICT_WRONG)
-                if verdict.target not in new_state.psi.g:
+                if verdict.target not in new_state.psi.good:
                     good_set.add(verdict.target)
 
             # Solely invalid verdict (all negative votes)
@@ -210,14 +210,14 @@ class Disputes:
                 for fault in disputes.faults:
                     if fault.target == verdict.target and not fault.vote:
                         raise DisputesError(DisputesErrorCode.FAULT_VERDICT_WRONG)
-                if verdict.target not in new_state.psi.b:
+                if verdict.target not in new_state.psi.bad:
                     bad_set.add(verdict.target)
 
             # Wonky verdict (mixed votes meeting wonky threshold)
             elif (
                 positive_votes == VALIDATORS_WONKY
             ):  # Condition for wonky verdict EXACTLY
-                if verdict.target not in new_state.psi.w:
+                if verdict.target not in new_state.psi.wonky:
                     wonky_set.add(verdict.target)
             else:
                 raise DisputesError(DisputesErrorCode.BAD_VOTE_SPLIT)
@@ -240,15 +240,15 @@ class Disputes:
         # Update of the Disputes states
         offenders_set = sorted(offenders_set)
         for i in good_set:
-            if i not in new_state.psi.g:
-                new_state.psi.g.append(i)
+            if i not in new_state.psi.good:
+                new_state.psi.good.append(i)
         for i in bad_set:
-            if i not in new_state.psi.b:
-                new_state.psi.b.append(i)
+            if i not in new_state.psi.bad:
+                new_state.psi.bad.append(i)
         for i in wonky_set:
-            if i not in new_state.psi.w:
-                new_state.psi.w.append(i)
+            if i not in new_state.psi.wonky:
+                new_state.psi.wonky.append(i)
         for i in offenders_set:
-            if i not in new_state.psi.o:
-                new_state.psi.o.append(i)
+            if i not in new_state.psi.offenders:
+                new_state.psi.offenders.append(i)
         return new_state

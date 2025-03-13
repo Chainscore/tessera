@@ -2,7 +2,7 @@ name: Python Tests
 
 on:
   push:
-    branches: [ main, dev, staging ]
+    branches: [ main, staging ]
   pull_request:
     branches: [ main, dev, staging ]
 
@@ -25,4 +25,4 @@ jobs:
       run: poetry install --with dev --no-interaction --no-ansi
 
     - name: Run tests
-      run: poetry run pytest tests/
+      run: RUNALL=1 poetry run pytest tests/
