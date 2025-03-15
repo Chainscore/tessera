@@ -1,1 +1,118 @@
- 
+name: Deploy to Azure Container Instance
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      debug_mode:
+        description: 'Run in debug mode'
+        type: boolean
+        default: true
+
+env:
+  RESOURCE_GROUP: tessera
+  CONTAINER_NAME: tessera-node
+  IMAGE_NAME: tessera.azurecr.io/tessera/jam-node:latest
+  ACR_NAME: tessera
+  CPU: "2"
+  MEMORY: "4"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Check if container exists and delete
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            if az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} >/dev/null 2>&1; then
+              echo "Container exists, deleting..."
+              az container delete --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} --yes
+            fi
+
+      - name: Get ACR credentials
+        id: get-acr-creds
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query "username" -o tsv)
+            ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
+            echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_OUTPUT
+            echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_OUTPUT
+
+      - name: Create Azure Container Instance
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            DEBUG_MODE=${{ github.event.inputs.debug_mode || 'true' }}
+            
+            az container create \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name ${{ env.CONTAINER_NAME }} \
+              --image ${{ env.IMAGE_NAME }} \
+              --registry-login-server "${{ env.ACR_NAME }}.azurecr.io" \
+              --registry-username "${{ steps.get-acr-creds.outputs.ACR_USERNAME }}" \
+              --registry-password "${{ steps.get-acr-creds.outputs.ACR_PASSWORD }}" \
+              --cpu ${{ env.CPU }} \
+              --memory ${{ env.MEMORY }} \
+              --environment-variables JAM_DEBUG=$DEBUG_MODE \
+              --ports 30333 \
+              --dns-name-label "tessera-jam-node" \
+              --restart-policy Never \
+              --os-type Linux
+
+      - name: Get container logs
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            echo "Container created!"
+            echo "Container logs:"
+            az container logs --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }}
+
+      - name: Debug information
+        if: ${{ github.event.inputs.debug_mode != 'false' }}
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            echo "Container running in DEBUG mode"
+            echo "To access container shell:"
+            echo "az container exec --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} --exec-command /bin/bash"
+            echo "To view logs:"
+            echo "az container logs --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }}"
+            echo "To attach to container:"
+            echo "az container attach --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }}"
+            
+            # Wait for container to be fully up
+            sleep 15
+            
+            # Try to access container shell
+            az container exec --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} --exec-command "/bin/bash -c 'ls -la /app/data || echo \"No data directory yet\"'" 

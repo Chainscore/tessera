@@ -1,7 +1,6 @@
 import asyncio
 from datetime import datetime
-import uvloop
-from jam.config.logging import setup_logging, get_logger
+from jam.config.logging import get_logger, setup_logging
 from jam.config.settings import settings
 from jam.chainspec import chain_config
 from jam.types.protocol.crypto import Hash
@@ -21,7 +20,6 @@ async def main() -> None:
         listen_address=settings.LISTEN_ADDRESS,
         listen_port=settings.LISTEN_PORT,
     )
-
     try:
         # Initialize components
         # TODO: Add initialization code
