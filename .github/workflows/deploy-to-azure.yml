@@ -2,7 +2,7 @@ name: Deploy to Azure Container Instance
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, staging ]
   workflow_dispatch:
     inputs:
       debug_mode:
@@ -12,8 +12,7 @@ on:
 
 env:
   RESOURCE_GROUP: tessera
-  CONTAINER_NAME: tessera-node
-  IMAGE_NAME: tessera.azurecr.io/tessera/jam-node:latest
+  IMAGE_NAME: tessera.azurecr.io/tessera/jam-node
   ACR_NAME: tessera
   CPU: "2"
   MEMORY: "4"
@@ -22,6 +21,18 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Set deployment specific variables
+        run: |
+          if [[ ${{ github.ref }} == 'refs/heads/staging' ]]; then
+            echo "CONTAINER_NAME=tessera-node-staging" >> $GITHUB_ENV
+            echo "IMAGE_TAG=staging" >> $GITHUB_ENV
+            echo "DNS_LABEL=tessera-jam-node-staging" >> $GITHUB_ENV
+          else
+            echo "CONTAINER_NAME=tessera-node" >> $GITHUB_ENV
+            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+            echo "DNS_LABEL=tessera-jam-node" >> $GITHUB_ENV
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -45,7 +56,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE_NAME }}
+          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           platforms: linux/amd64
 
       - name: Check if container exists and delete
@@ -76,7 +87,7 @@ jobs:
             az container create \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --name ${{ env.CONTAINER_NAME }} \
-              --image ${{ env.IMAGE_NAME }} \
+              --image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
               --registry-login-server "${{ env.ACR_NAME }}.azurecr.io" \
               --registry-username "${{ steps.get-acr-creds.outputs.ACR_USERNAME }}" \
               --registry-password "${{ steps.get-acr-creds.outputs.ACR_PASSWORD }}" \
@@ -84,7 +95,7 @@ jobs:
               --memory ${{ env.MEMORY }} \
               --environment-variables JAM_DEBUG=$DEBUG_MODE \
               --ports 30333 \
-              --dns-name-label "tessera-jam-node" \
+              --dns-name-label "${{ env.DNS_LABEL }}" \
               --restart-policy Never \
               --os-type Linux
 
