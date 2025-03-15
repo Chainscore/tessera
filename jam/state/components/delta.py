@@ -4,6 +4,7 @@ from jam.types.base.integers.fixed import U32, U64
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.base.sequences.bytes import ByteArray32, Bytes
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
+from jam.types.protocol.crypto import Hash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
@@ -34,12 +35,10 @@ class LookupTable(Codable, JsonSerde):
     def __hash__(self) -> int:
         return int.from_bytes(bytes(Hash.sha256(bytes(self.hash) + bytes(self.length))))
 
-
 @decodable_vector(element_type=U32, max_length=3)
 class Timestamps(Vector[U32]):
     """Lookup timestamps"""
     ...
-
 
 @decodable_dictionary(LookupTable, Timestamps)
 class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
@@ -50,13 +49,13 @@ class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
 @decodable_dataclass
 @dataclass
 class AccountData(Codable, JsonSerde):
-    storage: AccountStorage
-    lookup: PreImageLookup
-    timestamps: LookupTimestamps
-    code_hash: ServiceCodeHash
-    balance: Balance
-    gas_limit: Gas
-    min_gas: Gas
+    storage: AccountStorage  # items
+    lookup: PreImageLookup # preimages
+    timestamps: LookupTimestamps # bytes
+    code_hash: ServiceCodeHash # code_hash
+    balance: Balance # balance
+    gas_limit: Gas # min_item_gas
+    min_gas: Gas # min_memo_gas
 
 
 @decodable_dictionary(ServiceId, AccountData)

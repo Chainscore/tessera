@@ -5,3 +5,4 @@ from jam.utils.constants import EPOCH_LENGTH
 
 @decodable_array(EPOCH_LENGTH, WorkDependencies)
 class Xi(Array[WorkDependencies]): ...
+

@@ -9,7 +9,7 @@ from jam.types.protocol.core import TimeSlot
 from jam.utils.json.serde import JsonSerde
 
 
-@decodable_vector(OpaqueHash)
+@decodable_vector(OpaqueHash, allow_duplicates=False)
 class OpaqueHashes(Vector[OpaqueHash]):
     ...
 

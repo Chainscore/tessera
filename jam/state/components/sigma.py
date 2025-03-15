@@ -14,7 +14,7 @@ from jam.state.components.psi import Psi
 from jam.state.components.rho import Rho
 from jam.state.components.phi import Phi
 from jam.state.components.tau import Tau
-from jam.state.components.theta import Theta
+from jam.state.components.nu import Nu
 from jam.state.components.xi import Xi
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -90,7 +90,7 @@ class Sigma(Codable, JsonSerde):
 
     # Accumulation queue for ready work-reports
     # Defined in section 12
-    theta: Theta
+    nu: Nu
 
     # History of accumulated work-reports
     # Defined in section 12

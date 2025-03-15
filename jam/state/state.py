@@ -40,8 +40,9 @@ class State(Sigma):
             construct_state_key(11): Bytes(self.tau.encode()),
             construct_state_key(12): Bytes(self.chi.encode()),
             construct_state_key(13): Bytes(self.pi.encode()),
-            construct_state_key(14): Bytes(self.theta.encode()),
+            construct_state_key(14): Bytes(self.nu.encode()),
             construct_state_key(15): Bytes(self.xi.encode()),
+            # construct_state_key(16): Bytes(self.nu.encode()),
         }
 
     def generate_root(self) -> ByteArray32:
