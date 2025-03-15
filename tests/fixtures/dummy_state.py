@@ -1,7 +1,5 @@
 from typing import Dict
 
-import pytest
-
 from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
 from jam.merklization import MMR
 from jam.state.components.alpha import Alpha, AuthorizationPool, AuthorizerHash
@@ -50,6 +48,17 @@ from jam.types.protocol.crypto import (
     HeaderHash,
     OpaqueHash,
     StateRoot,
+    BandersnatchPublic,
+    BandersnatchRingRoot,
+)
+from jam.types.work.report import WorkDependencies
+from jam.types.protocol.core import (
+    SegmentRoot,
+    WorkPackageHash,
+    Balance,
+    Gas,
+    ServiceId,
+    WorkReportHash,
 )
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.work.report import WorkDependencies
@@ -191,6 +200,7 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Nu and Xi
     components["nu"] = Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
+
 
     components["xi"] = Xi(
         [WorkDependencies([]) for _ in range(EPOCH_LENGTH)]

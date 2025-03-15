@@ -18,12 +18,15 @@ from jam.state.components.nu import Nu
 from jam.state.components.xi import Xi
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.decorators import json_field
+from jam.utils.json.decorators import with_json_metadata
 from jam.utils.json.serde import JsonSerde
 
 
-@decodable_dataclass
 @dataclass(kw_only=True)
+@with_json_metadata(
+    lambda_={"name": "lambda"}
+)
+@decodable_dataclass
 class Sigma(Codable, JsonSerde):
     """Overall system state combining all components (σ). Defined in Graypaper section 4.2."""
 
@@ -59,7 +62,7 @@ class Sigma(Codable, JsonSerde):
 
     # Previous epoch's validator keys and metadata
     # Defined in section 6.3
-    lambda_: Lambda_ = json_field(name="lambda")
+    lambda_: Lambda_
 
     # Tracks work-reports available but not yet accumulated (has states ρ† and ρ‡)
     # Defined in section 11.1

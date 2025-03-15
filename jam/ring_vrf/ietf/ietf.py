@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple, Optional
+from typing import Tuple, Type
 
+from jam.ring_vrf.curve.point import Point
 from ..vrf import VRF
-from ..curve.specs.bandersnatch import BandersnatchPoint
 from ..curve.curve import Curve
 
 @dataclass
@@ -27,14 +27,14 @@ class IETF_VRF(VRF):
     for VRFs using the Bandersnatch curve.
     """
     
-    def __init__(self, curve: Curve):
+    def __init__(self, curve: Curve, point_type: Type[Point]):
         """
         Initialize IETF VRF with a curve.
         
         Args:
             curve: Elliptic curve to use (should be Bandersnatch)
         """
-        super().__init__(curve)
+        super().__init__(curve, point_type)
         if not isinstance(curve, Curve):
             raise TypeError("Curve must be a valid elliptic curve")
     
@@ -44,7 +44,7 @@ class IETF_VRF(VRF):
         secret_key: int,
         additional_data: bytes,
         salt: bytes = b''
-    ) -> Tuple[BandersnatchPoint, Tuple[int, int]]:
+    ) -> Tuple[Point, Tuple[int, int]]:
         """
         Generate IETF VRF proof.
         
@@ -58,13 +58,13 @@ class IETF_VRF(VRF):
             Tuple[BandersnatchPoint, Tuple[int, int]]: (output_point, (c, s))
         """
         # Create generator point
-        generator = BandersnatchPoint(
+        generator = self.point_type(
             self.curve.GENERATOR_X,
             self.curve.GENERATOR_Y
         )
         
         # Encode input to curve point
-        input_point = BandersnatchPoint.encode_to_curve(alpha, salt)
+        input_point = self.point_type.encode_to_curve(alpha, salt)
         
         # Compute output point and public key
         output_point = input_point * secret_key
@@ -88,10 +88,10 @@ class IETF_VRF(VRF):
     
     def verify(
         self,
-        public_key: BandersnatchPoint,
-        input_point: BandersnatchPoint,
+        public_key: Point,
+        input_point: Point,
         additional_data: bytes,
-        output_point: BandersnatchPoint,
+        output_point: Point,
         proof: Tuple[int, int]
     ) -> bool:
         """
@@ -110,7 +110,7 @@ class IETF_VRF(VRF):
         c, s = proof
         
         # Create generator point
-        generator = BandersnatchPoint(
+        generator = self.point_type(
             self.curve.GENERATOR_X,
             self.curve.GENERATOR_Y
         )

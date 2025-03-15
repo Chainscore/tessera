@@ -1,5 +1,3 @@
-import pytest
-
 from jam.types import (
     HeaderHash,
     StateRoot,
@@ -9,7 +7,6 @@ from jam.types import (
     BandersnatchVrfSignature,
     ValidatorArray,
     TicketBody,
-    ByteArray32,
     Entropy,
     BandersnatchPublic,
 )
@@ -33,23 +30,27 @@ def create_dummy_header() -> Header:
         parent_state_root=StateRoot(create_dummy_bytes32()),
         extrinsic_hash=OpaqueHash(create_dummy_bytes32()),
         slot=TimeSlot(0),
-        epoch_mark=EpochMark(
-            entropy=Entropy(create_dummy_bytes32()),
-            tickets_entropy=Entropy(create_dummy_bytes32()),
-            validators=ValidatorArray(
-                [
-                    BandersnatchPublic(create_dummy_bytes32())
-                    for _ in range(VALIDATOR_COUNT)
-                ]
+        epoch_mark=OptionalEpochMark(
+            EpochMark(
+                entropy=Entropy(create_dummy_bytes32()),
+                tickets_entropy=Entropy(create_dummy_bytes32()),
+                validators=ValidatorArray(
+                    [
+                        BandersnatchPublic(create_dummy_bytes32())
+                        for _ in range(VALIDATOR_COUNT)
+                    ]
+                ),
             ),
         ),
-        tickets_mark=TicketsMark(
-            [
-                TicketBody(
-                    id=TicketId(create_dummy_bytes32()), attempt=TicketAttempt(0)
-                )
-                for i in range(EPOCH_LENGTH)
-            ]
+        tickets_mark=OptionalTicketsMark(
+            TicketsMark(
+                [
+                    TicketBody(
+                        id=TicketId(create_dummy_bytes32()), attempt=TicketAttempt(0)
+                    )
+                    for i in range(EPOCH_LENGTH)
+                ]
+            ),
         ),
         offenders_mark=OffendersMark([]),
         entropy_source=BandersnatchVrfSignature(create_dummy_bytes(96)),

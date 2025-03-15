@@ -85,7 +85,6 @@ class WorkReport(Codable, JsonSerde):
     segment_root_lookup: SegmentRootLookup
     results: WorkResults
 
-
 @decodable_vector(element_type=WorkReportHash, allow_duplicates=False)
 class WorkDependencies(Vector[WorkReportHash]):
     """Set of dependencies hashes"""
@@ -95,3 +94,4 @@ class WorkDependencies(Vector[WorkReportHash]):
 class WorkReports(Vector[WorkReport]):
     """Vector of Work Reports"""
     ...
+
