@@ -47,8 +47,6 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}
           platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Check if container exists and delete
         uses: azure/CLI@v1
