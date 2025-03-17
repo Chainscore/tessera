@@ -12,6 +12,8 @@ main (stable) → develop (integration) → feature branches
 - **`develop`**: Integration branch for features, pre-release testing
 - **Feature branches**: All development work happens here
 
+![GitFlow](https://wac-cdn.atlassian.com/dam/jcr:cc0b526e-adb7-4d45-874e-9bcea9898b4a/04%20Hotfix%20branches.svg?cdnVersion=2612)
+
 ## 🔄 Workflow
 
 ### 1. Creating a New Feature
