@@ -8,7 +8,7 @@ from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.null import Nullable
 from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
-from jam.types.protocol.crypto import OpaqueHash
+from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
 from jam.types.protocol.core import ErasureRoot, ExportsRoot, WorkPackageHash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -84,3 +84,14 @@ class WorkReport(Codable, JsonSerde):
     auth_output: Bytes
     segment_root_lookup: SegmentRootLookup
     results: WorkResults
+
+@decodable_vector(element_type=WorkReportHash, allow_duplicates=False)
+class WorkDependencies(Vector[WorkReportHash]):
+    """Set of dependencies hashes"""
+    ...
+
+@decodable_vector(element_type=WorkReport)
+class WorkReports(Vector[WorkReport]):
+    """Vector of Work Reports"""
+    ...
+

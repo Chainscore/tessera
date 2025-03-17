@@ -22,7 +22,7 @@ Submodules
    rho
    sigma
    tau
-   theta
+   nu
    xi
 
 Module Contents
