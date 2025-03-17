@@ -32,8 +32,12 @@ RUN poetry install --no-interaction --no-ansi $(poetry --version | grep -q "Poet
 # Create data directory with permissions
 RUN mkdir -p data/db && chmod -R 777 data
 
+COPY jam/api
+
+CMD [ "fastapi dev api-service.py", "--port", "8000" ]
 # Expose application port
-EXPOSE 30333
+
+EXPOSE 8000
 
 # Run the application
 CMD ["poetry", "run", "jam"]
