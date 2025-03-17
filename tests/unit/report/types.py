@@ -29,7 +29,6 @@ class Input(Codable, JsonSerde):
     guarantees: GuaranteesExtrinsic
     slot : TimeSlot
 
-
 @decodable_dataclass
 @dataclass
 class InputService(Codable,JsonSerde):
@@ -39,9 +38,6 @@ class InputService(Codable,JsonSerde):
     min_memo_gas: Gas
     bytes: U64
     items: I64
-
-
-
 
 @decodable_dataclass
 @dataclass
@@ -53,8 +49,6 @@ class InputServices(Codable, JsonSerde):
 class InputAccData(Codable, JsonSerde):
     id: U64
     data: InputServices
-
-
 
 @decodable_vector(InputAccData)
 class InputAccount(Vector):
@@ -84,11 +78,8 @@ class Testcase(Codable, JsonSerde):
     output: dict
     post_state: PostState
 
-
-
 def get_testcases_starting_with(prefix: str = "", limit: int = 0) -> List[Testcase]:
-    data_dir = "/home/dikshant441/Desktop/jam/test-file/jam-test-vectors/reports/tiny"
-
+    data_dir = "/home/rahulcsl/Documents/tiny"
     result = []
     position = 1
     for index, file in enumerate(os.listdir(data_dir)):

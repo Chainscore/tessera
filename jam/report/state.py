@@ -62,7 +62,7 @@ class Reporting:
                 if state.rho[x.report.core_index] != Null:
                     raise ReportingError(
                         ReportingErrorCode.CORE_ENGAGED,
-                        ""
+                        "the core index mentioned in report should be available in rho"
                     )
 
             # --------- no_enough_guatantee ------------
@@ -118,7 +118,8 @@ class Reporting:
             # ---------- future_report_slot -----------------
             if x.slot > block.header.slot:
                 raise ReportingError(
-                    ReportingErrorCode.FUTURE_REPORT_SLOT
+                    ReportingErrorCode.FUTURE_REPORT_SLOT,
+                    "report's slot should match with header slot"
                 )
 
             # -------- report_epoch_before_last ------------
@@ -138,7 +139,6 @@ class Reporting:
                     public_key = state.lambda_[y.validator_index].ed25519
                 signature = y.signature
                 try:
-                    # print(Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(bytes(signature),SIGNING_CONTEXTS['guarantee'] + bytes(Hash.blake2b(x.report.encode()))))
                     Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(bytes(signature),SIGNING_CONTEXTS['guarantee'] + bytes(Hash.blake2b(x.report.encode())))
                 except InvalidSignature:
                     raise ReportingError(
@@ -164,11 +164,7 @@ class Reporting:
             hashes.append(x.report.package_spec.hash)
 
         for i in state.beta:
-                # print('in duplicate package')
-                # print('packages',hashes[0],i.packages)
-                # if i.packages in hashes:
                 if any(key in hashes for key in i.packages.keys()):
-                    # print('inside recent history')
                     raise ReportingError (
                         ReportingErrorCode.DUPLICATE_PACKAGE,
                         "Work package is already executed in recent-block's history"
@@ -181,7 +177,8 @@ class Reporting:
                 for y in range(x+1, len(block.extrinsic.guarantees)):
                     if block.extrinsic.guarantees[x].report.package_spec.hash == block.extrinsic.guarantees[y].report.package_spec.hash:
                         raise ReportingError(
-                            ReportingErrorCode.DUPLICATE_PACKAGE
+                            ReportingErrorCode.DUPLICATE_PACKAGE,
+                            "Duplicate package spec hash in other report of same guarantee"
                         )
 
     @staticmethod
@@ -278,8 +275,9 @@ class Reporting:
         for x in state.beta:
             for key in x.packages:
                 work_package_hashes.append(key)
-            for key in x.packages:
                 exports_root.append(x.packages[key])
+            # for key in x.packages:
+
 
         hashes = []
         for report in block.extrinsic.guarantees:
@@ -296,26 +294,28 @@ class Reporting:
             if context.anchor not in header_hashes:
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
+                    "Anchor hash should match with header hash of any block in recent history"
                 )
 
             if not any(item.state_root == context.state_root for item in state.beta):
                 raise ReportingError(
-                    ReportingErrorCode.BAD_STATE_ROOT
+                    ReportingErrorCode.BAD_STATE_ROOT,
+                    "State_root should match with any block state_root in recent history"
                 )
 
             if context.prerequisites != Null or y.report.segment_root_lookup != Null: # changed from is not None to != Null
                  for x in context.prerequisites:
-                    if x not in  hashes and x not in work_package_hashes:
+                    if x not in hashes and x not in work_package_hashes:
                         raise ReportingError(
                             ReportingErrorCode.DEPENDENCY_MISSING
                         )
 
             if  y.report.segment_root_lookup != Null:
-                # print('segment 2',exports_root)
                 for x in y.report.segment_root_lookup:
                     if x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes or (x.segment_tree_root != y.report.package_spec.exports_root and x.segment_tree_root not in exports_root):
                         raise ReportingError(
-                            ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID
+                            ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID,
+                            "work-packages mentioned in the segment-root lookup, be either in the extrinsic or in our recent history."
                         )
 
     @staticmethod
@@ -327,40 +327,29 @@ class Reporting:
             total_accumulate_gas = 0
             for y in x.report.results:
                 if y.service_id not in state.delta:
-                    # print("service")
                     raise ReportingError(
-                        ReportingErrorCode.BAD_SERVICE_ID
+                        ReportingErrorCode.BAD_SERVICE_ID,
+                        "service_id of each report should match with id of delta"
                     )
 
                 if y.code_hash != state.delta[y.service_id].code_hash:
                     raise ReportingError(
-                        ReportingErrorCode.BAD_CODE_HASH
+                        ReportingErrorCode.BAD_CODE_HASH,
+                        "result code_hash should match with state's delta code_hash"
                     )
 
                 if y.accumulate_gas < state.delta[y.service_id].min_gas:
                     raise ReportingError(
-                        ReportingErrorCode.SERVICE_ITEM_GAS_TOO_LOW
+                        ReportingErrorCode.SERVICE_ITEM_GAS_TOO_LOW,
+                        "for every report its accumulate gas should be greater than the delta's min_gas"
                     )
 
                 total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
 
             if total_accumulate_gas > ACCUMULATION_GAS:
                 raise ReportingError(
-                    ReportingErrorCode.WORK_REPORT_GAS_TOO_HIGH
-                )
-
-    @staticmethod
-    def workreport_package( block:Block ) :
-        hashes = []
-
-        # storing package_spec hash of all reports in hashes
-        for x in block.extrinsic.guarantees:
-            if x.report.package_spec.hash not in hashes:
-                hashes.append(x.report.package_spec.hash)
-            else :
-                raise ReportingError(
-                    ReportingErrorCode.DUPLICATE_PACKAGE_IN_REPORT,
-                    "Two work reports of the same package(no duplicate work-package hash)"
+                    ReportingErrorCode.WORK_REPORT_GAS_TOO_HIGH,
+                    "sum of all accumulate gas in result of report should be less than ACCUMULATION_GAS"
                 )
 
     @staticmethod
@@ -374,7 +363,8 @@ class Reporting:
 
         if len(work_report_output) > MAX_WORK_REPORT_SIZE:
             raise ReportingError(
-                ReportingErrorCode.WORK_REPORT_TOO_BIG
+                ReportingErrorCode.WORK_REPORT_TOO_BIG,
+                "length of sum of result and auth_output should be less than 48 * 2**10 "
             )
 
 
