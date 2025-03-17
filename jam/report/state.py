@@ -10,7 +10,7 @@ from math import floor
 from jam.types import  decodable_vector, U32, Vector
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
-from jam.report.guarantee_assignment import wrong_assignment
+from jam.report.guarantee_assignment import guarantor_assignment
 
 
 @decodable_vector(element_type=U32)
@@ -50,8 +50,8 @@ class Reporting:
                     )
 
             # --------- no_enough_guatantee ------------
+            # https://graypaper.fluffylabs.dev/#/85129da/147002149002?v=0.6.3
             credential_len = len(x.signatures)
-            # print('credential length',credential_len)
             if credential_len < MIN_VALIDATOR_PER_REPORT:
                 raise ReportingError(
                     ReportingErrorCode.INSUFFICIENT_GUARANTEE,
@@ -67,6 +67,7 @@ class Reporting:
                     )
 
             # --------- not_sorted_guarantee ---------
+            # https://graypaper.fluffylabs.dev/#/85129da/14b80214df02?v=0.6.3
             for j in range(len(x.signatures)-1):
                 if x.signatures[j].validator_index >= x.signatures[j+1].validator_index:
                     raise ReportingError (
@@ -75,15 +76,11 @@ class Reporting:
                     )
 
             # --------- not-authorized -----------------
+            # https://graypaper.fluffylabs.dev/#/85129da/15ea0015f700?v=0.6.3
             report_auth_hash = x.report.authorizer_hash
             core_index = x.report.core_index
             auth_pool = state.alpha
             if core_index < CORE_COUNT:
-                if len(state.alpha[core_index]) == 0:
-                    raise ReportingError(
-                        ReportingErrorCode.CORE_UNAUTHORIZED,
-                        "Pool for that particular core_index in Authorization pool is empty"
-                    )
                 if report_auth_hash not in auth_pool[core_index]:
                     raise ReportingError(
                         ReportingErrorCode.CORE_UNAUTHORIZED,
@@ -91,6 +88,7 @@ class Reporting:
                     )
 
             # -------- too_many_dependencies ---------
+            # https://graypaper.fluffylabs.dev/#/85129da/13ab0013b600?v=0.6.3
             segment_root = len(x.report.segment_root_lookup)
             prerequisite = len(x.report.context.prerequisites)
             if (segment_root + prerequisite) > MAX_DEPENDENCIES:
@@ -103,7 +101,7 @@ class Reporting:
             if x.slot > block.header.slot:
                 raise ReportingError(
                     ReportingErrorCode.FUTURE_REPORT_SLOT,
-                    "Report's slot should match with header slot"
+                    "Report's slot more then block's slot"
                 )
 
             # -------- report_epoch_before_last ------------
@@ -114,23 +112,8 @@ class Reporting:
                         "Guarantee work report slot not in recent slots (block history)"
                     )
 
-            # -------- bad_signature ------------
-            for y in x.signatures:
-                public_key = None
-                if x.slot == block.header.slot or x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD)/EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
-                    public_key = state.kappa[y.validator_index].ed25519
-                elif x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
-                    public_key = state.lambda_[y.validator_index].ed25519
-                signature = y.signature
-                try:
-                    Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(bytes(signature),SIGNING_CONTEXTS['guarantee'] + bytes(Hash.blake2b(x.report.encode())))
-                except InvalidSignature:
-                    raise ReportingError(
-                        ReportingErrorCode.BAD_SIGNATURE,
-                        "Signature doesn't match with that particular public key"
-                    )
-
         #------------- out_of_order_guarantee ---------------------
+        # https://graypaper.fluffylabs.dev/#/85129da/146802146902?v=0.6.3
         guarantee_length = len(block.extrinsic.guarantees)
         if guarantee_length > 1:
             for i in range(len(block.extrinsic.guarantees) - 1):
@@ -142,6 +125,7 @@ class Reporting:
                     )
 
         # --------------- duplicated_package_in_recent_history ----------------------------
+        # https://graypaper.fluffylabs.dev/#/85129da/157a0115c901?v=0.6.3
         hashes = []
         for x in block.extrinsic.guarantees:
             hashes.append(x.report.package_spec.hash)
@@ -154,6 +138,7 @@ class Reporting:
                 )
 
         #--------------------------duplicated_package_in_reports----------------------------
+        # https://graypaper.fluffylabs.dev/#/85129da/151e01152501?v=0.6.3
         if len(block.extrinsic.guarantees) > 1:
             for x in range (len(block.extrinsic.guarantees)):
                 for y in range(x+1, len(block.extrinsic.guarantees)):
@@ -163,7 +148,52 @@ class Reporting:
                             "Duplicate package spec hash in other report of same guarantee"
                         )
 
-        # --------------- too_big_work_report -------------------
+        Reporting.ensure_signature(state, block)
+        Reporting.verify_report_output(block)
+        Reporting.ensure_valid_refinement_context(state, block)
+        Reporting.ensure_valid_report_result(state,block)
+        Reporting.wrong_assignment(state, block)
+
+        for x in block.extrinsic.guarantees:
+            state.rho[x.report.core_index] = OptionalWorkReportState(
+                WorkReportState(
+                    report=block.extrinsic.guarantees[x.report.core_index].report,
+                    timeout=block.header.slot
+                )
+            )
+
+        return new_state
+
+    @staticmethod
+    def ensure_signature(state: State, block: Block):
+        """
+        Description : This function make sure that signature for the work_report is valid (ensure that report are signed by correct validators which are assigned, to that particular core, through guarantor assignment).
+
+        Sources :  https://graypaper.fluffylabs.dev/#/85129da/15250015af00?v=0.6.3
+        """
+        for x in block.extrinsic.guarantees:
+            for y in x.signatures:
+                public_key = None
+                if x.slot == block.header.slot or x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH) == floor(block.header.slot / EPOCH_LENGTH):
+                    public_key = state.kappa[y.validator_index].ed25519
+                elif x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
+                    public_key = state.lambda_[y.validator_index].ed25519
+                signature = y.signature
+                try:
+                    Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(bytes(signature),SIGNING_CONTEXTS['guarantee'] + bytes(Hash.blake2b(x.report.encode())))
+                except InvalidSignature:
+                    raise ReportingError(
+                        ReportingErrorCode.BAD_SIGNATURE,
+                        "Signature doesn't match with that particular public key"
+                    )
+
+    @staticmethod
+    def verify_report_output(block: Block):
+        """
+        Description: ensure that work report (authorizer output + sum of report output ) size always should be <= 48*(2**10)
+
+        Source: https://graypaper.fluffylabs.dev/#/85129da/141d00144500?v=0.6.3
+        """
         work_report_output = Bytes(0)
 
         for x in block.extrinsic.guarantees:
@@ -176,21 +206,6 @@ class Reporting:
                 ReportingErrorCode.WORK_REPORT_TOO_BIG,
                 "Length of sum of result and auth_output should be less than 48 * 2**10 "
             )
-
-        Reporting.ensure_valid_refinement_context(state, block)
-        Reporting.ensure_valid_report_result(state,block)
-        wrong_assignment(state, block)
-
-        for x in block.extrinsic.guarantees:
-            state.rho[x.report.core_index] = OptionalWorkReportState(
-                WorkReportState(
-                    report=block.extrinsic.guarantees[x.report.core_index].report,
-                    timeout=block.header.slot
-                )
-            )
-
-        return new_state
-
 
     @staticmethod
     def ensure_valid_refinement_context(state:State,block:Block):
@@ -207,7 +222,6 @@ class Reporting:
 
 
         """
-
         exports_root = []
         work_package_hashes = []
 
@@ -275,7 +289,6 @@ class Reporting:
                    Returns error according to specific testcases.
 
         """
-
         results = block.extrinsic.guarantees
 
         for x in results:
@@ -314,8 +327,34 @@ class Reporting:
                     "Sum of all accumulate gas in result of report should be less than ACCUMULATION_GAS"
                 )
 
+    @staticmethod
+    def wrong_assignment(state: State, block: Block):
+        """
+        Description : This function check assign validator to the core is correct or not.
 
+        """
+        report_slot = None
+        for x in block.extrinsic.guarantees:
+            report_slot = x.slot
 
+        mapping = guarantor_assignment(state.eta, state.kappa, state.lambda_,block.header.slot, report_slot )
 
+        # array of assign validator for each core
+        guarantee_validator_index = {}
 
+        for x in block.extrinsic.guarantees:
+            key = x.report.core_index
+            value = set()
+            for y in x.signatures:
+                value.add(y.validator_index)
 
+            guarantee_validator_index[key] = value
+
+        guarantee_validator_index = {k: guarantee_validator_index[k] for k in (guarantee_validator_index.keys())}
+        for key in guarantee_validator_index:
+            if len(guarantee_validator_index[key]) == 3:
+                if guarantee_validator_index[key] != mapping.get(key):
+                    raise ReportingError(
+                        ReportingErrorCode.WRONG_ASSIGNMENT,
+                        "Assign wrong validator to the core"
+                    )

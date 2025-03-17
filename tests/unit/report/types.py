@@ -1,17 +1,14 @@
 from dataclasses import dataclass
 from jam.state.components.alpha import Alpha
-from jam.state.components.beta import Beta
 from jam.state.components.eta import Eta
-from jam.state.components.psi import Psi, PsiO
-from jam.types import decodable_vector, Array, Vector, U64
+from jam.state.components.psi import PsiO
+from jam.types import decodable_vector, Vector, U64
 from jam.types.extrinsics import GuaranteesExtrinsic
-from jam.types.work.refine_context import OpaqueHashes
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.json import JsonSerde
-from jam.state.components.rho import Rho, WorkReportState
-from jam.types.base.integers.fixed import U32,I64
-from jam.utils.constants import CORE_COUNT
+from jam.state.components.rho import Rho
+from jam.types.base.integers.fixed import I64
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
 from tests.unit.recent_history.types import BetaInput
@@ -79,9 +76,8 @@ class Testcase(Codable, JsonSerde):
     post_state: PostState
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 0) -> List[Testcase]:
-    data_dir = "/home/rahulcsl/Documents/tiny"
+    data_dir = "/tests/unit/report/data/tiny"
     result = []
-    position = 1
     for index, file in enumerate(os.listdir(data_dir)):
 
         if len(result) >= limit:
@@ -95,10 +91,9 @@ def get_testcases_starting_with(prefix: str = "", limit: int = 0) -> List[Testca
                 data = json.loads(f.read())
                 try:
                     tc = Testcase.from_json(data)
-                    print(f"Decoded {position}{file}")
+                    print(f"Decoded {file}")
                     result.append(tc)
                 except Exception as e:
                     print(f"❌ Failed to decode {file}: {e}")
                     continue
-        position = position + 1
     return result
