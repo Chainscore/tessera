@@ -18,6 +18,8 @@ from jam.types.block import Block
 from jam.consensus.safrole.safrole import Safrole
 from jam.recent_history.recent_history import RecentHistory
 from jam.utils.shuffle import shuffle
+from jam.state.utils.state_transformation import GeneralState
+
 
 app = FastAPI()
 
@@ -50,9 +52,10 @@ async def vaildate_safarole(request_data: RequestDataSafarole):
     try:
 
         test_block = Block.from_json(request_data.input.block)
-        # test_state = PreState.from_json(request_data.input.state)
-        # state_from_prestate = create_state_from_pre(test_state)
-        output = Safrole.transition(request_data.input.state, test_block)
+        test_state = GeneralState.from_json(request_data.input.state).to_state()
+
+        output = Safrole.transition(test_state, test_block)
+        print(output)
 
     except Exception as e:
         print("Failed XXX", e)

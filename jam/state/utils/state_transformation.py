@@ -16,12 +16,12 @@ from jam.state.components.eta import Eta
 from jam.state.components.iota import Iota
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
+from jam.state.components.nu import Nu
 from jam.state.components.phi import Phi
 from jam.state.components.pi import Pi
 from jam.state.components.psi import Psi
 from jam.state.components.rho import Rho
 from jam.state.components.tau import Tau
-from jam.state.components.theta import Theta
 from jam.state.components.xi import Xi
 from jam.state.state import State
 from jam.types.base import Bytes
@@ -137,7 +137,7 @@ class DunaDelta(Vector): ...
     tau={"skip_if_none": True},
     chi={"skip_if_none": True},
     pi={"skip_if_none": True},
-    theta={"skip_if_none": True},
+    nu={"skip_if_none": True},
     xi={"skip_if_none": True},
     accounts={"skip_if_none": True},
 )
@@ -157,7 +157,7 @@ class GeneralState(Codable, JsonSerde):
     tau: Tau
     chi: DunaChi
     pi: TestPi
-    theta: Theta
+    nu: Nu
     xi: Xi
     accounts: DunaDelta
 
@@ -211,8 +211,8 @@ class GeneralState(Codable, JsonSerde):
         if self.pi:
             state.pi = Pi([self.pi.current, self.pi.last])
 
-        if self.theta:
-            state.theta = self.theta
+        if self.nu:
+            state.nu = self.nu
 
         if self.xi:
             state.xi = self.xi
@@ -240,10 +240,9 @@ class GeneralState(Codable, JsonSerde):
 
 # NOTE: remove before merging with main
 # genesis_file = "jam/state/utils/temp_json.json"
-# genesis_file = "jam/state/utils/temp_json2.json"
+# # genesis_file = "jam/state/utils/temp_json2.json"
 # with open(genesis_file, "r") as file:
 #     genesis_data = json.loads(file.read())
-#
 #     try:
 #         tc = GeneralState.from_json(genesis_data)
 #         print("DECODED", tc)
