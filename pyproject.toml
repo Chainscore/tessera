@@ -24,6 +24,7 @@ pycryptodome = "^3.21.0"
 numpy = "2.2.3"
 uvloop = "^0.21.0"
 structlog = "^25.2.0"
+fastapi = {extras = ["standard"], version = "^0.115.11"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"
