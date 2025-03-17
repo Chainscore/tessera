@@ -13,7 +13,6 @@ class ReportingErrorCode(Enum):
     NOT_ENOUGH_GUARANTEE = "not_enough_guarantee"
     NOT_SORTED_OR_UNIQUE_GUARANTORS = "not_sorted_or_unique_guarantors"
     BAD_CORE_INDEX = "bad_core_index"
-    DUPLICATE_PACKAGE_IN_REPORT = "duplicate_package_in_report"
     DUPLICATE_PACKAGE_IN_RECENT_HISTORY = "duplicate_package_in_recent_history"
     OUT_OF_ORDER_GUARANTEE = "out_of_order_guarantee"
     TOO_MANY_DEPENDENCIES = "too_many_dependencies"

@@ -79,7 +79,7 @@ class Testcase(Codable, JsonSerde):
     post_state: PostState
 
 def get_testcases_starting_with(prefix: str = "", limit: int = 0) -> List[Testcase]:
-    data_dir = "/home/rahulcsl/Documents/tiny"
+    data_dir = "/home/dikshant441/Desktop/jam/test-file/jam-test-vectors/reports/tiny"
     result = []
     position = 1
     for index, file in enumerate(os.listdir(data_dir)):

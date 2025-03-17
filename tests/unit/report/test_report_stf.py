@@ -1,6 +1,5 @@
 from jam.report.error import ReportingError, ReportingErrorCode
 from jam.report.state import Reporting
-from jam.state.components.beta import PackageDict, Beta
 from jam.state.components.delta import AccountData
 from jam.state.state import State
 from jam.types import Boolean, Dictionary, ServiceId, Block
@@ -8,10 +7,6 @@ from tests.fixtures.dummy_block import create_dummy_block
 from tests.fixtures.dummy_state import create_dummy_state
 from tests.unit.report.types import Testcase, get_testcases_starting_with, PreState, Input
 from typing import List
-from jam.types.protocol.core import (
-    SegmentRoot,
-    WorkPackageHash,
-)
 
 def create_block_from_input(input:Input) -> Block:
 
@@ -48,7 +43,6 @@ def create_state_from_pre(pre_state: PreState) -> State:
 def vector_transition(vector:Testcase) -> Boolean:
     test_state = create_state_from_pre(vector.pre_state)
     test_block = create_block_from_input(vector.input)
-    post_state = create_state_from_pre(vector.post_state)
     try:
         output = Reporting.transition(test_state, test_block)
         assert output == create_state_from_pre(vector.post_state)
