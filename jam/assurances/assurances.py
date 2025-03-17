@@ -24,7 +24,16 @@ class Assurances:
 
     @staticmethod
     def transition(state: State, block: Block) -> State:
-        """Process the assurances extrinsic."""
+        """
+        Process the assurances extrinsic.
+        
+        Args:
+            state: The current state of the chain.
+            block: The block to process.
+
+        Returns:
+            The new state of the chain.
+        """
         # Make a copy of the state
         new_state = dataclasses.replace(state)
 
