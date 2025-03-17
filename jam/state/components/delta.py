@@ -50,9 +50,9 @@ class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
 @decodable_dataclass
 @dataclass
 class AccountData(Codable, JsonSerde):
-    storage: AccountStorage
-    lookup: PreImageLookup
-    timestamps: LookupTimestamps
+    storage: AccountStorage 
+    lookup: PreImageLookup  
+    timestamps: LookupTimestamps 
     code_hash: ServiceCodeHash
     balance: Balance
     gas_limit: Gas
