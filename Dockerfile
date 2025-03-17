@@ -40,4 +40,5 @@ CMD [ "fastapi dev api-service.py", "--port", "8000" ]
 EXPOSE 8000
 
 # Run the application
-CMD ["poetry", "run", "jam"]
+# Run the FastAPI application
+CMD ["poetry", "run", "fastapi", "run", "jam/api/api-service.py", "--host", "0.0.0.0", "--port", "8000"]
