@@ -177,8 +177,8 @@ class Reporting:
                 "Length of sum of result and auth_output should be less than 48 * 2**10 "
             )
 
-        Reporting.refinement_fn(state, block)
-        Reporting.result_fn(state,block)
+        Reporting.ensure_valid_refinement_context(state, block)
+        Reporting.ensure_valid_report_result(state,block)
         wrong_assignment(state, block)
 
         for x in block.extrinsic.guarantees:
@@ -193,7 +193,20 @@ class Reporting:
 
 
     @staticmethod
-    def refinement_fn(state:State,block:Block):
+    def ensure_valid_refinement_context(state:State,block:Block):
+
+        """
+        Description: This function takes two arguments and checks for all the testcases related to refinement contex section of each report.
+
+        Args:
+            state: This is the state on which transition happen or another state to get previous and curr data (like validators)
+            block: This is the recent block (modified according to the input provided in the testcases) to be added on-chain and to get all information(like header, slot, extrinsic)
+
+        Returns:
+            Returns error according to specific testcases.
+
+
+        """
 
         exports_root = []
         work_package_hashes = []
@@ -214,27 +227,32 @@ class Reporting:
 
         for y in block.extrinsic.guarantees:
             context = y.report.context
-
+            # --------------- anchor_not_recent -------------------
+            # https://graypaper.fluffylabs.dev/#/85129da/152801152b01?v=0.6.3
+            # Eq 11.33
             if context.anchor not in header_hashes:
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
                     "Anchor hash should match with header hash of any block in recent history"
                 )
-
+            # --------------- bad_state_root -------------------
             if not any(item.state_root == context.state_root for item in state.beta):
                 raise ReportingError(
                     ReportingErrorCode.BAD_STATE_ROOT,
                     "State_root should match with any block state_root in recent history"
                 )
-
+            # --------------- dependency_missing -------------------
+            # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
+            # Eq 11.39
             if context.prerequisites != Null or y.report.segment_root_lookup != Null: # changed from is not None to != Null
                  for x in context.prerequisites:
                     if x not in hashes and x not in work_package_hashes:
                         raise ReportingError(
                             ReportingErrorCode.DEPENDENCY_MISSING,
-                            ""
+                            "prerequisite's hash should match the package_specification's hash of any of the reports"
                         )
-
+            # --------------- segment_root_lookup_invalid -------------------
+            # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
             if  y.report.segment_root_lookup != Null:
                 for x in y.report.segment_root_lookup:
                     if x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes or (x.segment_tree_root != y.report.package_spec.exports_root and x.segment_tree_root not in exports_root):
@@ -244,25 +262,42 @@ class Reporting:
                         )
 
     @staticmethod
-    def result_fn(state:State,block:Block):
+    def ensure_valid_report_result(state:State,block:Block):
+
+        """
+               Description: This function takes two arguments and checks for all the testcases related to results section of each report.
+
+               Args:
+                   state: This is the state on which transition happen or another state to get previous and curr data (like validators)
+                   block: This is the recent block (modified according to the input provided in the testcases) to be added on-chain and to get all information(like header, slot, extrinsic)
+
+               Returns:
+                   Returns error according to specific testcases.
+
+        """
 
         results = block.extrinsic.guarantees
 
         for x in results:
             total_accumulate_gas = 0
             for y in x.report.results:
+                # --------------- bad_service_id -------------------
                 if y.service_id not in state.delta:
                     raise ReportingError(
                         ReportingErrorCode.BAD_SERVICE_ID,
                         "Service_id of each report should match with id of delta"
                     )
-
+                # --------------- bad_code_hash -------------------
+                # https://graypaper.fluffylabs.dev/#/85129da/153302153502?v=0.6.3
+                # Eq 11.42
                 if y.code_hash != state.delta[y.service_id].code_hash:
                     raise ReportingError(
                         ReportingErrorCode.BAD_CODE_HASH,
                         "Result code_hash should match with state's delta code_hash"
                     )
-
+                # --------------- service_item_gas_too_low -------------------
+                # https://graypaper.fluffylabs.dev/#/85129da/15f80015fa00?v=0.6.3
+                # Eq 11.30
                 if y.accumulate_gas < state.delta[y.service_id].min_gas:
                     raise ReportingError(
                         ReportingErrorCode.SERVICE_ITEM_GAS_TOO_LOW,
@@ -270,7 +305,9 @@ class Reporting:
                     )
 
                 total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
-
+            # --------------- work_report_gas_too_high -------------------
+            # https://graypaper.fluffylabs.dev/#/85129da/15fa0015fd00?v=0.6.3
+            # Eq 11.30
             if total_accumulate_gas > ACCUMULATION_GAS:
                 raise ReportingError(
                     ReportingErrorCode.WORK_REPORT_GAS_TOO_HIGH,
