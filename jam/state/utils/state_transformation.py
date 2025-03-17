@@ -41,10 +41,10 @@ from tests.unit.statistics.types import Pi as TestPi
 @decodable_dataclass
 @dataclass
 class DunaGamma(Codable, JsonSerde):
-    gamma_k: GammaK
-    gamma_a: GammaA
-    gamma_s: GammaS
-    gamma_z: GammaZ
+    k: GammaK
+    a: GammaA
+    s: GammaS
+    z: GammaZ
 
 
 @decodable_dataclass
@@ -176,10 +176,10 @@ class GeneralState(Codable, JsonSerde):
             state.beta = self.beta.to_beta()
 
         if self.gamma:
-            state.gamma.k = self.gamma.gamma_k
-            state.gamma.a = self.gamma.gamma_a
-            state.gamma.s = self.gamma.gamma_s
-            state.gamma.z = self.gamma.gamma_z
+            state.gamma.k = self.gamma.k
+            state.gamma.a = self.gamma.a
+            state.gamma.s = self.gamma.s
+            state.gamma.z = self.gamma.z
 
         if self.psi:
             state.psi = self.psi
