@@ -1,7 +1,7 @@
-jam.state.components.theta module
+jam.state.components.nu module
 =================================
 
-.. automodule:: jam.state.components.theta
+.. automodule:: jam.state.components.nu
    :members:
    :undoc-members:
    :show-inheritance:

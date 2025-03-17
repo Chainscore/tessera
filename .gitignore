@@ -47,3 +47,5 @@ ENV/
 
 .cursorrules
 .cursorignore
+
+azure_logs/
