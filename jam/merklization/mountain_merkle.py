@@ -23,7 +23,7 @@ class MMRFunctions:
 
     def __init__(self):
         super().__init__()
-        self._ZERO_HASH = ByteArray32([0] * 32)
+        self._ZERO_HASH = OpaqueHash([0] * 32)
         self._PEAK_PREFIX = bytes('peak', 'utf-8')
 
     @staticmethod
@@ -148,11 +148,19 @@ class MMRFunctions:
             return self._ZERO_HASH
 
         elif len(mmr) == 1:
-            return mmr[0]
+            if mmr[0] == OptionHash(Null):
+                return self._ZERO_HASH
+            else:
+                return mmr[0]
+                # return OpaqueHash(mmr[0].get_value())
 
         else:
             mmr_dash = mmr[:-1]
-            if mmr[-1] is not Null:
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(self.super_peak(mmr_dash)) + bytes(mmr[-1]))
-            else:
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(self.super_peak(mmr_dash)))
+
+            val = (self.super_peak(mmr_dash))
+
+            if val != OptionHash(Null) and mmr[-1] != OptionHash(Null):
+                return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(mmr[-1].get_value()))
+
+            elif val != OptionHash(Null) and mmr[-1] == OptionHash(Null):
+                return Hash.keccak256(self._PEAK_PREFIX + bytes(val.get_value()))
