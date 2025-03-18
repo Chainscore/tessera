@@ -38,3 +38,4 @@ EXPOSE 8000
 # Run the application
 # Run the FastAPI application
 CMD ["poetry", "run", "jam", "fastapi",  "jam/api/api-service.py", "--host", "0.0.0.0", "--port", "8000"]
+
