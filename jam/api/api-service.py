@@ -55,9 +55,10 @@ async def safrole(request_data: RequestData):
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
-        transition_output = Safrole.transition(test_state, test_block)
-        output_state = GeneralState.from_json(request_data.output.state).to_state()
 
+        transition_output = Safrole.transition(test_state, test_block)
+        print("conversion successs")
+        output_state = GeneralState.from_json(request_data.output.state).to_state()
         if (transition_output == output_state):
             return Boolean(True)
 
@@ -132,6 +133,7 @@ async def disputes(request_data: RequestData):
 
 @app.post("/api/v1/assurances/validate")
 async def assurances(request_data: RequestData):
+
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
@@ -139,7 +141,9 @@ async def assurances(request_data: RequestData):
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
         if (transition_output == output_state):
+            print("conversion success")
             return Boolean(True)
+
     except Exception as e:
         print("Failed XXX", e)
         return Boolean(False)
