@@ -1,11 +1,27 @@
+from jam.state.components.alpha import Alpha
+from jam.state.components.eta import Eta
+from jam.state.components.pi import Pi
+from jam.state.components.psi import Psi
+from jam.state.components.kappa import Kappa
+from jam.state.components.lambda_ import Lambda_
+from jam.state.components.rho import Rho
+from jam.state.components.tau import Tau
+from jam.state.components.chi import Chi
 from jam.state.components.sigma import Sigma
+from jam.state.components.iota import Iota
+from jam.state.components.nu import Nu
+from jam.state.components.xi import Xi
 from jam.state.merkle import StateMerkle
 from jam.state.utils.key_constructor import construct_state_key
+from jam.state.components.phi import Phi
+from jam.state.components.beta import Beta
+from jam.consensus.safrole.gamma import Gamma
 from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.protocol.core import Balance, Gas
 from jam.types.protocol.crypto import Hash
-
+from jam.types.protocol.crypto import OpaqueHash
 # from jam.types.block import Block
 # from jam.authorization.authorization import Authorization
 # from jam.recent_history.recent_history import RecentHistory
@@ -98,15 +114,63 @@ class State(Sigma):
             **service_lookup,
         }
 
-    # @staticmethod
-    # def detransform(state: dict) -> "State":
-    #     """Inverse of transform"""
-    #     # Start with finding all core state components 1-15
-    #     # Loop thru the whole state dict
-    #     for key, value in state.items():
-    #         if key[0] <= 15 or key[0] == 255:
-    #             if key[0] == 1:
-    #                 alpha = Alpha.decode_from()
+    @staticmethod
+    def detransform(state: dict) -> "State":
+        """Inverse of transform"""
+        # Loop thru the whole state dict
+        delta = {}
+        for key, value in state.items():
+            # Start with finding all core state components 1-15
+            if (key[0] <= 15) and bytes(key[0:32]) == 0:
+                if key[0] == 1:
+                    alpha, _ = Alpha.decode_from(value)
+                elif key[0] == 2:
+                    phi, _ = Phi.decode_from(value)
+                elif key[0] == 3:
+                    beta, _ = Beta.decode_from(value)
+                elif key[0] == 4:
+                    gamma, _ = Gamma.decode_from(value)
+                elif key[0] == 5:
+                    psi, _ = Psi.decode_from(value)
+                elif key[0] == 6:
+                    eta, _ = Eta.decode_from(value)
+                elif key[0] == 7:
+                    iota, _ = Iota.decode_from(value)
+                elif key[0] == 8:
+                    kappa, _ = Kappa.decode_from(value)
+                elif key[0] == 9:
+                    lambda_, _ = Lambda_.decode_from(value)
+                elif key[0] == 10:
+                    rho, _ = Rho.decode_from(value)
+                elif key[0] == 11:
+                    tau, _ = Tau.decode_from(value)
+                elif key[0] == 12:
+                    chi, _ = Chi.decode_from(value)
+                elif key[0] == 13:
+                    pi, _ = Pi.decode_from(value)
+                elif key[0] == 14:
+                    nu, _ = Nu.decode_from(value)
+                elif key[0] == 15:
+                    xi, _ = Xi.decode_from(value)
+            # Then find all services (first byte is 255, rest is service id)
+            elif key[0] == 255:
+                service_id = int(Bytes([key[1], key[3], key[5], key[7]]))
+                total_offset = 0
+                ac, offset = OpaqueHash.decode_from(value, total_offset)
+                total_offset += offset
+                ab, offset = Balance.decode_from(value, total_offset)
+                total_offset += offset
+                ag, offset = Gas.decode_from(value, total_offset)
+                total_offset += offset
+                am, offset = Gas.decode_from(value, total_offset)
+                total_offset += offset
+                ao, offset = Gas.decode_from(value, total_offset)
+                total_offset += offset
+                ai, offset = U32.decode_from(value, total_offset)
+                total_offset += offset
+                # Find all preimages ()
+                
+                
 
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
