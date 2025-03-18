@@ -26,11 +26,11 @@ jobs:
       - name: Set deployment specific variables
         run: |
           if [[ ${{ github.ref }} == 'refs/heads/develop' ]]; then
-            echo "CONTAINER_NAME=tessera-node-develop" >> $GITHUB_ENV
+            echo "CONTAINER_NAME=tessera-node-develop2" >> $GITHUB_ENV
             echo "IMAGE_TAG=develop" >> $GITHUB_ENV
             echo "DNS_LABEL=tessera-jam-node-develop" >> $GITHUB_ENV
           else
-            echo "CONTAINER_NAME=tessera-node" >> $GITHUB_ENV
+            echo "CONTAINER_NAME=tessera-node2" >> $GITHUB_ENV
             echo "IMAGE_TAG=latest" >> $GITHUB_ENV
             echo "DNS_LABEL=tessera-jam-node" >> $GITHUB_ENV
           fi
