@@ -162,6 +162,7 @@ class Reporting:
                 )
             )
 
+
         return new_state
 
     @staticmethod

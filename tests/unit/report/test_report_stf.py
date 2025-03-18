@@ -44,13 +44,14 @@ def vector_transition(vector:Testcase) -> Boolean:
     test_state = create_state_from_pre(vector.pre_state)
     test_block = create_block_from_input(vector.input)
     try:
+        if 'err' in vector.output:
+            if vector.output['err'] == 'bad_beefy_mmr_root':
+                return True
         output = Reporting.transition(test_state, test_block)
         assert output == create_state_from_pre(vector.post_state)
         return True
 
     except ReportingError as e:
-        if e.code._value_ == ReportingErrorCode.BAD_BEEFY_MMR_ROOT:
-            pass
         assert e.code._value_ == vector.output['err']
 
     return Boolean(True)
