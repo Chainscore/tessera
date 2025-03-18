@@ -13,9 +13,9 @@ on:
         default: true
 
 env:
-  RESOURCE_GROUP: tessera
-  IMAGE_NAME: tessera.azurecr.io/tessera/jam-node
-  ACR_NAME: tessera
+  RESOURCE_GROUP: chainscore
+  IMAGE_NAME: chainscore.azurecr.io/chainscore/jam-node
+  ACR_NAME: chainscore
   CPU: "2"
   MEMORY: "4"
 
