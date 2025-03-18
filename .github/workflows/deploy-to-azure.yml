@@ -99,7 +99,7 @@ jobs:
               --cpu ${{ env.CPU }} \
               --memory ${{ env.MEMORY }} \
               --environment-variables JAM_DEBUG=$DEBUG_MODE \
-              --ports 30333 \
+              --ports 8000 \
               --dns-name-label "${{ env.DNS_LABEL }}" \
               --restart-policy Never \
               --os-type Linux
