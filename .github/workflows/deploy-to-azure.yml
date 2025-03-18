@@ -62,6 +62,7 @@ jobs:
           platforms: linux/amd64
 
       - name: Check if container exists and delete
+        if: github.event_name != 'pull_request'
         uses: azure/CLI@v1
         with:
           inlineScript: |
@@ -71,6 +72,7 @@ jobs:
             fi
 
       - name: Get ACR credentials
+        if: github.event_name != 'pull_request'
         id: get-acr-creds
         uses: azure/CLI@v1
         with:
@@ -81,7 +83,8 @@ jobs:
             echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_OUTPUT
 
       - name: Create Azure Container Instance
-        uses: azure/CLI@v1
+        if: github.event_name != 'pull_request'
+        uses: azure/CLI@v2
         with:
           inlineScript: |
             DEBUG_MODE=${{ github.event.inputs.debug_mode || 'true' }}
@@ -102,7 +105,8 @@ jobs:
               --os-type Linux
 
       - name: Get container logs
-        uses: azure/CLI@v1
+        if: github.event_name != 'pull_request'
+        uses: azure/CLI@v2
         with:
           inlineScript: |
             echo "Container created!"
@@ -110,8 +114,8 @@ jobs:
             az container logs --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }}
 
       - name: Debug information
-        if: ${{ github.event.inputs.debug_mode != 'false' }}
-        uses: azure/CLI@v1
+        if: ${{ github.event.inputs.debug_mode != 'false' && github.event_name != 'pull_request' }}
+        uses: azure/CLI@v2
         with:
           inlineScript: |
             echo "Container running in DEBUG mode"
