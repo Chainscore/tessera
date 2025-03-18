@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+
+from jam.types import decodable_option, Option
 from jam.types.base.choices import Choice
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.array import Array, decodable_array
@@ -9,6 +11,10 @@ from jam.utils.constants import CORE_COUNT
 from jam.utils.json.serde import JsonSerde
 
 
+
+
+
+
 @decodable_dataclass
 @dataclass
 class AvailabilityAssignment(Codable, JsonSerde):
@@ -16,11 +22,12 @@ class AvailabilityAssignment(Codable, JsonSerde):
 
     report: WorkReport
     timeout: U32
-
+@decodable_option(AvailabilityAssignment)
+class AvailabilityOption(Option): ...
 
 """Fixed-size array of availability assignments."""
 
 
-@decodable_array(length=CORE_COUNT, element_type=Choice)
-class AvailabilityAssignments(Array[Choice]):
+@decodable_array(length=CORE_COUNT, element_type=AvailabilityOption)
+class AvailabilityAssignments(Array[AvailabilityOption]):
     ...
