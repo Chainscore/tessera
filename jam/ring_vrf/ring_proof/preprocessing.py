@@ -1,0 +1,151 @@
+from jam.ring_vrf.ring_proof.constants import omega, S_PRIME, Blinding_Base
+from sympy import  symbols
+from jam.ring_vrf.ring_proof.helpers import unzip, do_modulus
+from jam.ring_vrf.ring_proof.short_weierstrass import short_to_te
+from jam.ring_vrf.ring_proof.short_weierstrass_curve_ops import point_multiplication, point_addition
+from jam.ring_vrf.ring_proof.polynomial_interpolation import polynomial_interpolation,check_is_valid
+from jam.ring_vrf.ring_proof.KZG_polynomial_commit_open_verify import commit_to_polynomial
+
+size=N = 10 #sample size
+
+D = [pow(omega, i, S_PRIME) for i in range(1, size + 1)]
+
+# check1
+# for i in D:
+#     print(i <= S_PRIME)
+# print("Length of D:", len(D))
+# pk_x_list = [21152057402729667312496293294297764832832212584798595855305715986087432315110,22701128027605163255287479990904743371228537263771121146122946136409432257751,47071946321903207716315688985633358316651320322927034140049218360019572291435,15399555213624974946722003193908857493365446701741213785216372151566726652259,4908528150439625350545851300040765924448743948727272381070201966612746241443,1044436883726687888193890742367257796823071590799272213003472024843701428481,6404236510134289295155353938933732952593235524451835124112637039459751528990,45757562599000416476139925801153738685378181758776245848411431656697549280147]
+# print(D)
+
+
+# H's Scaled Multiples
+def h_vector(Blinding_Base,size=10):
+    """
+    input: Blinding Base
+    output:H_Vector
+    """
+    #convert B_B into SW point
+    Blinding_Base= short_to_te(Blinding_Base)
+    H_Vct = []
+    for i in range(size):
+        New_H_point = point_multiplication(2**i, Blinding_Base)
+        H_Vct.append(New_H_point)
+    return H_Vct
+
+# H_vector=h_vector(Blinding_Base)
+
+# Public input preprocessing
+def public_intput_preprocessing(Ring_of_pkeys, H_Vector,size=10):
+    """
+    input: Public keys ring,  pedersen blinding base
+    output: Px,Py
+    """
+    for i in range(0,size-4-len(Ring_of_pkeys)):
+        Ring_of_pkeys.append(H_Vector[i])
+
+    for i in range(4):
+        Ring_of_pkeys.append((0,0))
+
+    return Ring_of_pkeys
+
+# print(public_intput_preprocessing([1,2,3,4,5],H_vector))
+
+# selector vector
+def selector_vector(Ring_of_pk,size=10):
+    """
+    input: ring of public key's
+    output: selecting vector having 0/1
+    """
+    s_vector = []
+    N_K=size-len(Ring_of_pk)
+    for i in range(size):
+        if i<N_K:
+            s_vector.append(1)
+        else:
+            s_vector.append(0)
+    return s_vector
+
+# print(selector_vector([1,2,3,4,5]))
+
+
+def relation_to_prove(k,t,H,Ring_of_pk):
+    """
+    input:Prover Secret Scalar, Prover index, Blinding Base, Ring_of_pk
+    """
+    Pk=Ring_of_pk[k]
+    R=point_addition(Pk ,point_multiplication(t, H))
+    return R
+
+
+def interpolation_to_resulting_vectors(D, x_vector):
+    """
+
+    """
+    interpolated_poly=polynomial_interpolation(D,x_vector)
+    return do_modulus(interpolated_poly)
+
+
+def commitment_to_constructed_vectors(polynomial):
+    """
+
+    """
+    poly_commitment= commit_to_polynomial(polynomial)
+    return poly_commitment
+
+
+
+
+# Pk_x_y = [(21152057402729667312496293294297764832832212584798595855305715986087432315110,8600616026692704040561837643103488293369364320895395780204394900161931326075), (22701128027605163255287479990904743371228537263771121146122946136409432257751,51486106944809842873218842767456544099764456483473004009171982934696869605843), (47071946321903207716315688985633358316651320322927034140049218360019572291435,31498498211557646914848178400790749454392072658262487773299925944603879612246), (15399555213624974946722003193908857493365446701741213785216372151566726652259,2978269951633892242536971685561965424783123163672102774715828837293640488861), (4908528150439625350545851300040765924448743948727272381070201966612746241443,5436701823404652213002659541233409199955571924915761824043064116504573235535), (1044436883726687888193890742367257796823071590799272213003472024843701428481,25280779625090634708313710177907367206517307309657328296160432443295854940294), (6404236510134289295155353938933732952593235524451835124112637039459751528990,12403747724083786716350619620411580822982938332919905142724531849944744488877), (45757562599000416476139925801153738685378181758776245848411431656697549280147,40400479491766310513769902546033620536908034113240983495824802513821276085567)]
+
+Ring_of_pk = [(21152057402729667312496293294297764832832212584798595855305715986087432315110,8600616026692704040561837643103488293369364320895395780204394900161931326075), (22701128027605163255287479990904743371228537263771121146122946136409432257751,51486106944809842873218842767456544099764456483473004009171982934696869605843), (47071946321903207716315688985633358316651320322927034140049218360019572291435,31498498211557646914848178400790749454392072658262487773299925944603879612246), (15399555213624974946722003193908857493365446701741213785216372151566726652259,2978269951633892242536971685561965424783123163672102774715828837293640488861), (4908528150439625350545851300040765924448743948727272381070201966612746241443,5436701823404652213002659541233409199955571924915761824043064116504573235535)]  #, (1044436883726687888193890742367257796823071590799272213003472024843701428481,25280779625090634708313710177907367206517307309657328296160432443295854940294), (6404236510134289295155353938933732952593235524451835124112637039459751528990,12403747724083786716350619620411580822982938332919905142724531849944744488877), (45757562599000416476139925801153738685378181758776245848411431656697549280147,40400479491766310513769902546033620536908034113240983495824802513821276085567)]
+Result_point=relation_to_prove(3,21,Blinding_Base,Ring_of_pk)
+# print(Result_point)
+s_vector=selector_vector(Ring_of_pk,10)
+# print(s_vector)
+H_vector=h_vector(Blinding_Base)
+# print(H_vector)
+p_pk_ring = public_intput_preprocessing(Ring_of_pk, H_vector)
+# print(p_pk_ring)
+px_v,py_v=unzip(p_pk_ring)
+# print(px_v,'\n',py_v)
+
+# #interpolation of resulting vectors
+px_I=interpolation_to_resulting_vectors(D,px_v)
+py_I=interpolation_to_resulting_vectors(D,py_v)
+s_v_I=interpolation_to_resulting_vectors(D,s_vector)
+
+
+
+# check whether interpolation is accurate
+# print(check_is_valid(px_I,D,px_v))
+# print(check_is_valid(py_I,D,py_v))
+# print(check_is_valid(s_v_I,D,s_vector))
+# #
+# print(px_I,'\n',px_I,'\n',s_v_I)
+
+# #commitment to constructed vectors
+C_px=commitment_to_constructed_vectors(px_I)
+C_py=commitment_to_constructed_vectors(py_I)
+C_s=commitment_to_constructed_vectors(s_v_I)
+
+# print(C_px,'\n',C_py,'\n',C_s)
+
+
+
+
+
+
+
+
+
+
+
+
+
+# S_V = selector_vector(p_pk_ring, Ring_of_pk)
+# print("Selector Vector:", S_V)
+# print(len(S_V))
+# print("Relation to Proove:",relation_to_prove(3,7,Blinding_Base,Ring_of_pk))
+# print("px",px)
+# print("py",py)
+# print("public_key_Ring:", p_pk_ring)
