@@ -2,7 +2,7 @@ name: Deploy to Azure Container Instance
 
 on:
   push:
-    branches: [ main, staging ]
+    branches: [ main, develop ]
   workflow_dispatch:
     inputs:
       debug_mode:
@@ -23,10 +23,10 @@ jobs:
     steps:
       - name: Set deployment specific variables
         run: |
-          if [[ ${{ github.ref }} == 'refs/heads/staging' ]]; then
-            echo "CONTAINER_NAME=tessera-node-staging" >> $GITHUB_ENV
-            echo "IMAGE_TAG=staging" >> $GITHUB_ENV
-            echo "DNS_LABEL=tessera-jam-node-staging" >> $GITHUB_ENV
+          if [[ ${{ github.ref }} == 'refs/heads/develop' ]]; then
+            echo "CONTAINER_NAME=tessera-node-develop" >> $GITHUB_ENV
+            echo "IMAGE_TAG=develop" >> $GITHUB_ENV
+            echo "DNS_LABEL=tessera-jam-node-develop" >> $GITHUB_ENV
           else
             echo "CONTAINER_NAME=tessera-node" >> $GITHUB_ENV
             echo "IMAGE_TAG=latest" >> $GITHUB_ENV
