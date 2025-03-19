@@ -1,5 +1,14 @@
 name: Deploy to Azure Container Instance
 
+# NOTE: This workflow deploys the container with HTTP access on port 8000.
+# To access the service via HTTPS (https://FQDN/), you'll need to set up an Azure Front Door or 
+# Application Gateway in front of this container instance to handle SSL termination.
+# Follow these steps:
+# 1. Create an Azure Front Door or Application Gateway resource
+# 2. Configure it with an SSL certificate for your domain
+# 3. Set the backend to point to your container instance's FQDN on port 8000
+# 4. Route traffic from https://yourdomain.com/ to the backend
+
 on:
   push:
     branches: [ main, develop ]
@@ -85,7 +94,7 @@ jobs:
             if az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} >/dev/null 2>&1; then
               echo "Container exists, restarting to pull latest image..."
               
-              # For existing containers, just restart to pull the latest image with the same tag
+              # For existing containers, just restart to pull the latest image
               MAX_RETRIES=3
               RETRY_COUNT=0
               RESTARTED=false
@@ -129,6 +138,7 @@ jobs:
                   --memory ${{ env.MEMORY }} \
                   --environment-variables JAM_DEBUG=$DEBUG_MODE \
                   --ports 8000 \
+                  --ip-address Public \
                   --dns-name-label "${{ env.DNS_LABEL }}" \
                   --restart-policy Never \
                   --os-type Linux; then
@@ -160,14 +170,16 @@ jobs:
             # Get the FQDN of the container
             FQDN=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} --query "ipAddress.fqdn" -o tsv)
             
-            # Check if service is responsive
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${FQDN}:8000/health || echo "Failed")
+            # Check if service is responsive on port 8000
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${FQDN}:8000/docs || echo "Failed")
             
             if [[ "$HTTP_STATUS" == "200" ]]; then
-              echo "✅ Service is healthy"
+              echo "✅ Service is healthy on port 8000"
+              echo "NOTE: To access via HTTPS, you'll need to set up Azure Front Door or Application Gateway"
             else
               echo "❌ Service is not responding correctly. Status: $HTTP_STATUS"
               echo "You may need to check logs for more details"
+              exit 1
             fi
 
       - name: Debug information
