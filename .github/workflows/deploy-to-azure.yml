@@ -148,15 +148,6 @@ jobs:
               done
             fi
 
-      - name: Get container logs
-        if: github.event_name != 'pull_request'
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            echo "Container created!"
-            echo "Container logs:"
-            az container logs --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }}
-
       - name: Verify deployment health
         if: github.event_name != 'pull_request'
         uses: azure/CLI@v2
