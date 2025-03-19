@@ -1,18 +1,7 @@
 name: Deploy to Azure Container Instance
 
-# NOTE: This workflow deploys the container with HTTP access on port 8000.
-# To access the service via HTTPS (https://FQDN/), you'll need to set up an Azure Front Door or 
-# Application Gateway in front of this container instance to handle SSL termination.
-# Follow these steps:
-# 1. Create an Azure Front Door or Application Gateway resource
-# 2. Configure it with an SSL certificate for your domain
-# 3. Set the backend to point to your container instance's FQDN on port 8000
-# 4. Route traffic from https://yourdomain.com/ to the backend
-
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
     inputs:
@@ -73,7 +62,6 @@ jobs:
           platforms: linux/amd64
 
       - name: Get ACR credentials
-        if: github.event_name != 'pull_request'
         id: get-acr-creds
         uses: azure/CLI@v2
         with:
@@ -84,7 +72,6 @@ jobs:
             echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_OUTPUT
 
       - name: Update or Create Azure Container Instance
-        if: github.event_name != 'pull_request'
         uses: azure/CLI@v2
         with:
           inlineScript: |
@@ -159,7 +146,6 @@ jobs:
             fi
 
       - name: Verify deployment health
-        if: github.event_name != 'pull_request'
         uses: azure/CLI@v2
         with:
           inlineScript: |
@@ -183,7 +169,7 @@ jobs:
             fi
 
       - name: Debug information
-        if: ${{ github.event.inputs.debug_mode != 'false' && github.event_name != 'pull_request' }}
+        if: ${{ github.event.inputs.debug_mode != 'false' }}
         uses: azure/CLI@v2
         with:
           inlineScript: |
