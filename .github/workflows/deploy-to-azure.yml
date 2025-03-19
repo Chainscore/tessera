@@ -62,8 +62,6 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           platforms: linux/amd64
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Scan Docker image for vulnerabilities
         uses: aquasecurity/trivy-action@master
@@ -209,13 +207,3 @@ jobs:
             
             # Try to access container shell
             az container exec --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} --exec-command "/bin/bash -c 'ls -la /app/data || echo \"No data directory yet\"'" 
-
-      - name: Send deployment notification
-        if: github.event_name != 'pull_request' && always()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
-          text: "Deployment to ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }} ${{ job.status }}"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} 
