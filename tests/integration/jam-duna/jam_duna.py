@@ -27,7 +27,7 @@ from jam.state.components.pi import Pi
 from jam.state.components.psi import Psi
 from jam.state.components.rho import Rho
 from jam.state.components.tau import Tau
-from jam.state.components.theta import Theta
+from jam.state.components.nu import Nu
 from jam.state.components.xi import Xi
 from jam.state.state import State
 from jam.types.base import Bytes
@@ -142,7 +142,7 @@ class DunaState(Codable, JsonSerde):
     tau: Tau
     chi: DunaChi
     pi: TestPi
-    theta: Theta
+    theta: Nu
     xi: Xi
     accounts: DunaDelta
 
@@ -205,7 +205,8 @@ start_slot = 13
 initial_state = tc.to_state()
 
 if __name__ == "__main__":
-    print(initial_state.generate_root())
+    transform_state=initial_state.transform()
+    State.detransform(transform_state)
     # asyncio.run(main("from jam duna", initial_state, start_slot, rpc_url))
 
 # Command to run file: 'python tests/integration/jam-duna/jam_duna.py'
