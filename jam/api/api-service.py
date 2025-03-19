@@ -11,6 +11,7 @@ from jam.types.base.sequences.bytes import ByteArray32
 from jam.preimages.preimages import Preimages
 from jam.types.block import Block
 from jam.consensus.safrole.safrole import Safrole
+from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 from jam.recent_history.recent_history import RecentHistory
 from jam.utils.shuffle import shuffle
 from jam.state.utils.state_transformation import GeneralState
@@ -55,18 +56,22 @@ async def safrole(request_data: RequestData):
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
+        print("conversion successs")
 
         transition_output = Safrole.transition(test_state, test_block)
-        print("conversion successs")
+        print("transition successs")
         output_state = GeneralState.from_json(request_data.output.state).to_state()
         if (transition_output == output_state):
-            return Boolean(True)
+            return {"ok": None}
+        else:
+            return {"err": "output_mismatch"}
 
+    except SafroleError as e:
+        print("Failed:", e.code._value_)
+        return {"err": e.code._value_}
     except Exception as e:
-        print("Failed XXX", e)
-        return Boolean(False)
-
-    return Boolean(False)
+        print("Unexpected error:", str(e))
+        return {"err": "unexpected_error"}
 
 
 @app.post("/api/v1/shuffle/validate")
@@ -76,7 +81,7 @@ async def shuffle_validate(request_data: RequestDataShuffle):
         test_entropy = request_data.input.entropy
         shuffle_transition = shuffle(test_entropy, request_data.input.input)
         if(shuffle_transition == request_data.output.output):
-            return Boolean(True);
+            return Boolean(True)
 
     except Exception as e:
         print("Failed XXX", e)

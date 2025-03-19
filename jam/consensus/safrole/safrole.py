@@ -79,7 +79,7 @@ class Safrole:
             new_state.kappa = new_kappa
             filtered_validators=[]
             for k in pre_state.iota:
-                if k.ed25519 in pre_state.psi.o:
+                if k.ed25519 in pre_state.psi.offenders:
                     # Offender found, replace with default ValidatorData
                     filtered_validators.append(ValidatorData(bandersnatch=ByteArray32(bytes(32)), ed25519=ByteArray32(bytes(32)), bls=k.bls, metadata=k.metadata))
                 else:
