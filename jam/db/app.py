@@ -71,11 +71,11 @@ with open(genesis_file, "r") as file:
 rpc_url = "http://localhost:3001/blocks"
 start_slot = 13
 initial_state = tc.to_state()
-print('initial state',initial_state)
+# print('initial state',initial_state)
 
 if __name__ == "__main__":
     transform_state=initial_state.transform()
-    print('transfrom state',list(transform_state.keys()))
+    # print('transfrom state',list(transform_state.keys()))
 
 
 # Open RocksDB
@@ -86,12 +86,12 @@ data = transform_state
 test_data = {}
 
 for key, value in data.items():
-    test_data[bytes(key).hex()] = bytes(value).hex()
+    test_data[Bytes(key).hex()] = Bytes(value).hex()
 
-print('test  data',test_data)
+# print('test  data',test_data)
 
-for keys in data:
-    print('keeeeeyyy',(Bytes(keys).hex()))
+# for keys in data:
+#     print('keeeeeyyy',(Bytes(keys).hex()))
 
 # Convert dictionary to JSON string
 json_data = json.dumps(test_data)
@@ -103,6 +103,8 @@ db.put(b'user:1', json_data.encode())
 retrieved_data = db.get(b'user:1')
 if retrieved_data:
     dict_data = json.loads(retrieved_data.decode())
-    print(dict_data)  # Output: {'name': 'Alice', 'age': 25, 'city': 'New York'}
+    for key in dict_data:
+        print(dict_data[key])
+    # print(dict_data)  # Output: {'name': 'Alice', 'age': 25, 'city': 'New York'}
 
 db.close()
