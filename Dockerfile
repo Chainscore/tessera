@@ -33,7 +33,7 @@ RUN poetry install --no-interaction --no-ansi $(poetry --version | grep -q "Poet
 RUN mkdir -p data/db && chmod -R 777 data
 
 # Expose application port
-EXPOSE 8000
+EXPOSE 8000 80
 
 # Run the application
 #CMD ["poetry", "run", "jam"]

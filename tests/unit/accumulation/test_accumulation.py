@@ -105,7 +105,6 @@ def vector_transition(vector: Testcase) -> Boolean:
     return Boolean(True)
 
         
-
 def test_accumulation_transition():
     """Test accumulation transition with various test vectors"""
     vectors: List[Testcase] = get_testcases_starting_with(
