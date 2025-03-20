@@ -22,7 +22,7 @@ from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.core import Balance, Gas
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.crypto import OpaqueHash
-from jam.state.components.delta import AccountData, AccountStorage, LookupTimestamps, PreImageLookup
+from jam.state.components.delta import AccountData, AccountStorage, LookupTimestamps, PreImageLookup, Timestamps
 from jam.utils.codec.primitives.integers import IntegerCodec
 
 # from jam.types.block import Block
@@ -56,7 +56,7 @@ class State(Sigma):
             a_s, a_l = 0, 0
             if l_key:
                 for key in l_key:
-                    a_l += 81 + int(key.length)
+                    a_l += 81 + int(LookupTimestamps.get_length(key))
             if s_key:
                 for key in s_key:
                     a_s += 32 + len(self.delta[i].storage[key])
@@ -84,20 +84,18 @@ class State(Sigma):
                 ] = Bytes(self.delta[i].lookup[j])
 
             for j in self.delta[i].timestamps:
-                service_lookup[
-                    construct_state_key(
-                        (
-                            i,
-                            ByteArray32(
-                                Bytes(j.length.encode()) + Hash.blake2b(j.hash)[2:30]
-                            ),
-                        )
-                    )
-                ] = Bytes(self.delta[i].timestamps[j].encode())
-                # a=Bytes(self.delta[i].timestamps[j].encode())
-                # print(a)
-                # print(self.delta[i].timestamps[j],IntegerCodec.decode_from(4,bytes(a)))
-
+            
+                for k in self.delta[i].lookup:
+                    if (k[2:26]==j[4:28]):
+                        service_lookup[
+                            construct_state_key(
+                                (
+                                    i,
+                                    ByteArray32(Bytes(j[0:4])+Hash.blake2b(k)[2:30])
+                                )
+                            )
+                        ] = Bytes(self.delta[i].timestamps[j].encode())
+            
         return {
             construct_state_key(1): Bytes(self.alpha.encode()),
             construct_state_key(2): Bytes(self.phi.encode()),
@@ -124,6 +122,8 @@ class State(Sigma):
     def detransform(state: dict) -> "State":
         """Inverse of transform"""
         # Loop thru the whole state dict
+        # State=State()
+        # print(State)
         delta = {}
         for key, value in state.items():
             # Start with finding all core state components 1-15
@@ -178,27 +178,30 @@ class State(Sigma):
                 ai, offset = U32.decode_from(bytes(value), total_offset)
                 total_offset += offset
                 delta[service_id] = AccountData(storage=AccountStorage({}), lookup=PreImageLookup({}), timestamps=LookupTimestamps({}), code_hash=ByteArray32(ac), balance=Balance(ab), gas_limit=Gas(ag), min_gas=Gas(am))
-                # print(service_id, ac, ab, ag, am, ao, ai)
-                # print(delta)
+
             else:
                 if Bytes(key[7:0:-2])==Bytes(2**32 - 1):
+                    #populating the storage
                     print("Storage")
                 elif Bytes(key[7:0:-2])==Bytes(2**32 - 2):
+                    #populating the lookup
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                    # print(Hash.blake2b(value),Bytes(value).hex())
                     delta[service_id].lookup[Hash.blake2b(value)] = value
                     
-                    print("lookup")
                 else:
-                    print("Lookup")
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                    # for i in delta[0].timestamps:
-                    #     print(i)
-                    # print("length",int.from_bytes(bytes(Bytes(key[7:0:-2]))))
-                    # break;
+                    #populating the timestamps
+                    for i in delta[service_id].lookup:
+                        if Hash.blake2b(i)[2:26]==(key[8:32]):
+                            service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                            TimeStamps,_=Timestamps.decode_from(bytes(value))
+                            
+                            delta[service_id].timestamps[i,int.from_bytes(bytes(Bytes(key[7:0:-2])))]=TimeStamps
+                        else:
+                            continue # NOTE: This might be a problem for where the Hashes are not matching
+                   
                 # Find all preimages ()
-        # for i in delta[0].lookup:
-        #     print(i)
+        
+      
 
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
@@ -206,6 +209,7 @@ class State(Sigma):
 
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
+        
         return self._merkle.get_nodes()
 
     # def master_transition_state(self, block : Block):

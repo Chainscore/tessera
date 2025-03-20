@@ -26,26 +26,39 @@ class PreImageLookup(Dictionary[ByteArray32, Bytes]):
     ...
 
 
-@decodable_dataclass
-@dataclass
-class LookupTable(Codable, JsonSerde):
-    hash: ByteArray32
-    length: BlobLength
+# @decodable_dataclass
+# @dataclass
+# class LookupTable(Codable, JsonSerde):
+#     hash: ByteArray32
+#     length: BlobLength
 
-    def __hash__(self) -> int:
-        return int.from_bytes(bytes(Hash.sha256(bytes(self.hash) + bytes(self.length))))
+#     def __hash__(self) -> int:
+#         return int.from_bytes(bytes(Hash.sha256(bytes(self.hash) + bytes(self.length))))
 
 @decodable_vector(element_type=U32, max_length=3)
 class Timestamps(Vector[U32]):
     """Lookup timestamps"""
     ...
 
-@decodable_dictionary(LookupTable, Timestamps)
-class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
+# @decodable_dictionary(LookupTable, Timestamps)
+# class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
+#     """Lookup timestamps"""
+#     ...
+
+@decodable_dictionary(ByteArray32, Timestamps)
+class LookupTimestamps(Dictionary[ByteArray32, Timestamps]):
     """Lookup timestamps"""
-    ...
 
+    @staticmethod
+    def get_key(hash: ByteArray32, length: BlobLength) -> ByteArray32:
+        return ByteArray32(Bytes(length.encode()) + Bytes(hash)[2:26] + Bytes(bytearray(4)))
+        # return ByteArray32(Bytes(length.encode()) + Bytes(hash)[2:30] )
 
+    
+    @staticmethod
+    def get_length(hash: ByteArray32) -> BlobLength:
+        return BlobLength(int.from_bytes(bytes(Bytes(hash[0:4])),byteorder='little'))
+    
 @decodable_dataclass
 @dataclass
 class AccountData(Codable, JsonSerde):

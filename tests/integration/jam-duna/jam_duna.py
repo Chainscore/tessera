@@ -13,7 +13,6 @@ from jam.state.components.delta import (
     AccountData,
     AccountStorage,
     Delta,
-    LookupTable,
     LookupTimestamps,
     PreImageLookup,
     Timestamps,
@@ -42,6 +41,8 @@ from tests.unit.recent_history.types import BetaInput
 from tests.unit.statistics.types import Pi as TestPi
 from jam.utils.json.decorators import with_json_metadata
 from jam.types.protocol.core import ServiceId
+from jam.types.base.sequences.bytes import ByteArray32
+from jam.types.protocol.core import BlobLength
 
 @decodable_dataclass
 @dataclass
@@ -74,6 +75,15 @@ class CustomPreimages(Vector): ...
 
 @decodable_vector(U32, 3)
 class LookupMetaValue(Vector): ...
+
+@decodable_dataclass
+@dataclass
+class LookupTable(Codable, JsonSerde):
+    hash: ByteArray32
+    length: BlobLength
+
+    def __hash__(self) -> int:
+        return int.from_bytes(bytes(Hash.sha256(bytes(self.hash) + bytes(self.length))))
 
 
 @decodable_dataclass
@@ -185,8 +195,10 @@ class DunaState(Codable, JsonSerde):
             for preimage in i.data.preimages:
                 state.delta[i.id].lookup[preimage.hash] = preimage.blob
             for lookup in i.data.lookup_meta:
-                state.delta[i.id].timestamps[lookup.key] = lookup.value
-
+                state.delta[i.id].timestamps[LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length))] = lookup.value
+                # print(LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length)))
+                # state.delta[i.id].timestamps[lookup.key] = lookup.value
+            
         return state
 
 
@@ -205,8 +217,9 @@ start_slot = 13
 initial_state = tc.to_state()
 
 if __name__ == "__main__":
-    transform_state=initial_state.transform()
-    State.detransform(transform_state)
+    # transform_state=initial_state.transform()
+    print(initial_state.generate_root())
+    # State.detransform(transform_state)
     # asyncio.run(main("from jam duna", initial_state, start_slot, rpc_url))
 
 # Command to run file: 'python tests/integration/jam-duna/jam_duna.py'
