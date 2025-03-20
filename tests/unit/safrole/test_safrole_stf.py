@@ -25,7 +25,7 @@ def vector_transition(vector: Testcase) -> Boolean:
         assert output.iota == vector.post_state.iota
         assert output.gamma.a == vector.post_state.gamma_a
         assert output.gamma.s == vector.post_state.gamma_s
-        assert output.psi.o == vector.post_state.post_offenders
+        assert output.psi.offenders == vector.post_state.post_offenders
         # TODO: uncomment this once KZG_commitment(⟦HB⟧) is implemented
         # assert len(output.gamma.z) == len(vector.post_state.gamma_z)
         # assert output.gamma.z == vector.post_state.gamma_z

@@ -61,16 +61,30 @@ async def safrole(request_data: RequestData):
         transition_output = Safrole.transition(test_state, test_block)
         print("transition successs")
         output_state = GeneralState.from_json(request_data.output.state).to_state()
-        if (transition_output == output_state):
-            return {"ok": None}
-        else:
-            return {"err": "output_mismatch"}
+
+        try:
+            assert transition_output.tau == output_state.tau, "output_mismatch(tau)"
+            assert transition_output.eta[0] == output_state.eta[0], "output_mismatch(eta)"
+            assert transition_output.eta[1] == output_state.eta[1], "output_mismatch(eta)"
+            assert transition_output.eta[2] == output_state.eta[2], "output_mismatch(eta)"
+            assert transition_output.eta[3] == output_state.eta[3], "output_mismatch(eta)"
+            assert transition_output.lambda_ == output_state.lambda_, "output_mismatch(lamda)"
+            assert transition_output.kappa == output_state.kappa, "output_mismatch(kappa)"
+            assert transition_output.gamma.k == output_state.gamma.k, "output_mismatch(gamma_k)"
+            assert transition_output.iota == output_state.iota, "output_mismatch(iota)"
+            assert transition_output.gamma.a == output_state.gamma.a, "output_mismatch(gamma_a)"
+            assert transition_output.gamma.s == output_state.gamma.s, "output_mismatch(gamma_s)"
+            assert transition_output.psi.offenders == output_state.psi.offenders, "output_mismatch(psi)"
+            # TODO: uncomment this once KZG_commitment(⟦HB⟧) is implemented
+            # assert len(transition_output.gamma.z) == len(output_state.gamma_z)
+            # assert transition_output.gamma.z == output_state.gamma_z
+        except AssertionError as e:
+            print("output mismatch:", str(e))
+            return {"err": str(e)}
+
+        return {"ok": None}
 
     except SafroleError as e:
-        if e.code == SafroleErrorCode.BAD_TICKET_PROOF:
-            return {"pass": None}
-        elif e.code == SafroleErrorCode.BAD_TICKET_ORDER :
-            return {"pass": None}
         print("Failed:", e.code._value_)
         return {"err": e.code._value_}
     except Exception as e:
