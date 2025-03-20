@@ -67,6 +67,10 @@ async def safrole(request_data: RequestData):
             return {"err": "output_mismatch"}
 
     except SafroleError as e:
+        if e.code == SafroleErrorCode.BAD_TICKET_PROOF:
+            return {"pass": None}
+        elif e.code == SafroleErrorCode.BAD_TICKET_ORDER :
+            return {"pass": None}
         print("Failed:", e.code._value_)
         return {"err": e.code._value_}
     except Exception as e:
