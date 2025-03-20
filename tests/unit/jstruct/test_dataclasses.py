@@ -153,7 +153,6 @@ def test_dataclass_invalid_input():
             }
         )
 
-
 def test_dataclass_inheritance():
     @dataclass(kw_only=True)
     class BaseClass(JsonSerde):
@@ -218,7 +217,7 @@ def test_dataclass_optional_fields():
 def test_dataclass_field_metadata():
     @with_json_metadata(
         field1={"name": "jsonField1", "skip_if_none": True},
-        field2={"name": "jsonField2", "skip_if_none": True, "default": None},
+        field2={"name": "jsonField2", "skip_if_none": True},
         field3={"name": "jsonField3"}
     )
     @dataclass

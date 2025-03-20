@@ -44,7 +44,21 @@ class JsonCodec:
 
     @staticmethod
     def from_json(data: Any, target_type: Type[T]) -> T:
-        """Convert JSON-compatible value to target type."""
+        """
+        Convert JSON-compatible value to target type.
+        JSON can be either: 
+            dict
+            list
+            tuple
+            string
+            int
+            float
+            bool
+            None
+        So we have to take these 
+
+
+        """
         try:
             # Handle None
             if data is None:
