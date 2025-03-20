@@ -56,10 +56,8 @@ async def safrole(request_data: RequestData):
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
-        print("conversion successs")
 
         transition_output = Safrole.transition(test_state, test_block)
-        print("transition successs")
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
         try:
