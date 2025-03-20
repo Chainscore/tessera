@@ -71,7 +71,7 @@ class PreState(Codable, JsonSerde):
         state.gamma.a = self.gamma_a
         state.gamma.s = self.gamma_s
         state.gamma.z = self.gamma_z
-        state.psi.o = self.post_offenders
+        state.psi.offenders = self.post_offenders
         return state
 
 
