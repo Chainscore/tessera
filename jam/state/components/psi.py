@@ -3,7 +3,7 @@ from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.crypto import Ed25519Public, WorkReportHash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
 @decodable_vector(element_type=WorkReportHash)
 class PsiG(Vector[WorkReportHash]):

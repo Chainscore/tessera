@@ -9,7 +9,7 @@ from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ServiceId
 from jam.types.work.item import WorkItem
 from jam.types.work.refine_context import RefineContext
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.serde import JsonSerde
 
 
 @decodable_dataclass

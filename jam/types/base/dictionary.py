@@ -18,7 +18,7 @@ from typing import (
 
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.dictionaries import DictionaryCodec
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
 K = TypeVar("K", bound=Codable)
 V = TypeVar("V", bound=Codable)

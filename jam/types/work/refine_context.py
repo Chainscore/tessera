@@ -6,7 +6,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import HeaderHash, StateRoot, BeefyRoot, OpaqueHash
 from jam.types.protocol.core import TimeSlot
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.serde import JsonSerde
 
 
 @decodable_vector(OpaqueHash, allow_duplicates=False)

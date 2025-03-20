@@ -8,7 +8,7 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, WorkReportHash
 from jam.types.protocol.core import ValidatorIndex
 from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.serde import JsonSerde
 
 
 @decodable_dataclass

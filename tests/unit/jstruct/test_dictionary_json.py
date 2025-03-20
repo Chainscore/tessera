@@ -3,7 +3,7 @@ from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.string import String
 from jam.types.base.integers.fixed import I32 as Int32
 from jam.types.base.boolean import Boolean
-from jam.utils.json.serde import JsonDeserializationError
+from jam.utils.jstruct.serde import JsonDeserializationError
 
 
 @decodable_dictionary(String, Int32)

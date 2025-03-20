@@ -9,7 +9,7 @@ from jam.types import OpaqueHash, decodable_choice, Null, Choice, Nullable
 from jam.types.base.integers.fixed import U32
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 from jam.types.extrinsics.preimages import PreimagesExtrinsic
 from jam.types.base.sequences.vector import decodable_vector, Vector
 from jam.types.base import Bytes

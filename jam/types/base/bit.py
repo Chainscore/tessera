@@ -1,7 +1,7 @@
 from typing import Any
 from jam.utils.byte_utils import Bytable, ByteUtils
-from jam.utils.json import JsonSerde
-from jam.utils.json.serde import JsonDeserializationError
+from jam.utils.jstruct import JsonSerde
+from jam.utils.jstruct.serde import JsonDeserializationError
 
 
 class Bit(JsonSerde):

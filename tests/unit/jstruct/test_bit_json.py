@@ -1,6 +1,6 @@
 import pytest
 from jam.types.base.bit import Bit
-from jam.utils.json.serde import JsonDeserializationError
+from jam.utils.jstruct.serde import JsonDeserializationError
 
 
 def test_bit_json_serialization():

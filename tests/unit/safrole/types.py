@@ -17,8 +17,8 @@ from jam.types.extrinsics.tickets import TicketsExtrinsic
 from jam.types.header import OptionalTicketsMark, OptionalEpochMark
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde
-from jam.utils.json.decorators import with_json_metadata
+from jam.utils.jstruct import JsonSerde
+from jam.utils.jstruct.decorators import with_json_metadata
 from tests.fixtures.dummy_block import create_dummy_block
 from jam.state.state import State
 from tests.fixtures.dummy_state import create_dummy_state

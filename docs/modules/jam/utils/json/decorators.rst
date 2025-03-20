@@ -1,4 +1,4 @@
-jam.utils.json.decorators module
+jam.utils.jstruct.decorators module
 ================================
 
 Decorators for adding JSON serialization capabilities to classes.
@@ -89,13 +89,13 @@ API Reference
 
 Decorators
 ^^^^^^^^
-.. autofunction:: jam.utils.json.decorators.json_serializable
+.. autofunction:: jam.utils.jstruct.decorators.json_serializable
 
-.. autofunction:: jam.utils.json.decorators.json_field
+.. autofunction:: jam.utils.jstruct.decorators.json_field
 
-.. autofunction:: jam.utils.json.decorators.with_json_metadata
+.. autofunction:: jam.utils.jstruct.decorators.with_json_metadata
 
-.. autofunction:: jam.utils.json.decorators.json_field_metadata
+.. autofunction:: jam.utils.jstruct.decorators.json_field_metadata
 
 Examples
 -------
@@ -105,7 +105,7 @@ Basic Usage
 .. code-block:: python
 
     from dataclasses import dataclass
-    from jam.utils.json import json_serializable, json_field
+    from jam.utils.jstruct import json_serializable, json_field
 
     @json_serializable
     @dataclass

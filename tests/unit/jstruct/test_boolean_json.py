@@ -1,6 +1,6 @@
 import pytest
 from jam.types.base.boolean import Boolean
-from jam.utils.json.serde import JsonDeserializationError
+from jam.utils.jstruct.serde import JsonDeserializationError
 
 
 def test_boolean_json_serialization():

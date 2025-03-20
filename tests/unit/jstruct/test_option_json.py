@@ -4,7 +4,7 @@ from jam.types.base.string import String
 from jam.types.base.integers.fixed import I64
 from jam.types.base.boolean import Boolean
 from jam.types.base.null import Null, Nullable
-from jam.utils.json.serde import JsonDeserializationError
+from jam.utils.jstruct.serde import JsonDeserializationError
 
 
 @decodable_option(String)

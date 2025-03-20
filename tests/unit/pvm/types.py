@@ -9,8 +9,8 @@ from jam.types.base.string import String
 from jam.types.protocol.core import Gas
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.decorators import with_json_metadata
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.decorators import with_json_metadata
+from jam.utils.jstruct.serde import JsonSerde
 
 
 class Status(Enum):

@@ -1,7 +1,7 @@
 from typing import Union, Any, Tuple
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.primitives.strings import StringCodec
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
 
 class String(Codable, JsonSerde):

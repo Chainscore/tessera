@@ -110,8 +110,8 @@
 <span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Generic</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">Union</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.codable</span><span class="w"> </span><span class="kn">import</span> <span class="n">Codable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.codec.codec</span><span class="w"> </span><span class="kn">import</span> <span class="n">Codec</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.json</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonSerde</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.json.serde</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonDeserializationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.jstruct</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonSerde</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jam.utils.jstruct.serde</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonDeserializationError</span>
 
 <span class="n">T</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">Codable</span><span class="p">)</span>
 

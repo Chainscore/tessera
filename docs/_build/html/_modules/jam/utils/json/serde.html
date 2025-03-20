@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>jam.utils.json.serde &mdash; Tessera 0.1.0 documentation</title>
+  <title>jam.utils.jstruct.serde &mdash; Tessera 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
 
@@ -97,7 +97,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
-      <li class="breadcrumb-item active">jam.utils.json.serde</li>
+      <li class="breadcrumb-item active">jam.utils.jstruct.serde</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -106,7 +106,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for jam.utils.json.serde</h1><div class="highlight"><pre>
+  <h1>Source code for jam.utils.jstruct.serde</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;JSON serialization interface.&quot;&quot;&quot;</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
@@ -116,7 +116,7 @@
 
 
 <div class="viewcode-block" id="JsonSerializationError">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.json.JsonSerializationError">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.jstruct.JsonSerializationError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">JsonSerializationError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Base exception for JSON serialization errors.&quot;&quot;&quot;</span>
 
@@ -125,7 +125,7 @@
 
 
 <div class="viewcode-block" id="JsonDeserializationError">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.json.JsonDeserializationError">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.jstruct.JsonDeserializationError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">JsonDeserializationError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Base exception for JSON deserialization errors.&quot;&quot;&quot;</span>
 
@@ -134,12 +134,12 @@
 
 
 <div class="viewcode-block" id="JsonFieldError">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.json.JsonFieldError">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.jstruct.JsonFieldError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">JsonFieldError</span><span class="p">(</span><span class="n">JsonSerializationError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Field-specific JSON conversion error.&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="JsonFieldError.__init__">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.json.JsonFieldError.__init__">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.jstruct.JsonFieldError.__init__">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">field_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">field_name</span> <span class="o">=</span> <span class="n">field_name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">field_type</span> <span class="o">=</span> <span class="n">field_type</span>
@@ -149,7 +149,7 @@
 
 
 <div class="viewcode-block" id="JsonFieldMetadata">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.json.JsonFieldMetadata">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.jstruct.JsonFieldMetadata">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">JsonFieldMetadata</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Field customization metadata.&quot;&quot;&quot;</span>
@@ -161,12 +161,12 @@
 
 
 <div class="viewcode-block" id="JsonSerde">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.json.JsonSerde">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.jstruct.JsonSerde">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">JsonSerde</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Base mixin for JSON serialization.&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="JsonSerde.to_json">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.json.JsonSerde.to_json">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.jstruct.JsonSerde.to_json">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert to JSON-compatible value.&quot;&quot;&quot;</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">.codec</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonCodec</span>
@@ -175,7 +175,7 @@
 
 
 <div class="viewcode-block" id="JsonSerde.from_json">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.json.JsonSerde.from_json">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.jstruct.JsonSerde.from_json">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create from JSON-compatible value.&quot;&quot;&quot;</span>
@@ -185,7 +185,7 @@
 
 
 <div class="viewcode-block" id="JsonSerde.__json_metadata__">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.json.JsonSerde.__json_metadata__">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/serde.html#jam.utils.jstruct.JsonSerde.__json_metadata__">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">__json_metadata__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">JsonFieldMetadata</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get JSON metadata for fields.&quot;&quot;&quot;</span>

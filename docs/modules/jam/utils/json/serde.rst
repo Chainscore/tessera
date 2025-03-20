@@ -1,4 +1,4 @@
-jam.utils.json.serde
+jam.utils.jstruct.serde
 ==================
 
 Base interface for JSON serialization, providing a mixin class and metadata types.
@@ -93,29 +93,29 @@ API Reference
 
 Classes
 ^^^^^^^
-.. autoclass:: jam.utils.json.serde.JsonSerde
+.. autoclass:: jam.utils.jstruct.serde.JsonSerde
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: jam.utils.json.serde.JsonFieldMetadata
+.. autoclass:: jam.utils.jstruct.serde.JsonFieldMetadata
    :members:
    :undoc-members:
    :show-inheritance:
 
 Exceptions
 ^^^^^^^^^
-.. autoclass:: jam.utils.json.serde.JsonSerializationError
+.. autoclass:: jam.utils.jstruct.serde.JsonSerializationError
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: jam.utils.json.serde.JsonDeserializationError
+.. autoclass:: jam.utils.jstruct.serde.JsonDeserializationError
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: jam.utils.json.serde.JsonFieldError
+.. autoclass:: jam.utils.jstruct.serde.JsonFieldError
    :members:
    :undoc-members:
    :show-inheritance:
@@ -128,7 +128,7 @@ Basic Usage
 .. code-block:: python
 
     from dataclasses import dataclass
-    from jam.utils.json import JsonSerde
+    from jam.utils.jstruct import JsonSerde
 
     @dataclass
     class Point(JsonSerde):

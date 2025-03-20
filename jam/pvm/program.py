@@ -8,7 +8,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
 from jam.utils.codec.utils import check_buffer_size
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.serde import JsonSerde
 
 
 class Program(Codable, JsonSerde):

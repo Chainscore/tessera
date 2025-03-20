@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>jam.utils.json.decorators &mdash; Tessera 0.1.0 documentation</title>
+  <title>jam.utils.jstruct.decorators &mdash; Tessera 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
 
@@ -97,7 +97,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
-      <li class="breadcrumb-item active">jam.utils.json.decorators</li>
+      <li class="breadcrumb-item active">jam.utils.jstruct.decorators</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -106,7 +106,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for jam.utils.json.decorators</h1><div class="highlight"><pre>
+  <h1>Source code for jam.utils.jstruct.decorators</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;JSON decorators.&quot;&quot;&quot;</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">is_dataclass</span><span class="p">,</span> <span class="n">field</span>
@@ -117,7 +117,7 @@
 
 
 <div class="viewcode-block" id="json_field">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.json.decorators.json_field">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.jstruct.decorators.json_field">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">json_field</span><span class="p">(</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -135,7 +135,7 @@
 
 
 <div class="viewcode-block" id="json_serializable">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.json.decorators.json_serializable">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.jstruct.decorators.json_serializable">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">json_serializable</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Add JSON serialization to a class.&quot;&quot;&quot;</span>
     <span class="c1"># If it&#39;s not a dataclass, make it one</span>
@@ -166,7 +166,7 @@
 
 
 <div class="viewcode-block" id="json_field_metadata">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.json.decorators.json_field_metadata">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.jstruct.decorators.json_field_metadata">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">json_field_metadata</span><span class="p">(</span>
     <span class="n">field_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
@@ -184,7 +184,7 @@
 
 
 <div class="viewcode-block" id="with_json_metadata">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.json.decorators.with_json_metadata">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.jstruct.decorators.with_json_metadata">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">with_json_metadata</span><span class="p">(</span><span class="o">**</span><span class="n">field_metadata</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Add JSON metadata to multiple fields.&quot;&quot;&quot;</span>
 

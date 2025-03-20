@@ -4,7 +4,7 @@ import os
 from typing import List
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 from jam.types.extrinsics.assurances import AssurancesExtrinsic
 from jam.state.components.rho import Rho
 from jam.assurances.errors import AssurancesErrorCode

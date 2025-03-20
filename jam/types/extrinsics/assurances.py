@@ -6,7 +6,7 @@ from jam.types.protocol.core import ValidatorIndex
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import CORE_COUNT
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.serde import JsonSerde
 
 
 @decodable_bit_array(length=CORE_COUNT, bitorder="lsb")

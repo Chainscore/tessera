@@ -69,7 +69,7 @@ Basic Usage
 .. code-block:: python
 
     from dataclasses import dataclass
-    from jam.utils.json import json_serializable, json_field
+    from jam.utils.jstruct import json_serializable, json_field
 
     @json_serializable
     @dataclass
@@ -121,7 +121,7 @@ Submodules
 Module Contents
 --------------
 
-.. automodule:: jam.utils.json
+.. automodule:: jam.utils.jstruct
    :members:
    :undoc-members:
    :show-inheritance:

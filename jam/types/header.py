@@ -15,7 +15,7 @@ from jam.types.protocol.crypto import (
     OpaqueHash,
 )
 from jam.utils.constants import EPOCH_LENGTH
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.serde import JsonSerde
 
 """Fixed-length array of ticket bodies."""
 

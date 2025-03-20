@@ -3,7 +3,7 @@
 import pytest
 from jam.types.base.enum import Enum, decodable_enum
 from jam.utils.codec.errors import DecodeError
-from jam.utils.json.serde import JsonDeserializationError
+from jam.utils.jstruct.serde import JsonDeserializationError
 
 
 @decodable_enum

@@ -11,7 +11,7 @@ from typing import (
 )
 from jam.utils.codec import Codable
 from jam.utils.codec.composite.choices import ChoiceCodec
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
 T = TypeVar("T")
 

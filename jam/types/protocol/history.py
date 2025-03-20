@@ -7,7 +7,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import HeaderHash, StateRoot, OpaqueHash
 from jam.utils.constants import RECENT_HISTORY_SIZE
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.serde import JsonSerde
 
 """Merkle Mountain Range structure."""
 

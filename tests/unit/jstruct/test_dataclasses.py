@@ -1,8 +1,8 @@
 import pytest
 from dataclasses import dataclass
 from typing import Dict, Optional
-from jam.utils.json import with_json_metadata
-from jam.utils.json.serde import JsonFieldError, JsonSerde
+from jam.utils.jstruct import with_json_metadata
+from jam.utils.jstruct.serde import JsonFieldError, JsonSerde
 from jam.types.base.string import String
 from jam.types.base.boolean import Boolean
 from jam.types.base.integers.fixed import I32 as Int32

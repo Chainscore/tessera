@@ -12,7 +12,7 @@ from jam.types.extrinsics import (
     DisputesExtrinsic,
 )
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.serde import JsonSerde
 
 
 @decodable_dataclass

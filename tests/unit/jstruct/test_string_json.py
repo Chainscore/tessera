@@ -1,6 +1,6 @@
 import pytest
 from jam.types.base.string import String
-from jam.utils.json.serde import JsonDeserializationError
+from jam.utils.jstruct.serde import JsonDeserializationError
 
 
 def test_string_json_serialization():

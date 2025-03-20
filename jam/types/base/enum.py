@@ -2,8 +2,8 @@ from enum import Enum as OGEnum
 from typing import Tuple, Type, Union, Any, TypeVar, cast
 from jam.types.base.integers.fixed import U8
 from jam.utils.codec.codable import Codable
-from jam.utils.json import JsonSerde
-from jam.utils.json.serde import JsonDeserializationError
+from jam.utils.jstruct import JsonSerde
+from jam.utils.jstruct.serde import JsonDeserializationError
 
 T = TypeVar("T", bound="Enum")
 

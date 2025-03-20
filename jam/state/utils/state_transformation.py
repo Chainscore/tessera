@@ -35,9 +35,9 @@ from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.core import U64, Gas, OpaqueHash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
-from jam.utils.json.decorators import with_json_metadata
+from jam.utils.jstruct.decorators import with_json_metadata
 
 from tests.fixtures.dummy_state import create_dummy_state
 from tests.unit.recent_history.types import BetaInput as TestBeta

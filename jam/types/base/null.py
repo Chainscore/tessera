@@ -2,7 +2,7 @@ from types import NoneType
 from typing import Tuple, Union, Dict, Any
 from jam.utils.codec import Codable
 from jam.utils.codec.primitives.nulls import NullCodec
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
 
 class Nullable(Codable, JsonSerde):

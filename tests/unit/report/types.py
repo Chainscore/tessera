@@ -6,7 +6,7 @@ from jam.types import decodable_vector, Vector, U64
 from jam.types.extrinsics import GuaranteesExtrinsic
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 from jam.state.components.rho import Rho
 from jam.types.base.integers.fixed import I64
 from jam.state.components.kappa import Kappa

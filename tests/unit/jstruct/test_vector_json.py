@@ -3,7 +3,7 @@ from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.base.string import String
 from jam.types.base.integers.fixed import U32
 from jam.types.base.boolean import Boolean
-from jam.utils.json.serde import JsonDeserializationError
+from jam.utils.jstruct.serde import JsonDeserializationError
 
 
 @decodable_vector(String)

@@ -1,8 +1,8 @@
 from typing import Any, Generic, List, Optional, Sequence, Type, TypeVar, Union
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.codec import Codec
-from jam.utils.json import JsonSerde
-from jam.utils.json.serde import JsonDeserializationError
+from jam.utils.jstruct import JsonSerde
+from jam.utils.jstruct.serde import JsonDeserializationError
 
 T = TypeVar("T", bound=Codable)
 

@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>jam.utils.json.codec &mdash; Tessera 0.1.0 documentation</title>
+  <title>jam.utils.jstruct.codec &mdash; Tessera 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
 
@@ -97,7 +97,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
-      <li class="breadcrumb-item active">jam.utils.json.codec</li>
+      <li class="breadcrumb-item active">jam.utils.jstruct.codec</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -106,7 +106,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for jam.utils.json.codec</h1><div class="highlight"><pre>
+  <h1>Source code for jam.utils.jstruct.codec</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Core JSON codec implementation.&quot;&quot;&quot;</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Mapping</span>
@@ -121,12 +121,12 @@
 
 
 <div class="viewcode-block" id="JsonCodec">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.json.codec.JsonCodec">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.jstruct.codec.JsonCodec">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">JsonCodec</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Core JSON serialization engine.&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="JsonCodec.to_json">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.json.codec.JsonCodec.to_json">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.jstruct.codec.JsonCodec.to_json">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert object to JSON-compatible value.&quot;&quot;&quot;</span>
@@ -157,7 +157,7 @@
 
 
 <div class="viewcode-block" id="JsonCodec.from_json">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.json.codec.JsonCodec.from_json">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.jstruct.codec.JsonCodec.from_json">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_json</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">target_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert JSON-compatible value to target type.&quot;&quot;&quot;</span>
@@ -216,7 +216,7 @@
 
 
 <div class="viewcode-block" id="JsonCodec._get_dataclass_fields">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.json.codec.JsonCodec._get_dataclass_fields">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.jstruct.codec.JsonCodec._get_dataclass_fields">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_dataclass_fields</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
@@ -233,7 +233,7 @@
 
 
 <div class="viewcode-block" id="JsonCodec._dataclass_to_json">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.json.codec.JsonCodec._dataclass_to_json">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.jstruct.codec.JsonCodec._dataclass_to_json">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_dataclass_to_json</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert dataclass instance to JSON dict&quot;&quot;&quot;</span>
@@ -257,7 +257,7 @@
 
 
 <div class="viewcode-block" id="JsonCodec._dataclass_from_json">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.json.codec.JsonCodec._dataclass_from_json">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/index.html#jam.utils.jstruct.codec.JsonCodec._dataclass_from_json">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_dataclass_from_json</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert JSON dict to dataclass instance.&quot;&quot;&quot;</span>
@@ -316,7 +316,7 @@
 
 
 <div class="viewcode-block" id="is_optional_type">
-<a class="viewcode-back" href="../../../../modules/jam/utils/json/codec.html#jam.utils.json.codec.is_optional_type">[docs]</a>
+<a class="viewcode-back" href="../../../../modules/jam/utils/json/codec.html#jam.utils.jstruct.codec.is_optional_type">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">is_optional_type</span><span class="p">(</span><span class="n">tp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if type hint is Optional[T].&quot;&quot;&quot;</span>
     <span class="n">origin</span> <span class="o">=</span> <span class="n">get_origin</span><span class="p">(</span><span class="n">tp</span><span class="p">)</span>

@@ -1,5 +1,5 @@
 from typing import Union, Any, TypeVar, cast
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
 T = TypeVar("T", bound="BaseInteger")
 

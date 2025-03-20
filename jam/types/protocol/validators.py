@@ -6,7 +6,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import BandersnatchPublic, Ed25519Public, BlsPublic
 from jam.utils.constants import VALIDATOR_COUNT
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.serde import JsonSerde
 
 
 @decodable_array(length=VALIDATOR_COUNT, element_type=BandersnatchPublic)

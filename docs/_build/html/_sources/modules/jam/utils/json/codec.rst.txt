@@ -1,4 +1,4 @@
-jam.utils.json.codec
+jam.utils.jstruct.codec
 ==================
 
 Core JSON serialization engine that handles type-safe conversion between JAM types and JSON.
@@ -84,14 +84,14 @@ API Reference
 
 JsonCodec
 ^^^^^^^^
-.. autoclass:: jam.utils.json.codec.JsonCodec
+.. autoclass:: jam.utils.jstruct.codec.JsonCodec
    :members:
    :undoc-members:
    :show-inheritance:
 
 Functions
 ^^^^^^^^
-.. autofunction:: jam.utils.json.codec.is_optional_type
+.. autofunction:: jam.utils.jstruct.codec.is_optional_type
 
 Examples
 -------
@@ -100,7 +100,7 @@ Basic Usage
 ^^^^^^^^^
 .. code-block:: python
 
-    from jam.utils.json import JsonCodec
+    from jam.utils.jstruct import JsonCodec
     
     # Primitive types
     JsonCodec.to_json(42)  # -> 42

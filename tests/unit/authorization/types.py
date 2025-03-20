@@ -9,7 +9,7 @@ from jam.types.base.integers.fixed import U32
 from jam.types.protocol.crypto import Entropy, OpaqueHash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
 
 @decodable_dataclass

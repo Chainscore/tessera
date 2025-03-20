@@ -10,7 +10,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import CORE_COUNT
 from jam.types.base.choices.option import Option
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
 
 @decodable_dataclass

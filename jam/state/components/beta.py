@@ -6,7 +6,7 @@ from jam.types.protocol.crypto import HeaderHash, StateRoot
 from jam.types.protocol.merkle import MMR
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde 
+from jam.utils.jstruct import JsonSerde 
 
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)

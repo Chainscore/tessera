@@ -11,7 +11,7 @@ from jam.types.protocol.crypto import (
     OpaqueHash,
 )
 from jam.utils.constants import EPOCH_LENGTH, MAX_TICKETS_PER_EXTRINSIC
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.serde import JsonSerde
 from jam.types.protocol.crypto import Hash
 
 TicketId = OpaqueHash

@@ -18,8 +18,8 @@ from jam.state.components.nu import Nu
 from jam.state.components.xi import Xi
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.decorators import with_json_metadata
-from jam.utils.json.serde import JsonSerde
+from jam.utils.jstruct.decorators import with_json_metadata
+from jam.utils.jstruct.serde import JsonSerde
 
 
 @dataclass(kw_only=True)

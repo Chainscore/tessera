@@ -5,7 +5,7 @@ from jam.types.work.report import WorkReport, WorkDependencies
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import EPOCH_LENGTH
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
 
 @decodable_dataclass

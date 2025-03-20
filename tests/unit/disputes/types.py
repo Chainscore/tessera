@@ -12,7 +12,7 @@ from jam.state.components.psi import Psi
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
 
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 
 @decodable_dataclass
 @dataclass

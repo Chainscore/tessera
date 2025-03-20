@@ -5,7 +5,7 @@ from jam.state.state import State
 from jam.merklization import MMR
 from jam.types.base.sequences.vector import decodable_vector, Vector
 from jam.utils.codec import Codable
-from jam.utils.json import JsonSerde
+from jam.utils.jstruct import JsonSerde
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.types.protocol.crypto import OpaqueHash, HeaderHash, StateRoot
 from dataclasses import dataclass
