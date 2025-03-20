@@ -63,7 +63,7 @@ def test_publish_tickets_with_mark():
 def test_publish_tickets_no_mark():
     """Test publishing tickets with no mark"""
     vectors: List[Testcase] = get_testcases_starting_with(
-        prefix="publish-tickets-no-mark-5"
+        prefix="publish-tickets-no-mark"
     )
     for i, vector in enumerate(vectors):
         vector_transition(vector)
