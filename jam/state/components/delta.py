@@ -8,8 +8,11 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.types.protocol.crypto import Hash
-
+from jam.types.protocol.validators import ValidatorArray
+from jam.state.components.phi import Phi
+from jam.state.components.chi import Chi
 ServiceCodeHash = ByteArray32
+
 
 @decodable_dictionary(ByteArray32, Bytes)
 class AccountStorage(Dictionary[ByteArray32, Bytes]):
@@ -64,6 +67,15 @@ class Delta(Dictionary[ServiceId, AccountData]):
     """Delta state"""
 
     ...
+
+
+@decodable_dataclass
+@dataclass
+class PartialState(Codable, JsonSerde):
+    delta: Delta
+    next_val_key: ValidatorArray
+    phi: Phi
+    chi: Chi
 
 
 # TODO - : Confirm these types + usage

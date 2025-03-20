@@ -270,35 +270,59 @@ class InstructionMapper:
         return ''.join(map(str, [(num >> i) & 1 for i in range(8 * n)]))
 
     @staticmethod
-    def valid_address(initial_page_map, address, ln=0, writable=None):
-        for region in initial_page_map:
-            start = region.address
-            end = start + region.length
-            if start <= address and address + ln <= end:
-                return start
-                # if writable is None or region.is_writable == writable:
-                #     return start
+    def valid_address(page_memory, address, ln=0, writable=None):
+        page_number = address // 4096
+        offset = int(address % 4096)
+        while offset + ln > 4096:
+            if U32(page_number) not in page_memory.pages.keys():
+                print("one")
+                return False
+            memory = page_memory.pages[U32(page_number)]
+            if memory.access.inaccessible.value:
+                print("two")
+                return False
+            ln -= (4096 - offset)
+            offset = 0
+            page_number += 1
+
+        if U32(int(page_number)) in page_memory.pages.keys():
+            memory = page_memory.pages[U32(page_number)]
+            if memory.access.inaccessible.value:
+                print("three")
+                return False
+            return True
+
         return False
 
     @staticmethod
-    def memory_value(data, address, length=1, is_int=False):
-        result = [0] * length  # Initialize result array with zeros
+    def memory_value(page_memory, address, length=1, is_int=False):
+        PAGE_SIZE = 4096
+        pages = page_memory.pages  # Dictionary containing memory pages
 
-        for item in data:
-            start_add = item.address
-            contents = item.contents
-            end_add = start_add + len(contents)
+        # Calculate page index and offset
+        page_index = address // PAGE_SIZE
+        offset = int(address % PAGE_SIZE)
 
-            if not (end_add <= address or start_add >= address + length):
-                for i in range(len(contents)):
-                    content_add = int(start_add + i)
-                    pos = content_add - address
+        result = Bytes([])
+        while length > 0:
+            if page_index in pages.keys():
+                memory_object = pages[page_index]
+                values = memory_object.value  # Byte array
 
-                    if 0 <= pos < length:
-                        if is_int:
-                            result[pos] = int(contents[i])
-                        else:
-                            result[pos] = contents[i]
+                for i in range(offset, min(offset + length, PAGE_SIZE)):
+                    if i < len(values):
+                        result.append(values[i])
+                    else:
+                        result.append(Byte(0))  # If index is out of bounds, append 0
+
+                length -= min(length, PAGE_SIZE - offset)
+                offset = 0  # Reset offset for next page lookup
+            else:
+                result.extend(Bytes([Byte(0)] * min(length, PAGE_SIZE - offset)))  # Append zeros for missing page
+                length -= min(length, PAGE_SIZE - offset)
+                offset = 0  # Reset offset for next page lookup
+
+            page_index += 1  # Move to the next page
 
         return result
 
@@ -379,12 +403,40 @@ class InstructionMapper:
     def extend_array(arr, num):
         return arr + [0] * (num - len(arr)) if len(arr) < num else arr
 
-    @staticmethod 
-    def store_value(data, address, values):
-        updated_data = InstructionMapper.update_memory(data, U32(address), values)
-        merged_data = InstructionMapper.merge_indices(updated_data)
-        final_data = MemoryChunk(InstructionMapper.remove_zeros(merged_data))
-        return final_data
+    @staticmethod
+    def store_value(page_memory, address, values):
+        PAGE_SIZE = 4096
+        pages = page_memory.pages  # Dictionary containing memory pages
+        # Convert integer values to Byte objects
+        byte_values = [Byte(int(v)) for v in values]
+
+        page_index = address // PAGE_SIZE
+        offset = int(address % PAGE_SIZE)
+        length = len(byte_values)
+        #print(f"Storing {length} bytes at address {address} (Page: {page_index}, Offset: {offset}, {values})")
+
+        i = 0  # Index for byte_values
+        while length > 0:
+            if page_index not in pages.keys():
+                pages[page_index] = Memory(value=Bytes([Byte(0)] * PAGE_SIZE))  # Ensure full page initialization
+
+            memory_object = pages[page_index]
+
+            # Ensure the value array is large enough (should already be PAGE_SIZE)
+            if len(memory_object.value) < PAGE_SIZE:
+                memory_object.value.extend([Byte(0)] * (PAGE_SIZE - len(memory_object.value)))
+
+            # Write values into the memory at the correct offset
+            for j in range(offset, min(offset + length, PAGE_SIZE)):
+                memory_object.value[j] = byte_values[i]
+                i += 1
+
+            length -= min(length, PAGE_SIZE - offset)
+            offset = 0  # Reset offset for next page lookup
+            page_index += 1  # Move to next page
+
+        # print(page_memory)
+        return page_memory
 
     @staticmethod
     def smod(a: int, b: int) -> int:
@@ -569,23 +621,29 @@ class InstructionMapper:
     def load_u8(instance, arg):
         print(f"load_u8 ")
         reg_a, l_a, v_x = InstructionMapper.reg_imm(arg)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, v_x)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, v_x)
         if is_valid:
             u_vx = InstructionMapper.memory_value(instance.initial_memory, v_x)[0]
             InstructionMapper.increase_counter(instance, len(arg) + 1)
-            instance.initial_regs[reg_a] = U64(int(u_vx))
+            temp = InstructionMapper.bit_to_int(u_vx.value)
+            instance.initial_regs[reg_a] = U64(temp)
         else:
             return "page-fault"
+
+    @staticmethod
+    def bit_to_int(bit_list):
+        return int("".join(str(int(b)) for b in bit_list), 2)  # Convert bit list to binary string, then to int
 
     @staticmethod
     def load_i8(instance, arg):
         print(f"load_i8 ")
         reg_a, l_a, v_x = InstructionMapper.reg_imm(arg)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, v_x)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, v_x)
         if is_valid:
             u_vx = InstructionMapper.memory_value(instance.initial_memory, v_x, 1, True)[0]
             InstructionMapper.increase_counter(instance, len(arg) + 1)
-            instance.initial_regs[reg_a] = U64(InstructionMapper.signed_ext(u_vx, 1))
+            temp = InstructionMapper.bit_to_int(u_vx.value)
+            instance.initial_regs[reg_a] = U64(InstructionMapper.signed_ext(temp, 1))
         else:
             return "page-fault"
 
@@ -593,14 +651,14 @@ class InstructionMapper:
     def load_u16(instance, arg):
         print(f"load_u16 ")
         reg_a, l_a, v_x = InstructionMapper.reg_imm(arg)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, v_x, 2)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, v_x, 2)
         if is_valid:
             u_vx = InstructionMapper.memory_value(instance.initial_memory, v_x, 2)
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             temp = []
             for v in u_vx:
                 temp.append(int(v))
-            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(2, temp)[0])
+            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(2, bytes(temp))[0])
         else:
             return "page-fault"
 
@@ -608,11 +666,11 @@ class InstructionMapper:
     def load_i16(instance, arg):
         print(f"load_i16 ")
         reg_a, l_a, v_x = InstructionMapper.reg_imm(arg)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, v_x, 2)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, v_x, 2)
         if is_valid:
             u_vx = InstructionMapper.memory_value(instance.initial_memory, v_x, 2, True)
             InstructionMapper.increase_counter(instance, len(arg) + 1)
-            instance.initial_regs[reg_a] = U64(InstructionMapper.signed_ext(IntegerCodec.decode_from(2, u_vx)[0], 2))
+            instance.initial_regs[reg_a] = U64(InstructionMapper.signed_ext(IntegerCodec.decode_from(2, bytes(u_vx))[0], 2))
         else:
             return "page-fault"
 
@@ -620,14 +678,14 @@ class InstructionMapper:
     def load_u32(instance, arg):
         print(f"load_u32 ")
         reg_a, l_a, v_x = InstructionMapper.reg_imm(arg)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, v_x, 4)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, v_x, 4)
         if is_valid:
             u_vx = InstructionMapper.memory_value(instance.initial_memory, v_x, 4)
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             temp = []
             for v in u_vx:
                 temp.append(int(v))
-            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(4, temp)[0])
+            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(4, bytes(temp))[0])
         else:
             return "page-fault"
 
@@ -635,11 +693,11 @@ class InstructionMapper:
     def load_i32(instance, arg):
         print(f"load_i32 ")
         reg_a, l_a, v_x = InstructionMapper.reg_imm(arg)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, v_x, 4)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, v_x, 4)
         if is_valid:
             u_vx = InstructionMapper.memory_value(instance.initial_memory, v_x, 4,True)
             InstructionMapper.increase_counter(instance, len(arg) + 1)
-            instance.initial_regs[reg_a] = U64(InstructionMapper.signed_ext(IntegerCodec.decode_from(4, u_vx)[0], 4))
+            instance.initial_regs[reg_a] = U64(InstructionMapper.signed_ext(IntegerCodec.decode_from(4, bytes(u_vx))[0], 4))
         else:
             return "page-fault"
 
@@ -648,14 +706,11 @@ class InstructionMapper:
     def load_u64(instance, arg):
         print(f"load_u64")
         reg_a, l_a, v_x = InstructionMapper.reg_imm(arg)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, v_x, 8)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, v_x, 8)
         if is_valid:
             u_vx = InstructionMapper.memory_value(instance.initial_memory, v_x, 8)
             InstructionMapper.increase_counter(instance, len(arg) + 1)
-            temp = []
-            for v in u_vx:
-                temp.append(int(v))
-            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(8, temp)[0])
+            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(8, bytes(u_vx))[0])
         else:
             return "page-fault"
 
@@ -665,8 +720,9 @@ class InstructionMapper:
         reg_a, l_a, v_x = InstructionMapper.reg_imm(arg)
         w_a = InstructionMapper.reg_value(instance, reg_a)
         address = v_x
+        print(address)
         contents = [w_a % 2 ** 8]
-        if InstructionMapper.valid_address(instance.initial_page_map, address):
+        if InstructionMapper.valid_address(instance.initial_memory, address):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, contents)
         else:
@@ -682,7 +738,7 @@ class InstructionMapper:
         buffer = bytearray(2)
         IntegerCodec.encode_into(serialize, w_a % 2 ** 16, buffer)
         contents = list(buffer.rstrip(b'\x00'))
-        if InstructionMapper.valid_address(instance.initial_page_map, address, 2):
+        if InstructionMapper.valid_address(instance.initial_memory, address, 2):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             contents = InstructionMapper.extend_array(contents, 2)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, contents)
@@ -699,7 +755,7 @@ class InstructionMapper:
         buffer = bytearray(4)
         IntegerCodec.encode_into(serialize, w_a % 2 ** 32, buffer)
         contents = list(buffer.rstrip(b'\x00'))
-        if InstructionMapper.valid_address(instance.initial_page_map, address):
+        if InstructionMapper.valid_address(instance.initial_memory, address):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             contents = InstructionMapper.extend_array(contents, 4)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, contents)
@@ -716,7 +772,7 @@ class InstructionMapper:
         buffer = bytearray(8)
         IntegerCodec.encode_into(serialize, w_a, buffer)
         contents = list(buffer.rstrip(b'\x00'))
-        if InstructionMapper.valid_address(instance.initial_page_map, address, 8):
+        if InstructionMapper.valid_address(instance.initial_memory, address, 8):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             contents = InstructionMapper.extend_array(contents, 8)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, contents)
@@ -874,7 +930,7 @@ class InstructionMapper:
     def store_imm_u8(instance, arg):
         print(f"store_imm_u8 ")
         l_x, l_y, v_x, v_y = InstructionMapper.imm_imm(arg)
-        if InstructionMapper.valid_address(instance.initial_page_map, v_x, writable=True):
+        if InstructionMapper.valid_address(instance.initial_memory, v_x, writable=True):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, v_x, [v_y % 2 ** 8])
         else:
@@ -888,7 +944,7 @@ class InstructionMapper:
         buffer = bytearray(2)
         IntegerCodec.encode_into(serialize, v_y % 2 ** 16, buffer)
         contents = list(buffer.rstrip(b'\x00'))
-        address = InstructionMapper.valid_address(instance.initial_page_map, v_x, 2, writable=True)
+        address = InstructionMapper.valid_address(instance.initial_memory, v_x, 2, writable=True)
         if address:
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             contents = InstructionMapper.extend_array(contents, 2)
@@ -904,7 +960,7 @@ class InstructionMapper:
         buffer = bytearray(4)
         IntegerCodec.encode_into(serialize, v_y % 2 ** 32, buffer)
         contents = list(buffer.rstrip(b'\x00'))
-        address = InstructionMapper.valid_address(instance.initial_page_map, v_x, 4, writable=True)
+        address = InstructionMapper.valid_address(instance.initial_memory, v_x, 4, writable=True)
         if address:
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             contents = InstructionMapper.extend_array(contents, 4)
@@ -920,7 +976,7 @@ class InstructionMapper:
         buffer = bytearray(8)
         IntegerCodec.encode_into(serialize, v_y, buffer)
         contents = list(buffer.rstrip(b'\x00'))
-        address = InstructionMapper.valid_address(instance.initial_page_map, v_x, 8, writable=True)
+        address = InstructionMapper.valid_address(instance.initial_memory, v_x, 8, writable=True)
         if address:
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             contents = InstructionMapper.extend_array(contents, 8)
@@ -1502,7 +1558,7 @@ class InstructionMapper:
         w_a = int(InstructionMapper.reg_value(instance, reg_a))
         address = (w_b + v_x) % 2 ** 64
         content = [w_a % 2 ** 8]
-        if InstructionMapper.valid_address(instance.initial_page_map, address):
+        if InstructionMapper.valid_address(instance.initial_memory, address):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, content)
         else:
@@ -1519,7 +1575,7 @@ class InstructionMapper:
         IntegerCodec.encode_into(serialize, w_a % 2 ** 16, buffer)
         content = list(buffer.rstrip(b'\x00'))
         address = (w_b + v_x) % 2 ** 64
-        if InstructionMapper.valid_address(instance.initial_page_map, address, 2):
+        if InstructionMapper.valid_address(instance.initial_memory, address, 2):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             content = InstructionMapper.extend_array(content, 2)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, content)
@@ -1537,7 +1593,7 @@ class InstructionMapper:
         IntegerCodec.encode_into(serialize, w_a % 2 ** 32, buffer)
         content = list(buffer.rstrip(b'\x00'))
         address = (w_b + v_x) % 2 ** 64
-        if InstructionMapper.valid_address(instance.initial_page_map, address, 4):
+        if InstructionMapper.valid_address(instance.initial_memory, address, 4):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             content = InstructionMapper.extend_array(content, 4)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, content)
@@ -1551,7 +1607,7 @@ class InstructionMapper:
         w_b = int(InstructionMapper.reg_value(instance, reg_b))
         w_a = int(InstructionMapper.reg_value(instance, reg_a))
         address = (w_b + v_x) % 2 ** 64
-        if InstructionMapper.valid_address(instance.initial_page_map, address, 8):
+        if InstructionMapper.valid_address(instance.initial_memory, address, 8):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             serialize = IntegerCodec(8)
             buffer = bytearray(8)
@@ -1569,9 +1625,10 @@ class InstructionMapper:
         reg_a, reg_b, l_x, v_x = InstructionMapper.reg_reg_imm(arg)
         w_b = int(InstructionMapper.reg_value(instance, reg_b))
         address = int((w_b + v_x) % 2 ** 64)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, address)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, address)
         if is_valid:
             temp = InstructionMapper.memory_value(instance.initial_memory, address)[0]
+            temp = InstructionMapper.bit_to_int(temp.value)
             instance.initial_regs[reg_a] = U64(int(temp))
             InstructionMapper.increase_counter(instance, len(arg) + 1)
         else:
@@ -1583,10 +1640,11 @@ class InstructionMapper:
         reg_a, reg_b, l_x, v_x = InstructionMapper.reg_reg_imm(arg)
         w_b = int(InstructionMapper.reg_value(instance, reg_b))
         address = int((w_b + v_x) % 2 ** 64)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, address)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, address)
         if is_valid:
             value = InstructionMapper.memory_value(instance.initial_memory, address)[0]
-            instance.initial_regs[reg_a] = U64(InstructionMapper.inverse_signed_z(InstructionMapper.signed_z(value, 1), 8))
+            temp = InstructionMapper.bit_to_int(value.value)
+            instance.initial_regs[reg_a] = U64(InstructionMapper.inverse_signed_z(InstructionMapper.signed_z(temp, 1), 8))
             InstructionMapper.increase_counter(instance, len(arg) + 1)
         else:
             return "page-fault"
@@ -1597,13 +1655,13 @@ class InstructionMapper:
         reg_a, reg_b, l_x, v_x = InstructionMapper.reg_reg_imm(arg)
         w_b = int(InstructionMapper.reg_value(instance, reg_b))
         address = int((w_b + v_x) % 2 ** 64)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, address, 2)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, address, 2)
         if is_valid:
             value = InstructionMapper.memory_value(instance.initial_memory, address, 2)
             temp = []
             for v in value:
                 temp.append(int(v))
-            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(2, temp)[0])
+            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(2, bytes(temp))[0])
             InstructionMapper.increase_counter(instance, len(arg) + 1)
         else:
             return "page-fault"
@@ -1614,13 +1672,13 @@ class InstructionMapper:
         reg_a, reg_b, l_x, v_x = InstructionMapper.reg_reg_imm(arg)
         w_b = int(InstructionMapper.reg_value(instance, reg_b))
         address = int((w_b + v_x) % 2**64)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, address, 2)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, address, 2)
         if is_valid:
             temp = InstructionMapper.memory_value(instance.initial_memory, address, 2)
             temp2 = []
             for t in temp:
                 temp2.append(int(t))
-            value = IntegerCodec.decode_from(2, temp2)[0]
+            value = IntegerCodec.decode_from(2, bytes(temp2))[0]
             instance.initial_regs[reg_a] = U64(InstructionMapper.inverse_signed_z(InstructionMapper.signed_z(value, 2), 8))
             InstructionMapper.increase_counter(instance, len(arg) + 1)
         else:
@@ -1632,13 +1690,13 @@ class InstructionMapper:
         reg_a, reg_b, l_x, v_x = InstructionMapper.reg_reg_imm(arg)
         w_b = int(InstructionMapper.reg_value(instance, reg_b))
         address = int((w_b + v_x) % 2 ** 64)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, address, 4)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, address, 4)
         if is_valid:
             value = InstructionMapper.memory_value(instance.initial_memory, address, 4)
             temp = []
             for v in value:
                 temp.append(int(v))
-            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(4, temp)[0])
+            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(4, bytes(temp))[0])
             InstructionMapper.increase_counter(instance, len(arg) + 1)
         else:
             return "page-fault"
@@ -1649,13 +1707,13 @@ class InstructionMapper:
         reg_a, reg_b, l_x, v_x = InstructionMapper.reg_reg_imm(arg)
         w_b = int(InstructionMapper.reg_value(instance, reg_b))
         address = int((w_b + v_x) % 2 ** 64)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, address, 4)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, address, 4)
         if is_valid:
             temp = InstructionMapper.memory_value(instance.initial_memory, address, 4)
             temp2 = []
             for t in temp:
                 temp2.append(int(t))
-            value = IntegerCodec.decode_from(4, temp2)[0]
+            value = IntegerCodec.decode_from(4, bytes(temp2))[0]
             instance.initial_regs[reg_a] = U64(InstructionMapper.inverse_signed_z(InstructionMapper.signed_z(value, 4), 8))
             InstructionMapper.increase_counter(instance, len(arg) + 1)
         else:
@@ -1667,13 +1725,13 @@ class InstructionMapper:
         reg_a, reg_b, l_x, v_x = InstructionMapper.reg_reg_imm(arg)
         w_b = int(InstructionMapper.reg_value(instance, reg_b))
         address = int((w_b + v_x) % 2 ** 64)
-        is_valid = InstructionMapper.valid_address(instance.initial_page_map, address, 8)
+        is_valid = InstructionMapper.valid_address(instance.initial_memory, address, 8)
         if is_valid:
             value = InstructionMapper.memory_value(instance.initial_memory, address, 8)
             temp = []
             for v in value:
                 temp.append(int(v))
-            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(8, temp)[0])
+            instance.initial_regs[reg_a] = U64(IntegerCodec.decode_from(8, bytes(temp))[0])
             InstructionMapper.increase_counter(instance, len(arg) + 1)
         else:
             return "page-fault"
@@ -2046,7 +2104,7 @@ class InstructionMapper:
         w_a = InstructionMapper.reg_value(instance, reg_a)
         address = w_a + v_x
         content = [v_y % 2 ** 8]
-        if InstructionMapper.valid_address(instance.initial_page_map, address, True):
+        if InstructionMapper.valid_address(instance.initial_memory, address, True):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, content)
         else:
@@ -2062,7 +2120,7 @@ class InstructionMapper:
         buffer = bytearray(2)
         IntegerCodec.encode_into(serialize, v_y % 2 ** 16, buffer)
         content = list(buffer.rstrip(b'\x00'))
-        if InstructionMapper.valid_address(instance.initial_page_map, U32(address), 2, True):
+        if InstructionMapper.valid_address(instance.initial_memory, U32(address), 2, True):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             content = InstructionMapper.extend_array(content, 2)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, content)
@@ -2079,7 +2137,7 @@ class InstructionMapper:
         buffer = bytearray(4)
         IntegerCodec.encode_into(serialize, v_y % 2 ** 32, buffer)
         content = list(buffer.rstrip(b'\x00'))
-        if InstructionMapper.valid_address(instance.initial_page_map, address, 4, True):
+        if InstructionMapper.valid_address(instance.initial_memory, address, 4, True):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             content = InstructionMapper.extend_array(content, 4)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, content)
@@ -2096,7 +2154,7 @@ class InstructionMapper:
         buffer = bytearray(8)
         IntegerCodec.encode_into(serialize, v_y, buffer)
         content = list(buffer.rstrip(b'\x00'))
-        if InstructionMapper.valid_address(instance.initial_page_map, address, 8, True):
+        if InstructionMapper.valid_address(instance.initial_memory, address, 8, True):
             InstructionMapper.increase_counter(instance, len(arg) + 1)
             content = InstructionMapper.extend_array(content, 8)
             instance.initial_memory = InstructionMapper.store_value(instance.initial_memory, address, content)

@@ -29,3 +29,8 @@ class Bytes(Vector[Byte]):
     def from_json(cls, data: Any) -> "Bytes":
         """Create from JSON representation."""
         return cls(data)
+
+
+@decodable_vector(Byte)
+class ByteVector32(Bytes):
+    ...

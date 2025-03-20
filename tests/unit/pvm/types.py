@@ -1,9 +1,6 @@
 from dataclasses import dataclass
-from jam.pvm.memory import MemoryChunk
 from jam.pvm.program import Program
 from jam.pvm.register import Registers
-from jam.pvm.page_map import PageMap
-from jam.types.base.enum import Enum
 from jam.types.base.integers.fixed import U32
 from jam.types.base.string import String
 from jam.types.protocol.core import Gas
@@ -12,6 +9,12 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.decorators import with_json_metadata
 from jam.utils.json.serde import JsonSerde
 from jam.pvm.extract import Status
+from jam.pvm.pvm_memory import Memory, Access
+from jam.pvm.memory import Memory, MemoryChunk
+from jam.pvm.page_map import PageMap
+from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.boolean import Boolean
+from typing import Dict, Any
 
 
 @with_json_metadata(
@@ -34,7 +37,7 @@ class Testcase(Codable, JsonSerde):
     initial_pc: U32
     initial_page_map: PageMap
     initial_memory: MemoryChunk
-    initial_gas: U32
+    initial_gas: Gas
     program: Program
     expected_status: Status
     expected_regs: Registers
