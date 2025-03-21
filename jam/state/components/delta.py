@@ -51,8 +51,8 @@ class LookupTimestamps(Dictionary[ByteArray32, Timestamps]):
 
     @staticmethod
     def get_key(hash: ByteArray32, length: BlobLength) -> ByteArray32:
-        return ByteArray32(Bytes(length.encode()) + Bytes(hash)[2:26] + Bytes(bytearray(4)))
-        # return ByteArray32(Bytes(length.encode()) + Bytes(hash)[2:30] )
+        
+        return ByteArray32(Bytes(length.encode()) + Hash.blake2b(hash)[2:26] + Bytes(bytearray(4)))
 
     
     @staticmethod

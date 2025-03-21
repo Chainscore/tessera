@@ -195,8 +195,8 @@ class DunaState(Codable, JsonSerde):
             for preimage in i.data.preimages:
                 state.delta[i.id].lookup[preimage.hash] = preimage.blob
             for lookup in i.data.lookup_meta:
-                state.delta[i.id].timestamps[LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length))] = lookup.value
                 # print(LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length)))
+                state.delta[i.id].timestamps[LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length))] = lookup.value
                 # state.delta[i.id].timestamps[lookup.key] = lookup.value
             
         return state
@@ -216,10 +216,41 @@ rpc_url = "http://localhost:3001/blocks"
 start_slot = 13
 initial_state = tc.to_state()
 
+
+
+
+def testState(DunaState,OurState):
+    assert(DunaState.alpha==OurState.alpha)
+    assert(DunaState.phi==OurState.phi)
+    assert(OurState.beta==OurState.beta)
+    assert(DunaState.gamma==OurState.gamma)
+    assert(DunaState.psi==OurState.psi)
+    assert(DunaState.eta==OurState.eta)
+    assert(DunaState.iota==OurState.iota)
+    assert(DunaState.kappa==OurState.kappa)
+    assert(DunaState.lambda_==OurState.lambda_)
+    assert(DunaState.rho==OurState.rho)
+    assert(DunaState.tau==OurState.tau)
+    assert(DunaState.chi==OurState.chi)
+    assert(DunaState.pi==OurState.pi)
+    assert(DunaState.theta==OurState.nu)
+    assert(DunaState.xi==OurState.xi)
+    for i in DunaState.delta:
+        assert(DunaState.delta[i].storage==OurState.delta[i].storage)
+        assert(DunaState.delta[i].lookup==OurState.delta[i].lookup)
+        assert(DunaState.delta[i].code_hash==OurState.delta[i].code_hash)
+        assert(DunaState.delta[i].balance==OurState.delta[i].balance)
+        assert(DunaState.delta[i].gas_limit==OurState.delta[i].gas_limit)
+        assert(DunaState.delta[i].min_gas==OurState.delta[i].min_gas)
+        assert(DunaState.delta[i].timestamps==OurState.delta[i].timestamps)
+    
 if __name__ == "__main__":
-    # transform_state=initial_state.transform()
-    print(initial_state.generate_root())
-    # State.detransform(transform_state)
+    transform_state=initial_state.transform()
+
+    our_state=State.detransform(transform_state)
+    testState(initial_state,our_state)
     # asyncio.run(main("from jam duna", initial_state, start_slot, rpc_url))
 
 # Command to run file: 'python tests/integration/jam-duna/jam_duna.py'
+
+

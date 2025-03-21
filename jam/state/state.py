@@ -15,7 +15,7 @@ from jam.state.merkle import StateMerkle
 from jam.state.utils.key_constructor import construct_state_key
 from jam.state.components.phi import Phi
 from jam.state.components.beta import Beta
-from jam.consensus.safrole.gamma import Gamma
+from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaZ
 from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
@@ -24,6 +24,8 @@ from jam.types.protocol.crypto import Hash
 from jam.types.protocol.crypto import OpaqueHash
 from jam.state.components.delta import AccountData, AccountStorage, LookupTimestamps, PreImageLookup, Timestamps
 from jam.utils.codec.primitives.integers import IntegerCodec
+from jam.types.protocol.core import BlobLength
+
 
 # from jam.types.block import Block
 # from jam.authorization.authorization import Authorization
@@ -84,17 +86,15 @@ class State(Sigma):
                 ] = Bytes(self.delta[i].lookup[j])
 
             for j in self.delta[i].timestamps:
-            
-                for k in self.delta[i].lookup:
-                    if (k[2:26]==j[4:28]):
-                        service_lookup[
-                            construct_state_key(
-                                (
-                                    i,
-                                    ByteArray32(Bytes(j[0:4])+Hash.blake2b(k)[2:30])
-                                )
-                            )
-                        ] = Bytes(self.delta[i].timestamps[j].encode())
+
+                service_lookup[
+                    construct_state_key(
+                        (
+                            i,
+                            j
+                        )
+                    )
+                ] = Bytes(self.delta[i].timestamps[j].encode())
             
         return {
             construct_state_key(1): Bytes(self.alpha.encode()),
@@ -122,29 +122,27 @@ class State(Sigma):
     def detransform(state: dict) -> "State":
         """Inverse of transform"""
         # Loop thru the whole state dict
-        # State=State()
-        # print(State)
+        
         delta = {}
         for key, value in state.items():
             # Start with finding all core state components 1-15
             # if (key[0] <= 15) and bytes(key[0:32]) == 0:
-            
             if (int(key[0]) <= 15 and int(key[0])>0):
                 if int(key[0]) == 1:
                     alpha, _ = Alpha.decode_from(bytes(value))
                 elif int(key[0]) == 2:
-                    phi, _ = Phi.decode_from(bytes(value))
+                     phi, _ = Phi.decode_from(bytes(value))
                 elif int(key[0]) == 3:
                     beta, _ = Beta.decode_from(bytes(value))
                 elif int(key[0]) == 4:
                     gamma, _ = Gamma.decode_from(bytes(value))
-                elif key[0] == 5:
+                elif int(key[0]) == 5:
                     psi, _ = Psi.decode_from(bytes(value))
                 elif int(key[0]) == 6:
                     eta, _ = Eta.decode_from(bytes(value))
                 elif int(key[0]) == 7:
                     iota, _ = Iota.decode_from(bytes(value))
-                elif key[0] == 8:
+                elif int(key[0]) == 8:
                     kappa, _ = Kappa.decode_from(bytes(value))
                 elif int(key[0]) == 9:
                     lambda_, _ = Lambda_.decode_from(bytes(value))
@@ -152,9 +150,9 @@ class State(Sigma):
                     rho, _ = Rho.decode_from(bytes(value))
                 elif int(key[0]) == 11:
                     tau, _ = Tau.decode_from(bytes(value))
-                elif key[0] == 12:
+                elif int(key[0]) == 12:
                     chi, _ = Chi.decode_from(bytes(value))
-                elif key[0] == 13:
+                elif int(key[0]) == 13:
                     pi, _ = Pi.decode_from(bytes(value))
                 elif int(key[0]) == 14:
                     nu, _ = Nu.decode_from(bytes(value))
@@ -177,7 +175,15 @@ class State(Sigma):
                 total_offset += offset
                 ai, offset = U32.decode_from(bytes(value), total_offset)
                 total_offset += offset
-                delta[service_id] = AccountData(storage=AccountStorage({}), lookup=PreImageLookup({}), timestamps=LookupTimestamps({}), code_hash=ByteArray32(ac), balance=Balance(ab), gas_limit=Gas(ag), min_gas=Gas(am))
+                delta[service_id] = AccountData(
+                    storage=AccountStorage({}), 
+                    lookup=PreImageLookup({}), 
+                    timestamps=LookupTimestamps({}), 
+                    code_hash=ByteArray32(ac), 
+                    balance=Balance(ab), 
+                    gas_limit=Gas(ag), 
+                    min_gas=Gas(am)
+                )
 
             else:
                 if Bytes(key[7:0:-2])==Bytes(2**32 - 1):
@@ -190,18 +196,23 @@ class State(Sigma):
                     
                 else:
                     #populating the timestamps
-                    for i in delta[service_id].lookup:
-                        if Hash.blake2b(i)[2:26]==(key[8:32]):
-                            service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                            TimeStamps,_=Timestamps.decode_from(bytes(value))
-                            
-                            delta[service_id].timestamps[i,int.from_bytes(bytes(Bytes(key[7:0:-2])))]=TimeStamps
-                        else:
-                            continue # NOTE: This might be a problem for where the Hashes are not matching
-                   
+                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    # print("keyBhai",key)
+                    TimeStamps,_=Timestamps.decode_from(bytes(value))
+                    timestamp_key=ByteArray32(Bytes(key[1:8:2])+Bytes(key[8:32])+ Bytes(bytearray(4)))
+                    # print("timestamp_key",timestamp_key)
+                    delta[service_id].timestamps[timestamp_key]=TimeStamps
+            
                 # Find all preimages ()
         
-      
+        return State(alpha=alpha,phi=phi,
+                     beta=beta,gamma=gamma,
+                     psi=psi,eta=eta,
+                     iota=iota,kappa=kappa,
+                     lambda_=lambda_,rho=rho,
+                     tau=tau,chi=chi,
+                     pi=pi,nu=nu,
+                     xi=xi,delta=delta)
 
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
