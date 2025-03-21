@@ -74,7 +74,7 @@ if __name__ == "__main__":
         print(i)
 
 # Open RocksDB
-db = plyvel.DB("mydb", create_if_missing=True)
+db = plyvel.DB("my_db", create_if_missing=True)
 
 # Sample dictionary
 data = transform_state
@@ -93,6 +93,7 @@ db.put(b'user:1', json_data.encode())
 
 # Retrieve from RocksDB
 retrieved_data = db.get(b'user:1')
+
 # if retrieved_data:
 #     dict_data = json.loads(retrieved_data.decode())
 #     for key in dict_data:
