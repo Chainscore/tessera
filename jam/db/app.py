@@ -55,33 +55,21 @@ class TestState(Codable, JsonSerde):
 
 
 
-
-# genesis_file = "/home/rahulcsl/jam/jam-node/tests/integration/jam-duna/state_snapshots/genesis.json"
-
 # Construct relative path from project root
-# genesis_file = Path("tests/integration/jam-duna/state_snapshots/genesis.json")
-# with open(genesis_file, "r") as file:
+
 genesis_file = "tests/integration/jam-duna/state_snapshots/genesis.json"
 with open(genesis_file) as file:
     genesis_data = json.loads(file.read())
-    print('data',genesis_data)
-
     try:
-        print('hi')
         tc = DunaState.from_json(genesis_data)
-        print('ttt',tc)
         print(f"Decoded {file}")
     except Exception as e:
         print(f"❌ Failed to decode {file}: {e}")
 
-rpc_url = "http://localhost:3001/blocks"
-start_slot = 13
-initial_state = tc.to_state()
-# print('initial state',initial_state)
 
+initial_state = tc.to_state()
 if __name__ == "__main__":
     transform_state=initial_state.transform()
-    # print('transfrom state',list(transform_state.keys()))
 
 
 # Open RocksDB
@@ -94,10 +82,7 @@ test_data = {}
 for key, value in data.items():
     test_data[Bytes(key).hex()] = Bytes(value).hex()
 
-# print('test  data',test_data)
 
-# for keys in data:
-#     print('keeeeeyyy',(Bytes(keys).hex()))
 
 # Convert dictionary to JSON string
 json_data = json.dumps(test_data)
@@ -107,10 +92,9 @@ db.put(b'user:1', json_data.encode())
 
 # Retrieve from RocksDB
 retrieved_data = db.get(b'user:1')
-if retrieved_data:
-    dict_data = json.loads(retrieved_data.decode())
-    for key in dict_data:
-        print(dict_data[key])
-    # print(dict_data)  # Output: {'name': 'Alice', 'age': 25, 'city': 'New York'}
+# if retrieved_data:
+#     dict_data = json.loads(retrieved_data.decode())
+#     for key in dict_data:
+#         print(key)
 
 db.close()
