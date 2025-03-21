@@ -50,4 +50,4 @@ ENV/
 
 azure_logs/
 
-my_db/
+mydb/
