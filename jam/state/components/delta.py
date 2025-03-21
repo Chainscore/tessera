@@ -40,12 +40,24 @@ class Timestamps(Vector[U32]):
     """Lookup timestamps"""
     ...
 
-@decodable_dictionary(LookupTable, Timestamps)
-class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
+# @decodable_dictionary(LookupTable, Timestamps)
+# class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
+#     """Lookup timestamps"""
+#     ...
+
+@decodable_dictionary(ByteArray32, Timestamps)
+class LookupTimestamps(Dictionary[ByteArray32, Timestamps]):
     """Lookup timestamps"""
-    ...
 
+    @staticmethod
+    def get_key(hash: ByteArray32, length: BlobLength) -> ByteArray32:
+        return ByteArray32(Bytes(length.encode()) + Hash.blake2b(hash)[2:26] + Bytes(bytearray(4)))
 
+    
+    @staticmethod
+    def get_length(hash: ByteArray32) -> BlobLength:
+        return BlobLength(int.from_bytes(bytes(Bytes(hash[0:4])),byteorder='little'))
+    
 @decodable_dataclass
 @dataclass
 class AccountData(Codable, JsonSerde):

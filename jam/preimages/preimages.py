@@ -2,11 +2,12 @@ import dataclasses
 from copy import deepcopy
 
 from jam.preimages.errors import PreimageError, PreimageErrorEnum
-from jam.state.components.delta import LookupTable
+from jam.state.components.delta import LookupTimestamps
 from jam.state.state import State
 from jam.types.block import Block
 from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
 from jam.types.protocol.crypto import Hash
+from jam.types.protocol.core import BlobLength
 
 
 class Preimages:
@@ -32,7 +33,8 @@ class Preimages:
             account = new_state.delta[preimage.requester]
             # If the preimage to add does not have lookup metadata, throw unneeded error
             hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(hashed_blob, len(preimage.blob))
+            # lookup_key = LookupTable(hashed_blob, len(preimage.blob))
+            lookup_key=LookupTimestamps.get_key(hashed_blob,BlobLength(len(preimage.blob)))
             if (
                 lookup_key not in account.timestamps
                 or len(account.timestamps[lookup_key]) != 0
@@ -46,7 +48,8 @@ class Preimages:
             # Add the preimage to the account
             account = new_state.delta[preimage.requester]
             hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(hashed_blob, len(preimage.blob))
+            # lookup_key = LookupTable(hashed_blob, len(preimage.blob))
+            lookup_key=LookupTimestamps.get_key(hashed_blob,BlobLength(len(preimage.blob)))
 
             account.lookup[hashed_blob] = preimage.blob
             account.timestamps[lookup_key].append(block.header.slot)

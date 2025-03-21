@@ -15,13 +15,18 @@ from jam.state.merkle import StateMerkle
 from jam.state.utils.key_constructor import construct_state_key
 from jam.state.components.phi import Phi
 from jam.state.components.beta import Beta
-from jam.consensus.safrole.gamma import Gamma
+from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaZ
 from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.core import Balance, Gas
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.crypto import OpaqueHash
+from jam.state.components.delta import AccountData, AccountStorage, LookupTimestamps, PreImageLookup, Timestamps
+from jam.utils.codec.primitives.integers import IntegerCodec
+from jam.types.protocol.core import BlobLength
+
+
 # from jam.types.block import Block
 # from jam.authorization.authorization import Authorization
 # from jam.recent_history.recent_history import RecentHistory
@@ -53,7 +58,8 @@ class State(Sigma):
             a_s, a_l = 0, 0
             if l_key:
                 for key in l_key:
-                    a_l += 81 + int(key.length)
+                    #fetching the length from the LookupTimestamps
+                    a_l += 81 + int(LookupTimestamps.get_length(key))
             if s_key:
                 for key in s_key:
                     a_s += 32 + len(self.delta[i].storage[key])
@@ -81,17 +87,16 @@ class State(Sigma):
                 ] = Bytes(self.delta[i].lookup[j])
 
             for j in self.delta[i].timestamps:
+
                 service_lookup[
                     construct_state_key(
                         (
                             i,
-                            ByteArray32(
-                                Bytes(j.length.encode()) + Hash.blake2b(j.hash)[2:30]
-                            ),
+                            j
                         )
                     )
                 ] = Bytes(self.delta[i].timestamps[j].encode())
-
+            
         return {
             construct_state_key(1): Bytes(self.alpha.encode()),
             construct_state_key(2): Bytes(self.phi.encode()),
@@ -118,66 +123,113 @@ class State(Sigma):
     def detransform(state: dict) -> "State":
         """Inverse of transform"""
         # Loop thru the whole state dict
+        
+        # populating the delta
         delta = {}
         for key, value in state.items():
             # Start with finding all core state components 1-15
-            if (key[0] <= 15) and bytes(key[0:32]) == 0:
-                if key[0] == 1:
-                    alpha, _ = Alpha.decode_from(value)
-                elif key[0] == 2:
-                    phi, _ = Phi.decode_from(value)
-                elif key[0] == 3:
-                    beta, _ = Beta.decode_from(value)
-                elif key[0] == 4:
-                    gamma, _ = Gamma.decode_from(value)
-                elif key[0] == 5:
-                    psi, _ = Psi.decode_from(value)
-                elif key[0] == 6:
-                    eta, _ = Eta.decode_from(value)
-                elif key[0] == 7:
-                    iota, _ = Iota.decode_from(value)
-                elif key[0] == 8:
-                    kappa, _ = Kappa.decode_from(value)
-                elif key[0] == 9:
-                    lambda_, _ = Lambda_.decode_from(value)
-                elif key[0] == 10:
-                    rho, _ = Rho.decode_from(value)
-                elif key[0] == 11:
-                    tau, _ = Tau.decode_from(value)
-                elif key[0] == 12:
-                    chi, _ = Chi.decode_from(value)
-                elif key[0] == 13:
-                    pi, _ = Pi.decode_from(value)
-                elif key[0] == 14:
-                    nu, _ = Nu.decode_from(value)
-                elif key[0] == 15:
-                    xi, _ = Xi.decode_from(value)
+            # if (key[0] <= 15) and bytes(key[0:32]) == 0:
+            if (int(key[0]) <= 15 and int(key[0])>0):
+                if int(key[0]) == 1:
+                    alpha, _ = Alpha.decode_from(bytes(value))
+                elif int(key[0]) == 2:
+                     phi, _ = Phi.decode_from(bytes(value))
+                elif int(key[0]) == 3:
+                    beta, _ = Beta.decode_from(bytes(value))
+                elif int(key[0]) == 4:
+                    gamma, _ = Gamma.decode_from(bytes(value))
+                elif int(key[0]) == 5:
+                    psi, _ = Psi.decode_from(bytes(value))
+                elif int(key[0]) == 6:
+                    eta, _ = Eta.decode_from(bytes(value))
+                elif int(key[0]) == 7:
+                    iota, _ = Iota.decode_from(bytes(value))
+                elif int(key[0]) == 8:
+                    kappa, _ = Kappa.decode_from(bytes(value))
+                elif int(key[0]) == 9:
+                    lambda_, _ = Lambda_.decode_from(bytes(value))
+                elif int(key[0]) == 10:
+                    rho, _ = Rho.decode_from(bytes(value))
+                elif int(key[0]) == 11:
+                    tau, _ = Tau.decode_from(bytes(value))
+                elif int(key[0]) == 12:
+                    chi, _ = Chi.decode_from(bytes(value))
+                elif int(key[0]) == 13:
+                    pi, _ = Pi.decode_from(bytes(value))
+                elif int(key[0]) == 14:
+                    nu, _ = Nu.decode_from(bytes(value))
+                elif int(key[0]) == 15:
+                    xi, _ = Xi.decode_from(bytes(value))
+                
             # Then find all services (first byte is 255, rest is service id)
-            elif key[0] == 255:
-                service_id = int(Bytes([key[1], key[3], key[5], key[7]]))
+            elif int(key[0]) == 255:
+                service_id = int.from_bytes(bytes(Bytes([key[1], key[3], key[5], key[7]])))
                 total_offset = 0
-                ac, offset = OpaqueHash.decode_from(value, total_offset)
+                ac, offset = OpaqueHash.decode_from(bytes(value), total_offset)
                 total_offset += offset
-                ab, offset = Balance.decode_from(value, total_offset)
+                ab, offset = Balance.decode_from(bytes(value), total_offset)
                 total_offset += offset
-                ag, offset = Gas.decode_from(value, total_offset)
+                ag, offset = Gas.decode_from(bytes(value), total_offset)
                 total_offset += offset
-                am, offset = Gas.decode_from(value, total_offset)
+                am, offset = Gas.decode_from(bytes(value), total_offset)
                 total_offset += offset
-                ao, offset = Gas.decode_from(value, total_offset)
+                ao, offset = Gas.decode_from(bytes(value), total_offset)
                 total_offset += offset
-                ai, offset = U32.decode_from(value, total_offset)
+                ai, offset = U32.decode_from(bytes(value), total_offset)
                 total_offset += offset
-                # Find all preimages ()
-                
-                
+                delta[service_id] = AccountData(
+                    storage=AccountStorage({}), 
+                    lookup=PreImageLookup({}), 
+                    timestamps=LookupTimestamps({}), 
+                    code_hash=ByteArray32(ac), 
+                    balance=Balance(ab), 
+                    gas_limit=Gas(ag), 
+                    min_gas=Gas(am)
+                )
 
+            else:
+                if Bytes(key[7:0:-2])==Bytes(2**32 - 1):
+                    #populating the storage
+                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    delta[service_id].storage[ByteArray32(Bytes(key[8:32]+Bytes(bytearray(8))))]=value
+                    print("Storage")
+                elif Bytes(key[7:0:-2])==Bytes(2**32 - 2):
+                    #populating the lookup
+                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    delta[service_id].lookup[Hash.blake2b(value)] = value
+                    
+                else:
+                    #populating the timestamps
+                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    TimeStamps,_=Timestamps.decode_from(bytes(value))
+                    timestamp_key=ByteArray32(Bytes(key[1:8:2])+Bytes(key[8:32])+ Bytes(bytearray(4)))
+                    # print("timestamp_key",timestamp_key)
+                    delta[service_id].timestamps[timestamp_key]=TimeStamps
+                    
+        return State(alpha=alpha,
+                     phi=phi,
+                     beta=beta,
+                     gamma=gamma,
+                     psi=psi,
+                     eta=eta,
+                     iota=iota,
+                     kappa=kappa,
+                     lambda_=lambda_,
+                     rho=rho,
+                     tau=tau,
+                     chi=chi,
+                     pi=pi,
+                     nu=nu,
+                     xi=xi,
+                     delta=delta)
+        
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
         return self._merkle.merkelize(self.transform())
 
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
+        
         return self._merkle.get_nodes()
 
     # def master_transition_state(self, block : Block):
