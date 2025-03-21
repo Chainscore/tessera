@@ -26,14 +26,14 @@ class PreImageLookup(Dictionary[ByteArray32, Bytes]):
     ...
 
 
-# @decodable_dataclass
-# @dataclass
-# class LookupTable(Codable, JsonSerde):
-#     hash: ByteArray32
-#     length: BlobLength
+@decodable_dataclass
+@dataclass
+class LookupTable(Codable, JsonSerde):
+    hash: ByteArray32
+    length: BlobLength
 
-#     def __hash__(self) -> int:
-#         return int.from_bytes(bytes(Hash.sha256(bytes(self.hash) + bytes(self.length))))
+    def __hash__(self) -> int:
+        return int.from_bytes(bytes(Hash.sha256(bytes(self.hash) + bytes(self.length))))
 
 @decodable_vector(element_type=U32, max_length=3)
 class Timestamps(Vector[U32]):
@@ -51,7 +51,6 @@ class LookupTimestamps(Dictionary[ByteArray32, Timestamps]):
 
     @staticmethod
     def get_key(hash: ByteArray32, length: BlobLength) -> ByteArray32:
-        
         return ByteArray32(Bytes(length.encode()) + Hash.blake2b(hash)[2:26] + Bytes(bytearray(4)))
 
     
