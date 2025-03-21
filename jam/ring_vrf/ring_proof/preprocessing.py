@@ -1,14 +1,43 @@
-from jam.ring_vrf.ring_proof.constants import omega, S_PRIME, Blinding_Base
+from jam.ring_vrf.ring_proof.constants import omega, S_PRIME, Blinding_Base, PaddingPoint
 from sympy import  symbols
+from jam.ring_vrf.ring_proof.get_ring_points import pk_x_y_list, secret_t
 from jam.ring_vrf.ring_proof.helpers import unzip, do_modulus
-from jam.ring_vrf.ring_proof.short_weierstrass import short_to_te
+from jam.ring_vrf.ring_proof.short_weierstrass import twisted_edward_to_sw, is_on_monty, is_on_weierstrass
 from jam.ring_vrf.ring_proof.short_weierstrass_curve_ops import point_multiplication, point_addition
-from jam.ring_vrf.ring_proof.polynomial_interpolation import polynomial_interpolation,check_is_valid
+# from jam.ring_vrf.ring_proof.polynomial_interpolation import polynomial_interpolation,check_is_valid
 from jam.ring_vrf.ring_proof.KZG_polynomial_commit_open_verify import commit_to_polynomial
 
-size=N = 10 #sample size
+size= 512 #sample size
 
-D = [pow(omega, i, S_PRIME) for i in range(1, size + 1)]
+old_D = [pow(omega, i, S_PRIME) for i in range(0, size)]
+# For larger domains like 2048, this more efficient version is recommended:
+def generate_domain_efficient(omega, size, prime):
+    """
+    Efficiently generates a domain D = <ω> using binary exponentiation.
+    """
+    # Precompute ω^(2^k) for k = 0,1,2,...,log_2(size)-1
+    omega_powers = [omega]
+    current = omega
+    for _ in range(size.bit_length() - 2):
+        current = (current * current) % prime
+        omega_powers.append(current)
+
+    # Generate the domain
+    domain = [1]  # ω^0 = 1
+
+    for i in range(1, size):
+        # Compute ω^i using binary decomposition
+        elem = 1
+        for j, power in enumerate(omega_powers):
+            if (i >> j) & 1:
+                elem = (elem * power) % prime
+        domain.append(elem)
+
+    return domain
+D= generate_domain_efficient(omega,2048,S_PRIME)
+D=D[:512]
+
+
 
 # check1
 # for i in D:
@@ -19,13 +48,13 @@ D = [pow(omega, i, S_PRIME) for i in range(1, size + 1)]
 
 
 # H's Scaled Multiples
-def h_vector(Blinding_Base,size=10):
+def h_vector(Blinding_Base,size=512):
     """
     input: Blinding Base
     output:H_Vector
     """
     #convert B_B into SW point
-    Blinding_Base= short_to_te(Blinding_Base)
+    Blinding_Base= twisted_edward_to_sw(Blinding_Base)
     H_Vct = []
     for i in range(size):
         New_H_point = point_multiplication(2**i, Blinding_Base)
@@ -35,7 +64,7 @@ def h_vector(Blinding_Base,size=10):
 # H_vector=h_vector(Blinding_Base)
 
 # Public input preprocessing
-def public_intput_preprocessing(Ring_of_pkeys, H_Vector,size=10):
+def public_intput_preprocessing(Ring_of_pkeys, H_Vector,size=512):
     """
     input: Public keys ring,  pedersen blinding base
     output: Px,Py
@@ -51,13 +80,13 @@ def public_intput_preprocessing(Ring_of_pkeys, H_Vector,size=10):
 # print(public_intput_preprocessing([1,2,3,4,5],H_vector))
 
 # selector vector
-def selector_vector(Ring_of_pk,size=10):
+def selector_vector(Ring_of_pk,size=512):
     """
     input: ring of public key's
     output: selecting vector having 0/1
     """
     s_vector = []
-    N_K=size-len(Ring_of_pk)
+    N_K=255 #len(Ring_of_pk)
     for i in range(size):
         if i<N_K:
             s_vector.append(1)
@@ -94,26 +123,31 @@ def commitment_to_constructed_vectors(polynomial):
 
 
 
-
 # Pk_x_y = [(21152057402729667312496293294297764832832212584798595855305715986087432315110,8600616026692704040561837643103488293369364320895395780204394900161931326075), (22701128027605163255287479990904743371228537263771121146122946136409432257751,51486106944809842873218842767456544099764456483473004009171982934696869605843), (47071946321903207716315688985633358316651320322927034140049218360019572291435,31498498211557646914848178400790749454392072658262487773299925944603879612246), (15399555213624974946722003193908857493365446701741213785216372151566726652259,2978269951633892242536971685561965424783123163672102774715828837293640488861), (4908528150439625350545851300040765924448743948727272381070201966612746241443,5436701823404652213002659541233409199955571924915761824043064116504573235535), (1044436883726687888193890742367257796823071590799272213003472024843701428481,25280779625090634708313710177907367206517307309657328296160432443295854940294), (6404236510134289295155353938933732952593235524451835124112637039459751528990,12403747724083786716350619620411580822982938332919905142724531849944744488877), (45757562599000416476139925801153738685378181758776245848411431656697549280147,40400479491766310513769902546033620536908034113240983495824802513821276085567)]
+# Ring_of_pk = [(21152057402729667312496293294297764832832212584798595855305715986087432315110,8600616026692704040561837643103488293369364320895395780204394900161931326075), (22701128027605163255287479990904743371228537263771121146122946136409432257751,51486106944809842873218842767456544099764456483473004009171982934696869605843), (47071946321903207716315688985633358316651320322927034140049218360019572291435,31498498211557646914848178400790749454392072658262487773299925944603879612246), (15399555213624974946722003193908857493365446701741213785216372151566726652259,2978269951633892242536971685561965424783123163672102774715828837293640488861), (4908528150439625350545851300040765924448743948727272381070201966612746241443,5436701823404652213002659541233409199955571924915761824043064116504573235535)]  #, (1044436883726687888193890742367257796823071590799272213003472024843701428481,25280779625090634708313710177907367206517307309657328296160432443295854940294), (6404236510134289295155353938933732952593235524451835124112637039459751528990,12403747724083786716350619620411580822982938332919905142724531849944744488877), (45757562599000416476139925801153738685378181758776245848411431656697549280147,40400479491766310513769902546033620536908034113240983495824802513821276085567)]
 
-Ring_of_pk = [(21152057402729667312496293294297764832832212584798595855305715986087432315110,8600616026692704040561837643103488293369364320895395780204394900161931326075), (22701128027605163255287479990904743371228537263771121146122946136409432257751,51486106944809842873218842767456544099764456483473004009171982934696869605843), (47071946321903207716315688985633358316651320322927034140049218360019572291435,31498498211557646914848178400790749454392072658262487773299925944603879612246), (15399555213624974946722003193908857493365446701741213785216372151566726652259,2978269951633892242536971685561965424783123163672102774715828837293640488861), (4908528150439625350545851300040765924448743948727272381070201966612746241443,5436701823404652213002659541233409199955571924915761824043064116504573235535)]  #, (1044436883726687888193890742367257796823071590799272213003472024843701428481,25280779625090634708313710177907367206517307309657328296160432443295854940294), (6404236510134289295155353938933732952593235524451835124112637039459751528990,12403747724083786716350619620411580822982938332919905142724531849944744488877), (45757562599000416476139925801153738685378181758776245848411431656697549280147,40400479491766310513769902546033620536908034113240983495824802513821276085567)]
-Result_point=relation_to_prove(3,21,Blinding_Base,Ring_of_pk)
-# print(Result_point)
-s_vector=selector_vector(Ring_of_pk,10)
-# print(s_vector)
+Ring_of_pk=pk_x_y_list
+Result_point=relation_to_prove(3,secret_t,Blinding_Base,Ring_of_pk)
+print("Result Point",Result_point)
+s_vector=selector_vector(Ring_of_pk,512)
+print("s_vector_len:",len(s_vector))
+print("s_vector:",s_vector)
 H_vector=h_vector(Blinding_Base)
-# print(H_vector)
+print("H_vector",H_vector)
 p_pk_ring = public_intput_preprocessing(Ring_of_pk, H_vector)
-# print(p_pk_ring)
+
+print("p after preprocessing:")
+print("p_pk_ring",p_pk_ring)
+
 px_v,py_v=unzip(p_pk_ring)
-# print(px_v,'\n',py_v)
+print("px_v",px_v[:],'\n',"py_v",py_v[:])
 
 # #interpolation of resulting vectors
-px_I=interpolation_to_resulting_vectors(D,px_v)
-py_I=interpolation_to_resulting_vectors(D,py_v)
-s_v_I=interpolation_to_resulting_vectors(D,s_vector)
+# px_I=interpolation_to_resulting_vectors(D,px_v)
+# py_I=interpolation_to_resulting_vectors(D,py_v)
+# s_v_I=interpolation_to_resulting_vectors(D,s_vector)
 
+# print("Interolated_Px_v",px_I)
 
 
 # check whether interpolation is accurate
@@ -124,28 +158,14 @@ s_v_I=interpolation_to_resulting_vectors(D,s_vector)
 # print(px_I,'\n',px_I,'\n',s_v_I)
 
 # #commitment to constructed vectors
-C_px=commitment_to_constructed_vectors(px_I)
-C_py=commitment_to_constructed_vectors(py_I)
-C_s=commitment_to_constructed_vectors(s_v_I)
+# C_px=commitment_to_constructed_vectors(px_I)
+# C_py=commitment_to_constructed_vectors(py_I)
+# C_s=commitment_to_constructed_vectors(s_v_I)
+#
+# print("Commitment of Px_I",C_px)
 
 # print(C_px,'\n',C_py,'\n',C_s)
 
-
-
-
-
-
-
-
-
-
-
-
-
-# S_V = selector_vector(p_pk_ring, Ring_of_pk)
-# print("Selector Vector:", S_V)
-# print(len(S_V))
-# print("Relation to Proove:",relation_to_prove(3,7,Blinding_Base,Ring_of_pk))
-# print("px",px)
-# print("py",py)
-# print("public_key_Ring:", p_pk_ring)
+# print(H_vector[0])
+# print(twisted_edward_to_sw(PaddingPoint))
+# print(is_on_weierstrass(twisted_edward_to_sw(PaddingPoint)))
