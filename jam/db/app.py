@@ -28,6 +28,7 @@ from tests.fixtures.dummy_state import create_dummy_state
 from tests.unit.recent_history.types import BetaInput
 from tests.unit.statistics.types import Pi as TestPi
 
+from pathlib import Path
 
 
 
@@ -55,8 +56,13 @@ class TestState(Codable, JsonSerde):
 
 
 
-genesis_file = "/home/rahulcsl/jam/jam-node/tests/integration/jam-duna/state_snapshots/genesis.json"
-with open(genesis_file, "r") as file:
+# genesis_file = "/home/rahulcsl/jam/jam-node/tests/integration/jam-duna/state_snapshots/genesis.json"
+
+# Construct relative path from project root
+# genesis_file = Path("tests/integration/jam-duna/state_snapshots/genesis.json")
+# with open(genesis_file, "r") as file:
+genesis_file = "tests/integration/jam-duna/state_snapshots/genesis.json"
+with open(genesis_file) as file:
     genesis_data = json.loads(file.read())
     print('data',genesis_data)
 

@@ -49,3 +49,5 @@ ENV/
 .cursorignore
 
 azure_logs/
+
+my_db/
