@@ -13,8 +13,8 @@ from jam.utils.json import JsonSerde
 from jam.types.extrinsics.preimages import PreimagesExtrinsic
 from jam.types.base.sequences.vector import decodable_vector, Vector
 from jam.types.base import Bytes
+from jam.types.base.sequences.bytes import ByteArray32
 from jam.state.components.delta import LookupTable
-
 
 @decodable_dataclass
 @dataclass
@@ -92,6 +92,7 @@ def get_testcases_starting_with(prefix: str = "", limit: int = 10) -> List[Testc
         else:
             with open(os.path.join(data_dir, file), "r") as f:
                 data = json.loads(f.read())
+             
                 try:
                     tc = Testcase.from_json(data)
                     print(f"Decoded {file}")
