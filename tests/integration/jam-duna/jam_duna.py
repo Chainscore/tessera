@@ -3,6 +3,8 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
+
+from jam.types.base.choices.option import Option, decodable_option
 from jam.__main__ import main
 from jam.consensus.safrole.gamma import GammaA, GammaK, GammaS, GammaZ
 from jam.state.components.alpha import Alpha
@@ -38,7 +40,8 @@ from jam.utils.json import JsonSerde
 from tests.fixtures.dummy_state import create_dummy_state
 from tests.unit.recent_history.types import BetaInput
 from tests.unit.statistics.types import Pi as TestPi
-
+from jam.utils.json.decorators import with_json_metadata
+from jam.types.protocol.core import ServiceId
 
 @decodable_dataclass
 @dataclass
@@ -95,26 +98,34 @@ class CustomService(Codable, JsonSerde):
     items: U32
 
 
+@decodable_option(AccountStorage)
+class OptionStorage(Option): ...
+
+
 @decodable_dataclass
 @dataclass
 class CustomAccountData(Codable, JsonSerde):
     preimages: CustomPreimages
     lookup_meta: CustomLookupMetas
     service: CustomService
-    storage: Optional[AccountStorage] = None
+    storage: OptionStorage
 
 
 @decodable_dataclass
 @dataclass
 class Account(Codable, JsonSerde):
-    id: U32
+    id: ServiceId
     data: CustomAccountData
 
-
 @decodable_vector(Account)
-class DunaDelta(Vector): ...
+class DunaDelta(Vector[Account]): ...
 
 
+@with_json_metadata(
+    # alpha={"name": "alpha"},
+    lambda_={"name": "lambda", "skip_if_none": True},
+    # accounts={"name": "accounts", "skip_if_none": True}
+)
 @decodable_dataclass
 @dataclass
 class DunaState(Codable, JsonSerde):
@@ -168,8 +179,8 @@ class DunaState(Codable, JsonSerde):
                 balance=i.data.service.balance,
                 gas_limit=i.data.service.min_item_gas,
                 min_gas=i.data.service.min_memo_gas,
-                lookup=PreImageLookup({}),
-                timestamps=LookupTimestamps({}),
+                lookup=PreImageLookup({}), #preimages
+                timestamps=LookupTimestamps({}), # lookup
             )
             for preimage in i.data.preimages:
                 state.delta[i.id].lookup[preimage.hash] = preimage.blob
@@ -194,7 +205,7 @@ start_slot = 13
 initial_state = tc.to_state()
 
 if __name__ == "__main__":
-    # print(genesis_data)
-    asyncio.run(main("from jam duna", initial_state, start_slot, rpc_url))
+    print(initial_state.generate_root())
+    # asyncio.run(main("from jam duna", initial_state, start_slot, rpc_url))
 
 # Command to run file: 'python tests/integration/jam-duna/jam_duna.py'

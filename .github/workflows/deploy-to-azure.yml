@@ -2,7 +2,7 @@ name: Deploy to Azure Container Instance
 
 on:
   push:
-    branches: [ main, staging ]
+    branches: [ main, develop ]
   workflow_dispatch:
     inputs:
       debug_mode:
@@ -20,13 +20,15 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
     steps:
       - name: Set deployment specific variables
         run: |
-          if [[ ${{ github.ref }} == 'refs/heads/staging' ]]; then
-            echo "CONTAINER_NAME=tessera-node-staging" >> $GITHUB_ENV
-            echo "IMAGE_TAG=staging" >> $GITHUB_ENV
-            echo "DNS_LABEL=tessera-jam-node-staging" >> $GITHUB_ENV
+          if [[ ${{ github.ref }} == 'refs/heads/develop' ]]; then
+            echo "CONTAINER_NAME=tessera-node-develop" >> $GITHUB_ENV
+            echo "IMAGE_TAG=develop" >> $GITHUB_ENV
+            echo "DNS_LABEL=tessera-jam-node-develop" >> $GITHUB_ENV
           else
             echo "CONTAINER_NAME=tessera-node" >> $GITHUB_ENV
             echo "IMAGE_TAG=latest" >> $GITHUB_ENV
@@ -37,7 +39,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Log in to Azure
-        uses: azure/login@v1
+        uses: azure/login@v2 
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
@@ -45,7 +47,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Login to Azure Container Registry
-        uses: azure/docker-login@v1
+        uses: azure/docker-login@v2
         with:
           login-server: ${{ env.ACR_NAME }}.azurecr.io
           username: ${{ secrets.ACR_USERNAME }}
@@ -59,18 +61,9 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           platforms: linux/amd64
 
-      - name: Check if container exists and delete
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            if az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} >/dev/null 2>&1; then
-              echo "Container exists, deleting..."
-              az container delete --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} --yes
-            fi
-
       - name: Get ACR credentials
         id: get-acr-creds
-        uses: azure/CLI@v1
+        uses: azure/CLI@v2
         with:
           inlineScript: |
             ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query "username" -o tsv)
@@ -78,38 +71,106 @@ jobs:
             echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_OUTPUT
             echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_OUTPUT
 
-      - name: Create Azure Container Instance
-        uses: azure/CLI@v1
+      - name: Update or Create Azure Container Instance
+        uses: azure/CLI@v2
         with:
           inlineScript: |
             DEBUG_MODE=${{ github.event.inputs.debug_mode || 'true' }}
             
-            az container create \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --name ${{ env.CONTAINER_NAME }} \
-              --image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
-              --registry-login-server "${{ env.ACR_NAME }}.azurecr.io" \
-              --registry-username "${{ steps.get-acr-creds.outputs.ACR_USERNAME }}" \
-              --registry-password "${{ steps.get-acr-creds.outputs.ACR_PASSWORD }}" \
-              --cpu ${{ env.CPU }} \
-              --memory ${{ env.MEMORY }} \
-              --environment-variables JAM_DEBUG=$DEBUG_MODE \
-              --ports 30333 \
-              --dns-name-label "${{ env.DNS_LABEL }}" \
-              --restart-policy Never \
-              --os-type Linux
+            # Check if container already exists
+            if az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} >/dev/null 2>&1; then
+              echo "Container exists, restarting to pull latest image..."
+              
+              # For existing containers, just restart to pull the latest image
+              MAX_RETRIES=3
+              RETRY_COUNT=0
+              RESTARTED=false
+              
+              while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$RESTARTED" != "true" ]; do
+                echo "Attempt $(($RETRY_COUNT+1)) to restart container instance..."
+                
+                if az container restart --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }}; then
+                  RESTARTED=true
+                  echo "Container restarted successfully! Latest image will be pulled."
+                else
+                  echo "Failed to restart container. Retrying in 30 seconds..."
+                  RETRY_COUNT=$(($RETRY_COUNT+1))
+                  if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                    sleep 30
+                  else
+                    echo "Failed to restart container after $MAX_RETRIES attempts."
+                    exit 1
+                  fi
+                fi
+              done
+            else
+              echo "Container does not exist, creating new container instance..."
+              
+              # For new deployments, create the container from scratch
+              MAX_RETRIES=3
+              RETRY_COUNT=0
+              CREATED=false
+              
+              while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$CREATED" != "true" ]; do
+                echo "Attempt $(($RETRY_COUNT+1)) to create container instance..."
+                
+                if az container create \
+                  --resource-group ${{ env.RESOURCE_GROUP }} \
+                  --name ${{ env.CONTAINER_NAME }} \
+                  --image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+                  --registry-login-server "${{ env.ACR_NAME }}.azurecr.io" \
+                  --registry-username "${{ steps.get-acr-creds.outputs.ACR_USERNAME }}" \
+                  --registry-password "${{ steps.get-acr-creds.outputs.ACR_PASSWORD }}" \
+                  --cpu ${{ env.CPU }} \
+                  --memory ${{ env.MEMORY }} \
+                  --environment-variables JAM_DEBUG=$DEBUG_MODE \
+                  --ports 8000 \
+                  --ip-address Public \
+                  --dns-name-label "${{ env.DNS_LABEL }}" \
+                  --restart-policy Never \
+                  --os-type Linux; then
+                  
+                  CREATED=true
+                  echo "Container created successfully!"
+                else
+                  echo "Failed to create container. Retrying in 30 seconds..."
+                  RETRY_COUNT=$(($RETRY_COUNT+1))
+                  if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                    sleep 30
+                  else
+                    echo "Failed to create container after $MAX_RETRIES attempts."
+                    exit 1
+                  fi
+                fi
+              done
+            fi
 
-      - name: Get container logs
-        uses: azure/CLI@v1
+      - name: Verify deployment health
+        uses: azure/CLI@v2
         with:
           inlineScript: |
-            echo "Container created!"
-            echo "Container logs:"
-            az container logs --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }}
+            echo "Checking if container is running properly..."
+            # Wait for service to start up
+            sleep 30
+            
+            # Get the FQDN of the container
+            FQDN=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} --query "ipAddress.fqdn" -o tsv)
+            
+            # Check if service is responsive on port 8000
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${FQDN}:8000/docs || echo "Failed")
+            
+            if [[ "$HTTP_STATUS" == "200" ]]; then
+              echo "✅ Service is healthy on port 8000"
+              echo "NOTE: To access via HTTPS, you'll need to set up Azure Front Door or Application Gateway"
+            else
+              echo "❌ Service is not responding correctly. Status: $HTTP_STATUS"
+              echo "You may need to check logs for more details"
+              exit 1
+            fi
 
       - name: Debug information
         if: ${{ github.event.inputs.debug_mode != 'false' }}
-        uses: azure/CLI@v1
+        uses: azure/CLI@v2
         with:
           inlineScript: |
             echo "Container running in DEBUG mode"

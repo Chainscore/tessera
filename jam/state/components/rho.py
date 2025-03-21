@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+
+from jam.types import Option
 from jam.types.base import Choice
 from jam.types.base.choices.option import decodable_option
 from jam.types.base.sequences.array import Array, decodable_array

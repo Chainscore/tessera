@@ -6,7 +6,7 @@ from jam.types.protocol.core import ServiceId
 
 
 def construct_state_key(
-    input: Union[U8, int, Tuple[U32, ServiceId], Tuple[ServiceId, ByteArray32]]
+    input: Union[U8, int, Tuple[U32, ServiceId], Tuple[ServiceId, ByteArray32], Tuple[int,ServiceId]]
 ) -> ByteArray32:
     """
     State key constructor function C as defined in Appendix D.
@@ -46,6 +46,13 @@ def construct_state_key(
                 else:
                     sequence[seq_pointer:32] = hash_bytes[h_pointer:28]
                     break
+        elif isinstance(input[0], int) and isinstance(input[1], U32):
+            # Case 4: (255, ServiceId)
+            service_id = input[1]
+            service_id_encoded = service_id.encode()
+            sequence[0] = Byte(input[0])
+            for i, s_byte in enumerate(service_id_encoded):
+                sequence[i + 1] = Byte(s_byte)
 
         else:
             raise ValueError("Invalid tuple input types")

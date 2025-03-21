@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 from jam.consensus.safrole.gamma import GammaA, GammaK, GammaS, GammaZ
 from jam.state.components.alpha import Alpha
 from jam.state.components.chi import ChiA, ChiG, ChiM, ChiV
@@ -16,23 +17,28 @@ from jam.state.components.eta import Eta
 from jam.state.components.iota import Iota
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
+
 from jam.state.components.nu import Nu
 from jam.state.components.phi import Phi
 from jam.state.components.pi import Pi
 from jam.state.components.psi import Psi
 from jam.state.components.rho import Rho
 from jam.state.components.tau import Tau
+
 from jam.state.components.xi import Xi
 from jam.state.state import State
 from jam.types.base import Bytes
 from jam.types.base.choices.option import Option, decodable_option
+
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.core import U64, Gas, OpaqueHash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
+
 from jam.utils.json.decorators import with_json_metadata
+
 from tests.fixtures.dummy_state import create_dummy_state
 from tests.unit.recent_history.types import BetaInput as TestBeta
 from tests.unit.statistics.types import Pi as TestPi
@@ -45,7 +51,7 @@ class DunaGamma(Codable, JsonSerde):
     a: GammaA
     s: GammaS
     z: GammaZ
-
+      
 
 @decodable_dataclass
 @dataclass
@@ -93,6 +99,7 @@ class CustomService(Codable, JsonSerde):
     items: U32
 
 
+
 @decodable_option(AccountStorage)
 class OptionStorage(Option): ...
 
@@ -103,6 +110,7 @@ class OptionStorage(Option): ...
     service={"skip_if_none": True},
     storage={"skip_if_none": True},
 )
+
 @decodable_dataclass
 @dataclass
 class CustomAccountData(Codable, JsonSerde):
@@ -176,10 +184,12 @@ class GeneralState(Codable, JsonSerde):
             state.beta = self.beta.to_beta()
 
         if self.gamma:
+
             state.gamma.k = self.gamma.k
             state.gamma.a = self.gamma.a
             state.gamma.s = self.gamma.s
             state.gamma.z = self.gamma.z
+
 
         if self.psi:
             state.psi = self.psi
@@ -236,20 +246,3 @@ class GeneralState(Codable, JsonSerde):
                     state.delta[i.id].timestamps[lookup.key] = lookup.value
 
         return state
-
-
-# NOTE: remove before merging with main
-# genesis_file = "jam/state/utils/temp_json.json"
-# # genesis_file = "jam/state/utils/temp_json2.json"
-# with open(genesis_file, "r") as file:
-#     genesis_data = json.loads(file.read())
-#     try:
-#         tc = GeneralState.from_json(genesis_data)
-#         print("DECODED", tc)
-#         print(f"Decoded {file}")
-#         # print(tc.to_state())
-#     except Exception as e:
-#         print(f"❌ Failed to decode {file}: {e}")
-#     parsed = tc.to_state()
-#     print("")
-#     print("ARORA", parsed)
