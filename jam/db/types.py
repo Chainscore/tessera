@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from jam.types.base import Bytes
 from jam.state.components.pi import Pi
 from jam.utils.json.decorators import with_json_metadata
+from jam.types.protocol.core import BlobLength
 
 @decodable_dataclass
 @dataclass
@@ -154,7 +155,7 @@ class DunaState(Codable, JsonSerde):
         state.xi = self.xi
 
         state.delta = Delta({})
-
+        # making a seperate Delta for Duna
         for i in self.accounts:
             state.delta[i.id] = AccountData(
                 storage=AccountStorage({}),
@@ -168,7 +169,10 @@ class DunaState(Codable, JsonSerde):
             for preimage in i.data.preimages:
                 state.delta[i.id].lookup[preimage.hash] = preimage.blob
             for lookup in i.data.lookup_meta:
-                state.delta[i.id].timestamps[lookup.key] = lookup.value
-
+                # setting the key(from the values of length and Hash.2b(Hash))
+                state.delta[i.id].timestamps[
+                    LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length))
+                ] = lookup.value
+            
         return state
 

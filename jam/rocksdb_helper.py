@@ -2,7 +2,7 @@ import plyvel
 import os
 
 class RocksDBHelper:
-    def __init__(self, db_path="/home/rahulcsl/jam/jam-node/jam/db/mydb"):
+    def __init__(self, db_path="jam/db/mydb"):
         """Initialize and open the RocksDB database inside the 'db' folder"""
         os.makedirs(os.path.dirname(db_path), exist_ok=True)  # Ensure the folder exists
         self.db = plyvel.DB(db_path, create_if_missing=True)

@@ -70,7 +70,8 @@ with open(genesis_file) as file:
 initial_state = tc.to_state()
 if __name__ == "__main__":
     transform_state=initial_state.transform()
-
+    for i in transform_state:
+        print(i)
 
 # Open RocksDB
 db = plyvel.DB("mydb", create_if_missing=True)
