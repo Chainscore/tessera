@@ -58,6 +58,7 @@ class State(Sigma):
             a_s, a_l = 0, 0
             if l_key:
                 for key in l_key:
+                    #fetching the length from the LookupTimestamps
                     a_l += 81 + int(LookupTimestamps.get_length(key))
             if s_key:
                 for key in s_key:
@@ -123,6 +124,7 @@ class State(Sigma):
         """Inverse of transform"""
         # Loop thru the whole state dict
         
+        # populating the delta
         delta = {}
         for key, value in state.items():
             # Start with finding all core state components 1-15
@@ -188,6 +190,8 @@ class State(Sigma):
             else:
                 if Bytes(key[7:0:-2])==Bytes(2**32 - 1):
                     #populating the storage
+                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    delta[service_id].storage[ByteArray32(Bytes(key[8:32]+Bytes(bytearray(8))))]=value
                     print("Storage")
                 elif Bytes(key[7:0:-2])==Bytes(2**32 - 2):
                     #populating the lookup
@@ -197,23 +201,28 @@ class State(Sigma):
                 else:
                     #populating the timestamps
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                    # print("keyBhai",key)
                     TimeStamps,_=Timestamps.decode_from(bytes(value))
                     timestamp_key=ByteArray32(Bytes(key[1:8:2])+Bytes(key[8:32])+ Bytes(bytearray(4)))
                     # print("timestamp_key",timestamp_key)
                     delta[service_id].timestamps[timestamp_key]=TimeStamps
-            
-                # Find all preimages ()
+                    
+        return State(alpha=alpha,
+                     phi=phi,
+                     beta=beta,
+                     gamma=gamma,
+                     psi=psi,
+                     eta=eta,
+                     iota=iota,
+                     kappa=kappa,
+                     lambda_=lambda_,
+                     rho=rho,
+                     tau=tau,
+                     chi=chi,
+                     pi=pi,
+                     nu=nu,
+                     xi=xi,
+                     delta=delta)
         
-        return State(alpha=alpha,phi=phi,
-                     beta=beta,gamma=gamma,
-                     psi=psi,eta=eta,
-                     iota=iota,kappa=kappa,
-                     lambda_=lambda_,rho=rho,
-                     tau=tau,chi=chi,
-                     pi=pi,nu=nu,
-                     xi=xi,delta=delta)
-
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
         return self._merkle.merkelize(self.transform())

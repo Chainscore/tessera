@@ -130,7 +130,7 @@ class Account(Codable, JsonSerde):
 @decodable_vector(Account)
 class DunaDelta(Vector[Account]): ...
 
-
+#Setting the state for Duna(where setting lambda to lambda_)
 @with_json_metadata(
     # alpha={"name": "alpha"},
     lambda_={"name": "lambda", "skip_if_none": True},
@@ -181,7 +181,7 @@ class DunaState(Codable, JsonSerde):
         state.xi = self.xi
 
         state.delta = Delta({})
-
+        # making a seperate Delta for Duna
         for i in self.accounts:
             state.delta[i.id] = AccountData(
                 storage=AccountStorage({}),
@@ -195,9 +195,10 @@ class DunaState(Codable, JsonSerde):
             for preimage in i.data.preimages:
                 state.delta[i.id].lookup[preimage.hash] = preimage.blob
             for lookup in i.data.lookup_meta:
-                # print(LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length)))
-                state.delta[i.id].timestamps[LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length))] = lookup.value
-                # state.delta[i.id].timestamps[lookup.key] = lookup.value
+                # setting the key(from the values of length and Hash.2b(Hash))
+                state.delta[i.id].timestamps[
+                    LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length))
+                ] = lookup.value
             
         return state
 
@@ -217,8 +218,7 @@ start_slot = 13
 initial_state = tc.to_state()
 
 
-
-
+#Checking the State of Duna and OurState
 def testState(DunaState,OurState):
     assert(DunaState.alpha==OurState.alpha)
     assert(DunaState.phi==OurState.phi)
@@ -235,6 +235,7 @@ def testState(DunaState,OurState):
     assert(DunaState.pi==OurState.pi)
     assert(DunaState.theta==OurState.nu)
     assert(DunaState.xi==OurState.xi)
+    #Checking the delta of Duna and OurState
     for i in DunaState.delta:
         assert(DunaState.delta[i].storage==OurState.delta[i].storage)
         assert(DunaState.delta[i].lookup==OurState.delta[i].lookup)
@@ -245,9 +246,11 @@ def testState(DunaState,OurState):
         assert(DunaState.delta[i].timestamps==OurState.delta[i].timestamps)
     
 if __name__ == "__main__":
+    #Transforming the state
     transform_state=initial_state.transform()
-
+    #Detransforming the state
     our_state=State.detransform(transform_state)
+    #Checking the State of Duna and OurState
     testState(initial_state,our_state)
     # asyncio.run(main("from jam duna", initial_state, start_slot, rpc_url))
 
