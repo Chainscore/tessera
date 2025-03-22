@@ -128,7 +128,12 @@ class Choice(Codable[T], JsonSerde, Generic[T]):
         """
         return self.value
 
+    def get_key(self) -> str:
+        """Returns the selected choice key"""
+        return list(self.value.keys())[0]
+    
     def get_value(self):
+        """Returns the selected choice value"""
         return self.value[list(self.value.keys())[0]]
 
     def __eq__(self, other: object) -> bool:
@@ -145,9 +150,6 @@ class Choice(Codable[T], JsonSerde, Generic[T]):
     def __repr__(self) -> str:
         """Get string representation."""
         return f"{self.__class__.__name__}({self.value!r})"
-
-    def get_value(self):
-        return self.value[list(self.value.keys())[0]]
     
     @classmethod
     def from_json(cls, data: Any) -> "Choice[T]":

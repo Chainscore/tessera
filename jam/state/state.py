@@ -1,4 +1,4 @@
-from jam.network.peer import Peer
+from jam.db.kv import KVStore
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.eta import Eta
 from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat
@@ -259,12 +259,10 @@ class State(Sigma):
         return State(
             alpha=Alpha([AuthorizationPool([]) for _ in range(CORE_COUNT)]),
             beta=Beta([]),
-            # TODO: Add validator data from perrlist to GammaS (fallback) and GammaK (Upcoming validators)
             gamma=Gamma(a=GammaA([]), k=GammaK(peers), s=fallback, z=GammaZ(bytes(144))),
             delta=Delta({}),
             eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
             iota=Iota(empty_validators),
-            # TODO: Add validator data from perrlist to Kappa
             kappa=Kappa(peers),
             lambda_=Lambda_(empty_validators),
             rho=Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]),
@@ -272,7 +270,19 @@ class State(Sigma):
             phi=Phi([AuthorizationQueue([AuthorizerHash(bytes(32)) for _ in range(MAX_AUTH_QUEUE_ITEMS)]) for _ in range(CORE_COUNT)]),
             chi=Chi(m=ServiceId(0), a=ServiceId(0), v=ServiceId(0), g=ChiG({})),
             psi=Psi(good=PsiG([]), bad=PsiB([]), wonky=PsiW([]), offenders=PsiO([])),
-            pi=Pi([AllValidatorStats([ValidatorStat(blocks=0, tickets=0, pre_images=0, pre_images_size=0, guarantees=0, assurances=0) for _ in range(VALIDATOR_COUNT)]) for _ in range(2)]),
+            pi=Pi([AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]) for _ in range(2)]),
             nu=Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)]),
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
+    
+    def save(self, db: KVStore):
+        data = self.transform()
+        for key, value in data.items():
+            db.put(bytes(key), bytes(value))
+    
+    @staticmethod
+    def load(db: KVStore) -> "State":
+        data = {}
+        for key, value in db.get_all().items():
+            data[key] = Bytes(value)
+        return State.detransform(data)

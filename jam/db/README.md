@@ -1,6 +1,6 @@
-# JAM Database Module
+# Database Module
 
-The `jam.db` module provides database interfaces and implementations for the JAM project, focusing on efficient key-value storage solutions.
+The `jam.db` module provides database interfaces and implementations for Tessera, focusing on efficient key-value storage solutions.
 
 ## Components
 
@@ -58,34 +58,13 @@ db.delete("user:2")
 db.close()
 ```
 
-### Context Manager Pattern
-
-```python
-from contextlib import contextmanager
-from jam.db.kv import KVStore
-
-@contextmanager
-def open_database(path):
-    db = KVStore(path)
-    try:
-        yield db
-    finally:
-        db.close()
-
-# Usage
-with open_database("path/to/database") as db:
-    db.put("key", "value")
-    value = db.get("key")
-    # Automatically closed when exiting the with block
-```
-
 ## Architecture
 
 The module uses a layered approach:
 
 1. **CFFI Layer**: Directly interfaces with the RocksDB C API
 2. **KVStore Class**: Provides a clean Python interface over the C API
-3. **Application Layer**: Your code that uses the KVStore
+3. **Application Layer**: KVStore
 
 ## Extending
 
@@ -100,4 +79,3 @@ The database module is designed to be extended with:
 - RocksDB is optimized for high write throughput
 - For read-heavy workloads, consider tweaking RocksDB options
 - For large values (>100KB), consider storing references instead of values directly
-```

@@ -3,29 +3,56 @@ import json
 from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
 from jam.consensus.safrole.safrole import Safrole
+from jam.db.kv import KVStore
 from jam.network.peer import Peer
 from jam.network.node import Node
-from jam.network.dummy_bp import produce_blocks
+from jam.network.dummy_bp import block_producer
+from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
 from jam.state.state import State
+from jam.types.base.sequences.bytes.byte_array import ByteArray32
+from jam.types.block import Block
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-async def main(genesis: str, port: int) -> None:
+from tests.fixtures.dummy_block import create_dummy_block
+
+async def main(genesis_path: str, db_path: str, port: int) -> None:
     # Setup logging
     setup_logging()
 
     logger.info(
-        "Starting JAM node",
+        "Starting Tessera node",
         spec=chain_config.name,
         listen_port=port,
     )
     try:
         # Initialize components
-        peerlist = json.load(open(genesis))["peers"]
+        peerlist = json.load(open(genesis_path))["peers"]
         peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
 
-        tsr_node = Node(node_name=port, node_id=port, host="0.0.0.0", port=port, peers=peers)
+        # Test block
+        # block = create_dummy_block()
+        # print(block.encode().hex())
 
+
+        # Load validator data from seeds
+        my_keys = json.load(open("seeds/keys.json"))[str(port)]
+        ed25519_public = Ed25519PrivateKey.from_private_bytes(
+                            bytes.fromhex(my_keys["ed25519_private"][2:])
+                        ).public_key()
+
+        bandersnatch_public = BandersnatchPublic((BandersnatchPoint.generator_point() * int.from_bytes(bytes.fromhex(my_keys["bandersnatch_private"][2:]), 'little')).point_to_string().hex())
+        my_data = ValidatorData(bandersnatch_public, ed25519_public, BlsPublic(bytes(144)), ValidatorMetadata(bytes(128)))
+
+        tsr_node = Node(
+            node_name=port, 
+            node_id=port, 
+            host="0.0.0.0", 
+            port=port, 
+            peers=peers,
+            validator_data=my_data
+        )
         validators = [ValidatorData(
             bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
             ed25519=Ed25519Public(pr["ed25519_public"]),
@@ -33,11 +60,13 @@ async def main(genesis: str, port: int) -> None:
             metadata=ValidatorMetadata(bytes(128))
         ) for pr in peerlist]
 
-        genesis_state = State.genesis(validators, Safrole.arrange_fallback(bytes(32), validators))
+        db = KVStore(db_path)
+        state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
+        state.save(db)
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            tg.create_task(produce_blocks(tsr_node))
+            tg.create_task(block_producer(tsr_node, db))
     
     except KeyboardInterrupt:
         logger.info("Shutting down JAM node")
