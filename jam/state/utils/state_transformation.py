@@ -42,6 +42,7 @@ from jam.utils.json.decorators import with_json_metadata
 from tests.fixtures.dummy_state import create_dummy_state
 from tests.unit.recent_history.types import BetaInput as TestBeta
 from tests.unit.statistics.types import Pi as TestPi
+from jam.types.protocol.core import BlobLength
 
 
 @decodable_dataclass
@@ -51,7 +52,7 @@ class DunaGamma(Codable, JsonSerde):
     a: GammaA
     s: GammaS
     z: GammaZ
-      
+
 
 @decodable_dataclass
 @dataclass
@@ -99,7 +100,6 @@ class CustomService(Codable, JsonSerde):
     items: U32
 
 
-
 @decodable_option(AccountStorage)
 class OptionStorage(Option): ...
 
@@ -110,7 +110,6 @@ class OptionStorage(Option): ...
     service={"skip_if_none": True},
     storage={"skip_if_none": True},
 )
-
 @decodable_dataclass
 @dataclass
 class CustomAccountData(Codable, JsonSerde):
@@ -184,12 +183,10 @@ class GeneralState(Codable, JsonSerde):
             state.beta = self.beta.to_beta()
 
         if self.gamma:
-
             state.gamma.k = self.gamma.k
             state.gamma.a = self.gamma.a
             state.gamma.s = self.gamma.s
             state.gamma.z = self.gamma.z
-
 
         if self.psi:
             state.psi = self.psi
@@ -245,9 +242,11 @@ class GeneralState(Codable, JsonSerde):
                 # for lookup in i.data.lookup_meta:
                 #     state.delta[i.id].timestamps[lookup.key] = lookup.value
                 for lookup in i.data.lookup_meta:
-                # setting the key(from the values of length and Hash.2b(Hash))
+                    # setting the key(from the values of length and Hash.2b(Hash))
                     state.delta[i.id].timestamps[
-                        LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length))
+                        LookupTimestamps.get_key(
+                            lookup.key.hash, BlobLength(lookup.key.length)
+                        )
                     ] = lookup.value
 
         return state

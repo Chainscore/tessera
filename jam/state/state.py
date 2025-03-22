@@ -15,30 +15,32 @@ from jam.state.merkle import StateMerkle
 from jam.state.utils.key_constructor import construct_state_key
 from jam.state.components.phi import Phi
 from jam.state.components.beta import Beta
-from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaZ
+from jam.consensus.safrole.gamma import Gamma
 from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.core import Balance, Gas
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.crypto import OpaqueHash
-from jam.state.components.delta import AccountData, AccountStorage, LookupTimestamps, PreImageLookup, Timestamps
-from jam.utils.codec.primitives.integers import IntegerCodec
-from jam.types.protocol.core import BlobLength
-
-
-# from jam.types.block import Block
-# from jam.authorization.authorization import Authorization
-# from jam.recent_history.recent_history import RecentHistory
-# from jam.consensus.safrole.safrole import Safrole
-# from jam.assurances.assurances import Assurances
-# from jam.disputes.disputes import Disputes
-# from jam.preimages.preimages import Preimages
-# from jam.statistics.statistics import Statistics
+from jam.state.components.delta import (
+    AccountData,
+    AccountStorage,
+    LookupTimestamps,
+    PreImageLookup,
+    Timestamps,
+)
 
 
 class State(Sigma):
-    """State implementation that adds Merklization to Sigma"""
+    """
+    State implementation that 
+        - Extends Sigma
+        - Adds Merklization (generates root, get_merkle_nodes)
+        - Adds transform and detransform methods
+
+    Args:
+        **kwargs: Keyword arguments for the components of the state
+    """
 
     def __init__(self, **kwargs):
         """Initialize state with component kwargs"""
@@ -46,7 +48,11 @@ class State(Sigma):
         self._merkle = StateMerkle(Hash.blake2b)
 
     def transform(self) -> dict:
-        """Transform the state into a dictionary as defined in D.2"""
+        """
+            Transform the state into a dictionary as defined in D.2
+            Returns:
+                dict: A dictionary representation of the state in this format: {bytes -> Bytes}
+        """
         services, service_storage, service_preimages, service_lookup = {}, {}, {}, {}
         for i in self.delta:
             l_key, s_key = set(), set()
@@ -58,7 +64,7 @@ class State(Sigma):
             a_s, a_l = 0, 0
             if l_key:
                 for key in l_key:
-                    #fetching the length from the LookupTimestamps
+                    # fetching the length from the LookupTimestamps
                     a_l += 81 + int(LookupTimestamps.get_length(key))
             if s_key:
                 for key in s_key:
@@ -87,16 +93,10 @@ class State(Sigma):
                 ] = Bytes(self.delta[i].lookup[j])
 
             for j in self.delta[i].timestamps:
+                service_lookup[construct_state_key((i, j))] = Bytes(
+                    self.delta[i].timestamps[j].encode()
+                )
 
-                service_lookup[
-                    construct_state_key(
-                        (
-                            i,
-                            j
-                        )
-                    )
-                ] = Bytes(self.delta[i].timestamps[j].encode())
-            
         return {
             construct_state_key(1): Bytes(self.alpha.encode()),
             construct_state_key(2): Bytes(self.phi.encode()),
@@ -123,17 +123,17 @@ class State(Sigma):
     def detransform(state: dict) -> "State":
         """Inverse of transform"""
         # Loop thru the whole state dict
-        
+
         # populating the delta
         delta = {}
         for key, value in state.items():
             # Start with finding all core state components 1-15
             # if (key[0] <= 15) and bytes(key[0:32]) == 0:
-            if (int(key[0]) <= 15 and int(key[0])>0):
+            if int(key[0]) <= 15 and int(key[0]) > 0:
                 if int(key[0]) == 1:
                     alpha, _ = Alpha.decode_from(bytes(value))
                 elif int(key[0]) == 2:
-                     phi, _ = Phi.decode_from(bytes(value))
+                    phi, _ = Phi.decode_from(bytes(value))
                 elif int(key[0]) == 3:
                     beta, _ = Beta.decode_from(bytes(value))
                 elif int(key[0]) == 4:
@@ -160,10 +160,12 @@ class State(Sigma):
                     nu, _ = Nu.decode_from(bytes(value))
                 elif int(key[0]) == 15:
                     xi, _ = Xi.decode_from(bytes(value))
-                
+
             # Then find all services (first byte is 255, rest is service id)
             elif int(key[0]) == 255:
-                service_id = int.from_bytes(bytes(Bytes([key[1], key[3], key[5], key[7]])))
+                service_id = int.from_bytes(
+                    bytes(Bytes([key[1], key[3], key[5], key[7]]))
+                )
                 total_offset = 0
                 ac, offset = OpaqueHash.decode_from(bytes(value), total_offset)
                 total_offset += offset
@@ -178,82 +180,61 @@ class State(Sigma):
                 ai, offset = U32.decode_from(bytes(value), total_offset)
                 total_offset += offset
                 delta[service_id] = AccountData(
-                    storage=AccountStorage({}), 
-                    lookup=PreImageLookup({}), 
-                    timestamps=LookupTimestamps({}), 
-                    code_hash=ByteArray32(ac), 
-                    balance=Balance(ab), 
-                    gas_limit=Gas(ag), 
-                    min_gas=Gas(am)
+                    storage=AccountStorage({}),
+                    lookup=PreImageLookup({}),
+                    timestamps=LookupTimestamps({}),
+                    code_hash=ByteArray32(ac),
+                    balance=Balance(ab),
+                    gas_limit=Gas(ag),
+                    min_gas=Gas(am),
                 )
 
             else:
-                if Bytes(key[7:0:-2])==Bytes(2**32 - 1):
-                    #populating the storage
+                if Bytes(key[7:0:-2]) == Bytes(2**32 - 1):
+                    # populating the storage
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                    delta[service_id].storage[ByteArray32(Bytes(key[8:32]+Bytes(bytearray(8))))]=value
+                    delta[service_id].storage[
+                        ByteArray32(Bytes(key[8:32] + Bytes(bytearray(8))))
+                    ] = value
                     print("Storage")
-                elif Bytes(key[7:0:-2])==Bytes(2**32 - 2):
-                    #populating the lookup
+                elif Bytes(key[7:0:-2]) == Bytes(2**32 - 2):
+                    # populating the lookup
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
                     delta[service_id].lookup[Hash.blake2b(value)] = value
-                    
+
                 else:
-                    #populating the timestamps
+                    # populating the timestamps
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                    TimeStamps,_=Timestamps.decode_from(bytes(value))
-                    timestamp_key=ByteArray32(Bytes(key[1:8:2])+Bytes(key[8:32])+ Bytes(bytearray(4)))
+                    TimeStamps, _ = Timestamps.decode_from(bytes(value))
+                    timestamp_key = ByteArray32(
+                        Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
+                    )
                     # print("timestamp_key",timestamp_key)
-                    delta[service_id].timestamps[timestamp_key]=TimeStamps
-                    
-        return State(alpha=alpha,
-                     phi=phi,
-                     beta=beta,
-                     gamma=gamma,
-                     psi=psi,
-                     eta=eta,
-                     iota=iota,
-                     kappa=kappa,
-                     lambda_=lambda_,
-                     rho=rho,
-                     tau=tau,
-                     chi=chi,
-                     pi=pi,
-                     nu=nu,
-                     xi=xi,
-                     delta=delta)
-        
+                    delta[service_id].timestamps[timestamp_key] = TimeStamps
+
+        return State(
+            alpha=alpha,
+            phi=phi,
+            beta=beta,
+            gamma=gamma,
+            psi=psi,
+            eta=eta,
+            iota=iota,
+            kappa=kappa,
+            lambda_=lambda_,
+            rho=rho,
+            tau=tau,
+            chi=chi,
+            pi=pi,
+            nu=nu,
+            xi=xi,
+            delta=delta,
+        )
+
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
         return self._merkle.merkelize(self.transform())
 
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
-        
         return self._merkle.get_nodes()
-
-    # def master_transition_state(self, block : Block):
-    #     """
-    #            Master transition state
-    #
-    #            args accepted
-    #             pre_state: state before transition
-    #
-    #             block: block
-    #
-    #            returns new_state
-    #             """
-    #
-    #     # section 11 (assurance and the Reporting)
-    #     genesis_state = self.value
-    #     block_production_state = Safrole.transition(genesis_state, block)
-    #     recent_block_history_state = RecentHistory.transition(block_production_state, block, ByteArray32([0] * 32))
-    #     authorization_state = Authorization.transition(recent_block_history_state, block)
-    #     disputes_state = Disputes.transition(authorization_state, block)
-    #     assurance_state = Assurances.transition(disputes_state, block)
-    #     # reporting_state = Report.transition(assurance_state, block) ## TODO: update with latest state oreders.
-    #     # accumulation_state = accumulate.transition(reporting_state, block)
-    #     preimage_state = Preimages.transition(assurance_state, block)
-    #     statistics_state = Statistics.transition(preimage_state, block)
-    #
-    #     self.value = statistics_state
