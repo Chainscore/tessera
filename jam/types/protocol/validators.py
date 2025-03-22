@@ -16,7 +16,6 @@ class ValidatorArray(Array[BandersnatchPublic]):
 
 class ValidatorMetadata(ByteArray128):
     """Validator metadata structure."""
-
     # NOTE - Could define fns to parse metadata into a more useful format
     ...
 

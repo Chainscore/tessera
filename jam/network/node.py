@@ -136,9 +136,3 @@ class Node:
         await asyncio.sleep(1)
         logger.info(f"🔄 ({self.name}) Opening connections to {len(self.peers)} peers...")
         await self.run_client()
-        
-        self.is_initialized = True
-        
-        # Keep the server running
-        while True:
-            await asyncio.sleep(5)  # Just keep it alive

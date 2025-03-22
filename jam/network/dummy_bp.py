@@ -8,8 +8,8 @@ async def produce_blocks(node: Node):
     block_number = 0
     while True:
         if not node.is_initialized:
-            logger.info(f"🔄 ({node.name}) Node is not initialized, skipping block production")
-            await asyncio.sleep(4)
+            logger.info(f"🔄 ({node.name}) Network is not initialized, skipping block production")
+            await asyncio.sleep(6)
             continue
 
         if (block_number + node.port) % len(node.peers) == 0:

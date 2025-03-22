@@ -30,11 +30,11 @@ def test_slot_regression_error():
     )
     
     # Create block with a previous slot
-    regression_block = create_block(slot=U32(9), entropy=ByteArray32(bytes(32)), tickets=[])
+    regression_block = create_block(slot=U32(9), tickets=[])
     
     # Verify that the transition raises an error
     with pytest.raises(SafroleError) as excinfo:
-        Safrole.transition(initial_state, regression_block)
+        Safrole.transition(initial_state, regression_block, entropy=ByteArray32(bytes(32)))
     
     assert excinfo.value.code == SafroleErrorCode.BAD_SLOT
 
@@ -58,13 +58,12 @@ def test_invalid_seal_signature():
     # Create block with invalid seal
     invalid_seal_block = create_block(
         slot=U32(6), 
-        entropy=ByteArray32(bytes(32)), 
-        tickets=[],
+        tickets=[]
     )
     
     # Verify that the transition raises an error
     # TODO: Uncomment this once the signatures are implemented
     # with pytest.raises(SafroleError) as excinfo:
-    Safrole.transition(initial_state, invalid_seal_block)
+    Safrole.transition(initial_state, invalid_seal_block, ByteArray32(bytes(32)))
     # TODO: Uncomment this once the signatures are implemented
     # assert excinfo.value.code == SafroleErrorCode.BAD_TICKET_PROOF

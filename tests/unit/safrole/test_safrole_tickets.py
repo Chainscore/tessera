@@ -48,12 +48,11 @@ def test_ticket_accumulation():
         # Create a block with a ticket during submission period
         new_block = create_block(
             slot=slot_within_submission, 
-            entropy=ByteArray32(bytes(32)), 
             tickets=[ticket_envelope]
         )
         
         # Apply the transition
-        new_state = Safrole.transition(initial_state, new_block)
+        new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
         
         # Check that the new ticket was accumulated
         assert len(new_state.gamma.a) == 2
@@ -91,13 +90,12 @@ def test_ticket_submission_outside_period():
     # Create a block with tickets after the submission period
     new_block = create_block(
         slot=slot_after_submission, 
-        entropy=ByteArray32(bytes(32)), 
         tickets=[ticket_envelope]
     )
     
     # Verify that the transition raises the expected error
     with pytest.raises(SafroleError) as excinfo:
-        Safrole.transition(initial_state, new_block)
+        Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
     
     assert excinfo.value.code == SafroleErrorCode.UNEXPECTED_TICKET
 
@@ -133,13 +131,12 @@ def test_ticket_duplicate_rejection():
         # Create a block with duplicate tickets (same ID)
         duplicate_block = create_block(
             slot=slot_within_submission, 
-            entropy=ByteArray32(bytes(32)), 
             tickets=[ticket_envelope, ticket_envelope]  # Same ticket twice
         )
         
         # Verify that trying to apply duplicate tickets raises the expected error
         with pytest.raises(SafroleError) as excinfo:
-            Safrole.transition(initial_state, duplicate_block)
+            Safrole.transition(initial_state, duplicate_block, ByteArray32(bytes(32)))
         
         # Check that the error message indicates duplicate tickets not allowed
         assert "Duplicate tickets are not allowed" in str(excinfo.value)
@@ -196,12 +193,11 @@ def test_ticket_sorting():
         # Create a block with the tickets
         new_block = create_block(
             slot=slot_within_submission, 
-            entropy=ByteArray32(bytes(32)), 
             tickets=envelopes
         )
         
         # Apply the transition
-        new_state = Safrole.transition(initial_state, new_block)
+        new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
         
         # Check that tickets were accumulated
         assert len(new_state.gamma.a) == 3

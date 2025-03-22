@@ -73,17 +73,12 @@ def generate_ticket():
     """Generate a test ticket envelope"""
     return Safrole.generate_ticket()
 
-def create_block(slot: U32, entropy: ByteArray32, tickets: list) -> Block:
+def create_block(slot: U32, tickets: list) -> Block:
     """Create a dummy block with specified parameters"""
     # Create a simple header
     block = create_dummy_block()
     block.extrinsic.tickets = TicketsExtrinsic(tickets)
     block.header.slot = slot
-    optional_entropy_mark = block.header.epoch_mark
-    entropy_mark = optional_entropy_mark.get_value()
-    entropy_mark.entropy = entropy
-    optional_entropy_mark = OptionalEpochMark(entropy_mark)
-    block.header.epoch_mark = optional_entropy_mark
     return block
 
 def create_state(

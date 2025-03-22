@@ -26,7 +26,8 @@ def transition(pre_state: State, block: Block) -> State:
     """
 
     # 1. Safrole
-    safrole_state = Safrole.transition(pre_state, block)
+    entropy = ByteArray32(bytes(32)) 
+    safrole_state = Safrole.transition(pre_state, block, entropy)
     # 2. Recent History
     recent_block_history_state = RecentHistory.transition(safrole_state, block, ByteArray32([0] * 32))
     # 3. Authorization

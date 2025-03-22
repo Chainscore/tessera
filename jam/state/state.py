@@ -1,34 +1,40 @@
-from jam.state.components.alpha import Alpha
+from jam.network.peer import Peer
+from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.eta import Eta
-from jam.state.components.pi import Pi
-from jam.state.components.psi import Psi
+from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat
+from jam.state.components.psi import Psi, PsiB, PsiG, PsiO, PsiW
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
-from jam.state.components.rho import Rho
+from jam.state.components.rho import OptionalWorkReportState, Rho
 from jam.state.components.tau import Tau
-from jam.state.components.chi import Chi
+from jam.state.components.chi import Chi, ChiG
 from jam.state.components.sigma import Sigma
 from jam.state.components.iota import Iota
-from jam.state.components.nu import Nu
+from jam.state.components.nu import AllReadyWRs, Nu
 from jam.state.components.xi import Xi
 from jam.state.merkle import StateMerkle
 from jam.state.utils.key_constructor import construct_state_key
-from jam.state.components.phi import Phi
+from jam.state.components.phi import AuthorizationQueue, AuthorizerHash, Phi
 from jam.state.components.beta import Beta
-from jam.consensus.safrole.gamma import Gamma
+from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaZ
 from jam.types.base.integers.fixed import U64, U32
+from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.protocol.core import Balance, Gas
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.core import Balance, Gas, ServiceId
+from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public, Hash
 from jam.types.protocol.crypto import OpaqueHash
 from jam.state.components.delta import (
     AccountData,
     AccountStorage,
+    Delta,
     LookupTimestamps,
     PreImageLookup,
     Timestamps,
 )
+from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.types.work.report import WorkDependencies
+from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
 
 
 class State(Sigma):
@@ -238,3 +244,35 @@ class State(Sigma):
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
         return self._merkle.get_nodes()
+    
+    @staticmethod
+    def genesis(peers: list[ValidatorData], fallback: GammaS) -> "State":
+        """Generate the genesis state"""
+
+        empty_validators = [ValidatorData(
+            bandersnatch=BandersnatchPublic(bytes(32)),
+            ed25519=Ed25519Public(bytes(32)),
+            bls=BlsPublic(bytes(144)),
+            metadata=ValidatorMetadata(bytes(128))
+        ) for _ in range(VALIDATOR_COUNT)]
+
+        return State(
+            alpha=Alpha([AuthorizationPool([]) for _ in range(CORE_COUNT)]),
+            beta=Beta([]),
+            # TODO: Add validator data from perrlist to GammaS (fallback) and GammaK (Upcoming validators)
+            gamma=Gamma(a=GammaA([]), k=GammaK(peers), s=fallback, z=GammaZ(bytes(144))),
+            delta=Delta({}),
+            eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+            iota=Iota(empty_validators),
+            # TODO: Add validator data from perrlist to Kappa
+            kappa=Kappa(peers),
+            lambda_=Lambda_(empty_validators),
+            rho=Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]),
+            tau=Tau(0),
+            phi=Phi([AuthorizationQueue([AuthorizerHash(bytes(32)) for _ in range(MAX_AUTH_QUEUE_ITEMS)]) for _ in range(CORE_COUNT)]),
+            chi=Chi(m=ServiceId(0), a=ServiceId(0), v=ServiceId(0), g=ChiG({})),
+            psi=Psi(good=PsiG([]), bad=PsiB([]), wonky=PsiW([]), offenders=PsiO([])),
+            pi=Pi([AllValidatorStats([ValidatorStat(blocks=0, tickets=0, pre_images=0, pre_images_size=0, guarantees=0, assurances=0) for _ in range(VALIDATOR_COUNT)]) for _ in range(2)]),
+            nu=Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)]),
+            xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
+        )

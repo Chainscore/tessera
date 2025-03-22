@@ -52,7 +52,7 @@ class Safrole:
         return ByteArray32(vrf.proof_to_hash(BandersnatchPoint.string_to_point(bytes(signature)[:32]))[:32])
 
     @staticmethod
-    def transition(pre_state: State, block: Block) -> State:
+    def transition(pre_state: State, block: Block, entropy: ByteArray32) -> State:
         new_state = deepcopy(pre_state)
 
         # 1. Timekeeping
@@ -146,7 +146,7 @@ class Safrole:
         if block.header.epoch_mark:
             # TODO: Use actual entropy coming from vrf output of Hv once we have valid seals generated
             new_state.eta[0] = Hash.blake2b(
-                bytes(new_state.eta[0]) + (bytes(block.header.epoch_mark.get_value().entropy))
+                bytes(new_state.eta[0]) + bytes(entropy)
             )
         return new_state
 
