@@ -321,3 +321,6 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
                 f"Expected list for {cls.__name__}, got {type(data)}"
             )
         return cls([cls._element_type.from_json(item) for item in data])
+
+    def to_json(self) -> list:
+        return [i.to_json() for i in self]

@@ -3,28 +3,21 @@ import json
 import os
 from typing import List
 
-from jam.state.components.nu import AllReadyWRs, Nu
+from jam.state.components.nu import Nu
 from jam.state.components.phi import Phi
 from jam.state.components.xi import Xi
 from jam.types.base.integers.fixed import U32
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.types.base.sequences.array import Array, decodable_array
-from jam.utils.constants import EPOCH_LENGTH
 from jam.utils.json import JsonSerde
-from jam.types.work.report import WorkPackageHash, WorkDependencies, WorkExecResult, WorkReports
+from jam.types.work.report import WorkPackageHash, WorkExecResult, WorkReports
 from jam.state.components.chi import Chi
 from jam.types.protocol.crypto import Entropy
 from jam.types.protocol.core import ServiceId,Gas,U64,OpaqueHash,Balance
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.state.components.delta import Delta
 from jam.state.components.iota import Iota
-
-
-from typing import Optional
-
-
 
 @decodable_dataclass
 @dataclass

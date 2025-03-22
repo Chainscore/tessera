@@ -29,3 +29,6 @@ class Bytes(Vector[Byte]):
     def from_json(cls, data: Any) -> "Bytes":
         """Create from JSON representation."""
         return cls(data)
+
+    def to_json(self) -> str:
+        return f"0x{self.hex()}"
