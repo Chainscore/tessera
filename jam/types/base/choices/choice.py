@@ -164,6 +164,9 @@ class Choice(Codable[T], JsonSerde, Generic[T]):
             f"No valid choice type found for {data} in {cls.__name__}: {last_error}"
         )
 
+    def to_json(self) -> Any:
+        return {list(self.value.keys())[0] : self.get_value().to_json()}
+
 
 def decodable_choice(cls: Type[Choice]) -> Type[Choice]:
     if len(cls.__choices__) == 0:
