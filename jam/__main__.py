@@ -1,42 +1,31 @@
 import asyncio
-from datetime import datetime
-from jam.config.logging import get_logger, setup_logging
-from jam.config.settings import settings
+import json
+from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
-from jam.types.protocol.crypto import Hash
-from jam.utils.constants import EPOCH_LENGTH
+from jam.network.peer import Peer
+from jam.network.node import Node
+from jam.network.dummy_bp import produce_blocks
 
-logger = get_logger(__name__)
-
-
-async def main() -> None:
+async def main(genesis: str, port: int) -> None:
     # Setup logging
     setup_logging()
 
     logger.info(
         "Starting JAM node",
         spec=chain_config.name,
-        node_name=settings.NODE_NAME,
-        listen_address=settings.LISTEN_ADDRESS,
-        listen_port=settings.LISTEN_PORT,
+        listen_port=port,
     )
     try:
         # Initialize components
-        # TODO: Add initialization code
-        
+        peerlist = json.load(open(genesis))["peers"]
+        peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
 
-        # Start main loop
-        block_number = 0
-        while True:
-            logger.info(
-                f"Processing block #{block_number}",
-                block_hash=bytes(Hash.blake2b(f"{block_number:064x}".encode())).hex(),
-                block_timestamp=datetime.now().isoformat(),
-                epoch_number=block_number // EPOCH_LENGTH,
-            )
-            block_number += 1
-            await asyncio.sleep(6)
+        tsr_node = Node(node_name=port, node_id=port, host="0.0.0.0", port=port, peers=peers)
 
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(tsr_node.initialize())
+            tg.create_task(produce_blocks(tsr_node))
+    
     except KeyboardInterrupt:
         logger.info("Shutting down JAM node")
     except Exception as e:

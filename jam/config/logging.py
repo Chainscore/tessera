@@ -4,7 +4,6 @@ import structlog
 from typing import Any
 import logging
 
-
 def setup_logging() -> None:
     structlog.configure(
         processors=[
@@ -23,3 +22,5 @@ def setup_logging() -> None:
 
 def get_logger(name: str) -> Any:
     return structlog.get_logger(name)
+
+logger = get_logger(__name__)
