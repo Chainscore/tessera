@@ -1,0 +1,5 @@
+requests~=2.32.3
+yarl~=1.18.3
+structlog~=25.2.0
+uvloop~=0.21.0
+pytest~=7.4.4
