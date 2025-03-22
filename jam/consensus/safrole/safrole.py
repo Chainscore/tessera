@@ -16,13 +16,21 @@ from jam.utils.constants import (
     TICKET_ENTRIES_PER_VALIDATOR,
     MAX_TICKETS_PER_EXTRINSIC
 )
-from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchVrfSignature, Hash
+from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingVrfSignature, BandersnatchVrfSignature, Hash
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.consensus.safrole.gamma import GammaK, GammaSFallback, GammaA
 from jam.types.protocol.validators import ValidatorData
+from copy import deepcopy
 
 class Safrole:
+    @staticmethod
+    def generate_ticket() -> TicketEnvelope:
+        return TicketEnvelope(
+            attempt=U32(0),
+            signature=BandersnatchRingVrfSignature(bytes(784)),
+        )
+
     @staticmethod
     def verify_vrf(message, proof) -> bool:
         # TODO: Implement VRF verification after VRF module is added
@@ -35,7 +43,7 @@ class Safrole:
         data = b""
         for key in sorted_keys:
             data = data + bytes(key)
-        return data[:72]
+        return data[:144]
 
     @staticmethod
     def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
@@ -45,7 +53,7 @@ class Safrole:
 
     @staticmethod
     def transition(pre_state: State, block: Block) -> State:
-        new_state = dataclasses.replace(pre_state)
+        new_state = deepcopy(pre_state)
 
         # 1. Timekeeping
         if block.header.slot > new_state.tau:
@@ -136,10 +144,10 @@ class Safrole:
 
         # 2. Accumulate entropy
         if block.header.epoch_mark:
+            # TODO: Use actual entropy coming from vrf output of Hv once we have valid seals generated
             new_state.eta[0] = Hash.blake2b(
                 bytes(new_state.eta[0]) + (bytes(block.header.epoch_mark.get_value().entropy))
             )
-
         return new_state
 
     @staticmethod
