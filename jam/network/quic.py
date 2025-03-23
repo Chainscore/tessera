@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional
+from typing import Dict, Optional
 
 from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic.connection import logger
@@ -10,6 +10,8 @@ from jam.types.block import Block
 
 # QUIC Server Protocol (Handles incoming connections)
 class QuicServerProtocol(QuicConnectionProtocol):
+    stream_buffer: Dict[int, bytes] = {}
+
     def quic_event_received(self, event: QuicEvent):
         if isinstance(event, HandshakeCompleted):
             print(f"🔗 Handshake completed with {self._quic.configuration.is_client}")
@@ -18,13 +20,18 @@ class QuicServerProtocol(QuicConnectionProtocol):
             logger.warning(f"❌ Server Connection terminated: {event.error_code}")
 
         elif isinstance(event, StreamDataReceived):
-            print(f"📩 Received data of size {len(event.data)} bytes: {event.data.hex()}")
-            try:
-                message = Block.decode_from(event.data)
-                print(f"📩 Received block: {message}")
-            except Exception as e:
-                message = event.data.decode()
-                print(f"📩 Received message: {message}")
+            print(f"📩 Received data of size {len(event.data)} bytes {event}")
+            if event.stream_id not in self.stream_buffer:
+                self.stream_buffer[event.stream_id] = bytes(0)
+            
+            self.stream_buffer[event.stream_id] += event.data
+            if event.end_stream:
+                try:
+                    message = Block.decode_from(self.stream_buffer[event.stream_id])
+                    print(f"📩 Received block: {message}")
+                except Exception as e:
+                    message = self.stream_buffer[event.stream_id].decode()
+                    print(f"📩 Received message: {message}")
 
 
 # QUIC Client Protocol (Initiates connections to other nodes)
