@@ -63,7 +63,7 @@ async def main(genesis_path: str, db_path: str, port: int) -> None:
         db = KVStore(db_path)
         state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
         state.save(db)
-
+        
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
             tg.create_task(block_producer(tsr_node, db))
