@@ -1,11 +1,18 @@
+import os
 import pickle
 from typing import Dict, Optional
 from aioquic.tls import SessionTicket
 
+
 class SessionTicketStore:
-    def __init__(self, node_name) -> None:
+    def __init__(self, port: int) -> None:
         """Initialize the session ticket store and load existing tickets from file."""
-        self.file = f"seeds/{node_name}/session_tickets.pkl"
+        store_path = f"sessions/{port}"
+
+        if not os.path.exists(store_path):
+            os.makedirs(store_path)
+
+        self.file = f"{store_path}/session_tickets.pkl"
         self.tickets: Dict[bytes, SessionTicket] = self.load_tickets()
 
     def add(self, ticket: SessionTicket) -> None:
@@ -33,7 +40,7 @@ class SessionTicketStore:
             return {}  # Return an empty dictionary if the file doesn't exist or is empty
 
 def read_store(port: int):
-    with open(f"seeds/{port}/session_tickets.pkl", "rb") as file:
+    with open(f"sessions/{port}/session_tickets.pkl", "rb") as file:
         data = pickle.load(file)
-    print(type(data))
-    print((data))
+
+    return data
