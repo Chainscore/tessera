@@ -291,6 +291,7 @@ class State(Sigma):
     def get_services(db: KVStore,serviceID:ServiceId) -> dict:
         service = {}
         for key,value in sorted(db.get_all().items(), key=lambda x: x[0], reverse=True):
+            #searching for service ids and fetch the required service_id
             if int(key[0]) == 255 and int.from_bytes(
                     bytes(Bytes([key[1], key[3], key[5], key[7]]))
                 ) == serviceID:
@@ -319,14 +320,15 @@ class State(Sigma):
                     gas_limit=Gas(ag),
                     min_gas=Gas(am),
                 )
+            #eliminating the core state components
             elif not (0 < int(key[0]) <= 15):
+                #fetching all the service related data
                 if Bytes(key[7:0:-2]) == Bytes(2**32 - 1) and int.from_bytes(bytes(Bytes(key[0:7:2])))==serviceID:
                     # populating the storage
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
                     service.storage[
                         ByteArray32(Bytes(key[8:32] + Bytes(bytearray(8))))
                     ] = value
-                    print("Storage")
                 elif Bytes(key[7:0:-2]) == Bytes(2**32 - 2) and int.from_bytes(bytes(Bytes(key[0:7:2])))==serviceID:
                     # populating the lookup
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
