@@ -286,3 +286,60 @@ class State(Sigma):
         for key, value in db.get_all().items():
             data[key] = Bytes(value)
         return State.detransform(data)
+    
+    @staticmethod
+    def get_services(db: KVStore,serviceID:ServiceId) -> dict:
+        service = {}
+        for key,value in sorted(db.get_all().items(), key=lambda x: x[0], reverse=True):
+            if int(key[0]) == 255 and int.from_bytes(
+                    bytes(Bytes([key[1], key[3], key[5], key[7]]))
+                ) == serviceID:
+                service_id = int.from_bytes(
+                    bytes(Bytes([key[1], key[3], key[5], key[7]]))
+                )
+                total_offset = 0
+                ac, offset = OpaqueHash.decode_from(bytes(value), total_offset)
+                total_offset += offset
+                ab, offset = Balance.decode_from(bytes(value), total_offset)
+                total_offset += offset
+                ag, offset = Gas.decode_from(bytes(value), total_offset)
+                total_offset += offset
+                am, offset = Gas.decode_from(bytes(value), total_offset)
+                total_offset += offset
+                ao, offset = Gas.decode_from(bytes(value), total_offset)
+                total_offset += offset
+                ai, offset = U32.decode_from(bytes(value), total_offset)
+                total_offset += offset
+                service = AccountData(
+                    storage=AccountStorage({}),
+                    lookup=PreImageLookup({}),
+                    timestamps=LookupTimestamps({}),
+                    code_hash=ByteArray32(ac),
+                    balance=Balance(ab),
+                    gas_limit=Gas(ag),
+                    min_gas=Gas(am),
+                )
+            elif not (0 < int(key[0]) <= 15):
+                if Bytes(key[7:0:-2]) == Bytes(2**32 - 1) and int.from_bytes(bytes(Bytes(key[0:7:2])))==serviceID:
+                    # populating the storage
+                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    service.storage[
+                        ByteArray32(Bytes(key[8:32] + Bytes(bytearray(8))))
+                    ] = value
+                    print("Storage")
+                elif Bytes(key[7:0:-2]) == Bytes(2**32 - 2) and int.from_bytes(bytes(Bytes(key[0:7:2])))==serviceID:
+                    # populating the lookup
+                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    service.lookup[Hash.blake2b(value)] = value
+
+                else:
+                    if int.from_bytes(bytes(Bytes(key[0:7:2])))==serviceID:
+                        # populating the timestamps
+                        service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                        TimeStamps, _ = Timestamps.decode_from(bytes(value))
+                        timestamp_key = ByteArray32(
+                            Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
+                        )
+                        service.timestamps[timestamp_key] = TimeStamps
+
+        return service

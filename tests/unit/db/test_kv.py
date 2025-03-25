@@ -10,6 +10,7 @@ from jam.consensus.safrole.safrole import Safrole
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
+from jam.types.protocol.core import ServiceId
 
 @pytest.fixture
 def db_path():
@@ -43,7 +44,7 @@ def test_kv_store_basic_operations(db_path):
     #         ) for pr in peerlist]
     # state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
     # state.save(kv)
-    # state.load(kv)
+    # state.get_services(kv,ServiceId(0))
     
     # Test overwrite
     kv.put("key1".encode(), "updated_value".encode())
