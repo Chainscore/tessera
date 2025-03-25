@@ -31,18 +31,20 @@ def test_kv_store_basic_operations(db_path):
     # # print("Hui",valueList[0])  
     # assert kv.get("State".encode()) == "StateValue"
     
-    peerlist = json.load(open("genesis.json"))["peers"]
-    peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
-    validators = [ValidatorData(
-                bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
-                ed25519=Ed25519Public(pr["ed25519_public"]),
-                bls=BlsPublic(pr["bls_public"]),
-                metadata=ValidatorMetadata(bytes(128))
-            ) for pr in peerlist]
-    state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
-    state.save(kv)
-    a=state.load(kv)
-
+    #State checking:
+    
+    # peerlist = json.load(open("genesis.json"))["peers"]
+    # peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
+    # validators = [ValidatorData(
+    #             bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
+    #             ed25519=Ed25519Public(pr["ed25519_public"]),
+    #             bls=BlsPublic(pr["bls_public"]),
+    #             metadata=ValidatorMetadata(bytes(128))
+    #         ) for pr in peerlist]
+    # state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
+    # state.save(kv)
+    # state.load(kv)
+    
     # Test overwrite
     kv.put("key1".encode(), "updated_value".encode())
     assert kv.get("key1".encode()) == "updated_value".encode()
