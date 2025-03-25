@@ -4,8 +4,6 @@ from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted
 from aioquic.quic.connection import logger
 
-
-
 # QUIC Server Protocol (Handles incoming connections)
 class QuicServerProtocol(QuicConnectionProtocol):
     stream_buffer: Dict[int, bytes] = {}
@@ -25,16 +23,24 @@ class QuicServerProtocol(QuicConnectionProtocol):
             self.stream_buffer[event.stream_id] += event.data
             if event.end_stream:
                 try:
-                    from jam.network.protocols import BlockAnnouncementProtocol
-                    announcement = BlockAnnouncementProtocol.intercept(buffer=self.stream_buffer[event.stream_id])
+                    from jam.network.protocols.base import PrefixType
 
-                    # announcement = .intercept(buffer=self.stream_buffer[event.stream_id])
-                    # message = Block.decode_from(self.stream_buffer[event.stream_id])
-                    logger.info(f"📩 Received block with parent: {announcement.header.parent}")
+                    buffer = self.stream_buffer[event.stream_id]
+                    prefix, _ = PrefixType.decodeFrom(buffer[0:1])
+
+                    if prefix == PrefixType.UP0:
+                        from jam.network.protocols import BlockAnnouncementProtocol
+                        announcement = BlockAnnouncementProtocol.intercept(buffer=buffer)
+
+                        logger.info(f"📩 Received block with parent: {announcement.header.parent}")
+
+                    else:
+                        logger.warning(f"📩 Received data: {buffer.decode()}")
+
                 except Exception as e:
+                    print("error", e)
                     message = self.stream_buffer[event.stream_id].decode()
                     logger.warning(f"📩 Received message: {message}")
-
 
 # QUIC Client Protocol (Initiates connections to other nodes)
 class QuicClientProtocol(QuicConnectionProtocol):

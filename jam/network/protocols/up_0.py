@@ -49,7 +49,7 @@ class BlockAnnouncementProtocol(NetworkProtocol):
             # await client.send_message(bytes(self._prefix) + final.encode())
 
             # Block Announcement
-            await client.send_message(announcement.encode())
+            await client.send_message(self._prefix.encode() + announcement.encode())
 
     @classmethod
     def intercept(cls, buffer: bytes) -> BlockAnnouncement:
