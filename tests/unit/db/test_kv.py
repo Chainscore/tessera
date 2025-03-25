@@ -11,7 +11,7 @@ from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
 from jam.types.protocol.core import ServiceId
-
+from jam.types.base.sequences.bytes.bytes import Bytes
 @pytest.fixture
 def db_path():
     """Create a temporary directory for testing."""
@@ -34,17 +34,25 @@ def test_kv_store_basic_operations(db_path):
     
     #State checking:
     
-    # peerlist = json.load(open("genesis.json"))["peers"]
-    # peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
-    # validators = [ValidatorData(
-    #             bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
-    #             ed25519=Ed25519Public(pr["ed25519_public"]),
-    #             bls=BlsPublic(pr["bls_public"]),
-    #             metadata=ValidatorMetadata(bytes(128))
-    #         ) for pr in peerlist]
-    # state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
+    peerlist = json.load(open("genesis.json"))["peers"]
+    peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
+    validators = [ValidatorData(
+                bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
+                ed25519=Ed25519Public(pr["ed25519_public"]),
+                bls=BlsPublic(pr["bls_public"]),
+                metadata=ValidatorMetadata(bytes(128))
+            ) for pr in peerlist]
+    state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
+    state.save(kv)
+    state=State.load(kv)
+    print(state)
+    
+
+    
+    
+    
     # state.save(kv)
-    # state.get_services(kv,ServiceId(0))
+    # state=State.load(kv)
     
     # Test overwrite
     kv.put("key1".encode(), "updated_value".encode())

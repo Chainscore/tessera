@@ -35,6 +35,7 @@ from jam.state.components.delta import (
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
+import json
 
 
 class State(Sigma):
@@ -132,7 +133,7 @@ class State(Sigma):
 
         # populating the delta
         delta = {}
-        for key, value in state.items():
+        for key, value in sorted(state.items(), key=lambda x: x[0], reverse=True):
             # Start with finding all core state components 1-15
             # if (key[0] <= 15) and bytes(key[0:32]) == 0:
             if int(key[0]) <= 15 and int(key[0]) > 0:
@@ -277,71 +278,61 @@ class State(Sigma):
     
     def save(self, db: KVStore):
         data = self.transform()
+        # Save the regular state data
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
+        
+        # Save service ID to hash mappings
+        for service_id in self.delta:
+            # First get the value from db
+            db_value = db.get(f"service_{service_id}".encode())
+
+            # Initialize empty set
+            hash_set = set()
+
+            # If value exists in db, convert to set
+            if db_value:
+                # Load JSON string into list and convert to set
+                hash_list = json.loads(db_value.decode())
+                hash_set = set(hash_list)
+                
+            # Collect storage keys
+            for storage_key in self.delta[service_id].storage:
+                hash_set.add(bytes(storage_key).hex())
+            # Collect preimage keys  
+            for preimage_key in self.delta[service_id].lookup:
+                hash_set.add(bytes(preimage_key).hex())
+            # Collect lookup keys
+            for lookup_key in self.delta[service_id].timestamps:
+                hash_set.add(bytes(lookup_key).hex())
+            
+            # Save as service_id -> list of unique hashes
+            if hash_set:
+                db.put(
+                    f"service_{service_id}".encode(),
+                    json.dumps(list(hash_set)).encode()  # Convert set to list for JSON
+                )
 
     @staticmethod
-    def load(db: KVStore) -> "State":   
+    def load(db: KVStore) -> "State":
         data = {}
+        service_hashes = {}
+        
+        # Load all data from db
         for key, value in db.get_all().items():
-            data[key] = Bytes(value)
-        return State.detransform(data)
+            if key.startswith(b'service_'):
+                # Handle service ID -> hashes mapping
+                service_id = int(key.split(b'_')[1])
+                hashes = json.loads(value.decode())
+                service_hashes[service_id] = [bytes.fromhex(h) for h in hashes]
+            else:
+                data[key] = Bytes(value)
+                
+        state = State.detransform(data)
+        
+        # Store service hashes mapping in state if needed
+        state.service_hashes = service_hashes
+        return state
     
-    @staticmethod
-    def get_services(db: KVStore,serviceID:ServiceId) -> dict:
-        service = {}
-        for key,value in sorted(db.get_all().items(), key=lambda x: x[0], reverse=True):
-            #searching for service ids and fetch the required service_id
-            if int(key[0]) == 255 and int.from_bytes(
-                    bytes(Bytes([key[1], key[3], key[5], key[7]]))
-                ) == serviceID:
-                service_id = int.from_bytes(
-                    bytes(Bytes([key[1], key[3], key[5], key[7]]))
-                )
-                total_offset = 0
-                ac, offset = OpaqueHash.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                ab, offset = Balance.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                ag, offset = Gas.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                am, offset = Gas.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                ao, offset = Gas.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                ai, offset = U32.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                service = AccountData(
-                    storage=AccountStorage({}),
-                    lookup=PreImageLookup({}),
-                    timestamps=LookupTimestamps({}),
-                    code_hash=ByteArray32(ac),
-                    balance=Balance(ab),
-                    gas_limit=Gas(ag),
-                    min_gas=Gas(am),
-                )
-            #eliminating the core state components
-            elif not (0 < int(key[0]) <= 15):
-                #fetching all the service related data
-                if Bytes(key[7:0:-2]) == Bytes(2**32 - 1) and int.from_bytes(bytes(Bytes(key[0:7:2])))==serviceID:
-                    # populating the storage
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                    service.storage[
-                        ByteArray32(Bytes(key[8:32] + Bytes(bytearray(8))))
-                    ] = value
-                elif Bytes(key[7:0:-2]) == Bytes(2**32 - 2) and int.from_bytes(bytes(Bytes(key[0:7:2])))==serviceID:
-                    # populating the lookup
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                    service.lookup[Hash.blake2b(value)] = value
-
-                else:
-                    if int.from_bytes(bytes(Bytes(key[0:7:2])))==serviceID:
-                        # populating the timestamps
-                        service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                        TimeStamps, _ = Timestamps.decode_from(bytes(value))
-                        timestamp_key = ByteArray32(
-                            Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
-                        )
-                        service.timestamps[timestamp_key] = TimeStamps
-
-        return service
+   
+       
