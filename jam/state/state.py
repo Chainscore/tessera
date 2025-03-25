@@ -126,7 +126,7 @@ class State(Sigma):
         
         # populating the delta
         delta = {}
-        for key, value in state.items():
+        for key, value in sorted(state.items(), reverse=True):
             # Start with finding all core state components 1-15
             # if (key[0] <= 15) and bytes(key[0:32]) == 0:
             if (int(key[0]) <= 15 and int(key[0])>0):
@@ -203,7 +203,6 @@ class State(Sigma):
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
                     TimeStamps,_=Timestamps.decode_from(bytes(value))
                     timestamp_key=ByteArray32(Bytes(key[1:8:2])+Bytes(key[8:32])+ Bytes(bytearray(4)))
-                    # print("timestamp_key",timestamp_key)
                     delta[service_id].timestamps[timestamp_key]=TimeStamps
                     
         return State(alpha=alpha,

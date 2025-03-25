@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from jam.types.base.sequences.bytes import ByteArray32
 
 
 from jam.consensus.safrole.gamma import GammaA, GammaK, GammaS, GammaZ
@@ -12,6 +13,7 @@ from jam.state.components.delta import (
     LookupTimestamps,
     PreImageLookup,
     Timestamps,
+    BlobLength
 )
 from jam.state.components.eta import Eta
 from jam.state.components.iota import Iota
@@ -251,3 +253,15 @@ class GeneralState(Codable, JsonSerde):
                     ] = lookup.value
 
         return state
+
+    def parse_keyval_state(keyval_raw) -> State:
+        keyval_state = {}
+        for keyval in keyval_raw["keyvals"]:
+            key = ByteArray32(keyval[0])
+            val = Bytes(keyval[1])
+            keyval_state[key] = val
+
+        detransformed_keyval_state = State.detransform(keyval_state)
+        
+        return detransformed_keyval_state
+
