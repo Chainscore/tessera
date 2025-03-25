@@ -1,4 +1,3 @@
-
 import asyncio
 from math import floor
 from time import time
@@ -9,8 +8,7 @@ from tests.fixtures.dummy_block import create_dummy_block
 from .node import Node
 from jam.config.logging import logger
 from jam.db.kv import KVStore
-from jam.types.protocol.crypto import Hash
-from .protocols import announce_block
+from .protocols import BlockAnnouncementProtocol
 
 
 async def block_producer(node: Node, db: KVStore):
@@ -26,6 +24,7 @@ async def block_producer(node: Node, db: KVStore):
     
     # Record genesis timestamp in seconds
     genesis_ts = time()
+    up_0 = BlockAnnouncementProtocol()
 
     block_number = 0
     while True:
@@ -51,7 +50,8 @@ async def block_producer(node: Node, db: KVStore):
             if author_key == node.validator_data.bandersnatch:
                 block = create_dummy_block()
                 logger.info(f"⛏️ ({node.name}) Producing Block {block_number}")
-                await announce_block(node, block)
+                # await announce_block(node, block)
+                await up_0.transmit(node, block)
             else:
                 logger.info(f"🔄 ({node.name}) Skipping Block {block_number}")
         else:

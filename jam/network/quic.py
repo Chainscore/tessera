@@ -1,11 +1,9 @@
-import asyncio
-from typing import Dict, Optional
+from typing import Dict
 
 from aioquic.asyncio import QuicConnectionProtocol
-from aioquic.quic.connection import logger
 from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted
+from aioquic.quic.connection import logger
 
-from jam.types.block import Block
 
 
 # QUIC Server Protocol (Handles incoming connections)
@@ -23,12 +21,16 @@ class QuicServerProtocol(QuicConnectionProtocol):
             logger.info(f"📩 Received data of size {len(event.data)} bytes {event}")
             if event.stream_id not in self.stream_buffer:
                 self.stream_buffer[event.stream_id] = bytes(0)
-            
+
             self.stream_buffer[event.stream_id] += event.data
             if event.end_stream:
                 try:
-                    message = Block.decode_from(self.stream_buffer[event.stream_id])
-                    logger.info(f"📩 Received block: {message}")
+                    from jam.network.protocols import BlockAnnouncementProtocol
+                    announcement = BlockAnnouncementProtocol.intercept(buffer=self.stream_buffer[event.stream_id])
+
+                    # announcement = .intercept(buffer=self.stream_buffer[event.stream_id])
+                    # message = Block.decode_from(self.stream_buffer[event.stream_id])
+                    logger.info(f"📩 Received block with parent: {announcement.header.parent}")
                 except Exception as e:
                     message = self.stream_buffer[event.stream_id].decode()
                     logger.warning(f"📩 Received message: {message}")
