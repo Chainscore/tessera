@@ -279,9 +279,9 @@ class State(Sigma):
         data = self.transform()
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
-    
+
     @staticmethod
-    def load(db: KVStore) -> "State":
+    def load(db: KVStore) -> "State":   
         data = {}
         for key, value in db.get_all().items():
             data[key] = Bytes(value)

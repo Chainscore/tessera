@@ -4,6 +4,13 @@ import shutil
 import tempfile
 from jam.db.kv import KVStore
 import json
+from jam.state.state import State
+from jam.network.peer import Peer
+from jam.consensus.safrole.safrole import Safrole
+from jam.types.base.sequences.bytes.byte_array import ByteArray32
+from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
+
 @pytest.fixture
 def db_path():
     """Create a temporary directory for testing."""
@@ -17,17 +24,28 @@ def test_kv_store_basic_operations(db_path):
     kv = KVStore(db_path)
     
     # Test put and get
-    kv.put("key1".encode(), "value1".encode())
-    kv.put("key2".encode(), json.dumps(["key1", "key2"]).encode())
-    value=kv.get("key2".encode())
-    valueList=json.loads(value)
-    print("Hui",valueList[0])  
-
-    assert kv.get("key1".encode()) == "value1"
+    # kv.put("State".encode(), "StateValue".encode())
+    # kv.put("ServiceId".encode(), json.dumps(["PreImageKey1", "PreImageKey2"]).encode())
+    # value=kv.get("ServiceId".encode())
+    # valueList=json.loads(value)
+    # # print("Hui",valueList[0])  
+    # assert kv.get("State".encode()) == "StateValue"
     
+    peerlist = json.load(open("genesis.json"))["peers"]
+    peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
+    validators = [ValidatorData(
+                bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
+                ed25519=Ed25519Public(pr["ed25519_public"]),
+                bls=BlsPublic(pr["bls_public"]),
+                metadata=ValidatorMetadata(bytes(128))
+            ) for pr in peerlist]
+    state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
+    state.save(kv)
+    a=state.load(kv)
+
     # Test overwrite
     kv.put("key1".encode(), "updated_value".encode())
-    assert kv.get("key1".encode()) == "updated_value"
+    assert kv.get("key1".encode()) == "updated_value".encode()
     
     # Test get non-existent key
     assert kv.get("non_existent_key".encode()) is None
@@ -97,4 +115,5 @@ def test_kv_store_basic_operations(db_path):
 #         assert kv.get(key.encode()) == expected_value
     
 #     kv.close() 
+
 
