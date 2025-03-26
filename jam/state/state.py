@@ -315,8 +315,7 @@ class State(Sigma):
     def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
         data = {}
         service_ids:set[ServiceId]=set()
-        # for key, value in db.get_all().items():
-        #     data[key] = Bytes(value)
+        
         if keys is None:
             for key, value in db.get_all().items():
                 data[key] = Bytes(value)
@@ -369,14 +368,10 @@ class State(Sigma):
     def get_service_timestamps(self, service_id: ServiceId, hash: ByteArray32,length:BlobLength,kv:KVStore) -> Timestamps:
         data=[]
         key=LookupTimestamps.get_key(hash,length)
-        # print(key)
         key=construct_state_key((service_id, key))
-        # print("k",Bytes(key).hex())
         value=kv.get(bytes(key))
         TimeStamps, _ = Timestamps.decode_from(bytes(value))
         return TimeStamps
 
-    # def getData(self,keyArray:list,kv:KVStore):
-    #     for key in keyArray:
-    #         print(kv.get(bytes(key)))
+
         
