@@ -21,7 +21,7 @@ from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.protocol.core import Balance, Gas, ServiceId
+from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public, Hash
 from jam.types.protocol.crypto import OpaqueHash
 from jam.state.components.delta import (
@@ -216,7 +216,6 @@ class State(Sigma):
                     timestamp_key = ByteArray32(
                         Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
                     )
-                    # print("timestamp_key",timestamp_key)
                     delta[service_id].timestamps[timestamp_key] = TimeStamps
 
         return State(
@@ -283,56 +282,101 @@ class State(Sigma):
             db.put(bytes(key), bytes(value))
         
         # Save service ID to hash mappings
-        for service_id in self.delta:
-            # First get the value from db
-            db_value = db.get(f"service_{service_id}".encode())
-
-            # Initialize empty set
-            hash_set = set()
-
-            # If value exists in db, convert to set
-            if db_value:
-                # Load JSON string into list and convert to set
-                hash_list = json.loads(db_value.decode())
-                hash_set = set(hash_list)
-                
-            # Collect storage keys
-            for storage_key in self.delta[service_id].storage:
-                hash_set.add(bytes(storage_key).hex())
-            # Collect preimage keys  
-            for preimage_key in self.delta[service_id].lookup:
-                hash_set.add(bytes(preimage_key).hex())
-            # Collect lookup keys
-            for lookup_key in self.delta[service_id].timestamps:
-                hash_set.add(bytes(lookup_key).hex())
+        # for service_id in self.delta:
+        #     # First get the value from db
             
-            # Save as service_id -> list of unique hashes
-            if hash_set:
-                db.put(
-                    f"service_{service_id}".encode(),
-                    json.dumps(list(hash_set)).encode()  # Convert set to list for JSON
-                )
+        #     db_value = db.get(f"service_{service_id}".encode())
+
+        #     # Initialize empty set
+        #     hash_set = set()
+
+        #     # If value exists in db, convert to set
+        #     if db_value:
+        #         # Load JSON string into list and convert to set
+        #         hash_list = json.loads(db_value.decode())
+        #         hash_set = set(hash_list)
+        #     # Collect storage keys
+        #     for storage_key in self.delta[service_id].storage:
+        #         hash_set.add(bytes(storage_key).hex())
+        #     # Collect preimage keys  
+        #     for preimage_key in self.delta[service_id].lookup:
+        #         hash_set.add(bytes(preimage_key).hex())
+        #     # Collect lookup keys
+        #     for lookup_key in self.delta[service_id].timestamps:
+        #         hash_set.add(bytes(lookup_key).hex())
+        #     # Save as service_id -> list of unique hashes
+        #     if hash_set:
+        #         db.put(
+        #             f"service_{int(service_id)}".encode(),
+        #             json.dumps(list(hash_set)).encode()  # Convert set to list for JSON
+        #         )
 
     @staticmethod
-    def load(db: KVStore) -> "State":
+    def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
         data = {}
-        service_hashes = {}
-        
-        # Load all data from db
-        for key, value in db.get_all().items():
-            if key.startswith(b'service_'):
-                # Handle service ID -> hashes mapping
-                service_id = int(key.split(b'_')[1])
-                hashes = json.loads(value.decode())
-                service_hashes[service_id] = [bytes.fromhex(h) for h in hashes]
-            else:
+        service_ids:set[ServiceId]=set()
+        # for key, value in db.get_all().items():
+        #     data[key] = Bytes(value)
+        if keys is None:
+            for key, value in db.get_all().items():
                 data[key] = Bytes(value)
+        else:
+            for i in range(1,16):
+                state_key=construct_state_key(i)
+                # print(type(state_key))
+                data[state_key] = Bytes(db.get(bytes(state_key)))
+            for key in keys:
+                if int.from_bytes(
+                    bytes(Bytes([key[0], key[2], key[4], key[6]]))
+                ) not in service_ids:
+                    service_ids.add(ServiceId(int.from_bytes(
+                        bytes(Bytes([key[0], key[2], key[4], key[6]]))
+                    )))
+                data[key] = Bytes(db.get(bytes(key)))
+            for service_id in service_ids:
+                service_key=construct_state_key((255,service_id))
+                data[service_key]=Bytes(db.get(bytes(service_key)))
                 
-        state = State.detransform(data)
+            
         
-        # Store service hashes mapping in state if needed
-        state.service_hashes = service_hashes
+        # # Load all data from db
+        # for key, value in db.get_all().items():
+        #     if key.startswith(b'service_'):
+        #         # Handle service ID -> hashes mapping
+        #         service_id = int(key.split(b'_')[1])
+        #         hashes = json.loads(value.decode())
+               
+        #         service_hashes[service_id] = hashes
+        #     else:
+        #         data[key] = Bytes(value)
+                
+        # state = State.detransform(data)
+        
+        # # Store service hashes mapping in state if needed
+        # state.service_hashes = service_hashes
+        state = State.detransform(data)
+
         return state
     
-   
-       
+    def get_service_preimages(self, service_id: ServiceId, hash: ByteArray32,kv:KVStore) -> bytes:
+        key=construct_state_key(
+                        (service_id, ByteArray32(Bytes(U32(2**32 - 2).encode()) + hash[1:29]))
+                    )
+        value=kv.get(bytes(key))
+        # print(Bytes(value).hex())
+        return value
+    
+    def get_service_timestamps(self, service_id: ServiceId, hash: ByteArray32,length:BlobLength,kv:KVStore) -> Timestamps:
+        data=[]
+        key=LookupTimestamps.get_key(hash,length)
+        # print(key)
+        key=construct_state_key((service_id, key))
+        # print("k",Bytes(key).hex())
+        value=kv.get(bytes(key))
+        TimeStamps, _ = Timestamps.decode_from(bytes(value))
+        return TimeStamps
+
+    # def getData(self,keyArray:list,kv:KVStore):
+    #     for key in keyArray:
+    #         print(kv.get(bytes(key)))
+        

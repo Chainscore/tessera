@@ -10,8 +10,10 @@ from jam.consensus.safrole.safrole import Safrole
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
-from jam.types.protocol.core import ServiceId
+from jam.types.protocol.core import ServiceId,BlobLength
 from jam.types.base.sequences.bytes.bytes import Bytes
+from tests.unit.db.types import DunaState
+
 @pytest.fixture
 def db_path():
     """Create a temporary directory for testing."""
@@ -34,25 +36,44 @@ def test_kv_store_basic_operations(db_path):
     
     #State checking:
     
-    peerlist = json.load(open("genesis.json"))["peers"]
-    peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
-    validators = [ValidatorData(
-                bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
-                ed25519=Ed25519Public(pr["ed25519_public"]),
-                bls=BlsPublic(pr["bls_public"]),
-                metadata=ValidatorMetadata(bytes(128))
-            ) for pr in peerlist]
-    state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
-    state.save(kv)
-    state=State.load(kv)
-    print(state)
-    
+    # peerlist = json.load(open("genesis.json"))["peers"]
+    # peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
+    # validators = [ValidatorData(
+    #             bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
+    #             ed25519=Ed25519Public(pr["ed25519_public"]),
+    #             bls=BlsPublic(pr["bls_public"]),
+    #             metadata=ValidatorMetadata(bytes(128))
+    #         ) for pr in peerlist]
+    # state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
+    # state="/genesis.json"
+    genesis_file = "tests/integration/jam-duna/state_snapshots/genesis.json"
+    with open(genesis_file) as file:
+        genesis_data = json.loads(file.read())
+        try:
+            tc = DunaState.from_json(genesis_data)
+            print(f"Decoded {file}")
+        except Exception as e:
+            print(f"❌ Failed to decode {file}: {e}")
 
+    state1=tc.to_state()
+    state1=State.transform(state1)
+    state1=State.detransform(state1)
+    state = tc.to_state()
+    state.save(kv)
+    # state=State.load(kv)    
+    # blob=state.get_service_preimages(ServiceId(0),ByteArray32(0xc16326432b5b3213dfd1609495e13c6b276cb474d679645337e5c2c09f19b53c),kv)
+    # print(Bytes(blob).hex())
+    # Timestamp:Timestamps=state.get_service_timestamps(ServiceId(0),ByteArray32(0xc16326432b5b3213dfd1609495e13c6b276cb474d679645337e5c2c09f19b53c),BlobLength(35),kv)
+    # print(Timestamp)
+    keyArray=[ByteArray32(bytes.fromhex("0023000000000000478648cd19b4f812f897a26976ecf312eac28508b4368d0c")),ByteArray32(bytes.fromhex("00c1000500000000e9cd67b035be4b81c826840fd636fcbc3640d6990dfb8a6d"))]
+    state2=State.load(kv,keyArray)
+    print(state2.delta)
+    
     
     
     
     # state.save(kv)
-    # state=State.load(kv)
+    
     
     # Test overwrite
     kv.put("key1".encode(), "updated_value".encode())
