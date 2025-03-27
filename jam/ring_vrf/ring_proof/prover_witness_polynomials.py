@@ -1,19 +1,18 @@
 from sympy import expand
 import random
+import time
 from jam.ring_vrf.ring_proof.get_ring_points import secret_t
 from jam.ring_vrf.ring_proof.helpers import unzip, do_modulus
-from jam.ring_vrf.ring_proof.preprocessing import p_pk_ring, s_vector
+from jam.ring_vrf.ring_proof.polynomial_interpolation import polynomial_interpolation
+from jam.ring_vrf.ring_proof.preprocessing import pre_pd_pk_ring, s_vector
 # from jam.ring_vrf.ring_proof.preprocessing import D, p_pk_ring, s_vector
 from jam.ring_vrf.ring_proof.short_weierstrass import short_to_te, twisted_edward_to_sw
-from jam.ring_vrf.ring_proof.constants import S_ORDER, SeedPoint, S_PRIME, omega
+from jam.ring_vrf.ring_proof.constants import S_ORDER, SeedPoint, S_PRIME, omega, D
 from jam.ring_vrf.ring_proof import short_weierstrass_curve_ops as sw
 # from jam.ring_vrf.ring_proof.polynomial_interpolation import polynomial_interpolation, check_is_valid
-# from jam.ring_vrf.ring_proof.KZG_polynomial_commit_open_verify import commit_to_polynomial
+from jam.ring_vrf.ring_proof.KZG_polynomial_commit_open_verify import commit_to_polynomial
 
-
-size=N = 512 #sample size
-
-D = [pow(omega, i, S_PRIME) for i in range(1, size + 1)]
+size= 512 #sample size
 
 def bits_vector(k,t,ring_size=255,size=512):
     """"
@@ -111,41 +110,45 @@ for i in b_v:
 
 
 print("b_V TRUE_FALSE_repr:",b_v_tf)
-acc_x,acc_y=conditional_sum_accumulator(SeedPoint,b_v,p_pk_ring)
+acc_x,acc_y=conditional_sum_accumulator(SeedPoint,b_v,pre_pd_pk_ring)
 acc_ip=inner_product_accumulator(b_v,s_vector)
 print("accx:",acc_x)
 print("accy:",acc_y)
 print("acc_ip",acc_ip)
 
-# print(len(D))
-# b_v_I=interpolate(D,b_v)
-# acc_x_I=interpolate(D,acc_x)
-# acc_y_I=interpolate(D,acc_y)
-# acc_ip_I=interpolate(D,acc_ip)
 
-# print("Interpolated:",b_v_I)
-# print(acc_x_I)
+
+start_time=time.time()
+b_v_I=interpolate(D,b_v)
+acc_x_I=interpolate(D,acc_x)
+acc_y_I=interpolate(D,acc_y)
+acc_ip_I=interpolate(D,acc_ip)
+
+print("Interpolated:",b_v_I)
+end_time=time.time()
+print("interpolation time:",end_time-start_time)
+
+
 # print(acc_y_I)
 # print(acc_ip_I)
+
+#check the validity
 # print(check_is_valid(b_v_I,D,b_v))
 # print(check_is_valid(acc_x_I,D,acc_x))
 # print(check_is_valid(acc_y_I,D,acc_y))
 # print(check_is_valid(acc_ip_I,D,acc_ip))
 
-#Commitments as Affine Co-ordinates
-# C_b_v=commitment(b_v_I)
-# C_acc_x=commitment(acc_x_I)
-# C_acc_y=commitment(acc_y_I)
-# C_acc_ip=commitment(acc_ip_I)
 
+stat_time=time.time()
+# Commitments as Affine Co-ordinates
+C_b_v=commitment(b_v_I)
+C_acc_x=commitment(acc_x_I)
+C_acc_y=commitment(acc_y_I)
+C_acc_ip=commitment(acc_ip_I)
 
-# print(len(acc_y))
-# print(len(acc_x))
-# print(len(acc_ip))
+print("commitment to bits_poly:",C_b_v)
+end_time=time.time()
+print("commitment time:", end_time - start_time)
 
-# print(C_b_v)
-# print(C_acc_x)
-# print(C_acc_y)
-# print(C_acc_ip)
 
 
