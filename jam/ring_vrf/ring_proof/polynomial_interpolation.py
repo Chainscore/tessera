@@ -1,7 +1,8 @@
 # from jam.ring_vrf.ring_proof.constants import S_PRIME, D
 from sympy import  symbols, expand,Poly
 import numpy as np
-from jam.ring_vrf.ring_proof.constants import S_PRIME
+# from jam.ring_vrf.ring_proof.constants import S_PRIME, D
+# from jam.ring_vrf.ring_proof.preprocessing import s_vector
 
 
 ##initail
@@ -213,6 +214,8 @@ def main():
 
 if __name__=="__main__":
     main()
+
+# comment poly import in preprocessing.py to check sample exec here
 
 
 
