@@ -4,20 +4,22 @@ from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
 from jam.consensus.safrole.safrole import Safrole
 from jam.db.kv import KVStore
+
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.dummy_bp import block_producer
+from jam.network.dummy_wpb import wp_producer
+
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
 from jam.state.state import State
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
-from jam.types.block import Block
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from tests.fixtures.dummy_block import create_dummy_block
 
-async def main(genesis_path: str, db_path: str, port: int) -> None:
+async def main(genesis_path: str, db_path: str, port: int, is_builder: bool) -> None:
     # Setup logging
     setup_logging()
 
@@ -46,13 +48,15 @@ async def main(genesis_path: str, db_path: str, port: int) -> None:
         my_data = ValidatorData(bandersnatch_public, ed25519_public, BlsPublic(bytes(144)), ValidatorMetadata(bytes(128)))
 
         tsr_node = Node(
-            node_name=port, 
-            node_id=port, 
+            node_name=str(port),
+            node_id=str(port),
             host="0.0.0.0", 
             port=port, 
             peers=peers,
-            validator_data=my_data
+            validator_data=my_data,
+            is_builder=is_builder
         )
+
         validators = [ValidatorData(
             bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
             ed25519=Ed25519Public(pr["ed25519_public"]),
@@ -66,8 +70,12 @@ async def main(genesis_path: str, db_path: str, port: int) -> None:
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            tg.create_task(block_producer(tsr_node, db))
-    
+            if tsr_node.is_builder:
+                print("yay i am imposter")
+                tg.create_task(wp_producer(tsr_node, db))
+            else:
+                tg.create_task(block_producer(tsr_node, db))
+
     except KeyboardInterrupt:
         logger.info("Shutting down JAM node")
     except Exception as e:
