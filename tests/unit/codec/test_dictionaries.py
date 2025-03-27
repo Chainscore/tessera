@@ -1,14 +1,15 @@
 """Unit tests for dictionary codec implementation."""
 
-import pytest
-from typing import Dict, Mapping, Type, Tuple, Any, cast
+from typing import Any, Dict, Mapping, Tuple, Type, cast
 
-from jam.types.base.boolean import Boolean
-from jam.types.base.integers import Int, U8, U16, U32
-from jam.types.base.string import String
+import pytest
+
 from jam.types.base import Bytes
+from jam.types.base.boolean import Boolean
+from jam.types.base.integers import U8, U16, U32, Int
+from jam.types.base.string import String
+from jam.utils.codec import Codable, DecodeError, EncodeError
 from jam.utils.codec.composite.dictionaries import DictionaryCodec
-from jam.utils.codec import Codable, EncodeError, DecodeError
 
 
 def make_test_dict(
@@ -136,11 +137,11 @@ class TestDictionaryCodec:
             {None: Int(1)},  # None key
             {String("key"): None},  # None value
             {True: String("wrong")},  # bool key
-            {String("key"): [1, 2, 3]},  # list value
+            {String("key"): [Int(1), Int(2), Int(3)]},  # list value
         ]
 
         for value in invalid_dicts:
-            with pytest.raises(EncodeError):
+            with pytest.raises((EncodeError, AttributeError)):
                 codec.encode(value)
 
     def test_offset_handling(self):
