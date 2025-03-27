@@ -30,10 +30,10 @@ def test_slot_increment():
     )
     
     # Create block with next slot
-    new_block = create_block(slot=U32(6), entropy=ByteArray32(bytes(32)), tickets=[])
+    new_block = create_block(slot=U32(6), tickets=[])
     
     # Apply transition
-    new_state = Safrole.transition(initial_state, new_block)
+    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
     
     # Verify tau was updated correctly
     assert new_state.tau == U32(6)
@@ -56,10 +56,10 @@ def test_slot_jump():
     )
     
     # Create block with a slot jump (several slots ahead)
-    new_block = create_block(slot=U32(15), entropy=ByteArray32(bytes(32)), tickets=[])
+    new_block = create_block(slot=U32(15), tickets=[])
     
     # Apply transition
-    new_state = Safrole.transition(initial_state, new_block)
+    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
     
     # Verify tau was updated correctly
     assert new_state.tau == U32(15)
@@ -84,10 +84,10 @@ def test_epoch_boundary_slot():
     
     # Create block for the first slot of the next epoch
     first_slot_in_next_epoch = U32(EPOCH_LENGTH)
-    new_block = create_block(slot=first_slot_in_next_epoch, entropy=ByteArray32(bytes(32)), tickets=[])
+    new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply transition
-    new_state = Safrole.transition(initial_state, new_block)
+    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
     
     # Verify tau was updated correctly
     assert new_state.tau == first_slot_in_next_epoch
