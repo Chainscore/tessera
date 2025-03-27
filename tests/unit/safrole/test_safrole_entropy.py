@@ -31,10 +31,10 @@ def test_entropy_accumulation():
     
     # Create a block with block entropy
     block_entropy = ByteArray32(bytes([42] * 32))
-    new_block = create_block(slot=U32(6), entropy=block_entropy, tickets=[])
+    new_block = create_block(slot=U32(6), tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block)
+    new_state = Safrole.transition(initial_state, new_block, block_entropy)
     
     # Check that the entropy was accumulated η'₀ = H(η₀ || VRF_output(H_v))
     expected_new_entropy = Hash.blake2b(bytes(initial_state.eta[0]) + bytes(block_entropy))
@@ -74,10 +74,10 @@ def test_entropy_rotation_at_epoch_boundary():
     # Create block for first slot of next epoch
     first_slot_in_next_epoch = U32(EPOCH_LENGTH)
     entropy = ByteArray32(bytes([42] * 32))
-    new_block = create_block(slot=first_slot_in_next_epoch, entropy=entropy, tickets=[])
+    new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block)
+    new_state = Safrole.transition(initial_state, new_block, entropy)
     
     # Calculate expected new η₀ value
     expected_new_eta0 = Hash.blake2b(bytes(initial_state.eta[0]) + bytes(entropy))

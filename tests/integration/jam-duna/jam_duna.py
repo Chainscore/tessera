@@ -205,7 +205,13 @@ start_slot = 13
 initial_state = tc.to_state()
 
 if __name__ == "__main__":
-    print(initial_state.generate_root())
+    #Transforming the state
+    transform_state=initial_state.transform()
+    #Detransforming the state
+    our_state=State.detransform(transform_state)
+    print(our_state)
+    #Checking the State of Duna and OurState
+    testState(initial_state,our_state)
     # asyncio.run(main("from jam duna", initial_state, start_slot, rpc_url))
 
 # Command to run file: 'python tests/integration/jam-duna/jam_duna.py'
