@@ -29,8 +29,7 @@ def test_state_transform(db_path):
     # Initialize store
     kv = KVStore(db_path)
     
-    # genesis_file = "tests/integration/jam-duna/state_snapshots/genesis.json"
-    genesis_file="/home/akki/Codes/JAM/JamBhai/tessera/tests/integration/jam-duna/state_snapshots/genesis.json"
+    genesis_file = "tests/integration/jam-duna/state_snapshots/genesis.json"
     with open(genesis_file) as file:
         genesis_data = json.loads(file.read())
         try:
@@ -48,8 +47,8 @@ def test_state_transform(db_path):
     keyArray=[ByteArray32(bytes.fromhex("0023000000000000478648cd19b4f812f897a26976ecf312eac28508b4368d0c")),ByteArray32(bytes.fromhex("00c1000500000000e9cd67b035be4b81c826840fd636fcbc3640d6990dfb8a6d")),ByteArray32(bytes.fromhex("00fe00ff00ff00ff6326432b5b3213dfd1609495e13c6b276cb474d679645337")),ByteArray32(bytes.fromhex("00fe00ff00ff00ffed2fda1ccc4b59d6b382edb3dcd2a312925839a006199060"))]
     # keyArray=[ByteArray32(bytes.fromhex("0023000000000000478648cd19b4f812f897a26976ecf312eac28508b4368d0c"))]
     state2=State.load(kv,keyArray)
-    print(state2.delta)
-    
+    # Checking the delta of JamDuna and our U32[0] related data from our DB is same
+    assert(state1.delta==state2.delta)
 
     # Close the store
     kv.close()
