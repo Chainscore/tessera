@@ -39,25 +39,26 @@ class Node:
     server: QuicServer
 
     is_initialized: bool = False
+    is_builder: bool = False
 
     connections: list[QuicClientProtocol] = []
 
-    def __init__(self, node_id: str, node_name: str, host: str, port: int, validator_data, peers: list[Peer]):
+    def __init__(self, node_id: str, node_name: str, host: str, port: int, validator_data, peers: list[Peer], is_builder: bool):
         self.__id = node_id
         self.name = node_name
         self.host = host
         self.port = port
         self.validator_data = validator_data
         self.peers = peers
+        self.is_builder = is_builder
 
         self.dns = generate_keys(port)
 
-    def configuration(self, is_client: bool = True, is_builder: bool = False) -> QuicConfiguration:
+    def configuration(self, is_client: bool = True) -> QuicConfiguration:
         """
         Utility function to build quic configuration.
         Args:
             is_client (bool): Flag indicating node is a client
-            is_builder (bool): Flag indicating node is a builder
         Returns:
             config (QuicConfiguration): A QUIC Configuration
         """
@@ -75,10 +76,10 @@ class Node:
             configuration.max_data = 10_000_000  # 10 MB
             configuration.max_stream_data = 1_000_000  # 1 MB per stream
 
-        if is_builder:
+        if self.is_builder:
             configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
         else:
-            configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}"]
+            configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}", f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
 
         return configuration
     
@@ -157,11 +158,15 @@ class Node:
         """
         Function to fully initialize a node.
         """
-        logger.info(f"🚀 ({self.name}) Starting server on {self.host}:{self.port}")
-        await self.run_server()
+        if self.is_builder:
+            logger.info(f"🚀 ({self.name}) Starting builder on {self.host}:{self.port}")
 
-        # Give server time to fully initialize
-        await asyncio.sleep(1)
+        if not self.is_builder:
+            logger.info(f"🚀 ({self.name}) Starting server on {self.host}:{self.port}")
+            await self.run_server()
+
+            # Give server time to fully initialize
+            await asyncio.sleep(1)
 
         logger.info(f"🔄 ({self.name}) Opening connections to {len(self.peers)} peers...")
         await self.run_client()
