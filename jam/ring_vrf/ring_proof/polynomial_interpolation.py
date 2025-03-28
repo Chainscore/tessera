@@ -1,6 +1,8 @@
 # from jam.ring_vrf.ring_proof.constants import S_PRIME, D
 from sympy import  symbols, expand,Poly
 import numpy as np
+
+from jam.ring_vrf.ring_proof.constants import D, S_PRIME
 # from jam.ring_vrf.ring_proof.constants import S_PRIME, D
 # from jam.ring_vrf.ring_proof.preprocessing import s_vector
 
@@ -203,19 +205,3 @@ def represent_as_poly(coeffs):
     polynomial = sum(coeff * x ** (n - 1 - i) for i, coeff in enumerate(coeffs))
 
     return polynomial
-
-
-def main():
-    x_cord = D
-    y_cord = s_vector
-    coeff_poly = polynomial_interpolation(x_cord, y_cord, S_PRIME)
-    print(represent_as_poly(coeff_poly))
-
-
-if __name__=="__main__":
-    main()
-
-# comment poly import in preprocessing.py to check sample exec here
-
-
-
