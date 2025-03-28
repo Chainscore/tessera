@@ -21,7 +21,7 @@ from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.protocol.core import Balance, Gas, ServiceId
+from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public, Hash
 from jam.types.protocol.crypto import OpaqueHash
 from jam.state.components.delta import (
@@ -35,6 +35,7 @@ from jam.state.components.delta import (
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
+import json
 
 
 class State(Sigma):
@@ -132,7 +133,7 @@ class State(Sigma):
 
         # populating the delta
         delta = {}
-        for key, value in state.items():
+        for key, value in sorted(state.items(), key=lambda x: x[0], reverse=True):
             # Start with finding all core state components 1-15
             # if (key[0] <= 15) and bytes(key[0:32]) == 0:
             if int(key[0]) <= 15 and int(key[0]) > 0:
@@ -215,7 +216,6 @@ class State(Sigma):
                     timestamp_key = ByteArray32(
                         Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
                     )
-                    # print("timestamp_key",timestamp_key)
                     delta[service_id].timestamps[timestamp_key] = TimeStamps
 
         return State(
@@ -277,12 +277,38 @@ class State(Sigma):
     
     def save(self, db: KVStore):
         data = self.transform()
+        # Save the regular state data
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
-    
     @staticmethod
-    def load(db: KVStore) -> "State":
+    def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
         data = {}
-        for key, value in db.get_all().items():
-            data[key] = Bytes(value)
-        return State.detransform(data)
+        service_ids:set[ServiceId]=set()
+        
+        if keys is None:
+            for key, value in db.get_all().items():
+                data[key] = Bytes(value)
+        else:
+            for i in range(1,16):
+                state_key=construct_state_key(i)
+                # print(type(state_key))
+                data[state_key] = Bytes(db.get(bytes(state_key)))
+            for key in keys:
+                if int.from_bytes(
+                    bytes(Bytes([key[0], key[2], key[4], key[6]]))
+                ) not in service_ids:
+                    service_ids.add(ServiceId(int.from_bytes(
+                        bytes(Bytes([key[0], key[2], key[4], key[6]]))
+                    )))
+                data[key] = Bytes(db.get(bytes(key)))
+            for service_id in service_ids:
+                service_key=construct_state_key((255,service_id))
+                data[service_key]=Bytes(db.get(bytes(service_key)))
+                
+        state = State.detransform(data)
+
+        return state
+    
+
+
+        
