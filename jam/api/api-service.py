@@ -271,7 +271,6 @@ async def json_to_codec(request_data: RequestDataCodec,
     """
     try:
         json_file = request_data.input.file
-        print(request_data)
         label = request_data.input.label
         if label_dropdown:
             label = label_dropdown
@@ -380,11 +379,9 @@ async def codec_to_json(request_data: RequestDataJson, label : str = Query("assu
     try:
         label = request_data.input.label
         hex_string = request_data.input.file
-        print(label)
-        print(hex_string)
+
         try:
             data = bytes.fromhex(hex_string)
-            print("data", data)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid hex string")
 
@@ -515,7 +512,6 @@ async def shuffle_validate(request_data: RequestDataShuffle):
     Uses the provided entropy to shuffle the input sequence and returns the result.
     """
     try:
-        print(request_data)
         test_entropy = request_data.input.entropy
         shuffle_sequence = shuffle(test_entropy, request_data.input.input)
         return {"data": shuffle_sequence, "status": "Ok"}
@@ -542,14 +538,13 @@ async def recent_history(request_data: RequestData):
         transition_output = RecentHistory.transition(test_state, test_block, ByteArray32([0]*32))
         
         if request_data.output is None:
-            return {"result": True}
+            return {"ok": None}
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
-        if (transition_output == output_state):
-            return {"result": True}
-        else:
-            return {"result": False}
+        assert transition_output == output_state
+    except AssertionError as e:
+        return JSONResponse(status_code=400, content={"err": str(e)})
     except Exception as e:
         return JSONResponse(status_code=400, content={"err": str(e)})
 
@@ -577,13 +572,11 @@ async def authorization(request_data: RequestData):
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
-        if (transition_output == output_state):
-            return {"result": True}
-        else:
-            return {"result": False}
+        assert transition_output == output_state
+    except AssertionError as e:
+        return JSONResponse(status_code=400, content={"err": str(e)})
     except Exception as e:
         return JSONResponse(status_code=400, content={"err": str(e)})
-
 
 @app.post("/api/v1/disputes/validate",
           tags=["State Transitions"],
@@ -608,10 +601,9 @@ async def disputes(request_data: RequestData):
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
-        if (transition_output == output_state):
-            return {"result": True}
-        else:
-            return {"result": False}
+        assert transition_output == output_state
+    except AssertionError as e:
+        return JSONResponse(status_code=400, content={"err": str(e)})
     except Exception as e:
         return JSONResponse(status_code=400, content={"err": str(e)})
 
@@ -639,10 +631,9 @@ async def assurances(request_data: RequestData):
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
-        if (transition_output == output_state):
-            return {"result": True}
-        else:
-            return {"result": False}
+        assert transition_output == output_state
+    except AssertionError as e:
+        return JSONResponse(status_code=400, content={"err": str(e)})
     except Exception as e:
         return JSONResponse(status_code=400, content={"err": str(e)})
 
@@ -694,10 +685,9 @@ async def accumulate(request_data: RequestData):
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
-        if (transition_output == output_state):
-            return {"result": True}
-        else:
-            return {"result": False}
+        assert transition_output == output_state
+    except AssertionError as e:
+        return JSONResponse(status_code=400, content={"err": str(e)})
     except Exception as e:
         return JSONResponse(status_code=400, content={"err": str(e)})
 
@@ -725,10 +715,9 @@ async def preimages(request_data: RequestData):
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
-        if (transition_output == output_state):
-            return {"result": True}
-        else:
-            return {"result": False}
+        assert transition_output == output_state
+    except AssertionError as e:
+        return JSONResponse(status_code=400, content={"err": str(e)})
     except Exception as e:
         return JSONResponse(status_code=400, content={"err": str(e)})
 
@@ -756,9 +745,8 @@ async def statistics(request_data: RequestData):
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
-        if (transition_output == output_state):
-            return {"result": True}
-        else:
-            return {"result": False}
+        assert transition_output == output_state
+    except AssertionError as e:
+        return JSONResponse(status_code=400, content={"err": str(e)})
     except Exception as e:
         return JSONResponse(status_code=400, content={"err": str(e)})
