@@ -1,6 +1,6 @@
 import dataclasses
 import math
-from typing import List
+from typing import List, Tuple
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -12,6 +12,7 @@ from jam.types.base.null import Null
 from jam.types.block import Block
 from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, Hash, OpaqueHash
+from jam.types.work.report import WorkReport
 from jam.utils.constants import (
     SIGNING_CONTEXTS,
     UNAVAILABLE_WORK_EXPIRY,
@@ -23,7 +24,7 @@ class Assurances:
     """State transition function for the processing of Assurances."""
 
     @staticmethod
-    def transition(state: State, block: Block) -> State:
+    def transition(state: State, block: Block) -> Tuple[State, List[WorkReport]]:
         """
         Process the assurances extrinsic.
         
@@ -76,18 +77,21 @@ class Assurances:
         Assurances.ensure_assurances_order(assurances)
         Assurances.ensure_assurances_unique(assurances)
 
-        # If we have supermajority
-        # Or if we have any stale pending WRs
-        # Clear them
+        # If we have supermajority add them to the available WRS
+        available_wrs = []
         super_majority = math.floor(2 * VALIDATOR_COUNT / 3)
         for i in range(len(state.rho)):
-            if core_assurances[i] > super_majority or (
-                block.header.slot
-                >= state.rho[i].get_value().timeout + UNAVAILABLE_WORK_EXPIRY
-            ):
-                new_state.rho[i] = OptionalWorkReportState(Null)
+            pending_wr = state.rho[i].get_value()
+            if pending_wr is not None:
+                # If we have supermajority add them to the available WRS & clear them
+                if core_assurances[i] > super_majority:
+                    available_wrs.append(pending_wr)
+                    new_state.rho[i] = OptionalWorkReportState(Null)
+                # If we have any stale pending WRs - clear them
+                if block.header.slot >= pending_wr.timeout + UNAVAILABLE_WORK_EXPIRY:
+                    new_state.rho[i] = OptionalWorkReportState(Null)
 
-        return new_state
+        return (new_state, available_wrs)
 
     @staticmethod
     def ensure_valid_signature(
