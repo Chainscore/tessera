@@ -85,7 +85,7 @@ class Assurances:
             if pending_wr is not None:
                 # If we have supermajority add them to the available WRS & clear them
                 if core_assurances[i] > super_majority:
-                    available_wrs.append(pending_wr)
+                    available_wrs.append(pending_wr.report)
                     new_state.rho[i] = OptionalWorkReportState(Null)
                 # If we have any stale pending WRs - clear them
                 if block.header.slot >= pending_wr.timeout + UNAVAILABLE_WORK_EXPIRY:
