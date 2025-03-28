@@ -27,6 +27,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
 
                     buffer = self.stream_buffer[event.stream_id]
                     prefix, _ = PrefixType.decodeFrom(buffer[0:1])
+                    # event.
 
                     if prefix == PrefixType.UP0:
                         from jam.network.protocols import BlockAnnouncementProtocol
@@ -34,6 +35,11 @@ class QuicServerProtocol(QuicConnectionProtocol):
 
                         logger.info(f"📩 Received block with parent: {announcement.header.parent}")
 
+                    elif prefix == PrefixType.CE133:
+                        from jam.network.protocols.CE_133 import WorkPackageSubmission
+                        data = WorkPackageSubmission.intercept(buffer=buffer)
+
+                        logger.info(f"📩 Received work package : {data.work_package} with {data.core_index}")
                     else:
                         logger.warning(f"📩 Received data: {buffer.decode()}")
 
