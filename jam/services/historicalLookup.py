@@ -1,13 +1,15 @@
 from hashlib import blake2b
+from jam.state.components.delta import AccountData
+from jam.types.base.integers.fixed import U32, U64
 
 
-def historical_look_up(a, t, h):
-     byte_value = bytes.fromhex(h[2:])
-     hashed = "0x" + blake2b(byte_value, digest_size=32).hexdigest()
-     if hashed in get_keys(a["p_map"], True) and util_i(a["l_map"][h]["t"], t):
-         return a["p_map"][hashed]
-     else:
-         return None
+def historical_look_up(a: AccountData, t: U32, h):
+    byte_value = bytes.fromhex(h[2:])
+    hashed = "0x" + blake2b(byte_value, digest_size=32).hexdigest()
+    if hashed in get_keys(a.lookup, True) and util_i(a.timestamps[h, a.lookup[hashed]], t):
+        return a.lookup[hashed]
+    else:
+        return None
 
 
 def get_keys(d, is_string=False):

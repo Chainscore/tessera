@@ -149,6 +149,6 @@ class Program(Codable, JsonSerde):
             pc: U32,
     ) -> (Registers, MemoryChunk, U32):
         # TODO: Implement execute
-        pvm_execution = Execution(initial_registers, gas, memory, pc, program=self)
+        pvm_execution = Execution(pc, gas, initial_registers, memory, program=self)
         res = pvm_execution.process_program()
         return res

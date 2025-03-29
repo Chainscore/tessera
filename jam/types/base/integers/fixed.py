@@ -79,6 +79,11 @@ class I16(FixedInt):
     ...
 
 
+@decodable_int(3)
+class U24(FixedInt):
+    ...
+
+
 @decodable_int(4)
 class U32(FixedInt):
     ...

@@ -5,7 +5,7 @@ from decimal import Decimal, ROUND_FLOOR
 from jam.types.base.integers.fixed import U32, U64, U128
 from jam.pvm.memory import Memory, MemoryChunk
 from jam.types.base.sequences.bytes.bytes import Bytes, Byte
-
+from jam.pvm.extract import Status
 
 class InstructionMapper:
     """Maps instruction opcodes to their respective functions and groups."""
@@ -516,6 +516,12 @@ class InstructionMapper:
         return int(reg_a), v_x
 
     @staticmethod
+    def _imm(arg):
+        l_x = min(4, len(arg))
+        v_x = InstructionMapper.signed_ext(IntegerCodec.decode_from(l_x, arg[0:l_x])[0], l_x)
+        return v_x
+
+    @staticmethod
     def imm_imm(arg):
         ln = len(arg)
         l_x = int(min(4, arg[0] % 8))
@@ -925,6 +931,8 @@ class InstructionMapper:
     @staticmethod
     def ecalli(instance, arg):
         print(f"ecalli ")
+        host_status = Status.HOST.with_number(InstructionMapper._imm(arg))
+        return host_status
 
     @staticmethod
     def store_imm_u8(instance, arg):

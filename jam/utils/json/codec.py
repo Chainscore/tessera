@@ -154,18 +154,15 @@ class JsonCodec:
             )
 
         field_info = getattr(cls, "metadata", {})
-        #print(field_info)
         field_values = {}
 
         # Loop through all fields in the dataclass to fill data for each field
         for field in fields(cls):
             field_name = field.name
             field_type = field.type
-            #print(field_name, field_type)
             meta_json_name = field_info.get(field_name, {}).get("json_name", field_name)
             meta_skip_if_none = field_info.get(field_name, {}).get("skip_if_none", False)
             meta_default = field_info.get(field_name, {}).get("default", None)
-            #print(meta_default)
             # Field processing
 
             # If the field is not present in the JSON data, check if it has an alternative name in the metadata
@@ -194,9 +191,7 @@ class JsonCodec:
             else:
                 try:
                     if data[meta_json_name] is None and meta_default is not None:
-                        #print("hsbbb")
                         field_values[field_name] = meta_default
-                        #print(field_values[field_name])
                     else:
                         field_values[field_name] = from_json(data[meta_json_name], field_type)
 

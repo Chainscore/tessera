@@ -64,9 +64,9 @@ class BlockHistoryInput(Codable, JsonSerde):
 class Input(Codable, JsonSerde):
     """Input format in test vectors for Recent History"""
 
-    header_hash:OpaqueHash
-    parent_state_root:OpaqueHash
-    accumulate_root:OpaqueHash
+    header_hash: OpaqueHash
+    parent_state_root: OpaqueHash
+    accumulate_root: OpaqueHash
     work_packages: PackageDictInput
 
 

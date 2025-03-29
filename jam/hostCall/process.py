@@ -3,36 +3,93 @@ from jam.types.base.sequences.bytes.bytes import Bytes
 from hashlib import blake2b
 import os
 from jam.utils.codec.primitives.integers import IntegerCodec
-import copy
 from jam.types.base.integers.fixed import U32, U64, U256
-from jam.utils.codec.composite.dictionaries import DictionaryCodec
 from jam.services import historicalLookup
+from jam.pvm.opcode_mapping import InstructionMapper
+from jam.pvm.extract import Execution
 from jam.pvm.program import Program
+from jam.types.base.dictionary import DictionaryCodec
+import copy
+from jam.pvm.register import Registers
+from jam.pvm.pvm_memory import PageMemory
+from jam.types.protocol.core import Balance, Gas, ServiceId
+from jam.state.components.delta import AccountData, Delta
+from jam.hostCall.types import XContent, RefineMap, Segment
+from jam.types.work.package import WorkPackage
+from typing import Optional
+from jam.pvm.extract import Status
 
 
 class HostCall:
-    def __init__(self, data):
-        self.initial_regs = data["initial-regs"]
-        self.initial_memory = data["initial-memory"]
-        self.initial_gas = data["initial-gas"]
-        self.initial_service_account = data.get("initial-service-account", {})
-        self.initial_service_index = data.get("initial-service-index", None)
-        self.initial_delta = data.get("initial-delta", {})
-        self.initial_xcontent_x = data.get("initial-xcontent-x", {})
-        self.initial_xcontent_y = data.get("initial-xcontent-y", {})
-        self.initial_refine_map = data.get("initial-refine-map", {})
-        self.initial_export_segment = data.get("initial-export-segment", [])
-        self.initial_export_segment_index = data.get("initial-export-segment-index", None)
-        self.initial_timeslot = data.get("initial-timeslot", None)
-        self.expected_regs = data["expected-regs"]
-        self.expected_memory = data["expected-memory"]
-        self.expected_gas = data["expected-gas"]
-        self.expected_service_account = data.get("expected-service-account", {})
-        self.expected_delta = data.get("expected-delta", {})
-        self.expected_xcontent_x = data.get("expected-xcontent-x", {})
-        self.expected_xcontent_y = data.get("expected-xcontent-y", {})
-        self.expected_refine_map = data.get("expected-refine-map", {})
-        self.expected_export_segment = data.get("expected-export-segment", [])
+    def __init__(self,
+                 register: Registers,
+                 memory: PageMemory,
+                 gas: Gas,
+                 service: Optional[AccountData] = None,
+                 s_index: Optional[U32] = None,
+                 delta: Optional[Delta] = None,
+                 xcontext: Optional[XContent] = None,
+                 ycontext: Optional[XContent] = None,
+                 refine: Optional[RefineMap] = None,
+                 export: Optional[Segment] = None,
+                 e_index: Optional[U32] = None,
+                 timeslot: Optional[U32] = None,
+                 work_package: Optional[WorkPackage] = None,
+                 blob: Optional[Bytes] = None,
+                 segment: Optional[Segment] = None
+                 ):
+        self.initial_regs = register
+        self.initial_memory = memory
+        self.initial_gas = gas
+        self.initial_service_account = service
+        self.initial_service_index = s_index
+        self.initial_delta = delta
+        self.initial_xcontent_x = xcontext
+        self.initial_xcontent_y = ycontext
+        self.initial_refine_map = refine
+        self.initial_export_segment = export
+        self.initial_export_segment_index = e_index
+        self.initial_timeslot = timeslot
+        self.initial_work_package = work_package
+        self.initial_blob = blob
+        self.segment_vec = segment
+
+        self.function_mapping = {
+            0: self.gas(),
+            1: self.lookup(),
+            2: self.read(),
+            3: self.write(),
+            4: self.info(),
+            5: self.bless(),
+            6: self.assign(),
+            7: self.designate(),
+            8: self.checkpoint(),
+            9: self.new(),
+            10: self.upgrade(),
+            11: self.transfer(),
+            12: self.eject(),
+            13: self.query(),
+            14: self.solicit(),
+            15: self.forget(),
+            16: self._yield(),
+            17: self.historical_lookup(),
+            18: self.fetch(),
+            19: self.export(),
+            20: self.machine(),
+            21: self.peek(),
+            22: self.poke(),
+            23: self.zero(),
+            24: self.void(),
+            25: self.invoke(),
+            26: self.expunge(),
+        }
+
+    def call_function_by_number(self, number):
+        func = self.function_mapping.get(number)
+        if func:
+            return func()
+        else:
+            return f"Invalid number: {number}. Please provide a number between 1 and 12."
 
     @staticmethod
     def get_keys(d, is_string=False):
@@ -226,6 +283,23 @@ class HostCall:
         print(list(t_i.encode()))
         print(list(t_l.encode()))
         final_array = [7] + decimal_array + list(t_b.encode()) + list(t_t.encode()) + list(t_g.encode()) + list(t_m.encode()) + list(t_i.encode()) + list(t_l.encode())
+        if t is not None:
+            m = final_array
+        else:
+            m = None
+
+        if m is not None and InstructionMapper.valid_address(self.initial_memory, o, len(m)):
+            InstructionMapper.store_value(self.initial_memory, o, m)
+
+        if not InstructionMapper.valid_address(self.initial_memory, o, len(m)):
+            self.initial_regs[6] = 2**64 - 3
+        elif m is None:
+            self.initial_regs[6] = 2 ** 64 - 1
+        else:
+            self.initial_regs[6] = 0
+        return self
+
+
         self.initial_memory = HostCall.insert_values(self.initial_memory, o, final_array)
         return self
 
@@ -471,18 +545,18 @@ class HostCall:
         z = self.initial_regs["10"]
 
         if not HostCall.is_valid(self.initial_memory, o, z):
-            return self
+            return Status("halt"), self.initial_regs[6], self.initial_memory
         elif n not in HostCall.get_keys(self.initial_refine_map):
             self.initial_regs["7"] = 2**64 - 4
-            return self
+            return Status("continue"), self.initial_regs[6], self.initial_memory
         elif not HostCall.is_valid(self.initial_refine_map[str(n)]["U"], s, z):
             self.initial_regs["7"] = 2**64 - 3
-            return self
+            return Status("continue"), self.initial_regs[6], self.initial_memory
         else:
             self.initial_regs["7"] = 0
             address = int(o/4096)
             self.initial_memory["pages"][str(address)]["value"] = HostCall.get_values(self.initial_refine_map[str(n)]["U"], s, z)
-            return self
+            return Status("continue"), self.initial_regs[6], self.initial_memory
 
     def poke(self):
         self.initial_gas -= 10
@@ -493,19 +567,19 @@ class HostCall:
 
         if not HostCall.is_valid(self.initial_memory, s, z):
             self.initial_regs["7"] = 2 ** 64 - 3
-            return self
+            return Status("halt"), self.initial_regs[6], self.initial_refine_map
         elif n not in HostCall.get_keys(self.initial_refine_map):
             self.initial_regs["7"] = 2 ** 64 - 4
-            return self
+            return Status("continue"), self.initial_regs[6], self.initial_refine_map
         elif not HostCall.is_valid(self.initial_refine_map[str(n)]["U"], o, z):
             print("OOB")
             self.initial_regs["7"] = 2 ** 64 - 3
-            return self
+            return Status("continue"), self.initial_regs[6], self.initial_refine_map
         else:
             self.initial_regs["7"] = 0
             address = int(o / 4096)
             self.initial_refine_map[str(n)]["U"]["pages"][str(address)]["value"] = HostCall.get_values(self.initial_memory, s, z)
-            return self
+            return Status("continue"), self.initial_regs[6], self.initial_refine_map
 
     def zero(self):
         self.initial_gas -= 10
@@ -681,14 +755,14 @@ class HostCall:
         _l = min(self.initial_regs.get("11", 0), v_len - f)
         if v == "error" or not HostCall.is_valid(self.initial_memory, o, _l):
             self.initial_regs["7"] = 2**64 - 3
-            return self
+            return Status("panic"), self.initial_regs[6], self.initial_memory
         elif v is None:
             self.initial_regs["7"] = 2 ** 64 - 1
-            return self
+            return Status("continue"), self.initial_regs[6], self.initial_memory
         else:
             self.initial_regs["7"] = len(v)
             self.initial_memory = HostCall.insert_values(self.initial_memory, o, v)
-            return self
+            return Status("continue"), self.initial_regs[6], self.initial_memory
 
     def export(self):
         self.initial_gas -= 10
@@ -705,14 +779,14 @@ class HostCall:
 
         if x == "error":
             self.initial_regs["7"] = 2**64 - 3
-            return self
+            return Status("panic"), self.initial_regs[6], self.initial_export_segment
         elif self.initial_export_segment_index + len(self.initial_export_segment) >= 2**11:
             self.initial_regs["7"] = 2 ** 64 - 5
-            return self
+            return Status("continue"), self.initial_regs[6], self.initial_export_segment
         else:
             self.initial_regs["7"] = self.initial_export_segment_index + len(self.initial_export_segment)
             self.initial_export_segment.append(x)
-            return self
+            return Status("continue"), self.initial_regs[6], self.initial_export_segment
 
     def machine(self):
         self.initial_gas -= 10
@@ -742,12 +816,14 @@ class HostCall:
 
         if p == "error":
             self.initial_regs["7"] = 2**64 - 3
+            return Status("halt"), self.initial_regs[6], self.initial_refine_map
         elif Program.decode_from(p) == "Error":
             self.initial_regs["7"] = 2 ** 64 - 10
+            return Status("continue"), self.initial_regs[6], self.initial_refine_map
         else:
             self.initial_regs["7"] = n
             self.initial_refine_map[str(n)] = u
-        return self
+            Status("continue"), self.initial_regs[6], self.initial_refine_map
 
     def expunge(self):
         self.initial_gas -= 10
@@ -846,6 +922,77 @@ class HostCall:
             self.initial_regs["7"] = 0
             self.initial_xcontent_x["U"]["I"] = v
             return self
+
+    def invoke(self):
+        print("invoke")
+        n = self.initial_regs[6]
+        o = self.initial_regs[7]
+        if InstructionMapper.valid_address(self.initial_memory, o, 112):
+            values = InstructionMapper.memory_value(self.initial_memory, o, 112)
+            g_arr = values[:4]
+            g = IntegerCodec.decode_from(8, bytes(g_arr))[0]
+            w = [
+                IntegerCodec.decode_from(8, bytes(values[i:i + 8]))[0]
+                for i in range(8, 112, 8)
+            ]
+        else:
+            g = None
+            w = None
+        p = Program.from_json(self.initial_refine_map[n].blob)
+        pvm_execution = Execution(self.initial_refine_map[n].i, g, w, self.initial_refine_map[n].memory, p)
+        c, _i, _g, _w, _u = pvm_execution.process_program()
+        serialize = IntegerCodec(8)
+        buffer = bytearray(8)
+        IntegerCodec.encode_into(serialize, _g, buffer)
+        contents = list(buffer.rstrip(b'\x00'))
+        for it in _w:
+            serialize = IntegerCodec(8)
+            buffer = bytearray(8)
+            IntegerCodec.encode_into(serialize, _g, buffer)
+            temp = list(buffer.rstrip(b'\x00'))
+            contents += temp
+        memory = copy.deepcopy(self.initial_memory)
+        refine_map = copy.deepcopy(self.initial_refine_map)
+        InstructionMapper.store_value(memory, o, contents)
+        refine_map[n].memory = _u
+        if c == "host-call":
+            refine_map[n].i = _i + 1
+        else:
+            refine_map[n].i = _i
+
+        if g is None:
+            self.initial_regs[6] = 2**64 - 3
+        elif n not in self.initial_refine_map.keys():
+            self.initial_regs[6] = 2**64 - 4
+        elif c == "host-call":
+            self.initial_regs[6] = 3
+            self.initial_memory = memory
+            self.initial_refine_map = refine_map
+        elif c == "out-of-gas":
+            self.initial_regs[6] = 4
+            self.initial_memory = memory
+            self.initial_refine_map = refine_map
+        elif c == "panic":
+            self.initial_regs[6] = 1
+            self.initial_memory = memory
+            self.initial_refine_map = refine_map
+        elif c == "halt":
+            self.initial_regs[6] = 0
+            self.initial_memory = memory
+            self.initial_refine_map = refine_map
+        return self
+
+    def fetch(self):
+        print("fetch")
+        if self.initial_regs[9] == 0:
+            serialize = DictionaryCodec()
+            v = DictionaryCodec.encode(serialize, self.initial_work_package)
+        elif self.initial_regs[9] == 1:
+            v = self.initial_blob
+        elif self.initial_regs[9] == 2 and self.initial_regs[10] < len(self.initial_work_package.items):
+            v = self.initial_work_package.items[self.initial_regs[10]].payload
+        elif self.initial_regs[9] == 3 and self.initial_regs[10] < len(self.initial_work_package.items[self.initial_regs[10]].extrinsic):
+            v = "" #implement from here
 
     @staticmethod
     def is_valid(data, address, length, writable=False):

@@ -14,17 +14,14 @@ class PvmTransition(Codable):
 
     memory: PageMemory
 
-    def __init__(self, memory: PageMemory):
-        self.memory = memory
-
     @staticmethod
-    def transit(json_memory: MemoryChunk, page: PageMap, isPage: bool = True):
+    def transit(json_memory: MemoryChunk, page: PageMap, is_page: bool = True):
         page_structure = Pages()
 
         # Convert PageMap into a lookup dictionary for fast access
         page_lookup = {p.address: p for p in page}
 
-        if not isPage:
+        if not is_page:
             # Process memory data as usual
             for mem in json_memory:
                 page_key = U32(mem.address // 4096)  # Page index calculation

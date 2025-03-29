@@ -20,9 +20,10 @@ def get_testcases_starting_with(prefix: str):
 
 def test_inst_add_32():
     # Read all json files from /data/pvm/programs
-    for tc in get_testcases_starting_with(""):
+    for tc in get_testcases_starting_with("inst_load"):
         # TODO: Uncomment this when we have implemented execute
         temp = PvmTransition.transit(tc.initial_memory, tc.initial_page_map)
+        print(temp)
         page = PageMap()
         temp2 = PvmTransition.transit(tc.expected_memory, page, False)
         output = tc.program.execute(

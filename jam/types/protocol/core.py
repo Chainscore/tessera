@@ -11,6 +11,7 @@ Balance = U64
 BlobLength = U32
 Register = U64
 
+
 # Hash type aliases
 WorkPackageHash = OpaqueHash
 WorkReportHash = OpaqueHash
