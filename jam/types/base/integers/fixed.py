@@ -1,7 +1,9 @@
 import math
-from typing import Callable, Union, Any, Tuple, TypeVar, Type
+from typing import Any, Callable, Tuple, Type, TypeVar, Union
+
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.primitives.integers import IntegerCodec
+
 from .base import BaseInteger
 
 T = TypeVar("T", bound="BaseInteger")
@@ -81,6 +83,11 @@ class I16(FixedInt):
 
 @decodable_int(3)
 class U24(FixedInt):
+    ...
+
+
+@decodable_int(3, has_sign=True)
+class I24(FixedInt):
     ...
 
 

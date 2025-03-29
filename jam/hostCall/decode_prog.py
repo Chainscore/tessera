@@ -1,5 +1,4 @@
 from jam.pvm.memory import Memory, MemoryChunk
-from jam.pvm.pvm_memory import PageMemory
 from jam.pvm.register import Registers
 from jam.types.base.integers.fixed import U16, U24
 from jam.types.base.sequences.array import Array, decodable_array
@@ -7,7 +6,7 @@ from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.utils.constants import REGISTER_COUNT
 
 
-def derive_p(program: bytes) -> (Bytes, Registers, PageMemory):
+def derive_p(program: bytes) -> (Bytes, Registers, MemoryChunk):
     try:
         (c, o, w, _, _) = decode_program(program)
         return c, o, w
@@ -15,7 +14,7 @@ def derive_p(program: bytes) -> (Bytes, Registers, PageMemory):
         return None
 
 
-def decode_program(program: bytes) -> (Bytes, Registers, PageMemory, U16, U24):
+def decode_program(program: bytes) -> (Bytes, Registers, MemoryChunk, U16, U24):
     offset = 0
     o_len = U24.decode_from(program, offset)
     if o_len[0] != REGISTER_COUNT:
@@ -40,4 +39,4 @@ def decode_program(program: bytes) -> (Bytes, Registers, PageMemory, U16, U24):
     offset += decoded
     # Decoding code
     c, decoded = Bytes.decode_from(program, offset)
-    return c, o, PageMemory(w), z, s
+    return (c, o, MemoryChunk(w), z, s)

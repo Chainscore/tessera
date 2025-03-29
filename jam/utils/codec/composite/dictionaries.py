@@ -11,12 +11,15 @@ Format:
         [Encoded Key][Encoded Value]
 """
 
-from typing import TypeVar, Generic, Dict as typing_Dict, Mapping, Union, Type, Tuple
+from typing import Dict as typing_Dict
+from typing import Generic, Mapping, Tuple, Type, TypeVar, Union
+
 from jam.utils.codec.primitives.integers import GeneralCodec
 from jam.utils.codec.utils import check_buffer_size
-from ..codec import Codec
+
 from ..codable import Codable
-from ..errors import EncodeError, DecodeError
+from ..codec import Codec
+from ..errors import DecodeError, EncodeError
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -50,14 +53,14 @@ class DictionaryCodec(Codec[Mapping[K, V]], Generic[K, V]):
         """
         # Encode key
         if isinstance(key, tuple):
-            key_bytes = b"".join([k.encode_into(buffer, offset) for k in key])
+            key_bytes = b"".join([k.encode() for k in key])
         else:
-            key_bytes = key.encode_into(buffer, offset)
+            key_bytes = key.encode()
 
         if isinstance(value, list):  # Assuming list of Codable values
-            value_bytes = b"".join([v.encode_into(buffer, offset) for v in value])
+            value_bytes = b"".join([v.encode() for v in value])
         else:
-            value_bytes = value.encode_into(buffer, offset)
+            value_bytes = value.encode()
 
         return key_bytes + value_bytes, len(key_bytes + value_bytes)
 
