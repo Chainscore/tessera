@@ -170,9 +170,9 @@ class State(Sigma):
 
             # Then find all services (first byte is 255, rest is service id)
             elif int(key[0]) == 255:
-                service_id = int.from_bytes(
+                service_id = ServiceId(int.from_bytes(
                     bytes(Bytes([key[1], key[3], key[5], key[7]]))
-                )
+                ))
                 total_offset = 0
                 ac, offset = OpaqueHash.decode_from(bytes(value), total_offset)
                 total_offset += offset
@@ -199,19 +199,19 @@ class State(Sigma):
             else:
                 if Bytes(key[7:0:-2]) == Bytes(2**32 - 1):
                     # populating the storage
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    service_id = ServiceId(int.from_bytes(bytes(Bytes(key[0:7:2]))))
                     delta[service_id].storage[
                         ByteArray32(Bytes(key[8:32] + Bytes(bytearray(8))))
                     ] = value
                     print("Storage")
                 elif Bytes(key[7:0:-2]) == Bytes(2**32 - 2):
                     # populating the lookup
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    service_id = ServiceId(int.from_bytes(bytes(Bytes(key[0:7:2]))))
                     delta[service_id].lookup[Hash.blake2b(value)] = value
 
                 else:
                     # populating the timestamps
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    service_id = ServiceId(int.from_bytes(bytes(Bytes(key[0:7:2]))))
                     TimeStamps, _ = Timestamps.decode_from(bytes(value))
                     timestamp_key = ByteArray32(
                         Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
@@ -277,9 +277,18 @@ class State(Sigma):
     
     def save(self, db: KVStore):
         data = self.transform()
+        if db.get(b"general_root:") is None:
+            general_root=self.generate_root()
+            db.put(b"general_root:",bytes(general_root))
+        else:
+            general_root=db.get(b"general_root:")
+            print("Oyeeeeeeeeeee")
+        print("general_root:",Bytes(general_root).hex())
+        
         # Save the regular state data
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
+
     @staticmethod
     def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
         data = {}
@@ -291,7 +300,6 @@ class State(Sigma):
         else:
             for i in range(1,16):
                 state_key=construct_state_key(i)
-                # print(type(state_key))
                 data[state_key] = Bytes(db.get(bytes(state_key)))
             for key in keys:
                 if int.from_bytes(
@@ -306,7 +314,6 @@ class State(Sigma):
                 data[service_key]=Bytes(db.get(bytes(service_key)))
                 
         state = State.detransform(data)
-
         return state
     
 
