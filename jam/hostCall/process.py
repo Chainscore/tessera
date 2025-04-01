@@ -31,6 +31,10 @@ class HostCall:
                  xcontext: Optional[XContent] = None,
                  ycontext: Optional[XContent] = None,
                  refine: Optional[RefineMap] = None,
+                 offset: Optional[int] = None,
+                 authorizer: Optional[Bytes] = None,
+                 work_service_id: Optional[ServiceId] = None,
+                 work_item_index: Optional[int] = None,
                  export: Optional[Segment] = None,
                  e_index: Optional[U32] = None,
                  timeslot: Optional[U32] = None,
@@ -47,6 +51,10 @@ class HostCall:
         self.initial_xcontent_x = xcontext
         self.initial_xcontent_y = ycontext
         self.initial_refine_map = refine
+        self.authorizer = authorizer
+        self.work_item_index = work_item_index
+        self.work_service_id = work_service_id
+        self.offset = offset
         self.initial_export_segment = export
         self.initial_export_segment_index = e_index
         self.initial_timeslot = timeslot
@@ -539,104 +547,104 @@ class HostCall:
 
     def peek(self):
         self.initial_gas -= 10
-        n = self.initial_regs["7"]
-        o = self.initial_regs["8"]
-        s = self.initial_regs["9"]
-        z = self.initial_regs["10"]
+        n = self.initial_regs[6]
+        o = self.initial_regs[7]
+        s = self.initial_regs[8]
+        z = self.initial_regs[9]
 
-        if not HostCall.is_valid(self.initial_memory, o, z):
+        if not InstructionMapper.valid_address(self.initial_memory, o, z):
             return Status("halt"), self.initial_regs[6], self.initial_memory
-        elif n not in HostCall.get_keys(self.initial_refine_map):
-            self.initial_regs["7"] = 2**64 - 4
+        elif n not in self.initial_refine_map.keys():
+            self.initial_regs[6] = 2**64 - 4
             return Status("continue"), self.initial_regs[6], self.initial_memory
-        elif not HostCall.is_valid(self.initial_refine_map[str(n)]["U"], s, z):
-            self.initial_regs["7"] = 2**64 - 3
+        elif not HostCall.is_valid(self.initial_refine_map[n].memory, s, z):
+            self.initial_regs[6] = 2**64 - 3
             return Status("continue"), self.initial_regs[6], self.initial_memory
         else:
-            self.initial_regs["7"] = 0
+            self.initial_regs[6] = U64(0)
             address = int(o/4096)
-            self.initial_memory["pages"][str(address)]["value"] = HostCall.get_values(self.initial_refine_map[str(n)]["U"], s, z)
+            self.initial_memory.pages[address].value = InstructionMapper.memory_value(self.initial_refine_map[n].memory, s, z)
             return Status("continue"), self.initial_regs[6], self.initial_memory
 
     def poke(self):
         self.initial_gas -= 10
-        n = self.initial_regs["7"]
-        s = self.initial_regs["8"]
-        o = self.initial_regs["9"]
-        z = self.initial_regs["10"]
+        n = self.initial_regs[6]
+        s = self.initial_regs[7]
+        o = self.initial_regs[8]
+        z = self.initial_regs[9]
 
-        if not HostCall.is_valid(self.initial_memory, s, z):
-            self.initial_regs["7"] = 2 ** 64 - 3
+        if not InstructionMapper.valid_address(self.initial_memory, s, z):
+            self.initial_regs[6] = 2 ** 64 - 3
             return Status("halt"), self.initial_regs[6], self.initial_refine_map
-        elif n not in HostCall.get_keys(self.initial_refine_map):
-            self.initial_regs["7"] = 2 ** 64 - 4
+        elif n not in self.initial_refine_map.keys():
+            self.initial_regs[6] = 2 ** 64 - 4
             return Status("continue"), self.initial_regs[6], self.initial_refine_map
-        elif not HostCall.is_valid(self.initial_refine_map[str(n)]["U"], o, z):
+        elif not InstructionMapper.valid_address(self.initial_refine_map[n].memory, o, z):
             print("OOB")
-            self.initial_regs["7"] = 2 ** 64 - 3
+            self.initial_regs[6] = 2 ** 64 - 3
             return Status("continue"), self.initial_regs[6], self.initial_refine_map
         else:
-            self.initial_regs["7"] = 0
+            self.initial_regs[6] = 0
             address = int(o / 4096)
-            self.initial_refine_map[str(n)]["U"]["pages"][str(address)]["value"] = HostCall.get_values(self.initial_memory, s, z)
+            self.initial_refine_map[n].memory.pages[address].value = InstructionMapper.memory_value(self.initial_memory, s, z)
             return Status("continue"), self.initial_regs[6], self.initial_refine_map
 
     def zero(self):
         self.initial_gas -= 10
-        n = self.initial_regs["7"]
-        p = self.initial_regs["8"]
-        c = self.initial_regs["9"]
+        n = self.initial_regs[6]
+        p = self.initial_regs[7]
+        c = self.initial_regs[8]
 
-        if n in HostCall.get_keys(self.initial_refine_map):
-            u = copy.deepcopy(self.initial_refine_map[str(n)]["U"])
+        if n in self.initial_refine_map.keys():
+            u = copy.deepcopy(self.initial_refine_map[n].memory)
         else:
             u = "error"
         address = int((p * 2**12)/4096)
 
         if p < 16 or p+c >= (2**32 / 2**12):
-            self.initial_regs["7"] = 2**64 - 3
+            self.initial_regs[6] = 2**64 - 3
             return self
         elif u == "error":
-            self.initial_regs["7"] = 2**64 - 4
+            self.initial_regs[6] = 2**64 - 4
             return self
-        if str(address) in HostCall.get_keys(u["pages"], True):
-            u["pages"][str(address)]["value"] = []
-            u["pages"][str(address)]["access"] = {
+        if str(address) in HostCall.get_keys(u.pages, True):
+            u.pages[address].value = []
+            u.pages[address].access = {
                 "inaccessible": False,
                 "writable": True,
                 "readable": False
             }
-            self.initial_refine_map[str(n)]["U"] = u
+            self.initial_refine_map[n].memory = u
         return self
 
     def void(self):
         self.initial_gas -= 10
-        n = self.initial_regs["7"]
-        p = self.initial_regs["8"]
-        c = self.initial_regs["9"]
+        n = self.initial_regs[6]
+        p = self.initial_regs[7]
+        c = self.initial_regs[8]
 
-        if n in HostCall.get_keys(self.initial_refine_map):
-            u = copy.deepcopy(self.initial_refine_map[str(n)]["U"])
+        if n in self.initial_refine_map.keys():
+            u = copy.deepcopy(self.initial_refine_map[n].memory)
         else:
             u = "error"
         address = int((p * 2**12)/4096)
 
         if u == "error":
-            self.initial_regs["7"] = 2 ** 64 - 4
+            self.initial_regs[6] = 2 ** 64 - 4
             return self
 
-        if str(address) in HostCall.get_keys(u["pages"], True):
-            u["pages"][str(address)]["value"] = []
-            u["pages"][str(address)]["access"] = {
+        if address in HostCall.get_keys(u.pages, True):
+            u.pages[address].value = []
+            u.pages[address].access = {
                 "inaccessible": True,
                 "writable": False,
                 "readable": False
             }
-            if p < 16 or p + c >= (2 ** 32 / 2 ** 12) or self.initial_refine_map[str(n)]["U"]["pages"][str(address)]["access"]["inaccessible"]:
-                self.initial_regs["7"] = 2 ** 64 - 3
+            if p < 16 or p + c >= (2 ** 32 / 2 ** 12) or self.initial_refine_map[n].memory.pages[address].access.inaccessible:
+                self.initial_regs[6] = 2 ** 64 - 3
             else:
-                self.initial_regs["7"] = 0
-                self.initial_refine_map[str(n)]["U"] = u
+                self.initial_regs[6] = U64(0)
+                self.initial_refine_map[n].memory = u
         return self
 
     def solicit(self):
@@ -729,12 +737,12 @@ class HostCall:
 
     def historical_lookup(self):
         self.initial_gas -= 10
-        w_a = self.initial_regs["7"]
-        h = self.initial_regs["8"]
-        o = self.initial_regs["9"]
+        w_a = self.initial_regs[6]
+        h = self.initial_regs[7]
+        o = self.initial_regs[8]
         s_i = self.initial_service_index
         d = self.initial_delta
-        d_keys = HostCall.get_keys(d)
+        d_keys = d.keys()
         if w_a == 2**64 - 1 and s_i in d_keys:
             a = d[str(s_i)]
         elif w_a in d_keys:
@@ -742,35 +750,35 @@ class HostCall:
         else:
             a = None
 
-        if not HostCall.is_valid(self.initial_memory, h, 32):
+        if not InstructionMapper.valid_address(self.initial_memory, h, 32):
             v = "error"
         elif a is None:
             v = None
         else:
-            values = HostCall.get_values(self.initial_memory, h, 32)
+            values = InstructionMapper.memory_value(self.initial_memory, h, 32)
             h = HostCall.get_hex_string(Bytes(values))
             v = historicalLookup.historical_look_up(a, self.initial_timeslot, h)
         v_len = len(v) if v is not None else 0
-        f = min(self.initial_regs.get("10", 0), v_len)
-        _l = min(self.initial_regs.get("11", 0), v_len - f)
+        f = min(self.initial_regs[9], v_len)
+        _l = min(self.initial_regs[10], v_len - f)
         if v == "error" or not HostCall.is_valid(self.initial_memory, o, _l):
-            self.initial_regs["7"] = 2**64 - 3
+            self.initial_regs[6] = 2**64 - 3
             return Status("panic"), self.initial_regs[6], self.initial_memory
         elif v is None:
-            self.initial_regs["7"] = 2 ** 64 - 1
+            self.initial_regs[6] = 2 ** 64 - 1
             return Status("continue"), self.initial_regs[6], self.initial_memory
         else:
-            self.initial_regs["7"] = len(v)
-            self.initial_memory = HostCall.insert_values(self.initial_memory, o, v)
+            self.initial_regs[6] = len(v)
+            self.initial_memory = InstructionMapper.store_value(self.initial_memory, o, v)
             return Status("continue"), self.initial_regs[6], self.initial_memory
 
     def export(self):
         self.initial_gas -= 10
-        p = self.initial_regs["7"]
-        z = min(self.initial_regs["8"], 4104)
-        if HostCall.is_valid(self.initial_memory, p, z):
+        p = self.initial_regs[6]
+        z = min(self.initial_regs[7], 4104)
+        if InstructionMapper.valid_address(self.initial_memory, p, z):
             print("one")
-            values = HostCall.get_values(self.initial_memory, p, z)
+            values = InstructionMapper.memory_value(self.initial_memory, p, z)
             print(values)
             x = HostCall.pad_zero(values, 24)
             print(x)
@@ -778,27 +786,27 @@ class HostCall:
             x = "error"
 
         if x == "error":
-            self.initial_regs["7"] = 2**64 - 3
+            self.initial_regs[6] = 2**64 - 3
             return Status("panic"), self.initial_regs[6], self.initial_export_segment
         elif self.initial_export_segment_index + len(self.initial_export_segment) >= 2**11:
-            self.initial_regs["7"] = 2 ** 64 - 5
+            self.initial_regs[6] = 2 ** 64 - 5
             return Status("continue"), self.initial_regs[6], self.initial_export_segment
         else:
-            self.initial_regs["7"] = self.initial_export_segment_index + len(self.initial_export_segment)
+            self.initial_regs[6] = self.initial_export_segment_index + len(self.initial_export_segment)
             self.initial_export_segment.append(x)
             return Status("continue"), self.initial_regs[6], self.initial_export_segment
 
     def machine(self):
         self.initial_gas -= 10
-        p_o = self.initial_regs["7"]
-        p_z = self.initial_regs["8"]
-        i = self.initial_regs["9"]
-        if HostCall.is_valid(self.initial_memory, p_o, p_z):
+        p_o = self.initial_regs[6]
+        p_z = self.initial_regs[7]
+        i = self.initial_regs[8]
+        if InstructionMapper.valid_address(self.initial_memory, p_o, p_z):
             print("one")
-            p = HostCall.get_values(self.initial_memory, p_o, p_z)
+            p = InstructionMapper.memory_value(self.initial_memory, p_o, p_z)
         else:
             p = "error"
-        m_keys =HostCall.get_keys(self.initial_refine_map, True)
+        m_keys = self.initial_refine_map.keys()
         numbers = {int(x) for x in m_keys if x.isdigit()}
 
         # Start checking from 1 (smallest natural number)
@@ -807,31 +815,31 @@ class HostCall:
             n += 1
 
         u = {
-            "P": p,
-            "U": {
+            "blob": p,
+            "memory": {
                 "pages": {}
             },
-            "I": i
+            "i": i
         }
 
         if p == "error":
-            self.initial_regs["7"] = 2**64 - 3
+            self.initial_regs[6] = 2**64 - 3
             return Status("halt"), self.initial_regs[6], self.initial_refine_map
         elif Program.decode_from(p) == "Error":
-            self.initial_regs["7"] = 2 ** 64 - 10
+            self.initial_regs[6] = 2 ** 64 - 10
             return Status("continue"), self.initial_regs[6], self.initial_refine_map
         else:
-            self.initial_regs["7"] = n
-            self.initial_refine_map[str(n)] = u
+            self.initial_regs[6] = n
+            self.initial_refine_map[n] = u
             Status("continue"), self.initial_regs[6], self.initial_refine_map
 
     def expunge(self):
         self.initial_gas -= 10
-        n = self.initial_regs["7"]
-        if str(n) not in HostCall.get_keys(self.initial_refine_map, True):
-            self.initial_regs["7"] = 2**64 - 4
+        n = self.initial_regs[6]
+        if n not in self.initial_refine_map.keys():
+            self.initial_regs[6] = 2**64 - 4
         else:
-            self.initial_regs["7"] = self.initial_refine_map[str(n)]["I"]
+            self.initial_regs[6] = self.initial_refine_map[n].i
             del self.initial_refine_map[str(n)]
         return self
 
@@ -961,23 +969,23 @@ class HostCall:
             refine_map[n].i = _i
 
         if g is None:
-            self.initial_regs[6] = 2**64 - 3
+            self.initial_regs[6] = U64(2**64 - 3)
         elif n not in self.initial_refine_map.keys():
             self.initial_regs[6] = 2**64 - 4
         elif c == "host-call":
-            self.initial_regs[6] = 3
+            self.initial_regs[6] = U64(3)
             self.initial_memory = memory
             self.initial_refine_map = refine_map
         elif c == "out-of-gas":
-            self.initial_regs[6] = 4
+            self.initial_regs[6] = U64(4)
             self.initial_memory = memory
             self.initial_refine_map = refine_map
         elif c == "panic":
-            self.initial_regs[6] = 1
+            self.initial_regs[6] = U64(1)
             self.initial_memory = memory
             self.initial_refine_map = refine_map
         elif c == "halt":
-            self.initial_regs[6] = 0
+            self.initial_regs[6] = U64(0)
             self.initial_memory = memory
             self.initial_refine_map = refine_map
         return self

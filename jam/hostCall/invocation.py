@@ -16,6 +16,9 @@ from jam.pvm.extract import Execution
 from jam.pvm.program import Program
 from jam.hostCall.decode_prog import derive_p
 from jam.types.work.package import WorkPackage
+from jam.hostCall.process import HostCall
+from jam.hostCall.types import RefineMap, Segment
+
 
 class PsiM:
     def __init__(self,
@@ -106,11 +109,30 @@ class PsiI:
     def __init__(self, p: WorkPackage, c: int):
         self.work_package = p
         self.core = c
-        self.host_function = "function"
+        self.host_function = self.is_authorized_f()
 
     def process(self):
-        buffer = self.work_package.encode(self.work_package)
+        buffer = self.work_package.encode()
         PsiM(self.work_package.code_hash, U64(0), 50000000, buffer, self.host_function, None)
+
+    def is_authorized_f(self):
+        def gas(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+            call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
+            return HostCall.gas(call)
+
+        def default(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+            _gas -= 10
+            register[6] = 2 ** 64
+            return Status("continue"), _gas, register, memory
+
+        function_map = {
+            "gas": gas, 0: gas,
+        }
+
+        def get_function(n):
+            return function_map.get(n, default)  # Default function if `n` not found
+
+        return get_function  # Return the dynamic function selector
 
 
 
