@@ -35,8 +35,8 @@ from jam.state.components.delta import (
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
+import pickle
 import json
-
 
 class State(Sigma):
     """
@@ -280,10 +280,14 @@ class State(Sigma):
         if db.get(b"general_root:") is None:
             general_root=self.generate_root()
             db.put(b"general_root:",bytes(general_root))
+            cached_tree=pickle.dumps(self.get_merkle_nodes())
+            db.put(b"cached_tree:",cached_tree)
         else:
             general_root=db.get(b"general_root:")
+            cached_tree=db.get(b"cached_tree:")
             print("Oyeeeeeeeeeee")
-        print("general_root:",Bytes(general_root).hex())
+        # print("general_root:",Bytes(general_root).hex())
+        # print("cached_tree:",pickle.loads(cached_tree))
         
         # Save the regular state data
         for key, value in data.items():

@@ -2,7 +2,7 @@ import pytest
 import os
 import shutil
 import tempfile
-
+import pickle
 
 import json
 
@@ -16,6 +16,7 @@ from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Publ
 from jam.types.protocol.core import ServiceId,BlobLength
 from jam.types.base.sequences.bytes.bytes import Bytes
 from tests.integration.stateTransform.types import DunaState
+from jam.state.merkle.merkle import StateMerkle
 
 @pytest.fixture
 def db_path():
@@ -23,6 +24,19 @@ def db_path():
     temp_dir = tempfile.mkdtemp()
     yield temp_dir
     shutil.rmtree(temp_dir)
+
+def get_cached_tree(db: KVStore) -> dict:
+    """
+    Retrieve the entire update tree from RocksDB.
+    The tree is stored under the key b"cached_tree" as a serialized dictionary.
+    Returns:
+        dict: Mapping of node keys (e.g., node hashes) to encoded node data.
+    """
+    tree_bytes = db.get(b"cached_tree:")
+    
+    if tree_bytes is not None:
+        return pickle.loads(tree_bytes)
+    return {}
 
 def test_state_transform(db_path):
     """Test basic operations of KVStore."""
@@ -49,6 +63,13 @@ def test_state_transform(db_path):
     state2=State.load(kv,keyArray)
     # Checking the delta of JamDuna and our U32[0] related data from our DB is same
     assert(state1.delta==state2.delta)
+
+    # merkle = StateMerkle()
+    # cached_tree = get_cached_tree(db=kv)
+    # print(state.get_merkle_nodes())
+    # root,updated_tree=merkle.merkelize(state.transform(),cached_tree)
+    # root,tree = merkle.merkelize(state.transform(),cached_tree)
+    print(get_cached_tree(db=kv))
 
     # Close the store
     kv.close()
