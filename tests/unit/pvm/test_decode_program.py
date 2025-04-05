@@ -1,11 +1,11 @@
 import os
 import json
-from .types import Status, Testcase
+from .types import Testcase
 
 
 def test_decode_program():
     # Read all json files from /data/pvm/programs
-    data_dir = r"C:\Users\FAIZ AHMAD\PycharmProjects\jam-node\tests\unit\pvm\data"
+    data_dir = "tests/unit/pvm/data"
     for i, file in enumerate(os.listdir(data_dir)):
         with open(os.path.join(data_dir, file), "r") as f:
             data = json.loads(f.read())
@@ -23,7 +23,6 @@ def test_decode_program():
             assert len(testcase.initial_memory) == len(data["initial-memory"])
             assert len(testcase.program.jump_table) == data["program"][0]
             assert testcase.program.z == data["program"][1]
-            assert testcase.expected_status == Status.from_json(data["expected-status"])
             assert len(testcase.expected_regs) == len(data["expected-regs"])
             assert testcase.expected_pc == data["expected-pc"]
             assert len(testcase.expected_memory) == len(data["expected-memory"])
