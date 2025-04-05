@@ -1,17 +1,18 @@
 from typing import List, Self, Tuple, Union
-from jam.pvm.memory import MemoryChunk
-from jam.pvm.pvm_memory import PageMemory
+from jam.pvm.errors import PvmError, PvmErrorCodes
+from jam.pvm.instructions.table import execute, terminating_blocks
 from jam.pvm.register import Registers
+from jam.pvm.zeta import Zeta
 from jam.types.base.bit import Bit
 from jam.types.base.integers.fixed import U8, U32
-from jam.types.protocol.core import Gas, Register
+from jam.types.protocol.core import Gas, Register, RemainingGas
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
 from jam.utils.codec.utils import check_buffer_size
 from jam.utils.json.serde import JsonSerde
-from jam.pvm.page_map import PageMap
-from jam.pvm.extract import Execution
+from jam.pvm.status import CONTINUE, PAGE_FAULT, PANIC, ExecutionStatus
+from jam.pvm.memory import Memory
 
 
 class Program(Codable, JsonSerde):
@@ -43,6 +44,11 @@ class Program(Codable, JsonSerde):
         self.offset_bitmask = offset_bitmask
 
     def encode_size(self) -> int:
+        """Encode the size of the program.
+
+        Returns:
+            int: Size of the program
+        """
         total_size = 0
         total_size += GeneralCodec().encode_size(len(self.jump_table))
         total_size += self.z.encode_size()
@@ -138,17 +144,94 @@ class Program(Codable, JsonSerde):
 
     @staticmethod
     def from_json(buffer: Union[bytes, bytearray]) -> Self:
+        """Decode a program from a bytes
+
+        Args:
+            buffer (Union[bytes, bytearray]): Bytes
+
+        Returns:
+            Tuple[Self, int]: Returns Program and bytes read
+        """
         value, _ = Program.decode_from(buffer)
         return value
 
+    def skip(self, i):
+        """
+        Skip the instructions until the next opcode is found.
+        Args:
+            i: Current index
+        Returns:
+            Distance to the next opcode.
+        """
+        extended_bitmask = self.offset_bitmask + [True] * (100)
+        for j in range(i + 1, len(extended_bitmask)):
+            if extended_bitmask[j] == 1:
+                return j - i  # Distance to the next opcode.
+        return len(extended_bitmask) - i  # Reached the end of the bitmask.
+
+    @property
+    def basic_blocks(self) -> List[U8]:
+        """Get the basic blocks of the program. ie. sequences of instructions
+        where the code sequence starts.
+
+        Returns:
+            List[U8]: List of basic blocks
+        """
+        basic_blocks = [0]
+        for i in range(len(self.instruction_set)):
+            if (
+                self.offset_bitmask[i]
+                and terminating_blocks().index(self.instruction_set[i].value) != -1
+            ):
+                basic_blocks.append(i)
+        return basic_blocks
+
     def execute(
-            self,
-            initial_registers: Registers,
-            gas: U32,
-            memory: PageMemory,
-            pc: U32,
-    ) -> (Registers, MemoryChunk, U32):
-        # TODO: Implement execute
-        pvm_execution = Execution(pc, gas, initial_registers, memory, program=self)
-        res = pvm_execution.process_program()
-        return res
+        self,
+        program_counter: U32,
+        gas: Gas,
+        registers: Registers,
+        memory: Memory,
+    ) -> Tuple[ExecutionStatus, U32, RemainingGas, Registers, Memory]:
+        """Execute the program blob `p` as per Psi specification.
+
+        Args:
+            self: Program
+            program_counter: Initial program counter
+            gas: Gas provided for execution
+            registers: Initial registers
+            memory: Initial memory
+
+        Returns:
+            Status: Status of the execution - Either PANIC, HALT, PAGE-FAULT, HOST, OUT-OF-GAS, or CONTINUE
+            U32: Final program counter
+            RemainingGas: Remaining gas
+            Registers: Final registers
+            Memory: Final memory
+        """
+        zeta = Zeta(self.instruction_set)
+        while True:
+            skip_index = self.skip(int(program_counter))
+
+            try:
+                status, program_counter, gas, registers, memory = execute(
+                    program_counter,
+                    registers,
+                    memory,
+                    skip_index,
+                    zeta,
+                    gas,
+                )
+            except PvmError as e:
+                if e.code == PvmErrorCodes.PANIC:
+                    return PANIC, program_counter, gas, registers, memory
+                elif e.code == PvmErrorCodes.PAGE_FAULT:
+                    return PAGE_FAULT(Register(0)), program_counter, gas, registers, memory
+                else:
+                    raise e
+
+    def __repr__(self):
+        return f"Program(z={self.z}, jump_table={self.jump_table}, instruction_set={self.instruction_set}, offset_bitmask={self.offset_bitmask})"
+    
+    def __eq__(self, other):
+        return self.z == other.z and self.jump_table == other.jump_table and self.instruction_set == other.instruction_set and self.offset_bitmask == other.offset_bitmask

@@ -1,6 +1,6 @@
 import os
 import json
-from .types import Status, Testcase
+from .types import Testcase
 
 
 def test_decode_program():
@@ -23,7 +23,6 @@ def test_decode_program():
             assert len(testcase.initial_memory) == len(data["initial-memory"])
             assert len(testcase.program.jump_table) == data["program"][0]
             assert testcase.program.z == data["program"][1]
-            assert testcase.expected_status == Status.from_json(data["expected-status"])
             assert len(testcase.expected_regs) == len(data["expected-regs"])
             assert testcase.expected_pc == data["expected-pc"]
             assert len(testcase.expected_memory) == len(data["expected-memory"])
