@@ -100,11 +100,11 @@ EXAMPLE_INPUT_BLOCK = []
 EXAMPLE_INPUT_SHUFFLE = []
 EXAMPLE_INPUT_JSON_TO_CODEC = []
 try:
-    with open("request_example.json", "r") as example_json:
+    with open("jam/api/examples/request_example.json", "r") as example_json:
          EXAMPLE_INPUT_BLOCK = json.load(example_json)
-    with open("shuffle_request_example.json", "r") as example_shuffle_json:
+    with open("jam/api/examples/shuffle_request_example.json", "r") as example_shuffle_json:
         EXAMPLE_INPUT_SHUFFLE = json.load(example_shuffle_json)
-    with open("json_to_codec_request_example.json", "r") as example_json_to_codec:
+    with open("jam/api/examples/json_to_codec_request_example.json", "r") as example_json_to_codec:
         EXAMPLE_INPUT_JSON_TO_CODEC = json.load(example_json_to_codec)
 
 except FileNotFoundError:
