@@ -27,8 +27,8 @@ class QuicServerProtocol(QuicConnectionProtocol):
             self.stream_buffer[event.stream_id] += event.data
             if event.end_stream:
                 try:
-                    message = Block.decode_from(self.stream_buffer[event.stream_id])
-                    print(f"📩 Received block: {message}")
+                    block, _ = Block.decode_from(self.stream_buffer[event.stream_id])
+                    print(f"📩 Received block: {block.header.seal}")
                 except Exception as e:
                     print(f"ERROR DECODING BLOCK: {e}")
                     message = self.stream_buffer[event.stream_id].decode()

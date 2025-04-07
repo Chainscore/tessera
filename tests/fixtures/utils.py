@@ -1,8 +1,8 @@
 from jam.types import ByteArray32
-from jam.types.base.sequences.bytes.byte_array import ByteArray
 
 
-def create_dummy_bytes32() -> ByteArray:
+
+def create_dummy_bytes32() -> ByteArray32:
     """Create dummy 32 byte value"""
     return ByteArray32(bytes([i % 256 for i in range(32)]))
 

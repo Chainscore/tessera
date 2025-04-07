@@ -5,22 +5,14 @@ from jam.types import (
     TimeSlot,
     ValidatorIndex,
     BandersnatchVrfSignature,
-    ValidatorArray,
-    TicketBody,
-    Entropy,
-    BandersnatchPublic,
 )
 from jam.types.base.null import Null
-from jam.types.extrinsics.tickets import TicketId, TicketAttempt
 from jam.types.header import (
     Header,
     OptionalEpochMark,
     OptionalTicketsMark,
     OffendersMark,
-    TicketsMark,
 )
-from jam.types.protocol.epoch import EpochMark
-from jam.utils.constants import VALIDATOR_COUNT, EPOCH_LENGTH
 from tests.fixtures.utils import create_dummy_bytes32, create_dummy_bytes
 
 

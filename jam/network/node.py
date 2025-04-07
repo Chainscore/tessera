@@ -39,6 +39,7 @@ class Node:
         self.port = port
         self.validator_data = validator_data
         self.peers = peers
+        self.connections = []
 
         self.dns = generate_keys(port)
 

@@ -47,6 +47,8 @@ async def main(name: str, genesis_path: str, db_path: str, port: int, start_gene
         )
         db = KVStore(db_path)
 
+        
+
         if start_genesis:
             # Start from genesis
             genesis_vals = [ValidatorData(
