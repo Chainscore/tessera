@@ -10,6 +10,7 @@ from jam.types import (
     Entropy,
     BandersnatchPublic,
 )
+from jam.types.base.null import Null
 from jam.types.extrinsics.tickets import TicketId, TicketAttempt
 from jam.types.header import (
     Header,
@@ -30,28 +31,8 @@ def create_dummy_header() -> Header:
         parent_state_root=StateRoot(create_dummy_bytes32()),
         extrinsic_hash=OpaqueHash(create_dummy_bytes32()),
         slot=TimeSlot(0),
-        epoch_mark=OptionalEpochMark(
-            EpochMark(
-                entropy=Entropy(create_dummy_bytes32()),
-                tickets_entropy=Entropy(create_dummy_bytes32()),
-                validators=ValidatorArray(
-                    [
-                        BandersnatchPublic(create_dummy_bytes32())
-                        for _ in range(VALIDATOR_COUNT)
-                    ]
-                ),
-            ),
-        ),
-        tickets_mark=OptionalTicketsMark(
-            TicketsMark(
-                [
-                    TicketBody(
-                        id=TicketId(create_dummy_bytes32()), attempt=TicketAttempt(0)
-                    )
-                    for i in range(EPOCH_LENGTH)
-                ]
-            ),
-        ),
+        epoch_mark=OptionalEpochMark(Null),
+        tickets_mark=OptionalTicketsMark(Null),
         offenders_mark=OffendersMark([]),
         entropy_source=BandersnatchVrfSignature(create_dummy_bytes(96)),
         author_index=ValidatorIndex(0),
