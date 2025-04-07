@@ -1,4 +1,5 @@
 from typing import Dict, List, Tuple
+from jam.types.base.bit import Bit
 from jam.types.protocol.crypto import Hash
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
 from jam.state.merkle.trie import MerkleTrie, NodeHash, EncodedNode
@@ -15,29 +16,44 @@ class StateMerkle:
         """Initialize state merkle with optional hash function"""
         self.trie = MerkleTrie(hash_function)
 
-    def _get_bit(self, key: ByteArray32, index: int) -> bool:
-        """Get bit at index from key.
-
-        Args:
-            key: 32-byte array to extract bit from
-            index: Position of bit to extract (0-255)
-
-        Returns:
-            bool: Value of bit at specified index
+    def bits(self, key: ByteArray32) -> List[Bit]:
         """
-        byte_index = index >> 3  # Divide by 8
-        bit_position = index & 7  # Modulo 8
-        return bool(key[byte_index].value[bit_position])
+        Convert the key into a list of bits from MSB to LSB
+        https://graypaper.fluffylabs.dev/#/68eaa1f/071001071101?v=0.6.4
+        """
+        bits_ = []
+        for i in key:
+            bits_.extend(i.value)
+        return bits_
 
     def _merkelize_recursive(
         self, items: List[Tuple[ByteArray32, ByteArray32]], bit_index: int
     ) -> Tuple[NodeHash, EncodedNode]:
-        """Recursive merkelization"""
+        """
+        Recursive merkelization
+        `M` function as defined in D.2 
+        https://graypaper.fluffylabs.dev/#/68eaa1f/39e20039e200?v=0.6.4
+
+        Args:
+            items: List of tuples containing key-value pairs
+            bit_index: Current bit index to split on. We are using bit index instead of slicing bits(key)
+            because it's more efficient.
+
+        Returns:
+            Tuple containing the node hash and encoded node
+        """
+
+        # If we have reached the maximum bit index, means the trie is too big -> throw an error
         if bit_index >= 256:
             raise ValueError("bit_index exceeds maximum value of 255")
+        
+        # If we have no items, return the zero hash and an empty encoded node 
+        # https://graypaper.fluffylabs.dev/#/68eaa1f/391c00391d00?v=0.6.4
         if not items:
             return (self.trie.node.ZERO_HASH, ByteArray64([0] * 64))
-
+        
+        # If we have only one item, we can directly encode it as a leaf node `L`
+        # https://graypaper.fluffylabs.dev/#/68eaa1f/396100396100?v=0.6.4
         if len(items) == 1:
             key, value = items[0]
             encoded = self.trie.node.encode_leaf(key, value)
@@ -45,11 +61,12 @@ class StateMerkle:
             self.trie._nodes[node_hash] = encoded
             return (node_hash, encoded)
 
-        # Split items by current bit
+        # Split items left/right by current bit
+        # https://graypaper.fluffylabs.dev/#/68eaa1f/391701393301?v=0.6.4
         left = []
         right = []
         for key, value in items:
-            if self._get_bit(key, bit_index):
+            if self.bits(key)[bit_index % len(self.bits(key))]:
                 right.append((key, value))
             else:
                 left.append((key, value))
@@ -58,7 +75,7 @@ class StateMerkle:
         left_hash, left_encoded = self._merkelize_recursive(left, bit_index + 1)
         right_hash, right_encoded = self._merkelize_recursive(right, bit_index + 1)
 
-        # Create branch node
+        # Create branch node `B`
         encoded = self.trie.node.encode_branch(left_hash, right_hash)
         node_hash = NodeHash(self.trie.hash_function(bytes(encoded)))
         self.trie._nodes[node_hash] = encoded
@@ -91,7 +108,7 @@ class StateMerkle:
     def get_nodes(self) -> Dict[NodeHash, EncodedNode]:
         """Get all nodes in the trie, useful for proof generation"""
         return self.trie._nodes.copy()
-
+    
     def clear(self) -> None:
         """Clear the trie state"""
         self.trie._nodes.clear()
