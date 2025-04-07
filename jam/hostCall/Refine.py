@@ -114,7 +114,7 @@ class PsiR:
             forth = self.work_package.context.encode()
             fifth = self.work_package.authorization.encode() #not confirmed yet
             a = first + second + third + forth + fifth
-            g, r, (m, e) = PsiM(historicalLookup(self.delta[w.service], self.work_package.context.lookup_anchor_slot, w.code_hash), 0, w.refine_gas_limit, a, self.f_function, (None, []))
+            g, r, (m, e) = PsiM(historicalLookup(self.delta[w.service], self.work_package.context.lookup_anchor_slot, w.code_hash), 0, w.refine_gas_limit, a, self.f_function, (None, [])).process()
             if r == Status.OUT_OF_GAS or r == Status.PANIC:
                 return r, []
             else:
