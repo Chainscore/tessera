@@ -6,7 +6,7 @@ from jam.consensus.safrole.safrole import Safrole
 from jam.db.kv import KVStore
 from jam.network.peer import Peer
 from jam.network.node import Node
-from jam.network.dummy_bp import block_producer
+from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
 from jam.state.state import State
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
@@ -14,12 +14,12 @@ from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Publ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-async def main(genesis_path: str, db_path: str, port: int, start_genesis: bool) -> None:
+async def main(name: str, genesis_path: str, db_path: str, port: int, start_genesis: bool, theme: str) -> None:
     # Setup logging
-    setup_logging()
+    setup_logging(theme=theme)
 
     logger.info(
-        "Starting Tessera node",
+        f"Starting {name} node",
         spec=chain_config.name,
         listen_port=port,
     )
@@ -38,7 +38,7 @@ async def main(genesis_path: str, db_path: str, port: int, start_genesis: bool) 
         my_data = ValidatorData(bandersnatch_public, ed25519_public, BlsPublic(bytes(144)), ValidatorMetadata(bytes(128)))
 
         tsr_node = Node(
-            node_name=port, 
+            node_name=name, 
             node_id=port, 
             host="0.0.0.0", 
             port=port, 
@@ -59,16 +59,18 @@ async def main(genesis_path: str, db_path: str, port: int, start_genesis: bool) 
             state = State.genesis(genesis_vals, Safrole.arrange_fallback(ByteArray32(bytes(32)), genesis_vals))
             state.save(db)
 
+            block_producer = BlockProducer(tsr_node, db)
+
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(tsr_node.initialize())
-                tg.create_task(block_producer(tsr_node, db))
+                tg.create_task(block_producer.run())
         else:
             # TODO: Sync from peers
             raise NotImplementedError("Syncing from peers is not implemented yet")
 
     
     except KeyboardInterrupt:
-        logger.info("👋 Shutting down JAM node 🔐")
+        logger.info(f"👋 ({name}) Shutting down JAM node 🔐")
     except Exception as e:
-        logger.exception("💥 Fatal error", error=str(e))
+        logger.exception(f"💥 ({name}) Fatal error", error=str(e)[:100])
         raise

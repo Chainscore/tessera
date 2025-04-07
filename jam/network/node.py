@@ -60,7 +60,7 @@ class Node:
         return configuration
     
     async def run_server(self):
-        session_ticket_store = SessionTicketStore(self.name)
+        session_ticket_store = SessionTicketStore(self.port)
 
         logger.info(f"🚀 ({self.name}) Listening on {self.host}:{self.port}")
 
@@ -76,13 +76,13 @@ class Node:
         self.server = server
 
     async def connect_peer(self, peer: Peer):
-        session_ticket_store = SessionTicketStore(self.name)
+        session_ticket_store = SessionTicketStore(self.port)
 
         # while True:
         try:
             # Skip self
             if peer.host == self.host and peer.port == self.port:
-                logger.info(f"⚠️ Skipping self ({self.host}:{self.port})")
+                logger.info(f"⚠️ ({self.name}) Skipping self ({self.host}:{self.port})")
                 return
             
             logger.info(f"🔹 ({self.name}) Creating new connection to {peer.host}:{peer.port} via QUIC...")
@@ -95,9 +95,8 @@ class Node:
                     create_protocol=QuicClientProtocol,
                     session_ticket_handler=session_ticket_store.add,
             ) as client:
-                # client = client
                 self.connections.append(client)
-                logger.info(f"🤝 ({self.name}) Connection to {peer.host}:{peer.port} established ✅")
+                logger.info(f"{len(self.connections)} 🤝 ({self.name}) Connection to {peer.host}:{peer.port} established ✅")
                 stream_id = client._quic.get_next_available_stream_id()
                 client._quic.send_stream_data(stream_id, json.dumps({
                     "type": "ping",

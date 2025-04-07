@@ -2,10 +2,10 @@ import asyncio
 from typing import Dict, Optional
 
 from aioquic.asyncio import QuicConnectionProtocol
-from aioquic.quic.connection import logger
 from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted
 
 from jam.types.block import Block
+from jam.config.logging import logger
 
 
 # QUIC Server Protocol (Handles incoming connections)
@@ -20,7 +20,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
             logger.warning(f"❌ Server Connection terminated: {event.error_code}")
 
         elif isinstance(event, StreamDataReceived):
-            print(f"📩 Received data of size {len(event.data)} bytes {event}")
+            logger.info(f"📩 Received data of size {len(event.data)} end_stream: {event.end_stream} stream_id: {event.stream_id}")
             if event.stream_id not in self.stream_buffer:
                 self.stream_buffer[event.stream_id] = bytes(0)
             
@@ -30,6 +30,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     message = Block.decode_from(self.stream_buffer[event.stream_id])
                     print(f"📩 Received block: {message}")
                 except Exception as e:
+                    print(f"ERROR DECODING BLOCK: {e}")
                     message = self.stream_buffer[event.stream_id].decode()
                     print(f"📩 Received message: {message}")
 
@@ -44,9 +45,8 @@ class QuicClientProtocol(QuicConnectionProtocol):
     async def send_message(self, message: bytes) -> str:
         if self._close_pending:
             raise ConnectionError("Connection is closing")
-            
+
         stream_id = self._quic.get_next_available_stream_id()
-        print(f"📤 Sending message of size {len(message)} bytes: {message.hex()} (stream {stream_id})")
         self._quic.send_stream_data(stream_id, message, end_stream=True)
         self.transmit()
 
