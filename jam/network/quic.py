@@ -31,13 +31,13 @@ class QuicServerProtocol(QuicConnectionProtocol):
 
                     if prefix == PrefixType.UP0:
                         from jam.network.protocols import BlockAnnouncementProtocol
-                        announcement = BlockAnnouncementProtocol.intercept(buffer=buffer)
+                        announcement = BlockAnnouncementProtocol.intercept(buffer=buffer[1:])
 
                         logger.info(f"📩 Received block with parent: {announcement.header.parent}")
 
                     elif prefix == PrefixType.CE133:
                         from jam.network.protocols.CE_133 import WorkPackageSubmission
-                        data = WorkPackageSubmission.intercept(buffer=buffer)
+                        data = WorkPackageSubmission.intercept(buffer=buffer[1:])
 
                         logger.info(f"📩 Received work package : {data.work_package} with {data.core_index}")
                     else:

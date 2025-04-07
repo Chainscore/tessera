@@ -79,7 +79,7 @@ class Node:
         if self.is_builder:
             configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
         else:
-            configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}"]
+            configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}", f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
 
         return configuration
     

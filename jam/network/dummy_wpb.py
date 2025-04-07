@@ -11,6 +11,7 @@ from tests.fixtures.dummy_package import create_dummy_package
 from jam.report.guarantee_assignment import guarantor_assignment
 from .protocols.CE_133 import WorkPackageSubmission
 from jam.network.protocols.CE_133 import WorkPackageCore
+from ..types import Int
 
 
 async def wp_producer(node: Node, db: KVStore):
@@ -47,8 +48,8 @@ async def wp_producer(node: Node, db: KVStore):
 
         if node.is_builder:
             wp = create_dummy_package()
-            data = WorkPackageCore(wp, 0)
-            logger.info(f"⛏️ ({node.name}) Producing Work Package {wp.authorizer}")
+            data = WorkPackageCore(wp, Int(0))
+            logger.info(f"⛏️ ({node.name}) Producing Work Package { wp}")
             # TODO: Implement package transmission
             await C133.transmit(node,data)
         else:
