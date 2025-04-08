@@ -7,7 +7,18 @@ from jam.utils.constants import MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUN
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
 from math import floor
 
+from jam.types.protocol.core import SegmentRoot, WorkPackageHash
+from jam.types.base.dictionary import Dictionary, decodable_dictionary
+from jam.types.protocol.crypto import OpaqueHash
+
+@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
+class SegmentRootLookupDict(Dictionary[WorkPackageHash, SegmentRoot]):
+    """contains all unique work-package hashes and segment root"""
+    ...
+
 class WorkPackage:
+
+    segment_root_lookup_dict: SegmentRootLookupDict = {}
 
     @staticmethod
     def export_count (item : WorkItem):
@@ -43,3 +54,16 @@ class WorkPackage:
                 arr.append(0)
         return arr
 
+    def segment_root_lookup(self, r: OpaqueHash) -> SegmentRoot:
+        """
+        segment root lookup function collapses a union of segment-roots and work-package hashes into segment-roots using the dictionary
+        Args:
+            r: hash
+
+        Returns:
+            r if r is already a segment root else Segment root from dictionary if r is a work package hash.
+        """
+        if r in self.segment_root_lookup_dict:
+            return self.segment_root_lookup_dict[r]
+        else:
+            return r
