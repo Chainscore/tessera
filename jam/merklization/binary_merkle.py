@@ -159,6 +159,7 @@ class BMRFunctions:
         else:
             return self._node_fn(values, hash_fn)
 
+    @staticmethod
     def cd_merkle_fn(self,
                      values: Vector[ByteArray32],
                      hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
@@ -179,6 +180,7 @@ class BMRFunctions:
 
         return self._node_fn(self._preprocessor_fn(values, hash_fn), hash_fn)
 
+    @staticmethod
     def merkle_path_fn(self,
                        values: Vector[ByteArray32],
                        size: Int,
