@@ -239,7 +239,8 @@ class State(Sigma):
 
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
-        return self._merkle.merkelize(self.transform())
+        root_hash, tree_structure = self._merkle.merkelize(self.transform())
+        return root_hash
 
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
