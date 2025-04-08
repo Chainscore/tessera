@@ -142,7 +142,6 @@ class RequestDataShuffle(BaseModel):
 # Json to codec type format
 class InputDataCodec(BaseModel):
     file: Any
-    label: Optional[Any]
 
     # Example field for swagger docs
     model_config = {
@@ -164,25 +163,7 @@ class InputDataJson(BaseModel):
         description="Hex-encoded codec data to convert to JSON",
         example="020cffbf67aae50aeed3c6f8f0d9bf7d854ffd87cef8358cbbaa587a9e3bd1a7760100002d8ec7b235be3b3cbe9be3d5ff36f082942102d64a0dc5953709a95cca55b58b1af297f534d464264be77477b547f3c596b947edbca33f6631f1aa188d25a38b2398ce69c3585e1b1b574a5a7185a2a086350abd4606d15aace8b4610b494772010100dda7a577f150ee83afedc9d3b50a4f00fcf21248e6f73097abcc4bb634f854aedc53769838d294b09c0184fb0e66f09bae8cc243f842a6cc401488591e9ffdb1"
     )
-    label: str = Field(
-        ...,
-        description="Type label for conversion",
-        enum=[
-            "assurances_extrinsic",
-            "block",
-            "disputes_extrinsic",
-            "extrinsic",
-            "guarantees_extrinsic",
-            "header",
-            "preimages_extrinsic",
-            "refine_context",
-            "tickets_extrinsic",
-            "work_item",
-            "work_package",
-            "work_report",
-            "work_result"
-        ]
-    )
+    
 
     # class Config:
     #     schema_extra = {
@@ -222,7 +203,7 @@ async def list_all_types():
     return fetch_type()
 
 
-@app.post('/api/v1/types/type_id/json_to_codec/validate',
+@app.post('/api/v1/types/json_to_codec',
           status_code=status.HTTP_200_OK,
           tags=["Types"],
           summary="Convert JSON data to codec format",
@@ -234,7 +215,7 @@ async def list_all_types():
               422: {"description": "Validation error"}
           })
 async def json_to_codec(request_data: RequestDataCodec,
-        label_dropdown : str = Query("assurances_extrinsic", enum = [
+        type_id : str = Query("assurances_extrinsic", enum = [
         "assurances_extrinsic",
         "block",
         "disputes_extrinsic",
@@ -271,9 +252,8 @@ async def json_to_codec(request_data: RequestDataCodec,
     """
     try:
         json_file = request_data.input.file
-        label = request_data.input.label
-        if label_dropdown:
-            label = label_dropdown
+        label = type_id
+    
         if label == "assurances_extrinsic":
             assurance = AssurancesExtrinsic.from_json(json_file)
             return {"data": assurance.encode().hex(), "status": "Ok"}
@@ -330,7 +310,7 @@ async def json_to_codec(request_data: RequestDataCodec,
         raise HTTPException(status_code=400, detail=f"Conversion failed: {str(e)}")
 
 
-@app.post('/api/v1/types/type_id/codec_to_json/validate',
+@app.post('/api/v1/types/codec_to_json',
           status_code=status.HTTP_200_OK,
           tags=["Types"],
           summary="Convert codec data to JSON format",
@@ -341,7 +321,7 @@ async def json_to_codec(request_data: RequestDataCodec,
               400: {"description": "Invalid input data", "model": ErrorResponse},
               422: {"description": "Validation error"}
           })
-async def codec_to_json(request_data: RequestDataJson, label : str = Query("assurances_extrinsic", enum = [
+async def codec_to_json(request_data: RequestDataJson, type_id : str = Query("assurances_extrinsic", enum = [
         "assurances_extrinsic",
         "block",
         "disputes_extrinsic",
@@ -377,7 +357,7 @@ async def codec_to_json(request_data: RequestDataJson, label : str = Query("assu
     - work_result: Work result data structure
     """
     try:
-        label = request_data.input.label
+        label = type_id
         hex_string = request_data.input.file
 
         try:

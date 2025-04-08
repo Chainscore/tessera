@@ -14,8 +14,6 @@
                             "validator_index": 1,
                             "signature": "0xdda7a577f150ee83afedc9d3b50a4f00fcf21248e6f73097abcc4bb634f854aedc53769838d294b09c0184fb0e66f09bae8cc243f842a6cc401488591e9ffdb1"
                         }
-                    ],
-                    "label": "assurances_extrinsic"
-
+                    ]
             }
         ]
