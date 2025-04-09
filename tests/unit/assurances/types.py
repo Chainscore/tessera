@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import json
 import os
 from typing import List
+from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
@@ -37,9 +38,8 @@ class WorkOutputVector(Vector[WorkReport]):
 class OkOutput(Codable, JsonSerde):
     reported: WorkOutputVector
 
-@decodable_dataclass
-@dataclass
-class Output(Codable, JsonSerde):
+@decodable_choice
+class Output(Choice):
     err: AssurancesErrorCode
     ok: OkOutput
 
