@@ -17,11 +17,11 @@ from jam.state.utils.key_constructor import construct_state_key
 from jam.state.components.phi import AuthorizationQueue, AuthorizerHash, Phi
 from jam.state.components.beta import Beta
 from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaZ
-from jam.types.base.integers.fixed import U64, U32
+from jam.types.base.integers.fixed import U16, U64, U32, U8
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
+from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public, Hash
 from jam.types.protocol.crypto import OpaqueHash
 from jam.state.components.delta import (
@@ -32,10 +32,9 @@ from jam.state.components.delta import (
     PreImageLookup,
     Timestamps,
 )
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
-import json
 
 
 class State(Sigma):
@@ -253,7 +252,7 @@ class State(Sigma):
             bandersnatch=BandersnatchPublic(bytes(32)),
             ed25519=Ed25519Public(bytes(32)),
             bls=BlsPublic(bytes(144)),
-            metadata=ValidatorMetadata(bytes(128))
+            metadata=ValidatorMetadata(ValidatorName(""), IPAddress([U8(127), U8(0), U8(0), U8(1)]), U16(0))
         ) for _ in range(VALIDATOR_COUNT)]
 
         return State(
@@ -280,6 +279,7 @@ class State(Sigma):
         # Save the regular state data
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
+            
     @staticmethod
     def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
         data = {}

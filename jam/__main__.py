@@ -9,9 +9,10 @@ from jam.network.node import Node
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
 from jam.state.state import State
+from jam.types.base.integers.fixed import U16, U8
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName, ValidatorsData
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 async def main(name: str, genesis_path: str, db_path: str, port: int, start_genesis: bool, theme: str) -> None:
@@ -26,7 +27,7 @@ async def main(name: str, genesis_path: str, db_path: str, port: int, start_gene
     try:
         # Initialize components
         peerlist = json.load(open(genesis_path))["peers"]
-        peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
+        peers = [Peer(port=pr["metadata"]["port"], host=".".join([str(val) for val in pr["metadata"]["host"]]), san=pr["id"]) for pr in peerlist]
 
         # Load validator data from seeds
         my_keys = json.load(open("seeds/keys.json"))[str(port)]
@@ -35,30 +36,23 @@ async def main(name: str, genesis_path: str, db_path: str, port: int, start_gene
                         ).public_key()
 
         bandersnatch_public = BandersnatchPublic((BandersnatchPoint.generator_point() * int.from_bytes(bytes.fromhex(my_keys["bandersnatch_private"][2:]), 'little')).point_to_string().hex())
-        my_data = ValidatorData(bandersnatch_public, ed25519_public, BlsPublic(bytes(144)), ValidatorMetadata(bytes(128)))
+        my_data = ValidatorData(bandersnatch_public, ed25519_public, BlsPublic(bytes(144)), ValidatorMetadata(name=ValidatorName(name), host=IPAddress([U8(127), U8(0), U8(0), U8(1)]), port=U16(port)))
 
         tsr_node = Node(
             node_name=name, 
             node_id=port, 
-            host="0.0.0.0", 
+            host="127.0.0.1", 
             port=port, 
             peers=peers,
             validator_data=my_data
         )
         db = KVStore(db_path)
 
-        
-
         if start_genesis:
             # Start from genesis
-            genesis_vals = [ValidatorData(
-                bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
-                ed25519=Ed25519Public(pr["ed25519_public"]),
-                bls=BlsPublic(pr["bls_public"]),
-                metadata=ValidatorMetadata(bytes(128))
-            ) for pr in peerlist]
+            genesis_vals = ValidatorsData.from_json(peerlist)
 
-            state = State.genesis(genesis_vals, Safrole.arrange_fallback(ByteArray32(bytes(32)), genesis_vals))
+            state = State.genesis(genesis_vals.value, Safrole.arrange_fallback(ByteArray32(bytes(32)), genesis_vals))
             state.save(db)
 
             block_producer = BlockProducer(tsr_node, db)

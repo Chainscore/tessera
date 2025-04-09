@@ -3,6 +3,7 @@ from math import floor
 from time import time
 
 from jam.state.state import State
+from jam.types.block import Block
 from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD
 from jam.network.node import Node
 from jam.config.logging import logger
@@ -35,7 +36,6 @@ class BlockProducer:
         # Record genesis timestamp in seconds
         genesis_ts = time()
 
-        block_number = 0
         # TODO: If our validator is not in Kappa - skip block production till end of current epoch
         while True:
             if not self.node.is_initialized:
@@ -61,12 +61,12 @@ class BlockProducer:
             if state.gamma.s.get_key() == "keys":
                 author_key = state.gamma.s.get_value()[ts_epoch_index]
                 if author_key == self.node.validator_data.bandersnatch:
-                    block = create_dummy_block()
-                    logger.info(f"⛏️ ({self.node.name}) Producing Block {block_number}")
+                    block = await self._produce_block(state, current_timeslot)
+                    logger.info(f"⛏️ ({self.node.name}) Producing Block for TS {current_timeslot}")
                     for client in self.node.connections:
                         await client.send_message(block.encode())
                 else:
-                    logger.info(f"🔄 ({self.node.name}) Skipping Block {block_number}")
+                    logger.info(f"🔄 ({self.node.name}) Skipping Block for TS {current_timeslot}")
             else:
                 """Generate a header seal"""
                 # TODO: Implement once ring-proof are added
@@ -74,4 +74,9 @@ class BlockProducer:
 
             # Sleep for remaining time of the timeslot
             await asyncio.sleep(6 - (time() - genesis_ts) % SLOT_PERIOD)
-            block_number += 1
+
+    async def _produce_block(self, state: State, current_timeslot: int) -> Block:
+        """
+        Produce a block for the given timeslot
+        """
+        return create_dummy_block()

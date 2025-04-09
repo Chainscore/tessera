@@ -30,7 +30,7 @@ from jam.types import TicketBody, Array, Vector
 
 from jam.state.state import State
 from jam.types.base import Bytes
-from jam.types.base.integers.fixed import U32
+from jam.types.base.integers.fixed import U16, U32, U8
 from jam.types.base.integers.general import Int
 from jam.types.base.null import Nullable
 from jam.types.protocol.core import (
@@ -60,7 +60,7 @@ from jam.types.protocol.core import (
     ServiceId,
     WorkReportHash,
 )
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.types.protocol.validators import ValidatorData, ValidatorMetadata, ValidatorName, IPAddress
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import (
     CORE_COUNT,
@@ -103,7 +103,7 @@ def create_dummy_state_components() -> Dict[str, object]:
             bandersnatch=BandersnatchPublic(create_dummy_bytes32()),
             ed25519=Ed25519Public(create_dummy_bytes32()),
             bls=BlsPublic(create_dummy_bytes(144)),
-            metadata=ValidatorMetadata(create_dummy_bytes(128)),
+            metadata=ValidatorMetadata(name=ValidatorName(""), host=IPAddress([U8(127), U8(0), U8(0), U8(1)]), port=U16(0)),
         )
         for _ in range(VALIDATOR_COUNT)
     ]
