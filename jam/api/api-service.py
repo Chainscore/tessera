@@ -141,7 +141,7 @@ class RequestDataShuffle(BaseModel):
 
 # Json to codec type format
 class InputDataCodec(BaseModel):
-    file: Any
+    json_data: Any
 
     # Example field for swagger docs
     model_config = {
@@ -158,7 +158,7 @@ class RequestDataCodec(BaseModel):
 
 # Codec to JSON format
 class InputDataJson(BaseModel):
-    file: str = Field(
+    codec: str = Field(
         ...,
         description="Hex-encoded codec data to convert to JSON",
         example="020cffbf67aae50aeed3c6f8f0d9bf7d854ffd87cef8358cbbaa587a9e3bd1a7760100002d8ec7b235be3b3cbe9be3d5ff36f082942102d64a0dc5953709a95cca55b58b1af297f534d464264be77477b547f3c596b947edbca33f6631f1aa188d25a38b2398ce69c3585e1b1b574a5a7185a2a086350abd4606d15aace8b4610b494772010100dda7a577f150ee83afedc9d3b50a4f00fcf21248e6f73097abcc4bb634f854aedc53769838d294b09c0184fb0e66f09bae8cc243f842a6cc401488591e9ffdb1"
@@ -251,7 +251,7 @@ async def json_to_codec(request_data: RequestDataCodec,
     - work_result: Work result data structure
     """
     try:
-        json_file = request_data.input.file
+        json_file = request_data.input.json_data
         label = type_id
     
         if label == "assurances_extrinsic":
@@ -358,7 +358,7 @@ async def codec_to_json(request_data: RequestDataJson, type_id : str = Query("as
     """
     try:
         label = type_id
-        hex_string = request_data.input.file
+        hex_string = request_data.input.codec
 
         try:
             data = bytes.fromhex(hex_string)
@@ -436,8 +436,10 @@ async def safrole(request_data: RequestData):
     Compares the output of the Safrole transition function with the expected output state.
     """
     try:
+        print("Request data input:", request_data.input.block)
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
+
         entropy = getattr(request_data.input, 'entropy', None)
         if entropy is None:
             entropy = ByteArray32(bytes(32))
