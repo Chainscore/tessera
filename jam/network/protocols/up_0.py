@@ -1,38 +1,20 @@
-from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
-from jam.network.node import Node
 from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.network.protocols.types import Final, BlockAnnouncement
+from jam.state.state import State
 
-from jam.types import Block, Header
-from jam.types.protocol.core import TimeSlot
-from jam.types.protocol.crypto import HeaderHash
-
-from jam.utils.codec import Codable
-from jam.utils.json import JsonSerde
-from jam.utils.codec.decorators import decodable_dataclass
-
-
-@decodable_dataclass
-@dataclass
-class Final(Codable, JsonSerde):
-    block_hash: HeaderHash
-    time_slot: TimeSlot
-
-@decodable_dataclass
-@dataclass
-class BlockAnnouncement(Codable, JsonSerde):
-    header: Header
-    final: Final
-
+from jam.types import Block
 
 class BlockAnnouncementProtocol(NetworkProtocol):
+    from jam.network.node import Node
+
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.UP0
 
-    async def transmit(self, node: Node, data: Block):
+    def transmit(self, node: Node, data: Block):
         """
         UP 0 Protocol for announcing new blocks to peers.
         Args:
@@ -44,12 +26,14 @@ class BlockAnnouncementProtocol(NetworkProtocol):
         final = Final(block_hash=data.header.parent, time_slot=data.header.slot)
         announcement = BlockAnnouncement(header=data.header, final=final)
 
-        for client in node.connections:
-            # Handshake
-            # await client.send_message(bytes(self._prefix) + final.encode())
-
+        print("bla vla", node.peer_conn)
+        for conn in node.peer_conn:
             # Block Announcement
-            await client.send_message(self._prefix.encode() + announcement.encode())
+            print(f"check 342 {conn}, {node.peer_conn[conn]}")
+            stream_id, client = node.peer_conn[conn]
+            print("Stream id", stream_id)
+            message = self._prefix.encode() + announcement.encode()
+            client.stream_and_keep_open(stream_id=stream_id, message=message)
 
     @classmethod
     def intercept(cls, buffer: bytes) -> BlockAnnouncement:
@@ -66,3 +50,7 @@ class BlockAnnouncementProtocol(NetworkProtocol):
         logger.info(f"Received a new block with header {data.header}. Parent Block: {data.final.block_hash} in T.S {data.final.time_slot}")
 
         return data
+
+    @classmethod
+    def process(cls, state: State, data: BlockAnnouncement):
+        ...

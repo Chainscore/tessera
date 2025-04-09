@@ -3,50 +3,114 @@ from typing import Dict
 from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted
 from aioquic.quic.connection import logger
+from typing_extensions import Optional
+
+genesis_hash = "476243ad"
+protocol_version = "0"
 
 # QUIC Server Protocol (Handles incoming connections)
 class QuicServerProtocol(QuicConnectionProtocol):
     stream_buffer: Dict[int, bytes] = {}
 
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._close_pending = False
+
+    def stream_and_close(self, stream_id: int, message: bytes) -> int:
+        if self._close_pending:
+            raise ConnectionError("Connection is closing")
+
+        logger.info(f"📤 Sending message of size {len(message)} bytes: {message.hex()} (stream {stream_id})")
+        self._quic.send_stream_data(stream_id, message, end_stream=True)
+
+        return stream_id
+
+    def stream_and_keep_open(self, stream_id: int, message: bytes) -> int:
+        if self._close_pending:
+            raise ConnectionError("Connection is closing")
+
+        logger.info(f"📤 Sending message of size {len(message)} bytes: {message.hex()} (stream {stream_id})")
+        self._quic.send_stream_data(stream_id, message, end_stream=False)
+
+        return stream_id
+
     def quic_event_received(self, event: QuicEvent):
         if isinstance(event, HandshakeCompleted):
-            logger.info(f"🔗 Handshake completed with {self._quic.configuration.is_client}")
+            if event.alpn_protocol == f"jamnp-s/{protocol_version}/{genesis_hash}/builder":
+                print("Connected with a builder")
+            elif event.alpn_protocol == f"jamnp-s/{protocol_version}/{genesis_hash}":
+                print("Connected with a node")
+            else:
+                print("Unidentified Protocol")
+
+            logger.info(f"🔗 Handshake completed.")
 
         elif isinstance(event, ConnectionTerminated):
             logger.warning(f"❌ Server Connection terminated: {event.error_code}")
 
         elif isinstance(event, StreamDataReceived):
-            logger.info(f"📩 Received data of size {len(event.data)} bytes {event}")
+            from jam.network.protocols.base import PrefixType
+            from jam.network.protocols.ce_133 import WorkPackageSubmission
+
+            logger.info(f"📩 Received data of size {len(event.data)} bytes on stream {event.stream_id}")
+
             if event.stream_id not in self.stream_buffer:
                 self.stream_buffer[event.stream_id] = bytes(0)
 
             self.stream_buffer[event.stream_id] += event.data
+
+
             if event.end_stream:
                 try:
-                    from jam.network.protocols.base import PrefixType
 
                     buffer = self.stream_buffer[event.stream_id]
                     prefix, _ = PrefixType.decodeFrom(buffer[0:1])
-                    # event.
 
-                    if prefix == PrefixType.UP0:
-                        from jam.network.protocols import BlockAnnouncementProtocol
-                        announcement = BlockAnnouncementProtocol.intercept(buffer=buffer[1:])
-
-                        logger.info(f"📩 Received block with parent: {announcement.header.parent}")
-
-                    elif prefix == PrefixType.CE133:
-                        from jam.network.protocols.CE_133 import WorkPackageSubmission
+                    if prefix == PrefixType.CE133:
                         data = WorkPackageSubmission.intercept(buffer=buffer[1:])
 
-                        logger.info(f"📩 Received work package : {data.work_package} with {data.core_index}")
+                        WorkPackageSubmission.process(data)
+                        logger.info(f"📩 Received work package : {data.package_data.work_package} with CI {data.package_data.core_index}")
                     else:
                         logger.warning(f"📩 Received data: {buffer.decode()}")
 
                 except Exception as e:
-                    print("error", e)
+                    print("Error retrieving data from ce stream", e)
                     message = self.stream_buffer[event.stream_id].decode()
                     logger.warning(f"📩 Received message: {message}")
+            else:
+                try:
+                    buffer = event.data
+
+                    if not buffer:
+                        logger.warning("📩 Received empty buffer.")
+                        return
+
+                    try:
+                        prefix, _ = PrefixType.decodeFrom(buffer[0:1])
+                    except Exception:
+                        prefix = None
+
+                    print("Intercepting buffer prefix ", prefix)
+                    if prefix == PrefixType.UP0:
+                        from jam.network.protocols import BlockAnnouncementProtocol
+
+                        try:
+                            announcement = BlockAnnouncementProtocol.intercept(buffer=buffer[1:])
+                            logger.info(f"📩 Received block with parent: {announcement.header.parent}")
+                            self.stream_buffer[event.stream_id] = bytes(0)
+                        except Exception as ann_err:
+                            logger.warning(f"❌ Failed to parse block announcement: {ann_err}")
+                    else:
+                        try:
+                            message = buffer.decode()
+                        except Exception as decode_err:
+                            message = f"[Could not decode buffer: {decode_err}]"
+                        logger.warning(f"📩 Received data: {message}")
+
+                except Exception as e:
+                    logger.exception(f"Error retrieving data from up stream: {e}")
+
 
 # QUIC Client Protocol (Initiates connections to other nodes)
 class QuicClientProtocol(QuicConnectionProtocol):
@@ -54,14 +118,32 @@ class QuicClientProtocol(QuicConnectionProtocol):
         super().__init__(*args, **kwargs)
         self._close_pending = False
 
-    async def send_message(self, message: bytes):
+    def stream_and_close(self, message: bytes, stream_id: Optional[int] = None) -> int:
         if self._close_pending:
             raise ConnectionError("Connection is closing")
-            
-        stream_id = self._quic.get_next_available_stream_id()
+
+        if stream_id is None:
+            stream_id = self._quic.get_next_available_stream_id()
+
         logger.info(f"📤 Sending message of size {len(message)} bytes: {message.hex()} (stream {stream_id})")
         self._quic.send_stream_data(stream_id, message, end_stream=True)
-        self.transmit()
+
+        return stream_id
+
+    def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
+        if self._close_pending:
+            raise ConnectionError("Connection is closing")
+
+        if stream_id is None:
+            stream_id = self._quic.get_next_available_stream_id()
+
+        print("Stream id here", stream_id)
+
+        logger.info(f"📤 Sending message of size {len(message)} bytes: {message.hex()} (stream {stream_id})")
+        self._quic.send_stream_data(stream_id, message, end_stream=False)
+
+        return stream_id
+
 
     def quic_event_received(self, event: QuicEvent) -> None:
         if isinstance(event, HandshakeCompleted):
