@@ -13,6 +13,8 @@ from jam.merklization.binary_merkle import BMRFunctions
 from jam.types.protocol.core import SegmentRoot, WorkPackageHash
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.protocol.crypto import OpaqueHash
+from jam.hostCall.types import Segment
+from jam.types.work.report import ExecResults
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
 class SegmentRootLookupDict(Dictionary[WorkPackageHash, SegmentRoot]):
@@ -58,7 +60,7 @@ class WorkPackage:
         return arr
 
     @staticmethod
-    def _ext(w: WorkItem, d):
+    def _ext(w: WorkItem, d:ExecResults):
         result = []
         for item in d:
             first = blake2b(d)
@@ -67,7 +69,7 @@ class WorkPackage:
                 result.append(item)
         return result
 
-    def _imp_seg(self, w: WorkItem, segments):
+    def _imp_seg(self, w: WorkItem, segments: Segment):
         result = []
         for s in segments:
             for (r, n) in w.import_segments:
@@ -76,7 +78,7 @@ class WorkPackage:
                         result.append(s[n])
         return result
 
-    def _verify_imp(self, w: WorkItem, segments):
+    def _verify_imp(self, w: WorkItem, segments: Segment):
         result = []
         for s in segments:
             for (r, n) in w.import_segments:

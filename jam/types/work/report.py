@@ -29,6 +29,10 @@ class WorkExecResult(Choice):
     bad_code: Nullable
     code_oversize: Nullable
 
+@decodable_vector(element_type=WorkExecResult)
+class ExecResults(Vector[WorkExecResult]):
+    ...
+
 
 @decodable_dataclass
 @dataclass
