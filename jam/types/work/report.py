@@ -8,6 +8,16 @@ from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.null import Nullable
 from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
+from jam.types.protocol.core import (
+    CoreIndex,
+    ErasureRoot,
+    ExportsRoot,
+    Gas,
+    ServiceId,
+    WorkPackageHash,
+)
+from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
+from jam.types.work.refine_context import RefineContext
 from jam.types.base.sequences.array import decodable_array, Array
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ErasureRoot, ExportsRoot, WorkPackageHash
@@ -29,6 +39,16 @@ class WorkExecResult(Choice):
     bad_code: Nullable
     code_oversize: Nullable
 
+@decodable_dataclass
+@dataclass
+class RefineLoad(Codable, JsonSerde):
+    """Refine load structure."""
+
+    gas_used: Gas
+    imports: U16
+    exports: U16
+    extrinsic_count: U16
+    extrinsic_size: U32
 @decodable_vector(element_type=WorkExecResult)
 class ExecResults(Vector[WorkExecResult]):
     ...
@@ -56,16 +76,6 @@ class WorkPackageSpec(Codable, JsonSerde):
     erasure_root: ErasureRoot
     exports_root: ExportsRoot
     exports_count: U16
-
-
-@decodable_array(4104, Bytes)
-class Segment(Array[Bytes]):
-    ...
-
-
-@decodable_vector(Segment)
-class SegmentVector(Vector[Segment]):
-    ...
 
 
 @decodable_dataclass
@@ -99,3 +109,20 @@ class WorkReport(Codable, JsonSerde):
     auth_output: Bytes
     segment_root_lookup: SegmentRootLookup
     results: WorkResults
+    auth_gas_used: Gas
+
+
+@decodable_vector(element_type=WorkReportHash, allow_duplicates=False)
+class WorkDependencies(Vector[WorkReportHash]):
+    """Set of dependencies hashes"""
+
+    ...
+
+
+@decodable_vector(element_type=WorkReport)
+class WorkReports(Vector[WorkReport]):
+    """Vector of Work Reports"""
+
+    ...
+
+

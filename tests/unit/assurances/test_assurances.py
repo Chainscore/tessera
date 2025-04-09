@@ -31,13 +31,14 @@ def create_state_from_pre(pre_state: PreState) -> State:
     return state
 
 def vector_transition(vector: Testcase) -> Boolean:
+
     test_state = create_state_from_pre(vector.pre_state)
     test_block = create_block_from_input(vector.input)
     try:
-        output = Assurances.transition(test_state, test_block)
+        output, available_wrs = Assurances.transition(test_state, test_block)
         assert output == create_state_from_pre(vector.post_state)
     except AssurancesError as e:
-        assert e.code == vector.output.err
+        assert e.code == vector.output.get_value()
     except Exception as e:
         print("Failed", e)
         assert False

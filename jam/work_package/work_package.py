@@ -1,8 +1,10 @@
+from anyio import sleep
 from sympy.physics.units import ha
 
 from jam.types import Bytes
 from jam.types.work.item import WorkItem, ExtrinsicSpec
 from jam.types.work.package import  WorkPackage
+from jam.types.work.report import WorkResult
 from jam.utils.constants import MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUNT
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
 from jam.types.work.report import WorkExecResult
@@ -15,13 +17,15 @@ from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.protocol.crypto import OpaqueHash
 from jam.hostCall.types import Segment
 from jam.types.work.report import ExecResults
+from jam.types.protocol.crypto import Hash
+
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
 class SegmentRootLookupDict(Dictionary[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
     ...
 
-class WorkPackage:
+class WorkPackage(WorkResult):
 
     segment_root_lookup_dict: SegmentRootLookupDict = {}
 
@@ -93,6 +97,8 @@ class WorkPackage:
         print("utils for wok result computation")
 
 
+
+
     def segment_root_lookup(self, r: OpaqueHash) -> SegmentRoot:
         """
         segment root lookup function collapses a union of segment-roots and work-package hashes into segment-roots using the dictionary
@@ -106,3 +112,21 @@ class WorkPackage:
             return self.segment_root_lookup_dict[r]
         else:
             return r
+
+
+    def item_to_result(self, item : WorkItem, result, gas):
+
+        extrinsic_size = None
+        for i in item.extrinsic:
+            extrinsic_size = extrinsic_size + i.len
+
+        self.service_id = item.service
+        self.code_hash = item.code_hash
+        self.payload_hash = Hash.blake2b(item.payload)
+        self.accumulate_gas = item.accumulate_gas_limit
+        self.result = result
+        self.refine_load.gas_used = gas
+        self.refine_load.imports = len(item.import_segments)
+        self.refine_load.exports = item.export_count
+        self.refine_load.extrinsic_count = len(item.extrinsic)
+        self.refine_load.extrinsic_size = extrinsic_size
