@@ -1,10 +1,10 @@
 from anyio import sleep
 from sympy.physics.units import ha
 
-from jam.types import Bytes
+from jam.types import Bytes, Byte
 from jam.types.work.item import WorkItem, ExtrinsicSpec
 from jam.types.work.package import  WorkPackage
-from jam.types.work.report import WorkResult
+from jam.types.work.report import WorkResult, RefineLoad, WorkResults
 from jam.utils.constants import MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUNT
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
 from jam.types.work.report import WorkExecResult
@@ -13,21 +13,28 @@ from jam.types.base.integers.fixed import U32
 from math import floor
 from jam.merklization.binary_merkle import BMRFunctions
 from jam.types.protocol.core import SegmentRoot, WorkPackageHash
-from jam.types.base.dictionary import Dictionary, decodable_dictionary
+from jam.types.base.dictionary import decodable_dictionary, Dict
 from jam.types.protocol.crypto import OpaqueHash
-from jam.hostCall.types import Segment
+from jam.hostCall.types import Segment, SegEle
 from jam.types.work.report import ExecResults
 from jam.types.protocol.crypto import Hash
+from jam.hostCall.Refine import PsiR
+from jam.hostCall.invocation import PsiI
+from jam.types import CoreIndex
+from jam.types.work.report import WorkReport, WorkPackageSpec
 
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
-class SegmentRootLookupDict(Dictionary[WorkPackageHash, SegmentRoot]):
+class SegmentRootLookupDict(Dict[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
     ...
 
 class WorkPackage(WorkResult):
-
     segment_root_lookup_dict: SegmentRootLookupDict = {}
+    segments: Segment
+    d: ExecResults
+    specs: WorkPackageSpec
+
 
     @staticmethod
     def export_count (item : WorkItem):
@@ -63,28 +70,28 @@ class WorkPackage(WorkResult):
                 arr.append(0)
         return arr
 
-    @staticmethod
-    def _ext(w: WorkItem, d:ExecResults):
+
+    def _ext(self, w: WorkItem, d:ExecResults):
         result = []
         for item in d:
-            first = blake2b(d)
+            first = blake2b(self.d)
             second = U32(len(d))
             if ExtrinsicSpec(hash=first, len=second) in w.extrinsic:
                 result.append(item)
         return result
 
-    def _imp_seg(self, w: WorkItem, segments: Segment):
+    def _imp_seg(self, w: WorkItem):
         result = []
-        for s in segments:
+        for s in self.segments:
             for (r, n) in w.import_segments:
                 merkle = BMRFunctions()
                 if WorkPackage.segment_root_lookup(self, r) == BMRFunctions.cd_merkle_fn(merkle,s):
                         result.append(s[n])
         return result
 
-    def _verify_imp(self, w: WorkItem, segments: Segment):
+    def _justify_imp(self, w: WorkItem):
         result = []
-        for s in segments:
+        for s in self.segments:
             for (r, n) in w.import_segments:
                 merkle = BMRFunctions()
                 if WorkPackage.segment_root_lookup(self, r) == BMRFunctions.cd_merkle_fn(merkle, s):
@@ -92,11 +99,51 @@ class WorkPackage(WorkResult):
         return result
 
 
-    @staticmethod
-    def wr_i(p:WorkPackage, j:int):
-        print("utils for wok result computation")
+    def wr_gen(self, p:WorkPackage, c: CoreIndex):
+        """
+        work result computation function
+        Args:
+            work package , core_index
+        Return :
+            Work Report
+        """
+        o, g = PsiI(p, int(c)).process()
+        lookup_keys = []
+        for item in p.items:
+            for (h, n) in item.import_segments:
+                if len(lookup_keys) <= 8:
+                    lookup_keys.append(h)
+        self.segment_root_lookup_dict = SegmentRootLookupDict({key: None for key in lookup_keys})
+        def utils_i(j: int):
+            w = p.items[int(j)]
+            l = 0
+            k = int(j)
+            for i in range(k):
+                l += p.items[i].extrinsic
+            r, e, u = PsiR(int(c), p, o, WorkPackage._imp_seg(self, w), l)
+            # h = blake2b(p)
+            seg_ele = SegEle([Byte(0)] * 4104)
+            segment_length = w.extrinsic
+            zero_segment = Segment([seg_ele for _ in range(segment_length)])
+            if len(e) == w.extrinsic:
+                return r, u, e
+            elif not isinstance(r, Bytes):
+                return r, u, zero_segment
+            else:
+                return WorkExecResult(bad_exports=None), u,zero_segment
 
+        r_list = []
+        e_list = []
+        for _j in range(len(p.items)):
+            _r, _u, _e = utils_i(_j)
+            comp = WorkPackage.item_to_result(p.items[_j], _r, _u)
+            r_list.append(comp)
+            e_list.append(_e)
 
+        if not isinstance(o, Bytes):
+            return None
+        else:
+            return WorkReport(package_spec=self.specs, context=p.context, core_index=c, authorizer_hash=p.code_hash, auth_output=o, segment_root_lookup=self.segment_root_lookup_dict, results=WorkResults(r_list), auth_gas_used=g)
 
 
     def segment_root_lookup(self, r: OpaqueHash) -> SegmentRoot:
@@ -113,20 +160,14 @@ class WorkPackage(WorkResult):
         else:
             return r
 
-
-    def item_to_result(self, item : WorkItem, result, gas):
-
+    @staticmethod
+    def item_to_result(item : WorkItem, result, gas):
         extrinsic_size = None
         for i in item.extrinsic:
             extrinsic_size = extrinsic_size + i.len
 
-        self.service_id = item.service
-        self.code_hash = item.code_hash
-        self.payload_hash = Hash.blake2b(item.payload)
-        self.accumulate_gas = item.accumulate_gas_limit
-        self.result = result
-        self.refine_load.gas_used = gas
-        self.refine_load.imports = len(item.import_segments)
-        self.refine_load.exports = item.export_count
-        self.refine_load.extrinsic_count = len(item.extrinsic)
-        self.refine_load.extrinsic_size = extrinsic_size
+        refine_load = RefineLoad(gas_used=gas, imports=len(item.import_segments), exports=item.export_count,
+                                 extrinsic_count=len(item.extrinsic), extrinsic_size=extrinsic_size)
+
+        return WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=Hash.blake2b(item.payload),
+                          accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)

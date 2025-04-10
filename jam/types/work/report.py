@@ -27,6 +27,7 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.core import ServiceId, Gas, CoreIndex
 from jam.types.work.refine_context import RefineContext
 from jam.utils.json.serde import JsonSerde
+from jam.work_package.work_package import SegmentRootLookupDict
 
 
 @decodable_choice
@@ -38,6 +39,7 @@ class WorkExecResult(Choice):
     panic: Nullable
     bad_code: Nullable
     code_oversize: Nullable
+    bad_exports: Nullable
 
 @decodable_dataclass
 @dataclass
@@ -107,7 +109,7 @@ class WorkReport(Codable, JsonSerde):
     core_index: CoreIndex
     authorizer_hash: OpaqueHash
     auth_output: Bytes
-    segment_root_lookup: SegmentRootLookup
+    segment_root_lookup: SegmentRootLookupDict
     results: WorkResults
     auth_gas_used: Gas
 
