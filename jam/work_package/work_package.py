@@ -30,15 +30,17 @@ from jam.types import CoreIndex
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
 class SegmentRootLookupDict(Dict[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
-   ...
+    ...
 
-class WorkPackage(WorkResult):
+class WorkPackageProcessing(WorkResult):
     segment_root_lookup_dict: SegmentRootLookupDict = {}
     segments: Segment
     d: ExecResults
     specs: WorkPackageSpec
 
-
+    def __init__(self):
+        super().__init__()
+        self.merkle = BMRFunctions()
 
     @staticmethod
     def export_count (item : WorkItem):
@@ -88,8 +90,8 @@ class WorkPackage(WorkResult):
         result = []
         for s in self.segments:
             for (r, n) in w.import_segments:
-                merkle = BMRFunctions()
-                if WorkPackage.segment_root_lookup(self, r) == BMRFunctions.cd_merkle_fn(merkle,s):
+                # merkle = BMRFunctions()
+                if WorkPackage.segment_root_lookup(self, r) == self.merkle.cd_merkle_fn(self.merkle,s):
                         result.append(s[n])
         return result
 
@@ -97,9 +99,9 @@ class WorkPackage(WorkResult):
         result = []
         for s in self.segments:
             for (r, n) in w.import_segments:
-                merkle = BMRFunctions()
-                if WorkPackage.segment_root_lookup(self, r) == BMRFunctions.cd_merkle_fn(merkle, s):
-                    result.append(BMRFunctions.merkle_path_fn(merkle, s, len(s), n))
+                # merkle = BMRFunctions()
+                if WorkPackage.segment_root_lookup(self, r) == self.merkle.cd_merkle_fn(self.merkle, s):
+                    result.append(self.merkle.merkle_path_fn(self.merkle, s, len(s), n))
         return result
 
 
