@@ -22,18 +22,22 @@ from jam.hostCall.Refine import PsiR
 from jam.hostCall.invocation import PsiI
 from jam.types import CoreIndex
 from jam.types.work.report import WorkReport, WorkPackageSpec
+from jam.hostCall.Refine import PsiR
+from jam.hostCall.invocation import PsiI
+from jam.types import CoreIndex
 
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
 class SegmentRootLookupDict(Dict[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
-    ...
+   ...
 
 class WorkPackage(WorkResult):
     segment_root_lookup_dict: SegmentRootLookupDict = {}
     segments: Segment
     d: ExecResults
     specs: WorkPackageSpec
+
 
 
     @staticmethod
