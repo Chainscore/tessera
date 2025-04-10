@@ -19,6 +19,7 @@ class StateMerkle:
     def __init__(self, hash_function: Hash = Hash.blake2b):
         """Initialize state merkle with an optional hash function."""
         self.trie = MerkleTrie(hash_function)
+        print("StateMerkle initialized")
 
     def bits(self, key: ByteArray32) -> List[Bit]:
         """

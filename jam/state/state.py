@@ -276,7 +276,7 @@ class State(Sigma):
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
     
-    def save(self, db: KVStore):
+    def save(self, db: KVStore,keys:list[ByteArray32]=None):
         data = self.transform()
         if db.get(b"general_root:") is None:
             general_root=self.generate_root()
