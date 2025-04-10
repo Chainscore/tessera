@@ -13,19 +13,20 @@ from jam.hostCall.invocation import PsiM
 
 
 class PsiR:
+
+    delta: Delta
     def __init__(self,
                  i: int,
                  p: WorkPackage,
                  o: Bytes,
                  i_segment: Segment,
                  e_offset: int,
-                 services: Delta):
+                ):
         self.pc = i
         self.work_package = p
         self.authorizer = o
         self.import_segment = i_segment
         self.offset = e_offset
-        self.delta = services
         self.f_function = self.refine_f()
 
     def refine_f(self):
