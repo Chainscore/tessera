@@ -2,10 +2,19 @@ import asyncio
 import pytest
 from jam.__main__ import main
 
+clients = [
+    ("Alice", 30333),
+    ("Bob", 30334),
+    ("Charlie", 30335),
+    ("Dave", 30336),
+    ("Eve", 30337),
+    ("Frank", 30338),
+]
+
 @pytest.mark.asyncio
 async def test_connection():
-    client1 = asyncio.create_task(main(name="Alice", genesis_path="genesis.json", db_path="db/30333", port=30333, start_genesis=True, theme="polkadot"))
-    client2 = asyncio.create_task(main(name="Bob", genesis_path="genesis.json", db_path="db/30334", port=30334, start_genesis=True, theme="matrix"))
+    tasks = []
+    for client in clients:
+        tasks.append(main(name=client[0], genesis_path="genesis.json", db_path=f"db/{client[1]}", port=client[1], start_genesis=True, theme="matrix"))
 
-    await client1
-    await client2
+    await asyncio.gather(*tasks)

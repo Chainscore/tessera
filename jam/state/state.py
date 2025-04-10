@@ -290,29 +290,25 @@ class State(Sigma):
             db.put(bytes(key), bytes(value))
             
     @staticmethod
-    def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
+    def load(db: KVStore, keys: list[ByteArray32] = []) -> "State":
         data = {}
         service_ids:set[ServiceId]=set()
         
-        if keys is None:
-            for key, value in db.get_all().items():
-                data[key] = Bytes(value)
-        else:
-            for i in range(1,16):
-                state_key=construct_state_key(i)
-                # print(type(state_key))
-                data[state_key] = Bytes(db.get(bytes(state_key)))
-            for key in keys:
-                if int.from_bytes(
+        for i in range(1,16):
+            state_key=construct_state_key(i)
+            # print(type(state_key))
+            data[state_key] = Bytes(db.get(bytes(state_key)))
+        for key in keys:
+            if int.from_bytes(
+                bytes(Bytes([key[0], key[2], key[4], key[6]]))
+            ) not in service_ids:
+                service_ids.add(ServiceId(int.from_bytes(
                     bytes(Bytes([key[0], key[2], key[4], key[6]]))
-                ) not in service_ids:
-                    service_ids.add(ServiceId(int.from_bytes(
-                        bytes(Bytes([key[0], key[2], key[4], key[6]]))
-                    )))
-                data[key] = Bytes(db.get(bytes(key)))
-            for service_id in service_ids:
-                service_key=construct_state_key((255,service_id))
-                data[service_key]=Bytes(db.get(bytes(service_key)))
+                )))
+            data[key] = Bytes(db.get(bytes(key)))
+        for service_id in service_ids:
+            service_key=construct_state_key((255,service_id))
+            data[service_key]=Bytes(db.get(bytes(service_key)))
                 
         state = State.detransform(data)
 

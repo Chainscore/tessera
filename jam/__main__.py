@@ -11,7 +11,9 @@ from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
 from jam.state.state import State
 from jam.types.base.integers.fixed import U16, U8
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
-from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
+from jam.types.block import Block
+from jam.types.header import Header
+from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic 
 from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName, ValidatorsData
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -26,7 +28,8 @@ async def main(name: str, genesis_path: str, db_path: str, port: int, start_gene
     )
     try:
         # Initialize components
-        peerlist = json.load(open(genesis_path))["peers"]
+        genesis = json.load(open(genesis_path))
+        peerlist = genesis["peers"]
         peers = [Peer(port=pr["metadata"]["port"], host=".".join([str(val) for val in pr["metadata"]["host"]]), san=pr["id"]) for pr in peerlist]
 
         # Load validator data from seeds
@@ -52,6 +55,10 @@ async def main(name: str, genesis_path: str, db_path: str, port: int, start_gene
             # Start from genesis
             genesis_vals = ValidatorsData.from_json(peerlist)
 
+            block = Block.from_random(0)
+            block.header = Header.from_json(genesis["header"])
+            block.save(db)
+            
             state = State.genesis(genesis_vals.value, Safrole.arrange_fallback(ByteArray32(bytes(32)), genesis_vals))
             state.save(db)
 

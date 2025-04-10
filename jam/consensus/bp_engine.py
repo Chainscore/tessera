@@ -1,5 +1,5 @@
 import asyncio
-from math import floor
+import math
 from time import time
 
 from jam.consensus.safrole.safrole import Safrole
@@ -16,12 +16,13 @@ from jam.types.extrinsics import (
 )
 from jam.types.extrinsics.disputes import Culprits, Faults, Verdicts
 from jam.types.header import Header
-from jam.types.protocol.core import ValidatorIndex
+from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.crypto import BandersnatchVrfSignature, Hash, OpaqueHash
 from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD
 from jam.network.node import Node
 from jam.config.logging import logger
 from jam.db.kv import KVStore
+from tests.fixtures.utils import create_dummy_bytes
 
 class BlockProducer:
     """
@@ -61,10 +62,10 @@ class BlockProducer:
 
             # Get state from db
             state = State.load(self.db)
-            current_timeslot = floor((time() - genesis_ts) / SLOT_PERIOD)
+            current_timeslot = math.ceil((time() - genesis_ts) / SLOT_PERIOD)
 
             # Get current timeslot
-            ts_epoch_index = floor(current_timeslot % EPOCH_LENGTH)
+            ts_epoch_index = math.floor(current_timeslot % EPOCH_LENGTH)
 
             logger.info(
                 f"🔄 ({self.node.name}) We're in epoch slot {ts_epoch_index} and {state.gamma.s.get_key()} mode"
@@ -75,7 +76,8 @@ class BlockProducer:
                 author_key = state.gamma.s.get_value()[ts_epoch_index]
                 if author_key == self.node.validator_data.bandersnatch:
                     block = await self._produce_block(state, current_timeslot)
-                    logger.info(f"⛏️ ({self.node.name}) Producing Block for TS {current_timeslot}")
+                    logger.info(f"⛏️ ({self.node.name}) Producing Block for slot: {current_timeslot}")
+                    print("Block: ", block)
                     for client in self.node.connections:
                         await client.send_message(block.encode())
                 else:
@@ -102,16 +104,16 @@ class BlockProducer:
         )
         return Block(
             header=Header(
-                parent=Hash.blake2b(Header.load_parent(current_timeslot).encode()),
+                parent=Hash.blake2b(Block.load_parent(TimeSlot(current_timeslot), self.db).header.encode()),
                 parent_state_root=state.generate_root(),
                 extrinsic_hash=self.hash_extrinsic(extrinsic),
-                slot=U64(current_timeslot),
+                slot=TimeSlot(current_timeslot),
                 epoch_mark=Safrole.get_epoch_marker(state, current_timeslot),
                 tickets_mark=Safrole.get_tickets_marker(state, current_timeslot),
                 offenders_mark=Disputes.get_offenders_mark(extrinsic.disputes),
                 author_index=self.get_author_index(state),
-                entropy_source=BandersnatchVrfSignature(bytes(96)),
-                seal=BandersnatchVrfSignature(bytes(96))
+                entropy_source=BandersnatchVrfSignature(create_dummy_bytes(96)),
+                seal=BandersnatchVrfSignature(create_dummy_bytes(96))
             ),
             extrinsic=extrinsic
         )
