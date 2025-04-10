@@ -10,12 +10,6 @@ from jam.types.protocol.crypto import BandersnatchPublic, Ed25519Public, BlsPubl
 from jam.utils.constants import VALIDATOR_COUNT
 from jam.utils.json.serde import JsonSerde
 
-
-@decodable_array(length=VALIDATOR_COUNT, element_type=BandersnatchPublic)
-class ValidatorArray(Array[BandersnatchPublic]):
-    ...
-
-
 @decodable_array(length=4, element_type=U8)
 class IPAddress(Array): ...
 

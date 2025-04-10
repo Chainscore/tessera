@@ -11,6 +11,8 @@ from jam.state.state import State
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
 from jam.types.block import Block
+from jam.types.extrinsics.disputes import DisputesExtrinsic
+from jam.types.header import OffendersMark
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import (
     EPOCH_LENGTH,
@@ -252,3 +254,15 @@ class Disputes:
             if i not in new_state.psi.offenders:
                 new_state.psi.offenders.append(i)
         return new_state
+    
+    @staticmethod
+    def get_offenders_mark(disputes: DisputesExtrinsic) -> OffendersMark:
+        """
+        Returns the offenders mark for all new disputes reported. Get all the keys of culprits and faults
+        and return the offenders mark.
+        https://graypaper.fluffylabs.dev/#/68eaa1f/131c00131c00?v=0.6.4
+        """
+        c_keys = [culprit.key for culprit in disputes.culprits]
+        f_keys = [fault.key for fault in disputes.faults]
+        offenders = list(set(c_keys + f_keys))
+        return OffendersMark(offenders)

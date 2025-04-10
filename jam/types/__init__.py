@@ -139,7 +139,6 @@ from jam.types.protocol.validators import (
     ValidatorMetadata,
     ValidatorData,
     ValidatorsData,
-    ValidatorArray,
 )
 
 __all__ = [
@@ -251,5 +250,4 @@ __all__ = [
     "ValidatorMetadata",
     "ValidatorData",
     "ValidatorsData",
-    "ValidatorArray",
 ]

@@ -21,6 +21,7 @@ from jam.types.base.integers.fixed import U16, U64, U32, U8
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.block import Block
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public, Hash
 from jam.types.protocol.crypto import OpaqueHash
@@ -35,7 +36,15 @@ from jam.state.components.delta import (
 from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
-
+# from jam.accumulation.accumulation import Accumulation
+# from jam.report.state import Reporting
+# from jam.authorization.authorization import Authorization
+# from jam.recent_history.recent_history import RecentHistory
+from jam.consensus.safrole.safrole import Safrole
+# from jam.assurances.assurances import Assurances
+# from jam.disputes.disputes import Disputes
+# from jam.preimages.preimages import Preimages
+# from jam.statistics.statistics import Statistics
 
 class State(Sigma):
     """
@@ -308,7 +317,45 @@ class State(Sigma):
         state = State.detransform(data)
 
         return state
-    
+
+    def transition(self, block: Block) -> "State":
+        """
+        Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
+
+        Args:
+            pre_state: Current state
+            block: Incoming block
+
+        Returns:
+            State: The transitioned state
+        """
+
+        #TODO: Validate block headers
+        # Epoch markers - make sure eta0_1 are the same as current etas
+        # Tickets mark - make sure tickets are valid, present in gamma_a and outside in sequenced
+        # Offenders mark - make sure offenders are present in psi.offenders
+
+        # 1. Safrole
+        entropy = ByteArray32(bytes(32)) 
+        sigma = Safrole.transition(self, block, entropy)
+        # # 2. Disputes
+        # disputes_state = Disputes.transition(safrole_state, block)
+        # # 3. Assurances
+        # assurance_state = Assurances.transition(disputes_state, block)
+        # # 4. Reporting
+        # reporting_state = Reporting.transition(assurance_state, block)
+        # # 5. Accumulation
+        # accumulation_state = Accumulation.transition(reporting_state, block)
+        # # 6. Authorization
+        # authorization_state = Authorization.transition(accumulation_state, block)
+        # # 7. Recent History
+        # recent_block_history_state = RecentHistory.transition(authorization_state, block, ByteArray32([0] * 32))
+        # # 8. Preimages
+        # preimage_state = Preimages.transition(recent_block_history_state, block)
+        # # 9. Statistics
+        # statistics_state = Statistics.transition(preimage_state, block)
+
+        return sigma
 
 
-        
+

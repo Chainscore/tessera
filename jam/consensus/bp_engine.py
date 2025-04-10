@@ -2,13 +2,26 @@ import asyncio
 from math import floor
 from time import time
 
+from jam.consensus.safrole.safrole import Safrole
+from jam.disputes.disputes import Disputes
 from jam.state.state import State
-from jam.types.block import Block
+from jam.types.base.integers.fixed import U64
+from jam.types.block import Block, Extrinsic
+from jam.types.extrinsics import (
+    TicketsExtrinsic,
+    PreimagesExtrinsic,
+    GuaranteesExtrinsic,
+    AssurancesExtrinsic,
+    DisputesExtrinsic,
+)
+from jam.types.extrinsics.disputes import Culprits, Faults, Verdicts
+from jam.types.header import Header
+from jam.types.protocol.core import ValidatorIndex
+from jam.types.protocol.crypto import BandersnatchVrfSignature, Hash, OpaqueHash
 from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD
 from jam.network.node import Node
 from jam.config.logging import logger
 from jam.db.kv import KVStore
-from tests.fixtures.dummy_block import create_dummy_block
 
 class BlockProducer:
     """
@@ -48,7 +61,7 @@ class BlockProducer:
 
             # Get state from db
             state = State.load(self.db)
-            current_timeslot = (time() - genesis_ts) // SLOT_PERIOD
+            current_timeslot = floor((time() - genesis_ts) / SLOT_PERIOD)
 
             # Get current timeslot
             ts_epoch_index = floor(current_timeslot % EPOCH_LENGTH)
@@ -70,6 +83,7 @@ class BlockProducer:
             else:
                 """Generate a header seal"""
                 # TODO: Implement once ring-proof are added
+                raise NotImplementedError("Only fallback mode is supported for now")
                 ...
 
             # Sleep for remaining time of the timeslot
@@ -79,4 +93,47 @@ class BlockProducer:
         """
         Produce a block for the given timeslot
         """
-        return create_dummy_block()
+        extrinsic = Extrinsic(
+            TicketsExtrinsic([]),
+            PreimagesExtrinsic([]),
+            GuaranteesExtrinsic([]),
+            AssurancesExtrinsic([]),
+            DisputesExtrinsic(culprits=Culprits([]), faults=Faults([]), verdicts=Verdicts([]))
+        )
+        return Block(
+            header=Header(
+                parent=Hash.blake2b(Header.load_parent(current_timeslot).encode()),
+                parent_state_root=state.generate_root(),
+                extrinsic_hash=self.hash_extrinsic(extrinsic),
+                slot=U64(current_timeslot),
+                epoch_mark=Safrole.get_epoch_marker(state, current_timeslot),
+                tickets_mark=Safrole.get_tickets_marker(state, current_timeslot),
+                offenders_mark=Disputes.get_offenders_mark(extrinsic.disputes),
+                author_index=self.get_author_index(state),
+                entropy_source=BandersnatchVrfSignature(bytes(96)),
+                seal=BandersnatchVrfSignature(bytes(96))
+            ),
+            extrinsic=extrinsic
+        )
+    
+    def get_author_index(self, state: State) -> ValidatorIndex:
+        """
+        Get block producer's author index from the state
+        """
+        for i, validator in enumerate(state.kappa):
+            if validator.bandersnatch == self.node.validator_data.bandersnatch:
+                return ValidatorIndex(i)
+        raise ValueError("Author not found in the state")
+    
+    def hash_extrinsic(self, extrinsic: Extrinsic) -> OpaqueHash:
+        all_ext = [
+            extrinsic.tickets,
+            extrinsic.preimages,
+            extrinsic.guarantees,
+            extrinsic.assurances,
+            extrinsic.disputes
+        ]
+        enc_ext = b''
+        for ext in all_ext:
+            enc_ext += bytes(Hash.blake2b(ext.encode()))
+        return Hash.blake2b(enc_ext)
