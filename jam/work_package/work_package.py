@@ -167,11 +167,12 @@ class WorkPackageProcessing(WorkResult):
             comp = WorkPackageProcessing.item_to_result(p.items[_j], _r, _u)
             r_list.append(comp)
             e_list.append(_e)
-
+        temp = p.code_hash + p.params
+        p_a = blake2b(temp)
         if not isinstance(o, Bytes):
             return None
         else:
-            return WorkReport(package_spec=self.specs, context=p.context, core_index=c, authorizer_hash=p.code_hash, auth_output=o, segment_root_lookup=self.segment_root_lookup_dict, results=WorkResults(r_list), auth_gas_used=g)
+            return WorkReport(package_spec=self.specs, context=p.context, core_index=c, authorizer_hash=p_a, auth_output=o, segment_root_lookup=self.segment_root_lookup_dict, results=WorkResults(r_list), auth_gas_used=g)
 
 
     def segment_root_lookup(self, r: OpaqueHash) -> SegmentRoot:
