@@ -26,12 +26,9 @@ class BlockAnnouncementProtocol(NetworkProtocol):
         final = Final(block_hash=data.header.parent, time_slot=data.header.slot)
         announcement = BlockAnnouncement(header=data.header, final=final)
 
-        print("bla vla", node.peer_conn)
         for conn in node.peer_conn:
             # Block Announcement
-            print(f"check 342 {conn}, {node.peer_conn[conn]}")
             stream_id, client = node.peer_conn[conn]
-            print("Stream id", stream_id)
             message = self._prefix.encode() + announcement.encode()
             client.stream_and_keep_open(stream_id=stream_id, message=message)
 
@@ -52,5 +49,5 @@ class BlockAnnouncementProtocol(NetworkProtocol):
         return data
 
     @classmethod
-    def process(cls, state: State, data: BlockAnnouncement):
-        ...
+    def process(cls, data: BlockAnnouncement):
+        print("Processing new block.")

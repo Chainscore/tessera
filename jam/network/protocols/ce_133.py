@@ -19,7 +19,7 @@ class WorkPackageCore(Codable, JsonSerde):
 @dataclass
 class CE133Data(Codable, JsonSerde):
     package_data: WorkPackageCore
-    extrinsics: Array[WorkPackage]
+    extrinsics: Int
 
 
 class WorkPackageSubmission(NetworkProtocol):
@@ -35,7 +35,7 @@ class WorkPackageSubmission(NetworkProtocol):
             message = self._prefix.encode() + data.package_data.encode()
             stream_id = client.stream_and_keep_open(message=message)
 
-            message = self._prefix.encode() + data.extrinsics.encode()
+            message = data.extrinsics.encode()
             client.stream_and_close(message=message, stream_id=stream_id)
 
     @classmethod
@@ -47,9 +47,9 @@ class WorkPackageSubmission(NetworkProtocol):
         # return data.package_data, data.extrinsics
 
     @classmethod
-    def process(cls, state: State, data: CE133Data):
-        # do anything
-        ...
+    def process(cls, data: CE133Data):
+        print("Processing work package")
+
 
     # @classmethod
     # def intercept_ext(cls, buffer: bytes) -> Tuple[WorkPackage, Array[WorkPackage]]:

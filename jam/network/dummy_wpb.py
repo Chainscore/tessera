@@ -50,7 +50,7 @@ async def wp_producer(node: Node, db: KVStore):
             wp = create_dummy_package()
             wc = WorkPackageCore(wp, Int(0))
 
-            data = CE133Data(package_data=wc, extrinsics=Array([]))
+            data = CE133Data(package_data=wc, extrinsics=Int(341))
             logger.info(f"⛏️ ({node.name}) Producing Work Package { wp}")
             # TODO: Implement package transmission
 

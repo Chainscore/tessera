@@ -71,15 +71,15 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     if prefix == PrefixType.CE133:
                         data = WorkPackageSubmission.intercept(buffer=buffer[1:])
 
-                        WorkPackageSubmission.process(data)
+                        WorkPackageSubmission.process(data=data)
                         logger.info(f"📩 Received work package : {data.package_data.work_package} with CI {data.package_data.core_index}")
                     else:
                         logger.warning(f"📩 Received data: {buffer.decode()}")
 
                 except Exception as e:
-                    print("Error retrieving data from ce stream", e)
-                    message = self.stream_buffer[event.stream_id].decode()
-                    logger.warning(f"📩 Received message: {message}")
+                    logger.exception(f"Error retrieving data from ce stream: {e}")
+                    # message = self.stream_buffer[event.stream_id].decode()
+                    # logger.warning(f"📩 Received message: {message}")
             else:
                 try:
                     buffer = event.data
@@ -102,12 +102,6 @@ class QuicServerProtocol(QuicConnectionProtocol):
                             self.stream_buffer[event.stream_id] = bytes(0)
                         except Exception as ann_err:
                             logger.warning(f"❌ Failed to parse block announcement: {ann_err}")
-                    else:
-                        try:
-                            message = buffer.decode()
-                        except Exception as decode_err:
-                            message = f"[Could not decode buffer: {decode_err}]"
-                        logger.warning(f"📩 Received data: {message}")
 
                 except Exception as e:
                     logger.exception(f"Error retrieving data from up stream: {e}")

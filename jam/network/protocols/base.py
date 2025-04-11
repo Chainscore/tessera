@@ -53,7 +53,7 @@ class NetworkProtocol(ABC):
 
     @classmethod
     @abstractmethod
-    def process(cls, state: State, data: Any):
+    def process(cls, data: Any):
         """Function to process intercepted data. Must be implemented by subclasses."""
         ...
 
