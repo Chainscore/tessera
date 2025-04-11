@@ -142,6 +142,8 @@ class QuicClientProtocol(QuicConnectionProtocol):
         logger.info(f"📤 Sending message of size {len(message)} bytes: {message.hex()} (stream {stream_id})")
         self._quic.send_stream_data(stream_id, message, end_stream=False)
 
+        self.transmit()
+
         return stream_id
 
 
