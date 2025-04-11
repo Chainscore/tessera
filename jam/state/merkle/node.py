@@ -3,8 +3,8 @@ from jam.types.base.bit import Bit
 from jam.types.protocol.crypto import Hash
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64, Bytes
 from jam.types.base import Byte
-
-
+from jam.utils.byte_utils import ByteUtils
+from typing import Literal
 class Node:
     """Node encoding for Merkle trees as defined in D.2.1
 
@@ -18,6 +18,8 @@ class Node:
     def __init__(self, hash_function: Optional[Hash] = None):
         """Initialize node encoder with optional hash function"""
         self.hash_function = hash_function or Hash.blake2b
+
+    
 
     def encode_branch(
         self, left_hash: ByteArray32, right_hash: ByteArray32
@@ -79,3 +81,12 @@ class Node:
             )  # Hash of value in last 32 bytes
 
         return node
+
+    def node_part(self,encoded_node: ByteArray64) -> Literal["branch", "leaf_embedded", "leaf_normal"]:
+        first_byte=ByteUtils.bytes_to_bitarray(bytes(encoded_node[0]))
+        if first_byte==[1,1,0,0,0,0,0,0]:
+            return "leaf_normal"
+        elif first_byte[0]==1 and first_byte[1]==0:
+            return "leaf_embedded"
+        elif first_byte[0]==0:
+            return "branch"

@@ -1,3 +1,5 @@
+
+
 from typing import Dict, List, Tuple
 from jam.types.base.bit import Bit
 from jam.types.protocol.crypto import Hash
@@ -208,13 +210,17 @@ class StateMerkle:
                 - new_node_hash: The hash of the updated or inserted node
                 - updated_tree: The updated tree structure
         """
+        # print("Kye-->",key,len(self.bits(key)))
+
         if tree["type"] == "empty":
+            # print("Empty-->",key,new_value,self.trie.node.encode_leaf(key, new_value))
             encoded_leaf = self.trie.node.encode_leaf(key, new_value)
             new_hash = NodeHash(self.trie.hash_function(bytes(encoded_leaf)))
             self.trie._nodes[new_hash] = encoded_leaf
             return (new_hash, {"type": "leaf", "key": key, "value": new_value, "encoded": encoded_leaf})
         
         if tree["type"] == "leaf":
+            
             if tree["key"] == key:
                 encoded_leaf = self.trie.node.encode_leaf(key, new_value)
                 new_hash = NodeHash(self.trie.hash_function(bytes(encoded_leaf)))
@@ -227,7 +233,6 @@ class StateMerkle:
                 # print("merkelize_recursive working...")
                 new_hash, new_encoded, new_subtree = self._merkelize_recursive([existing_item, new_item], bit_index)
                 return (new_hash, new_subtree)
-        
         key_bits = self.bits(key)
         current_bit = key_bits[bit_index % len(key_bits)]
         if current_bit:

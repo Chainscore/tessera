@@ -25,3 +25,5 @@ class MerkleTrie:
             {}
         )  # node_hash -> encoded_node - Two node hashes will point to one encoded node
         self._root_hash = self.node.ZERO_HASH
+        
+    

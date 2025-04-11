@@ -80,9 +80,9 @@ def test_state_transform(db_path):
 
     root_hash,tree_structure=state1._merkle.merkelize(tree)
     
-    keys_with_paths = state1._merkle.collect_keys(tree_structure)
+    # keys_with_paths = state1._merkle.collect_keys(tree_structure)
     
-    print(tree_structure)
+    # print(tree_structure)
     # for path, key in keys_with_paths:
     #     print("Path:", "".join(str(bit) for bit in path), "Key:", key)
     root_hash2,updated_treeStructure=state1._merkle.update_tree_bulk(tree_structure,{
@@ -94,7 +94,7 @@ def test_state_transform(db_path):
         ByteArray32(ByteUtils.hex_to_bytes("0x0d00000000000000000000000000000000000000000000000000000000000000")):Bytes(ByteUtils.hex_to_bytes("000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")),
         
         })
-    # print("prevstate==updatedState matching... -->",state01.generate_root()==root_hash2)
+    print("prevstate==updatedState matching... -->",state01.generate_root()==root_hash2)
     
     
     
