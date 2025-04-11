@@ -69,44 +69,52 @@ class State(Sigma):
                 dict: A dictionary representation of the state in this format: {bytes -> Bytes}
         """
         services, service_storage, service_preimages, service_lookup = {}, {}, {}, {}
+
         for i in self.delta:
-            l_key, s_key = set(), set()
+            l_key=set()
+            s_key=set()
             for j in self.delta[i].timestamps:
                 l_key.add(j)
             for j in self.delta[i].storage:
                 s_key.add(j)
             a_i = 2 * len(list(l_key)) + len(list(s_key))
-            a_s, a_l = 0, 0
+            a_s = 0
+            a_l = 0
             if l_key:
                 for key in l_key:
                     # fetching the length from the LookupTimestamps
                     a_l += 81 + int(LookupTimestamps.get_length(key))
+
             if s_key:
                 for key in s_key:
-                    a_s += 32 + len(self.delta[i].storage[key])
+                    a_s+=32+len(self.delta[i].storage[key])
+            a_o = a_l + a_s
+            a_t = 100 + 10 * a_i + a_o
+            serialize_4=IntegerCodec(4)
+            buffer_4=bytearray(4)
+            IntegerCodec.encode_into(serialize_4,a_i,buffer_4)
+            serialize_8=IntegerCodec(8)
+            buffer_8=bytearray(8)
+            IntegerCodec.encode_into(serialize_8,a_o,buffer_8)
 
-            services[construct_state_key((255, i))] = Bytes(
-                self.delta[i].code_hash.encode()
-                + self.delta[i].balance.encode()
-                + self.delta[i].gas_limit.encode()
-                + self.delta[i].min_gas.encode()
-                + U64(a_l + a_s).encode()
-                + U32(a_i).encode()
-            )
-
-            for j in self.delta[i].storage:
-                service_storage[
-                    construct_state_key(
-                        (i, ByteArray32(Bytes(U32(2**32 - 1).encode()) + j[0:28]))
-                    )
-                ] = self.delta[i].storage[j]
+            
+            
+            services[construct_state_key((255,i))]=Bytes(self.delta[i].code_hash.encode()+self.delta[i].balance.encode()+self.delta[i].gas_limit.encode()+self.delta[i].min_gas.encode()+buffer_8+buffer_4)
+            
+            buffer_storage=bytearray(4)
+            buffer_preimage=bytearray(4)
+            # buffer_lookup=bytearray(4)
+            IntegerCodec.encode_into(serialize_4,2**32-1,buffer_storage)
+            IntegerCodec.encode_into(serialize_4,2**32-2,buffer_preimage)
+            # IntegerCodec.encode_into(serialize_4,2**32-3,buffer_lookup)
+            # print(Bytes(buffer_storage).hex())
+            # storage_key=bytes([0]*28)
+            for j in self.delta[i].storage:  
+                service_storage[construct_state_key((i,ByteArray32(Bytes(buffer_storage)+j[0:28])))]=self.delta[i].storage[j]
             for j in self.delta[i].lookup:
-                service_preimages[
-                    construct_state_key(
-                        (i, ByteArray32(Bytes(U32(2**32 - 2).encode()) + j[1:29]))
-                    )
-                ] = Bytes(self.delta[i].lookup[j])
-
+                # print(ByteArray32(Bytes(buffer_preimage)+j[1:29]))
+                service_preimages[construct_state_key((i,ByteArray32(Bytes(buffer_preimage)+j[1:29])))]=Bytes(self.delta[i].lookup[j])
+        
             for j in self.delta[i].timestamps:
                 service_lookup[construct_state_key((i, j))] = Bytes(
                     self.delta[i].timestamps[j].encode()
@@ -131,7 +139,7 @@ class State(Sigma):
             **services,
             **service_storage,
             **service_preimages,
-            **service_lookup,
+            **service_lookup
         }
 
     @staticmethod

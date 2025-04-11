@@ -15,8 +15,6 @@ from tests.unit.preimages.types import (
     get_testcases_starting_with,
 )
 
-from jam.state.components.delta import LookupTimestamps
-from jam.types.protocol.core import BlobLength
 
 def create_block_from_input(input: Input) -> Block:
     """Create a block from test input"""
@@ -35,7 +33,7 @@ def create_state_from_pre(pre_state: PreState) -> State:
         for preimage in account.data.preimages:
             state.delta[account.id].lookup[preimage.hash] = preimage.blob
         for lookup in account.data.lookup_meta:
-            state.delta[account.id].timestamps[LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length))] = lookup.value
+            state.delta[account.id].timestamps[lookup.key] = lookup.value
     return state
 
 

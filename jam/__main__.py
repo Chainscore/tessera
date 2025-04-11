@@ -4,20 +4,28 @@ from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
 from jam.consensus.safrole.safrole import Safrole
 from jam.db.kv import KVStore
+
 from jam.network.peer import Peer
 from jam.network.node import Node
+from jam.network.dummy_bp import block_producer
+from jam.network.dummy_wpb import wp_producer
+
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
 from jam.state.state import State
 from jam.types.base.integers.fixed import U16, U8
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
+from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
+from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.block import Block
 from jam.types.header import Header
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic 
 from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName, ValidatorsData
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-async def main(name: str, genesis_path: str, db_path: str, port: int, start_genesis: bool, theme: str) -> None:
+from tests.fixtures.dummy_block import create_dummy_block
+
+async def main(name: str, genesis_path: str, db_path: str, port: int, start_genesis: bool, theme: str, is_builder: bool) -> None:
     # Setup logging
     setup_logging(theme=theme)
 
@@ -42,13 +50,25 @@ async def main(name: str, genesis_path: str, db_path: str, port: int, start_gene
         my_data = ValidatorData(bandersnatch_public, ed25519_public, BlsPublic(bytes(144)), ValidatorMetadata(name=ValidatorName(name), host=IPAddress([U8(127), U8(0), U8(0), U8(1)]), port=U16(port)))
 
         tsr_node = Node(
+            node_name=str(port),
+            node_id=str(port),
+            host="0.0.0.0", 
             node_name=name, 
             node_id=port, 
             host="127.0.0.1", 
             port=port, 
             peers=peers,
-            validator_data=my_data
+            validator_data=my_data,
+            is_builder=is_builder
         )
+
+        validators = [ValidatorData(
+            bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
+            ed25519=Ed25519Public(pr["ed25519_public"]),
+            bls=BlsPublic(pr["bls_public"]),
+            metadata=ValidatorMetadata(bytes(128))
+        ) for pr in peerlist]
+
         db = KVStore(db_path)
 
         if start_genesis:
@@ -66,7 +86,12 @@ async def main(name: str, genesis_path: str, db_path: str, port: int, start_gene
 
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(tsr_node.initialize())
-                tg.create_task(block_producer.run())
+                if tsr_node.is_builder:
+                    print("yay i am imposter")
+                    tg.create_task(wp_producer(tsr_node, db))
+                else:
+                    tg.create_task(block_producer(tsr_node, db))
+
         else:
             # TODO: Sync from peers
             raise NotImplementedError("Syncing from peers is not implemented yet")

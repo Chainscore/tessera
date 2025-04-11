@@ -239,8 +239,6 @@ class GeneralState(Codable, JsonSerde):
                 )
                 for preimage in i.data.preimages:
                     state.delta[i.id].lookup[preimage.hash] = preimage.blob
-                # for lookup in i.data.lookup_meta:
-                #     state.delta[i.id].timestamps[lookup.key] = lookup.value
                 for lookup in i.data.lookup_meta:
                     # setting the key(from the values of length and Hash.2b(Hash))
                     state.delta[i.id].timestamps[
