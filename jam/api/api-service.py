@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional, Union, Literal
+
 from jam.accumulation.accumulation import Accumulation
 from jam.assurances.assurances import Assurances
 from jam.authorization.authorization import Authorization
@@ -14,7 +15,7 @@ from jam.types import Boolean
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.preimages.preimages import Preimages
 from jam.consensus.safrole.safrole import Safrole
-from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
+from jam.consensus.safrole.errors import SafroleError
 from jam.recent_history.recent_history import RecentHistory
 from jam.utils.shuffle import shuffle
 from jam.state.utils.state_transformation import GeneralState
@@ -503,8 +504,49 @@ tyoe : str = Query("non_keyval", enum = [
     except SafroleError as e:
         return JSONResponse(status_code=400, content={"err": e.code._value_})
     except Exception as e:
-        return JSONResponse(status_code=400, content={"err": "unexpected_error"})
+         return JSONResponse(status_code=400, content={"err": "unexpected_error"})
 
+@app.post("/api/v1/safrole/validate_keyval")
+async def safrole_keyval(request_data: RequestData):
+    """
+    This function takes pre_state and post_state in key value form
+    """
+    try:
+        test_block = Block.from_json(request_data.input.block)
+
+        test_state = GeneralState.parse_keyval_state(request_data.input.state)
+
+        transition_output = Safrole.transition(test_state, test_block)
+        output_state = GeneralState.parse_keyval_state(request_data.output.state)
+
+        try:
+            assert transition_output.tau == output_state.tau, "output_mismatch(tau)"
+            assert transition_output.eta[0] == output_state.eta[0], "output_mismatch(eta)"
+            assert transition_output.eta[1] == output_state.eta[1], "output_mismatch(eta)"
+            assert transition_output.eta[2] == output_state.eta[2], "output_mismatch(eta)"
+            assert transition_output.eta[3] == output_state.eta[3], "output_mismatch(eta)"
+            assert transition_output.lambda_ == output_state.lambda_, "output_mismatch(lamda)"
+            assert transition_output.kappa == output_state.kappa, "output_mismatch(kappa)"
+            assert transition_output.gamma.k == output_state.gamma.k, "output_mismatch(gamma_k)"
+            assert transition_output.iota == output_state.iota, "output_mismatch(iota)"
+            assert transition_output.gamma.a == output_state.gamma.a, "output_mismatch(gamma_a)"
+            assert transition_output.gamma.s == output_state.gamma.s, "output_mismatch(gamma_s)"
+            assert transition_output.psi.offenders == output_state.psi.offenders, "output_mismatch(psi)"
+            # TODO: uncomment this once KZG_commitment(⟦HB⟧) is implemented
+            # assert len(transition_output.gamma.z) == len(output_state.gamma_z)
+            # assert transition_output.gamma.z == output_state.gamma_z
+        except AssertionError as e:
+            print("output mismatch:", str(e))
+            return {"err": str(e)}
+
+        return {"ok": None}
+
+    except SafroleError as e:
+        print("Failed:", e.code._value_)
+        return {"err": e.code._value_}
+    except Exception as e:
+        print("Unexpected error:", str(e))
+        return {"err": "unexpected_error"}
 
 @app.post("/api/v1/shuffle/validate",
           tags=["Utilities"],

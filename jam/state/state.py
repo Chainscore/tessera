@@ -1,3 +1,4 @@
+
 from jam.db.kv import KVStore
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.eta import Eta
@@ -38,6 +39,7 @@ from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, 
 import json
 
 
+
 class State(Sigma):
     """
     State implementation that 
@@ -60,6 +62,7 @@ class State(Sigma):
             Returns:
                 dict: A dictionary representation of the state in this format: {bytes -> Bytes}
         """
+
         services, service_storage, service_preimages, service_lookup = {}, {}, {}, {}
         for i in self.delta:
             l_key, s_key = set(), set()
@@ -71,8 +74,9 @@ class State(Sigma):
             a_s, a_l = 0, 0
             if l_key:
                 for key in l_key:
-                    # fetching the length from the LookupTimestamps
+                    #fetching the length from the LookupTimestamps
                     a_l += 81 + int(LookupTimestamps.get_length(key))
+                    
             if s_key:
                 for key in s_key:
                     a_s += 32 + len(self.delta[i].storage[key])
@@ -243,6 +247,7 @@ class State(Sigma):
 
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
+        
         return self._merkle.get_nodes()
     
     @staticmethod
@@ -310,5 +315,3 @@ class State(Sigma):
         return state
     
 
-
-        
