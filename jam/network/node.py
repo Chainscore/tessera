@@ -136,10 +136,10 @@ class Node:
                 logger.info(f"🤝 ({self.name}) Connection to {peer.host}:{peer.port} established ✅")
 
                 stream_id = client._quic.get_next_available_stream_id()
-                # await client.stream_and_keep_open(stream_id=stream_id,message=json.dumps({
-                #     "type": "ping",
-                #     "from": self.name
-                # }).encode())
+                client.stream_and_keep_open(stream_id=stream_id,message=json.dumps({
+                    "type": "ping",
+                    "from": self.name
+            }).encode())
 
                 # last_block = self.state.beta[-1]
                 # final = Final(block_hash=last_block.header_hash, time_slot=U32(0))
@@ -147,11 +147,6 @@ class Node:
 
                 self.peer_conn[peer] = stream_id, client
 
-                print("check here", peer.port, self.peer_conn[peer])
-                client._quic.send_stream_data(stream_id, json.dumps({
-                    "type": "ping",
-                    "from": self.name
-                }).encode(), end_stream=False)
 
                 self.is_initialized = True
 

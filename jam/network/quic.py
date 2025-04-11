@@ -23,6 +23,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
         logger.info(f"📤 Sending message of size {len(message)} bytes: {message.hex()} (stream {stream_id})")
         self._quic.send_stream_data(stream_id, message, end_stream=True)
 
+        self.transmit()
         return stream_id
 
     def stream_and_keep_open(self, stream_id: int, message: bytes) -> int:
@@ -32,6 +33,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
         logger.info(f"📤 Sending message of size {len(message)} bytes: {message.hex()} (stream {stream_id})")
         self._quic.send_stream_data(stream_id, message, end_stream=False)
 
+        self.transmit()
         return stream_id
 
     def quic_event_received(self, event: QuicEvent):
@@ -91,7 +93,6 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     except Exception:
                         prefix = None
 
-                    print("Intercepting buffer prefix ", prefix)
                     if prefix == PrefixType.UP0:
                         from jam.network.protocols import BlockAnnouncementProtocol
 
@@ -128,6 +129,7 @@ class QuicClientProtocol(QuicConnectionProtocol):
         logger.info(f"📤 Sending message of size {len(message)} bytes: {message.hex()} (stream {stream_id})")
         self._quic.send_stream_data(stream_id, message, end_stream=True)
 
+        self.transmit()
         return stream_id
 
     def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
@@ -137,13 +139,10 @@ class QuicClientProtocol(QuicConnectionProtocol):
         if stream_id is None:
             stream_id = self._quic.get_next_available_stream_id()
 
-        print("Stream id here", stream_id)
-
         logger.info(f"📤 Sending message of size {len(message)} bytes: {message.hex()} (stream {stream_id})")
         self._quic.send_stream_data(stream_id, message, end_stream=False)
 
         self.transmit()
-
         return stream_id
 
 
