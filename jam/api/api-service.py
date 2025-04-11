@@ -468,11 +468,13 @@ tyoe : str = Query("non_keyval", enum = [
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
-
-        entropy = getattr(request_data.input, 'entropy', None)
-        if entropy is None:
+      
+        epoch_mark = test_block.header.epoch_mark.value
+        if 'none' in epoch_mark:
             entropy = ByteArray32(bytes(32))
-
+        else:
+            entropy = test_block.header.epoch_mark.value['some'].entropy
+       
         transition_output = Safrole.transition(test_state, test_block, entropy)
         
         if request_data.output is None:
@@ -513,11 +515,20 @@ async def safrole_keyval(request_data: RequestData):
     """
     try:
         test_block = Block.from_json(request_data.input.block)
-
         test_state = GeneralState.parse_keyval_state(request_data.input.state)
+        epoch_mark = test_block.header.epoch_mark.value
+        if 'none' in epoch_mark:
+            entropy = ByteArray32(bytes(32))
+        else:
+            entropy = test_block.header.epoch_mark.value['some'].entropy
+       
 
-        transition_output = Safrole.transition(test_state, test_block)
+        transition_output = Safrole.transition(test_state, test_block, entropy)
+        # print("testste 1 ",request_data.input.state)
+        # print("----------------------------------------------------------------------------------")
+        # print("testste 2 ",request_data.output.state)
         output_state = GeneralState.parse_keyval_state(request_data.output.state)
+
 
         try:
             assert transition_output.tau == output_state.tau, "output_mismatch(tau)"

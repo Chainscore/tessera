@@ -259,6 +259,6 @@ class GeneralState(Codable, JsonSerde):
             keyval_state[key] = val
 
         detransformed_keyval_state = State.detransform(keyval_state)
-        
+
         return detransformed_keyval_state
 
