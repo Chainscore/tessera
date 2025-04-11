@@ -1,5 +1,3 @@
-from anyio import sleep
-from sympy.physics.units import ha
 
 from jam.types import Bytes, Byte
 from jam.types.work.item import WorkItem, ExtrinsicSpec
@@ -30,7 +28,7 @@ from jam.types import CoreIndex
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
 class SegmentRootLookupDict(Dict[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
-   ...
+    ...
 
 class WorkPackage(WorkResult):
     segment_root_lookup_dict: SegmentRootLookupDict = {}
@@ -76,6 +74,14 @@ class WorkPackage(WorkResult):
 
 
     def _ext(self, w: WorkItem, d:ExecResults):
+        """
+        https://graypaper.fluffylabs.dev/#/68eaa1f/1bcb011bd501?v=0.6.4
+        Function that defines extrinsic data
+        args:
+           w: workitem , d: Work execution result
+        return :
+           Extrincsic data
+        """
         result = []
         for item in d:
             first = blake2b(self.d)
@@ -85,6 +91,14 @@ class WorkPackage(WorkResult):
         return result
 
     def _imp_seg(self, w: WorkItem):
+        """
+        https://graypaper.fluffylabs.dev/#/68eaa1f/1be0011bea01?v=0.6.4
+         Function that defines import segment
+         args:
+            w: WorkItem
+        return:
+            import segment
+        """
         result = []
         for s in self.segments:
             for (r, n) in w.import_segments:
@@ -94,6 +108,12 @@ class WorkPackage(WorkResult):
         return result
 
     def _justify_imp(self, w: WorkItem):
+        """
+        https://graypaper.fluffylabs.dev/#/68eaa1f/1bf0011bfe01?v=0.6.4
+         Function that verify import segment
+         args:
+           w: WorkItem
+        """
         result = []
         for s in self.segments:
             for (r, n) in w.import_segments:
@@ -105,6 +125,7 @@ class WorkPackage(WorkResult):
 
     def wr_gen(self, p:WorkPackage, c: CoreIndex):
         """
+        https://graypaper.fluffylabs.dev/#/68eaa1f/1b7c001be700?v=0.6.4
         work result computation function
         Args:
             work package , core_index
