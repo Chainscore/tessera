@@ -1,12 +1,12 @@
 """Work report types for the JAM protocol."""
-
 from dataclasses import dataclass
+from typing import Any, Tuple, Union
 
-from jam.types.base import Vector
 from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.integers import U16, U32
-from jam.types.base.null import Nullable
 from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.null import Nullable
+from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
 from jam.types.protocol.core import (
     CoreIndex,
@@ -18,9 +18,16 @@ from jam.types.protocol.core import (
 )
 from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
 from jam.types.work.refine_context import RefineContext
+from jam.types.base.sequences.array import decodable_array, Array
+from jam.types.protocol.crypto import OpaqueHash
+from jam.types.protocol.core import ErasureRoot, ExportsRoot, WorkPackageHash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+
+from jam.types.protocol.core import ServiceId, Gas, CoreIndex
+from jam.types.work.refine_context import RefineContext
 from jam.utils.json.serde import JsonSerde
+from jam.work_package.work_package import SegmentRootLookupDict
 
 
 @decodable_choice
@@ -32,6 +39,7 @@ class WorkExecResult(Choice):
     panic: Nullable
     bad_code: Nullable
     code_oversize: Nullable
+    bad_exports: Nullable
 
 @decodable_dataclass
 @dataclass
@@ -43,6 +51,10 @@ class RefineLoad(Codable, JsonSerde):
     exports: U16
     extrinsic_count: U16
     extrinsic_size: U32
+@decodable_vector(element_type=WorkExecResult)
+class ExecResults(Vector[WorkExecResult]):
+    ...
+
 
 @decodable_dataclass
 @dataclass
@@ -54,7 +66,6 @@ class WorkResult(Codable, JsonSerde):
     payload_hash: OpaqueHash
     accumulate_gas: Gas
     result: WorkExecResult
-    refine_load: RefineLoad
 
 
 @decodable_dataclass
@@ -79,11 +90,13 @@ class SegmentRootLookupItem(Codable, JsonSerde):
 
 
 @decodable_vector(SegmentRootLookupItem)
-class SegmentRootLookup(Vector[SegmentRootLookupItem]): ...
+class SegmentRootLookup(Vector[SegmentRootLookupItem]):
+    ...
 
 
 @decodable_vector(WorkResult)
-class WorkResults(Vector[WorkResult]): ...
+class WorkResults(Vector[WorkResult]):
+    ...
 
 
 @decodable_dataclass
@@ -96,7 +109,7 @@ class WorkReport(Codable, JsonSerde):
     core_index: CoreIndex
     authorizer_hash: OpaqueHash
     auth_output: Bytes
-    segment_root_lookup: SegmentRootLookup
+    segment_root_lookup: SegmentRootLookupDict
     results: WorkResults
     auth_gas_used: Gas
 

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from jam.types.base.sequences.array import Array, decodable_array
+from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.base.sequences.bytes.byte_array import ByteArray128
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -36,4 +37,9 @@ class ValidatorData(Codable, JsonSerde):
 
 @decodable_array(length=VALIDATOR_COUNT, element_type=ValidatorData)
 class ValidatorsData(Array[ValidatorData]):
+    ...
+
+
+@decodable_vector(ValidatorData)
+class ValidatorsVector(Vector[ValidatorData]):
     ...

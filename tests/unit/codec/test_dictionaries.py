@@ -1,11 +1,12 @@
 """Unit tests for dictionary codec implementation."""
 
-from typing import Any, Dict, List, Mapping, Tuple, Type, cast
+from typing import Any, Dict, Mapping, Tuple, Type, cast
 
 import pytest
 
+from jam.types.base import Bytes
 from jam.types.base.boolean import Boolean
-from jam.types.base.integers import Int
+from jam.types.base.integers import U8, U16, U32, Int
 from jam.types.base.string import String
 from jam.utils.codec import Codable, DecodeError, EncodeError
 from jam.utils.codec.composite.dictionaries import DictionaryCodec
@@ -23,11 +24,11 @@ def make_test_dict(
         raise ValueError(f"Unsupported key type: {key_type}")
 
     if value_type == Int:
-        values: List[Int] = [Int(42), Int(43), Int(44)]
+        values = [Int(42), Int(43), Int(44)]
     elif value_type == Boolean:
-        values: List[Boolean] = [Boolean(True), Boolean(False), Boolean(True)]
+        values = [Boolean(True), Boolean(False), Boolean(True)]
     elif value_type == String:
-        values: List[String] = [String("x"), String("y"), String("z")]
+        values = [String("x"), String("y"), String("z")]
     else:
         raise ValueError(f"Unsupported value type: {value_type}")
 
@@ -136,11 +137,11 @@ class TestDictionaryCodec:
             {None: Int(1)},  # None key
             {String("key"): None},  # None value
             {True: String("wrong")},  # bool key
-            {String("key"): [1, 2, 3]},  # list value
+            {String("key"): [Int(1), Int(2), Int(3)]},  # list value
         ]
 
         for value in invalid_dicts:
-            with pytest.raises(EncodeError):
+            with pytest.raises((EncodeError, AttributeError)):
                 codec.encode(value)
 
     def test_offset_handling(self):

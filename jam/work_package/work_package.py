@@ -1,28 +1,55 @@
+from anyio import sleep
+from sympy.physics.units import ha
+
+from jam.types import Bytes, Byte
+from jam.types.work.item import WorkItem, ExtrinsicSpec
 from jam.types import Bytes, Vector, ByteArray32, Int
 from jam.types.work.item import WorkItem
 from jam.types.work.package import  WorkPackage
 from jam.types.work.report import WorkResult, RefineLoad
 from jam.utils.constants import MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUNT, MAX_WORK_PACKAGE_SIZE, SEGMENT_SIZE, REFINE_GAS, ACCUMULATION_GAS
 from jam.utils.vrf.ietf import point_add
+from jam.types.work.report import WorkResult, RefineLoad, WorkResults
+from jam.utils.constants import MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUNT
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
+from jam.types.work.report import WorkExecResult
+from hashlib import blake2b
+from jam.types.base.integers.fixed import U32
 from math import floor
+from jam.merklization.binary_merkle import BMRFunctions
 from jam.types.work.report import WorkReport
 from jam.types.protocol.core import SegmentRoot, WorkPackageHash
-from jam.types.base.dictionary import Dictionary, decodable_dictionary
+from jam.types.base.dictionary import decodable_dictionary, Dict
 from jam.types.protocol.crypto import OpaqueHash
+from jam.hostCall.types import Segment, SegEle
+from jam.types.work.report import ExecResults
 from jam.types.protocol.crypto import Hash
 from jam.merklization.binary_merkle import BMRFunctions
 from math import ceil
+from jam.hostCall.Refine import PsiR
+from jam.hostCall.invocation import PsiI
+from jam.types import CoreIndex
+from jam.types.work.report import WorkReport, WorkPackageSpec
+from jam.hostCall.Refine import PsiR
+from jam.hostCall.invocation import PsiI
+from jam.types import CoreIndex
 
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
-class SegmentRootLookupDict(Dictionary[WorkPackageHash, SegmentRoot]):
+class SegmentRootLookupDict(Dict[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
     ...
 
 class WorkPackageProcessing(WorkResult):
 
     segment_root_lookup_dict: SegmentRootLookupDict = {}
+    segments: Segment
+    d: ExecResults
+    specs: WorkPackageSpec
+
+    def __init__(self):
+        super().__init__()
+        self.merkle = BMRFunctions()
 
     # https://graypaper.fluffylabs.dev/#/68eaa1f/1a9f001ad000?v=0.6.4
     @staticmethod
@@ -51,6 +78,81 @@ class WorkPackageProcessing(WorkResult):
                 "count of extrinsic more than are more than actual value"
             )
 
+    def _ext(self, w: WorkItem, d:ExecResults):
+        result = []
+        for item in d:
+            first = blake2b(self.d)
+            second = U32(len(d))
+            if ExtrinsicSpec(hash=first, len=second) in w.extrinsic:
+                result.append(item)
+        return result
+
+    def _imp_seg(self, w: WorkItem):
+        result = []
+        for s in self.segments:
+            for (r, n) in w.import_segments:
+                # merkle = BMRFunctions()
+                if WorkPackage.segment_root_lookup(self, r) == self.merkle.cd_merkle_fn(self.merkle,s):
+                        result.append(s[n])
+        return result
+
+    def _justify_imp(self, w: WorkItem):
+        result = []
+        for s in self.segments:
+            for (r, n) in w.import_segments:
+                # merkle = BMRFunctions()
+                if WorkPackage.segment_root_lookup(self, r) == self.merkle.cd_merkle_fn(self.merkle, s):
+                    result.append(self.merkle.merkle_path_fn(self.merkle, s, len(s), n))
+        return result
+
+
+    def wr_gen(self, p:WorkPackage, c: CoreIndex):
+        """
+        work result computation function
+        Args:
+            work package , core_index
+        Return :
+            Work Report
+        """
+        o, g = PsiI(p, int(c)).process()
+        lookup_keys = []
+        for item in p.items:
+            for (h, n) in item.import_segments:
+                if len(lookup_keys) <= 8:
+                    lookup_keys.append(h)
+        self.segment_root_lookup_dict = SegmentRootLookupDict({key: None for key in lookup_keys})
+        def utils_i(j: int):
+            w = p.items[int(j)]
+            l = 0
+            k = int(j)
+            for i in range(k):
+                l += p.items[i].extrinsic
+            r, e, u = PsiR(int(c), p, o, WorkPackage._imp_seg(self, w), l)
+            # h = blake2b(p)
+            seg_ele = SegEle([Byte(0)] * 4104)
+            segment_length = w.extrinsic
+            zero_segment = Segment([seg_ele for _ in range(segment_length)])
+            if len(e) == w.extrinsic:
+                return r, u, e
+            elif not isinstance(r, Bytes):
+                return r, u, zero_segment
+            else:
+                return WorkExecResult(bad_exports=None), u,zero_segment
+
+        r_list = []
+        e_list = []
+        for _j in range(len(p.items)):
+            _r, _u, _e = utils_i(_j)
+            comp = WorkPackage.item_to_result(p.items[_j], _r, _u)
+            r_list.append(comp)
+            e_list.append(_e)
+
+        if not isinstance(o, Bytes):
+            return None
+        else:
+            return WorkReport(package_spec=self.specs, context=p.context, core_index=c, authorizer_hash=p.code_hash, auth_output=o, segment_root_lookup=self.segment_root_lookup_dict, results=WorkResults(r_list), auth_gas_used=g)
+
+
     def segment_root_lookup(self, r: OpaqueHash) -> SegmentRoot:
         """
         segment root lookup function collapses a union of segment-roots and work-package hashes into segment-roots using the dictionary
@@ -66,22 +168,25 @@ class WorkPackageProcessing(WorkResult):
             return r
 
     # https://graypaper.fluffylabs.dev/#/68eaa1f/1a45011a2302?v=0.6.4
-    def item_to_result(self, item : WorkItem, result, gas):
-
+    @staticmethod
+    def item_to_result(item : WorkItem, result, gas):
         extrinsic_size = None
         for i in item.extrinsic:
             extrinsic_size = extrinsic_size + i.len
 
-        refine_load = RefineLoad( gas_used=gas, imports=len(item.import_segments) , exports=item.export_count, extrinsic_count=len(item.extrinsic), extrinsic_size=extrinsic_size)
-        return WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=Hash.blake2b(item.payload), accumulate_gas=item.accumulate_gas_limit , result=result, refine_load=refine_load)
+        refine_load = RefineLoad(gas_used=gas, imports=len(item.import_segments), exports=item.export_count,
+                                 extrinsic_count=len(item.extrinsic), extrinsic_size=extrinsic_size)
+
+        return WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=Hash.blake2b(item.payload),
+                          accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)
 
 
 
     # https://graypaper.fluffylabs.dev/#/68eaa1f/1ad6001a2401?v=0.6.4
     @staticmethod
     def work_package_size(item :WorkItem, package: WorkPackage):
-        auth_token = len(package.parameterization)
-        parameterization  = len(package.parameterization)
+        auth_token = len(package.authorization)
+        parameterization  = len(package.params)
 
         extrinsic_len = 0
         item_count = 0
