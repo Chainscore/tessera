@@ -106,7 +106,7 @@ class WorkPackageProcessing(WorkResult):
         for s in self.segments:
             for (r, n) in w.import_segments:
                 # merkle = BMRFunctions()
-                if WorkPackage.segment_root_lookup(self, r) == self.merkle.cd_merkle_fn(self.merkle,s):
+                if WorkPackageProcessing.segment_root_lookup(self, r) == BMRFunctions.cd_merkle_fn(self.merkle,s):
                         result.append(s[n])
         return result
 
@@ -121,8 +121,8 @@ class WorkPackageProcessing(WorkResult):
         for s in self.segments:
             for (r, n) in w.import_segments:
                 # merkle = BMRFunctions()
-                if WorkPackage.segment_root_lookup(self, r) == self.merkle.cd_merkle_fn(self.merkle, s):
-                    result.append(self.merkle.merkle_path_fn(self.merkle, s, len(s), n))
+                if WorkPackageProcessing.segment_root_lookup(self, r) == BMRFunctions.cd_merkle_fn(self.merkle, s):
+                    result.append(BMRFunctions.merkle_path_fn(self.merkle, s, len(s), n))
         return result
 
 
@@ -148,7 +148,7 @@ class WorkPackageProcessing(WorkResult):
             k = int(j)
             for i in range(k):
                 l += p.items[i].extrinsic
-            r, e, u = PsiR(int(c), p, o, WorkPackage._imp_seg(self, w), l)
+            r, e, u = PsiR(int(c), p, o, WorkPackageProcessing._imp_seg(self, w), l)
             # h = blake2b(p)
             seg_ele = SegEle([Byte(0)] * 4104)
             segment_length = w.extrinsic
@@ -164,7 +164,7 @@ class WorkPackageProcessing(WorkResult):
         e_list = []
         for _j in range(len(p.items)):
             _r, _u, _e = utils_i(_j)
-            comp = WorkPackage.item_to_result(p.items[_j], _r, _u)
+            comp = WorkPackageProcessing.item_to_result(p.items[_j], _r, _u)
             r_list.append(comp)
             e_list.append(_e)
 
