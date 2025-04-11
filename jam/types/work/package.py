@@ -34,5 +34,6 @@ class WorkPackage(Codable, JsonSerde):
     authorization: Bytes
     auth_code_host: ServiceId
     authorizer: Authorizer
+    parameterization : Bytes
     context: RefineContext
     items: WorkItems
