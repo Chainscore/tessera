@@ -1,4 +1,5 @@
 from anyio import sleep
+from numpy.ma.core import concatenate
 from sympy.physics.units import ha
 
 from jam.types import Bytes, Byte
@@ -33,7 +34,11 @@ from jam.types.work.report import WorkReport, WorkPackageSpec
 from jam.hostCall.Refine import PsiR
 from jam.hostCall.invocation import PsiI
 from jam.types import CoreIndex
-
+from jam.erasure_coding.erasure_code import ErasureCode
+from jam.utils.constants import BASIC_ERASURE_SIZE
+from jam.types.base.sequences.bytes import ByteArray32
+from jam.types.base.sequences.bytes.bit_array import Byte
+from jam.types import Vector
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
 class SegmentRootLookupDict(Dict[WorkPackageHash, SegmentRoot]):
@@ -270,3 +275,61 @@ class WorkPackageProcessing(WorkResult):
             padding.append(WorkPackageProcessing.zero_padding(merkle_path + leaf, SEGMENT_SIZE))
 
         return padding
+
+    def availability_specifier(self, package_hash: OpaqueHash, wp_bundle: ByteArray32, export_segment: Vector[ByteArray32]):
+        """
+        creates an availability specifier from the package hash, work-package bundle and the sequence of exported segments
+        Args:
+            package_hash:
+            wp_bundle:
+            export_segment:
+        Returns:
+            s: Availability specifier
+        """
+        l = len(wp_bundle)
+        e = BMRFunctions.cd_merkle_fn(self.merkle, export_segment)
+        n = len(export_segment)
+
+        erasure_codec = ErasureCode()
+
+        padded_wp_bundle = self.zero_padding(wp_bundle, BASIC_ERASURE_SIZE)
+        encoded_wp_bundle = erasure_codec.encode(padded_wp_bundle)
+        hashed_wp_bundle = []
+        for item in encoded_wp_bundle:
+            hashed_wp_bundle.append(item.blake2b(item.encode()))
+
+        concatenated_export_segment = export_segment + self.paged_proof(export_segment)
+
+        encoded_export_segment = []
+
+        for item in concatenated_export_segment:
+            encoded = erasure_codec.encode(item)
+            encoded_export_segment.append(encoded)
+
+        transposed_s = [[encoded_export_segment[j][i] for j in range(len(encoded_export_segment))] for i in range(len(encoded_export_segment[0]))]
+
+        merkle_chunks_s = []
+        for item in transposed_s:
+            merkle_chunks_s.append(BMRFunctions.wb_merkle_fn(self.merkle, item))
+
+        x = merkle_chunks_s + hashed_wp_bundle
+        transposed_x = [[x[j][i] for j in range(len(x))] for i in range(len(x[0]))]
+
+        x_caps: Vector[ByteArray32] = Vector([])
+
+        for item in transposed_x:
+            x_cap = ""
+            for i in item:
+                x_cap += i
+            x_caps.append(x_cap)
+
+        u = BMRFunctions.wb_merkle_fn(self.merkle, x_caps)
+
+        return {
+            package_hash,
+            l,
+            u,
+            e,
+            n
+        }
+
