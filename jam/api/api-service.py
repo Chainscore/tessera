@@ -515,7 +515,9 @@ async def safrole_keyval(request_data: RequestData):
     """
     try:
         test_block = Block.from_json(request_data.input.block)
-        test_state = GeneralState.parse_keyval_state(request_data.input.state)
+        output_state = GeneralState.parse_keyval_state(request_data.output.state)
+
+        # test_state = GeneralState.parse_keyval_state(request_data.input.state)
         epoch_mark = test_block.header.epoch_mark.value
         if 'none' in epoch_mark:
             entropy = ByteArray32(bytes(32))
@@ -527,9 +529,8 @@ async def safrole_keyval(request_data: RequestData):
         # print("testste 1 ",request_data.input.state)
         # print("----------------------------------------------------------------------------------")
         # print("testste 2 ",request_data.output.state)
+        print("RINS")
         output_state = GeneralState.parse_keyval_state(request_data.output.state)
-
-
         try:
             assert transition_output.tau == output_state.tau, "output_mismatch(tau)"
             assert transition_output.eta[0] == output_state.eta[0], "output_mismatch(eta)"

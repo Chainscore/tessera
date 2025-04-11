@@ -169,6 +169,7 @@ class GeneralState(Codable, JsonSerde):
     nu: Nu
     xi: Xi
     accounts: DunaDelta
+    
 
     # TODO: Fix parsing error when Delta incomplete
 
@@ -248,7 +249,6 @@ class GeneralState(Codable, JsonSerde):
                     state.delta[i.id].timestamps[
                         LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length))
                     ] = lookup.value
-
         return state
 
     def parse_keyval_state(keyval_raw) -> State:
@@ -258,6 +258,7 @@ class GeneralState(Codable, JsonSerde):
             val = Bytes(keyval[1])
             keyval_state[key] = val
 
+            
         detransformed_keyval_state = State.detransform(keyval_state)
 
         return detransformed_keyval_state
