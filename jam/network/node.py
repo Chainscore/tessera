@@ -75,10 +75,12 @@ class Node:
         configuration.load_verify_locations(cafile=f"seeds/{self.port}/cert.pem")
         configuration.verify_mode = ssl.CERT_NONE
 
+        configuration.max_data = 104857600  # 100 MB
+        configuration.max_stream_data = 10485760  # 10 MB per stream
+        configuration.max_datagram_size = 1350
+
         if is_client:
             configuration.server_name = self.dns
-            configuration.max_data = 10_000_000  # 10 MB
-            configuration.max_stream_data = 1_000_000  # 1 MB per stream
 
         if self.is_builder:
             configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
