@@ -3,6 +3,7 @@ import uvloop
 from .chainspec import JamConfig, chain_config
 import asyncio
 from jam.__main__ import main
+# from jam.network.playground.main import main
 
 __all__ = ["JamConfig", "chain_config"]
 
@@ -20,3 +21,4 @@ def run_jam():
 
     uvloop.install()
     asyncio.run(main(args.genesis, args.db, args.port, args.builder))
+    # asyncio.run(main())
