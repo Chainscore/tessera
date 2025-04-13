@@ -4,7 +4,6 @@ from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
 from jam.consensus.safrole.safrole import Safrole
 from jam.db.kv import KVStore
-
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.dummy_bp import block_producer
@@ -17,9 +16,7 @@ from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Publ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from tests.fixtures.dummy_block import create_dummy_block
-
-async def main(genesis_path: str, db_path: str, port: int, is_builder: bool) -> None:
+async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, start_genesis: bool) -> None:
     # Setup logging
     setup_logging()
 
@@ -32,11 +29,6 @@ async def main(genesis_path: str, db_path: str, port: int, is_builder: bool) -> 
         # Initialize components
         peerlist = json.load(open(genesis_path))["peers"]
         peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
-
-        # Test block
-        # block = create_dummy_block()
-        # print(block.encode().hex())
-
 
         # Load validator data from seeds
         my_keys = json.load(open("seeds/keys.json"))[str(port)]
@@ -56,28 +48,35 @@ async def main(genesis_path: str, db_path: str, port: int, is_builder: bool) -> 
             validator_data=my_data,
             is_builder=is_builder
         )
-
-        validators = [ValidatorData(
-            bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
-            ed25519=Ed25519Public(pr["ed25519_public"]),
-            bls=BlsPublic(pr["bls_public"]),
-            metadata=ValidatorMetadata(bytes(128))
-        ) for pr in peerlist]
-
         db = KVStore(db_path)
-        state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
-        state.save(db)
 
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(tsr_node.initialize())
-            if tsr_node.is_builder:
-                print("yay i am imposter")
-                tg.create_task(wp_producer(tsr_node, db))
-            else:
-                tg.create_task(block_producer(tsr_node, db))
+        if start_genesis:
+            # Start from genesis
+            genesis_vals = [ValidatorData(
+                bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
+                ed25519=Ed25519Public(pr["ed25519_public"]),
+                bls=BlsPublic(pr["bls_public"]),
+                metadata=ValidatorMetadata(bytes(128))
+            ) for pr in peerlist]
+
+            state = State.genesis(genesis_vals, Safrole.arrange_fallback(ByteArray32(bytes(32)), genesis_vals))
+            state.save(db)
+
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task(tsr_node.initialize())
+                if tsr_node.is_builder:
+                    print("yay i am imposter")
+                    tg.create_task(wp_producer(tsr_node, db))
+                else:
+                    tg.create_task(block_producer(tsr_node, db))
+
+        else:
+            # TODO: Sync from peers
+            raise NotImplementedError("Syncing from peers is not implemented yet")
+
 
     except KeyboardInterrupt:
-        logger.info("Shutting down JAM node")
+        logger.info("👋 Shutting down JAM node 🔐")
     except Exception as e:
-        logger.exception("Fatal error", error=str(e))
+        logger.exception("💥 Fatal error", error=str(e))
         raise

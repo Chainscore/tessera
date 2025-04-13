@@ -21,7 +21,7 @@ from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.protocol.core import Balance, Gas, ServiceId
+from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public, Hash
 from jam.types.protocol.crypto import OpaqueHash
 from jam.state.components.delta import (
@@ -60,52 +60,44 @@ class State(Sigma):
                 dict: A dictionary representation of the state in this format: {bytes -> Bytes}
         """
         services, service_storage, service_preimages, service_lookup = {}, {}, {}, {}
-
         for i in self.delta:
-            l_key=set()
-            s_key=set()
+            l_key, s_key = set(), set()
             for j in self.delta[i].timestamps:
                 l_key.add(j)
             for j in self.delta[i].storage:
                 s_key.add(j)
             a_i = 2 * len(list(l_key)) + len(list(s_key))
-            a_s = 0
-            a_l = 0
+            a_s, a_l = 0, 0
             if l_key:
                 for key in l_key:
                     # fetching the length from the LookupTimestamps
                     a_l += 81 + int(LookupTimestamps.get_length(key))
-
             if s_key:
                 for key in s_key:
-                    a_s+=32+len(self.delta[i].storage[key])
-            a_o = a_l + a_s
-            a_t = 100 + 10 * a_i + a_o
-            serialize_4=IntegerCodec(4)
-            buffer_4=bytearray(4)
-            IntegerCodec.encode_into(serialize_4,a_i,buffer_4)
-            serialize_8=IntegerCodec(8)
-            buffer_8=bytearray(8)
-            IntegerCodec.encode_into(serialize_8,a_o,buffer_8)
+                    a_s += 32 + len(self.delta[i].storage[key])
 
-            
-            
-            services[construct_state_key((255,i))]=Bytes(self.delta[i].code_hash.encode()+self.delta[i].balance.encode()+self.delta[i].gas_limit.encode()+self.delta[i].min_gas.encode()+buffer_8+buffer_4)
-            
-            buffer_storage=bytearray(4)
-            buffer_preimage=bytearray(4)
-            # buffer_lookup=bytearray(4)
-            IntegerCodec.encode_into(serialize_4,2**32-1,buffer_storage)
-            IntegerCodec.encode_into(serialize_4,2**32-2,buffer_preimage)
-            # IntegerCodec.encode_into(serialize_4,2**32-3,buffer_lookup)
-            # print(Bytes(buffer_storage).hex())
-            # storage_key=bytes([0]*28)
-            for j in self.delta[i].storage:  
-                service_storage[construct_state_key((i,ByteArray32(Bytes(buffer_storage)+j[0:28])))]=self.delta[i].storage[j]
+            services[construct_state_key((255, i))] = Bytes(
+                self.delta[i].code_hash.encode()
+                + self.delta[i].balance.encode()
+                + self.delta[i].gas_limit.encode()
+                + self.delta[i].min_gas.encode()
+                + U64(a_l + a_s).encode()
+                + U32(a_i).encode()
+            )
+
+            for j in self.delta[i].storage:
+                service_storage[
+                    construct_state_key(
+                        (i, ByteArray32(Bytes(U32(2**32 - 1).encode()) + j[0:28]))
+                    )
+                ] = self.delta[i].storage[j]
             for j in self.delta[i].lookup:
-                # print(ByteArray32(Bytes(buffer_preimage)+j[1:29]))
-                service_preimages[construct_state_key((i,ByteArray32(Bytes(buffer_preimage)+j[1:29])))]=Bytes(self.delta[i].lookup[j])
-        
+                service_preimages[
+                    construct_state_key(
+                        (i, ByteArray32(Bytes(U32(2**32 - 2).encode()) + j[1:29]))
+                    )
+                ] = Bytes(self.delta[i].lookup[j])
+
             for j in self.delta[i].timestamps:
                 service_lookup[construct_state_key((i, j))] = Bytes(
                     self.delta[i].timestamps[j].encode()
@@ -130,7 +122,7 @@ class State(Sigma):
             **services,
             **service_storage,
             **service_preimages,
-            **service_lookup
+            **service_lookup,
         }
 
     @staticmethod
@@ -140,7 +132,7 @@ class State(Sigma):
 
         # populating the delta
         delta = {}
-        for key, value in state.items():
+        for key, value in sorted(state.items(), key=lambda x: x[0], reverse=True):
             # Start with finding all core state components 1-15
             # if (key[0] <= 15) and bytes(key[0:32]) == 0:
             if int(key[0]) <= 15 and int(key[0]) > 0:
@@ -223,7 +215,6 @@ class State(Sigma):
                     timestamp_key = ByteArray32(
                         Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
                     )
-                    # print("timestamp_key",timestamp_key)
                     delta[service_id].timestamps[timestamp_key] = TimeStamps
 
         return State(
@@ -285,12 +276,38 @@ class State(Sigma):
     
     def save(self, db: KVStore):
         data = self.transform()
+        # Save the regular state data
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
     
     @staticmethod
-    def load(db: KVStore) -> "State":
+    def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
         data = {}
-        for key, value in db.get_all().items():
-            data[key] = Bytes(value)
-        return State.detransform(data)
+        service_ids:set[ServiceId]=set()
+
+        if keys is None:
+            for key, value in db.get_all().items():
+                data[key] = Bytes(value)
+        else:
+            for i in range(1,16):
+                state_key=construct_state_key(i)
+                # print(type(state_key))
+                data[state_key] = Bytes(db.get(bytes(state_key)))
+            for key in keys:
+                if int.from_bytes(
+                    bytes(Bytes([key[0], key[2], key[4], key[6]]))
+                ) not in service_ids:
+                    service_ids.add(ServiceId(int.from_bytes(
+                        bytes(Bytes([key[0], key[2], key[4], key[6]]))
+                    )))
+                data[key] = Bytes(db.get(bytes(key)))
+            for service_id in service_ids:
+                service_key=construct_state_key((255,service_id))
+                data[service_key]=Bytes(db.get(bytes(service_key)))
+
+        state = State.detransform(data)
+
+        return state
+
+
+
