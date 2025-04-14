@@ -60,7 +60,7 @@ mydb/
 !/seeds/keys.json
 
 # Ignore Session Tickets
-seeds/
+sessions/
 
 # Ignore Logs
 logs/
