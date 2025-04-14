@@ -4,7 +4,6 @@ from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
 from jam.consensus.safrole.safrole import Safrole
 from jam.db.kv import KVStore
-
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.dummy_wpb import wp_producer
@@ -20,7 +19,7 @@ from jam.types.header import Header
 from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName, ValidatorsData
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-async def main(name: str, genesis_path: str, db_path: str, port: int, start_genesis: bool, theme: str, is_builder: bool) -> None:
+async def main(name: str, genesis_path: str, db_path: str, port: int, start_genesis: bool, theme: str, is_builder: bool, is_validator: bool) -> None:
     # Setup logging
     setup_logging(theme=theme)
 
@@ -51,7 +50,8 @@ async def main(name: str, genesis_path: str, db_path: str, port: int, start_gene
             port=port, 
             peers=peers,
             validator_data=my_data,
-            is_builder=is_builder
+            is_builder=is_builder,
+            is_validator=is_validator
         )
 
         validators = [ValidatorData(
@@ -87,6 +87,7 @@ async def main(name: str, genesis_path: str, db_path: str, port: int, start_gene
         else:
             # TODO: Sync from peers
             raise NotImplementedError("Syncing from peers is not implemented yet")
+
 
     
     except KeyboardInterrupt:
