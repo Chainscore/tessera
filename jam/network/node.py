@@ -41,13 +41,14 @@ class Node:
 
     is_initialized: bool = False
     is_builder: bool = False
+    is_validator: bool = True
 
     # state: State
 
     peer_conn: Dict[Peer, Tuple[int, QuicClientProtocol]] = {}
     connections: list[QuicClientProtocol] = []
 
-    def __init__(self, node_id: str, node_name: str, host: str, port: int, validator_data, peers: list[Peer], is_builder: bool):
+    def __init__(self, node_id: str, node_name: str, host: str, port: int, validator_data, peers: list[Peer], is_builder: bool, is_validator: bool):
         self.__id = node_id
         self.name = node_name
         self.host = host
@@ -55,6 +56,10 @@ class Node:
         self.validator_data = validator_data
         self.peers = peers
         self.is_builder = is_builder
+        self.is_validator = is_validator
+
+        if is_validator and is_builder:
+            raise ValueError("Node can't be validator and builder at same time!")
 
         self.dns = generate_keys(port)
 

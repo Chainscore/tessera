@@ -16,7 +16,7 @@ from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Publ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, start_genesis: bool) -> None:
+async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, is_validator: bool, start_genesis: bool) -> None:
     # Setup logging
     setup_logging()
 
@@ -46,7 +46,8 @@ async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, sta
             port=port, 
             peers=peers,
             validator_data=my_data,
-            is_builder=is_builder
+            is_builder=is_builder,
+            is_validator=is_validator
         )
         db = KVStore(db_path)
 
