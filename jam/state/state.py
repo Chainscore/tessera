@@ -1,4 +1,5 @@
 from jam.db.kv import KVStore
+from typing import Dict
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.eta import Eta
 from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat
@@ -278,21 +279,18 @@ class State(Sigma):
     
     def save(self, db: KVStore,keys:list[ByteArray32]=None):
         data = self.transform()
-        if db.get(b"general_root:") is None:
-            general_root=self.generate_root()
-            db.put(b"general_root:",bytes(general_root))
-            cached_tree=pickle.dumps(self.get_merkle_nodes())
-            db.put(b"cached_tree:",cached_tree)
-        else:
-            general_root=db.get(b"general_root:")
-            cached_tree=db.get(b"cached_tree:")
-            print("Oyeeeeeeeeeee")
-        # print("general_root:",Bytes(general_root).hex())
-        # print("cached_tree:",pickle.loads(cached_tree))
-        
-        # Save the regular state data
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
+        if db.get(b"general_root:") is None:
+            general_root,db_nodes=self._merkle.merkelize(data)
+            db.put(b"general_root:",bytes(general_root))
+            for key, value in db_nodes.items():
+                db.put(bytes(key), bytes(value.encoded))
+        else:
+            general_root=db.get(b"general_root:")
+        
+        # Save the regular state data
+        
 
     @staticmethod
     def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
@@ -321,6 +319,8 @@ class State(Sigma):
         state = State.detransform(data)
         return state
     
-
+    @staticmethod
+    def update( state_dict: Dict[ByteArray32, ByteArray32], db: KVStore):
+        pass
 
         
