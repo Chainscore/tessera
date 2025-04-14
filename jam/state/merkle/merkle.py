@@ -92,7 +92,7 @@ class StateMerkle:
         )
         return (node_hash, encoded_branch)
 
-    def merkelize(self, state_dict: Dict[ByteArray32, ByteArray32],db: KVStore=None) -> [NodeHash,Dict[NodeHash,DBNode]]:
+    def merkelize(self, state_dict: Dict[ByteArray32, ByteArray32],db: KVStore=None) -> Tuple[NodeHash,Dict[NodeHash,DBNode]]:
         """
         Build the trie from a state dictionary and return (root_hash, db_nodes).
         """
@@ -100,14 +100,25 @@ class StateMerkle:
         self._db_nodes: Dict[NodeHash, DBNode] = {}
         if not state_dict:
             return self.trie.node.ZERO_HASH,self._db_nodes
+
+        if not state_dict:
+            return self.trie.node.ZERO_HASH
+
         items = sorted(state_dict.items())
-        root_hash, _ = self._merkelize_recursive(items, 0)
+        root_hash,_= self._merkelize_recursive(items, 0)
         self.trie._root_hash = root_hash
-        return root_hash,self._db_nodes
+        return root_hash,self.trie._nodes
+    
+    def get_nodes(self) -> Dict[NodeHash, DBNode]:
+        return self.trie._nodes.copy()
+    
+    
     
     def clear(self) -> None:
         self.trie._nodes.clear()
         self.trie._root_hash = self.trie.node.ZERO_HASH
+        if hasattr(self, "_db_nodes"):
+            self._db_nodes.clear()
         if hasattr(self, "_db_nodes"):
             self._db_nodes.clear()
 

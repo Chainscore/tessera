@@ -240,7 +240,7 @@ class State(Sigma):
 
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
-        root_hash, tree_structure = self._merkle.merkelize(self.transform())
+        root_hash, _ = self._merkle.merkelize(self.transform())
         return root_hash
 
     def get_merkle_nodes(self) -> dict:
@@ -277,15 +277,15 @@ class State(Sigma):
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
     
-    def save(self, db: KVStore,keys:list[ByteArray32]=None):
+    def save(self,db:KVStore,keys:list[ByteArray32]=None,):
         data = self.transform()
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
         if db.get(b"general_root:") is None:
-            general_root,db_nodes=self._merkle.merkelize(data)
+            general_root,_=self._merkle.merkelize(data)
             db.put(b"general_root:",bytes(general_root))
-            for key, value in db_nodes.items():
-                db.put(bytes(key), bytes(value.encoded))
+            # for key, value in data.items():
+            #     db.put(bytes(key), bytes(value.encoded))
         else:
             general_root=db.get(b"general_root:")
         
