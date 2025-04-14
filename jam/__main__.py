@@ -7,7 +7,6 @@ from jam.db.kv import KVStore
 
 from jam.network.peer import Peer
 from jam.network.node import Node
-from jam.network.dummy_bp import block_producer
 from jam.network.dummy_wpb import wp_producer
 
 from jam.consensus.bp_engine import BlockProducer
@@ -16,14 +15,10 @@ from jam.state.state import State
 from jam.types.base.integers.fixed import U16, U8
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.block import Block
 from jam.types.header import Header
-from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic 
 from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName, ValidatorsData
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
-from tests.fixtures.dummy_block import create_dummy_block
 
 async def main(name: str, genesis_path: str, db_path: str, port: int, start_genesis: bool, theme: str, is_builder: bool) -> None:
     # Setup logging
@@ -50,12 +45,9 @@ async def main(name: str, genesis_path: str, db_path: str, port: int, start_gene
         my_data = ValidatorData(bandersnatch_public, ed25519_public, BlsPublic(bytes(144)), ValidatorMetadata(name=ValidatorName(name), host=IPAddress([U8(127), U8(0), U8(0), U8(1)]), port=U16(port)))
 
         tsr_node = Node(
-            node_name=str(port),
-            node_id=str(port),
-            host="0.0.0.0", 
             node_name=name, 
             node_id=port, 
-            host="127.0.0.1", 
+            host="0.0.0.0", 
             port=port, 
             peers=peers,
             validator_data=my_data,
