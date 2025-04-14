@@ -35,7 +35,6 @@ from jam.state.components.delta import (
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
-import json
 
 
 class State(Sigma):
@@ -280,11 +279,12 @@ class State(Sigma):
         # Save the regular state data
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
+    
     @staticmethod
     def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
         data = {}
         service_ids:set[ServiceId]=set()
-        
+
         if keys is None:
             for key, value in db.get_all().items():
                 data[key] = Bytes(value)
@@ -304,11 +304,10 @@ class State(Sigma):
             for service_id in service_ids:
                 service_key=construct_state_key((255,service_id))
                 data[service_key]=Bytes(db.get(bytes(service_key)))
-                
+
         state = State.detransform(data)
 
         return state
-    
 
 
-        
+
