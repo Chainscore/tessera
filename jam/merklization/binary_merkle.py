@@ -1,8 +1,11 @@
+from math import log2, ceil
 from typing import Optional, Callable
 
-from jam.types import Vector
+from jam.types import Vector, Int
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.protocol.crypto import Hash
+
+from jam.types.protocol.crypto import OpaqueHash
 
 HashType = ByteArray32
 
@@ -57,16 +60,81 @@ class BMRFunctions:
             Returns:
                 32 octet blob or Hash for a node
         """
-        if len(values) == 0:
+        sz = len(values)
+        if sz == 0:
             return self._ZERO_HASH
 
-        elif len(values) == 1:
+        elif sz == 1:
             return values[0]
 
         else:
-            left = values[:len(values) // 2]
-            right = values[len(values) // 2:]
+            mid = (sz + 1) // 2
+
+            left = values[:mid]
+            right = values[mid:]
             return hash_fn(self._NODE_PREFIX + bytes(self._node_fn(left, hash_fn)) + bytes(self._node_fn(right, hash_fn)))
+
+    @staticmethod
+    def _p_i(values: Vector[ByteArray32], index: Int) -> Int:
+        """
+            Util Function P_I Implementation for Trace Function
+        """
+        sz = len(values)
+        mid = (sz+1) // 2
+
+        if index < mid:
+            return Int(0)
+        else:
+            return Int(mid)
+
+    @staticmethod
+    def _p_bool(values: Vector[ByteArray32], index: Int, case: bool) -> Vector[ByteArray32]:
+        """
+            Util Function P_s Implementation for Trace Function
+        """
+        sz = len(values)
+        mid = (sz + 1) // 2
+
+        if (index < mid) == case:
+            left = values[:mid]
+            return left
+        else:
+            right = values[mid:]
+            return right
+
+
+    def _trace_fn(self,
+                  values: Vector[ByteArray32],
+                  index: Int,
+                  hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+                  ) -> Vector[ByteArray32]:
+        """
+            Trace Function Implementation as defined in Equation E.2
+
+            Args:
+                values: Sequence of 32 octet blobs
+                index: Node Index
+                hash_fn: Hash Function
+
+            Returns:
+                Vector of corresponding path nodes
+        """
+        sz = len(values)
+
+        if sz <= 1:
+            return Vector([])
+
+        else:
+            trace = Vector([])
+
+            node = self._node_fn(self._p_bool(values[int(index)], index, False))
+            trace.append(node)
+
+            trace_nodes = self._trace_fn(self._p_bool(values, index,True), index - self._p_i(values, index), hash_fn)
+
+            trace.extend(trace_nodes)
+
+            return trace
 
     def wb_merkle_fn(self,
                      values: Vector[ByteArray32],
@@ -91,6 +159,7 @@ class BMRFunctions:
         else:
             return self._node_fn(values, hash_fn)
 
+    @staticmethod
     def cd_merkle_fn(self,
                      values: Vector[ByteArray32],
                      hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
@@ -110,3 +179,60 @@ class BMRFunctions:
         """
 
         return self._node_fn(self._preprocessor_fn(values, hash_fn), hash_fn)
+
+    @staticmethod
+    def merkle_path_fn(self,
+                       values: Vector[ByteArray32],
+                       size: Int,
+                       index: Int,
+                       hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+                       ) -> Vector[OpaqueHash]:
+        """
+            Page Merkle Path Function Implementation as defined in Equation E.5
+
+            Args:
+                values: Sequence of 32 octet blobs
+                index: Node Index
+                hash_fn: Hash Function
+                size: page size = 2 ^ size
+
+            Returns:
+                Merkle path to a single page
+        """
+        val = ceil(log2(max(1, len(values))) - size)
+        sz = max(0, val)
+
+        ind = (2 ** size) * index
+
+        path = self._trace_fn(self._preprocessor_fn(values, hash_fn), ind, hash_fn)
+
+        return path[:sz]
+
+    def leaf_page_fn(self,
+                     values: Vector[ByteArray32],
+                     size: Int,
+                     index: Int,
+                     hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+                     ) -> Vector[OpaqueHash]:
+        """
+            Leaves Page Function Implementation as defined in Equation E.6
+
+            Args:
+                values: Sequence of 32 octet blobs
+                index: Node Index
+                hash_fn: Hash Function
+                size: page size = 2 ^ size
+
+            Returns:
+                Single page of leaves
+        """
+        page: Vector[OpaqueHash] = Vector([])
+
+
+        ind = (2 ** size) * index
+        val = min(ind + 2 ** size, len(values))
+
+        for i in range(ind, val):
+            page.append(hash_fn(self._LEAF_PREFIX + bytes(values[i])))
+
+        return page

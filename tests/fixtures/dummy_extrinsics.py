@@ -25,7 +25,7 @@ from jam.types.protocol.core import ServiceId, ValidatorIndex, Gas
 from jam.types.base.boolean import Boolean
 from jam.types.base.integers.fixed import U32, U16, U8
 from jam.types.work import WorkReport
-from jam.types.work.report import SegmentRootLookup, WorkResults
+from jam.types.work.report import SegmentRootLookup, WorkResults, RefineLoad
 from tests.fixtures.utils import create_dummy_bytes, create_dummy_bytes32
 from jam.types.work.refine_context import OpaqueHashes
 from jam.types.protocol.crypto import OpaqueHash
@@ -63,6 +63,13 @@ def create_dummy_work_result() -> WorkResult:
         payload_hash=create_dummy_bytes32(),
         accumulate_gas=Gas(42),
         result=WorkExecResult({"ok": Bytes(create_dummy_bytes(16))}),
+        refine_load=RefineLoad(
+            gas_used= Gas(0),
+            imports=U16(0),
+            exports= U16(0),
+            extrinsic_count=U16(0),
+            extrinsic_size= U32(0),
+        )
     )
 
 
@@ -76,6 +83,7 @@ def create_dummy_work_report() -> WorkReport:
         auth_output=Bytes("0x0102030405"),
         segment_root_lookup=SegmentRootLookup([]),
         results=WorkResults([create_dummy_work_result()]),
+        auth_gas_used=Gas(0),
     )
 
 
