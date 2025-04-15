@@ -2,7 +2,7 @@ from typing import Dict
 
 from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted
-from aioquic.quic.connection import logger
+from jam.config.logging import logging as logger
 from typing_extensions import Optional
 
 from jam.network.logger.log import save_decoded_data_to_json
@@ -47,7 +47,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
             else:
                 print("Unidentified Protocol")
 
-            logger.info(f"🔗 Handshake completed.")
+            logger.info("🔗 Handshake completed.")
 
         elif isinstance(event, ConnectionTerminated):
             logger.warning(f"❌ Server Connection terminated: {event.error_code}")
@@ -78,12 +78,16 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     except Exception:
                         prefix = None
 
+
                     if prefix == PrefixType.CE133:
                         data = WorkPackageSubmission.intercept(buffer=buffer[1:])
 
                         WorkPackageSubmission.process(data=data)
                         logger.info(f"📩 Received work package : {data.package_data.work_package} with CI {data.package_data.core_index}")
                         save_decoded_data_to_json(buffer.decode(), event.stream_id)
+
+                    if prefix == PrefixType.CE128:
+                        self.stream_and_keep_open(event.stream_id, bytes(0))
 
                     else:
                         try:

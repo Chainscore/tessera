@@ -8,7 +8,6 @@ from jam.types.protocol.crypto import Hash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
-from jam.types.protocol.crypto import Hash
 
 ServiceCodeHash = ByteArray32
 

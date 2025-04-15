@@ -11,10 +11,22 @@ clients = [
     ("Frank", 30338),
 ]
 
+
 @pytest.mark.asyncio
 async def test_connection():
     tasks = []
     for client in clients:
-        tasks.append(main(name=client[0], genesis_path="genesis.json", db_path=f"db/{client[1]}", port=client[1], start_genesis=True, theme="matrix"))
+        tasks.append(
+            main(
+                name=client[0],
+                genesis_path="genesis.json",
+                db_path=f"db/{client[1]}",
+                port=client[1],
+                start_genesis=True,
+                theme="matrix",
+                is_builder=False,
+                is_validator=True,
+            )
+        )
 
     await asyncio.gather(*tasks)

@@ -73,6 +73,7 @@ class ThemeColors:
                 "timestamp": cls.BRIGHT_BLACK,
                 "logger_name": cls.BLUE,
                 "event": cls.WHITE,
+                "node_name": cls.BRIGHT_MAGENTA,
             },
             LogTheme.MATRIX: {
                 "DEBUG": cls.GREEN,
@@ -83,6 +84,7 @@ class ThemeColors:
                 "timestamp": cls.GREEN,
                 "logger_name": cls.GREEN,
                 "event": cls.BRIGHT_GREEN,
+                "node_name": cls.BRIGHT_GREEN,
             },
             LogTheme.POLKADOT: {
                 "DEBUG": cls.MAGENTA,
@@ -93,6 +95,7 @@ class ThemeColors:
                 "timestamp": cls.BRIGHT_BLACK,
                 "logger_name": f"{cls.BOLD}{cls.MAGENTA}",
                 "event": cls.WHITE,
+                "node_name": f"{cls.BOLD}{cls.BRIGHT_MAGENTA}",
             }
         }
         
@@ -151,6 +154,13 @@ class ThemedConsole(ConsoleRenderer):
                 f"[{logger_color}{logger_name}{self.reset}]"
             )
         
+        # Color the node name if present
+        if "node_name" in event_dict:
+            node_name = str(event_dict["node_name"])
+            node_color = self.get_color("node_name")
+            # Add node name to the output
+            output = f"{node_color}[{node_name}]{self.reset} {output}"
+        
         # Apply level color to the level name
         if level in event_dict:
             output = output.replace(
@@ -167,12 +177,13 @@ class ThemedConsole(ConsoleRenderer):
         return f"{level_color}{output}{self.reset}"
 
 
-def setup_logging(theme: Union[LogTheme, str] = LogTheme.DEFAULT) -> None:
+def setup_logging(theme: Union[LogTheme, str] = LogTheme.DEFAULT, node_name: str = None) -> None:
     """
     Configure structured logging with the specified theme.
     
     Args:
         theme: The color theme to use for logs
+        node_name: The name of the node to include in all log messages
     """
     # Convert string to enum if needed
     if isinstance(theme, str):
@@ -181,10 +192,17 @@ def setup_logging(theme: Union[LogTheme, str] = LogTheme.DEFAULT) -> None:
         except ValueError:
             theme = LogTheme.DEFAULT
         
+    # Create a processor to add node_name to all log messages
+    def add_node_name(logger, method_name, event_dict):
+        if node_name:
+            event_dict["node_name"] = node_name
+        return event_dict
+        
     structlog.configure(
         processors=[
             add_log_level,
             TimeStamper(fmt="iso"),
+            add_node_name,  # Add node_name to all log messages
             ThemedConsole(theme),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),

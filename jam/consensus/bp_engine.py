@@ -4,8 +4,8 @@ from time import time
 
 from jam.consensus.safrole.safrole import Safrole
 from jam.disputes.disputes import Disputes
+from jam.network.protocols.up_0 import BlockAnnouncementProtocol
 from jam.state.state import State
-from jam.types.base.integers.fixed import U64
 from jam.types.block import Block, Extrinsic
 from jam.types.extrinsics import (
     TicketsExtrinsic,
@@ -49,6 +49,7 @@ class BlockProducer:
 
         # Record genesis timestamp in seconds
         genesis_ts = time()
+        up0 = BlockAnnouncementProtocol()
 
         # TODO: If our validator is not in Kappa - skip block production till end of current epoch
         while True:
@@ -76,10 +77,11 @@ class BlockProducer:
                 author_key = state.gamma.s.get_value()[ts_epoch_index]
                 if author_key == self.node.validator_data.bandersnatch:
                     block = await self._produce_block(state, current_timeslot)
-                    logger.info(f"⛏️ ({self.node.name}) Producing Block for slot: {current_timeslot}")
-                    print("Block: ", block)
-                    for client in self.node.connections:
-                        await client.send_message(block.encode())
+                    up0.transmit(self.node, block)
+                    # logger.info(f"⛏️ ({self.node.name}) Producing Block for slot: {current_timeslot}")
+                    # print("Block: ", block)
+                    # for client in self.node.connections:
+                    #     await client.send_message(block.encode())
                 else:
                     logger.info(f"🔄 ({self.node.name}) Skipping Block for TS {current_timeslot}")
             else:
