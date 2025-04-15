@@ -41,9 +41,12 @@ def transition(pre_state: State, block: Block) -> State:
     # 7. Recent History
     recent_block_history_state = RecentHistory.transition(authorization_state, block, ByteArray32([0] * 32))
     # 8. Preimages
-    preimage_state = Preimages.transition(recent_block_history_state, block)
+    #NOTE: temp stats that should come from accumulation module
+    accumulation_stats = {}
+    deferred_transfer_stats = {}
+    preimage_state = Preimages.transition(recent_block_history_state, block, accumulation_stats, deferred_transfer_stats)
     # 9. Statistics
-    statistics_state = Statistics.transition(preimage_state, block)
+    statistics_state = Statistics.transition(preimage_state, block, available_wrs)
 
     return statistics_state
 
