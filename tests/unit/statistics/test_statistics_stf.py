@@ -29,9 +29,15 @@ def create_block_from_input(input: Input) -> Block:
 def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state: State = create_dummy_state()
-    Py = Pi([pre_state.pi.current, pre_state.pi.last])
+    Py = Pi(
+        [
+            pre_state.statistics.vals_current,
+            pre_state.statistics.vals_last,
+            pre_state.statistics.cores,
+        ]
+    )
     state.pi = Py
-    state.tau = pre_state.tau
+    state.tau = pre_state.slot
     return state
 
 
