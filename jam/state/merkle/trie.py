@@ -1,4 +1,5 @@
-from typing import Dict
+from typing import Dict, Optional, Literal
+from dataclasses import dataclass
 from jam.types.protocol.crypto import Hash
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
 from jam.state.merkle.node import Node
@@ -6,6 +7,18 @@ from jam.state.merkle.node import Node
 NodeHash = ByteArray32
 EncodedNode = ByteArray64
 
+
+# Persistent node type for storing in the database.
+DBNodeType = Literal["branch", "leaf_embedded", "leaf_normal", "empty"]
+
+@dataclass
+class DBNode:
+    node_type: DBNodeType            # "branch", "leaf_embedded", "leaf_normal", "empty"
+    encoded: ByteArray64             # the full 64-byte encoded value of the node
+    key: Optional[ByteArray32] = None  # For leaf nodes: store only the key (value is externally stored)
+    bit_index: Optional[int] = None    # For branch nodes: index used to decide the split
+    left: Optional[NodeHash] = None    # For branch nodes: hash pointer to left child
+    right: Optional[NodeHash] = None   # For branch nodes: hash pointer to right child
 
 class MerkleTrie:
     """Binary Merkle Trie implementation as defined in D.2
@@ -25,5 +38,5 @@ class MerkleTrie:
             {}
         )  # node_hash -> encoded_node - Two node hashes will point to one encoded node
         self._root_hash = self.node.ZERO_HASH
-        
+        self._db_nodes: Dict[NodeHash, int] = {}
     
