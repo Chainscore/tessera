@@ -179,6 +179,7 @@ class BMRFunctions:
 
         return self._node_fn(self._preprocessor_fn(values, hash_fn), hash_fn)
 
+
     def merkle_path_fn(self,
                        values: Vector[ByteArray32],
                        size: Int,
