@@ -100,7 +100,7 @@ class VRF(ABC):
             int: Generated challenge
         """
         # Create challenge string
-        str0 = self.curve.SUITE_STRING.encode() + bytes([0x02])
+        str0 = self.curve.SUITE_STRING + bytes([0x02])
         challenge_string = str0
 
         # Add point encodings

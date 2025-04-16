@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import math
 from dataclasses import dataclass
 from typing import TypeVar, Self
@@ -314,7 +315,7 @@ class TEAffinePoint(Point[C]):
         return self.__class__(0, 1)
 
     @classmethod
-    def encode_to_curve(cls, alpha_string: bytes, salt: bytes = b"") -> Self:
+    def encode_to_curve_(cls, alpha_string: bytes, salt: bytes = b"") -> Self:
         """
         Encode a string to a curve point using Elligator 2.
 
@@ -333,6 +334,37 @@ class TEAffinePoint(Point[C]):
         R = q0 + q1
 
         return R.clear_cofactor()
+    
+    @classmethod
+    def encode_to_curve(cls, alpha, salt=" "):
+        """
+        Encode a string to a curve point using try-and-increment method for ECVRF.
+
+        Args:
+            alpha: String to encode
+            salt: Optional salt for the encoding
+
+        Returns:
+            TEAffinePoint: Resulting curve point
+        """
+        ctr = 0
+        H = "INVALID"
+        front = b'\x01'
+        back = b'\x00'
+        salt = salt.encode() if isinstance(salt, str) else salt
+
+        suite_string = b'' # cls.curve.SUITE_STRING.encode()
+
+        while H == "INVALID" or H == (0, 1):
+            ctr_string = ctr.to_bytes(1, "big")
+            hash_input = (suite_string + front + b"" + alpha + ctr_string + back)
+            hash_output = hashlib.sha256(hash_input).digest()
+            H = cls.string_to_point(b'0x02' + hash_output)
+            if H != "INVALID" and cls.curve.COFACTOR > 1:
+                H = cls.scalar_mul(H,cls.curve.COFACTOR)
+            ctr += 1
+
+        return H
 
     def clear_cofactor(self) -> Self:
         """
@@ -341,7 +373,7 @@ class TEAffinePoint(Point[C]):
         Returns:
             TEAffinePoint: Point in prime-order subgroup
         """
-        return self.glv_mul(self.curve.COFACTOR)
+        return self * (self.curve.COFACTOR)
 
     @classmethod
     def map_to_curve(cls, u: int) -> Self:

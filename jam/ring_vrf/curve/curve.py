@@ -39,8 +39,8 @@ class Curve:
     K: ClassVar[int] = 128  # Security parameter
     
     # Suite String Parameters
-    SUITE_STRING: ClassVar[str] = "Bandersnatch_SHA-512_ELL2"
-    DST: ClassVar[bytes] = f"ECVRF_Bandersnatch_XMD:SHA-512_ELL2_RO_{SUITE_STRING}".encode()
+    SUITE_STRING: Final[bytes]
+    DST: Final[bytes]
     
     def __post_init__(self) -> None:
         """Validate curve parameters after initialization."""

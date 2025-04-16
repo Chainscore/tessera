@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final, Self
 
-from ..glv import GLVSpecs
+from ..glv import DisabledGLV, GLVSpecs
 from ..twisted_edwards.te_curve import TECurve
 from ..twisted_edwards.te_affine_point import TEAffinePoint
 
@@ -15,6 +15,9 @@ class BandersnatchParams:
     The Bandersnatch curve is a Twisted Edwards curve designed for efficient
     implementation of zero-knowledge proofs and VRFs.
     """
+    SUITE_STRING=b"Bandersnatch_SHA-512_ELL2"
+    DST=b"ECVRF_Bandersnatch_XMD:SHA-512_ELL2_RO_Bandersnatch_SHA-512_ELL2"
+    
     # Curve parameters
     PRIME_FIELD: Final[int] = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
     ORDER: Final[int] = 0x1cfb69d4ca675f520cce760202687600ff8f87007419047174fd06b52876e7e1
@@ -62,7 +65,9 @@ class BandersnatchCurve(TECurve):
             glv=BandersnatchGLVSpecs(),
             Z=BandersnatchParams.Z,
             EdwardsA=BandersnatchParams.EDWARDS_A,
-            EdwardsD=BandersnatchParams.EDWARDS_D
+            EdwardsD=BandersnatchParams.EDWARDS_D,
+            SUITE_STRING=BandersnatchParams.SUITE_STRING,
+            DST=BandersnatchParams.SUITE_STRING
         )
 
 # Singleton instance
@@ -103,28 +108,3 @@ class BandersnatchPoint(TEAffinePoint):
             BandersnatchParams.GENERATOR_X,
             BandersnatchParams.GENERATOR_Y
         )
-    
-    def to_bytes(self) -> bytes:
-        """
-        Convert point to compressed byte representation.
-        
-        Returns:
-            bytes: Compressed point representation
-        """
-        return self.point_to_string()
-    
-    @classmethod
-    def from_bytes(cls, data: bytes) -> Self:
-        """
-        Create point from compressed byte representation.
-        
-        Args:
-            data: Compressed point bytes
-            
-        Returns:
-            BandersnatchPoint: Decoded point
-            
-        Raises:
-            ValueError: If data is invalid
-        """
-        return cls.string_to_point(data)
