@@ -138,17 +138,13 @@ class State(Sigma):
         for key, value in sorted(state.items(), key=lambda x: x[0], reverse=True):
             # Start with finding all core state components 1-15
             # if (key[0] <= 15) and bytes(key[0:32]) == 0:
-            print("print",int(key[0]))
             if int(key[0]) <= 15 and int(key[0]) > 0:
                 if int(key[0]) == 1:
                     alpha, _ = Alpha.decode_from(bytes(value))
                 elif int(key[0]) == 2:
                     phi, _ = Phi.decode_from(bytes(value))
                 elif int(key[0]) == 3:
-                    print("value", value)
-                    print("bytes(value)", bytes(value))
                     beta, _ = Beta.decode_from(bytes(value))
-                    print("Beta")
                 elif int(key[0]) == 4:
                     gamma, _ = Gamma.decode_from(bytes(value))
                 elif int(key[0]) == 5:
@@ -201,7 +197,6 @@ class State(Sigma):
                     gas_limit=Gas(ag),
                     min_gas=Gas(am),
                 )
-                print("Service ID: ")
             else:
                 if Bytes(key[7:0:-2]) == Bytes(2**32 - 1):
                     # populating the storage
@@ -209,12 +204,10 @@ class State(Sigma):
                     delta[service_id].storage[
                         ByteArray32(Bytes(key[8:32] + Bytes(bytearray(8))))
                     ] = value
-                    print("Storage")
                 elif Bytes(key[7:0:-2]) == Bytes(2**32 - 2):
                     # populating the lookup
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
                     delta[service_id].lookup[Hash.blake2b(value)] = value
-                    print("State Detransform 31111")
                 else:
                     # populating the timestamps
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
@@ -223,9 +216,7 @@ class State(Sigma):
                         Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
                     )
                     delta[service_id].timestamps[timestamp_key] = TimeStamps
-                    print("State Detransform 3211")
         
-        print("RUNNZZ")
         return State(
             alpha=alpha,
             phi=phi,

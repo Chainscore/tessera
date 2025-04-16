@@ -515,8 +515,7 @@ async def safrole_keyval(request_data: RequestData):
     """
     try:
         test_block = Block.from_json(request_data.input.block)
-        output_state = GeneralState.parse_keyval_state(request_data.output.state)
-
+        test_state = GeneralState.parse_keyval_state(request_data.input.state)
         # test_state = GeneralState.parse_keyval_state(request_data.input.state)
         epoch_mark = test_block.header.epoch_mark.value
         if 'none' in epoch_mark:
@@ -524,19 +523,19 @@ async def safrole_keyval(request_data: RequestData):
         else:
             entropy = test_block.header.epoch_mark.value['some'].entropy
        
-
         transition_output = Safrole.transition(test_state, test_block, entropy)
-        # print("testste 1 ",request_data.input.state)
-        # print("----------------------------------------------------------------------------------")
-        # print("testste 2 ",request_data.output.state)
-        print("RINS")
+        # print("transition_output", transition_output)
+
+        if request_data.output is None:
+            return {"ok": None}
         output_state = GeneralState.parse_keyval_state(request_data.output.state)
+        # print("output_state", output_state)
         try:
             assert transition_output.tau == output_state.tau, "output_mismatch(tau)"
-            assert transition_output.eta[0] == output_state.eta[0], "output_mismatch(eta)"
-            assert transition_output.eta[1] == output_state.eta[1], "output_mismatch(eta)"
-            assert transition_output.eta[2] == output_state.eta[2], "output_mismatch(eta)"
-            assert transition_output.eta[3] == output_state.eta[3], "output_mismatch(eta)"
+            assert transition_output.eta[0] == output_state.eta[0], "output_mismatch(eta0)"
+            assert transition_output.eta[1] == output_state.eta[1], "output_mismatch(eta1)"
+            assert transition_output.eta[2] == output_state.eta[2], "output_mismatch(eta2)"
+            assert transition_output.eta[3] == output_state.eta[3], "output_mismatch(eta3)"
             assert transition_output.lambda_ == output_state.lambda_, "output_mismatch(lamda)"
             assert transition_output.kappa == output_state.kappa, "output_mismatch(kappa)"
             assert transition_output.gamma.k == output_state.gamma.k, "output_mismatch(gamma_k)"
@@ -548,16 +547,13 @@ async def safrole_keyval(request_data: RequestData):
             # assert len(transition_output.gamma.z) == len(output_state.gamma_z)
             # assert transition_output.gamma.z == output_state.gamma_z
         except AssertionError as e:
-            print("output mismatch:", str(e))
             return {"err": str(e)}
 
         return {"ok": None}
 
     except SafroleError as e:
-        print("Failed:", e.code._value_)
         return {"err": e.code._value_}
     except Exception as e:
-        print("Unexpected error:", str(e))
         return {"err": "unexpected_error"}
 
 @app.post("/api/v1/shuffle/validate",
