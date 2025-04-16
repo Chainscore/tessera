@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import TypeVar, Self
 
+from sympy import mod_inverse
+
 from ..point import Point, PointProtocol
 from .te_curve import TECurve
-
 C = TypeVar("C", bound=TECurve)
 
 
@@ -175,6 +177,22 @@ class TEAffinePoint(Point[C]):
 
         return result
 
+    # def glv_mul(self, scalar: int) -> Self:
+    #     """
+    #     GLV scalar multiplication using endomorphism.
+    #
+    #     Args:
+    #         scalar: Integer to multiply by
+    #
+    #     Returns:
+    #         TEAffinePoint: Scalar multiplication result
+    #     """
+    #     n = self.curve.ORDER
+    #     k1, k2 = self.curve.glv.decompose_scalar(scalar % n, n)
+    #     phi = self.compute_endomorphism()
+    #
+    #     return self.scalar_mul(k1) + phi.scalar_mul(k2)
+
     def glv_mul(self, scalar: int) -> Self:
         """
         GLV scalar multiplication using endomorphism.
@@ -189,7 +207,73 @@ class TEAffinePoint(Point[C]):
         k1, k2 = self.curve.glv.decompose_scalar(scalar % n, n)
         phi = self.compute_endomorphism()
 
-        return self.scalar_mul(k1) + phi.scalar_mul(k2)
+        return self.windowed_simultaneous_mult(k1, k2, self, phi, w=2)
+
+    def windowed_simultaneous_mult(
+            self,
+            k1: int,
+            k2: int,
+            P1: PointProtocol[C],
+            P2: PointProtocol[C],
+            w: int = 2
+    ) -> Self:
+        """
+        Compute k1 * P1 + k2 * P2 using windowed simultaneous multi-scalar multiplication.
+
+        Args:
+            k1: First scalar
+            k2: Second scalar
+            P1: First point
+            P2: Second point
+            w: Window size (default=2)
+
+        Returns:
+            TEAffinePoint: Result of k1*P1 + k2*P2
+
+        Raises:
+            TypeError: If P1 or P2 is not compatible with this curve
+        """
+        # Validate input points
+        if not isinstance(P1, TEAffinePoint) or not isinstance(P2, TEAffinePoint):
+            raise TypeError("Points must be TEAffinePoints")
+
+        if P1.curve != self.curve or P2.curve != self.curve:
+            raise ValueError("Points must be on the same curve")
+
+        def split_scalar(scalar: int, width: int, chunks: int) -> list[int]:
+            """Split scalar into 'chunks' groups of 'width' bits."""
+            mask = (1 << width) - 1
+            return [(scalar >> (i * width)) & mask for i in range(chunks)]
+
+        # Step 1: Precompute all i*P1 + j*P2
+        table = {}
+        identity = self.identity_point()
+
+        for i in range(1 << w):
+            Pi = P1.scalar_mul(i) if i != 0 else identity
+            for j in range(1 << w):
+                Qj = P2.scalar_mul(j) if j != 0 else identity
+                table[(i, j)] = Pi + Qj
+
+        # Step 2: Split k1 and k2 into w-bit windows
+        max_len = max(k1.bit_length(), k2.bit_length())
+        d = math.ceil(max_len / w)
+        k1_windows = split_scalar(k1, w, d)
+        k2_windows = split_scalar(k2, w, d)
+
+        # Step 3: Initialize result
+        R = identity
+
+        # Step 4: Iterate windows from MSB to LSB
+        for i in range(d - 1, -1, -1):
+            for _ in range(w):
+                R = R.double()
+
+            idx = (k1_windows[i], k2_windows[i])
+            if idx in table:
+                R = R + table[idx]
+
+        return R
 
     def compute_endomorphism(self) -> Self:
         """
@@ -198,7 +282,27 @@ class TEAffinePoint(Point[C]):
         Returns:
             TEAffinePoint: Result of endomorphism
         """
-        return self.scalar_mul(self.curve.glv.lambda_param)
+        p = self.curve.PRIME_FIELD
+        # These constants should ideally be curve attributes
+        B = 0x52c9f28b828426a561f00d3a63511a882ea712770d9af4d6ee0f014d172510b4
+        C = 0x6cc624cf865457c3a97c6efd6c17d1078456abcfff36f4e9515c806cdf650b3d
+
+        x, y = self.x, self.y
+        y2 = pow(y, 2, p)
+        xy = (x * y) % p
+        f_y = (C * (1 - y2)) % p
+        g_y = (B * (y2 + B)) % p
+        h_y = (y2 - B) % p
+
+        x_p = (f_y * h_y) % p
+        y_p = (g_y * xy) % p
+        z_p = (h_y * xy) % p
+
+        x_a = (x_p * mod_inverse(z_p, p)) % p
+        y_a = (y_p * mod_inverse(z_p, p)) % p
+
+        return self.__class__(x_a, y_a)
+
 
     def identity_point(self) -> Self:
         """
