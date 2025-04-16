@@ -29,32 +29,16 @@ def db_path():
     yield temp_dir
     shutil.rmtree(temp_dir)
 
-
-def get_cached_tree(db: KVStore) -> dict:
-    """
-    Retrieve the entire update tree from RocksDB.
-    The tree is stored under the key b"cached_tree" as a serialized dictionary.
-    Returns:
-        dict: Mapping of node keys (e.g., node hashes) to encoded node data.
-    """
-    tree_bytes = db.get(b"cached_tree:")
-
-    if tree_bytes is not None:
-        return pickle.loads(tree_bytes)
-    return {}
-
-
 def test_state_transform_and_detransform(db_path: str):
     """
     Test transformation and merkelization of the state.
     
     This function:
-      - Loads the genesis state snapshot,
-      - Constructs the in‑memory state,
-      - Transforms the state into a trie structure using merkelization,
-      - Prints node keys (for debugging)
-    
-    Adjust the file paths as needed.
+      - Loads the genesis_transform.json file,
+      - Constructs the state from the genesis_transform.json file,
+      - Saves the state to the KVStore,
+      - Loads the state from the KVStore,
+      - Asserts that the state is consistent with the genesis_transform.json file
     """
     # Initialize the KVStore (in-memory DB used for RocksDB or similar)
     kv = KVStore(db_path)
@@ -90,19 +74,22 @@ def test_state_transform_and_detransform(db_path: str):
     continuation_keyvals = sorted(transform_data["post_state"]["keyvals"], key=lambda item: item[0])
     # Convert the decoded DunaState into the State class (in-memory representation)
     state = genesis_state.to_state()
-    # Assuming state is already defined and has a transform() method that returns a dict
     state.save(kv)
 
+    # Assert that the state is consistent with the genesis_transform.json file
+    #pre-state
     for index, (key, value) in enumerate(sorted(state.transform().items(), key=lambda item: item[0])):
-        # print(f"Index {index}: Key = {key}, {ByteArray32(genesis_keyvals[index][0])}, {value}, {Bytes(genesis_keyvals[index][1])}")
         assert key == ByteArray32(genesis_keyvals[index][0])
         assert value == Bytes(genesis_keyvals[index][1])
     
     state.save(kv,updates1)
+    # Fetch the updated state from the KVStore and assert that it is consistent with the continuation_keyvals
+    #post-state
     for index, (key, value) in enumerate(sorted(State.load(kv).transform().items(), key=lambda item: item[0])):
         assert key == ByteArray32(continuation_keyvals[index][0])
         assert value == Bytes(continuation_keyvals[index][1])
-    
+    print("✅ State transformation and detransformation check passed.")
+    kv.close()
 
 
 def test_state_delta_load(db_path: str):
@@ -110,18 +97,15 @@ def test_state_delta_load(db_path: str):
     Test the delta consistency between state saved to and loaded from the KVStore.
     
     This function:
-      - Loads two genesis snapshot files (original and variant),
-      - Converts them into state objects,
-      - Persists the original state to the KVStore,
-      - Loads the state from the KVStore via a list of state keys,
-      - Asserts that the 'delta' field of the original state matches the loaded state.
-    
-    Adjust file paths and key-array formation as needed.
+      - Loads a genesis state from a json file
+      - Saves the state to the KVStore
+      - Loads the state from the KVStore using a list of state keys
+      - Asserts that the 'delta' of the specific serviceId field of the original state matches the loaded state.
     """
     # Initialize the key-value store.
     kv = KVStore(db_path)
     
-    # Load the first genesis snapshot (original state)
+    # Load the first genesis snapshot 
     genesis_file = "tests/integration/jam-duna/state_snapshots/genesis.json"
     with open(genesis_file) as file:
         genesis_data = json.load(file)
@@ -150,88 +134,23 @@ def test_state_delta_load(db_path: str):
     
     # Load state from the KVStore using the key array.
     state_loaded = State.load(kv, key_array)
+    # Assert that the delta values of the specific serviceId are consistent between the original and loaded states.
     assert(state_original.delta[ServiceId(0)]==state_loaded.delta[ServiceId(0)])
-    # Assert that the delta values are consistent between the original and loaded states.
     print("✅ State delta consistency check passed.")
     kv.close()
 
-
-
-
-
-# def test_state_transform(db_path):
-#     """Test state transformation."""
-#     # Initialize store
-#     kv = KVStore(db_path)
-
-#     genesis_file = "tests/integration/jam-duna/state_snapshots/genesis.json"
-#     with open(genesis_file) as file:
-#         genesis_data = json.loads(file.read())
-#         try:
-#             tc = DunaState.from_json(genesis_data)
-#             print(f"Decoded {file}")
-#         except Exception as e:
-#             print(f"❌ Failed to decode {file}: {e}")
-#     genesis_file01 = "tests/integration/jam-duna/state_snapshots/genesis01.json"
-#     with open(genesis_file01) as file:
-#         genesis_data01 = json.loads(file.read())
-#         try:
-#             tc01 = DunaState.from_json(genesis_data01)
-#             print(f"Decoded {file}")
-#         except Exception as e:
-#             print(f"❌ Failed to decode {file}: {e}")
-#     state1 = tc.to_state()
-#     # state01 = tc01.to_state()
-#     # transform1=state1.transform()
-#     # print(state01.generate_root())
-#     # keys1 = {key: value.hex() for key, value in state1.transform().items()}
-#     # keys2={key:value.hex() for key,value in state01.transform().items()}
-#     # print("keys2",keys2)
-#     # print("0x0023000000000000478648cd19b4f812f897a26976ecf312eac28508b4368d0c-->",transform1[ByteArray32(bytes.fromhex("0023000000000000478648cd19b4f812f897a26976ecf312eac28508b4368d0c"))]==Bytes(bytes.fromhex("0100000000")))
-
-#     # state_diff={}
-#     # for i in state01:
-#     #     if i not in state1 or state01[i]!=state1[i]:
-#     #         print(i,state01[i])
-#     # state_diff[i]=state01[i]
-#     # print("State_diff-->",state_diff)
-#     # State.generate_root(state1)
-
-
-#     # print(tree_structure,root_hash)
-#     # state1=State.transform(state1)
-#     # state01=State.transform(state01)
-#     # state1=State.detransform(state1)
-#     # state01=State.detransform(state01)
-
-#     # state = tc.to_state()
-#     # state.save(kv)
-
-#     # keyArray = [ByteArray32(bytes.fromhex("0023000000000000478648cd19b4f812f897a26976ecf312eac28508b4368d0c")), ByteArray32(bytes.fromhex("00c1000500000000e9cd67b035be4b81c826840fd636fcbc3640d6990dfb8a6d")), ByteArray32(
-#     #     bytes.fromhex("00fe00ff00ff00ff6326432b5b3213dfd1609495e13c6b276cb474d679645337")), ByteArray32(bytes.fromhex("00fe00ff00ff00ffed2fda1ccc4b59d6b382edb3dcd2a312925839a006199060"))]
-#     # # keyArray=[ByteArray32(bytes.fromhex("0023000000000000478648cd19b4f812f897a26976ecf312eac28508b4368d0c"))]
-#     # state2=State.load(kv,keyArray)
-#     # # Checking the delta of JamDuna and our U32[0] related data from our DB is same
-#     # assert(state1.delta==state2.delta)
-
-#     # tree = state1.transform()
-#     # state1._merkle.merkelize(tree)
-
-#     # for i in state1._merkle.trie._nodes:
-#     #     print(i,[int(val) for val in state1._merkle.bits(i)])
-#     # print("Tree:\n")
-#     # for i in sorted(tree.items()):
-#     #     print([int(val) for val in state1._merkle.bits(i[0])])
-#     #     print("\n")
-
-#     # print(bin(160)[2:])
-
-#     # Close the store
-#     kv.close()
-
-
 def test_state_trie_update(db_path):
-    """Test state trie updation."""
+    """
+    Test state trie updates.
+    
+    This function tests the state trie update functionality by:
+      - Loading a genesis state from a JSON file
+      - Saving the initial state to the KVStore (pre-state)
+      - Applying updates and saving to the KVStore (post-state)
+      - Verifying that the root hash matches between updated pre-state and post-state (updatation of key nodes)
+      - Adding a new key-value pair to the state
+      - Verifying that the root hash updates correctly after the new insertion (insertion of a new key node)
+    """
     # Initialize store
     kv = KVStore(db_path)
 
@@ -253,6 +172,7 @@ def test_state_trie_update(db_path):
             print(f"❌ Failed to decode {file}: {e}")
     state1 = tc.to_state()
     state2 = tc01.to_state()
+    #pre_state
     state1.save(kv)
     updates1 = {
         ByteArray32(ByteUtils.hex_to_bytes("0x0400000000000000000000000000000000000000000000000000000000000000")):
@@ -271,9 +191,11 @@ def test_state_trie_update(db_path):
         ByteArray32(ByteUtils.hex_to_bytes("0x1400000000000000000000000000000000000000000000000000000000000000")):
             Bytes(ByteUtils.hex_to_bytes("0x00000000")),
     }
+    #post_state
     state1.save(kv, updates1)
     assert(state1._merkle.trie._root_hash==state2.generate_root())
-
+    #post_state with addition of a new key node
     state1.save(kv, updates2)
     assert(state1._merkle.trie._root_hash==ByteArray32(ByteUtils.hex_to_bytes("0xcb9e069a09b9943ba6c5b6f205964ece7e57fae2ef656468a24f1d0b53a6ae39")))
+    print("✅ State trie update check passed.")
     kv.close()

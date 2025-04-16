@@ -46,6 +46,8 @@ class State(Sigma):
         - Extends Sigma
         - Adds Merklization (generates root, get_merkle_nodes)
         - Adds transform and detransform methods
+        - Adds save and load methods
+        - Adds genesis method
 
     Args:
         **kwargs: Keyword arguments for the components of the state
@@ -131,9 +133,8 @@ class State(Sigma):
     @staticmethod
     def detransform(state: dict) -> "State":
         """Inverse of transform"""
-        # Loop thru the whole state dict
-
-        # populating the delta
+        # Iterate through the state dictionary to reconstruct the State object.
+        # The state dictionary contains core state components and service-specific data.
         delta = {}
         for key, value in sorted(state.items(), key=lambda x: x[0], reverse=True):
             # Start with finding all core state components 1-15
@@ -279,11 +280,12 @@ class State(Sigma):
         )
     
     def save(self,db:KVStore,Updated_keys:list[ByteArray32,Bytes]=None):
-        ''' 
-            We merkelize state only when:
-            general_root is not present in db 
-            otherwise update the path and update the general_root
-        '''
+        """
+        Save state to the key-value store.
+        
+        If the root hash is not initialized (all zeros), merkelize the full state and save all key-value pairs.
+        Otherwise, update only the modified paths, root hash, and state keys in the database.
+        """
         data = self.transform()
         if self._merkle.trie._root_hash == ByteArray32([0] * 32):
             self._merkle.merkelize(data)
@@ -299,6 +301,12 @@ class State(Sigma):
 
     @staticmethod
     def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
+        """
+            Load state data from the key-value store and transform it into a dictionary.
+            If service-related keys are provided, load the corresponding service-specific
+            state data as well. This allows for efficient partial state loading when
+            only specific service data is needed.
+        """
         data = {}
         service_ids:set[ServiceId]=set()
         
