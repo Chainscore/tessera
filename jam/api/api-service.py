@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional, Union, Literal
-
+from jam.report.state import Reporting
 from jam.accumulation.accumulation import Accumulation
 from jam.assurances.assurances import Assurances
 from jam.authorization.authorization import Authorization
@@ -690,13 +690,18 @@ async def assurances(request_data: RequestData):
             return {"result": True}
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
+        try:
+            assert transition_output == output_state, "output_mismatch"
+            
+        except AssertionError as e:
+            return {"err": str(e)}
 
-        assert transition_output == output_state
-    except AssertionError as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        return {"ok": None}
+
+    except AssurancesError as e:
+        return {"err": e.code._value_}
     except Exception as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
-
+        return {"err": "unexpected_error"}
 
 @app.post("/api/v1/report/validate",
           tags=["State Transitions"],
@@ -710,13 +715,13 @@ async def report(request_data: RequestData):
     """
     Validate state transition according to Report rules.
     
-    NOTE: This endpoint is incomplete and currently uses Assurances transition as a placeholder.
+    Compares the output of the Report transition function with the expected output state.
     """
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
         ##TODO: Add reports once added.
-        output = Assurances.transition(test_state, test_block)
+        output = Reporting.transition(test_state, test_block)
         return {"result": output}
     except Exception as e:
         return JSONResponse(status_code=400, content={"err": str(e)})
