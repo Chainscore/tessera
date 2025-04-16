@@ -133,6 +133,8 @@ class StateMerkle:
         
             
         while True:
+            if current_hash==NodeHash([0] * 32):
+                return path
             node_obj = self.trie._db_nodes[current_hash]
             if node_obj is None:
                 return path
@@ -152,7 +154,7 @@ class StateMerkle:
             else:
                 # It's a leaf (or empty); we've reached the end
                 return path
-    def update_path(self, key: ByteArray32, new_value: Bytes, db: KVStore = None) -> NodeHash:
+    def update_path(self, key: ByteArray32, new_value: Bytes) -> NodeHash:
         """Update path in RAM and optionally persist state update"""
         # Find path using in-memory nodes
         path = self.find_path(key)
@@ -172,17 +174,11 @@ class StateMerkle:
             encoded=leaf_encoded,
             key=key
         )
-        
         # TODO: Need to prune the old leaf node
         
         # # Update branch nodes in RAM
         new_root_hash = self._update_branch_nodes(path, key, new_leaf_hash)
-        # print("new_root_hash-->",new_root_hash)
-        # # Only persist state update in DB if provided
-        # if db is not None:
-        #     db.put(bytes(key), bytes(new_value))
         
-        # return new_root_hash
         return self.trie._root_hash
 
     def _update_branch_nodes(self, path: List[NodeHash], key: ByteArray32, new_leaf_hash: NodeHash) -> NodeHash:
@@ -215,7 +211,7 @@ class StateMerkle:
         self.trie._root_hash = path[0]
         return path[0]
 
-    def update_global_root(self, updates: Dict[ByteArray32, Bytes],db:KVStore=None) -> NodeHash:
+    def update_global_root(self, updates: Dict[ByteArray32, Bytes]) -> NodeHash:
         """
         Given a set of key:new_value updates (for leaves), update the trie along each key's path
         and then re-calculate the global state root.
@@ -227,5 +223,5 @@ class StateMerkle:
         new_root = self.trie._root_hash
         
         for key, new_value in updates.items():
-            new_root = self.update_path(key, new_value,db)
-        return new_root
+            self.update_path(key, new_value)
+        return self.trie._root_hash

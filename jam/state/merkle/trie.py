@@ -9,7 +9,7 @@ EncodedNode = ByteArray64
 
 
 # Persistent node type for storing in the database.
-DBNodeType = Literal["branch", "leaf_embedded", "leaf_normal", "empty"]
+DBNodeType = Literal["branch", "leaf_embedded", "leaf_normal"]
 
 @dataclass
 class DBNode:

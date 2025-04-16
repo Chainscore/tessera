@@ -25,6 +25,7 @@ from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public, Hash
 from jam.types.protocol.crypto import OpaqueHash
+from jam.utils.byte_utils import ByteUtils
 from jam.state.components.delta import (
     AccountData,
     AccountStorage,
@@ -277,19 +278,23 @@ class State(Sigma):
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
     
-    def save(self,db:KVStore,keys:list[ByteArray32]=None,):
-        data = self.transform()
-        for key, value in data.items():
-            db.put(bytes(key), bytes(value))
+    def save(self,db:KVStore,Updated_keys:list[ByteArray32,Bytes]=None):
+        ''' 
+            We merkelize state only when:
+            general_root is not present in db 
+            otherwise update the path and update the general_root
+        '''
         if db.get(b"general_root:") is None:
+            data = self.transform()
             general_root,_=self._merkle.merkelize(data)
             db.put(b"general_root:",bytes(general_root))
-            # for key, value in data.items():
-            #     db.put(bytes(key), bytes(value.encoded))
+            for key, value in data.items():
+                db.put(bytes(key), bytes(value))
         else:
-            general_root=db.get(b"general_root:")
-        
-        # Save the regular state data
+            general_root=self._merkle.update_global_root(Updated_keys)
+            db.put(b"general_root:",bytes(general_root))
+            for key,value in Updated_keys.items():
+                db.put(bytes(key),bytes(value))
         
 
     @staticmethod
@@ -318,9 +323,5 @@ class State(Sigma):
                 
         state = State.detransform(data)
         return state
-    
-    @staticmethod
-    def update( state_dict: Dict[ByteArray32, ByteArray32], db: KVStore):
-        pass
 
         
