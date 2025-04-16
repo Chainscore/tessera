@@ -8,12 +8,14 @@ from jam.types.work.package import WorkPackage
 from jam.utils.json import JsonSerde
 from typing import cast, Any, Optional, Tuple
 from jam.types.work.report import WorkReport
+from jam.types.protocol.core import TimeSlot
 
 
 @decodable_dataclass
 @dataclass
 class CE135Data(Codable, JsonSerde):
     report: WorkReport
+    slot: TimeSlot
 
 
 class WorkReportDistribution(NetworkProtocol):
@@ -26,7 +28,7 @@ class WorkReportDistribution(NetworkProtocol):
     def transmit(self, node: Node, data: CE135Data):
 
         for client in node.connections:
-            message = self._prefix.encode() + data.report.encode()
+            message = self._prefix.encode() + data.report.encode() + data.slot.encode()
             client.stream_and_close(message=message)
 
     @classmethod

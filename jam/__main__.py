@@ -8,7 +8,8 @@ from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.dummy_bp import block_producer
 from jam.network.dummy_wpb import wp_producer
-
+from jam.network.dummy_wr import work_report_producer
+from jam.network.dummy_wr_request import work_report_request_producer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
 from jam.state.state import State
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
@@ -68,8 +69,10 @@ async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, is_
                 if tsr_node.is_builder:
                     print("yay i am imposter")
                     tg.create_task(wp_producer(tsr_node, db))
+                    tg.create_task(work_report_producer(tsr_node, db))
                 else:
                     tg.create_task(block_producer(tsr_node, db))
+                    tg.create_task(work_report_request_producer(tsr_node, db))
 
         else:
             # TODO: Sync from peers
