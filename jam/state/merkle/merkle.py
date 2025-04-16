@@ -223,5 +223,5 @@ class StateMerkle:
         new_root = self.trie._root_hash
         
         for key, new_value in updates.items():
-            self.update_path(key, new_value)
+            new_root=self.update_path(key, new_value)
         return self.trie._root_hash

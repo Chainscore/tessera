@@ -284,15 +284,15 @@ class State(Sigma):
             general_root is not present in db 
             otherwise update the path and update the general_root
         '''
-        if db.get(b"general_root:") is None:
-            data = self.transform()
-            general_root,_=self._merkle.merkelize(data)
-            db.put(b"general_root:",bytes(general_root))
+        data = self.transform()
+        if self._merkle.trie._root_hash == ByteArray32([0] * 32):
+            self._merkle.merkelize(data)
+            # db.put(b"general_root:",bytes(general_root))
             for key, value in data.items():
                 db.put(bytes(key), bytes(value))
         else:
-            general_root=self._merkle.update_global_root(Updated_keys)
-            db.put(b"general_root:",bytes(general_root))
+            root=self._merkle.update_global_root(Updated_keys)
+            # db.put(b"general_root:",bytes(general_root))
             for key,value in Updated_keys.items():
                 db.put(bytes(key),bytes(value))
         
@@ -304,7 +304,7 @@ class State(Sigma):
         
         if keys is None:
             for key, value in db.get_all().items():
-                data[key] = Bytes(value)
+                data[ByteArray32(key)] = Bytes(value)
         else:
             for i in range(1,16):
                 state_key=construct_state_key(i)
@@ -320,7 +320,6 @@ class State(Sigma):
             for service_id in service_ids:
                 service_key=construct_state_key((255,service_id))
                 data[service_key]=Bytes(db.get(bytes(service_key)))
-                
         state = State.detransform(data)
         return state
 
