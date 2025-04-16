@@ -170,16 +170,13 @@ class KVStore:
     def get(self, key_bytes: bytes):
         error = self.ffi.new("char**")
         vallen = self.ffi.new("size_t*")
-
         value_ptr = self.lib.rocksdb_get(
             self.db, self.roptions, key_bytes, len(key_bytes), vallen, error
         )
         self._check_error(error)
-
         if value_ptr == self.ffi.NULL:
             return None
-
-        value = self.ffi.string(value_ptr, vallen[0]).decode("utf-8")
+        value = bytes(self.ffi.buffer(value_ptr, vallen[0]))
         self.lib.rocksdb_free(value_ptr)
         return value
 

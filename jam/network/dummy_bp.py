@@ -50,8 +50,9 @@ async def block_producer(node: Node, db: KVStore):
             if author_key == node.validator_data.bandersnatch:
                 block = create_dummy_block()
                 logger.info(f"⛏️ ({node.name}) Producing Block {block_number}")
+
                 # await announce_block(node, block)
-                await up_0.transmit(node, block)
+                up_0.transmit(node, block)
             else:
                 logger.info(f"🔄 ({node.name}) Skipping Block {block_number}")
         else:

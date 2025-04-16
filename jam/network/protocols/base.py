@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from jam.state.state import State
 from jam.types.base.enum import Enum
 
 class PrefixType(Enum):
@@ -40,13 +41,20 @@ class NetworkProtocol(ABC):
         ...
 
     @abstractmethod
-    async def transmit(self, node: Node, data: Any):
+    def transmit(self, node: Node, data: Any):
         """Function to transmit data to connected peers. Must be implemented by subclasses."""
         ...
 
     @classmethod
-    def intercept(cls, data: bytes):
+    @abstractmethod
+    def intercept(cls, buffer: bytes):
         """Function to intercept data from connected peers. Must be implemented by subclasses."""
-
         ...
+
+    @classmethod
+    @abstractmethod
+    def process(cls, data: Any):
+        """Function to process intercepted data. Must be implemented by subclasses."""
+        ...
+
 
