@@ -31,7 +31,7 @@ def transition(pre_state: State, block: Block) -> State:
     # 2. Disputes
     disputes_state = Disputes.transition(safrole_state, block)
     # 3. Assurances
-    assurance_state = Assurances.transition(disputes_state, block)
+    assurance_state, available_wrs = Assurances.transition(disputes_state, block)
     # 4. Reporting
     reporting_state = Reporting.transition(assurance_state, block)
     # 5. Accumulation
