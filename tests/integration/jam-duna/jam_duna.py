@@ -13,6 +13,7 @@ from jam.state.components.delta import (
     AccountData,
     AccountStorage,
     Delta,
+    LookupTable,
     LookupTimestamps,
     PreImageLookup,
     Timestamps,
@@ -26,7 +27,7 @@ from jam.state.components.pi import Pi
 from jam.state.components.psi import Psi
 from jam.state.components.rho import Rho
 from jam.state.components.tau import Tau
-from jam.state.components.nu import Nu
+from jam.state.components.theta import Theta
 from jam.state.components.xi import Xi
 from jam.state.state import State
 from jam.types.base import Bytes
@@ -41,8 +42,6 @@ from tests.unit.recent_history.types import BetaInput
 from tests.unit.statistics.types import Pi as TestPi
 from jam.utils.json.decorators import with_json_metadata
 from jam.types.protocol.core import ServiceId
-from jam.types.base.sequences.bytes import ByteArray32
-from jam.types.protocol.core import BlobLength
 
 @decodable_dataclass
 @dataclass
@@ -75,15 +74,6 @@ class CustomPreimages(Vector): ...
 
 @decodable_vector(U32, 3)
 class LookupMetaValue(Vector): ...
-
-@decodable_dataclass
-@dataclass
-class LookupTable(Codable, JsonSerde):
-    hash: ByteArray32
-    length: BlobLength
-
-    def __hash__(self) -> int:
-        return int.from_bytes(bytes(Hash.sha256(bytes(self.hash) + bytes(self.length))))
 
 
 @decodable_dataclass
@@ -130,7 +120,7 @@ class Account(Codable, JsonSerde):
 @decodable_vector(Account)
 class DunaDelta(Vector[Account]): ...
 
-#Setting the state for Duna(where setting lambda to lambda_)
+
 @with_json_metadata(
     # alpha={"name": "alpha"},
     lambda_={"name": "lambda", "skip_if_none": True},
@@ -152,7 +142,7 @@ class DunaState(Codable, JsonSerde):
     tau: Tau
     chi: DunaChi
     pi: TestPi
-    theta: Nu
+    theta: Theta
     xi: Xi
     accounts: DunaDelta
 
@@ -181,7 +171,7 @@ class DunaState(Codable, JsonSerde):
         state.xi = self.xi
 
         state.delta = Delta({})
-        # making a seperate Delta for Duna
+
         for i in self.accounts:
             state.delta[i.id] = AccountData(
                 storage=AccountStorage({}),
@@ -195,11 +185,8 @@ class DunaState(Codable, JsonSerde):
             for preimage in i.data.preimages:
                 state.delta[i.id].lookup[preimage.hash] = preimage.blob
             for lookup in i.data.lookup_meta:
-                # setting the key(from the values of length and Hash.2b(Hash))
-                state.delta[i.id].timestamps[
-                    LookupTimestamps.get_key(lookup.key.hash,BlobLength(lookup.key.length))
-                ] = lookup.value
-            
+                state.delta[i.id].timestamps[lookup.key] = lookup.value
+
         return state
 
 
@@ -217,34 +204,6 @@ rpc_url = "http://localhost:3001/blocks"
 start_slot = 13
 initial_state = tc.to_state()
 
-
-#Checking the State of Duna and OurState
-def testState(DunaState,OurState):
-    assert(DunaState.alpha==OurState.alpha)
-    assert(DunaState.phi==OurState.phi)
-    assert(OurState.beta==OurState.beta)
-    assert(DunaState.gamma==OurState.gamma)
-    assert(DunaState.psi==OurState.psi)
-    assert(DunaState.eta==OurState.eta)
-    assert(DunaState.iota==OurState.iota)
-    assert(DunaState.kappa==OurState.kappa)
-    assert(DunaState.lambda_==OurState.lambda_)
-    assert(DunaState.rho==OurState.rho)
-    assert(DunaState.tau==OurState.tau)
-    assert(DunaState.chi==OurState.chi)
-    assert(DunaState.pi==OurState.pi)
-    assert(DunaState.theta==OurState.nu)
-    assert(DunaState.xi==OurState.xi)
-    #Checking the delta of Duna and OurState
-    for i in DunaState.delta:
-        assert(DunaState.delta[i].storage==OurState.delta[i].storage)
-        assert(DunaState.delta[i].lookup==OurState.delta[i].lookup)
-        assert(DunaState.delta[i].code_hash==OurState.delta[i].code_hash)
-        assert(DunaState.delta[i].balance==OurState.delta[i].balance)
-        assert(DunaState.delta[i].gas_limit==OurState.delta[i].gas_limit)
-        assert(DunaState.delta[i].min_gas==OurState.delta[i].min_gas)
-        assert(DunaState.delta[i].timestamps==OurState.delta[i].timestamps)
-    
 if __name__ == "__main__":
     #Transforming the state
     transform_state=initial_state.transform()
@@ -255,5 +214,3 @@ if __name__ == "__main__":
     # asyncio.run(main("from jam duna", initial_state, start_slot, rpc_url))
 
 # Command to run file: 'python tests/integration/jam-duna/jam_duna.py'
-
-

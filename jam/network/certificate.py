@@ -26,18 +26,18 @@ def generate_keys(port: int):
         ValueError: If the seed is not 32 bytes long
 
     Returns:
-        str: The SAN of the certificate
+        str: SAN of the certificate
     """
 
     with open("seeds/keys.json", "r") as f:
-        allSeeds = json.load(f)
+        all_seeds = json.load(f)
 
-    myKeys = allSeeds[str(port)]
-    if myKeys is None:
+    my_keys = all_seeds[str(port)]
+    if my_keys is None:
         raise ValueError(f"No keys found for this port {port}. Please add them to the seeds/keys.json file.")
 
     
-    seed = bytes.fromhex(myKeys["seed"][2:] if myKeys["seed"].startswith("0x") else myKeys["seed"])
+    seed = bytes.fromhex(my_keys["seed"][2:] if my_keys["seed"].startswith("0x") else my_keys["seed"])
     if len(seed) != 32:
         raise ValueError("Seed must be exactly 32 bytes long.")
 

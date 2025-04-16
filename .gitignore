@@ -58,3 +58,12 @@ mydb/
 # Ignore all folders in /seeds, but not the keys.json
 /seeds/*
 !/seeds/keys.json
+
+# Ignore Session Tickets
+sessions/
+
+# Ignore Logs
+logs/
+
+# Ignore Packets
+packets/
