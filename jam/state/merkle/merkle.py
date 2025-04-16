@@ -51,7 +51,11 @@ class StateMerkle:
             
             # Persist leaf node (only store key; value stored elsewhere in DB)
             
-            self.trie._db_nodes[node_hash] = 1
+            self.trie._db_nodes[node_hash] = DBNode(
+                node_type=leaf_type,
+                encoded=encoded_leaf,
+                key=NodeHash(key)
+            )
             return (node_hash, encoded_leaf)
         
         left_items = []
@@ -67,10 +71,17 @@ class StateMerkle:
         right_hash, right_encoded = self._merkelize_recursive(right_items, bit_index + 1)
         
         encoded_branch = self.trie.node.encode_branch(left_hash, right_hash)
-        node_hash = NodeHash(self.trie.hash_function(bytes(encoded_branch)))
+        node_hash = NodeHash(self.trie.hash_function(encoded_branch))
       
         self.trie._nodes[node_hash] = encoded_branch
-        self.trie._db_nodes[node_hash] = 1
+       
+        self.trie._db_nodes[node_hash] = DBNode(
+            node_type="branch",
+            encoded=encoded_branch,
+            bit_index=bit_index,
+            left=NodeHash(left_hash),
+            right=NodeHash(right_hash)
+        )
         return (node_hash, encoded_branch)
 
     def merkelize(self, state_dict: Dict[ByteArray32, ByteArray32], db: KVStore = None) -> Tuple[NodeHash, Dict[NodeHash, DBNode]]:
@@ -84,11 +95,12 @@ class StateMerkle:
         items = sorted(state_dict.items())
         root_hash, _ = self._merkelize_recursive(items, 0)
         self.trie._root_hash = root_hash
-
+       
         # Only persist state key-value pairs if db provided
         if db is not None:
             for key, value in state_dict.items():
                 db.put(bytes(key), bytes(value))
+        
         return root_hash, self.trie._db_nodes
     
     def get_nodes(self) -> Dict[NodeHash, DBNode]:
@@ -118,68 +130,59 @@ class StateMerkle:
             return path
         
         path.append(current_hash)
-        # test:Dict[NodeHash,DBNode]={}
-        # print(self.trie._db_nodes)
-        for key,value in self.trie._db_nodes.items():
-            print(key in self.trie._nodes.keys(),value)
-        # print(self.trie._db_nodes[NodeHash(0x3fbf7acee35d11fe444e4004816cf4529e9d8dd34523ed1dddbafc8a1bb3ab40)])
-        # for key,value in self.trie._db_nodes.items():
-        #     # if(key==NodeHash(0x3fbf7acee35d11fe444e4004816cf4529e9d8dd34523ed1dddbafc8a1bb3ab40)):
-        #     #     print(value)
-        #     test[key]=value
-        # print(test[NodeHash(0x3fbf7acee35d11fe444e4004816cf4529e9d8dd34523ed1dddbafc8a1bb3ab40)])
-        # print(self.trie._nodes)
+        
             
-        # while True:
-        #     node_obj = self._get_db_node(current_hash)
-            
-        #     if node_obj is None:
-        #         return path
-        #     # print(self.trie._db_nodes[NodeHash("0x48621200ffa32e96c7086e9565bf68c34a11fdc0f148accd56209e22f1d54414")])
-        #     if node_obj.node_type == "branch":
-        #         # Decide which way to go according to the current bit
-        #         if key_bits[bit_index % len(key_bits)]:
-        #             if node_obj.right is None:
-        #                 return path
-        #             current_hash = NodeHash(node_obj.right)
-        #             path.append(current_hash)
-        #         else:
-        #             if node_obj.left is None:
-        #                 return path
-        #             current_hash = NodeHash(node_obj.left)
-        #             path.append(current_hash)
-        #         bit_index += 1
-        #     else:
-        #         # It's a leaf (or empty); we've reached the end
-        #         return path
-        return self.trie._root_hash
+        while True:
+            node_obj = self.trie._db_nodes[current_hash]
+            if node_obj is None:
+                return path
+            if node_obj.node_type == "branch":
+                # Decide which way to go according to the current bit
+                if key_bits[bit_index % len(key_bits)]:
+                    if node_obj.right is None:
+                        return path
+                    current_hash = NodeHash(node_obj.right)
+                    path.append(current_hash)
+                else:
+                    if node_obj.left is None:
+                        return path
+                    current_hash = NodeHash(node_obj.left)
+                    path.append(current_hash)
+                bit_index += 1
+            else:
+                # It's a leaf (or empty); we've reached the end
+                return path
     def update_path(self, key: ByteArray32, new_value: Bytes, db: KVStore = None) -> NodeHash:
         """Update path in RAM and optionally persist state update"""
         # Find path using in-memory nodes
         path = self.find_path(key)
-        # if not path:
-        #     raise ValueError("Key not found in the tree path")
+ 
+        if not path:
+            raise ValueError("Key not found in the tree path")
         
-        # # Update leaf node in RAM
-        # leaf_hash = path[-1]
-        # leaf_encoded = self.trie.node.encode_leaf(key, new_value)
-        # new_leaf_hash = NodeHash(self.trie.hash_function(bytes(leaf_encoded)))
+        # Update leaf node in RAM
+        leaf_hash = path[-1]
+        leaf_encoded = self.trie.node.encode_leaf(key, new_value)
+        new_leaf_hash = NodeHash(self.trie.hash_function(bytes(leaf_encoded)))
         
-        # # Update RAM structures
-        # self.trie._nodes[new_leaf_hash] = leaf_encoded
-        # self.trie._db_nodes[new_leaf_hash] = DBNode(
-        #     node_type=self.trie.node.node_part(leaf_encoded),
-        #     encoded=leaf_encoded,
-        #     key=key
-        # )
+        # Update RAM structures
+        self.trie._nodes[new_leaf_hash] = leaf_encoded
+        self.trie._db_nodes[new_leaf_hash] = DBNode(
+            node_type=self.trie.node.node_part(leaf_encoded),
+            encoded=leaf_encoded,
+            key=key
+        )
+        
+        # TODO: Need to prune the old leaf node
         
         # # Update branch nodes in RAM
-        # new_root_hash = self._update_branch_nodes(path, key, new_leaf_hash)
-        
+        new_root_hash = self._update_branch_nodes(path, key, new_leaf_hash)
+        # print("new_root_hash-->",new_root_hash)
         # # Only persist state update in DB if provided
         # if db is not None:
         #     db.put(bytes(key), bytes(new_value))
         
+        # return new_root_hash
         return self.trie._root_hash
 
     def _update_branch_nodes(self, path: List[NodeHash], key: ByteArray32, new_leaf_hash: NodeHash) -> NodeHash:
@@ -226,16 +229,3 @@ class StateMerkle:
         for key, new_value in updates.items():
             new_root = self.update_path(key, new_value,db)
         return new_root
-
-    def _get_db_node(self, node_hash: NodeHash) -> Optional[int]:
-        """Helper method to safely get a node from _db_nodes"""
-        # if self.trie._db_nodes.get(node_hash) is None:
-        #     return self._get_db_node_iter(node_hash)
-        return self.trie._db_nodes.get(node_hash)
-    
-    # def _get_db_node_iter(self, node_hash: NodeHash) -> Optional[DBNode]:
-    #     """Helper method to safely get a node from _db_nodes"""
-    #     for key,value in self.trie._db_nodes.items():
-    #         if key == node_hash:
-    #             return value
-    #     return None
