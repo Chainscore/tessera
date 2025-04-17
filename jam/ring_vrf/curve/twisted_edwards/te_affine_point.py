@@ -7,6 +7,8 @@ from typing import TypeVar, Self
 
 from sympy import mod_inverse
 
+from jam.ring_vrf.curve.e2c import E2C_Variant
+
 from ..point import Point, PointProtocol
 from .te_curve import TECurve
 C = TypeVar("C", bound=TECurve)
@@ -313,9 +315,18 @@ class TEAffinePoint(Point[C]):
             TEAffinePoint: Identity point
         """
         return self.__class__(0, 1)
+    
+    @classmethod
+    def encode_to_curve(cls, alpha_string: bytes, salt: bytes = b"") -> Self:
+        if cls.curve.E2C == E2C_Variant.ELL2:
+            return cls.encode_to_curve_hash2_suite(alpha_string, salt)
+        elif cls.curve.E2C == E2C_Variant.TAI:
+            return cls.encode_to_curve_tai(alpha_string, salt)
+        else:
+            raise ValueError("Unexpected E2C Variant")
 
     @classmethod
-    def encode_to_curve_(cls, alpha_string: bytes, salt: bytes = b"") -> Self:
+    def encode_to_curve_hash2_suite(cls, alpha_string: bytes, salt: bytes = b"") -> Self:
         """
         Encode a string to a curve point using Elligator 2.
 
@@ -336,7 +347,7 @@ class TEAffinePoint(Point[C]):
         return R.clear_cofactor()
     
     @classmethod
-    def encode_to_curve(cls, alpha, salt=" "):
+    def encode_to_curve_tai(cls, alpha_string: bytes, salt: bytes = b"") -> Self:
         """
         Encode a string to a curve point using try-and-increment method for ECVRF.
 
@@ -357,7 +368,7 @@ class TEAffinePoint(Point[C]):
 
         while H == "INVALID" or H == (0, 1):
             ctr_string = ctr.to_bytes(1, "big")
-            hash_input = (suite_string + front + b"" + alpha + ctr_string + back)
+            hash_input = (suite_string + front + b"" + alpha_string + ctr_string + back)
             hash_output = hashlib.sha256(hash_input).digest()
             H = cls.string_to_point(b'0x02' + hash_output)
             if H != "INVALID" and cls.curve.COFACTOR > 1:

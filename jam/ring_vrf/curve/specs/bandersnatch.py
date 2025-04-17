@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final, Self
 
+from jam.ring_vrf.curve.e2c import E2C_Variant
+
 from ..glv import DisabledGLV, GLVSpecs
 from ..twisted_edwards.te_curve import TECurve
 from ..twisted_edwards.te_affine_point import TEAffinePoint
@@ -39,13 +41,22 @@ class BandersnatchParams:
     # Z
     Z: Final[int] = 5
 
-@dataclass(frozen=True)
-class BandersnatchGLVSpecs(GLVSpecs):
-    """GLV endomorphism parameters for Bandersnatch curve."""
-    is_enabled: Final[bool] = True
-    lambda_param: Final[int] = BandersnatchParams.GLV_LAMBDA
-    constant_b: Final[int] = BandersnatchParams.GLV_B
-    constant_c: Final[int] = BandersnatchParams.GLV_C
+    # Blinding Base For Pedersen
+    BBx: Final[
+        int
+    ] = 14576224270591906826192118712803723445031237947873156025406837473427562701854
+    BBy: Final[
+        int
+    ] = 38436873314098705092845609371301773715650206984323659492499960072785679638442
+
+
+"""GLV endomorphism parameters for Bandersnatch curve."""
+BandersnatchGLVSpecs = GLVSpecs(
+    is_enabled=True,
+    lambda_param=BandersnatchParams.GLV_LAMBDA,
+    constant_b=BandersnatchParams.GLV_B,
+    constant_c=BandersnatchParams.GLV_C,
+)
 
 class BandersnatchCurve(TECurve):
     """
@@ -62,12 +73,15 @@ class BandersnatchCurve(TECurve):
             GENERATOR_X=BandersnatchParams.GENERATOR_X,
             GENERATOR_Y=BandersnatchParams.GENERATOR_Y,
             COFACTOR=BandersnatchParams.COFACTOR,
-            glv=BandersnatchGLVSpecs(),
+            glv=BandersnatchGLVSpecs,
             Z=BandersnatchParams.Z,
             EdwardsA=BandersnatchParams.EDWARDS_A,
             EdwardsD=BandersnatchParams.EDWARDS_D,
             SUITE_STRING=BandersnatchParams.SUITE_STRING,
-            DST=BandersnatchParams.SUITE_STRING
+            DST=BandersnatchParams.SUITE_STRING,
+            E2C=E2C_Variant.ELL2,
+            BBx=BandersnatchParams.BBx,
+            BBy=BandersnatchParams.BBy
         )
 
 # Singleton instance

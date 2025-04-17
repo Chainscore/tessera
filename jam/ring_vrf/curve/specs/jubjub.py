@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final, Self
 
-from ..glv import DisabledGLV
+from jam.ring_vrf.curve.e2c import E2C_Variant
+
+from ..glv import DisabledGLV, GLVSpecs
 from ..twisted_edwards.te_curve import TECurve
 from ..twisted_edwards.te_affine_point import TEAffinePoint
 
@@ -30,12 +32,28 @@ class JubJubParams:
     EDWARDS_A: Final[int] = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000000
     EDWARDS_D: Final[int] = 0x2a9318e74bfa2b48f5fd9207e6bd7fd4292d7f6d37579d2601065fd6d6343eb1
     
-    GLV_LAMBDA: Final[int] = 0
-    GLV_B: Final[int] = 0
-    GLV_C: Final[int] = 0
+    # GLV parameters
+    GLV_LAMBDA: Final[int] = 0x13b4f3dc4a39a493edf849562b38c72bcfc49db970a5056ed13d21408783df05
+    GLV_B: Final[int] = 0x52c9f28b828426a561f00d3a63511a882ea712770d9af4d6ee0f014d172510b4
+    GLV_C: Final[int] = 0x6cc624cf865457c3a97c6efd6c17d1078456abcfff36f4e9515c806cdf650b3d
 
     # Z
     Z: Final[int] = 5
+
+    # Blinding Base For Pedersen
+    BBx: Final[
+        int
+    ] = 0x11dafe5d23e1218086a365b99fbf3d3be72f6afd7d1f72623e6b071492d1122b
+    BBy: Final[
+        int
+    ] = 0x1d523cf1ddab1a1793132e78c866c0c33e26ba5cc220fed7cc3f870e59d292aa
+
+JubJubGLVSpecs = GLVSpecs(
+    is_enabled=True,
+    lambda_param=JubJubParams.GLV_LAMBDA,
+    constant_b=JubJubParams.GLV_B,
+    constant_c=JubJubParams.GLV_C
+)
 
 class JubJubCurve(TECurve):
     """
@@ -52,12 +70,15 @@ class JubJubCurve(TECurve):
             GENERATOR_X=JubJubParams.GENERATOR_X,
             GENERATOR_Y=JubJubParams.GENERATOR_Y,
             COFACTOR=JubJubParams.COFACTOR,
-            glv=DisabledGLV,
+            glv=JubJubGLVSpecs,
             Z=JubJubParams.Z,
             EdwardsA=JubJubParams.EDWARDS_A,
             EdwardsD=JubJubParams.EDWARDS_D,
             SUITE_STRING=JubJubParams.SUITE_STRING,
-            DST=JubJubParams.DST
+            DST=JubJubParams.DST,
+            E2C=E2C_Variant.TAI,
+            BBx=JubJubParams.BBx,
+            BBy=JubJubParams.BBy
         )
 
 # Singleton instance

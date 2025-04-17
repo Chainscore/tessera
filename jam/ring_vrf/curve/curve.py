@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from enum import Enum
 import math
 import hashlib
 from dataclasses import dataclass
 from typing import List, ClassVar, Final
+from jam.ring_vrf.curve.e2c import E2C_Variant
 from jam.ring_vrf.curve.glv import GLVSpecs
+
 
 @dataclass(frozen=True)
 class Curve:
@@ -33,6 +36,7 @@ class Curve:
     COFACTOR: Final[int]
     glv: GLVSpecs
     Z: Final[int]
+    E2C: E2C_Variant
     
     # Hash to Curve Parameters
     M: ClassVar[int] = 1  # Degree of field extension
@@ -41,6 +45,11 @@ class Curve:
     # Suite String Parameters
     SUITE_STRING: Final[bytes]
     DST: Final[bytes]
+
+    # Blinding Base For Pedersen
+    BBx: Final[int]
+    BBy: Final[int]
+
     
     def __post_init__(self) -> None:
         """Validate curve parameters after initialization."""

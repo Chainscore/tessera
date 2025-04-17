@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final, Self
 
+from jam.ring_vrf.curve.e2c import E2C_Variant
+
 from ..glv import DisabledGLV
 from ..twisted_edwards.te_curve import TECurve
 from ..twisted_edwards.te_affine_point import TEAffinePoint
@@ -37,6 +39,16 @@ class Ed25519Params:
     # Z
     Z: Final[int] = 5
 
+    
+    # Blinding Base For Pedersen
+    BBx: Final[
+        int
+    ] = 0x216936D3CD6E53FEC0A4E231FDD6DC5C692CC7609525A7B2C9562D608F25D51A
+    BBy: Final[
+        int
+    ] = 0x6666666666666666666666666666666666666666666666666666666666666658
+
+
 class Ed25519Curve(TECurve):
     """
     Bandersnatch curve implementation.
@@ -57,7 +69,10 @@ class Ed25519Curve(TECurve):
             EdwardsA=Ed25519Params.EDWARDS_A,
             EdwardsD=Ed25519Params.EDWARDS_D,
             SUITE_STRING=Ed25519Params.SUITE_STRING,
-            DST=Ed25519Params.DST
+            DST=Ed25519Params.DST,
+            E2C=E2C_Variant.TAI,
+            BBx=Ed25519Params.BBx,
+            BBy=Ed25519Params.BBy
         )
 
 # Singleton instance

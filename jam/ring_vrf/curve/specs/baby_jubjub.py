@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final, Self
 
-from ..glv import DisabledGLV
+from jam.ring_vrf.curve.e2c import E2C_Variant
+
+from ..glv import DisabledGLV, GLVSpecs
 from ..twisted_edwards.te_curve import TECurve
 from ..twisted_edwards.te_affine_point import TEAffinePoint
 
@@ -30,12 +32,28 @@ class BabyJubJubParams:
     EDWARDS_A: Final[int] = 168700
     EDWARDS_D: Final[int] = 168696
     
-    GLV_LAMBDA: Final[int] = 0
-    GLV_B: Final[int] = 0
-    GLV_C: Final[int] = 0
+    GLV_LAMBDA: Final[int] = 0x13b4f3dc4a39a493edf849562b38c72bcfc49db970a5056ed13d21408783df05
+    GLV_B: Final[int] = 0x52c9f28b828426a561f00d3a63511a882ea712770d9af4d6ee0f014d172510b4
+    GLV_C: Final[int] = 0x6cc624cf865457c3a97c6efd6c17d1078456abcfff36f4e9515c806cdf650b3d
 
     # Z
     Z: Final[int] = 5
+
+    # Blinding Base For Pedersen
+    BBx: Final[
+        int
+    ] = 995203441582195749578291179787384436505546430278305826713579947235728471134
+    BBy: Final[
+        int
+    ] = 5472060717959818805561601436314318772137091100104008585924551046643952123905
+
+
+JubJubGLVSpecs = GLVSpecs(
+    is_enabled=True,
+    lambda_param=BabyJubJubParams.GLV_LAMBDA,
+    constant_b=BabyJubJubParams.GLV_B,
+    constant_c=BabyJubJubParams.GLV_C
+)
 
 class BabyJubJubCurve(TECurve):
     """
@@ -57,7 +75,10 @@ class BabyJubJubCurve(TECurve):
             EdwardsA=BabyJubJubParams.EDWARDS_A,
             EdwardsD=BabyJubJubParams.EDWARDS_D,
             SUITE_STRING=BabyJubJubParams.SUITE_STRING,
-            DST=BabyJubJubParams.DST
+            DST=BabyJubJubParams.DST,
+            E2C=E2C_Variant.TAI,
+            BBx=BabyJubJubParams.BBx,
+            BBy=BabyJubJubParams.BBy
         )
 
 # Singleton instance
