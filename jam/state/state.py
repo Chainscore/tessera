@@ -39,6 +39,7 @@ from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
 import pickle
 import json
+import time
 
 class State(Sigma):
     """
@@ -293,7 +294,11 @@ class State(Sigma):
             for key, value in data.items():
                 db.put(bytes(key), bytes(value))
         else:
+            start_time = time.time()
             root=self._merkle.update_global_root(Updated_keys)
+            end_time = time.time()
+            print(f"Time taken to just update the root: {end_time - start_time} seconds")
+
             # db.put(b"general_root:",bytes(general_root))
             for key,value in Updated_keys.items():
                 db.put(bytes(key),bytes(value))

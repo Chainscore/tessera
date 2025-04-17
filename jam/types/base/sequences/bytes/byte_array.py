@@ -18,6 +18,7 @@ class ByteArray(Array[Byte]):
         else:
             byt = [Byte(b) for b in ByteUtils.to_bytes(value)]
             super().__init__(byt)
+
     def __repr__(self) -> str:
         return f"0x{bytes(self).hex()}"
 
@@ -34,13 +35,6 @@ class ByteArray(Array[Byte]):
     def to_json(self) -> str:
         """Convert to JSON representation as hex string."""
         return f"0x{bytes(self).hex()}"
-    def __eq__(self, other):
-        if not isinstance(other, ByteArray):
-            return False
-        return bytes(self) == bytes(other)
-        
-    def __hash__(self):
-        return hash(bytes(self))
 
 
 def decodable_bytearray(length: int) -> Callable[[Type[ByteArray]], Type[ByteArray]]:

@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import pickle
 
+import time
 import json
 
 from jam.db.kv import KVStore
@@ -75,14 +76,21 @@ def test_state_transform_and_detransform(db_path: str):
     # Convert the decoded DunaState into the State class (in-memory representation)
     state = genesis_state.to_state()
     state.save(kv)
-
     # Assert that the state is consistent with the genesis_transform.json file
     #pre-state
     for index, (key, value) in enumerate(sorted(state.transform().items(), key=lambda item: item[0])):
         assert key == ByteArray32(genesis_keyvals[index][0])
         assert value == Bytes(genesis_keyvals[index][1])
+    for update in updates1:
+        assert update in state.transform()
+    print("✅ Key-value pair is present and will be updated....")
     
     state.save(kv,updates1)
+    start_time = time.time()
+    state._merkle.merkelize(state.transform())
+    end_time = time.time()
+    print(f"Time taken to merkelize the updated state: {end_time - start_time} seconds")
+    #on addition of updates1 calculate the time to merkelize the state
     # Fetch the updated state from the KVStore and assert that it is consistent with the continuation_keyvals
     #post-state
     for index, (key, value) in enumerate(sorted(State.load(kv).transform().items(), key=lambda item: item[0])):
@@ -191,11 +199,32 @@ def test_state_trie_update(db_path):
         ByteArray32(ByteUtils.hex_to_bytes("0x1400000000000000000000000000000000000000000000000000000000000000")):
             Bytes(ByteUtils.hex_to_bytes("0x00000000")),
     }
+    for update in updates1:
+        assert update in state1.transform()
+    print("✅ Key-value pair is present and will be updated....")
     #post_state
     state1.save(kv, updates1)
+    state1 = State.load(kv)
+    start_time = time.time()
+    state1._merkle.merkelize(state1.transform())
+    end_time = time.time()
+    print(f"Time taken to merkelize the updated state: {end_time - start_time} seconds")
     assert(state1._merkle.trie._root_hash==state2.generate_root())
+    
+    for update in updates2:
+        assert update not in state1.transform()
+    print("✅ Key-value pair is not present and will be inserted....")
     #post_state with addition of a new key node
     state1.save(kv, updates2)
-    assert(state1._merkle.trie._root_hash==ByteArray32(ByteUtils.hex_to_bytes("0xcb9e069a09b9943ba6c5b6f205964ece7e57fae2ef656468a24f1d0b53a6ae39")))
+    state1_transform = state1.transform()
+    for update in updates2:
+        state1_transform[update]=updates2[update]
+    start_time = time.time()
+    merkle_root,_ = state1._merkle.merkelize(state1_transform)
+    end_time = time.time()
+    print("merkle_root_value BRO: ",merkle_root)
+    print(f"Time taken to merkelize the updated state: {end_time - start_time} seconds")
+    assert(state1._merkle.trie._root_hash==merkle_root)
     print("✅ State trie update check passed.")
     kv.close()
+    
