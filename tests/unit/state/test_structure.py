@@ -46,7 +46,7 @@ def test_transform_tree():
                 create_dummy_bytes32(): create_dummy_bytes(10)
             },
             "timestamps": {
-                create_dummy_bytes32(): []
+                # create_dummy_bytes32(): []
             },
             "code_hash": create_dummy_bytes32(),
             "gas_limit": 0,
@@ -61,7 +61,7 @@ def test_transform_tree():
                 create_dummy_bytes32(): create_dummy_bytes(10)
             },
             "timestamps": {
-                create_dummy_bytes32(): []
+                # create_dummy_bytes32(): []
             },
             "code_hash": create_dummy_bytes32(),
             "gas_limit": 0,
