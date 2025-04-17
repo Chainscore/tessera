@@ -631,12 +631,20 @@ async def authorization(request_data: RequestData):
             return {"result": True}
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
+        
+        try:
+            assert transition_output == output_state, "output_mismatch"
+            
+        except AssertionError as e:
+            return {"err": str(e)}
 
-        assert transition_output == output_state
-    except AssertionError as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        return {"ok": None}
+
+    except AssurancesError as e:
+        return {"err": e.code._value_}
     except Exception as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        return {"err": "unexpected_error"}
+
 
 @app.post("/api/v1/disputes/validate",
           tags=["State Transitions"],
@@ -661,11 +669,18 @@ async def disputes(request_data: RequestData):
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
-        assert transition_output == output_state
-    except AssertionError as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        try:
+            assert transition_output == output_state, "output_mismatch"
+            
+        except AssertionError as e:
+            return {"err": str(e)}
+
+        return {"ok": None}
+
+    except AssurancesError as e:
+        return {"err": e.code._value_}
     except Exception as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        return {"err": "unexpected_error"}
 
 
 @app.post("/api/v1/assurances/validate",
@@ -721,10 +736,25 @@ async def report(request_data: RequestData):
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
         ##TODO: Add reports once added.
-        output = Reporting.transition(test_state, test_block)
-        return {"result": output}
+        output_state = Reporting.transition(test_state, test_block)
+
+        if request_data.output is None:
+            return {"result": True}
+            
+        output_state = GeneralState.from_json(request_data.output.state).to_state()
+
+        try:
+            assert transition_output == output_state, "output_mismatch"
+            
+        except AssertionError as e:
+            return {"err": str(e)}
+
+        return {"ok": None}
+
+    except AssurancesError as e:
+        return {"err": e.code._value_}
     except Exception as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        return {"err": "unexpected_error"}
 
 
 @app.post("/api/v1/accumulate/validate",
@@ -749,13 +779,19 @@ async def accumulate(request_data: RequestData):
             return {"result": True}
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
+        
+        try:
+            assert transition_output == output_state, "output_mismatch"
+            
+        except AssertionError as e:
+            return {"err": str(e)}
 
-        assert transition_output == output_state
-    except AssertionError as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        return {"ok": None}
+
+    except AssurancesError as e:
+        return {"err": e.code._value_}
     except Exception as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
-
+        return {"err": "unexpected_error"}
 
 @app.post("/api/v1/preimages/validate",
           tags=["State Transitions"],
@@ -780,11 +816,18 @@ async def preimages(request_data: RequestData):
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
-        assert transition_output == output_state
-    except AssertionError as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        try:
+            assert transition_output == output_state, "output_mismatch"
+            
+        except AssertionError as e:
+            return {"err": str(e)}
+
+        return {"ok": None}
+
+    except AssurancesError as e:
+        return {"err": e.code._value_}
     except Exception as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        return {"err": "unexpected_error"}
 
 
 @app.post("/api/v1/statistics/validate",
@@ -809,9 +852,16 @@ async def statistics(request_data: RequestData):
             return {"result": True}
             
         output_state = GeneralState.from_json(request_data.output.state).to_state()
+        
+        try:
+            assert transition_output == output_state, "output_mismatch"
+            
+        except AssertionError as e:
+            return {"err": str(e)}
 
-        assert transition_output == output_state
-    except AssertionError as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        return {"ok": None}
+
+    except AssurancesError as e:
+        return {"err": e.code._value_}
     except Exception as e:
-        return JSONResponse(status_code=400, content={"err": str(e)})
+        return {"err": "unexpected_error"}
