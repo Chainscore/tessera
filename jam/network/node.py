@@ -1,6 +1,7 @@
 import asyncio
 import json
 import ssl
+from typing import Dict, cast, Tuple
 
 from aioquic.asyncio import serve, connect
 from aioquic.asyncio.server import QuicServer
@@ -40,10 +41,14 @@ class Node:
 
     is_initialized: bool = False
     is_builder: bool = False
+    is_validator: bool = True
 
+    # state: State
+
+    peer_conn: Dict[Peer, Tuple[int, QuicClientProtocol]] = {}
     connections: list[QuicClientProtocol] = []
 
-    def __init__(self, node_id: str, node_name: str, host: str, port: int, validator_data, peers: list[Peer], is_builder: bool):
+    def __init__(self, node_id: str, node_name: str, host: str, port: int, validator_data, peers: list[Peer], is_builder: bool, is_validator: bool):
         self.__id = node_id
         self.name = node_name
         self.host = host
@@ -51,6 +56,10 @@ class Node:
         self.validator_data = validator_data
         self.peers = peers
         self.is_builder = is_builder
+        self.is_validator = is_validator
+
+        if is_validator and is_builder:
+            raise ValueError("Node can't be validator and builder at same time!")
 
         self.dns = generate_keys(port)
 
@@ -71,10 +80,12 @@ class Node:
         configuration.load_verify_locations(cafile=f"seeds/{self.port}/cert.pem")
         configuration.verify_mode = ssl.CERT_NONE
 
+        configuration.max_data = 104857600  # 100 MB
+        configuration.max_stream_data = 10485760  # 10 MB per stream
+        configuration.max_datagram_size = 1350
+
         if is_client:
             configuration.server_name = self.dns
-            configuration.max_data = 10_000_000  # 10 MB
-            configuration.max_stream_data = 1_000_000  # 1 MB per stream
 
         if self.is_builder:
             configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
@@ -127,13 +138,22 @@ class Node:
 
                 # Save peer connection
                 self.connections.append(client)
+                client = cast(QuicClientProtocol, client)
+
                 logger.info(f"🤝 ({self.name}) Connection to {peer.host}:{peer.port} established ✅")
 
                 stream_id = client._quic.get_next_available_stream_id()
-                client._quic.send_stream_data(stream_id, json.dumps({
+                client.stream_and_keep_open(stream_id=stream_id,message=json.dumps({
                     "type": "ping",
                     "from": self.name
-                }).encode())
+            }).encode())
+
+                # last_block = self.state.beta[-1]
+                # final = Final(block_hash=last_block.header_hash, time_slot=U32(0))
+                # await client.stream_and_keep_open(stream_id=stream_id, message=final.encode())
+
+                self.peer_conn[peer] = stream_id, client
+
 
                 self.is_initialized = True
 
