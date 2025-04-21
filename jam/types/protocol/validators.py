@@ -51,8 +51,6 @@ class ValidatorData(Codable, JsonSerde):
 
 
 """Fixed-size array of validator data with size VALIDATOR_COUNT."""
-
-
 @decodable_array(length=VALIDATOR_COUNT, element_type=ValidatorData)
 class ValidatorsData(Array[ValidatorData]):
     ...

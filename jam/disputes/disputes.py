@@ -6,7 +6,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from jam.disputes.error import DisputesError, DisputesErrorCode
 from jam.state.components.rho import OptionalWorkReportState
-from jam.state.state import State
+from jam.state.components.sigma import Sigma
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
 from jam.types.block import Block
@@ -59,7 +59,7 @@ class Disputes:
         return False
 
     @staticmethod
-    def transition(pre_state: State, block: Block) -> State:
+    def transition(pre_state: Sigma, block: Block) -> Sigma:
         # 1. Disputes Transition
         # Make a copy of the state and get the disputes extrinsic
         new_state = dataclasses.replace(pre_state)

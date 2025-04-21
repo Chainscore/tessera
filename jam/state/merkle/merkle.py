@@ -42,7 +42,6 @@ class StateMerkle:
             key, value = items[0]
             encoded = self.trie.node.encode_leaf(key, value)
             node_hash = NodeHash(self.trie.hash_function(bytes(encoded)))
-            print("leaf node_hash", node_hash)
             self.trie._nodes[node_hash] = encoded
             return (node_hash, encoded)
 
@@ -63,7 +62,6 @@ class StateMerkle:
         encoded = self.trie.node.encode_branch(left_hash, right_hash)
         node_hash = NodeHash(self.trie.hash_function(bytes(encoded)))
         self.trie._nodes[node_hash] = encoded
-        print("branch node_hash", node_hash)
 
         return (node_hash, encoded)
 

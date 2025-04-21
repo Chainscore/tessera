@@ -25,6 +25,9 @@ class Bytes(Vector[Byte]):
         """Get hex representation of Bytes."""
         return bytes(self).hex()
     
+    def __repr__(self) -> str:
+        return self.hex()
+    
     def __int__(self) -> int:
         return int.from_bytes(self)
 

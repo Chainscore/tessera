@@ -11,11 +11,9 @@ from jam.state.components.lambda_ import Lambda_
 from jam.types.extrinsics import (
     TicketsExtrinsic,
 )
-from jam.types.header import OptionalEpochMark
-from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, ByteArray32, Ed25519Public
+from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
-from tests.fixtures.dummy_block import create_dummy_block
-from tests.fixtures.dummy_state import create_dummy_state
+from tests.dummy.dummy_state import create_dummy_state
 
 def validators():
     return [
@@ -76,7 +74,7 @@ def generate_ticket():
 def create_block(slot: U32, tickets: list) -> Block:
     """Create a dummy block with specified parameters"""
     # Create a simple header
-    block = create_dummy_block()
+    block = Block.from_random()
     block.extrinsic.tickets = TicketsExtrinsic(tickets)
     block.header.slot = slot
     return block
@@ -115,7 +113,7 @@ def create_validator_data_from_keys():
             bandersnatch=BandersnatchPublic(v["bandersnatch_public"]),
             ed25519=Ed25519Public(v["ed25519_public"]),
             bls=BlsPublic(bytes(144)),  # Dummy BLS key
-            metadata=ValidatorMetadata(bytes(128))  # Dummy metadata
+            metadata=ValidatorMetadata.from_json({"name": "test", "host": [0,0,0,0], "port": 1000})  # Dummy metadata
         )
         for v in validators()
     ]

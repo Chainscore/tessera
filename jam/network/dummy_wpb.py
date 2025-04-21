@@ -7,7 +7,7 @@ from jam.utils.constants import EPOCH_LENGTH
 from .node import Node
 from jam.config.logging import logger
 from jam.db.kv import KVStore
-from tests.fixtures.dummy_package import create_dummy_package
+from tests.dummy.dummy_package import create_dummy_package
 from .protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from ..types import Int

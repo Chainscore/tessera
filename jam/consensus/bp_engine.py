@@ -2,6 +2,7 @@ import asyncio
 import math
 from time import time
 
+from jam.consensus.grandpa.finality import Finality
 from jam.consensus.safrole.safrole import Safrole
 from jam.disputes.disputes import Disputes
 from jam.network.protocols.up_0 import BlockAnnouncementProtocol
@@ -22,7 +23,7 @@ from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD
 from jam.network.node import Node
 from jam.config.logging import logger
 from jam.db.kv import KVStore
-from tests.fixtures.utils import create_dummy_bytes
+from tests.dummy.utils import create_dummy_bytes
 
 class BlockProducer:
     """
@@ -76,12 +77,13 @@ class BlockProducer:
             if state.gamma.s.get_key() == "keys":
                 author_key = state.gamma.s.get_value()[ts_epoch_index]
                 if author_key == self.node.validator_data.bandersnatch:
-                    block = await self._produce_block(state, current_timeslot)
+                    block = self._produce_block(state, current_timeslot)
+                    # Set local chain head to produced block
+                    Finality.set_head(current_timeslot, self.db)
+                    # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
+                    Finality.finalise(current_timeslot, self.db)
+                    # Announce
                     up0.transmit(self.node, block)
-                    # logger.info(f"⛏️ ({self.node.name}) Producing Block for slot: {current_timeslot}")
-                    # print("Block: ", block)
-                    # for client in self.node.connections:
-                    #     await client.send_message(block.encode())
                 else:
                     logger.info(f"🔄 ({self.node.name}) Skipping Block for TS {current_timeslot}")
             else:
@@ -93,7 +95,7 @@ class BlockProducer:
             # Sleep for remaining time of the timeslot
             await asyncio.sleep(6 - (time() - genesis_ts) % SLOT_PERIOD)
 
-    async def _produce_block(self, state: State, current_timeslot: int) -> Block:
+    def _produce_block(self, state: State, current_timeslot: int) -> Block:
         """
         Produce a block for the given timeslot
         """

@@ -2,10 +2,10 @@ import copy
 import dataclasses
 from copy import deepcopy
 
-from jam.merklization import OptionHash
+from jam.types.protocol.merkle import OptionHash
 from jam.types import Block, Null
 from jam.types.protocol.core import Gas, ServiceId
-from tests.unit.accumulation.types import (
+from jam.accumulation.types import (
     AcclOutput,
     AccCommitmentMap,
     DeferredTransfers,

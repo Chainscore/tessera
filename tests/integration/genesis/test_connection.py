@@ -1,4 +1,5 @@
 import asyncio
+import os
 import pytest
 from jam.__main__ import main
 
@@ -13,6 +14,7 @@ clients = [
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_connection():
     tasks = []
     for client in clients:

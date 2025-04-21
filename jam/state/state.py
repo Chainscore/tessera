@@ -33,18 +33,21 @@ from jam.state.components.delta import (
     PreImageLookup,
     Timestamps,
 )
-from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName
+from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName, ValidatorsData
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
-# from jam.accumulation.accumulation import Accumulation
-# from jam.report.state import Reporting
-# from jam.authorization.authorization import Authorization
-# from jam.recent_history.recent_history import RecentHistory
+from jam.accumulation.accumulation import Accumulation
+from jam.report.state import Reporting
+from jam.authorization.authorization import Authorization
+from jam.recent_history.recent_history import RecentHistory
 from jam.consensus.safrole.safrole import Safrole
-# from jam.assurances.assurances import Assurances
-# from jam.disputes.disputes import Disputes
-# from jam.preimages.preimages import Preimages
-# from jam.statistics.statistics import Statistics
+from jam.assurances.assurances import Assurances
+from jam.disputes.disputes import Disputes
+from jam.preimages.preimages import Preimages
+from jam.statistics.statistics import Statistics
+from tests.dummy.dummy_state_comp import create_dummy_state_components
+import json
+
 
 class State(Sigma):
     """
@@ -61,6 +64,10 @@ class State(Sigma):
         """Initialize state with component kwargs"""
         super().__init__(**kwargs)
         self._merkle = StateMerkle(Hash.blake2b)
+
+    @staticmethod
+    def from_random(seed = 0) -> "State":
+        return State(**create_dummy_state_components())
 
     def transform(self) -> dict:
         """
@@ -254,25 +261,26 @@ class State(Sigma):
         return self._merkle.get_nodes()
     
     @staticmethod
-    def genesis(peers: list[ValidatorData], fallback: GammaS) -> "State":
+    def genesis(genesis_path = "genesis.json") -> "State":
         """Generate the genesis state"""
-
-        empty_validators = [ValidatorData(
+        peers = ValidatorsData.from_json(json.load(open(genesis_path))["peers"])
+        empty_set = [ValidatorData(
             bandersnatch=BandersnatchPublic(bytes(32)),
             ed25519=Ed25519Public(bytes(32)),
             bls=BlsPublic(bytes(144)),
             metadata=ValidatorMetadata(ValidatorName(""), IPAddress([U8(127), U8(0), U8(0), U8(1)]), U16(0))
         ) for _ in range(VALIDATOR_COUNT)]
-
+        fallback = Safrole.arrange_fallback(ByteArray32(bytes(32)), peers)
+        
         return State(
             alpha=Alpha([AuthorizationPool([]) for _ in range(CORE_COUNT)]),
             beta=Beta([]),
-            gamma=Gamma(a=GammaA([]), k=GammaK(peers), s=fallback, z=GammaZ(bytes(144))),
+            gamma=Gamma(a=GammaA([]), k=GammaK(peers.value), s=fallback, z=GammaZ(bytes(144))),
             delta=Delta({}),
             eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
-            iota=Iota(empty_validators),
-            kappa=Kappa(peers),
-            lambda_=Lambda_(empty_validators),
+            iota=Iota(empty_set),
+            kappa=Kappa(peers.value),
+            lambda_=Lambda_(empty_set),
             rho=Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]),
             tau=Tau(0),
             phi=Phi([AuthorizationQueue([AuthorizerHash(bytes(32)) for _ in range(MAX_AUTH_QUEUE_ITEMS)]) for _ in range(CORE_COUNT)]),
@@ -326,7 +334,7 @@ class State(Sigma):
             State: The transitioned state
         """
 
-        #TODO: Validate block headers
+        # TODO: Validate block headers
         # Epoch markers - make sure eta0_1 are the same as current etas
         # Tickets mark - make sure tickets are valid, present in gamma_a and outside in sequenced
         # Offenders mark - make sure offenders are present in psi.offenders
@@ -334,24 +342,21 @@ class State(Sigma):
         # 1. Safrole
         entropy = ByteArray32(bytes(32)) 
         sigma = Safrole.transition(self, block, entropy)
-        # # 2. Disputes
-        # disputes_state = Disputes.transition(safrole_state, block)
-        # # 3. Assurances
-        # assurance_state = Assurances.transition(disputes_state, block)
-        # # 4. Reporting
-        # reporting_state = Reporting.transition(assurance_state, block)
-        # # 5. Accumulation
-        # accumulation_state = Accumulation.transition(reporting_state, block)
-        # # 6. Authorization
-        # authorization_state = Authorization.transition(accumulation_state, block)
-        # # 7. Recent History
-        # recent_block_history_state = RecentHistory.transition(authorization_state, block, ByteArray32([0] * 32))
-        # # 8. Preimages
-        # preimage_state = Preimages.transition(recent_block_history_state, block)
-        # # 9. Statistics
-        # statistics_state = Statistics.transition(preimage_state, block)
+        # 2. Disputes
+        sigma = Disputes.transition(sigma, block)
+        # 3. Assurances
+        sigma = Assurances.transition(sigma, block)
+        # 4. Reporting
+        sigma = Reporting.transition(sigma, block)
+        # 5. Accumulation
+        sigma = Accumulation.transition(sigma, block)
+        # 6. Authorization
+        sigma = Authorization.transition(sigma, block)
+        # 7. Recent History
+        sigma = RecentHistory.transition(sigma, block, ByteArray32([0] * 32))
+        # 8. Preimages
+        sigma = Preimages.transition(sigma, block)
+        # 9. Statistics
+        sigma = Statistics.transition(sigma, block)
 
         return sigma
-
-
-

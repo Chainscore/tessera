@@ -1,8 +1,7 @@
 from jam.db.kv import KVStore
 from jam.storage.queue import StorageQueue
 
-def test_storage_queue():
-    db_path = "db/test_storage_queue"
+def test_storage_queue(db_path):
     db = KVStore(db_path)
     queue = StorageQueue("test")
     queue.push(db, b"test1")
@@ -18,13 +17,8 @@ def test_storage_queue():
     assert queue.pop(db) == b"test2"
     assert queue.pop(db) == b"test3"
     assert queue.pop(db) is None
-    # cleanup
-    cleanup(db)
-    db.close()
 
-
-def test_storage_queue_get():
-    db_path = "db/test_storage_queue"
+def test_storage_queue_get(db_path):
     db = KVStore(db_path)
     queue = StorageQueue("test")
     queue.push(db, b"test1")
@@ -41,13 +35,9 @@ def test_storage_queue_get():
     assert queue.get(db, 2, 1) == [b"test2", b"test3"]
     assert queue.get(db, 2, 2) == [b"test3"]
     assert queue.get(db, 2, 3) == []
-    # cleanup
-    cleanup(db)
-    db.close()
 
 
-def test_storage_queue_pop():
-    db_path = "db/test_storage_queue"
+def test_storage_queue_pop(db_path):
     db = KVStore(db_path)
     queue = StorageQueue("test")
     queue.push(db, b"test1")
@@ -69,14 +59,9 @@ def test_storage_queue_pop():
     assert int(metadata.head) == 3
     assert int(metadata.tail) == 3
     assert int(metadata.count) == 0
-    # cleanup
-    cleanup(db)
-    db.close()
-
 
 # Remove items in between and test pop
-def test_storage_queue_pop_in_between():
-    db_path = "db/test_storage_queue"
+def test_storage_queue_pop_in_between(db_path):
     db = KVStore(db_path)
     queue = StorageQueue("test")
     queue.push(db, b"test1")
@@ -86,12 +71,3 @@ def test_storage_queue_pop_in_between():
     assert queue.pop(db) == b"test1"
     assert queue.pop(db) == b"test3"
     assert queue.pop(db) is None
-    # cleanup
-    cleanup(db)
-    db.close()
-    
-def cleanup(db: KVStore):    
-    # iterate all records in the db
-    for key in db.get_all():
-        db.delete(key)
-    db.close()

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import json
 from jam.types.base.choices.option import Option, decodable_option
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base import Vector, decodable_vector
@@ -58,4 +59,8 @@ class Header(Codable, JsonSerde):
     seal: BandersnatchVrfSignature
 
     def __hash__(self) -> int:
-        return Hash.blake2b(self.encode())
+        return int(Hash.blake2b(self.encode()))
+    
+    @staticmethod
+    def genesis(path = "genesis.json") -> "Header":
+        return Header.from_json(json.load(open(path))["header"])
