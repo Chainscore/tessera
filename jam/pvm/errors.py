@@ -1,10 +1,9 @@
+from enum import Enum
 from jam.error import JamError
-from jam.types.base.enum import Enum, decodable_enum
 
 class PvmError(JamError):
     ...
 
-@decodable_enum
 class PvmErrorCodes(Enum):
     PANIC = "panic"
     HALT = "halt"
@@ -12,4 +11,5 @@ class PvmErrorCodes(Enum):
     HOST = "host-call"
     OUT_OF_GAS = "out-of-gas"
     CONTINUE = "continue"
-    # We'll add more as we go
+    UNEXPECTED = "unexpected"
+    INVALID_OPCODE = "invalid-opcode"

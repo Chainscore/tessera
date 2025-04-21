@@ -1,18 +1,17 @@
 from typing import List, Self, Tuple, Union
+
 from jam.pvm.errors import PvmError, PvmErrorCodes
-from jam.pvm.instructions.table import execute, terminating_blocks
-from jam.pvm.register import Registers
+from jam.pvm.instructions.table_map import InstTableMap
+from jam.pvm.status import CONTINUE, HALT, PANIC, ExecutionStatus
 from jam.pvm.zeta import Zeta
-from jam.types.base.bit import Bit
 from jam.types.base.integers.fixed import U8, U32
-from jam.types.protocol.core import Gas, Register, RemainingGas
+from jam.types.protocol.core import ProgramCounter
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
 from jam.utils.codec.utils import check_buffer_size
+from jam.utils.constants import PVM_ADDR_ALIGNMENT
 from jam.utils.json.serde import JsonSerde
-from jam.pvm.status import CONTINUE, PAGE_FAULT, PANIC, ExecutionStatus
-from jam.pvm.memory import Memory
 
 
 class Program(Codable, JsonSerde):
@@ -36,13 +35,77 @@ class Program(Codable, JsonSerde):
         z: U8,
         jump_table: List[int],
         instruction_set: List[U8],
-        offset_bitmask: List[Bit],
+        offset_bitmask: List[bool],
     ):
         self.z = z
         self.jump_table = jump_table
         self.instruction_set = instruction_set
         self.offset_bitmask = offset_bitmask
 
+    @property
+    def zeta(self) -> Zeta:
+        return Zeta(self.instruction_set)
+    
+    def skip(self, i) -> int:
+        """
+        Skip the instructions until the next opcode is found.
+        Args:
+            i: Current index
+        Returns:
+            Distance to the next opcode.
+        """
+        i = int(i)
+        extended_bitmask = self.offset_bitmask + [True] * (100)
+        for j in range(i + 1, len(extended_bitmask)):
+            if extended_bitmask[j] == 1:
+                return j - i  # Distance to the next opcode.
+        return len(extended_bitmask) - i  # Reached the end of the bitmask.
+
+    @property
+    def basic_blocks(self) -> List[U8]:
+        """Get the basic blocks of the program. ie. sequences of instructions
+        where the code sequence starts.
+
+        Returns:
+            List[U8]: List of basic blocks
+        """
+        basic_blocks = [U8(0)]
+        for n in range(len(self.instruction_set)):
+            if (
+                self.offset_bitmask[n] and 
+                self.instruction_set[n].value not in InstTableMap.terminating_blocks()
+            ):
+                basic_blocks.append(U8(n + 1 + self.skip(n)))
+        return basic_blocks
+    
+    def branch(
+        self,
+        counter: ProgramCounter, 
+        branch: U32, 
+        condition: bool
+    ) -> Tuple[ExecutionStatus, ProgramCounter]:
+        if not condition:
+            return CONTINUE, counter
+        elif branch not in self.basic_blocks:
+            raise PvmError(PvmErrorCodes.PANIC)
+        return CONTINUE, branch
+
+    def djump(
+        self, 
+        counter: ProgramCounter, 
+        a: int
+    ) -> Tuple[ExecutionStatus, ProgramCounter]:
+        if a == 2**32 - 2**16:
+            return HALT, counter
+        elif (
+            a == 0 or
+            a > len(self.jump_table) * PVM_ADDR_ALIGNMENT or
+            a % PVM_ADDR_ALIGNMENT != 0 or
+            self.jump_table[a//PVM_ADDR_ALIGNMENT - 1] not in self.basic_blocks
+        ):
+            raise PvmError(PvmErrorCodes.PANIC)
+        return CONTINUE, self.jump_table[a//PVM_ADDR_ALIGNMENT - 1]
+    
     def encode_size(self) -> int:
         """Encode the size of the program.
 
@@ -62,7 +125,7 @@ class Program(Codable, JsonSerde):
         )
         return total_size
 
-    def encode_into(self, buffer: Union[bytes, bytearray], offset: int = 0) -> int:
+    def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
         """Encode the program bytecode into a buffer.
 
         Args:
@@ -95,7 +158,7 @@ class Program(Codable, JsonSerde):
     @staticmethod
     def decode_from(
         buffer: Union[bytes, bytearray], offset: int = 0
-    ) -> Tuple[Self, int]:
+    ) -> Tuple["Program", int]:
         """Decode a program from a bytes
 
         Args:
@@ -140,10 +203,10 @@ class Program(Codable, JsonSerde):
         bytes_read += size
         current_offset += size
 
-        return Program(z, j, c, offset_bitmask), bytes_read
+        return Program(z, j, c, list(offset_bitmask)), bytes_read
 
-    @staticmethod
-    def from_json(buffer: Union[bytes, bytearray]) -> Self:
+    @classmethod
+    def from_json(cls, data: Union[bytes, bytearray]) -> "Program":
         """Decode a program from a bytes
 
         Args:
@@ -152,83 +215,8 @@ class Program(Codable, JsonSerde):
         Returns:
             Tuple[Self, int]: Returns Program and bytes read
         """
-        value, _ = Program.decode_from(buffer)
+        value, _ = Program.decode_from(data)
         return value
-
-    def skip(self, i):
-        """
-        Skip the instructions until the next opcode is found.
-        Args:
-            i: Current index
-        Returns:
-            Distance to the next opcode.
-        """
-        extended_bitmask = self.offset_bitmask + [True] * (100)
-        for j in range(i + 1, len(extended_bitmask)):
-            if extended_bitmask[j] == 1:
-                return j - i  # Distance to the next opcode.
-        return len(extended_bitmask) - i  # Reached the end of the bitmask.
-
-    @property
-    def basic_blocks(self) -> List[U8]:
-        """Get the basic blocks of the program. ie. sequences of instructions
-        where the code sequence starts.
-
-        Returns:
-            List[U8]: List of basic blocks
-        """
-        basic_blocks = [0]
-        for i in range(len(self.instruction_set)):
-            if (
-                self.offset_bitmask[i]
-                and terminating_blocks().index(self.instruction_set[i].value) != -1
-            ):
-                basic_blocks.append(i)
-        return basic_blocks
-
-    def execute(
-        self,
-        program_counter: U32,
-        gas: Gas,
-        registers: Registers,
-        memory: Memory,
-    ) -> Tuple[ExecutionStatus, U32, RemainingGas, Registers, Memory]:
-        """Execute the program blob `p` as per Psi specification.
-
-        Args:
-            self: Program
-            program_counter: Initial program counter
-            gas: Gas provided for execution
-            registers: Initial registers
-            memory: Initial memory
-
-        Returns:
-            Status: Status of the execution - Either PANIC, HALT, PAGE-FAULT, HOST, OUT-OF-GAS, or CONTINUE
-            U32: Final program counter
-            RemainingGas: Remaining gas
-            Registers: Final registers
-            Memory: Final memory
-        """
-        zeta = Zeta(self.instruction_set)
-        while True:
-            skip_index = self.skip(int(program_counter))
-
-            try:
-                status, program_counter, gas, registers, memory = execute(
-                    program_counter,
-                    registers,
-                    memory,
-                    skip_index,
-                    zeta,
-                    gas,
-                )
-            except PvmError as e:
-                if e.code == PvmErrorCodes.PANIC:
-                    return PANIC, program_counter, gas, registers, memory
-                elif e.code == PvmErrorCodes.PAGE_FAULT:
-                    return PAGE_FAULT(Register(0)), program_counter, gas, registers, memory
-                else:
-                    raise e
 
     def __repr__(self):
         return f"Program(z={self.z}, jump_table={self.jump_table}, instruction_set={self.instruction_set}, offset_bitmask={self.offset_bitmask})"

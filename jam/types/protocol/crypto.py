@@ -5,8 +5,6 @@ from jam.types.base import (
     ByteArray144,
     ByteArray784,
 )
-from jam.types.base.sequences.bytes.byte_array import ByteArray
-from jam.types.base.sequences.bytes.bytes import Bytes
 
 # Public key types
 BandersnatchPublic = ByteArray32
