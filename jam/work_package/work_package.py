@@ -1,7 +1,7 @@
+
 from anyio import sleep
 from numpy.ma.core import concatenate
 from sympy.physics.units import ha
-
 from jam.types import Bytes, Byte
 from jam.types.work.item import WorkItem, ExtrinsicSpec
 from jam.types import Bytes, Vector, ByteArray32, Int
@@ -84,6 +84,14 @@ class WorkPackageProcessing(WorkResult):
             )
 
     def _ext(self, w: WorkItem, d:ExecResults):
+        """
+        https://graypaper.fluffylabs.dev/#/68eaa1f/1bcb011bd501?v=0.6.4
+        Function that defines extrinsic data
+        args:
+           w: workitem , d: Work execution result
+        return :
+           Extrincsic data
+        """
         result = []
         for item in d:
             first = blake2b(self.d)
@@ -93,26 +101,41 @@ class WorkPackageProcessing(WorkResult):
         return result
 
     def _imp_seg(self, w: WorkItem):
+        """
+        https://graypaper.fluffylabs.dev/#/68eaa1f/1be0011bea01?v=0.6.4
+         Function that defines import segment
+         args:
+            w: WorkItem
+        return:
+            import segment
+        """
         result = []
         for s in self.segments:
             for (r, n) in w.import_segments:
                 # merkle = BMRFunctions()
-                if WorkPackage.segment_root_lookup(self, r) == self.merkle.cd_merkle_fn(self.merkle,s):
+                if WorkPackageProcessing.segment_root_lookup(self, r) == BMRFunctions.cd_merkle_fn(self.merkle,s):
                         result.append(s[n])
         return result
 
     def _justify_imp(self, w: WorkItem):
+        """
+        https://graypaper.fluffylabs.dev/#/68eaa1f/1bf0011bfe01?v=0.6.4
+         Function that verify import segment
+         args:
+           w: WorkItem
+        """
         result = []
         for s in self.segments:
             for (r, n) in w.import_segments:
                 # merkle = BMRFunctions()
-                if WorkPackage.segment_root_lookup(self, r) == self.merkle.cd_merkle_fn(self.merkle, s):
-                    result.append(self.merkle.merkle_path_fn(self.merkle, s, len(s), n))
+                if WorkPackageProcessing.segment_root_lookup(self, r) == BMRFunctions.cd_merkle_fn(self.merkle, s):
+                    result.append(BMRFunctions.merkle_path_fn(self.merkle, s, len(s), n))
         return result
 
 
     def wr_gen(self, p:WorkPackage, c: CoreIndex):
         """
+        https://graypaper.fluffylabs.dev/#/68eaa1f/1b7c001be700?v=0.6.4
         work result computation function
         Args:
             work package , core_index
@@ -132,7 +155,7 @@ class WorkPackageProcessing(WorkResult):
             k = int(j)
             for i in range(k):
                 l += p.items[i].extrinsic
-            r, e, u = PsiR(int(c), p, o, WorkPackage._imp_seg(self, w), l)
+            r, e, u = PsiR(int(c), p, o, WorkPackageProcessing._imp_seg(self, w), l)
             # h = blake2b(p)
             seg_ele = SegEle([Byte(0)] * 4104)
             segment_length = w.extrinsic
@@ -148,14 +171,15 @@ class WorkPackageProcessing(WorkResult):
         e_list = []
         for _j in range(len(p.items)):
             _r, _u, _e = utils_i(_j)
-            comp = WorkPackage.item_to_result(p.items[_j], _r, _u)
+            comp = WorkPackageProcessing.item_to_result(p.items[_j], _r, _u)
             r_list.append(comp)
             e_list.append(_e)
-
+        temp = p.code_hash + p.params
+        p_a = blake2b(temp)
         if not isinstance(o, Bytes):
             return None
         else:
-            return WorkReport(package_spec=self.specs, context=p.context, core_index=c, authorizer_hash=p.code_hash, auth_output=o, segment_root_lookup=self.segment_root_lookup_dict, results=WorkResults(r_list), auth_gas_used=g)
+            return WorkReport(package_spec=self.specs, context=p.context, core_index=c, authorizer_hash=p_a, auth_output=o, segment_root_lookup=self.segment_root_lookup_dict, results=WorkResults(r_list), auth_gas_used=g)
 
 
     def segment_root_lookup(self, r: OpaqueHash) -> SegmentRoot:
