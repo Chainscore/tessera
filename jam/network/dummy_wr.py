@@ -42,11 +42,11 @@ async def work_report_producer(node: Node, db: KVStore):
 
         logger.info(f"We're in epoch slot {ts_epoch_index} and {state.gamma.s.get_key()} mode")
 
-        if node.is_builder:
+        if not node.is_builder:
             report = create_dummy_report()
-            report_data = CE135Data(report=report, slot=TimeSlot(current_timeslot))
+            report_data = CE135Data(report=report, slot=TimeSlot(int(current_timeslot)))
 
-            logger.info(f"📝 ({node.name}) Producing Work Report {report_iter}: {report}")
+            logger.info(f"📝 ({node.name}) Producing Work Report {report_iter}")
 
             ReportProtocol.transmit(node, report_data)
         else:

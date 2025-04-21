@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from typing import Any, Tuple, Union
 
+from jam.types import Dictionary
 from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.integers import U16, U32
 from jam.types.base.sequences.bytes.bytes import Bytes
@@ -27,7 +28,14 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.core import ServiceId, Gas, CoreIndex
 from jam.types.work.refine_context import RefineContext
 from jam.utils.json.serde import JsonSerde
-from jam.work_package.work_package import SegmentRootLookupDict
+from jam.types.base.dictionary import decodable_dictionary, Dict
+from jam.types.protocol.core import SegmentRoot, WorkPackageHash
+
+
+@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
+class SegmentRootLookupDict(Dictionary[WorkPackageHash, SegmentRoot]):
+    """contains all unique work-package hashes and segment root"""
+    ...
 
 
 @decodable_choice

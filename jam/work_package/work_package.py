@@ -39,14 +39,10 @@ from jam.utils.constants import BASIC_ERASURE_SIZE
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.types import Vector
+from jam.types.work.report import SegmentRootLookupDict
 
-@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
-class SegmentRootLookupDict(Dict[WorkPackageHash, SegmentRoot]):
-    """contains all unique work-package hashes and segment root"""
-    ...
 
 class WorkPackageProcessing(WorkResult):
-
     segment_root_lookup_dict: SegmentRootLookupDict = {}
     segments: Segment
     d: ExecResults

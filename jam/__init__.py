@@ -22,5 +22,5 @@ def run_jam():
     args = parser.parse_args()
 
     uvloop.install()
-    asyncio.run(main(args.genesis, args.db, args.port, args.builder, args.validator, args.start_genesis))
+    asyncio.run(main(args.genesis, args.db, args.port, args.builder, args.validator, args.start_gen))
     # asyncio.run(main())

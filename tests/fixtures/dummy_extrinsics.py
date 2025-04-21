@@ -76,6 +76,7 @@ def create_dummy_work_report() -> WorkReport:
         auth_output=Bytes("0x0102030405"),
         segment_root_lookup=SegmentRootLookup([]),
         results=WorkResults([create_dummy_work_result()]),
+        auth_gas_used=Gas(20)
     )
 
 

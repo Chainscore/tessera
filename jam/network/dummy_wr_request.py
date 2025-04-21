@@ -37,7 +37,7 @@ async def work_report_request_producer(node: Node, db: KVStore):
         if not node.peers:
             logger.info(f"⚠️ ({node.name}) No peers connected, skipping request")
         else:
-            request_data = CE136Data(work_report_hash=create_dummy_bytes32(20))
+            request_data = CE136Data(work_report_hash=create_dummy_bytes32())
 
             # Send request via CE 136 protocol
             RequestProtocol.transmit(node, request_data)

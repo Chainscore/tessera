@@ -68,11 +68,11 @@ async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, is_
                 tg.create_task(tsr_node.initialize())
                 if tsr_node.is_builder:
                     print("yay i am imposter")
-                    tg.create_task(wp_producer(tsr_node, db))
-                    tg.create_task(work_report_producer(tsr_node, db))
+                    # tg.create_task(wp_producer(tsr_node, db))
                 else:
-                    tg.create_task(block_producer(tsr_node, db))
-                    tg.create_task(work_report_request_producer(tsr_node, db))
+                    # tg.create_task(block_producer(tsr_node, db))
+                    tg.create_task(work_report_producer(tsr_node, db))
+                    # tg.create_task(work_report_request_producer(tsr_node, db))
 
         else:
             # TODO: Sync from peers

@@ -70,7 +70,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                 try:
 
                     buffer = self.stream_buffer[event.stream_id]
-
+                    logger.info(buffer)
                     if not buffer:
                         logger.warning("📩 Received empty buffer.")
                         return
@@ -88,7 +88,9 @@ class QuicServerProtocol(QuicConnectionProtocol):
                         save_decoded_data_to_json(buffer.decode(), event.stream_id)
                     elif prefix == PrefixType.CE135:
                         data = WorkReportDistribution.intercept(buffer=buffer[1:])
+                        logger.info(data)
                         WorkReportDistribution.process(data=data)
+                        logger.info(f"📩 Received work report : {data.report} with slot {data.slot}")
                         save_decoded_data_to_json(buffer.decode(),event.stream_id)
                     elif prefix == PrefixType.CE136:
                         data = WorkReportRequest.intercept(buffer=buffer[1:])
