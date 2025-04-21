@@ -1,29 +1,29 @@
 from http.client import CONTINUE
-from typing import Callable, Dict, Tuple
+from typing import Any, Callable, Dict, Tuple
 from jam.pvm.instructions.code import OpCode
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
 from jam.pvm.status import ExecutionStatus
 from jam.pvm.utils import PvmUtilities
-from jam.types.base.integers.fixed import U8
-from jam.pvm.instructions.protocol import InstructionTable
+from jam.pvm.instructions.instruction_table import InstructionTable
+from jam.types.protocol.core import Gas, ProgramCounter
 from jam.utils.codec.primitives.integers import IntegerCodec
 
 
 class InstructionsWArgs2Imm(InstructionTable):
     @property
-    def lx(self) -> U8:
-        return min(4, self.zeta[self.program_counter + 1])
+    def lx(self) -> int:
+        return min(4, self.program.zeta[self.counter + 1])
     
     @property
-    def ly(self) -> U8:
+    def ly(self) -> int:
         return min(4, max(0, self.skip_index - int(self.lx) - 1))
     
     @property
     def vx(self) -> int:
-        start = self.program_counter + 2
+        start = self.counter + 2
         end = start + self.lx
-        val, _ = IntegerCodec.decode_from(int(self.lx), self.zeta[start:end])
+        val, _ = IntegerCodec.decode_from(int(self.lx), self.program.zeta[start:end])
         return PvmUtilities.chi(
             val,
             self.lx,
@@ -31,9 +31,9 @@ class InstructionsWArgs2Imm(InstructionTable):
 
     @property
     def vy(self) -> int:
-        start = self.program_counter + 2 + self.lx
+        start = self.counter + 2 + self.lx
         end = start + self.ly
-        val, _ = IntegerCodec.decode_from(int(self.ly), self.zeta[start:end])
+        val, _ = IntegerCodec.decode_from(int(self.ly), self.program.zeta[start:end])
         return PvmUtilities.chi(
             val,
             self.ly,
@@ -42,14 +42,14 @@ class InstructionsWArgs2Imm(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            30: OpCode(name="store_imm_u8", fn=cls.store_imm(8), gas=0, is_terminating=False),
-            31: OpCode(name="store_imm_u16", fn=cls.store_imm(16), gas=0, is_terminating=False),
-            32: OpCode(name="store_imm_u32", fn=cls.store_imm(32), gas=0, is_terminating=False),
-            33: OpCode(name="store_imm_u64", fn=cls.store_imm(64), gas=0, is_terminating=False),
+            30: OpCode(name="store_imm_u8", fn=cls.store_imm(8), gas=Gas(0), is_terminating=False),
+            31: OpCode(name="store_imm_u16", fn=cls.store_imm(16), gas=Gas(0), is_terminating=False),
+            32: OpCode(name="store_imm_u32", fn=cls.store_imm(32), gas=Gas(0), is_terminating=False),
+            33: OpCode(name="store_imm_u64", fn=cls.store_imm(64), gas=Gas(0), is_terminating=False),
         }
     
     @staticmethod
-    def store_imm(bit_size: int) -> Callable[[Registers, Memory], Tuple[ExecutionStatus, Registers, Memory]]:
+    def store_imm(bit_size: int) -> Callable[[Any, Registers, Memory], Tuple[ExecutionStatus, ProgramCounter, Registers, Memory]]:
         """Store an immediate value into memory. Implements the store_imm_u8, store_imm_u16, store_imm_u32, and store_imm_u64 instructions.
 
         Args:
@@ -60,7 +60,7 @@ class InstructionsWArgs2Imm(InstructionTable):
         """
         def store_imm_impl(
             self, registers: Registers, memory: Memory
-        ) -> Tuple[ExecutionStatus, Registers, Memory]:
+        ) -> Tuple[ExecutionStatus, ProgramCounter, Registers, Memory]:
             memory.write(self.vx, IntegerCodec(bit_size // 8).encode(self.vy % 2**bit_size))
-            return CONTINUE, registers, memory
+            return CONTINUE, self.skip_index, registers, memory
         return store_imm_impl

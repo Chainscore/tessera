@@ -1,6 +1,6 @@
 from dataclasses import dataclass
+from typing import Any
 from jam.pvm.memory import Memory
-from jam.pvm.program import Program
 from jam.pvm.register import Registers
 from jam.pvm.status import ExecutionStatusCode
 from jam.types.base.integers.fixed import U32
@@ -75,7 +75,7 @@ class Testcase(Codable, JsonSerde):
     initial_page_map: PageMap
     initial_memory: MemoryChunk
     initial_gas: Gas
-    program: Program
+    program: Bytes
     expected_status: ExecutionStatusCode
     expected_regs: Registers
     expected_pc: U32
