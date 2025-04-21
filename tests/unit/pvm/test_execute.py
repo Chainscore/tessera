@@ -1,5 +1,7 @@
 import os
 import json
+
+from jam.pvm.pvm import PVM
 from .types import Testcase
 
 def get_testcases_starting_with(prefix: str):
@@ -10,17 +12,21 @@ def get_testcases_starting_with(prefix: str):
                 data = json.loads(f.read())
                 yield Testcase.from_json(data)
 
-def test_inst_add_32():
+def vector_run(tc: Testcase):
+    print("\nProcessing test case: ", tc.name)
+    status, pc, gas, registers, memory = PVM.execute(
+        bytes(tc.program),
+        tc.initial_pc,
+        tc.initial_gas,
+        tc.initial_regs,
+        tc.initial_memory.to_memory(tc.initial_page_map),
+    )
+    assert registers == tc.expected_regs
+    assert memory == tc.expected_memory.to_memory(tc.initial_page_map)
+    assert pc == tc.expected_pc
+    assert status.code == tc.expected_status
+
+def test_inst_i_imm():
     # Read all json files from /data/pvm/programs
-    for tc in get_testcases_starting_with("inst_store_imm_indirect_u8_with_offset_ok"):
-        print("Testcase name: ", tc.name)
-        status, pc, gas, registers, memory = tc.program.execute(
-            tc.initial_pc,
-            tc.initial_gas,
-            tc.initial_regs,
-            tc.initial_memory.to_memory(tc.initial_page_map),
-        )
-        assert registers == tc.expected_regs
-        assert memory == tc.expected_memory.to_memory(tc.initial_page_map)
-        assert pc == tc.expected_pc
-        assert status.code == tc.expected_status
+    for tc in get_testcases_starting_with("inst_jump."):
+        vector_run(tc)
