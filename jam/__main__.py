@@ -4,7 +4,6 @@ from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
 from jam.consensus.safrole.safrole import Safrole
 from jam.db.kv import KVStore
-
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.dummy_bp import block_producer
@@ -17,10 +16,7 @@ from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Publ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from tests.fixtures.dummy_block import create_dummy_block
-
-async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, start_genesis: bool) -> None:
-
+async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, is_validator: bool, start_genesis: bool) -> None:
     # Setup logging
     setup_logging()
 
@@ -50,16 +46,9 @@ async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, sta
             port=port, 
             peers=peers,
             validator_data=my_data,
-            is_builder=is_builder
+            is_builder=is_builder,
+            is_validator=is_validator
         )
-
-        validators = [ValidatorData(
-            bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
-            ed25519=Ed25519Public(pr["ed25519_public"]),
-            bls=BlsPublic(pr["bls_public"]),
-            metadata=ValidatorMetadata(bytes(128))
-        ) for pr in peerlist]
-
         db = KVStore(db_path)
 
         if start_genesis:
@@ -76,12 +65,15 @@ async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, sta
 
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(tsr_node.initialize())
-
                 if tsr_node.is_builder:
                     print("yay i am imposter")
                     tg.create_task(wp_producer(tsr_node, db))
                 else:
                     tg.create_task(block_producer(tsr_node, db))
+
+        else:
+            # TODO: Sync from peers
+            raise NotImplementedError("Syncing from peers is not implemented yet")
 
         else:
             # TODO: Sync from peers

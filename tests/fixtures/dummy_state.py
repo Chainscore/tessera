@@ -30,7 +30,7 @@ from jam.types import TicketBody, Array, Vector
 
 from jam.state.state import State
 from jam.types.base import Bytes
-from jam.types.base.integers.fixed import U32
+from jam.types.base.integers.fixed import U32, U8
 from jam.types.base.integers.general import Int
 from jam.types.base.null import Nullable
 from jam.types.protocol.core import (
@@ -112,10 +112,10 @@ def create_dummy_state_components() -> Dict[str, object]:
     validator_set = GammaK(dummy_validator_data)
     ring_root = BandersnatchRingRoot(create_dummy_bytes(144))
     slot_sealers = GammaSTickets(
-        [TicketBody(create_dummy_bytes32(), i) for i in range(EPOCH_LENGTH)]
+        [TicketBody(create_dummy_bytes32(), U8(i)) for i in range(EPOCH_LENGTH)]
     )
     ticket_accumulator = GammaA(
-        [TicketBody(create_dummy_bytes32(), i) for i in range(3)]
+        [TicketBody(create_dummy_bytes32(), U8(i)) for i in range(3)]
     )
     components["gamma"] = Gamma(
         k=validator_set,

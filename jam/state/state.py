@@ -1,4 +1,5 @@
 from jam.db.kv import KVStore
+from typing import Dict
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.eta import Eta
 from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat
@@ -21,9 +22,10 @@ from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.protocol.core import Balance, Gas, ServiceId
+from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public, Hash
 from jam.types.protocol.crypto import OpaqueHash
+from jam.utils.byte_utils import ByteUtils
 from jam.state.components.delta import (
     AccountData,
     AccountStorage,
@@ -35,7 +37,9 @@ from jam.state.components.delta import (
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
-
+import pickle
+import json
+import time
 
 class State(Sigma):
     """
@@ -43,6 +47,8 @@ class State(Sigma):
         - Extends Sigma
         - Adds Merklization (generates root, get_merkle_nodes)
         - Adds transform and detransform methods
+        - Adds save and load methods
+        - Adds genesis method
 
     Args:
         **kwargs: Keyword arguments for the components of the state
@@ -60,52 +66,44 @@ class State(Sigma):
                 dict: A dictionary representation of the state in this format: {bytes -> Bytes}
         """
         services, service_storage, service_preimages, service_lookup = {}, {}, {}, {}
-
         for i in self.delta:
-            l_key=set()
-            s_key=set()
+            l_key, s_key = set(), set()
             for j in self.delta[i].timestamps:
                 l_key.add(j)
             for j in self.delta[i].storage:
                 s_key.add(j)
             a_i = 2 * len(list(l_key)) + len(list(s_key))
-            a_s = 0
-            a_l = 0
+            a_s, a_l = 0, 0
             if l_key:
                 for key in l_key:
                     # fetching the length from the LookupTimestamps
                     a_l += 81 + int(LookupTimestamps.get_length(key))
-
             if s_key:
                 for key in s_key:
-                    a_s+=32+len(self.delta[i].storage[key])
-            a_o = a_l + a_s
-            a_t = 100 + 10 * a_i + a_o
-            serialize_4=IntegerCodec(4)
-            buffer_4=bytearray(4)
-            IntegerCodec.encode_into(serialize_4,a_i,buffer_4)
-            serialize_8=IntegerCodec(8)
-            buffer_8=bytearray(8)
-            IntegerCodec.encode_into(serialize_8,a_o,buffer_8)
+                    a_s += 32 + len(self.delta[i].storage[key])
 
-            
-            
-            services[construct_state_key((255,i))]=Bytes(self.delta[i].code_hash.encode()+self.delta[i].balance.encode()+self.delta[i].gas_limit.encode()+self.delta[i].min_gas.encode()+buffer_8+buffer_4)
-            
-            buffer_storage=bytearray(4)
-            buffer_preimage=bytearray(4)
-            # buffer_lookup=bytearray(4)
-            IntegerCodec.encode_into(serialize_4,2**32-1,buffer_storage)
-            IntegerCodec.encode_into(serialize_4,2**32-2,buffer_preimage)
-            # IntegerCodec.encode_into(serialize_4,2**32-3,buffer_lookup)
-            # print(Bytes(buffer_storage).hex())
-            # storage_key=bytes([0]*28)
-            for j in self.delta[i].storage:  
-                service_storage[construct_state_key((i,ByteArray32(Bytes(buffer_storage)+j[0:28])))]=self.delta[i].storage[j]
+            services[construct_state_key((255, i))] = Bytes(
+                self.delta[i].code_hash.encode()
+                + self.delta[i].balance.encode()
+                + self.delta[i].gas_limit.encode()
+                + self.delta[i].min_gas.encode()
+                + U64(a_l + a_s).encode()
+                + U32(a_i).encode()
+            )
+
+            for j in self.delta[i].storage:
+                service_storage[
+                    construct_state_key(
+                        (i, ByteArray32(Bytes(U32(2**32 - 1).encode()) + j[0:28]))
+                    )
+                ] = self.delta[i].storage[j]
             for j in self.delta[i].lookup:
-                # print(ByteArray32(Bytes(buffer_preimage)+j[1:29]))
-                service_preimages[construct_state_key((i,ByteArray32(Bytes(buffer_preimage)+j[1:29])))]=Bytes(self.delta[i].lookup[j])
-        
+                service_preimages[
+                    construct_state_key(
+                        (i, ByteArray32(Bytes(U32(2**32 - 2).encode()) + j[1:29]))
+                    )
+                ] = Bytes(self.delta[i].lookup[j])
+
             for j in self.delta[i].timestamps:
                 service_lookup[construct_state_key((i, j))] = Bytes(
                     self.delta[i].timestamps[j].encode()
@@ -130,17 +128,16 @@ class State(Sigma):
             **services,
             **service_storage,
             **service_preimages,
-            **service_lookup
+            **service_lookup,
         }
 
     @staticmethod
     def detransform(state: dict) -> "State":
         """Inverse of transform"""
-        # Loop thru the whole state dict
-
-        # populating the delta
+        # Iterate through the state dictionary to reconstruct the State object.
+        # The state dictionary contains core state components and service-specific data.
         delta = {}
-        for key, value in state.items():
+        for key, value in sorted(state.items(), key=lambda x: x[0], reverse=True):
             # Start with finding all core state components 1-15
             # if (key[0] <= 15) and bytes(key[0:32]) == 0:
             if int(key[0]) <= 15 and int(key[0]) > 0:
@@ -177,9 +174,9 @@ class State(Sigma):
 
             # Then find all services (first byte is 255, rest is service id)
             elif int(key[0]) == 255:
-                service_id = int.from_bytes(
+                service_id = ServiceId(int.from_bytes(
                     bytes(Bytes([key[1], key[3], key[5], key[7]]))
-                )
+                ))
                 total_offset = 0
                 ac, offset = OpaqueHash.decode_from(bytes(value), total_offset)
                 total_offset += offset
@@ -206,24 +203,23 @@ class State(Sigma):
             else:
                 if Bytes(key[7:0:-2]) == Bytes(2**32 - 1):
                     # populating the storage
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    service_id = ServiceId(int.from_bytes(bytes(Bytes(key[0:7:2]))))
                     delta[service_id].storage[
                         ByteArray32(Bytes(key[8:32] + Bytes(bytearray(8))))
                     ] = value
                     print("Storage")
                 elif Bytes(key[7:0:-2]) == Bytes(2**32 - 2):
                     # populating the lookup
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    service_id = ServiceId(int.from_bytes(bytes(Bytes(key[0:7:2]))))
                     delta[service_id].lookup[Hash.blake2b(value)] = value
 
                 else:
                     # populating the timestamps
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
+                    service_id = ServiceId(int.from_bytes(bytes(Bytes(key[0:7:2]))))
                     TimeStamps, _ = Timestamps.decode_from(bytes(value))
                     timestamp_key = ByteArray32(
                         Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
                     )
-                    # print("timestamp_key",timestamp_key)
                     delta[service_id].timestamps[timestamp_key] = TimeStamps
 
         return State(
@@ -247,7 +243,8 @@ class State(Sigma):
 
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
-        return self._merkle.merkelize(self.transform())
+        root_hash, _ = self._merkle.merkelize(self.transform())
+        return root_hash
 
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
@@ -283,14 +280,60 @@ class State(Sigma):
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
     
-    def save(self, db: KVStore):
+    def save(self,db:KVStore,Updated_keys:list[ByteArray32,Bytes]=None):
+        """
+        Save state to the key-value store.
+        
+        If the root hash is not initialized (all zeros), merkelize the full state and save all key-value pairs.
+        Otherwise, update only the modified paths, root hash, and state keys in the database.
+        """
         data = self.transform()
-        for key, value in data.items():
-            db.put(bytes(key), bytes(value))
-    
+        if self._merkle.trie._root_hash == ByteArray32([0] * 32):
+            self._merkle.merkelize(data)
+            # db.put(b"general_root:",bytes(general_root))
+            for key, value in data.items():
+                db.put(bytes(key), bytes(value))
+        else:
+            start_time = time.time()
+            root=self._merkle.update_global_root(Updated_keys)
+            end_time = time.time()
+            print(f"Time taken to just update the root: {end_time - start_time} seconds")
+
+            # db.put(b"general_root:",bytes(general_root))
+            for key,value in Updated_keys.items():
+                db.put(bytes(key),bytes(value))
+        
+
     @staticmethod
-    def load(db: KVStore) -> "State":
+    def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
+        """
+            Load state data from the key-value store and transform it into a dictionary.
+            If service-related keys are provided, load the corresponding service-specific
+            state data as well. This allows for efficient partial state loading when
+            only specific service data is needed.
+        """
         data = {}
-        for key, value in db.get_all().items():
-            data[key] = Bytes(value)
-        return State.detransform(data)
+        service_ids:set[ServiceId]=set()
+        
+        if keys is None:
+            for key, value in db.get_all().items():
+                data[ByteArray32(key)] = Bytes(value)
+        else:
+            for i in range(1,16):
+                state_key=construct_state_key(i)
+                data[state_key] = Bytes(db.get(bytes(state_key)))
+            for key in keys:
+                if int.from_bytes(
+                    bytes(Bytes([key[0], key[2], key[4], key[6]]))
+                ) not in service_ids:
+                    service_ids.add(ServiceId(int.from_bytes(
+                        bytes(Bytes([key[0], key[2], key[4], key[6]]))
+                    )))
+                data[key] = Bytes(db.get(bytes(key)))
+            for service_id in service_ids:
+                service_key=construct_state_key((255,service_id))
+                data[service_key]=Bytes(db.get(bytes(service_key)))
+        state = State.detransform(data)
+        return state
+
+        

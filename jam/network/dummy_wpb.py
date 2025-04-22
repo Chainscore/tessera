@@ -9,9 +9,9 @@ from jam.config.logging import logger
 from jam.db.kv import KVStore
 from tests.fixtures.dummy_package import create_dummy_package
 from jam.report.guarantee_assignment import guarantor_assignment
-from .protocols.CE_133 import WorkPackageSubmission
-from jam.network.protocols.CE_133 import WorkPackageCore
-from ..types import Int
+from .protocols.ce_133 import WorkPackageSubmission, CE133Data
+from jam.network.protocols.ce_133 import WorkPackageCore
+from ..types import Int, Array
 
 
 async def wp_producer(node: Node, db: KVStore):
@@ -48,12 +48,15 @@ async def wp_producer(node: Node, db: KVStore):
 
         if node.is_builder:
             wp = create_dummy_package()
-            data = WorkPackageCore(wp, Int(0))
+            wc = WorkPackageCore(wp, Int(0))
+
+            data = CE133Data(package_data=wc, extrinsics=Int(341))
             logger.info(f"⛏️ ({node.name}) Producing Work Package { wp}")
             # TODO: Implement package transmission
-            await C133.transmit(node,data)
+
+            C133.transmit(node, data)
         else:
-            logger.info(f"⛏️ ({node.name}) skipping Node {wp.authorizer}")
+            logger.info(f"⛏️ ({node.name}) skipping Node")
 
 
         # Sleep for remaining time of the timeslot
