@@ -4,7 +4,9 @@ from numpy.ma.core import concatenate
 from sympy.physics.units import ha
 from jam.types import Bytes, Byte
 from jam.types.work.item import WorkItem, ExtrinsicSpec
-from jam.types import Bytes, Vector, ByteArray32, Int
+from jam.types.base.sequences.bytes import Bytes, ByteArray32
+from jam.types.base.sequences.vector import Vector
+from jam.types.base.integers.general import Int
 from jam.types.work.item import WorkItem
 from jam.types.work.package import  WorkPackage
 from jam.types.work.report import WorkResult, RefineLoad
@@ -15,12 +17,10 @@ from jam.utils.constants import MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUN
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
 from jam.types.work.report import WorkExecResult
 from hashlib import blake2b
-from jam.types.base.integers.fixed import U32
+from jam.types.base.integers.fixed import U32, U16
 from math import floor
-from jam.merklization.binary_merkle import BMRFunctions
 from jam.types.work.report import WorkReport
-from jam.types.protocol.core import SegmentRoot, WorkPackageHash
-from jam.types.base.dictionary import decodable_dictionary, Dict
+from jam.types.protocol.core import SegmentRoot
 from jam.types.protocol.crypto import OpaqueHash
 from jam.hostCall.types import Segment, SegEle
 from jam.types.work.report import ExecResults
@@ -34,18 +34,16 @@ from jam.types.work.report import WorkReport, WorkPackageSpec
 from jam.hostCall.Refine import PsiR
 from jam.hostCall.invocation import PsiI
 from jam.types import CoreIndex
+from tests.fixtures.dummy_package import create_dummy_package
+from jam.types.work.report import SegmentRootLookupDict
+
 from jam.erasure_coding.erasure_code import ErasureCode
 from jam.utils.constants import BASIC_ERASURE_SIZE
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.types import Vector
 
-@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
-class SegmentRootLookupDict(Dict[WorkPackageHash, SegmentRoot]):
-    """contains all unique work-package hashes and segment root"""
-    ...
-
-class WorkPackageProcessing(WorkResult):
+class WorkPackageProcessing:
 
     segment_root_lookup_dict: SegmentRootLookupDict = {}
     segments: Segment
@@ -53,7 +51,6 @@ class WorkPackageProcessing(WorkResult):
     specs: WorkPackageSpec
 
     def __init__(self):
-        super().__init__()
         self.merkle = BMRFunctions()
 
     # https://graypaper.fluffylabs.dev/#/68eaa1f/1a9f001ad000?v=0.6.4
@@ -113,7 +110,7 @@ class WorkPackageProcessing(WorkResult):
         for s in self.segments:
             for (r, n) in w.import_segments:
                 # merkle = BMRFunctions()
-                if WorkPackageProcessing.segment_root_lookup(self, r) == BMRFunctions.cd_merkle_fn(self.merkle,s):
+                if WorkPackageProcessing.segment_root_lookup(self, r) == self.merkle.cd_merkle_fn(s):
                         result.append(s[n])
         return result
 
@@ -128,10 +125,9 @@ class WorkPackageProcessing(WorkResult):
         for s in self.segments:
             for (r, n) in w.import_segments:
                 # merkle = BMRFunctions()
-                if WorkPackageProcessing.segment_root_lookup(self, r) == BMRFunctions.cd_merkle_fn(self.merkle, s):
-                    result.append(BMRFunctions.merkle_path_fn(self.merkle, s, len(s), n))
+                if WorkPackageProcessing.segment_root_lookup(self, r) == self.merkle.cd_merkle_fn(s):
+                    result.append(self.merkle.merkle_path_fn(s, len(s), n))
         return result
-
 
     def wr_gen(self, p:WorkPackage, c: CoreIndex):
         """
@@ -155,7 +151,7 @@ class WorkPackageProcessing(WorkResult):
             k = int(j)
             for i in range(k):
                 l += p.items[i].extrinsic
-            r, e, u = PsiR(int(c), p, o, WorkPackageProcessing._imp_seg(self, w), l)
+            r, e, u = PsiR(int(c), p, o, self._imp_seg(self, w), l)
             # h = blake2b(p)
             seg_ele = SegEle([Byte(0)] * 4104)
             segment_length = w.extrinsic
@@ -356,4 +352,9 @@ class WorkPackageProcessing(WorkResult):
             e,
             n
         }
+
+
+
+temp = WorkPackageProcessing()
+temp.wr_gen(p=create_dummy_package(), c=U16(0))
 

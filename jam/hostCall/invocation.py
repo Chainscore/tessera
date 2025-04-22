@@ -113,7 +113,7 @@ class PsiI:
 
     def process(self):
         buffer = self.work_package.encode()
-        PsiM(self.work_package.code_hash, U64(0), 50000000, buffer, self.host_function, None)
+        PsiM(self.work_package.code_hash, U64(0), 50000000, buffer, self.host_function, None).process()
 
     def is_authorized_f(self):
         def gas(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
