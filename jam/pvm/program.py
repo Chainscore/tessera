@@ -167,6 +167,8 @@ class Program(Codable, JsonSerde):
 
         Returns:
             Tuple[Self, int]: Returns Program and bytes read
+
+        TODO: Implement conditions - https://graypaper.fluffylabs.dev/#/68eaa1f/234701234701?v=0.6.4
         """
         current_offset = offset
         bytes_read = 0
