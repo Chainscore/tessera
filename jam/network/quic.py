@@ -57,6 +57,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
             from jam.network.protocols.ce_133 import WorkPackageSubmission
             from jam.network.protocols.ce_135 import WorkReportDistribution
             from jam.network.protocols.ce_136 import WorkReportRequest
+            from jam.network.protocols.ce_134 import WorkPackageSharing
 
             logger.info(f"📩 Received data of size {len(event.data)} bytes on stream {event.stream_id}")
 
@@ -86,6 +87,12 @@ class QuicServerProtocol(QuicConnectionProtocol):
                         WorkPackageSubmission.process(data=data)
                         logger.info(f"📩 Received work package : {data.package_data.work_package} with CI {data.package_data.core_index}")
                         save_decoded_data_to_json(buffer.decode(), event.stream_id)
+
+                    elif prefix == PrefixType.CE134:
+                        data = WorkPackageSharing.intercept(buffer=buffer[1:])
+                        logger.info(f"Received core_index : {data.core_segment.core_index} with segment mapping : {data.core_segment.segment_root_map} and Work package bundle:{data.work_package_bundle} ")
+                        save_decoded_data_to_json(buffer.decode(), event.stream_id)
+
                     elif prefix == PrefixType.CE135:
                         data = WorkReportDistribution.intercept(buffer=buffer[1:])
                         WorkReportDistribution.process(data=data)

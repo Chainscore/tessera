@@ -2,7 +2,7 @@ from anyio import sleep
 from numpy.ma.core import concatenate
 from sympy.physics.units import ha
 
-from jam.types import Bytes, Byte
+from jam.types import Bytes, Byte,
 from jam.types.work.item import WorkItem, ExtrinsicSpec
 from jam.types import Bytes, Vector, ByteArray32, Int
 from jam.types.work.item import WorkItem
@@ -20,7 +20,7 @@ from math import floor
 from jam.merklization.binary_merkle import BMRFunctions
 from jam.types.work.report import WorkReport
 from jam.types.protocol.core import SegmentRoot, WorkPackageHash
-from jam.types.base.dictionary import decodable_dictionary, Dict
+from jam.types.base.dictionary import decodable_dictionary , Dictionary
 from jam.types.protocol.crypto import OpaqueHash
 from jam.hostCall.types import Segment, SegEle
 from jam.types.work.report import ExecResults
@@ -41,7 +41,7 @@ from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.types import Vector
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
-class SegmentRootLookupDict(Dict[WorkPackageHash, SegmentRoot]):
+class SegmentRootLookupDict(Dictionary[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
     ...
 
