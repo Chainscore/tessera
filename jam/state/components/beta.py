@@ -3,11 +3,10 @@ from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.core import SegmentRoot, WorkPackageHash
 from jam.types.protocol.crypto import HeaderHash, StateRoot
-from jam.types.protocol.merkle import MMR
+from jam.merklization.mountain_merkle import MMR
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde 
-
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
 class PackageDict(Dictionary[WorkPackageHash, SegmentRoot]):

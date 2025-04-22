@@ -27,24 +27,25 @@ app = FastAPI(
 )
 
 
-db_path = tempfile.mkdtemp()
+# db_path = tempfile.mkdtemp()
    
+db_state = None
 # print(db_path)
 # Initialize store
-kv = KVStore(db_path)
+# kv = KVStore(db_path)
    
 # State checking:
-    
-peerlist = json.load(open("../../genesis.json"))["peers"]
-peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
-validators = [ValidatorData(
-bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
-ed25519=Ed25519Public(pr["ed25519_public"]),
-bls=BlsPublic(pr["bls_public"]), metadata=ValidatorMetadata(bytes(128)) ) for pr in peerlist]
-state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
-state.save(kv)
 
-print(state.load(kv).phi)
+# peerlist = json.load(open("../../genesis.json"))["peers"]
+# peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
+# validators = [ValidatorData(
+# bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
+# ed25519=Ed25519Public(pr["ed25519_public"]),
+# bls=BlsPublic(pr["bls_public"]), metadata=ValidatorMetadata(bytes(128)) ) for pr in peerlist]
+# state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
+# state.save(kv)
+
+# print(state.load(kv).phi)
 
 # Following the etherum json rpc api structure
 """
@@ -112,7 +113,7 @@ async def rpc_handler(request: RpcRequest):
             )
 
         # Fetch latest state from db
-        db_state = state.load(kv).header_hash
+        # db_state = state.load(kv).header_hash
 
         # Return the state root
         if(header_hash == db_state.header_hash):
