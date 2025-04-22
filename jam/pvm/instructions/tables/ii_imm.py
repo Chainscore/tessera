@@ -1,12 +1,11 @@
 from http.client import CONTINUE
-from typing import Any, Callable, Dict, Tuple
-from jam.pvm.instructions.code import OpCode
+from typing import Any, Callable, Dict
+from jam.pvm.instructions.code import OpCode, OpReturn
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
-from jam.pvm.status import ExecutionStatus
 from jam.pvm.utils import PvmUtilities
 from jam.pvm.instructions.instruction_table import InstructionTable
-from jam.types.protocol.core import Gas, ProgramCounter
+from jam.types.protocol.core import Gas
 from jam.utils.codec.primitives.integers import IntegerCodec
 
 
@@ -49,7 +48,7 @@ class InstructionsWArgs2Imm(InstructionTable):
         }
     
     @staticmethod
-    def store_imm(bit_size: int) -> Callable[[Any, Registers, Memory], Tuple[ExecutionStatus, ProgramCounter, Registers, Memory]]:
+    def store_imm(bit_size: int) -> Callable[[Any, Registers, Memory], OpReturn]:
         """Store an immediate value into memory. Implements the store_imm_u8, store_imm_u16, store_imm_u32, and store_imm_u64 instructions.
 
         Args:
@@ -60,7 +59,7 @@ class InstructionsWArgs2Imm(InstructionTable):
         """
         def store_imm_impl(
             self, registers: Registers, memory: Memory
-        ) -> Tuple[ExecutionStatus, ProgramCounter, Registers, Memory]:
+        ) -> OpReturn:
             memory.write(self.vx, IntegerCodec(bit_size // 8).encode(self.vy % 2**bit_size))
             return CONTINUE, self.skip_index, registers, memory
         return store_imm_impl
