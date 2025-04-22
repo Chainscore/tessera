@@ -1,47 +1,34 @@
-
-from anyio import sleep
-from numpy.ma.core import concatenate
-from sympy.physics.units import ha
-from jam.types import Bytes, Byte
-from jam.types.work.item import WorkItem, ExtrinsicSpec
-from jam.types.base.sequences.bytes import Bytes, ByteArray32
-from jam.types.base.sequences.vector import Vector
-from jam.types.base.integers.general import Int
-from jam.types.work.item import WorkItem
-from jam.types.work.package import  WorkPackage
-from jam.types.work.report import WorkResult, RefineLoad
-from jam.utils.constants import MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUNT, MAX_WORK_PACKAGE_SIZE, SEGMENT_SIZE, REFINE_GAS, ACCUMULATION_GAS
-from jam.utils.vrf.ietf import point_add
-from jam.types.work.report import WorkResult, RefineLoad, WorkResults
-from jam.utils.constants import MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUNT
-from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
-from jam.types.work.report import WorkExecResult
-from hashlib import blake2b
-from jam.types.base.integers.fixed import U32, U16
-from math import floor
-from jam.types.work.report import WorkReport
-from jam.types.protocol.core import SegmentRoot
-from jam.types.protocol.crypto import OpaqueHash
-from jam.hostCall.types import Segment, SegEle
-from jam.types.work.report import ExecResults
-from jam.types.protocol.crypto import Hash
-from jam.merklization.binary_merkle import BMRFunctions
 from math import ceil
-from jam.hostCall.Refine import PsiR
-from jam.hostCall.invocation import PsiI
-from jam.types import CoreIndex
-from jam.types.work.report import WorkReport, WorkPackageSpec
-from jam.hostCall.Refine import PsiR
-from jam.hostCall.invocation import PsiI
-from jam.types import CoreIndex
-from tests.fixtures.dummy_package import create_dummy_package
-from jam.types.work.report import SegmentRootLookupDict
+
+from jam.types.base.sequences.bytes import Bytes, ByteArray32, Byte
+from jam.types.base.sequences.vector import Vector
+
+from jam.types.base.integers.general import Int
+from jam.types.base.integers.fixed import U32, U16
+
+
+from jam.types.work.item import WorkItem, ExtrinsicSpec
+from jam.types.work.package import  WorkPackage
+from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
+from jam.types.work.report import (WorkResult, RefineLoad, WorkResults, WorkExecResult,
+                                   ExecResults, WorkReport, WorkPackageSpec, SegmentRootLookupDict)
+
+from jam.utils.constants import (MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUNT, BASIC_ERASURE_SIZE,
+                                 MAX_WORK_PACKAGE_SIZE, SEGMENT_SIZE, REFINE_GAS, ACCUMULATION_GAS)
+
+from jam.types.protocol.core import SegmentRoot, CoreIndex
+from jam.types.protocol.crypto import OpaqueHash, Hash
+from jam.hostCall.types import Segment, SegEle
 
 from jam.erasure_coding.erasure_code import ErasureCode
-from jam.utils.constants import BASIC_ERASURE_SIZE
-from jam.types.base.sequences.bytes import ByteArray32
-from jam.types.base.sequences.bytes.bit_array import Byte
-from jam.types import Vector
+from jam.merklization.binary_merkle import BMRFunctions
+
+
+from jam.hostCall.Refine import PsiR
+from jam.hostCall.invocation import PsiI
+
+from tests.fixtures.dummy_package import create_dummy_package
+
 
 class WorkPackageProcessing:
 
@@ -91,7 +78,8 @@ class WorkPackageProcessing:
         """
         result = []
         for item in d:
-            first = blake2b(self.d)
+            # first = blake2b(self.d)
+            first=OpaqueHash(ByteArray32("0x123455"))
             second = U32(len(d))
             if ExtrinsicSpec(hash=first, len=second) in w.extrinsic:
                 result.append(item)
