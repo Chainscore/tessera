@@ -5,20 +5,7 @@ from jam.types.base.integers.fixed import U32
 from jam.pvm.pvm_memory import PageMemory
 from jam.types.base.enum import Enum
 from jam.types.protocol.core import Gas
-
-
-class Status(Enum):
-    PANIC = "panic"
-    HALT = "halt"
-    PAGE_FAULT = "page-fault"
-    HOST = ("host-call", None)
-    OUT_OF_GAS = "out-of-gas"
-    CONTINUE = "continue"
-
-    def with_number(self, num):
-        if isinstance(self.value, tuple):
-            return self.value[0], num
-        return self.value, num
+from jam.pvm.types import Status
 
 
 class Execution:
