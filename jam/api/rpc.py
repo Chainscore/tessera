@@ -27,25 +27,29 @@ app = FastAPI(
 )
 
 
-# db_path = tempfile.mkdtemp()
+db_path = tempfile.mkdtemp()
    
-db_state = None
 # print(db_path)
 # Initialize store
-# kv = KVStore(db_path)
+kv = KVStore(db_path)
    
 # State checking:
 
-# peerlist = json.load(open("../../genesis.json"))["peers"]
-# peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
-# validators = [ValidatorData(
-# bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
-# ed25519=Ed25519Public(pr["ed25519_public"]),
-# bls=BlsPublic(pr["bls_public"]), metadata=ValidatorMetadata(bytes(128)) ) for pr in peerlist]
-# state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
-# state.save(kv)
+peerlist = json.load(open("../../genesis.json"))["peers"]
+peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
+validators = [ValidatorData(
+bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
+ed25519=Ed25519Public(pr["ed25519_public"]),
+bls=BlsPublic(pr["bls_public"]), metadata=ValidatorMetadata(bytes(128)) ) for pr in peerlist]
+state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
+state.save(kv)
 
-# print(state.load(kv).phi)
+print("state", state)
+
+# Dummy test block for testing
+dummy_block = json.load(open("./examples/request_example.json"))
+# print("dummy_block", dummy_block["block"]["header"]["extrinsic_hash"])
+
 
 # Following the etherum json rpc api structure
 """
@@ -84,12 +88,33 @@ async def rpc_handler(request: RpcRequest):
     
     if method == "bestBlock":
         # Handle getBlock method
-        # TODO: Implement the logic to get the best block after service implementation
-        if len(request.params) != 0:
+        # Takes no arguments
+        if len(request.params):
             return RPCResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                error={"code": -32602, "message": "Invalid parameters: expected no params"},
+                result=[dummy_block["block"]["header"]["extrinsic_hash"]]
+            )
+            
+    elif method == "finalizedBlock":
+        if len(request.params):
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                result=[dummy_block["block"]["header"]["extrinsic_hash"], dummy_block["block"]["header"]["slot"]]
+            )
+    elif method == "parent":
+        if len(request.params) != 1:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
+            )
+        if len(request.params):
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                result=[dummy_block["block"]["header"]["extrinsic_hash"], dummy_block["block"]["header"]["slot"]]
             )
     elif method == "stateRoot":
         # Handle stateRoot method
@@ -113,14 +138,14 @@ async def rpc_handler(request: RpcRequest):
             )
 
         # Fetch latest state from db
-        # db_state = state.load(kv).header_hash
+        # db_state = state.load(kv)
 
         # Return the state root
-        if(header_hash == db_state.header_hash):
+        if(header_hash == dummy_block["block"]["header"]["extrinsic_hash"]):
             return RPCResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                result=db_state.state_root,
+                result=dummy_block["post_state"]["state_root"],
             )
         else:
             return RPCResponse(
@@ -128,41 +153,7 @@ async def rpc_handler(request: RpcRequest):
                 id=request.id,
                 error={"code": -32602, "message": "unexpected error"},
             )
-    elif method == "parent":   
-        # Handle parent method
-        if len(request.params) != 1:
-            return RPCResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
-            )
-         # Extract header_hash from params
-        header_hash = request.params.get("Hash")
 
-        # Validate header_hash
-        if len(header_hash) != 32:
-            return RPCResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
-            )
-
-        # Fetch latest state from db
-        db_state = state.load(kv).header_hash
-
-        # Return the state root
-        if(header_hash == db_state.header_hash):
-            return RPCResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                result=[db_state.header_hash, db_state.slot]
-            )
-        else:
-            return RPCResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                error={"code": -32602, "message": "unexpected error"},
-            )
     elif method == "statistics":   
         # Handle parent method
         if len(request.params) != 1:
@@ -183,15 +174,14 @@ async def rpc_handler(request: RpcRequest):
             )
 
         # Fetch latest state from db
-        db_state = state.load(kv).header_hash
+        db_state = state.load(kv)
 
-        #TODo: Check if the header_hash is all needed and correct   
         # Return the state root
-        if(header_hash == db_state.header_hash):
+        if(header_hash == dummy_block["block"]["header"]["extrinsic_hash"]):
             return RPCResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                result=[db_state.pi]
+                result=[db_state.pi.encode()]
             )
         else:
             return RPCResponse(
@@ -200,13 +190,13 @@ async def rpc_handler(request: RpcRequest):
                 error={"code": -32602, "message": "unexpected error"},
             )
     
-    elif method == "serviceValue":   
+    elif method == "serviceData":   
         # Handle parent method
-        if len(request.params) != 3:
+        if len(request.params) != 2:
             return RPCResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                error={"code": -32602, "message": "Invalid parameters: expected , ServiceId, blob"},
+                error={"code": -32602, "message": "Invalid parameters: expected Header Hash and ServiceId"},
             )
          # Extract header_hash from params
         header_hash = request.params.get("Hash")
@@ -220,16 +210,151 @@ async def rpc_handler(request: RpcRequest):
             )
 
         # Fetch latest state from db
-        db_state = state.load(kv).header_hash
+        db_state = state.load(kv)
 
         #TODo: Check if the header_hash is all needed and correct   
         # Return the state root
-        if(header_hash == db_state.header_hash):
+        if(header_hash == dummy_block["block"]["header"]["extrinsic_hash"]):
+            if(db_state.pi):
+                return RPCResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    result=[db_state.pi.encode()]
+                )
+            else:
+                return RPCResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    result=null
+                )
+        else:
             return RPCResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                result=[db_state.pi]
+                error={"code": -32602, "message": "unexpected error"},
             )
+    elif method == "serviceValue":   
+        # Handle parent method
+        if len(request.params) != 3:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "Invalid parameters: expected Header Hash, ServiceId and"},
+            )
+         # Extract header_hash from params
+        header_hash = request.params.get("Hash")
+
+        # Validate header_hash
+        if len(header_hash) != 32:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
+            )
+
+        # Fetch latest state from db
+        db_state = state.load(kv)
+
+        #TODo: Check if the header_hash is all needed and correct   
+        # Return the state root
+        if(header_hash == dummy_block["block"]["header"]["extrinsic_hash"]):
+            if(db_state.pi):
+                return RPCResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    result=[db_state.pi.encode()]
+                )
+            else:
+                return RPCResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    result=null
+                )
+        else:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "unexpected error"},
+            )
+    elif method == "servicePreimage":   
+        # Handle parent method
+        if len(request.params) != 3:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "Invalid parameters: expected Header Hash, ServiceId and"},
+            )
+         # Extract header_hash from params
+        header_hash = request.params.get("Hash")
+
+        # Validate header_hash
+        if len(header_hash) != 32:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
+            )
+
+        # Fetch latest state from db
+        db_state = state.load(kv)
+
+        # Return the state root
+        if(header_hash == dummy_block["block"]["header"]["extrinsic_hash"]):
+            if(db_state.pi):
+                return RPCResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    result=[db_state.pi.encode()]
+                )
+            else:
+                return RPCResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    result=null
+                )
+        else:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "unexpected error"},
+            )
+
+    elif method == "serviceRequest":   
+        # Handle parent method
+        if len(request.params) != 4:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "Invalid parameters: expected Header Hash, ServiceId , Hash and Preimage"},
+            )
+         # Extract header_hash from params
+        header_hash = request.params.get("Hash")
+
+        # Validate header_hash
+        if len(header_hash) != 32:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
+            )
+
+        # Fetch latest state from db
+        db_state = state.load(kv)
+
+        # Return the state root
+        if(header_hash == dummy_block["block"]["header"]["extrinsic_hash"]):
+            if(db_state.pi):
+                return RPCResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    result=[db_state.pi.encode()]
+                )
+            else:
+                return RPCResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    result=null
+                )
         else:
             return RPCResponse(
                 jsonrpc="2.0",
@@ -237,6 +362,5 @@ async def rpc_handler(request: RpcRequest):
                 error={"code": -32602, "message": "unexpected error"},
             )
     
-
          
 
