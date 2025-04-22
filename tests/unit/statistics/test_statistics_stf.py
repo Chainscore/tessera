@@ -1,6 +1,6 @@
 from typing import List
 
-from jam.state.components.pi import Pi
+from jam.state.components.pi import AllServiceStats, Pi
 from jam.state.state import State
 from jam.statistics.statistics import Statistics
 from jam.types import Boolean
@@ -29,13 +29,17 @@ def create_block_from_input(input: Input) -> Block:
 def create_state_from_pre(pre_state: PreState) -> State:
     """Create a state from pre-state"""
     state: State = create_dummy_state()
+    all_service_stats = AllServiceStats()
+    for service_record in pre_state.statistics.services:
+        all_service_stats[service_record.id] = service_record.record
+
     Py = Pi(
-        [
-            pre_state.statistics.vals_current,
-            pre_state.statistics.vals_last,
-            pre_state.statistics.cores,
-        ]
+        vals_current=pre_state.statistics.vals_current,
+        vals_last=pre_state.statistics.vals_last,
+        cores=pre_state.statistics.cores,
+        services=all_service_stats,
     )
+
     state.pi = Py
     state.tau = pre_state.slot
     return state
@@ -44,10 +48,16 @@ def create_state_from_pre(pre_state: PreState) -> State:
 def vector_transition(vector: Testcase) -> Boolean:
     test_block = create_block_from_input(vector.input)
     test_state = create_state_from_pre(vector.pre_state)
+    expected_state = create_state_from_pre(vector.post_state)
+
     try:
-        output = Statistics.transition(test_state, test_block)
-        assert output.pi[0] == vector.post_state.pi.current
-        assert output.pi[1] == vector.post_state.pi.last
+        output_state = Statistics.transition(test_state, test_block, [], {}, {})
+        # return Boolean(True)
+        assert output_state.pi.vals_current == expected_state.pi.vals_current
+        assert output_state.pi.vals_last == expected_state.pi.vals_last
+        assert output_state.pi.cores == expected_state.pi.cores
+        assert output_state.pi.services == expected_state.pi.services
+        # assert output.pi.vals_last == vector.post_state.pi.last
     except Exception as e:
         print("Failed XXX", e)
         return Boolean(False)

@@ -72,10 +72,12 @@ class AllServiceStats(Dictionary[ServiceId, ServiceStat]):
     ...
 
 
-@decodable_array(
-    4, (AllValidatorStats, AllValidatorStats, AllCoreStats, AllServiceStats)
-)
-class Pi(Array):
+@decodable_dataclass
+@dataclass
+class Pi(Codable, JsonSerde):
     """Pi"""
 
-    ...
+    vals_current: AllValidatorStats
+    vals_last: AllValidatorStats
+    cores: AllCoreStats
+    services: AllServiceStats

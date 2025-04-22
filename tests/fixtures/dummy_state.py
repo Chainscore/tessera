@@ -19,7 +19,7 @@ from jam.state.components.iota import Iota
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
 from jam.state.components.phi import AuthorizationQueue, Phi
-from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat
+from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat, AllCoreStats, CoreStat, AllServiceStats
 from jam.state.components.psi import Psi, PsiB, PsiG, PsiO, PsiW
 from jam.state.components.rho import OptionalWorkReportState, Rho
 from jam.state.components.tau import Tau
@@ -196,7 +196,29 @@ def create_dummy_state_components() -> Dict[str, object]:
             for _ in range(VALIDATOR_COUNT)
         ]
     )
-    components["pi"] = Pi([all_validator_stats for _ in range(2)])
+    all_core_stats = AllCoreStats(
+        [
+            CoreStat(
+                gas_used=Int(1),
+                imports=Int(1),
+                extrinsic_count=Int(1),
+                extrinsic_size=Int(1),
+                exports=Int(1),
+                bundle_size=Int(1),
+                da_load=Int(1),
+                popularity=Int(1),
+            )
+            for _ in range(CORE_COUNT)
+        ]
+    )
+    all_service_stats = AllServiceStats()
+
+    components["pi"] = Pi(
+        vals_current=all_validator_stats,
+        vals_last=all_validator_stats,
+        cores=all_core_stats,
+        services=all_service_stats
+    )
 
     # Nu and Xi
     components["nu"] = Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
