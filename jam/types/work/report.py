@@ -1,41 +1,28 @@
 """Work report types for the JAM protocol."""
 from dataclasses import dataclass
-from typing import Any, Tuple, Union
 
-from jam.types import Dictionary
-from jam.types.base.choices.choice import Choice, decodable_choice
-from jam.types.base.integers import U16, U32
-from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.null import Nullable
-from jam.types.base import Vector
-from jam.types.base.sequences.vector import decodable_vector
+from jam.types.base.integers import U16, U32
+from jam.types.base.choices.choice import Choice, decodable_choice
+from jam.types.base.dictionary import decodable_dictionary, Dictionary
+from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.sequences.vector import Vector, decodable_vector
+
+from jam.types.work.refine_context import RefineContext
+from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
 from jam.types.protocol.core import (
     CoreIndex,
+    SegmentRoot,
     ErasureRoot,
     ExportsRoot,
     Gas,
     ServiceId,
     WorkPackageHash,
 )
-from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
-from jam.types.work.refine_context import RefineContext
-from jam.types.base.sequences.array import decodable_array, Array
-from jam.types.protocol.crypto import OpaqueHash
-from jam.types.protocol.core import ErasureRoot, ExportsRoot, WorkPackageHash
+
+from jam.utils.json.serde import JsonSerde
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-
-from jam.types.protocol.core import ServiceId, Gas, CoreIndex
-from jam.types.work.refine_context import RefineContext
-from jam.utils.json.serde import JsonSerde
-from jam.types.base.dictionary import decodable_dictionary, Dict
-from jam.types.protocol.core import SegmentRoot
-
-
-@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
-class SegmentRootLookupDict(Dictionary[WorkPackageHash, SegmentRoot]):
-    """contains all unique work-package hashes and segment root"""
-    ...
 
 
 @decodable_choice
@@ -59,6 +46,7 @@ class RefineLoad(Codable, JsonSerde):
     exports: U16
     extrinsic_count: U16
     extrinsic_size: U32
+
 @decodable_vector(element_type=WorkExecResult)
 class ExecResults(Vector[WorkExecResult]):
     ...
@@ -87,25 +75,28 @@ class WorkPackageSpec(Codable, JsonSerde):
     exports_root: ExportsRoot
     exports_count: U16
 
+# Deprecated Type
+# @decodable_dataclass
+# @dataclass
+# class SegmentRootLookupItem(Codable, JsonSerde):
+#     """Segment root lookup item structure."""
+#
+#     work_package_hash: WorkPackageHash
+#     segment_tree_root: OpaqueHash
+#
+#
+# @decodable_vector(SegmentRootLookupItem)
+# class SegmentRootLookup(Vector[SegmentRootLookupItem]):
+#     ...
 
-@decodable_dataclass
-@dataclass
-class SegmentRootLookupItem(Codable, JsonSerde):
-    """Segment root lookup item structure."""
-
-    work_package_hash: WorkPackageHash
-    segment_tree_root: OpaqueHash
-
-
-@decodable_vector(SegmentRootLookupItem)
-class SegmentRootLookup(Vector[SegmentRootLookupItem]):
+@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
+class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
+    """contains all unique work-package hashes and segment root"""
     ...
-
 
 @decodable_vector(WorkResult)
 class WorkResults(Vector[WorkResult]):
     ...
-
 
 @decodable_dataclass
 @dataclass
@@ -117,7 +108,7 @@ class WorkReport(Codable, JsonSerde):
     core_index: CoreIndex
     authorizer_hash: OpaqueHash
     auth_output: Bytes
-    segment_root_lookup: SegmentRootLookupDict
+    segment_root_lookup: SegmentRootLookup
     results: WorkResults
     auth_gas_used: Gas
 
