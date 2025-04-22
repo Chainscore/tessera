@@ -21,6 +21,7 @@ from jam.types.protocol.crypto import WorkReportHash
 from jam.work_package.work_package import SegmentRootLookupDict
 from tests.fixtures.dummy_package import create_dummy_package
 from typing import cast, Any, Optional, Tuple
+from tests.fixtures.dummy_package import crete_dummy_coreSegment, create_dummy_bundle
 
 
 
@@ -28,6 +29,7 @@ from typing import cast, Any, Optional, Tuple
 @dataclass
 class CoreSegment(Codable, JsonSerde):
     core_index : Int
+    length : Int
     segment_root_map : SegmentRootLookupDict
 
 
@@ -66,6 +68,7 @@ class WorkPackageSharing(NetworkProtocol):
             self._prefix = PrefixType.CE134
 
     def transmit(self, node: Node, data: CE134Data):
+        data = CE134Data(core_segment=crete_dummy_coreSegment(), work_package_bundle= create_dummy_bundle()  )
         for client in node.connections:
             message = self._prefix.encode() + data.core_segment.encode()
             stream_id = client.stream_and_keep_open(message=message)
@@ -79,3 +82,7 @@ class WorkPackageSharing(NetworkProtocol):
         data = cast(CE134Data, data)
 
         return data
+
+    @classmethod
+    def process(cls, data: CE134Data):
+        ...

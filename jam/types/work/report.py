@@ -27,7 +27,14 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.core import ServiceId, Gas, CoreIndex
 from jam.types.work.refine_context import RefineContext
 from jam.utils.json.serde import JsonSerde
-from jam.work_package.work_package import SegmentRootLookupDict
+from jam.types.protocol.core import SegmentRoot, WorkPackageHash
+from jam.types.base.dictionary import decodable_dictionary , Dictionary
+
+
+@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
+class SegmentRootLookupDict(Dictionary[WorkPackageHash, SegmentRoot]):
+    """contains all unique work-package hashes and segment root"""
+    ...
 
 
 @decodable_choice

@@ -2,15 +2,13 @@ from anyio import sleep
 from numpy.ma.core import concatenate
 from sympy.physics.units import ha
 
-from jam.types import Bytes, Byte,
 from jam.types.work.item import WorkItem, ExtrinsicSpec
 from jam.types import Bytes, Vector, ByteArray32, Int
 from jam.types.work.item import WorkItem
 from jam.types.work.package import  WorkPackage
-from jam.types.work.report import WorkResult, RefineLoad
 from jam.utils.constants import MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUNT, MAX_WORK_PACKAGE_SIZE, SEGMENT_SIZE, REFINE_GAS, ACCUMULATION_GAS
 from jam.utils.vrf.ietf import point_add
-from jam.types.work.report import WorkResult, RefineLoad, WorkResults
+from jam.types.work.report import WorkResult, RefineLoad
 from jam.utils.constants import MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUNT
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
 from jam.types.work.report import WorkExecResult
@@ -23,7 +21,7 @@ from jam.types.protocol.core import SegmentRoot, WorkPackageHash
 from jam.types.base.dictionary import decodable_dictionary , Dictionary
 from jam.types.protocol.crypto import OpaqueHash
 from jam.hostCall.types import Segment, SegEle
-from jam.types.work.report import ExecResults
+from jam.types.work.report import ExecResults, SegmentRootLookupDict
 from jam.types.protocol.crypto import Hash
 from jam.merklization.binary_merkle import BMRFunctions
 from math import ceil
@@ -40,10 +38,6 @@ from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.types import Vector
 
-@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
-class SegmentRootLookupDict(Dictionary[WorkPackageHash, SegmentRoot]):
-    """contains all unique work-package hashes and segment root"""
-    ...
 
 class WorkPackageProcessing(WorkResult):
 

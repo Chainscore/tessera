@@ -58,4 +58,3 @@ class WorkPackageSubmission(NetworkProtocol):
     #     data = cast(CE133Data, data)
     #
     #     return (data.package_data, data.extrinsics)
-

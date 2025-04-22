@@ -6,6 +6,7 @@ from aioquic.quic.connection import logger
 from typing_extensions import Optional
 
 from jam.network.logger.log import save_decoded_data_to_json
+from tests.fixtures.dummy_package import create_dummy_Credential
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -91,7 +92,8 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     elif prefix == PrefixType.CE134:
                         data = WorkPackageSharing.intercept(buffer=buffer[1:])
                         logger.info(f"Received core_index : {data.core_segment.core_index} with segment mapping : {data.core_segment.segment_root_map} and Work package bundle:{data.work_package_bundle} ")
-                        save_decoded_data_to_json(buffer.decode(), event.stream_id)
+                        WorkPackageSharing.process(data=data)
+                        self.stream_and_close(stream_id=event.stream_id  ,message=create_dummy_Credential())
 
                     elif prefix == PrefixType.CE135:
                         data = WorkReportDistribution.intercept(buffer=buffer[1:])
