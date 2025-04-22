@@ -10,11 +10,27 @@ from jam.types.base.integers.fixed import U32, U16
 from jam.types.work.item import WorkItem, ExtrinsicSpec
 from jam.types.work.package import  WorkPackage
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
-from jam.types.work.report import (WorkResult, RefineLoad, WorkResults, WorkExecResult,
-                                   ExecResults, WorkReport, WorkPackageSpec, SegmentRootLookupDict)
+from jam.types.work.report import (
+    WorkResult,
+    RefineLoad,
+    WorkResults,
+    WorkExecResult,
+    ExecResults,
+    WorkReport,
+    WorkPackageSpec,
+    SegmentRootLookup
+)
 
-from jam.utils.constants import (MAX_EXPORT_ITEM, MAX_IMPORT_ITEM, EXTRINSIC_COUNT, BASIC_ERASURE_SIZE,
-                                 MAX_WORK_PACKAGE_SIZE, SEGMENT_SIZE, REFINE_GAS, ACCUMULATION_GAS)
+from jam.utils.constants import (
+    MAX_EXPORT_ITEM,
+    MAX_IMPORT_ITEM,
+    EXTRINSIC_COUNT,
+    BASIC_ERASURE_SIZE,
+    MAX_WORK_PACKAGE_SIZE,
+    SEGMENT_SIZE,
+    REFINE_GAS,
+    ACCUMULATION_GAS
+)
 
 from jam.types.protocol.core import SegmentRoot, CoreIndex
 from jam.types.protocol.crypto import OpaqueHash, Hash
@@ -32,7 +48,7 @@ from tests.fixtures.dummy_package import create_dummy_package
 
 class WorkPackageProcessing:
 
-    segment_root_lookup_dict: SegmentRootLookupDict = {}
+    segment_root_lookup_dict: SegmentRootLookup = {}
     segments: Segment
     d: ExecResults
     specs: WorkPackageSpec
@@ -78,8 +94,7 @@ class WorkPackageProcessing:
         """
         result = []
         for item in d:
-            # first = blake2b(self.d)
-            first=OpaqueHash(ByteArray32("0x123455"))
+            first = Hash.blake2b(b"\0")
             second = U32(len(d))
             if ExtrinsicSpec(hash=first, len=second) in w.extrinsic:
                 result.append(item)
@@ -132,7 +147,7 @@ class WorkPackageProcessing:
             for (h, n) in item.import_segments:
                 if len(lookup_keys) <= 8:
                     lookup_keys.append(h)
-        self.segment_root_lookup_dict = SegmentRootLookupDict({key: None for key in lookup_keys})
+        self.segment_root_lookup_dict = SegmentRootLookup({key: None for key in lookup_keys})
         def utils_i(j: int):
             w = p.items[int(j)]
             l = 0
@@ -159,7 +174,7 @@ class WorkPackageProcessing:
             r_list.append(comp)
             e_list.append(_e)
         temp = p.code_hash + p.params
-        p_a = blake2b(temp)
+        p_a = Hash.blake2b(bytes(temp))
         if not isinstance(o, Bytes):
             return None
         else:
