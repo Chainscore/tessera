@@ -3,7 +3,7 @@ from jam.state.state import State
 from jam.types.protocol.crypto import BandersnatchPublic, Ed25519Public, BlsPublic
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.utils.constants import VALIDATOR_COUNT
-from tests.fixtures.utils import create_dummy_bytes, create_dummy_bytes32
+from tests.dummy.utils import create_dummy_bytes, create_dummy_bytes32
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 
