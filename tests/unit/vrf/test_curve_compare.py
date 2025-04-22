@@ -1,11 +1,13 @@
 from __future__ import annotations
 from cProfile import label
+import os
 from pathlib import Path
 import random
 import time
 from typing import List
 
 import matplotlib.pyplot as plt
+import pytest
 
 from jam.ring_vrf.curve.glv import DisabledGLV
 from jam.ring_vrf.curve.specs.baby_jubjub import BabyJubJub_TE_Curve, BabyJubJubPoint
@@ -94,7 +96,7 @@ def run_pedersenvrf(runs, point, curve):
 
     print(f"\nTime taken by {curve.__class__.__name__} \n Prove: {(prove_time)/runs} \t Verify: {verify_time/runs} \n(WA on {runs} runs)")
 
-
+@pytest.mark.skipif("BENCHMARKING" not in os.environ, reason="benchmarking test")
 def test_curve_mul():
     runs = 1
     times, bandersnatch_times, jj_times, ed25519_times, babyjj_times = [], [], [], [], []
@@ -121,7 +123,7 @@ def test_curve_mul():
     plt.tight_layout()
     plt.show()
 
-
+@pytest.mark.skipif("BENCHMARKING" not in os.environ, reason="benchmarking test")
 def test_bandersnatch_glv():
     runs = 1
     times = []
@@ -142,7 +144,7 @@ def test_bandersnatch_glv():
     plt.tight_layout()
     plt.show()
 
-
+@pytest.mark.skipif("BENCHMARKING" not in os.environ, reason="benchmarking test")
 def test_curve_ietf_vrf():
     runs = 1
     bandersnatch_bench = run_ietfvrf(runs, BandersnatchPoint, Bandersnatch_TE_Curve)
@@ -151,6 +153,7 @@ def test_curve_ietf_vrf():
     babyjub_bench = run_ietfvrf(runs, BabyJubJubPoint, BabyJubJub_TE_Curve)
 
 
+@pytest.mark.skipif("BENCHMARKING" not in os.environ, reason="benchmarking test")
 def test_curve_pedersen_vrf():
     runs = 1
     bandersnatch_bench = run_pedersenvrf(runs, BandersnatchPoint, Bandersnatch_TE_Curve)

@@ -7,7 +7,7 @@ from sympy import symbols
 from numpy.polynomial.polynomial import Polynomial
 from jam.ring_vrf.ring_proof.constants import D, S_PRIME
 from jam.ring_vrf.ring_proof.polynomial_interpolation import polynomial_interpolation
-from scipy.interpolate import lagrange
+# from scipy.interpolate import lagrange
 import matplotlib.pyplot as plt
 # from jam.ring_vrf.ring_proof.preprocessing import s_vector
 
@@ -56,27 +56,27 @@ def selector_vector(size=512):
 #         plt.legend()
 #         plt.show()
 
-def test_scipy_interpolation_timing():
-    """Test the performance of scipy's interpolation function."""
+# def test_scipy_interpolation_timing():
+#     """Test the performance of scipy's interpolation function."""
 
-    x_coords = np.array(D)
-    y_coords = np.array(selector_vector())
+#     x_coords = np.array(D)
+#     y_coords = np.array(selector_vector())
     
-    # Time the interpolation
-    start_time = time.time()    
-    interp = lagrange(x_coords, y_coords)
-    print([val for val in interp.c])
-    end_time = time.time()
+#     # Time the interpolation
+#     start_time = time.time()    
+#     interp = lagrange(x_coords, y_coords)
+#     print([val for val in interp.c])
+#     end_time = time.time()
     
-    # Record the time
-    elapsed = end_time - start_time
-    print(f"Time taken: {elapsed:.6f} seconds")
-    # Plot the polynomial
-    plt.scatter(x_coords, y_coords, label='data')
-    plt.plot(x_coords, Polynomial(interp.c[::-1])(x_coords), label='Polynomial')
-    plt.plot(x_coords, 3*x_coords**2 - 2*x_coords + 0*x_coords, linestyle='--')
-    plt.legend()
-    plt.show()
+#     # Record the time
+#     elapsed = end_time - start_time
+#     print(f"Time taken: {elapsed:.6f} seconds")
+#     # Plot the polynomial
+#     plt.scatter(x_coords, y_coords, label='data')
+#     plt.plot(x_coords, Polynomial(interp.c[::-1])(x_coords), label='Polynomial')
+#     plt.plot(x_coords, 3*x_coords**2 - 2*x_coords + 0*x_coords, linestyle='--')
+#     plt.legend()
+#     plt.show()
 
 
 # def test_scipy_example():

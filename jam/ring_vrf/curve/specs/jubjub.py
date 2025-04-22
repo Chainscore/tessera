@@ -48,12 +48,6 @@ class JubJubParams:
         int
     ] = 0x1d523cf1ddab1a1793132e78c866c0c33e26ba5cc220fed7cc3f870e59d292aa
 
-JubJubGLVSpecs = GLVSpecs(
-    is_enabled=True,
-    lambda_param=JubJubParams.GLV_LAMBDA,
-    constant_b=JubJubParams.GLV_B,
-    constant_c=JubJubParams.GLV_C
-)
 
 class JubJubCurve(TECurve):
     """
@@ -70,7 +64,7 @@ class JubJubCurve(TECurve):
             GENERATOR_X=JubJubParams.GENERATOR_X,
             GENERATOR_Y=JubJubParams.GENERATOR_Y,
             COFACTOR=JubJubParams.COFACTOR,
-            glv=JubJubGLVSpecs,
+            glv=DisabledGLV,
             Z=JubJubParams.Z,
             EdwardsA=JubJubParams.EDWARDS_A,
             EdwardsD=JubJubParams.EDWARDS_D,
