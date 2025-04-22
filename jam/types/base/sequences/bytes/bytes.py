@@ -32,3 +32,8 @@ class Bytes(Vector[Byte]):
 
     def to_json(self) -> str:
         return f"0x{self.hex()}"
+
+
+@decodable_vector(Byte)
+class ByteVector32(Bytes):
+    ...

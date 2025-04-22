@@ -1,14 +1,17 @@
 from typing import List, Self, Tuple, Union
 from jam.pvm.memory import MemoryChunk
+from jam.pvm.pvm_memory import PageMemory
 from jam.pvm.register import Registers
 from jam.types.base.bit import Bit
-from jam.types.base.integers.fixed import U8
+from jam.types.base.integers.fixed import U8, U32
 from jam.types.protocol.core import Gas, Register
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
 from jam.utils.codec.utils import check_buffer_size
 from jam.utils.json.serde import JsonSerde
+from jam.pvm.page_map import PageMap
+from jam.pvm.extract import Execution
 
 
 class Program(Codable, JsonSerde):
@@ -138,13 +141,14 @@ class Program(Codable, JsonSerde):
         value, _ = Program.decode_from(buffer)
         return value
 
-
     def execute(
-        self,
-        register: Register,
-        initial_registers: Registers,
-        gas: Gas,
-        memory: MemoryChunk,
-    ) -> Registers:
+            self,
+            initial_registers: Registers,
+            gas: U32,
+            memory: PageMemory,
+            pc: U32,
+    ) -> (Registers, MemoryChunk, U32):
         # TODO: Implement execute
-        return initial_registers
+        pvm_execution = Execution(pc, gas, initial_registers, memory, program=self)
+        res = pvm_execution.process_program()
+        return res

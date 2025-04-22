@@ -10,6 +10,7 @@ from jam.types.protocol.core import ServiceId
 from jam.types.work.item import WorkItem
 from jam.types.work.refine_context import RefineContext
 from jam.utils.json.serde import JsonSerde
+from jam.types.base.sequences.bytes.byte_array import ByteArray32
 
 
 @decodable_dataclass
@@ -33,6 +34,17 @@ class WorkPackage(Codable, JsonSerde):
 
     authorization: Bytes
     auth_code_host: ServiceId
-    authorizer: Authorizer
+    # authorizer: Authorizer
+    code_hash: OpaqueHash
+    params: Bytes
     context: RefineContext
     items: WorkItems
+
+
+@decodable_dataclass
+@dataclass
+class AccumulationOperand(Codable, JsonSerde):
+    o: Bytes
+    l: ByteArray32
+    k: ByteArray32
+    a: Bytes

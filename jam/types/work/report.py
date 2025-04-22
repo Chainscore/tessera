@@ -9,6 +9,8 @@ from jam.types.base.null import Nullable
 from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
 from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
+from jam.types.base.sequences.array import decodable_array, Array
+from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import ErasureRoot, ExportsRoot, WorkPackageHash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -51,6 +53,16 @@ class WorkPackageSpec(Codable, JsonSerde):
     erasure_root: ErasureRoot
     exports_root: ExportsRoot
     exports_count: U16
+
+
+@decodable_array(4104, Bytes)
+class Segment(Array[Bytes]):
+    ...
+
+
+@decodable_vector(Segment)
+class SegmentVector(Vector[Segment]):
+    ...
 
 
 @decodable_dataclass
