@@ -5,7 +5,7 @@ from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTermina
 from jam.config.logging import logging as logger
 from typing_extensions import Optional
 
-from jam.network.logger.log import save_decoded_data_to_json
+# from jam.network.logger.log import save_decoded_data_to_json
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -84,7 +84,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
 
                         WorkPackageSubmission.process(data=data)
                         logger.info(f"📩 Received work package : {data.package_data.work_package} with CI {data.package_data.core_index}")
-                        save_decoded_data_to_json(buffer.decode(), event.stream_id)
+                        # save_decoded_data_to_json(buffer.decode(), event.stream_id)
 
                     if prefix == PrefixType.CE128:
                         self.stream_and_keep_open(event.stream_id, bytes(0))
@@ -93,14 +93,14 @@ class QuicServerProtocol(QuicConnectionProtocol):
                         try:
                             decoded_data = buffer.decode('utf-8', errors='ignore')
                             logger.warning(f"📩 Received data of size {len(buffer)} bytes")
-                            save_decoded_data_to_json(decoded_data, event.stream_id)
-                            logger.info("Saved data")
+                            # save_decoded_data_to_json(decoded_data, event.stream_id)
+                            # logger.info("Saved data")
 
                         except UnicodeDecodeError:
                             logger.warning(
                                 f"❌ Failed to decode data for stream {event.stream_id}. Saving raw data in hex.")
                             decoded_data = buffer.hex()
-                            save_decoded_data_to_json(decoded_data, event.stream_id)
+                            # save_decoded_data_to_json(decoded_data, event.stream_id)
 
                 except Exception as e:
                     logger.exception(f"Error retrieving data from ce stream: {e}")
@@ -125,7 +125,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                             announcement = BlockAnnouncementProtocol.intercept(buffer=buffer[1:])
                             logger.info(f"📩 Received block with parent: {announcement.header.parent}")
                             self.stream_buffer[event.stream_id] = bytes(0)
-                            save_decoded_data_to_json(announcement, event.stream_id)
+                            # save_decoded_data_to_json(announcement, event.stream_id)
 
                         except Exception as ann_err:
                             logger.warning(f"❌ Failed to parse block announcement: {ann_err}")

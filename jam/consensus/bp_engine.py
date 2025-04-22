@@ -64,10 +64,10 @@ class BlockProducer:
 
             # Get state from db
             state = State.load(self.db)
-            current_timeslot = math.ceil((time() - genesis_ts) / SLOT_PERIOD)
+            current_timeslot = TimeSlot(math.ceil((time() - genesis_ts) / SLOT_PERIOD))
 
             # Get current timeslot
-            ts_epoch_index = math.floor(current_timeslot % EPOCH_LENGTH)
+            ts_epoch_index = math.floor(int(current_timeslot) % EPOCH_LENGTH)
 
             logger.info(
                 f"🔄 ({self.node.name}) We're in epoch slot {ts_epoch_index} and {state.gamma.s.get_key()} mode"
@@ -95,7 +95,7 @@ class BlockProducer:
             # Sleep for remaining time of the timeslot
             await asyncio.sleep(6 - (time() - genesis_ts) % SLOT_PERIOD)
 
-    def _produce_block(self, state: State, current_timeslot: int) -> Block:
+    def _produce_block(self, state: State, current_timeslot: TimeSlot) -> Block:
         """
         Produce a block for the given timeslot
         """
@@ -108,10 +108,10 @@ class BlockProducer:
         )
         return Block(
             header=Header(
-                parent=Hash.blake2b(Block.load_parent(TimeSlot(current_timeslot), self.db).header.encode()),
+                parent=Hash.blake2b(Block.load_parent(current_timeslot, self.db).header.encode()),
                 parent_state_root=state.generate_root(),
                 extrinsic_hash=self.hash_extrinsic(extrinsic),
-                slot=TimeSlot(current_timeslot),
+                slot=current_timeslot,
                 epoch_mark=Safrole.get_epoch_marker(state, current_timeslot),
                 tickets_mark=Safrole.get_tickets_marker(state, current_timeslot),
                 offenders_mark=Disputes.get_offenders_mark(extrinsic.disputes),

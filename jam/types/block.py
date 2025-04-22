@@ -36,9 +36,14 @@ class Block(Codable, JsonSerde):
         """
         Get the parent block
         """
-        if slot == 0:
-            raise ValueError("Parent does of exist of genesis block")
-        return Block.load(slot - 1, db)
+        while True:
+            slot -= 1
+            if slot < 0:
+                raise ValueError("Parent does of exist of genesis block")
+            try:
+                return Block.load(slot, db)
+            except ValueError:
+                continue
 
     @staticmethod
     def load(slot: TimeSlot, db: KVStore) -> "Block":

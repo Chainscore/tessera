@@ -17,12 +17,12 @@ from jam.state.utils.key_constructor import construct_state_key
 from jam.state.components.phi import AuthorizationQueue, AuthorizerHash, Phi
 from jam.state.components.beta import Beta
 from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaZ
-from jam.types.base.integers.fixed import U16, U64, U32, U8
+from jam.types.block import Block
+from jam.types.base.integers.fixed import U64, U32, U8, U16
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.block import Block
-from jam.types.protocol.core import Balance, Gas, ServiceId
+from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public, Hash
 from jam.types.protocol.crypto import OpaqueHash
 from jam.state.components.delta import (
@@ -45,7 +45,6 @@ from jam.assurances.assurances import Assurances
 from jam.disputes.disputes import Disputes
 from jam.preimages.preimages import Preimages
 from jam.statistics.statistics import Statistics
-from tests.dummy.dummy_state_comp import create_dummy_state_components
 import json
 
 
@@ -67,6 +66,8 @@ class State(Sigma):
 
     @staticmethod
     def from_random(seed = 0) -> "State":
+        from tests.dummy.dummy_state_comp import create_dummy_state_components
+
         return State(**create_dummy_state_components())
 
     def transform(self) -> dict:
@@ -254,7 +255,7 @@ class State(Sigma):
 
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
-        return self._merkle.merkelize(self.transform())
+        return self._merkle.merkelize(self.transform())[0]
 
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
@@ -271,7 +272,7 @@ class State(Sigma):
             metadata=ValidatorMetadata(ValidatorName(""), IPAddress([U8(127), U8(0), U8(0), U8(1)]), U16(0))
         ) for _ in range(VALIDATOR_COUNT)]
         fallback = Safrole.arrange_fallback(ByteArray32(bytes(32)), peers)
-        
+
         return State(
             alpha=Alpha([AuthorizationPool([]) for _ in range(CORE_COUNT)]),
             beta=Beta([]),
@@ -296,12 +297,12 @@ class State(Sigma):
         # Save the regular state data
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
-            
+
     @staticmethod
     def load(db: KVStore, keys: list[ByteArray32] = []) -> "State":
         data = {}
         service_ids:set[ServiceId]=set()
-        
+
         for i in range(1,16):
             state_key=construct_state_key(i)
             # print(type(state_key))
@@ -317,7 +318,7 @@ class State(Sigma):
         for service_id in service_ids:
             service_key=construct_state_key((255,service_id))
             data[service_key]=Bytes(db.get(bytes(service_key)))
-                
+
         state = State.detransform(data)
 
         return state
@@ -340,7 +341,7 @@ class State(Sigma):
         # Offenders mark - make sure offenders are present in psi.offenders
 
         # 1. Safrole
-        entropy = ByteArray32(bytes(32)) 
+        entropy = ByteArray32(bytes(32))
         sigma = Safrole.transition(self, block, entropy)
         # 2. Disputes
         sigma = Disputes.transition(sigma, block)

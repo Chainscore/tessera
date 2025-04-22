@@ -86,7 +86,7 @@ async def main(
 
         tsr_node = Node(
             node_name=name,
-            node_id=port,
+            node_id=str(port),
             host="0.0.0.0",
             port=port,
             peers=peers,
@@ -105,10 +105,7 @@ async def main(
             block.header = Header.from_json(genesis["header"])
             block.save(db)
 
-            state = State.genesis(
-                genesis_vals.value,
-                Safrole.arrange_fallback(ByteArray32(bytes(32)), genesis_vals),
-            )
+            state = State.genesis()
             state.save(db)
 
             block_producer = BlockProducer(tsr_node, db)
