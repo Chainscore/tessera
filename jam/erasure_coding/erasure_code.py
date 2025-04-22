@@ -1,7 +1,6 @@
 from typing import List
-from galois_field import GF
 from jam.erasure_coding.error import ErasureCodingErrorCode, ErasureCodingError
-
+from jam.erasure_coding.galois_field import GF
 class ErasureCode(GF):
 
     def __init__(self):

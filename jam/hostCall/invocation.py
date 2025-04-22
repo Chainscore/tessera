@@ -37,8 +37,8 @@ class PsiM:
         self.context = context
 
     def process(self):
-        print(self.blob)
-        res = derive_p(self.blob)
+        print(bytes(self.blob))
+        res = derive_p(bytes(self.blob))
         if res is None:
             return self.gas, Status("panic"), self.context
         (c, w, u) = res
@@ -113,7 +113,8 @@ class PsiI:
 
     def process(self):
         buffer = self.work_package.encode()
-        PsiM(self.work_package.code_hash, U64(0), 50000000, buffer, self.host_function, None).process()
+        u, r, n = PsiM(self.work_package.code_hash, U64(0), 50000000, buffer, self.host_function, None).process()
+        return r, u
 
     def is_authorized_f(self):
         def gas(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):

@@ -18,6 +18,8 @@ def decode_program(program: bytes) -> (Bytes, Registers, MemoryChunk, U16, U24):
     offset = 0
     o_len = U24.decode_from(program, offset)
     if o_len[0] != REGISTER_COUNT:
+        print(o_len)
+        print("Invalid register count")
         raise Exception("Invalid register count")
     offset += 3
     w_len = U24.decode_from(program, offset)

@@ -139,6 +139,7 @@ class WorkPackageProcessing:
             Work Report
         """
         o, g = PsiI(p, int(c)).process()
+        print(o, g)
         lookup_keys = []
         for item in p.items:
             for (h, n) in item.import_segments:
@@ -170,7 +171,7 @@ class WorkPackageProcessing:
             comp = WorkPackageProcessing.item_to_result(p.items[_j], _r, _u)
             r_list.append(comp)
             e_list.append(_e)
-        temp = p.code_hash + p.params
+        temp = bytes(p.code_hash) + bytes(p.params)
         p_a = blake2b(temp)
         if not isinstance(o, Bytes):
             return None
@@ -356,5 +357,5 @@ class WorkPackageProcessing:
 
 
 temp = WorkPackageProcessing()
-temp.wr_gen(p=create_dummy_package(), c=U16(0))
+print(temp.wr_gen(p=create_dummy_package(), c=U16(0)))
 
