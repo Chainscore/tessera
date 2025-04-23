@@ -87,7 +87,7 @@ async def main(
         tsr_node = Node(
             node_name=name,
             node_id=str(port),
-            host="0.0.0.0",
+            host="127.0.0.1",
             port=port,
             peers=peers,
             validator_data=my_data,

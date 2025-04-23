@@ -86,7 +86,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                         logger.info(f"📩 Received work package : {data.package_data.work_package} with CI {data.package_data.core_index}")
                         # save_decoded_data_to_json(buffer.decode(), event.stream_id)
 
-                    if prefix == PrefixType.CE128:
+                    elif prefix == PrefixType.CE128:
                         self.stream_and_keep_open(event.stream_id, bytes(0))
 
                     else:
