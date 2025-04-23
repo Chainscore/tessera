@@ -1,5 +1,4 @@
 from jam.db.kv import KVStore
-from typing import Dict
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.eta import Eta
 from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat
@@ -18,14 +17,14 @@ from jam.state.utils.key_constructor import construct_state_key
 from jam.state.components.phi import AuthorizationQueue, AuthorizerHash, Phi
 from jam.state.components.beta import Beta
 from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaZ
-from jam.types.base.integers.fixed import U64, U32
+from jam.types.block import Block
+from jam.types.base.integers.fixed import U64, U32, U8, U16
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public, Hash
 from jam.types.protocol.crypto import OpaqueHash
-from jam.utils.byte_utils import ByteUtils
 from jam.state.components.delta import (
     AccountData,
     AccountStorage,
@@ -34,12 +33,20 @@ from jam.state.components.delta import (
     PreImageLookup,
     Timestamps,
 )
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName, ValidatorsData
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
-import pickle
+from jam.accumulation.accumulation import Accumulation
+from jam.report.state import Reporting
+from jam.authorization.authorization import Authorization
+from jam.recent_history.recent_history import RecentHistory
+from jam.consensus.safrole.safrole import Safrole
+from jam.assurances.assurances import Assurances
+from jam.disputes.disputes import Disputes
+from jam.preimages.preimages import Preimages
+from jam.statistics.statistics import Statistics
 import json
-import time
+
 
 class State(Sigma):
     """
@@ -47,8 +54,6 @@ class State(Sigma):
         - Extends Sigma
         - Adds Merklization (generates root, get_merkle_nodes)
         - Adds transform and detransform methods
-        - Adds save and load methods
-        - Adds genesis method
 
     Args:
         **kwargs: Keyword arguments for the components of the state
@@ -58,6 +63,12 @@ class State(Sigma):
         """Initialize state with component kwargs"""
         super().__init__(**kwargs)
         self._merkle = StateMerkle(Hash.blake2b)
+
+    @staticmethod
+    def from_random(seed = 0) -> "State":
+        from tests.dummy.dummy_state_comp import create_dummy_state_components
+
+        return State(**create_dummy_state_components())
 
     def transform(self) -> dict:
         """
@@ -134,8 +145,9 @@ class State(Sigma):
     @staticmethod
     def detransform(state: dict) -> "State":
         """Inverse of transform"""
-        # Iterate through the state dictionary to reconstruct the State object.
-        # The state dictionary contains core state components and service-specific data.
+        # Loop thru the whole state dict
+
+        # populating the delta
         delta = {}
         for key, value in sorted(state.items(), key=lambda x: x[0], reverse=True):
             # Start with finding all core state components 1-15
@@ -174,9 +186,9 @@ class State(Sigma):
 
             # Then find all services (first byte is 255, rest is service id)
             elif int(key[0]) == 255:
-                service_id = ServiceId(int.from_bytes(
+                service_id = int.from_bytes(
                     bytes(Bytes([key[1], key[3], key[5], key[7]]))
-                ))
+                )
                 total_offset = 0
                 ac, offset = OpaqueHash.decode_from(bytes(value), total_offset)
                 total_offset += offset
@@ -203,19 +215,19 @@ class State(Sigma):
             else:
                 if Bytes(key[7:0:-2]) == Bytes(2**32 - 1):
                     # populating the storage
-                    service_id = ServiceId(int.from_bytes(bytes(Bytes(key[0:7:2]))))
+                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
                     delta[service_id].storage[
                         ByteArray32(Bytes(key[8:32] + Bytes(bytearray(8))))
                     ] = value
                     print("Storage")
                 elif Bytes(key[7:0:-2]) == Bytes(2**32 - 2):
                     # populating the lookup
-                    service_id = ServiceId(int.from_bytes(bytes(Bytes(key[0:7:2]))))
+                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
                     delta[service_id].lookup[Hash.blake2b(value)] = value
 
                 else:
                     # populating the timestamps
-                    service_id = ServiceId(int.from_bytes(bytes(Bytes(key[0:7:2]))))
+                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
                     TimeStamps, _ = Timestamps.decode_from(bytes(value))
                     timestamp_key = ByteArray32(
                         Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
@@ -243,33 +255,33 @@ class State(Sigma):
 
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
-        root_hash, _ = self._merkle.merkelize(self.transform())
-        return root_hash
+        return self._merkle.merkelize(self.transform())[0]
 
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
         return self._merkle.get_nodes()
     
     @staticmethod
-    def genesis(peers: list[ValidatorData], fallback: GammaS) -> "State":
+    def genesis(genesis_path = "genesis.json") -> "State":
         """Generate the genesis state"""
-
-        empty_validators = [ValidatorData(
+        peers = ValidatorsData.from_json(json.load(open(genesis_path))["peers"])
+        empty_set = [ValidatorData(
             bandersnatch=BandersnatchPublic(bytes(32)),
             ed25519=Ed25519Public(bytes(32)),
             bls=BlsPublic(bytes(144)),
-            metadata=ValidatorMetadata(bytes(128))
+            metadata=ValidatorMetadata(ValidatorName(""), IPAddress([U8(127), U8(0), U8(0), U8(1)]), U16(0))
         ) for _ in range(VALIDATOR_COUNT)]
+        fallback = Safrole.arrange_fallback(ByteArray32(bytes(32)), peers)
 
         return State(
             alpha=Alpha([AuthorizationPool([]) for _ in range(CORE_COUNT)]),
             beta=Beta([]),
-            gamma=Gamma(a=GammaA([]), k=GammaK(peers), s=fallback, z=GammaZ(bytes(144))),
+            gamma=Gamma(a=GammaA([]), k=GammaK(peers.value), s=fallback, z=GammaZ(bytes(144))),
             delta=Delta({}),
             eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
-            iota=Iota(empty_validators),
-            kappa=Kappa(peers),
-            lambda_=Lambda_(empty_validators),
+            iota=Iota(empty_set),
+            kappa=Kappa(peers.value),
+            lambda_=Lambda_(empty_set),
             rho=Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]),
             tau=Tau(0),
             phi=Phi([AuthorizationQueue([AuthorizerHash(bytes(32)) for _ in range(MAX_AUTH_QUEUE_ITEMS)]) for _ in range(CORE_COUNT)]),
@@ -280,60 +292,72 @@ class State(Sigma):
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
     
-    def save(self,db:KVStore,Updated_keys:list[ByteArray32,Bytes]=None):
-        """
-        Save state to the key-value store.
-        
-        If the root hash is not initialized (all zeros), merkelize the full state and save all key-value pairs.
-        Otherwise, update only the modified paths, root hash, and state keys in the database.
-        """
+    def save(self, db: KVStore):
         data = self.transform()
-        if self._merkle.trie._root_hash == ByteArray32([0] * 32):
-            self._merkle.merkelize(data)
-            # db.put(b"general_root:",bytes(general_root))
-            for key, value in data.items():
-                db.put(bytes(key), bytes(value))
-        else:
-            start_time = time.time()
-            root=self._merkle.update_global_root(Updated_keys)
-            end_time = time.time()
-            print(f"Time taken to just update the root: {end_time - start_time} seconds")
-
-            # db.put(b"general_root:",bytes(general_root))
-            for key,value in Updated_keys.items():
-                db.put(bytes(key),bytes(value))
-        
+        # Save the regular state data
+        for key, value in data.items():
+            db.put(bytes(key), bytes(value))
 
     @staticmethod
-    def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
-        """
-            Load state data from the key-value store and transform it into a dictionary.
-            If service-related keys are provided, load the corresponding service-specific
-            state data as well. This allows for efficient partial state loading when
-            only specific service data is needed.
-        """
+    def load(db: KVStore, keys: list[ByteArray32] = []) -> "State":
         data = {}
         service_ids:set[ServiceId]=set()
-        
-        if keys is None:
-            for key, value in db.get_all().items():
-                data[ByteArray32(key)] = Bytes(value)
-        else:
-            for i in range(1,16):
-                state_key=construct_state_key(i)
-                data[state_key] = Bytes(db.get(bytes(state_key)))
-            for key in keys:
-                if int.from_bytes(
+
+        for i in range(1,16):
+            state_key=construct_state_key(i)
+            # print(type(state_key))
+            data[state_key] = Bytes(db.get(bytes(state_key)))
+        for key in keys:
+            if int.from_bytes(
+                bytes(Bytes([key[0], key[2], key[4], key[6]]))
+            ) not in service_ids:
+                service_ids.add(ServiceId(int.from_bytes(
                     bytes(Bytes([key[0], key[2], key[4], key[6]]))
-                ) not in service_ids:
-                    service_ids.add(ServiceId(int.from_bytes(
-                        bytes(Bytes([key[0], key[2], key[4], key[6]]))
-                    )))
-                data[key] = Bytes(db.get(bytes(key)))
-            for service_id in service_ids:
-                service_key=construct_state_key((255,service_id))
-                data[service_key]=Bytes(db.get(bytes(service_key)))
+                )))
+            data[key] = Bytes(db.get(bytes(key)))
+        for service_id in service_ids:
+            service_key=construct_state_key((255,service_id))
+            data[service_key]=Bytes(db.get(bytes(service_key)))
+
         state = State.detransform(data)
+
         return state
 
-        
+    def transition(self, block: Block) -> "State":
+        """
+        Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
+
+        Args:
+            pre_state: Current state
+            block: Incoming block
+
+        Returns:
+            State: The transitioned state
+        """
+
+        # TODO: Validate block headers
+        # Epoch markers - make sure eta0_1 are the same as current etas
+        # Tickets mark - make sure tickets are valid, present in gamma_a and outside in sequenced
+        # Offenders mark - make sure offenders are present in psi.offenders
+
+        # 1. Safrole
+        entropy = ByteArray32(bytes(32))
+        sigma = Safrole.transition(self, block, entropy)
+        # 2. Disputes
+        sigma = Disputes.transition(sigma, block)
+        # 3. Assurances
+        sigma = Assurances.transition(sigma, block)
+        # 4. Reporting
+        sigma = Reporting.transition(sigma, block)
+        # 5. Accumulation
+        sigma = Accumulation.transition(sigma, block)
+        # 6. Authorization
+        sigma = Authorization.transition(sigma, block)
+        # 7. Recent History
+        sigma = RecentHistory.transition(sigma, block, ByteArray32([0] * 32))
+        # 8. Preimages
+        sigma = Preimages.transition(sigma, block)
+        # 9. Statistics
+        sigma = Statistics.transition(sigma, block)
+
+        return sigma

@@ -2,7 +2,7 @@ import dataclasses
 from copy import deepcopy
 
 from jam.state.components.pi import ValidatorStat
-from jam.state.state import State
+from jam.state.components.sigma import Sigma
 from jam.types.block import Block
 from jam.utils.constants import EPOCH_LENGTH
 
@@ -21,7 +21,7 @@ def create_empty_validator_stat():
 
 class Statistics:
     @staticmethod
-    def transition(pre_state: State, block: Block) -> State:
+    def transition(pre_state: Sigma, block: Block) -> Sigma:
         """
         Transition the state with Statistics logic.
 
@@ -32,7 +32,7 @@ class Statistics:
         Returns:
             State after transition
         """
-        new_state = dataclasses.replace(pre_state)
+        new_state = deepcopy(pre_state)
 
         if len(new_state.pi) != 2:
             raise ValueError("Invalid pi length, must be equal to 2")

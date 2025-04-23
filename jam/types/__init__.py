@@ -128,7 +128,6 @@ from jam.types.protocol.availability import (
 
 # History types
 from jam.types.protocol.history import (
-    Mmr,
     BlockInfo,
     BlocksHistory,
     ReportedWorkPackage,
@@ -139,7 +138,6 @@ from jam.types.protocol.validators import (
     ValidatorMetadata,
     ValidatorData,
     ValidatorsData,
-    ValidatorArray,
 )
 
 __all__ = [
@@ -243,7 +241,6 @@ __all__ = [
     "AvailabilityAssignment",
     "AvailabilityAssignments",
     # History types
-    "Mmr",
     "BlockInfo",
     "BlocksHistory",
     "ReportedWorkPackage",
@@ -251,5 +248,4 @@ __all__ = [
     "ValidatorMetadata",
     "ValidatorData",
     "ValidatorsData",
-    "ValidatorArray",
 ]
