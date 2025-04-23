@@ -4,14 +4,26 @@ from dataclasses import dataclass
 from typing import List
 
 from jam.chainspec import CHAIN_SPEC
-from jam.state.components.pi import AllValidatorStats
+from jam.state.components.pi import AllCoreStats, AllValidatorStats, ServiceStat
 from jam.state.components.tau import Tau
 from jam.types.base import Nullable
 from jam.types.base.integers.fixed import U32
+from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.block import Extrinsic
+from jam.types.protocol.core import ServiceId
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
+
+
+@dataclass
+class TestServiceRecord(Codable, JsonSerde):
+    id: ServiceId
+    record: ServiceStat
+
+
+@decodable_vector(TestServiceRecord)
+class TestServiceStats(Vector): ...
 
 
 @decodable_dataclass
@@ -19,8 +31,10 @@ from jam.utils.json import JsonSerde
 class Pi(Codable, JsonSerde):
     """Test Pi structure."""
 
-    current: AllValidatorStats
-    last: AllValidatorStats
+    vals_current: AllValidatorStats
+    vals_last: AllValidatorStats
+    cores: AllCoreStats
+    services: TestServiceStats
 
 
 @decodable_dataclass
@@ -34,8 +48,8 @@ class Input(Codable, JsonSerde):
 @decodable_dataclass
 @dataclass
 class PreState(Codable, JsonSerde):
-    pi: Pi
-    tau: Tau
+    statistics: Pi
+    slot: Tau
 
 
 PostState = PreState

@@ -31,7 +31,7 @@ def transition(pre_state: State, block: Block) -> State:
     # 2. Disputes
     disputes_state = Disputes.transition(safrole_state, block)
     # 3. Assurances
-    assurance_state = Assurances.transition(disputes_state, block)
+    assurance_state, available_wrs = Assurances.transition(disputes_state, block)
     # 4. Reporting
     reporting_state = Reporting.transition(assurance_state, block)
     # 5. Accumulation
@@ -43,7 +43,10 @@ def transition(pre_state: State, block: Block) -> State:
     # 8. Preimages
     preimage_state = Preimages.transition(recent_block_history_state, block)
     # 9. Statistics
-    statistics_state = Statistics.transition(preimage_state, block)
+    #NOTE: temp stats that should come from accumulation module
+    accumulation_stats = {}
+    deferred_transfer_stats = {}
+    statistics_state = Statistics.transition(preimage_state, block, available_wrs, accumulation_stats, deferred_transfer_stats)
 
     return statistics_state
 

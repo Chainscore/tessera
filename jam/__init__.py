@@ -19,6 +19,8 @@ def run_jam():
     parser.add_argument("--validator", action="store_false", help="Flag for validators")
     parser.add_argument("--start-gen", action="store_true", help="Flag to start from genesis")
 
+    parser.add_argument("--start-gen", action="store_true", help="Flag to start from genesis")
+
     args = parser.parse_args()
 
     uvloop.install()
