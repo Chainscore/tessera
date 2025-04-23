@@ -93,8 +93,8 @@ class InstructionsWArgs1Reg2Imm(InstructionTable):
         def sign_extend_impl(
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
-            registers[self.rd] = Register(PvmUtilities.to_unsigned(
-                PvmUtilities.to_signed(
+            registers[self.rd] = Register(PvmUtilities.z_inv(
+                PvmUtilities.z(
                     int.from_bytes(registers[self.ra]) % 2**bitsize, 
                     bitsize // 8
                 ),

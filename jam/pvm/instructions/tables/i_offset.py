@@ -20,7 +20,7 @@ class WArgsOneOffset(InstructionTable):
     def vx(self) -> U8:
         start = self.counter + 1
         end = start + self.lx
-        return self.counter + PvmUtilities.to_signed(
+        return self.counter + PvmUtilities.z(
             IntegerCodec.decode_from(int(self.lx), self.program.zeta[start:end])[0],
             self.lx,
         )
