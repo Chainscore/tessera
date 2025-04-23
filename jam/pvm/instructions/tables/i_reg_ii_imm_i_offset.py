@@ -9,8 +9,6 @@ from jam.pvm.instructions.instruction_table import InstructionTable
 from jam.types.protocol.core import Gas, Register
 from jam.utils.codec.primitives.integers import IntegerCodec
 
-def compare(a: int, b: int, op: str) -> bool:
-    return getattr(a, f"__{op}__")(b)
 
 class InstructionsWArgs1Reg2Imm(InstructionTable):
     @property
@@ -81,9 +79,9 @@ class InstructionsWArgs1Reg2Imm(InstructionTable):
             status, counter = self.program.branch(
                 self.counter, 
                 self.vy, 
-                compare(
-                    PvmUtilities.to_signed(registers[self.ra]) if signed else registers[self.ra], 
-                    PvmUtilities.to_signed(self.vx) if signed else self.vx, 
+                PvmUtilities.compare(
+                    PvmUtilities.z(registers[self.ra]) if signed else registers[self.ra], 
+                    PvmUtilities.z(self.vx) if signed else self.vx, 
                     op
                 )
             )
