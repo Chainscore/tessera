@@ -57,6 +57,8 @@ class Node:
         self.peers = peers
         self.is_builder = is_builder
         self.is_validator = is_validator
+        self.connections = []
+        self.peer_conn = {}
 
         if is_validator and is_builder:
             raise ValueError("Node can't be validator and builder at same time!")
