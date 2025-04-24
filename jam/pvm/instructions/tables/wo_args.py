@@ -13,9 +13,7 @@ class InstructionsWoArgs(InstructionTable):
     def table(cls) -> Dict[int, OpCode]:
         return {
             0: OpCode(name="trap", fn=cls.trap, gas=Gas(0), is_terminating=True),
-            1: OpCode(
-                name="fallthrough", fn=cls.fallthrough, gas=Gas(0), is_terminating=False
-            ),
+            1: OpCode(name="fallthrough", fn=cls.fallthrough, gas=Gas(0), is_terminating=True),
         }
 
     def trap(
@@ -32,4 +30,4 @@ class InstructionsWoArgs(InstructionTable):
         """
         OPC1: Fall through to the next instruction.
         """
-        return CONTINUE, self.skip_index, registers, memory
+        return CONTINUE, self.counter + self.skip_index + 1, registers, memory

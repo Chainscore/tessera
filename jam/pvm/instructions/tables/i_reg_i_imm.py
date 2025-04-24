@@ -1,3 +1,4 @@
+from math import floor
 from typing import Any, Callable, Dict
 from jam.pvm.errors import PvmError, PvmErrorCodes
 from jam.pvm.instructions.code import OpCode, OpReturn
@@ -21,7 +22,7 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
     
     @property
     def vx(self) -> int:
-        start = self.counter+2
+        start = self.counter + 2
         end = start + self.lx
         return PvmUtilities.chi(
             IntegerCodec.decode_from(
@@ -34,7 +35,7 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            50: OpCode(name="jump_ind", fn=cls.jump_ind, gas=Gas(0), is_terminating=False),
+            50: OpCode(name="jump_ind", fn=cls.jump_ind, gas=Gas(0), is_terminating=True),
             51: OpCode(name="load_imm", fn=cls.load_imm, gas=Gas(0), is_terminating=False),
             52: OpCode(name="load_u8", fn=cls.load_u(8), gas=Gas(0), is_terminating=False),
             53: OpCode(name="load_i8", fn=cls.load_i(8), gas=Gas(0), is_terminating=False),
@@ -52,11 +53,8 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
     def jump_ind(
         self, registers: Registers, memory: Memory
     ) -> OpReturn:
-        status, counter = self.program.djump(self.counter, int(registers[self.ra] + self.vx) % 2**32)
-        if status == CONTINUE:
-            return status, counter, registers, memory 
-        else:
-            raise PvmError(PvmErrorCodes.PANIC)
+        status, counter = self.program.djump(self.counter, floor(int(registers[self.ra]) + self.vx) % 2**32)
+        return status, counter, registers, memory 
             
     def load_imm(
         self, registers: Registers, memory: Memory
@@ -65,15 +63,21 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
         OPC20: Load a 64-bit immediate value into a register.
         """
         registers[self.ra] = Register(self.vx)
-        return CONTINUE, self.skip_index, registers, memory
+        print(f"LOAD: {int(registers[self.ra])} in Register({self.ra}) \nRegisters: {registers}")
+        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     @staticmethod
     def load_u(bitsize: int) -> Callable[[Any, Registers, Memory], OpReturn]:
         def load_u_impl(
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
-            registers[self.ra] = Register(IntegerCodec.decode_from(bitsize // 8, memory.read(self.vx, bitsize // 8))[0])
-            return CONTINUE, self.skip_index, registers, memory
+            registers[self.ra] = Register(
+                IntegerCodec.decode_from(
+                    bitsize // 8, 
+                    memory.read(self.vx, bitsize // 8)
+                )[0]
+            )
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return load_u_impl
     
     @staticmethod
@@ -82,7 +86,7 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
             memory.write(self.vx, int(registers[self.ra]) % (2**bitsize))
-            return CONTINUE, self.skip_index, registers, memory
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return store_u_impl
     
     @staticmethod
@@ -96,5 +100,5 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
                     bitsize // 8
                 )
             )
-            return CONTINUE, self.skip_index, registers, memory
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return load_i_impl
