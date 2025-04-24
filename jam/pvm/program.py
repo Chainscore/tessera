@@ -1,3 +1,4 @@
+from math import floor
 from typing import List, Self, Tuple, Union
 
 from jam.pvm.errors import PvmError, PvmErrorCodes
@@ -56,10 +57,12 @@ class Program(Codable, JsonSerde):
         """
         i = int(i)
         extended_bitmask = self.offset_bitmask + [True] * (100)
+        value = len(extended_bitmask)
         for j in range(i + 1, len(extended_bitmask)):
             if extended_bitmask[j] == 1:
-                return j - i  # Distance to the next opcode.
-        return len(extended_bitmask) - i  # Reached the end of the bitmask.
+                value = j - i - 1  # Distance to the next opcode.
+                break
+        return min(24, value) # Reached the end of the bitmask.
 
     @property
     def basic_blocks(self) -> List[U8]:
@@ -73,7 +76,7 @@ class Program(Codable, JsonSerde):
         for n in range(len(self.instruction_set)):
             if (
                 self.offset_bitmask[n] and 
-                self.instruction_set[n].value not in InstTableMap.terminating_blocks()
+                self.instruction_set[n].value in InstTableMap.terminating_blocks()
             ):
                 basic_blocks.append(U8(n + 1 + self.skip(n)))
         return basic_blocks
@@ -81,7 +84,7 @@ class Program(Codable, JsonSerde):
     def branch(
         self,
         counter: ProgramCounter, 
-        branch: U32, 
+        branch: ProgramCounter, 
         condition: bool
     ) -> Tuple[ExecutionStatus, ProgramCounter]:
         if not condition:
@@ -95,16 +98,18 @@ class Program(Codable, JsonSerde):
         counter: ProgramCounter, 
         a: int
     ) -> Tuple[ExecutionStatus, ProgramCounter]:
+        print(f"djumping {a}")
         if a == 2**32 - 2**16:
             return HALT, counter
         elif (
             a == 0 or
-            a > len(self.jump_table) * PVM_ADDR_ALIGNMENT or
+            a > (len(self.jump_table) * PVM_ADDR_ALIGNMENT) or
             a % PVM_ADDR_ALIGNMENT != 0 or
-            self.jump_table[a//PVM_ADDR_ALIGNMENT - 1] not in self.basic_blocks
+            self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1] not in self.basic_blocks
         ):
+            print(f"Either of {a == 0} or {a > (len(self.jump_table) * PVM_ADDR_ALIGNMENT)} or {a % PVM_ADDR_ALIGNMENT != 0}")
             raise PvmError(PvmErrorCodes.PANIC)
-        return CONTINUE, self.jump_table[a//PVM_ADDR_ALIGNMENT - 1]
+        return CONTINUE, self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1]
     
     def encode_size(self) -> int:
         """Encode the size of the program.

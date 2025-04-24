@@ -36,4 +36,4 @@ class InstructionsWArgs1Imm(InstructionTable):
         """
         OPC10: Ecalli.
         """
-        return HOST(Register(self.vx)), self.skip_index, registers, memory
+        return HOST(Register(self.vx)), self.counter + self.skip_index, registers, memory

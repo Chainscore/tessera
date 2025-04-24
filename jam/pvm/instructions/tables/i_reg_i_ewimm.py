@@ -32,4 +32,4 @@ class InstructionsWArgs1Imm1EwImm(InstructionTable):
         """
         _vx = self.vx
         registers[self.ra] = _vx
-        return CONTINUE, self.skip_index, registers, memory
+        return CONTINUE, self.counter + self.skip_index + 1, registers, memory

@@ -8,7 +8,7 @@ from jam.pvm.instructions.instruction_table import InstructionTable
 from jam.types.protocol.core import Gas, Register
 
 
-class InstructionsWArgs1Reg2Imm(InstructionTable):
+class InstructionsWArgs2Reg(InstructionTable):
     @property
     def rd(self) -> int:
         return min(12, int(self.program.zeta[self.counter + 1]) % 16)
@@ -36,7 +36,7 @@ class InstructionsWArgs1Reg2Imm(InstructionTable):
     
     def move_reg(self, registers: Registers, memory: Memory) -> OpReturn:
         registers[self.rd] = registers[self.ra]
-        return CONTINUE, self.skip_index, registers, memory
+        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     def sbrk(self, registers: Registers, memory: Memory) -> OpReturn:
         # TODO
@@ -52,7 +52,7 @@ class InstructionsWArgs1Reg2Imm(InstructionTable):
                     (int.from_bytes(registers[self.ra]) % 2**bitsize).to_bytes(bitsize // 8), 
                     bitsize // 8)[:bitsize]
             )
-            return CONTINUE, self.skip_index, registers, memory
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return count_set_bits_impl
     
     @staticmethod
@@ -68,7 +68,7 @@ class InstructionsWArgs1Reg2Imm(InstructionTable):
             except ValueError:
                 leading_zeroes = 64
             registers[self.rd] = leading_zeroes
-            return CONTINUE, self.skip_index, registers, memory
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return leading_zero_bits_impl
     
     @staticmethod
@@ -85,7 +85,7 @@ class InstructionsWArgs1Reg2Imm(InstructionTable):
             except ValueError:
                 leading_zeroes = 64
             registers[self.rd] = Register(leading_zeroes)
-            return CONTINUE, self.skip_index, registers, memory
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return trailing_zero_impl
     
     @staticmethod
@@ -100,13 +100,13 @@ class InstructionsWArgs1Reg2Imm(InstructionTable):
                 ),
                 8
             ))
-            return CONTINUE, self.skip_index, registers, memory
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return sign_extend_impl
     
     def zero_extend_16(self, registers: Registers, memory: Memory) -> OpReturn:
         registers[self.rd] = Register(int.from_bytes(registers[self.ra]) % 2**16)
-        return CONTINUE, self.skip_index, registers, memory
+        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     def reverse_bytes(self, registers: Registers, memory: Memory) -> OpReturn:
         registers[self.rd] = Register.decode_from(reversed(registers[self.ra].encode()))[0]
-        return CONTINUE, self.skip_index, registers, memory
+        return CONTINUE, self.counter + self.skip_index + 1, registers, memory

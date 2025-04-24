@@ -3,7 +3,7 @@ from jam.pvm.instructions.table_map import InstTableMap
 from jam.pvm.memory import Memory
 from jam.pvm.program import Program
 from jam.pvm.register import Registers
-from jam.pvm.status import PAGE_FAULT, PANIC, ExecutionStatus
+from jam.pvm.status import HALT, PAGE_FAULT, PANIC, ExecutionStatus, ExecutionStatusCode
 from jam.types.base.integers.fixed import U8
 from jam.types.protocol.core import Gas, ProgramCounter, Register, RemainingGas
 from jam.pvm.errors import PvmError, PvmErrorCodes
@@ -36,16 +36,21 @@ class PVM:
             Memory: Final memory
         """
         program, _ = Program.decode_from(blob)
-        print(f"Program: {program}")
-        print(f"Program Counter: {program_counter}")
+        print("Program")
+        print(f"Jump Table : {program.jump_table}")
+        for i in range(len(program.instruction_set)):
+            print(f"Inst | {i} \t | {"✅" if program.offset_bitmask[i] else "⏭️ "} {program.instruction_set[i]}")
         while True:
             try:
                 opcode: U8 = program.zeta[program_counter]
                 table = InstTableMap.get_instructions_table(opcode)(counter=program_counter, program=program)
                 print(f"\nExecuting {opcode} - {table.table()[int(opcode)].name}")
+                print(f"Program Counter: {program_counter}")
                 status, program_counter, registers, memory = table.execute(opcode, registers, memory)
 
-                print(f"Opcode status: {status.code} | Next: {program_counter}")
+                if status.code == ExecutionStatusCode.HALT:
+                    return status, program_counter, gas, registers, memory
+                print(f"Opcode status: {status.code} | Next: {int(program_counter)} - {program.zeta[program_counter]}")
             except PvmError as e:
                 print("Exit condition e", e)
                 if e.code == PvmErrorCodes.PANIC:
