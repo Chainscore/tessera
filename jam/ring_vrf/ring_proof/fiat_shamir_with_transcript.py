@@ -8,7 +8,7 @@ fixed_column_commitments=[(21843224087004430547403478283857563958874504995449614
 
 
 #1
-verifier_key=[g1_points,g2_points] #g1(one pt(x,y)) , g2[(x,y)..(xn,yn), fc_commitments]
+verifier_key=[g1_points,g2_points,fixed_column_commitments] #g1(one pt(x,y)) , g2[(x,y)..(xn,yn), fc_commitments]
 
 
 #2
