@@ -1,16 +1,24 @@
 from typing import List, Type
 from jam.pvm.errors import PvmError, PvmErrorCodes
-from jam.pvm.instructions.tables.i_reg_i_imm import InstructionsWArgs1Imm1Imm
+
+from jam.pvm.instructions.tables.i_imm import InstructionsWArgs1Imm
+from jam.pvm.instructions.tables.i_reg_i_ewimm import InstructionsWArgs1Imm1EwImm
+from jam.pvm.instructions.tables.wo_args import InstructionsWoArgs
+from jam.pvm.instructions.tables.i_offset import WArgsOneOffset
+from jam.pvm.instructions.tables.i_reg_i_imm import InstructionsWArgs1Reg1Imm
+from jam.pvm.instructions.tables.i_reg_ii_imm import InstructionsWArgs1Reg2Imm
+from jam.pvm.instructions.tables.i_reg_i_imm_i_offset import InstructionsWArgs1Reg1Imm1Offset
+from jam.pvm.instructions.tables.ii_imm import InstructionsWArgs2Imm
+from jam.pvm.instructions.tables.ii_reg import InstructionsWArgs2Reg
+from jam.pvm.instructions.tables.ii_reg_i_imm import InstructionsWArgs2Reg1Imm
+from jam.pvm.instructions.tables.ii_reg_i_offset import InstructionsWArgs2Reg1Offset
+from jam.pvm.instructions.tables.ii_reg_ii_imm import InstructionsWArgs2Reg2Imm
+from jam.pvm.instructions.tables.iii_reg import InstructionsWArgs3Reg
+
 from jam.types.base.integers.fixed import U8
 from jam.pvm.instructions.instruction_table import InstructionTable
 
 class InstTableMap:
-    from jam.pvm.instructions.tables.i_imm import InstructionsWArgs1Imm
-    from jam.pvm.instructions.tables.i_offset import WArgsOneOffset
-    from jam.pvm.instructions.tables.i_reg_i_ewimm import InstructionsWArgs1Imm1EwImm
-    from jam.pvm.instructions.tables.ii_imm import InstructionsWArgs2Imm
-    from jam.pvm.instructions.tables.wo_args import InstructionsWoArgs
-
     # Mapping of opcodes to instruction tables
     # Key denotes the last opcode of the corresponding table
     ALL_INSTRUCTION_TABLES = {
@@ -19,7 +27,14 @@ class InstTableMap:
         30: InstructionsWArgs1Imm1EwImm,
         40: InstructionsWArgs2Imm,
         50: WArgsOneOffset,
-        60: InstructionsWArgs1Imm1Imm
+        70: InstructionsWArgs1Reg1Imm,
+        80: InstructionsWArgs1Reg2Imm,
+        100: InstructionsWArgs1Reg1Imm1Offset,
+        120: InstructionsWArgs2Reg,
+        170: InstructionsWArgs2Reg1Imm,
+        180: InstructionsWArgs2Reg1Offset,
+        190: InstructionsWArgs2Reg2Imm,
+        240: InstructionsWArgs3Reg,
     }
 
     @classmethod

@@ -1,8 +1,8 @@
-from http.client import CONTINUE
 from typing import Any, Callable, Dict
 from jam.pvm.instructions.code import OpCode, OpReturn
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
+from jam.pvm.status import CONTINUE
 from jam.pvm.utils import PvmUtilities
 from jam.pvm.instructions.instruction_table import InstructionTable
 from jam.types.protocol.core import Gas
@@ -60,6 +60,6 @@ class InstructionsWArgs2Imm(InstructionTable):
         def store_imm_impl(
             self, registers: Registers, memory: Memory
         ) -> OpReturn:
-            memory.write(self.vx, IntegerCodec(bit_size // 8).encode(self.vy % 2**bit_size))
-            return CONTINUE, self.skip_index, registers, memory
+            memory.write(self.vx, self.vy % 2**bit_size)
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return store_imm_impl

@@ -1,12 +1,11 @@
 from typing import Any, Callable, Dict
-from jam.pvm.errors import PvmError, PvmErrorCodes
 from jam.pvm.instructions.code import OpCode, OpReturn
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
 from jam.pvm.status import CONTINUE
 from jam.pvm.utils import PvmUtilities
 from jam.pvm.instructions.instruction_table import InstructionTable
-from jam.types.protocol.core import Gas, Register
+from jam.types.protocol.core import Gas
 from jam.utils.codec.primitives.integers import IntegerCodec
 
 
@@ -17,11 +16,11 @@ class InstructionsWArgs1Reg2Imm(InstructionTable):
 
     @property
     def lx(self) -> int:
-        return min(4, (self.program.zeta[self.counter + 1] // 16) % 8)
+        return min(4, (int(self.program.zeta[self.counter + 1]) // 16) % 8)
     
     @property
     def ly(self) -> int:
-        return min(4, max(0, self.skip_index - self.lx - 1))
+        return min(4, max(0, int(self.skip_index) - self.lx - 1))
     
     @property
     def vx(self) -> int:
@@ -62,7 +61,10 @@ class InstructionsWArgs1Reg2Imm(InstructionTable):
         def store_u_impl(
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
-            memory.write(registers[self.ra] + self.vx, IntegerCodec(bitsize // 8).encode(self.vy % (2**bitsize)))
-            return CONTINUE, self.skip_index, registers, memory
+            memory.write(
+                int(registers[self.ra]) + self.vx, 
+                IntegerCodec(bitsize // 8).encode(self.vy % (2**bitsize))
+            )
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return store_u_impl
     

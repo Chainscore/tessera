@@ -1,7 +1,9 @@
-from typing import Dict
+from math import floor
+from typing import Dict, Sequence
 from jam.pvm.errors import PvmError, PvmErrorCodes
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.bytes.bit_array import Byte
+from jam.types.base.sequences.bytes.bytes import Bytes
 
 
 class Memory:
@@ -34,15 +36,13 @@ class Memory:
                 raise Exception(f"Memory: Invalid memory value at address {addr}: {val}.")
         self.data = data
 
-    def _check_address(self, addr, for_write=False):
+    def _check_address(self, addr: int, for_write=False):
         """
         Check if the given address is accessible.
         
         Raises an exception if the address is below the low bound or if its page is not allowed.
         """
-        if not isinstance(addr, U32):
-            addr = U32(addr)
-        addr = addr % self.ADDR_MOD  # Ensure address is within 0..2^32-1.
+        addr = floor(addr % self.ADDR_MOD)  # Ensure address is within 0..2^32-1.
         # Address cannot be below the low bound.
         if addr < self.LOW_BOUND:
             raise Exception(f"Memory Panic: Address {addr} is below the allowed threshold ({self.LOW_BOUND}).")
@@ -58,7 +58,7 @@ class Memory:
                 raise PvmError(PvmErrorCodes.PAGE_FAULT, f"Memory Fault: Read access denied for address {addr} (page {page}).")
         return addr
 
-    def read(self, address, length):
+    def read(self, address: int, length: int) -> bytes:
         """
         Read a sequence of bytes starting from 'address' with given 'length'.
         
@@ -70,17 +70,19 @@ class Memory:
             addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=False)
             # Return stored byte or 0 if the address has not been written.
             bytes_out.append(self.data.get(addr, 0))
-        return bytes_out
+        return bytes(Bytes(bytes_out))
 
-    def write(self, address, data_bytes):
+    def write(self, address: int, data_bytes: bytes|int|Sequence[int]):
         """
         Write a sequence of bytes starting at 'address'.
         
         data_bytes should be an iterable of integers (each 0-255).
         """
+        if isinstance(data_bytes, int):
+            data_bytes = data_bytes.to_bytes((max(data_bytes.bit_length(), 1) + 7) // 8, byteorder="little")
         for offset, byte in enumerate(data_bytes):
             addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=True)
-            self.data[addr] = Byte(byte)
+            self.data[U32(addr)] = Byte(byte)
 
     def dump_memory(self, start, end):
         """
@@ -92,4 +94,16 @@ class Memory:
         return f"Memory(data={str(self.data)}, allowed_read_pages={str(self.allowed_read_pages)}, allowed_write_pages={str(self.allowed_write_pages)})"
     
     def __eq__(self, other):
-        return self.data == other.data and self.allowed_read_pages == other.allowed_read_pages and self.allowed_write_pages == other.allowed_write_pages
+        # Dont compare if zero
+        data_eq = True
+        for data in self.data:
+            if self.data[data] != 0 and data in other.data:
+                if self.data[data] != other.data[data]:
+                    data_eq = False
+
+        for data in other.data:
+            if other.data[data] != 0 and data in self.data:
+                if self.data[data] != other.data[data]:
+                    data_eq = False
+        
+        return data_eq and self.allowed_read_pages == other.allowed_read_pages and self.allowed_write_pages == other.allowed_write_pages
