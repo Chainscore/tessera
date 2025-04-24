@@ -8,6 +8,7 @@ def modinv(a, p):
     #find x such that a*x= 1 mod p
     return pow(a, -1, p)
 
+
 #In general fft
 def fft(a, omega, p):
     n = len(a)
