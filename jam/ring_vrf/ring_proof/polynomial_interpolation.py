@@ -119,7 +119,6 @@ def poly_subtract(poly1, poly2, prime):
 
 
 
-
 #(O^2) initial
 def poly_multiply(poly1, poly2, prime):
     """Multiply two polynomials in a prime field."""
