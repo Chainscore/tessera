@@ -11,7 +11,6 @@ def knocker_delta(i,j):
     """
     return 1 if i==j else 0
 
-
 def unzip(points):
     """"
     input:Gets a list of points as input
