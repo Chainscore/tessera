@@ -30,7 +30,6 @@ from jam.types.protocol.validators import (
     ValidatorMetadata,
     ValidatorData,
     ValidatorsData,
-    ValidatorArray,
 )
 
 from jam.types.protocol.crypto import (
@@ -72,7 +71,6 @@ __all__ = [
     "ValidatorMetadata",
     "ValidatorData",
     "ValidatorsData",
-    "ValidatorArray",
     # Crypto types
     "BandersnatchPublic",
     "BandersnatchVrfSignature",

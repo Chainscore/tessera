@@ -2,17 +2,17 @@ from dataclasses import dataclass
 from typing import List
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.integers.general import Int
-from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes
+from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes, ByteArray128
 from jam.utils.json.decorators import with_json_metadata
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.state.components.delta import Timestamps
-from jam.state.components.delta import PartialState
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.pvm.register import Register
 from jam.pvm.pvm_memory import PageMemory
+from tests.unit.accumulation.types import StateContext
 ServiceCodeHash = ByteArray32
 
 
@@ -52,7 +52,7 @@ class DeferredTransfer(Codable, JsonSerde):
     sender: ServiceId
     receiver: ServiceId
     amount: Balance
-    memo: Bytes
+    memo: ByteArray128
     gas: Gas
 
 
@@ -65,7 +65,7 @@ class DeferredTransfers(Vector[DeferredTransfer]):
 @dataclass
 class XContent(Codable, JsonSerde):
     s_index: ServiceId
-    partial_state: PartialState
+    partial_state: StateContext
     i_index: ServiceId
     deferred_transfers: DeferredTransfers
     hash: ByteArray32

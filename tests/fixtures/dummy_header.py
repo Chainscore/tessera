@@ -5,7 +5,6 @@ from jam.types import (
     TimeSlot,
     ValidatorIndex,
     BandersnatchVrfSignature,
-    ValidatorArray,
     TicketBody,
     Entropy,
     BandersnatchPublic,

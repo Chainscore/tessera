@@ -1,6 +1,6 @@
 from jam.state.components.delta import AccountData, Delta
 from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot
-from jam.hostCall.types import XContent, PartialState, DeferredTransfers
+from jam.hostCall.types import XContent, DeferredTransfers
 from jam.pvm.register import Registers
 from jam.pvm.pvm_memory import PageMemory
 from jam.state.components.delta import AccountData, Delta
@@ -63,12 +63,12 @@ class PsiT:
         for item in self.transfer:
             s.balance += item.amount
         if s.code_hash is None or self.transfer == []:
-            return s
+            return s, 0
         else:
             gas = 0
             encoded_value = self.timeslot.encode() + self.service_id.encode() + self.transfer.encode()
             for item in self.transfer:
                 gas += item.gas
             g, r, _s = PsiM(s.code_hash, 10, gas, encoded_value, self.f_function, s).process()
-            return _s
+            return _s, g
 

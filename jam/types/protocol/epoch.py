@@ -1,6 +1,6 @@
 """Epoch-related protocol types for the JAM protocol."""
 from dataclasses import dataclass
-from jam.types.protocol.validators import ValidatorArray
+from jam.types.protocol.validators import EpochValidators
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import Entropy
@@ -14,4 +14,4 @@ class EpochMark(Codable, JsonSerde):
 
     entropy: Entropy
     tickets_entropy: Entropy
-    validators: ValidatorArray
+    validators: EpochValidators

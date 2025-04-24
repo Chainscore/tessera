@@ -74,10 +74,6 @@ async def main(genesis_path: str, db_path: str, port: int, is_builder: bool, is_
         else:
             # TODO: Sync from peers
             raise NotImplementedError("Syncing from peers is not implemented yet")
-
-        else:
-            # TODO: Sync from peers
-            raise NotImplementedError("Syncing from peers is not implemented yet")
     
     except KeyboardInterrupt:
         logger.info("👋 Shutting down JAM node 🔐")

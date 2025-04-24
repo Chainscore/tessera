@@ -23,13 +23,22 @@ from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField
 from jam.types.extrinsics.disputes import Verdicts, Culprits, Faults, Judgement
 from jam.types.protocol.core import ServiceId, ValidatorIndex, Gas
 from jam.types.base.boolean import Boolean
-from jam.types.base.integers.fixed import U32, U16, U8
-from jam.types.work import WorkReport
+from jam.types.base.integers.fixed import U32, U16, U8, U64
+from jam.types.work.report import WorkReport, WorkReports
 from jam.types.work.report import SegmentRootLookup, WorkResults, RefineLoad
-from tests.fixtures.utils import create_dummy_bytes, create_dummy_bytes32
+from tests.fixtures.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_bytes144, create_dummy_bytes128, create_dummy_Bytes
 from jam.types.work.refine_context import OpaqueHashes
 from jam.types.protocol.crypto import OpaqueHash
-
+from tests.unit.accumulation.types import StateContext
+from jam.state.components.delta import AccountData, AccountStorage, PreImageLookup, LookupTable, Timestamps, LookupTimestamps, Delta
+from jam.types.base.dictionary import Dictionary, decodable_dictionary
+from jam.state.components.iota import Iota
+from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.state.components.phi import Phi, AuthorizationQueue, AuthorizerHash
+from jam.state.components.chi import Chi, ChiG
+from jam.types.base.sequences.array import Array
+from jam.types.base.sequences.vector import Vector
+from jam.utils.constants import CORE_COUNT, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
 
 
 def create_dummy_package_spec() -> WorkPackageSpec:
@@ -84,6 +93,63 @@ def create_dummy_work_report() -> WorkReport:
         segment_root_lookup=SegmentRootLookup([]),
         results=WorkResults([create_dummy_work_result()]),
         auth_gas_used=Gas(0),
+    )
+
+
+def create_dummy_reports() -> WorkReports:
+    """Create dummy work reports"""
+    return WorkReports([create_dummy_work_report()])
+
+
+def create_dummy_account_data() -> AccountData:
+    """create dummy account data"""
+    time_stamps= LookupTimestamps({LookupTable(hash=create_dummy_bytes32(), length=U32(32)): Timestamps(Vector([U32(2)]))})
+    return AccountData(storage=AccountStorage({create_dummy_bytes32():create_dummy_Bytes(10)}),
+                       lookup=PreImageLookup({create_dummy_bytes32():create_dummy_Bytes(10)}),
+                       timestamps=time_stamps,
+                       code_hash=create_dummy_bytes32(),
+                       balance=U64(10),
+                       gas_limit=Gas(5),
+                       min_gas=Gas(5)
+                       )
+
+
+def create_dummy_delta() -> Delta:
+    """create dummy delta"""
+    return Delta(
+        {U32(1): create_dummy_account_data()}
+    )
+
+
+def create_dummy_privilege() -> Chi:
+    """create dummy privilege"""
+    return Chi(
+        chi_a=ServiceId(1),
+        chi_m=ServiceId(2),
+        chi_v=ServiceId(3),
+        chi_g=ChiG({ServiceId(1):Gas(10)})
+    )
+
+
+def create_dummy_state_context() -> StateContext:
+    """create dummy partial state"""
+    validator_keys = Iota([ValidatorData(
+    bandersnatch=create_dummy_bytes32(),
+    ed25519=create_dummy_bytes32(),
+    bls=create_dummy_bytes144(),
+    metadata=ValidatorMetadata(create_dummy_bytes128())
+) for _ in range(VALIDATOR_COUNT)])
+    return StateContext(
+        service_accounts=create_dummy_delta(),
+        validator_keys=validator_keys,
+        authorizer_keys=Phi([
+            AuthorizationQueue([
+                AuthorizerHash(create_dummy_bytes32())
+                for _ in range(MAX_AUTH_QUEUE_ITEMS)
+            ])
+    for _ in range(CORE_COUNT)
+]),
+        privileges=create_dummy_privilege()
     )
 
 

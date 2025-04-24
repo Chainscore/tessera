@@ -10,11 +10,6 @@ from jam.utils.constants import VALIDATOR_COUNT
 from jam.utils.json.serde import JsonSerde
 
 
-@decodable_array(length=VALIDATOR_COUNT, element_type=BandersnatchPublic)
-class ValidatorArray(Array[BandersnatchPublic]):
-    ...
-
-
 class ValidatorMetadata(ByteArray128):
     """Validator metadata structure."""
     # NOTE - Could define fns to parse metadata into a more useful format
@@ -42,4 +37,18 @@ class ValidatorsData(Array[ValidatorData]):
 
 @decodable_vector(ValidatorData)
 class ValidatorsVector(Vector[ValidatorData]):
+    ...
+
+
+@decodable_dataclass
+@dataclass()
+class EpochValidator(Codable, JsonSerde):
+    """Validator data structure using in epoch marker."""
+
+    bandersnatch: BandersnatchPublic
+    ed25519: Ed25519Public
+
+
+@decodable_vector(element_type=EpochValidator)
+class EpochValidators(Vector[EpochValidator]):
     ...

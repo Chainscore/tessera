@@ -22,11 +22,14 @@ from jam.state.components.iota import Iota
 @decodable_dataclass
 @dataclass
 class OperandTuple(Codable, JsonSerde):
-    o: WorkExecResult
-    l: OpaqueHash
-    a: Bytes
-    k: WorkPackageHash
-    
+    h: OpaqueHash
+    e: OpaqueHash
+    a: OpaqueHash
+    o: Bytes
+    y: OpaqueHash
+    d: WorkExecResult
+
+
 @decodable_vector(OperandTuple)
 class OperandTuples(Vector[OperandTuple]):
     ...
