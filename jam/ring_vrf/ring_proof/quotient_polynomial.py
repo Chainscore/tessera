@@ -24,6 +24,7 @@ from jam.ring_vrf.ring_proof.poly_interpolation_fft import poly_interpolate_fft,
 #     # return q_coeffs\
 
 
+
 def poly_divide(P_coeff, Q_coeff):
     """
     Perform polynomial division: P(x) / Q(x).
