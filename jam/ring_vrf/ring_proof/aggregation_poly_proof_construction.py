@@ -13,6 +13,7 @@ from jam.ring_vrf.ring_proof.prover_witness_polynomials import C_b_v, C_acc_y, C
 
 #get the v list
 
+
 def v_list(px_zeta, py_zeta, s_zeta, b_zeta, accip_zeta, accx_zeta, accy_zeta, l_zeta_omega, prime=None):
     """
     input: poly_evaluations
