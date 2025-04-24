@@ -25,6 +25,7 @@ l3= poly_scalar(poly_add(poly_scalar(acc_x_I,(b_zeta*((acc_y_zeta-P_y_zeta)%S_PR
 
 zeta_omega=(Evaluation_point_Zeta * omega ) % S_PRIME
 
+
 def linearization_contraint_aggregated(l1,l2,l3,alphas):
     l_c=[l1,l2,l3]
     l_x=[0]
