@@ -12,6 +12,7 @@ from jam.ring_vrf.ring_proof.poly_interpolation_fft import poly_interpolate_fft
 
 size= 512 #sample size
 
+
 def bits_vector(k,t,ring_size=255,size=512):
     """"
     input: k -position of the public key in the ring,
