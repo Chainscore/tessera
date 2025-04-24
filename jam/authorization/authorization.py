@@ -1,13 +1,13 @@
 import dataclasses
 
+from jam.state.components.sigma import Sigma
 from jam.types.block import Block
-from jam.state.state import State
 from jam.utils.constants import CORE_COUNT
 
 
 class Authorization:
     @staticmethod
-    def transition(pre_state: State, block: Block) -> State:
+    def transition(pre_state: Sigma, block: Block) -> Sigma:
         """
         Transition the state with Authorization logic.
 

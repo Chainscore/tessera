@@ -1,7 +1,8 @@
+from jam.accumulation.types import StateContext, OperandTuple
 from jam.pvm.extract import Status
 from typing import Optional, Tuple
 from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes
-from jam.hostCall.types import XContent, PartialState, DeferredTransfers
+from jam.hostCall.types import XContent, DeferredTransfers
 from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot
 from jam.pvm.register import Registers
 from jam.pvm.pvm_memory import PageMemory
@@ -9,12 +10,11 @@ from jam.state.components.delta import AccountData, Delta
 from jam.types.protocol.crypto import Entropy
 from hashlib import blake2b
 from jam.hostCall.process import HostCall
-from jam.types.work.package import AccumulationOperand
 from jam.hostCall.invocation import PsiM
 from jam.types.base.integers.fixed import U32, U64, U256
 
 
-def i_function(u: PartialState, s: ServiceId, _n_o: Entropy, timeslot: TimeSlot) -> XContent:
+def i_function(u: StateContext, s: ServiceId, _n_o: Entropy, timeslot: TimeSlot) -> XContent:
     print("hello")
     first = s.encode()
     second = _n_o.encode()
@@ -33,7 +33,7 @@ def i_function(u: PartialState, s: ServiceId, _n_o: Entropy, timeslot: TimeSlot)
 
 
 def c_function(g: Gas,  x: XContent, y: XContent, o: Optional[Bytes] = Status) -> (
-        Tuple)[PartialState, DeferredTransfers, Optional[ByteArray32], Gas]:
+        Tuple)[StateContext, DeferredTransfers, Optional[ByteArray32], Gas]:
     if o == Status.PANIC or o == Status.OUT_OF_GAS:
         return y.partial_state, y.deferred_transfers, y.hash, g
     elif isinstance(o, ByteArray32):
@@ -49,8 +49,8 @@ def g_function(status: Status, gas: Gas, register: Registers, memory: PageMemory
 
 
 class PsiA:
-    def __init__(self, u: PartialState,
-                 t: TimeSlot, s: ServiceId, g: Gas, o: AccumulationOperand, _n_o: Entropy, header_timeslot: TimeSlot):
+    def __init__(self, u: StateContext,
+                 t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuple, _n_o: Entropy, header_timeslot: TimeSlot):
         self.partial_state = u
         self.timeslot = t
         self.service_id = s

@@ -24,6 +24,12 @@ class Bytes(Vector[Byte]):
     def hex(self) -> str:
         """Get hex representation of Bytes."""
         return bytes(self).hex()
+    
+    def __repr__(self) -> str:
+        return self.hex()
+    
+    def __int__(self) -> int:
+        return int.from_bytes(self)
 
     @classmethod
     def from_json(cls, data: Any) -> "Bytes":

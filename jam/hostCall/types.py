@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from typing import List
+
+from jam.accumulation.types import StateContext
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes
@@ -8,7 +10,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.state.components.delta import Timestamps
-from jam.state.components.delta import PartialState
+# from jam.state.components.delta import PartialState
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.pvm.register import Register
@@ -28,15 +30,15 @@ class BoldM(Codable, JsonSerde):
 class RefineMap(Dictionary[Int, BoldM]):
     ...
 
-
-@decodable_vector(element_type=Byte)
-class SegEle(Vector[Byte]):
-    ...
-
-
-@decodable_vector(element_type=SegEle)
-class Segment(Vector[SegEle]):
-    ...
+#
+# @decodable_vector(element_type=Byte)
+# class SegEle(Vector[Byte]):
+#     ...
+#
+#
+# @decodable_vector(element_type=SegEle)
+# class Segment(Vector[SegEle]):
+#     ...
 
 
 @with_json_metadata(
@@ -46,6 +48,7 @@ class Segment(Vector[SegEle]):
     memo={"name": "memo", "skip_if_none": True},
     gas={"name": "gas_limit", "skip_if_none": True}
 )
+
 @decodable_dataclass
 @dataclass
 class DeferredTransfer(Codable, JsonSerde):
@@ -65,7 +68,7 @@ class DeferredTransfers(Vector[DeferredTransfer]):
 @dataclass
 class XContent(Codable, JsonSerde):
     s_index: ServiceId
-    partial_state: PartialState
+    partial_state: StateContext
     i_index: ServiceId
     deferred_transfers: DeferredTransfers
     hash: ByteArray32
