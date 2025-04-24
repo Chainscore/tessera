@@ -1,10 +1,7 @@
-# from jam.ring_vrf.ring_proof.constants import S_PRIME, D
+######
+from jam.ring_vrf.ring_proof.constants import S_PRIME, D
 from sympy import  symbols, expand,Poly
 import numpy as np
-
-from jam.ring_vrf.ring_proof.constants import D, S_PRIME
-# from jam.ring_vrf.ring_proof.constants import S_PRIME, D
-# from jam.ring_vrf.ring_proof.preprocessing import s_vector
 
 
 ##initail
@@ -58,6 +55,21 @@ from jam.ring_vrf.ring_proof.constants import D, S_PRIME
 #     assert evaluated == (p_v[idx] % S_PRIME), "Invalid Polynomial"
 #     return evaluated
 
+def selector_vector(size=512):
+    """
+    input: ring of public key's
+    output: selecting vector having 0/1
+    """
+    s_vector = []
+    N_K=255 #len(Ring_of_pk)
+
+    for i in range(size):
+        if i<N_K:
+            s_vector.append(1)
+        else:
+            s_vector.append(0)
+
+    return s_vector
 
 ## Up Dated ##
 
@@ -82,9 +94,8 @@ def poly_add(poly1, poly2, prime):
         result[i] = (result[i] + poly2[i]) % prime
 
     # Remove trailing zeros
-    while result and result[-1] == 0 and len(result) > 1:
-        result.pop()
-
+    # while result and result[-1] == 0 and len(result) > 1:
+    #     result.pop()
     return result
 
 
@@ -101,26 +112,38 @@ def poly_subtract(poly1, poly2, prime):
         result[i] = (result[i] - poly2[i]) % prime
 
     # Remove trailing zeros
-    while result and result[-1] == 0 and len(result) > 1:
-        result.pop()
+    # while result and result[-1] == 0 and len(result) > 1:
+    #     result.pop()
 
     return result
 
 
+
+
+#(O^2) initial
 def poly_multiply(poly1, poly2, prime):
     """Multiply two polynomials in a prime field."""
     result_len = len(poly1) + len(poly2) - 1
     result = [0] * result_len
-
     for i in range(len(poly1)):
         for j in range(len(poly2)):
             result[i + j] = (result[i + j] + poly1[i] * poly2[j]) % prime
 
     # Remove trailing zeros
-    while result and result[-1] == 0 and len(result) > 1:
-        result.pop()
-
+    # while result and result[-1] == 0 and len(result) > 1:
+    #     result.pop()
     return result
+
+
+#fft
+
+# def fft_poly_mul(A, B, omega_root, p):
+#     size = next_power_of_2(len(A) + len(B) - 1)
+#
+#     # Pointwise multiplication
+#     C_vals = [(a * b) % p for a, b in zip(A, B)]
+#     # Optional: trim trailing 0s
+
 
 
 def poly_scalar(poly, scalar, prime):
@@ -128,8 +151,8 @@ def poly_scalar(poly, scalar, prime):
     result = [(coef * scalar) % prime for coef in poly]
 
     # Remove trailing zeros
-    while result and result[-1] == 0 and len(result) > 1:
-        result.pop()
+    # while result and result[-1] == 0 and len(result) > 1:
+    #     result.pop()
 
     return result
 
@@ -137,7 +160,7 @@ def poly_scalar(poly, scalar, prime):
 def poly_evaluate(poly, x, prime):
     """Evaluate a polynomial at point x using Horner's method."""
     result = 0
-    for coef in reversed(poly):
+    for coef in  reversed(poly):
         result = (result * x + coef) % prime
     return result
 
@@ -197,6 +220,9 @@ def lagrange_basis_polynomial(x_coords, i, prime=S_PRIME):
 
     return basis_poly
 
+
+
+
 def represent_as_poly(coeffs):
     x = symbols('x')
     n = len(coeffs)
@@ -205,3 +231,37 @@ def represent_as_poly(coeffs):
     polynomial = sum(coeff * x ** (n - 1 - i) for i, coeff in enumerate(coeffs))
 
     return polynomial
+
+from sympy import symbols
+x=symbols('x')
+
+L_0_x = lagrange_basis_polynomial(D, 0)
+
+# print("is 1:",represent_as_poly(L_0_x).subs(x,D[0]))
+L_N_4_x = lagrange_basis_polynomial(D, 512 - 4)
+p2=represent_as_poly(L_N_4_x)
+p1=represent_as_poly(L_0_x)
+
+print(L_0_x)
+print(L_N_4_x)
+print(p1)
+print(p1.subs(x,D[0])%S_PRIME)
+print(p2.subs(x,D[0])%S_PRIME)
+print(p1.subs(x,D[-4])%S_PRIME)
+print(p2.subs(x,D[-4])%S_PRIME)
+
+
+# import time
+# def main():
+#     start=time.time()
+#     x_cord = D
+#     y_cord = selector_vector()
+#     coeff_poly = polynomial_interpolation(x_cord, y_cord, S_PRIME)
+#     print(represent_as_poly(coeff_poly))
+#     end=time.time()
+#     print(end-start)
+#
+#
+# if __name__=="__main__":
+#     main()
+

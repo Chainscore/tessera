@@ -1,6 +1,7 @@
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchParams
 from sympy import mod_inverse
 from jam.ring_vrf.ring_proof.constants import SeedPoint, PaddingPoint, Blinding_Base, S_A, S_B, S_PRIME
+from jam.utils.vrf.ietf import point_mul
 
 # from jam.ring_vrf.ring_proof.short_weierstrass_curve_ops import point_multiplication
 # from jam.ring_vrf.ring_proof.short_weierstrass_curve_ops import point_addition, point_multiplication, point_doubling
@@ -91,10 +92,9 @@ def monty_to_twisted_edward(mont_point):#(x, y) -> (x / y, (x−1) / (x + 1))
 
 def short_to_te(sw_point):
     mont_point= short_ws_to_monty(sw_point)
-    print(mont_point)
+    # print(mont_point)
     te_point=monty_to_twisted_edward(mont_point)
     return  te_point
-
 
 
 
@@ -131,4 +131,3 @@ def short_to_te(sw_point):
 # print(is_on_weierstrass(twisted_edward_to_sw(SeedPoint)))
 # p_m_v=point_multiplication(2,SeedPoint)
 # print(is_on_weierstrass(p_m_v))
-

@@ -1,5 +1,7 @@
+from typing import Tuple
+
 from sympy import mod_inverse
-from jam.ring_vrf.ring_proof.constants import S_PRIME as S_PRIME_FIELD, PaddingPoint, Blinding_Base
+from jam.ring_vrf.ring_proof.constants import S_PRIME as S_PRIME_FIELD, PaddingPoint, Blinding_Base, S_B
 from jam.ring_vrf.ring_proof.constants import S_A,SeedPoint,S_ORDER
 from jam.ring_vrf.ring_proof.short_weierstrass import is_on_weierstrass, twisted_edward_to_sw
 
@@ -57,33 +59,92 @@ def point_doubling(point):
     return x3,y3
 
 
+def point_subtraction(point1, point2):
+    """
+    input: point1 and point2
+    output: point1 - point2 on the short Weierstrass curve
+    """
+    if point2 is None:
+        return point1
+    # Negate the y-coordinate of point2
+    x2, y2 = point2
+    neg_point2 = (x2, (-y2) % S_PRIME_FIELD)
+    return point_addition(point1, neg_point2)
 
 
 
-# sp=SeedPoint
-# SeedPoint= twisted_edward_to_sw(SeedPoint)
-# Blinding_Base= twisted_edward_to_sw(Blinding_Base)
-# print(is_on_weierstrass(point_addition(SeedPoint,Blinding_Base)))
-# print(is_on_weierstrass(twisted_edward_to_sw(PaddingPoint)))
-# print(is_on_weierstrass(point_multiplication(S_PRIME_FIELD,SeedPoint)))
-# print()
+def mod_sqrt(a, p):
+    """Tonelli–Shanks algorithm for general primes p"""
+    # Check if square root exists
+    if pow(a, (p - 1) // 2, p) != 1:
+        raise ValueError("No square root exists")
+
+    # Simple case
+    if p % 4 == 3:
+        return pow(a, (p + 1) // 4, p)
+
+    # Find Q and S such that p - 1 = Q * 2^S with Q odd
+    q = p - 1
+    s = 0
+    while q % 2 == 0:
+        q //= 2
+        s += 1
+
+    # Find a quadratic non-residue z
+    z = 2
+    while pow(z, (p - 1) // 2, p) != p - 1:
+        z += 1
+
+    m = s
+    c = pow(z, q, p)
+    t = pow(a, q, p)
+    r = pow(a, (q + 1) // 2, p)
+
+    while t != 1:
+        i = 1
+        temp = pow(t, 2, p)
+        while temp != 1:
+            temp = pow(temp, 2, p)
+            i += 1
+            if i == m:
+                raise ValueError("No square root found")
+
+        b = pow(c, 2 ** (m - i - 1), p)
+        m = i
+        c = pow(b, 2, p)
+        t = (t * c) % p
+        r = (r * b) % p
+
+    return r
+
+def compress_point(point:Tuple[int,int], p: int) -> bytes:
+    x,y=point
+    prefix = 0x02 if y % 2 == 0 else 0x03
+    x_bytes = x.to_bytes((p.bit_length() + 7) // 8, 'big')
+    return bytes([prefix]) + x_bytes
+
+def decompress_point(compressed: bytes, a: int, b: int, p: int):
+    prefix = compressed[0]
+    x = int.from_bytes(compressed[1:], 'big')
+    rhs = (pow(x, 3, p) + a * x + b) % p
+    y = mod_sqrt(rhs, p)
+
+    # Choose correct y based on prefix
+    if (y % 2 == 0 and prefix == 0x02) or (y % 2 == 1 and prefix == 0x03):
+        return (x, y)
+    else:
+        return (x, p - y)
 
 
+def main():
+    from jam.ring_vrf.ring_proof.constants import Blinding_Base,PaddingPoint, SeedPoint
+    sw_bb=twisted_edward_to_sw(Blinding_Base)
+    # sw_pp=twisted_edward_to_sw(PaddingPoint)
+    # sw_sp=twisted_edward_to_sw(SeedPoint)
+    print(sw_bb)
+    print(compress_point(sw_bb, S_PRIME_FIELD))
+    print(decompress_point(b'\x03\n\xf5W\x8d\xaa\xfc\xa8_\xf4\xfb\x0eR\xefy|\x8e\xe2\xdd\x87\\C\x03\x0bG\xd8\xd8"NU\x95\xca\xc2', S_A, S_B,S_PRIME_FIELD))
 
+if __name__=='__main__':
+    main()
 
-
-
-
-# print(short_to_te(SeedPoint)==sp)
-# print("doubling:",is_on_weierstrass(point_doubling(SeedPoint)))
-#
-# print(Blinding_Base)
-# print(is_on_weierstrass(point_doubling(Blinding_Base)))
-# print(is_on_weierstrass(point_doubling(SeedPoint)))
-
-# print(is_on_weierstrass(point_addition(SeedPoint,Blinding_Base)))
-#
-# print(SeedPoint)
-#
-# print("BB",is_on_weierstrass(Blinding_Base))
-# print(point_addition(SeedPoint,Blinding_Base))

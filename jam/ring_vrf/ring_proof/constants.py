@@ -1,8 +1,6 @@
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchParams
 from sympy import symbols, expand, simplify, prod
-
-import  sys
-
+import sys
 sys.set_int_max_str_digits(100000)
 
 x= symbols('x')
@@ -21,9 +19,9 @@ Blinding_Base=(
 S_A=10773120815616481058602537765553212789256758185246796157495669123169359657269
 S_B=29569587568322301171008055308580903175558631321415017492731745847794083609535
 
-omega=49307615728544765012166121802278658070711169839041683575071795236746050763237 #Cyclic Group Generator
+omega=49307615728544765012166121802278658070711169839041683575071795236746050763237 #Cyclic Group Generator for |D|=2048
 
-# omega=4214636447306890335450803789410475782380792963881561516561680164772024173390 #used in ref impl
+omega_used=4214636447306890335450803789410475782380792963881561516561680164772024173390 #used in ref impl
 
 S_PRIME=BandersnatchParams.PRIME_FIELD
 S_ORDER= BandersnatchParams.ORDER
@@ -31,24 +29,10 @@ S_ORDER= BandersnatchParams.ORDER
 #MAX
 SIZE= 512 #2048
 
+omega=pow(omega,  2048 // 512, S_PRIME)
+
+assert omega==omega_used,"invalid omega used"
+
 D = [pow(omega, i, S_PRIME) for i in range(0, SIZE)]
 
 Max_ring_size=255
-
-def lagrange_D_poly(i, D):
-    """
-    Efficiently computes the Lagrange basis polynomial L_i(x)
-    """
-    x_i = D[i]
-
-    # Precompute the denominator product
-    denominator = prod(x_i - D[j] for j in range(len(D)) if j != i)
-
-    # Compute the numerator product
-    numerator = prod(x - D[j] for j in range(len(D)) if j != i)
-
-    # Return the simplified Lagrange basis polynomial
-    return simplify(numerator / denominator)
-
-# Example usage
-
