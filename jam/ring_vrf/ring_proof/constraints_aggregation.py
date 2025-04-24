@@ -10,7 +10,6 @@ from jam.ring_vrf.ring_proof.preprocessing import end_time
 from jam.ring_vrf.ring_proof.prover_witness_polynomials import C_b_v,C_acc_x,C_acc_ip,C_acc_y
 from jam.ring_vrf.ring_proof.constraints_polynomials import c1x, c2x, c3x, c4x, c5x, c6x, c7x
 
-
 sys.set_int_max_str_digits(1000000)
 
 def hash_commitments(commitments):
