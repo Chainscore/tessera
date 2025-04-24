@@ -1,20 +1,12 @@
 from dataclasses import dataclass
 from typing import List
-from jam.types.base.choices import Choice
+from jam.types.protocol.merkle import MMR
 from jam.types.base.sequences.array import Array, decodable_array
-from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import HeaderHash, StateRoot, OpaqueHash
 from jam.utils.constants import RECENT_HISTORY_SIZE
 from jam.utils.json.serde import JsonSerde
-
-"""Merkle Mountain Range structure."""
-
-
-@decodable_vector(element_type=Choice)
-class Mmr(Vector[Choice]):
-    ...
 
 
 @decodable_dataclass
@@ -32,7 +24,7 @@ class BlockInfo(Codable, JsonSerde):
     """Block information structure."""
 
     header_hash: HeaderHash
-    mmr: Mmr
+    mmr: MMR
     state_root: StateRoot
     reported: List[ReportedWorkPackage]
 

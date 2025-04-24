@@ -2,21 +2,12 @@ from copy import deepcopy
 from jam.types import ByteArray32, OpaqueHash, Int, Null
 
 from typing import Callable, TypeVar, Optional
-from jam.types.base import Vector, decodable_vector
+from jam.types.base import Vector
 from jam.types.protocol.crypto import Hash
-from jam.types.base.choices.option import Option, decodable_option
+from jam.types.protocol.merkle import MMR
 
 
 T = TypeVar("T")
-
-
-@decodable_option(OpaqueHash)
-class OptionHash(Option): ...
-
-
-@decodable_vector(OptionHash)
-class MMR(Vector[OptionHash]): ...
-
 
 class MMRFunctions:
     """General Merklization implementation for Merkle Mountain Ranges as defined in Section E.2"""

@@ -3,8 +3,6 @@ from typing import cast
 from jam.config.logging import logger
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.network.protocols.types import Final, BlockAnnouncement
-from jam.state.state import State
-
 from jam.types import Block
 
 class BlockAnnouncementProtocol(NetworkProtocol):

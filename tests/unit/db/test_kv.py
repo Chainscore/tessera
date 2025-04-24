@@ -13,13 +13,6 @@ from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Publ
 from jam.types.protocol.core import ServiceId,BlobLength
 from jam.types.base.sequences.bytes.bytes import Bytes
 
-@pytest.fixture
-def db_path():
-    """Create a temporary directory for testing."""
-    temp_dir = tempfile.mkdtemp()
-    yield temp_dir
-    shutil.rmtree(temp_dir)
-
 def test_kv_store_basic_operations(db_path):
     """Test basic operations of KVStore."""
     # Initialize store
@@ -33,17 +26,8 @@ def test_kv_store_basic_operations(db_path):
     assert valueList==["PreImageKey1", "PreImageKey2"]
     assert kv.get("State".encode()) == "StateValue".encode()
     
-    # State checking:
-    
-    peerlist = json.load(open("genesis.json"))["peers"]
-    peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
-    validators = [ValidatorData(
-                bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
-                ed25519=Ed25519Public(pr["ed25519_public"]),
-                bls=BlsPublic(pr["bls_public"]),
-                metadata=ValidatorMetadata(bytes(128))
-            ) for pr in peerlist]
-    state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
+    # State checking
+    state = State.genesis()
     state.save(kv)
     
     
@@ -53,8 +37,6 @@ def test_kv_store_basic_operations(db_path):
     
     # Test get non-existent key
     assert kv.get("non_existent_key".encode()) is None
-    
-    
     
     # Test delete
     kv.delete("key1".encode())

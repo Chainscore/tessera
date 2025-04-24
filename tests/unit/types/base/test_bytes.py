@@ -64,7 +64,7 @@ class TestBytesType:
     def test_bytes_repr(self):
         """Test string representation."""
         b = Bytes(b"hello")
-        expected = "Bytes([Byte(0x68), Byte(0x65), Byte(0x6c), Byte(0x6c), Byte(0x6f)])"  # 'hello' in hex
+        expected = "68656c6c6f"  # 'hello' in hex
         assert repr(b) == expected
 
     def test_invalid_hex_string(self):
