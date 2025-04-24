@@ -1,4 +1,6 @@
 # from jam.ring_vrf.ring_proof.KZG_poly_affine_powers_of_tau import commit_to_polynomial
+from py_ecc.optimized_bls12_381 import normalize
+
 from jam.ring_vrf.ring_proof.constants import omega, S_PRIME, Blinding_Base, PaddingPoint, S_ORDER, Max_ring_size, \
     SeedPoint
 from jam.ring_vrf.ring_proof.get_ring_points import pk_x_y_list, secret_t
@@ -125,7 +127,7 @@ start_time= time.time()
 px_I=interpolation_to_resulting_vectors(px_v,omega)
 py_I=interpolation_to_resulting_vectors(py_v,omega)
 s_v_I=interpolation_to_resulting_vectors(s_vector,omega)
-print("Interolated_Px",len(px_I))
+print("Interolated_Px",px_I)
 print("is Evaluations valid:", px_v==fft(px_I,omega,S_PRIME))
 print("Interpolated_py",py_I)
 print("is Evaluations valid:",py_v==fft(py_I,omega,S_PRIME))
@@ -142,5 +144,5 @@ C_s=commitment_to_constructed_vectors(s_v_I)
 
 end_time=time.time()
 
-print(C_px,'\n',C_py,'\n',C_s)
+print(normalize(C_px),'\n',normalize(C_py),'\n',normalize(C_s))
 print("commitment time:", end_time -start_time)
