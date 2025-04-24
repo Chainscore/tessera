@@ -223,7 +223,6 @@ def demonstrate_kzg_workflow():
     is_valid_incorrect = verify_kzg_proof(commitment, proof, point, incorrect_value, srs_g1, srs_g2)
     print(f"Proof verification with incorrect value: {'Success' if is_valid_incorrect else 'Failed'}")
 
-
 if __name__ == "__main__":
     print("KZG commit, open and verify")
     demonstrate_kzg_workflow()
