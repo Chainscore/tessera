@@ -128,8 +128,8 @@ def verify_kzg_proof(
         proof: Point_G1,
         point: Scalar,
         value: Scalar,
-        srs_g1: SRS_G1,
-        srs_g2: SRS_G2
+        srs_g1: SRS_G1=G1_powers,
+        srs_g2: SRS_G2=G1_powers
 ) -> bool:
     """
     Verify a KZG proof.
@@ -158,7 +158,7 @@ def verify_kzg_proof(
     g1_value = multiply(G1, value)  #G1->G
     commitment_minus_value = add(commitment, neg(g1_value))
     # Right pairing: e(commitment - [value]G1, G2)
-    right_pairing = pairing(srs_g2[0], commitment_minus_value)
+    right_pairing = pairing(G2, commitment_minus_value)
 
     # Left pairing: e(proof, [tau]G2 - [point]G2)
 
