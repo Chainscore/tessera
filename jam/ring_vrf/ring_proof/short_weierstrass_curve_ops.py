@@ -6,6 +6,7 @@ from jam.ring_vrf.ring_proof.constants import S_A,SeedPoint,S_ORDER
 from jam.ring_vrf.ring_proof.short_weierstrass import is_on_weierstrass, twisted_edward_to_sw
 
 
+
 def point_addition(point1, point2):
     """
     input: point1 and point2
