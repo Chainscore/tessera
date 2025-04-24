@@ -23,6 +23,7 @@ def h_vector(Blinding_Base,size=512):
         H_Vct.append(New_H_point)
     return H_Vct
 
+
 # H_vector=h_vector(Blinding_Base)
 
 # Public input preprocessing
