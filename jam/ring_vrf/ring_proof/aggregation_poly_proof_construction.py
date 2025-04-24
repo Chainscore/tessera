@@ -11,7 +11,6 @@ from jam.ring_vrf.ring_proof.preprocessing import px_I,py_I,s_v_I
 from jam.ring_vrf.ring_proof.prover_witness_polynomials import acc_x_I,acc_y_I, acc_ip_I, b_v_I
 from jam.ring_vrf.ring_proof.prover_witness_polynomials import C_b_v, C_acc_y, C_acc_x, C_acc_ip
 
-
 #get the v list
 
 def v_list(px_zeta, py_zeta, s_zeta, b_zeta, accip_zeta, accx_zeta, accy_zeta, l_zeta_omega, prime=None):
