@@ -72,7 +72,6 @@ def conditional_additon_constraint_poly(acc_x,acc_y,b_x,p_x,p_y):
            poly_multiply(one_m_bx, accx_wx_m_accx_x,S_PRIME),S_PRIME
            )
 
-
     c3x= poly_multiply(c3_x,factor,S_PRIME)
     return c2x,c3x
 
