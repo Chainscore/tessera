@@ -7,6 +7,7 @@ from jam.utils.vrf.ietf import point_mul
 # from jam.ring_vrf.ring_proof.short_weierstrass_curve_ops import point_addition, point_multiplication, point_doubling
 
 
+
 mont_a=29978822694968839326280996386011761570173833766074948509196803838190355340952#2*(BandersnatchParams.EDWARDS_A + BandersnatchParams.EDWARDS_D) % BandersnatchParams.ORDER * mod_inverse(BandersnatchParams.EDWARDS_A-BandersnatchParams.EDWARDS_D, BandersnatchParams.PRIME_FIELD) % BandersnatchParams.ORDER
 
 mont_b=25465760566081946422412445027709227188579564747101592991722834452325077642517 #4*mod_inverse(BandersnatchParams.EDWARDS_A-BandersnatchParams.EDWARDS_D,BandersnatchParams.PRIME_FIELD)
