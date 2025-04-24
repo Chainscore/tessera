@@ -20,6 +20,7 @@ from jam.ring_vrf.ring_proof.constants import S_PRIME as S_PRIME
 from jam.ring_vrf.ring_proof.aggregation_poly_proof_construction import prover_proof, agg_poly
 
 
+
 def recover_fiat_shamir_challeneges(Proof_Phi):
     """
     input:Proof
