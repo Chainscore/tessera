@@ -19,7 +19,6 @@ def fiat_shamir_evaluation_point(commitment):
     return random.randint(0, S_PRIME) #if we take field_modulus it would of bit length 381 i guess
 
 
-
 #Fiat shamir for final proof aggregation coefficients
 def fiat_shamir_final_aggregation(values, num_coeffs=8):
     """Generate Fiat-Shamir-based aggregation coefficients ν_i."""
