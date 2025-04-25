@@ -48,7 +48,6 @@ class MemoryChunk(Vector):
         for page in page_map:
             if page.is_writable:
                 allowed_write_pages.append(page.address // 2**12)
-            # else:
             allowed_read_pages.append(page.address // 2**12)
         memory = Memory(memory_data, allowed_read_pages, allowed_write_pages)
         return memory

@@ -37,9 +37,9 @@ def vector_run(tc: Testcase):
         tc.initial_memory.to_memory(tc.initial_page_map),
     )
     assert pc == tc.expected_pc
+    assert status.code == tc.expected_status
     assert registers == tc.expected_regs
     assert memory == tc.expected_memory.to_memory(tc.initial_page_map)
-    assert status.code == tc.expected_status
 
 class TestInst:
     @pytest.mark.parametrize("test_file", PVM_DIR.glob("inst_store*.json"))
