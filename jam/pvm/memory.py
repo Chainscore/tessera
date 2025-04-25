@@ -51,11 +51,11 @@ class Memory:
         # If writing, the page must be allowed to be written.
         if for_write:
             if page not in self.allowed_write_pages:
-                raise PvmError(PvmErrorCodes.PAGE_FAULT, f"Memory Fault: Write access denied for address {addr} (page {page}).")
+                raise PvmError(PvmErrorCodes.PAGE_FAULT, f"Memory Fault: Write access denied for address {addr} (page {page}).", addr)
         # Else (reading), the page must be allowed to be read.
         else:
             if page not in self.allowed_read_pages:
-                raise PvmError(PvmErrorCodes.PAGE_FAULT, f"Memory Fault: Read access denied for address {addr} (page {page}).")
+                raise PvmError(PvmErrorCodes.PAGE_FAULT, f"Memory Fault: Read access denied for address {addr} (page {page}).", addr)
         return addr
 
     def read(self, address: int, length: int) -> bytes:
