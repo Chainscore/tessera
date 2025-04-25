@@ -1,16 +1,31 @@
 import os
 import json
+from pathlib import Path
+
+import pytest
 
 from jam.pvm.pvm import PVM
 from .types import Testcase
 
-def get_testcases_starting_with(prefix: str):
-    data_dir = "tests/unit/pvm/data"
-    for i, file in enumerate(os.listdir(data_dir)):
-        if file.startswith(prefix):
-            with open(os.path.join(data_dir, file), "r") as f:
-                data = json.loads(f.read())
-                yield Testcase.from_json(data)
+TEST_DATA_DIR = Path("tests/unit/pvm")
+PVM_DIR = TEST_DATA_DIR / "data"
+
+def load_test_vectors(file_path: Path):
+    """
+    Load test vectors from a JSON file.
+
+    Args:
+        file_path: Path to test vector file
+
+    Returns:
+        List of test vectors
+
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        json.JSONDecodeError: If file is not valid JSON
+    """
+    with open(file_path, "r") as f:
+        return json.loads(f.read())
 
 def vector_run(tc: Testcase):
     print("\nProcessing test case: ", tc.name)
@@ -26,67 +41,20 @@ def vector_run(tc: Testcase):
     assert memory == tc.expected_memory.to_memory(tc.initial_page_map)
     assert status.code == tc.expected_status
 
-# def test_inst_jump():
-#     print("\n\n-------------------------- inst_jump --------------------------")
-#     for tc in get_testcases_starting_with("inst_jump"):
-#         vector_run(tc)
+class TestInst:
+    @pytest.mark.parametrize("test_file", PVM_DIR.glob("inst_store*.json"))
+    def test_store(self, test_file: Path):
+        vector_run(Testcase.from_json(load_test_vectors(test_file)))
 
-# def test_inst_add():
-#     print("\n\n-------------------------- inst_add --------------------------")
-#     for tc in get_testcases_starting_with("inst_add"):
-#         vector_run(tc)
+    @pytest.mark.parametrize("test_file", PVM_DIR.glob("inst_load*.json"))
+    def test_load(self, test_file: Path):
+        vector_run(Testcase.from_json(load_test_vectors(test_file)))
 
-# def test_inst_branch():
-#     print("\n\n-------------------------- inst_branch --------------------------")
-#     for tc in get_testcases_starting_with("inst_branch"):
-#         vector_run(tc)
+    @pytest.mark.parametrize("test_file", PVM_DIR.glob("inst*.json"))
+    def test_inst(self, test_file: Path):
+        vector_run(Testcase.from_json(load_test_vectors(test_file)))
 
-# def test_inst_div():
-#     print("\n\n-------------------------- inst_div --------------------------")
-#     for tc in get_testcases_starting_with("inst_div"):
-#         vector_run(tc)
-
-# def test_inst_mul():
-#     print("\n\n-------------------------- inst_mul --------------------------")
-#     for tc in get_testcases_starting_with("inst_mul"):
-#         vector_run(tc)
-
-# def test_inst_load():
-#     print("\n\n-------------------------- inst_load --------------------------")
-#     for tc in get_testcases_starting_with("inst_load"):
-#         vector_run(tc)
-
-# def test_inst_rem():
-#     print("\n\n-------------------------- inst_rem --------------------------")
-#     for tc in get_testcases_starting_with("inst_rem"):
-#         vector_run(tc)
-
-# def test_inst_shift():
-#     print("\n\n-------------------------- inst_shift --------------------------")
-#     for tc in get_testcases_starting_with("inst_shift"):
-#         vector_run(tc)
-
-# def test_inst_rem():
-#     print("\n\n-------------------------- inst_rem --------------------------")
-#     for tc in get_testcases_starting_with("inst_rem"):
-#         vector_run(tc)
-
-# def test_inst_store():
-#     print("\n\n-------------------------- inst_store --------------------------")
-#     for tc in get_testcases_starting_with("inst_store"):
-#         vector_run(tc)
-
-# def test_inst_sub():
-#     print("\n\n-------------------------- inst_sub --------------------------")
-#     for tc in get_testcases_starting_with("inst_sub"):
-#         vector_run(tc)
-
-# def test_inst():
-#     print("\n\n-------------------------- inst --------------------------")
-#     for tc in get_testcases_starting_with("inst"):
-#         vector_run(tc)
-
-# def test_riscv():
-#     print("\n\n-------------------------- inst --------------------------")
-#     for tc in get_testcases_starting_with("riscv"):
-#         vector_run(tc)
+class TestRiscV:
+    @pytest.mark.parametrize("test_file", PVM_DIR.glob("riscv*.json"))
+    def test_riscv(self, test_file: Path):
+        vector_run(Testcase.from_json(load_test_vectors(test_file)))

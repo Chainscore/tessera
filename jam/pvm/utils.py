@@ -10,7 +10,7 @@ class PvmUtilities:
         # Make value (of size n) an unbounded integer
         n = int(n)
         value = int(value)
-        return value + (value // 2 ** (8 * n - 1)) * (2**64 - 2 ** (8 * n))
+        return value + (math.floor(value / 2 ** (8 * n - 1)) * (2**64 - 2 ** (8 * n)))
 
     @staticmethod
     def z(x: int, n: int) -> int:
@@ -35,14 +35,20 @@ class PvmUtilities:
         return (2**(8*n) + x) % 2**(8*n)
             
     @staticmethod
-    def b(value: Union[int, bytes], byte_size: int, is_reversed = False) -> List[bool]:
-        if isinstance(value, int):
-            value = value.to_bytes(byte_size)
-        return BitArrayConversion.bytes_to_bitarray(value, "msb" if not is_reversed else "lsb", byte_size * 8)
+    def b(value: int, byte_size: int, is_reversed = False) -> List[int]:
+        result = [((int(value) // 2**i) % 2) for i in range(8*byte_size)]
+        if is_reversed:
+            result.reverse()
+        return result
     
     @staticmethod
-    def b_inv(value: List[bool], is_reversed = False) -> bytes:
-        return BitArrayConversion.bitarray_to_bytes(value, "msb" if not is_reversed else "lsb")
+    def b_inv(value: List[int], is_reversed = False) -> int:
+        result = 0
+        if is_reversed:
+            value.reverse()
+        for i in range(len(value)):
+            result += (value[i] * 2**i)
+        return result
     
     @staticmethod
     def compare(a: int|bool, b: int|bool, op: str) -> bool:

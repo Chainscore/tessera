@@ -36,21 +36,22 @@ class PVM:
             Memory: Final memory
         """
         program, _ = Program.decode_from(blob)
-        print("Program")
         print(f"Jump Table : {program.jump_table}")
-        for i in range(len(program.instruction_set)):
-            print(f"Inst | {i} \t | {"✅" if program.offset_bitmask[i] else "⏭️ "} {program.instruction_set[i]}")
         while True:
             try:
                 opcode: U8 = program.zeta[program_counter]
                 table = InstTableMap.get_instructions_table(opcode)(counter=program_counter, program=program)
                 print(f"\nExecuting {opcode} - {table.table()[int(opcode)].name}")
-                print(f"Program Counter: {program_counter}")
+                print(f"PC \t | {program_counter}")
+                print(f"Reg \t | {[int(r) for r in registers]}")
+                print(f"Memory \t | {memory.data}")
+                print(f"Imm \t | {program.zeta[program_counter + 1 : program_counter+ program.skip(program_counter) + 1]}")
+
                 status, program_counter, registers, memory = table.execute(opcode, registers, memory)
 
                 if status.code == ExecutionStatusCode.HALT:
                     return status, program_counter, gas, registers, memory
-                print(f"Opcode status: {status.code} | Next: {int(program_counter)} - {program.zeta[program_counter]}")
+                print(f"Op \t | {status.code} | Next: {int(program_counter)} -> {program.zeta[program_counter]}")
             except PvmError as e:
                 print("Exit condition e", e)
                 if e.code == PvmErrorCodes.PANIC:

@@ -69,17 +69,15 @@ class Memory:
         for offset in range(length):
             addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=False)
             # Return stored byte or 0 if the address has not been written.
-            bytes_out.append(self.data.get(addr, 0))
+            bytes_out.append(self.data.get(addr, Byte(0)))
         return bytes(Bytes(bytes_out))
 
-    def write(self, address: int, data_bytes: bytes|int|Sequence[int]):
+    def write(self, address: int, data_bytes: bytes|Sequence[int]):
         """
         Write a sequence of bytes starting at 'address'.
         
         data_bytes should be an iterable of integers (each 0-255).
         """
-        if isinstance(data_bytes, int):
-            data_bytes = data_bytes.to_bytes((max(data_bytes.bit_length(), 1) + 7) // 8, byteorder="little")
         for offset, byte in enumerate(data_bytes):
             addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=True)
             self.data[U32(addr)] = Byte(byte)

@@ -65,20 +65,20 @@ class Program(Codable, JsonSerde):
         return min(24, value) # Reached the end of the bitmask.
 
     @property
-    def basic_blocks(self) -> List[U8]:
+    def basic_blocks(self) -> List[int]:
         """Get the basic blocks of the program. ie. sequences of instructions
         where the code sequence starts.
 
         Returns:
             List[U8]: List of basic blocks
         """
-        basic_blocks = [U8(0)]
+        basic_blocks = [0]
         for n in range(len(self.instruction_set)):
             if (
                 self.offset_bitmask[n] and 
                 self.instruction_set[n].value in InstTableMap.terminating_blocks()
             ):
-                basic_blocks.append(U8(n + 1 + self.skip(n)))
+                basic_blocks.append(n + 1 + self.skip(n))
         return basic_blocks
     
     def branch(
@@ -91,6 +91,7 @@ class Program(Codable, JsonSerde):
             return CONTINUE, counter
         elif branch not in self.basic_blocks:
             raise PvmError(PvmErrorCodes.PANIC)
+        print("JUMP:", branch)
         return CONTINUE, branch
 
     def djump(
