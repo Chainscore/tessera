@@ -49,10 +49,10 @@ class InstructionsWArgs1Reg2Imm(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            70: OpCode(name="store_imm_ind_u8", fn=cls.store_imm_ind_u(8), gas=Gas(0), is_terminating=False),
-            71: OpCode(name="store_imm_ind_u16", fn=cls.store_imm_ind_u(16), gas=Gas(0), is_terminating=False),
-            72: OpCode(name="store_imm_ind_u32", fn=cls.store_imm_ind_u(32), gas=Gas(0), is_terminating=False),
-            73: OpCode(name="store_imm_ind_u64", fn=cls.store_imm_ind_u(64), gas=Gas(0), is_terminating=False),
+            70: OpCode(name="store_imm_ind_u8", fn=cls.store_imm_ind_u(8), gas=Gas(1), is_terminating=False),
+            71: OpCode(name="store_imm_ind_u16", fn=cls.store_imm_ind_u(16), gas=Gas(1), is_terminating=False),
+            72: OpCode(name="store_imm_ind_u32", fn=cls.store_imm_ind_u(32), gas=Gas(1), is_terminating=False),
+            73: OpCode(name="store_imm_ind_u64", fn=cls.store_imm_ind_u(64), gas=Gas(1), is_terminating=False),
         }
 
 

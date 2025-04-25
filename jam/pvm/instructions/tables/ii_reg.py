@@ -20,18 +20,18 @@ class InstructionsWArgs2Reg(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            100: OpCode(name="move_reg", fn=cls.move_reg, gas=Gas(0), is_terminating=False),
-            101: OpCode(name="sbrk", fn=cls.sbrk, gas=Gas(0), is_terminating=False),
-            102: OpCode(name="count_set_bits_64", fn=cls.count_set_bits(64), gas=Gas(0), is_terminating=False),
-            103: OpCode(name="count_set_bits_32", fn=cls.count_set_bits(32), gas=Gas(0), is_terminating=False),
-            104: OpCode(name="leading_zero_bits_64", fn=cls.leading_zero_bits(64), gas=Gas(0), is_terminating=False),
-            105: OpCode(name="leading_zero_bits_32", fn=cls.leading_zero_bits(32), gas=Gas(0), is_terminating=False),
-            106: OpCode(name="trailing_zero_bits_64", fn=cls.trailing_zero_bits(64), gas=Gas(0), is_terminating=False),
-            107: OpCode(name="trailing_zero_bits_32", fn=cls.trailing_zero_bits(32), gas=Gas(0), is_terminating=False),
-            108: OpCode(name="sign_extend_8", fn=cls.sign_extend(8), gas=Gas(0), is_terminating=False),
-            109: OpCode(name="sign_extend_16", fn=cls.sign_extend(16), gas=Gas(0), is_terminating=False),
-            110: OpCode(name="zero_extend_16", fn=cls.zero_extend_16, gas=Gas(0), is_terminating=False),
-            111: OpCode(name="reverse_bytes", fn=cls.reverse_bytes, gas=Gas(0), is_terminating=False),
+            100: OpCode(name="move_reg", fn=cls.move_reg, gas=Gas(1), is_terminating=False),
+            101: OpCode(name="sbrk", fn=cls.sbrk, gas=Gas(1), is_terminating=False),
+            102: OpCode(name="count_set_bits_64", fn=cls.count_set_bits(64), gas=Gas(1), is_terminating=False),
+            103: OpCode(name="count_set_bits_32", fn=cls.count_set_bits(32), gas=Gas(1), is_terminating=False),
+            104: OpCode(name="leading_zero_bits_64", fn=cls.leading_zero_bits(64), gas=Gas(1), is_terminating=False),
+            105: OpCode(name="leading_zero_bits_32", fn=cls.leading_zero_bits(32), gas=Gas(1), is_terminating=False),
+            106: OpCode(name="trailing_zero_bits_64", fn=cls.trailing_zero_bits(64), gas=Gas(1), is_terminating=False),
+            107: OpCode(name="trailing_zero_bits_32", fn=cls.trailing_zero_bits(32), gas=Gas(1), is_terminating=False),
+            108: OpCode(name="sign_extend_8", fn=cls.sign_extend(8), gas=Gas(1), is_terminating=False),
+            109: OpCode(name="sign_extend_16", fn=cls.sign_extend(16), gas=Gas(1), is_terminating=False),
+            110: OpCode(name="zero_extend_16", fn=cls.zero_extend_16, gas=Gas(1), is_terminating=False),
+            111: OpCode(name="reverse_bytes", fn=cls.reverse_bytes, gas=Gas(1), is_terminating=False),
         }
     
     def move_reg(self, registers: Registers, memory: Memory) -> OpReturn:
