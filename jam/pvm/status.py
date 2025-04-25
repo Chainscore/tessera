@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from jam.types.base.choices.option import decodable_option
+from jam.types.base.choices.option import Option, decodable_option
 from jam.types.base.enum import Enum, decodable_enum
 from jam.types.protocol.core import Register
 from jam.utils.codec.codable import Codable
@@ -16,7 +16,7 @@ class ExecutionStatusCode(Enum):
 
 
 @decodable_option(Register)
-class OptionalRegister(Codable):
+class OptionalRegister(Option):
     ... 
 
 @decodable_dataclass

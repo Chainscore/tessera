@@ -53,6 +53,6 @@ class PVM:
                 if e.code == PvmErrorCodes.PANIC:
                     return PANIC, program_counter, remaining_gas, registers, memory
                 elif e.code == PvmErrorCodes.PAGE_FAULT:
-                    return PAGE_FAULT(Register(0)), program_counter, remaining_gas, registers, memory
+                    return PAGE_FAULT(Register(e.args[1])), program_counter, remaining_gas, registers, memory
                 else:
                     raise e
