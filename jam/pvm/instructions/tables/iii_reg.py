@@ -47,9 +47,9 @@ class InstructionsWArgs3Reg(InstructionTable):
             207: OpCode(name="shlo_l_64", fn=cls.shlo_l_64, gas=Gas(0), is_terminating=False),
             208: OpCode(name="shlo_r_64", fn=cls.shlo_r_64, gas=Gas(0), is_terminating=False),
             209: OpCode(name="shar_r_64", fn=cls.shar_r_64, gas=Gas(0), is_terminating=False),
-            210: OpCode(name="and", fn=cls._and, gas=Gas(0), is_terminating=False),
-            211: OpCode(name="xor", fn=cls._xor, gas=Gas(0), is_terminating=False),
-            212: OpCode(name="or", fn=cls._or, gas=Gas(0), is_terminating=False),
+            210: OpCode(name="and", fn=cls._op("and"), gas=Gas(0), is_terminating=False),
+            211: OpCode(name="xor", fn=cls._op("xor"), gas=Gas(0), is_terminating=False),
+            212: OpCode(name="or", fn=cls._op("or"), gas=Gas(0), is_terminating=False),
             213: OpCode(name="mul_upper_s_s", fn=cls.mul_upper_s_s, gas=Gas(0), is_terminating=False),
             214: OpCode(name="mul_upper_u_u", fn=cls.mul_upper_u_u, gas=Gas(0), is_terminating=False),
             215: OpCode(name="mul_upper_s_u", fn=cls.mul_upper_s_u, gas=Gas(0), is_terminating=False),
@@ -61,9 +61,9 @@ class InstructionsWArgs3Reg(InstructionTable):
             221: OpCode(name="rot_l_32", fn=cls.rot_l_32, gas=Gas(0), is_terminating=False),
             222: OpCode(name="rot_r_64", fn=cls.rot_r(64), gas=Gas(0), is_terminating=False),
             223: OpCode(name="rot_r_32", fn=cls.rot_r(32), gas=Gas(0), is_terminating=False),
-            224: OpCode(name="and_inv", fn=cls._and_inv, gas=Gas(0), is_terminating=False),
-            225: OpCode(name="or_inv", fn=cls._or_inv, gas=Gas(0), is_terminating=False),
-            226: OpCode(name="xnor", fn=cls._xnor, gas=Gas(0), is_terminating=False),
+            224: OpCode(name="and_inv", fn=cls._op("and", inv_b=True), gas=Gas(0), is_terminating=False),
+            225: OpCode(name="or_inv", fn=cls._op("or", inv_b=True), gas=Gas(0), is_terminating=False),
+            226: OpCode(name="xnor", fn=cls._op("xor", inv_res=True), gas=Gas(0), is_terminating=False),
             227: OpCode(name="max", fn=cls._max, gas=Gas(0), is_terminating=False),
             228: OpCode(name="max_u", fn=cls._max_u, gas=Gas(0), is_terminating=False),
             229: OpCode(name="min", fn=cls._min, gas=Gas(0), is_terminating=False),
@@ -101,14 +101,14 @@ class InstructionsWArgs3Reg(InstructionTable):
     def mul_32(self, registers: Registers, memory: Memory) -> OpReturn:
         registers[self.rd] = Register(
             PvmUtilities.chi(
-                (registers[self.ra] * registers[self.rb]) % 2**32, 
+                (int(registers[self.ra]) * int(registers[self.rb])) % 2**32, 
                 4
             )
         )
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     def mul_64(self, registers: Registers, memory: Memory) -> OpReturn:
-        registers[self.rd] = Register((registers[self.ra] * registers[self.rb]) % 2**64)
+        registers[self.rd] = Register((int(registers[self.ra]) * int(registers[self.rb])) % 2**64)
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     def div_u_32(self, registers: Registers, memory: Memory) -> OpReturn:
@@ -194,7 +194,7 @@ class InstructionsWArgs3Reg(InstructionTable):
     
     def shlo_l_32(self, registers: Registers, memory: Memory) -> OpReturn:
         registers[self.rd] = Register(PvmUtilities.chi(
-            (registers[self.ra] * 2**(int(registers[self.rb]) % 32)) % 2**32,
+            (int(registers[self.ra]) * 2**(int(registers[self.rb]) % 32)) % 2**32,
             4
         ))
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
@@ -231,53 +231,20 @@ class InstructionsWArgs3Reg(InstructionTable):
         ))
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
-    def _and(self, registers: Registers, memory: Memory) -> OpReturn:
-        ba = PvmUtilities.b(int(registers[self.ra]), 8)
-        bb = PvmUtilities.b(int(registers[self.rb]), 8)
-        registers[self.rd] = Register(int.from_bytes(PvmUtilities.b_inv(
-            [(ba[i] & bb[i]) for i in range(64)]
-        )))
-        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
-    
-    def _xor(self, registers: Registers, memory: Memory) -> OpReturn:
-        ba = PvmUtilities.b(int(registers[self.ra]), 8)
-        bb = PvmUtilities.b(int(registers[self.rb]), 8)
-        registers[self.rd] = Register(int.from_bytes(PvmUtilities.b_inv(
-            [(ba[i] ^ bb[i]) for i in range(64)]
-        )))
-        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
-    
-    def _or(self, registers: Registers, memory: Memory) -> OpReturn:
-        ba = PvmUtilities.b(int(registers[self.ra]), 8)
-        bb = PvmUtilities.b(int(registers[self.rb]), 8)
-        registers[self.rd] = Register(int.from_bytes(PvmUtilities.b_inv(
-            [(ba[i] or bb[i]) for i in range(64)]
-        )))
-        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
-    
-    def _and_inv(self, registers: Registers, memory: Memory) -> OpReturn:
-        ba = PvmUtilities.b(int(registers[self.ra]), 8)
-        bb = PvmUtilities.b(int(registers[self.rb]), 8)
-        registers[self.rd] = Register(int.from_bytes(PvmUtilities.b_inv(
-            [(ba[i] & (not bb[i])) for i in range(64)]
-        )))
-        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
-    
-    def _xnor(self, registers: Registers, memory: Memory) -> OpReturn:
-        ba = PvmUtilities.b(int(registers[self.ra]), 8)
-        bb = PvmUtilities.b(int(registers[self.rb]), 8)
-        registers[self.rd] = Register(int.from_bytes(PvmUtilities.b_inv(
-            [(not (ba[i] ^ bb[i])) for i in range(64)]
-        )))
-        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
-    
-    def _or_inv(self, registers: Registers, memory: Memory) -> OpReturn:
-        ba = PvmUtilities.b(int(registers[self.ra]), 8)
-        bb = PvmUtilities.b(int(registers[self.rb]), 8)
-        registers[self.rd] = Register(int.from_bytes(PvmUtilities.b_inv(
-            [(ba[i] or (not bb[i])) for i in range(64)]
-        )))
-        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
+    def _op(op: str, inv_a = False, inv_b = False, inv_res = False):
+        def op_impl(self, registers: Registers, memory: Memory) -> OpReturn:
+            ba = PvmUtilities.b(registers[self.ra], 8)
+            bb = PvmUtilities.b(registers[self.rb], 8)
+            result = [0] * 64
+            for i in range(64):
+                a = (not ba[i]) if inv_a else ba[i]
+                b = (not bb[i]) if inv_b else bb[i]
+                result[i] = PvmUtilities.compare(a, b, op)
+                if inv_res:
+                    result[i] = (not result[i])
+            registers[self.rd] = Register(PvmUtilities.b_inv(result))
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
+        return op_impl
     
     def mul_upper_s_s(self, registers: Registers, memory: Memory) -> OpReturn:
         registers[self.rd] = Register(
@@ -290,13 +257,13 @@ class InstructionsWArgs3Reg(InstructionTable):
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     def mul_upper_u_u(self, registers: Registers, memory: Memory) -> OpReturn:
-        registers[self.rd] = Register((registers[self.ra] * registers[self.rb]) // 2**64)
+        registers[self.rd] = Register((int(registers[self.ra]) * int(registers[self.rb])) // 2**64)
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     def mul_upper_s_u(self, registers: Registers, memory: Memory) -> OpReturn:
         registers[self.rd] = Register(
             PvmUtilities.z_inv(
-                PvmUtilities.z(registers[self.ra], 8) * registers[self.rb] 
+                PvmUtilities.z(int(registers[self.ra]), 8) * int(registers[self.rb])
                 // 2**64,
                 8
             )
@@ -351,27 +318,25 @@ class InstructionsWArgs3Reg(InstructionTable):
         x = [False] * 64
         ba = PvmUtilities.b(registers[self.ra], 8)
         for i in range(64):
-            x[(i+registers[self.rb]) % 64] = ba[i]
+            x[(i+int(registers[self.rb])) % 64] = ba[i]
         registers[self.rd] = Register(PvmUtilities.b_inv(x))
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     def rot_l_32(self, registers: Registers, memory: Memory) -> OpReturn:
         x = [False] * 32
-        ba = PvmUtilities.b(registers[self.ra], 8)
+        ba = PvmUtilities.b(int(registers[self.ra]) % 2**32, 4)
         for i in range(32):
-            x[(i+registers[self.rb]) % 32] = ba[i]
+            x[(i+int(registers[self.rb])) % 32] = ba[i]
         registers[self.rd] = Register(PvmUtilities.chi(PvmUtilities.b_inv(x), 4))
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     def rot_r(bitsize: int) -> Callable[[Any, Registers, Memory], OpReturn]:
         def rot_r_impl(self, registers: Registers, memory: Memory) -> OpReturn:
-            a = registers[self.ra] 
-            b = registers[self.rb] 
-            value = PvmUtilities.b(a, bitsize // 8)
-            x = PvmUtilities.b_inv([a[(i+b) % bitsize] for i in range(bitsize)])
+            a_bits = PvmUtilities.b(int(registers[self.ra]) % 2**(bitsize), bitsize // 8)
+            b = int(registers[self.rb]) % 2**(bitsize)
+            x = PvmUtilities.b_inv([a_bits[(i+b) % bitsize] for i in range(bitsize)])
             if bitsize < 64:
-                value = PvmUtilities.chi(x, bitsize//8)
-            registers[self.ra] = Register(value)
+                x = PvmUtilities.chi(x, bitsize//8)
+            registers[self.rd] = Register(x)
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return rot_r_impl
-    

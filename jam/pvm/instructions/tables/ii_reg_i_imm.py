@@ -82,13 +82,11 @@ class InstructionsWArgs2Reg1Imm(InstructionTable):
 
     def op_imm(op: str) -> Callable[[Any, Registers, Memory], OpReturn]:
         def op_imm_impl(self, registers: Registers, memory: Memory) -> OpReturn:
-            wb_bits = PvmUtilities.b(int(registers[self.rb]), 8)
+            wb_bits = PvmUtilities.b(registers[self.rb], 8)
             vx_bits = PvmUtilities.b(self.vx, 8)
             registers[self.ra] = Register(
-                int.from_bytes(
-                    PvmUtilities.b_inv(
-                        [PvmUtilities.compare(wb_bits[i], vx_bits[i], op) for i in range(64)]
-                    )
+                PvmUtilities.b_inv(
+                    [PvmUtilities.compare(wb_bits[i], vx_bits[i], op) for i in range(64)]
                 )
             )
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
@@ -106,6 +104,8 @@ class InstructionsWArgs2Reg1Imm(InstructionTable):
         def shlo_l_imm_impl(self, registers: Registers, memory: Memory) -> OpReturn:
             a = int(registers[self.rb]) if not alt else self.vx
             b = self.vx if not alt else int(registers[self.rb])
+
+            print("a", a, "b", b)
                 
             registers[self.ra] = Register(
                 PvmUtilities.chi(
@@ -174,13 +174,16 @@ class InstructionsWArgs2Reg1Imm(InstructionTable):
     
     def rot_imm(bitsize: int, alt = False) -> Callable[[Any, Registers, Memory], OpReturn]:
         def rot_imm_impl(self, registers: Registers, memory: Memory) -> OpReturn:
-            a = registers[self.rb] if not alt else self.vx
-            b = self.vx if not alt else registers[self.rb]
-            value = PvmUtilities.b(a, bitsize // 8)
-            x = PvmUtilities.b_inv([a[(i+b) % bitsize] for i in range(bitsize)])
+            a = int(registers[self.rb] if not alt else self.vx) % 2**(bitsize)
+            b = int(self.vx if not alt else registers[self.rb]) % 2**(bitsize)
+
+            a_bits = PvmUtilities.b(a, bitsize // 8)
+            x = PvmUtilities.b_inv([a_bits[(i+b) % bitsize] for i in range(bitsize)])
+
             if bitsize < 64:
-                value = PvmUtilities.chi(x, bitsize//8)
-            registers[self.ra] = Register(value)
+                x = PvmUtilities.chi(x, bitsize//8)
+            
+            registers[self.ra] = Register(x)
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return rot_imm_impl
     
@@ -209,7 +212,7 @@ class InstructionsWArgs2Reg1Imm(InstructionTable):
         ) -> OpReturn:
             memory.write(
                 int(registers[self.rb]) + self.vx,
-                int(registers[self.ra] % 2**bitsize)
+                IntegerCodec(bitsize // 8).encode(int(registers[self.ra] % 2**bitsize))
             )
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return store_ind_impl

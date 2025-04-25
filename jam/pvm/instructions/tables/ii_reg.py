@@ -47,11 +47,12 @@ class InstructionsWArgs2Reg(InstructionTable):
         def count_set_bits_impl(
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
-            registers[self.rd] = sum(
+            registers[self.rd] = Register(sum(
                 PvmUtilities.b(
-                    (int.from_bytes(registers[self.ra]) % 2**bitsize).to_bytes(bitsize // 8), 
-                    bitsize // 8)[:bitsize]
-            )
+                    int(registers[self.ra]) % 2**bitsize, 
+                    bitsize // 8
+                )[:bitsize]
+            ))
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return count_set_bits_impl
     
@@ -62,12 +63,12 @@ class InstructionsWArgs2Reg(InstructionTable):
         ) -> OpReturn:
             try:
                 leading_zeroes = PvmUtilities.b(
-                        (int.from_bytes(registers[self.ra]) % 2**bitsize).to_bytes(bitsize // 8), 
+                        int(registers[self.ra]) % 2**bitsize, 
                         bitsize // 8
-                    ).index(True)
+                    )[::-1].index(True)
             except ValueError:
-                leading_zeroes = 64
-            registers[self.rd] = leading_zeroes
+                leading_zeroes = bitsize
+            registers[self.rd] = Register(leading_zeroes)
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return leading_zero_bits_impl
     
@@ -77,14 +78,13 @@ class InstructionsWArgs2Reg(InstructionTable):
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
             try:
-                rev_values = PvmUtilities.b(
-                    (int.from_bytes(registers[self.ra]) % 2**bitsize).to_bytes(bitsize // 8), 
+                trailing_zeroes = PvmUtilities.b(
+                    int(registers[self.ra]) % 2**bitsize, 
                     bitsize // 8
-                )
-                leading_zeroes = len(rev_values) - 1 - rev_values[::-1].index(True)
+                ).index(True)
             except ValueError:
-                leading_zeroes = 64
-            registers[self.rd] = Register(leading_zeroes)
+                trailing_zeroes = bitsize
+            registers[self.rd] = Register(trailing_zeroes)
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return trailing_zero_impl
     
@@ -95,7 +95,7 @@ class InstructionsWArgs2Reg(InstructionTable):
         ) -> OpReturn:
             registers[self.rd] = Register(PvmUtilities.z_inv(
                 PvmUtilities.z(
-                    int.from_bytes(registers[self.ra]) % 2**bitsize, 
+                    int(registers[self.ra]) % 2**bitsize, 
                     bitsize // 8
                 ),
                 8
@@ -104,9 +104,9 @@ class InstructionsWArgs2Reg(InstructionTable):
         return sign_extend_impl
     
     def zero_extend_16(self, registers: Registers, memory: Memory) -> OpReturn:
-        registers[self.rd] = Register(int.from_bytes(registers[self.ra]) % 2**16)
+        registers[self.rd] = Register(int(registers[self.ra]) % 2**16)
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     def reverse_bytes(self, registers: Registers, memory: Memory) -> OpReturn:
-        registers[self.rd] = Register.decode_from(reversed(registers[self.ra].encode()))[0]
+        registers[self.rd] = Register.decode_from(registers[self.ra].encode()[::-1])[0]
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory

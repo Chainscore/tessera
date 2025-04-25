@@ -6,23 +6,30 @@ from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
 from jam.pvm.status import CONTINUE, ExecutionStatus
 from jam.pvm.utils import PvmUtilities
-from jam.types.base.integers.fixed import U8
+from jam.types.base.integers.fixed import U32, U8
 from jam.types.protocol.core import Gas, ProgramCounter
 from jam.utils.codec.primitives.integers import IntegerCodec
 
 
 class WArgsOneOffset(InstructionTable):
     @property
-    def lx(self) -> U8:
-        return U8(min(4, int(self.skip_index)))
+    def lx(self) -> int:
+        return min(4, int(self.skip_index))
     
     @property
-    def vx(self) -> U8:
+    def vx(self) -> int:
         start = self.counter + 1
         end = start + self.lx
-        return self.counter + PvmUtilities.z(
-            IntegerCodec.decode_from(int(self.lx), self.program.zeta[start:end])[0],
-            self.lx,
+        print(self.program.zeta[start:end], IntegerCodec.decode_from(
+                self.lx, 
+                self.program.zeta[start:end]
+            )[0], self.lx)
+        return int(self.counter) + PvmUtilities.z(
+            IntegerCodec.decode_from(
+                self.lx, 
+                self.program.zeta[start:end]
+            )[0],
+            self.lx
         )
     
     @classmethod
@@ -36,8 +43,7 @@ class WArgsOneOffset(InstructionTable):
         registers: Registers, 
         memory: Memory
     ) -> Tuple[ExecutionStatus, ProgramCounter, Registers, Memory]:
-        status, updated_counter = self.program.branch(self.counter, self.vx, True)
-        if status == CONTINUE:
-            return CONTINUE, updated_counter, registers, memory
-        else:
-            raise PvmError(PvmErrorCodes.UNEXPECTED)
+        status, counter = self.program.branch(self.counter, U32(self.vx), True)
+        if status == CONTINUE and counter != self.counter:
+            return status, counter, registers, memory
+        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
