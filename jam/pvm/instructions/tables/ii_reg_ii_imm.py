@@ -53,7 +53,7 @@ class InstructionsWArgs2Reg2Imm(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            180: OpCode(name="load_imm_jump_ind", fn=cls.load_imm_jump_ind, gas=Gas(0), is_terminating=True),
+            180: OpCode(name="load_imm_jump_ind", fn=cls.load_imm_jump_ind, gas=Gas(1), is_terminating=True),
         }
 
     def load_imm_jump_ind(

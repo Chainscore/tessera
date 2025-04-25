@@ -35,7 +35,7 @@ class WArgsOneOffset(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            40: OpCode(name="jump", fn=cls.jump, gas=Gas(0), is_terminating=True),
+            40: OpCode(name="jump", fn=cls.jump, gas=Gas(1), is_terminating=True),
         }
     
     def jump(

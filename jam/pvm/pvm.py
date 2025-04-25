@@ -3,7 +3,7 @@ from jam.pvm.instructions.table_map import InstTableMap
 from jam.pvm.memory import Memory
 from jam.pvm.program import Program
 from jam.pvm.register import Registers
-from jam.pvm.status import HALT, PAGE_FAULT, PANIC, ExecutionStatus, ExecutionStatusCode
+from jam.pvm.status import HALT, OUT_OF_GAS, PAGE_FAULT, PANIC, ExecutionStatus, ExecutionStatusCode
 from jam.types.base.integers.fixed import U8
 from jam.types.protocol.core import Gas, ProgramCounter, Register, RemainingGas
 from jam.pvm.errors import PvmError, PvmErrorCodes
@@ -36,29 +36,23 @@ class PVM:
             Memory: Final memory
         """
         program, _ = Program.decode_from(blob)
-        print(f"Jump Table : {program.jump_table}")
+        remaining_gas = int(gas)
         while True:
             try:
                 opcode: U8 = program.zeta[program_counter]
                 table = InstTableMap.get_instructions_table(opcode)(counter=program_counter, program=program)
-                print(f"\nExecuting {opcode} - {table.table()[int(opcode)].name}")
-                print(f"PC \t | {program_counter}")
-                print(f"Reg \t | {[int(r) for r in registers]}")
-                print(f"Memory \t | {memory.data}")
-                print(f"Imm \t | {program.zeta[program_counter + 1 : program_counter+ program.skip(program_counter) + 1]}")
 
                 status, program_counter, registers, memory = table.execute(opcode, registers, memory)
+                remaining_gas -= int(table.table()[opcode].gas)
 
-                if status.code == ExecutionStatusCode.HALT:
-                    return status, program_counter, gas, registers, memory
-                print(f"Op \t | {status.code} | Next: {int(program_counter)} -> {program.zeta[program_counter]}")
+                if remaining_gas < 0:
+                    return OUT_OF_GAS, program_counter, remaining_gas, registers, memory
+                elif status.code == ExecutionStatusCode.HALT:
+                    return status, program_counter, remaining_gas, registers, memory
             except PvmError as e:
-                print("Exit condition e", e)
                 if e.code == PvmErrorCodes.PANIC:
-                    return PANIC, program_counter, gas, registers, memory
+                    return PANIC, program_counter, remaining_gas, registers, memory
                 elif e.code == PvmErrorCodes.PAGE_FAULT:
-                    return PAGE_FAULT(Register(0)), program_counter, gas, registers, memory
-                elif e.code == PvmErrorCodes.INVALID_OPCODE:
-                    return PANIC, program_counter, gas, registers, memory
+                    return PAGE_FAULT(Register(0)), program_counter, remaining_gas, registers, memory
                 else:
                     raise e

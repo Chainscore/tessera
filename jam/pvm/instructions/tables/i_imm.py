@@ -27,7 +27,7 @@ class InstructionsWArgs1Imm(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            10: OpCode(name="ecalli", fn=cls.ecalli, gas=Gas(0), is_terminating=False),
+            10: OpCode(name="ecalli", fn=cls.ecalli, gas=Gas(1), is_terminating=False),
         }
 
     def ecalli(

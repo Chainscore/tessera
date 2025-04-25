@@ -41,12 +41,12 @@ class InstructionsWArgs2Reg1Offset(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            170: OpCode(name="branch_eq", fn=cls.branch("eq"), gas=Gas(0), is_terminating=True),
-            171: OpCode(name="branch_ne", fn=cls.branch("ne"), gas=Gas(0), is_terminating=True),
-            172: OpCode(name="branch_lt_u", fn=cls.branch("lt"), gas=Gas(0), is_terminating=True),
-            173: OpCode(name="branch_lt_s", fn=cls.branch("lt", True), gas=Gas(0), is_terminating=True),
-            174: OpCode(name="branch_ge_u", fn=cls.branch("ge"), gas=Gas(0), is_terminating=True),
-            175: OpCode(name="branch_ge_s", fn=cls.branch("ge", True), gas=Gas(0), is_terminating=True),
+            170: OpCode(name="branch_eq", fn=cls.branch("eq"), gas=Gas(1), is_terminating=True),
+            171: OpCode(name="branch_ne", fn=cls.branch("ne"), gas=Gas(1), is_terminating=True),
+            172: OpCode(name="branch_lt_u", fn=cls.branch("lt"), gas=Gas(1), is_terminating=True),
+            173: OpCode(name="branch_lt_s", fn=cls.branch("lt", True), gas=Gas(1), is_terminating=True),
+            174: OpCode(name="branch_ge_u", fn=cls.branch("ge"), gas=Gas(1), is_terminating=True),
+            175: OpCode(name="branch_ge_s", fn=cls.branch("ge", True), gas=Gas(1), is_terminating=True),
         }
 
     @staticmethod

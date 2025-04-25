@@ -49,17 +49,17 @@ class InstructionsWArgs1Reg1Imm1Offset(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            80: OpCode(name="load_imm_jump", fn=cls.load_imm_jump, gas=Gas(0), is_terminating=True),
-            81: OpCode(name="branch_eq_imm", fn=cls.branch_imm("eq"), gas=Gas(0), is_terminating=True),
-            82: OpCode(name="branch_ne_imm", fn=cls.branch_imm("ne"), gas=Gas(0), is_terminating=True),
-            83: OpCode(name="branch_lt_u_imm", fn=cls.branch_imm("lt"), gas=Gas(0), is_terminating=True),
-            84: OpCode(name="branch_le_u_imm", fn=cls.branch_imm("le"), gas=Gas(0), is_terminating=True),
-            85: OpCode(name="branch_ge_u_imm", fn=cls.branch_imm("ge"), gas=Gas(0), is_terminating=True),
-            86: OpCode(name="branch_gt_u_imm", fn=cls.branch_imm("gt"), gas=Gas(0), is_terminating=True),
-            87: OpCode(name="branch_lt_s_imm", fn=cls.branch_imm("lt", True), gas=Gas(0), is_terminating=True),
-            88: OpCode(name="branch_le_s_imm", fn=cls.branch_imm("le", True), gas=Gas(0), is_terminating=True),
-            89: OpCode(name="branch_ge_s_imm", fn=cls.branch_imm("ge", True), gas=Gas(0), is_terminating=True),
-            90: OpCode(name="branch_gt_s_imm", fn=cls.branch_imm("gt", True), gas=Gas(0), is_terminating=True),
+            80: OpCode(name="load_imm_jump", fn=cls.load_imm_jump, gas=Gas(1), is_terminating=True),
+            81: OpCode(name="branch_eq_imm", fn=cls.branch_imm("eq"), gas=Gas(1), is_terminating=True),
+            82: OpCode(name="branch_ne_imm", fn=cls.branch_imm("ne"), gas=Gas(1), is_terminating=True),
+            83: OpCode(name="branch_lt_u_imm", fn=cls.branch_imm("lt"), gas=Gas(1), is_terminating=True),
+            84: OpCode(name="branch_le_u_imm", fn=cls.branch_imm("le"), gas=Gas(1), is_terminating=True),
+            85: OpCode(name="branch_ge_u_imm", fn=cls.branch_imm("ge"), gas=Gas(1), is_terminating=True),
+            86: OpCode(name="branch_gt_u_imm", fn=cls.branch_imm("gt"), gas=Gas(1), is_terminating=True),
+            87: OpCode(name="branch_lt_s_imm", fn=cls.branch_imm("lt", True), gas=Gas(1), is_terminating=True),
+            88: OpCode(name="branch_le_s_imm", fn=cls.branch_imm("le", True), gas=Gas(1), is_terminating=True),
+            89: OpCode(name="branch_ge_s_imm", fn=cls.branch_imm("ge", True), gas=Gas(1), is_terminating=True),
+            90: OpCode(name="branch_gt_s_imm", fn=cls.branch_imm("gt", True), gas=Gas(1), is_terminating=True),
         }
 
     def load_imm_jump(self, registers: Registers, memory: Memory) -> OpReturn:
