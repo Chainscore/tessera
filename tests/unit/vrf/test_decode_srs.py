@@ -1,8 +1,8 @@
 import os
-
+from py_ecc.bls12_381 import G1,G2
 def test_read_srs_file():
-    filename = "tests/unit/vrf/data/srs/bls12-381-srs-2-11-uncompressed-zcash.bin"
-    
+    filename = "/home/siva/PycharmProjects/tessera_VRF/tests/unit/vrf/data/srs/bls12-381-srs-2-11-uncompressed-zcash.bin"
+
     if not os.path.exists(filename):
         raise FileNotFoundError(f"File {filename} not found.")
 
@@ -25,8 +25,8 @@ def test_read_srs_file():
             raise ValueError(f"Unexpected end-of-file when reading G1 point {i}.")
         x_bytes = point_bytes[:48]
         y_bytes = point_bytes[48:]
-        x = int.from_bytes(x_bytes, byteorder="little")
-        y = int.from_bytes(y_bytes, byteorder="little")
+        x = int.from_bytes(x_bytes, byteorder="big")
+        y = int.from_bytes(y_bytes, byteorder="big")
         G1_points.append((x, y))
         offset += G1_POINT_SIZE
 
@@ -37,10 +37,10 @@ def test_read_srs_file():
         point_bytes = data[offset:offset + G2_POINT_SIZE]
         if len(point_bytes) != G2_POINT_SIZE:
             raise ValueError(f"Unexpected end-of-file when reading G2 point {i}.")
-        x0 = int.from_bytes(point_bytes[0:48], byteorder="little")
-        x1 = int.from_bytes(point_bytes[48:96], byteorder="little")
-        y0 = int.from_bytes(point_bytes[96:144], byteorder="little")
-        y1 = int.from_bytes(point_bytes[144:192], byteorder="little")
+        x0 = int.from_bytes(point_bytes[0:48], byteorder="big")
+        x1 = int.from_bytes(point_bytes[48:96], byteorder="big")
+        y0 = int.from_bytes(point_bytes[96:144], byteorder="big")
+        y1 = int.from_bytes(point_bytes[144:192], byteorder="big")
         G2_points.append(((x0, x1), (y0, y1)))
         offset += G2_POINT_SIZE
 
@@ -50,3 +50,5 @@ def test_read_srs_file():
     print(f"Found total of {len(g2_points)} G2 points")
     print("First G1 point:", g1_points[0])
     print("First G2 point:", g2_points[0])
+    print(G1 in g1_points)
+    # print(G2 in g2_points) # False
