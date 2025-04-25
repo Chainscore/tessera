@@ -35,19 +35,19 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            50: OpCode(name="jump_ind", fn=cls.jump_ind, gas=Gas(0), is_terminating=True),
-            51: OpCode(name="load_imm", fn=cls.load_imm, gas=Gas(0), is_terminating=False),
-            52: OpCode(name="load_u8", fn=cls.load_u(8), gas=Gas(0), is_terminating=False),
-            53: OpCode(name="load_i8", fn=cls.load_i(8), gas=Gas(0), is_terminating=False),
-            54: OpCode(name="load_u16", fn=cls.load_u(16), gas=Gas(0), is_terminating=False),
-            55: OpCode(name="load_i16", fn=cls.load_i(16), gas=Gas(0), is_terminating=False),
-            56: OpCode(name="load_u32", fn=cls.load_u(32), gas=Gas(0), is_terminating=False),
-            57: OpCode(name="load_i32", fn=cls.load_i(32), gas=Gas(0), is_terminating=False),
-            58: OpCode(name="load_u64", fn=cls.load_u(64), gas=Gas(0), is_terminating=False),
-            59: OpCode(name="store_u8", fn=cls.store_u(8), gas=Gas(0), is_terminating=False),
-            60: OpCode(name="store_u16", fn=cls.store_u(16), gas=Gas(0), is_terminating=False),
-            61: OpCode(name="store_u32", fn=cls.store_u(32), gas=Gas(0), is_terminating=False),
-            62: OpCode(name="store_u64", fn=cls.store_u(64), gas=Gas(0), is_terminating=False),
+            50: OpCode(name="jump_ind", fn=cls.jump_ind, gas=Gas(1), is_terminating=True),
+            51: OpCode(name="load_imm", fn=cls.load_imm, gas=Gas(1), is_terminating=False),
+            52: OpCode(name="load_u8", fn=cls.load_u(8), gas=Gas(1), is_terminating=False),
+            53: OpCode(name="load_i8", fn=cls.load_i(8), gas=Gas(1), is_terminating=False),
+            54: OpCode(name="load_u16", fn=cls.load_u(16), gas=Gas(1), is_terminating=False),
+            55: OpCode(name="load_i16", fn=cls.load_i(16), gas=Gas(1), is_terminating=False),
+            56: OpCode(name="load_u32", fn=cls.load_u(32), gas=Gas(1), is_terminating=False),
+            57: OpCode(name="load_i32", fn=cls.load_i(32), gas=Gas(1), is_terminating=False),
+            58: OpCode(name="load_u64", fn=cls.load_u(64), gas=Gas(1), is_terminating=False),
+            59: OpCode(name="store_u8", fn=cls.store_u(8), gas=Gas(1), is_terminating=False),
+            60: OpCode(name="store_u16", fn=cls.store_u(16), gas=Gas(1), is_terminating=False),
+            61: OpCode(name="store_u32", fn=cls.store_u(32), gas=Gas(1), is_terminating=False),
+            62: OpCode(name="store_u64", fn=cls.store_u(64), gas=Gas(1), is_terminating=False),
         }
 
     def jump_ind(
