@@ -60,6 +60,6 @@ class InstructionsWArgs2Imm(InstructionTable):
         def store_imm_impl(
             self, registers: Registers, memory: Memory
         ) -> OpReturn:
-            memory.write(self.vx, self.vy % 2**bit_size)
+            memory.write(self.vx, IntegerCodec(bit_size // 8).encode(self.vy % 2**bit_size))
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return store_imm_impl

@@ -26,7 +26,11 @@ class InstructionsWArgs2Reg1Offset(InstructionTable):
     def vx(self) -> int:
         start = self.counter + 2
         end = start + self.lx
-        return self.counter + PvmUtilities.z(
+        print(self.program.zeta[start:end], IntegerCodec.decode_from(
+                self.lx, 
+                self.program.zeta[start:end]
+            )[0], self.lx)
+        return int(self.counter) + PvmUtilities.z(
             IntegerCodec.decode_from(
                 self.lx, 
                 self.program.zeta[start:end]
@@ -50,14 +54,13 @@ class InstructionsWArgs2Reg1Offset(InstructionTable):
         def branch_impl(
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
+            a = PvmUtilities.z(registers[self.ra], 8) if signed else registers[self.ra]
+            b = PvmUtilities.z(registers[self.rb], 8) if signed else registers[self.rb]
+            print(a, b)
             status, counter = self.program.branch(
                 self.counter, 
                 ProgramCounter(self.vx), 
-                PvmUtilities.compare(
-                    PvmUtilities.z(registers[self.ra], 8) if signed else registers[self.ra], 
-                    PvmUtilities.z(registers[self.rb], 8) if signed else registers[self.rb], 
-                    op
-                )
+                PvmUtilities.compare(a, b, op)
             )
             if status == CONTINUE and counter != self.counter:
                 return status, counter, registers, memory

@@ -71,6 +71,7 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
         def load_u_impl(
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
+            print(f"Loading {memory.read(self.vx, bitsize // 8)} from {self.vx}")
             registers[self.ra] = Register(
                 IntegerCodec.decode_from(
                     bitsize // 8, 
@@ -85,7 +86,10 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
         def store_u_impl(
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
-            memory.write(self.vx, int(registers[self.ra]) % (2**bitsize))
+            memory.write(
+                self.vx, 
+                IntegerCodec(bitsize // 8).encode(int(registers[self.ra]) % (2**bitsize))
+            )
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return store_u_impl
     
