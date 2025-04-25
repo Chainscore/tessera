@@ -1,13 +1,19 @@
+import asyncio
+import json
+import random
 import tempfile
-from fastapi import FastAPI
+from datetime import datetime
+from typing import Any, Dict, Optional, Set
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
-from typing import Any, Dict, Optional
+
+from jam.consensus.grandpa.finality import Finality
 from jam.db.kv import KVStore
 from jam.state.state import State
-from jam.consensus.grandpa.finality import Finality
 from jam.types.block import Block
-from jam.types.protocol.core import TimeSlot
 from jam.types.header import Header
+from jam.types.protocol.core import TimeSlot
 
 # Initialize FastAPI with metadata for Swagger UI
 app = FastAPI(
@@ -16,7 +22,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-#db path
+# db path
 db_path = tempfile.mkdtemp()
 
 # Initialize store
@@ -50,16 +56,18 @@ curl https://docs-demo.quiknode.pro/ \
 
 """
 
+
 # Request model
 class RpcRequest(BaseModel):
     method: str
-    jsonrpc: str 
+    jsonrpc: str
     params: Dict[str, Any]
     id: Optional[Any]
 
+
 # Response models
-#block.py
-#grandpa.py
+# block.py
+# grandpa.py
 class RpcResponse(BaseModel):
     jsonrpc: str
     result: Any = None
@@ -76,32 +84,33 @@ async def rpc_handler(request: RpcRequest):
     params = request.params
 
     if method == "bestBlock":
-        # Handle bestBlock method        
+        # Handle bestBlock method
         return RpcResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                result=[
-                    Header.__hash__(db_block.header), 
-                    int(db_block.header.slot)]
-            )
-            
+            jsonrpc="2.0",
+            id=request.id,
+            result=[Header.__hash__(db_block.header), int(db_block.header.slot)],
+        )
+
     elif method == "finalizedBlock":
-    # Handle finalizedBlock method without requiring params
+        # Handle finalizedBlock method without requiring params
         return RpcResponse(
             jsonrpc="2.0",
             id=request.id,
             result=[
                 Header.__hash__(Finality.load_final(db).header),
-                int(Finality.load_final(db).header.slot)
-            ]
+                int(Finality.load_final(db).header.slot),
+            ],
         )
-            
+
     elif method == "parent":
         if len(params) != 1:
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash",
+                },
             )
         if len(params):
             if params["Hash"] == Header.__hash__(db_block.header):
@@ -111,8 +120,9 @@ async def rpc_handler(request: RpcRequest):
                     jsonrpc="2.0",
                     id=request.id,
                     result=[
-                        Header.__hash__(parent_block.header), 
-                        parent_block.header.slot]
+                        Header.__hash__(parent_block.header),
+                        parent_block.header.slot,
+                    ],
                 )
             else:
                 return RpcResponse(
@@ -120,21 +130,27 @@ async def rpc_handler(request: RpcRequest):
                     id=request.id,
                     error={"code": -32602, "message": "unexpected error"},
                 )
-        
+
     elif method == "stateRoot":
         if len(params) != 1:
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash",
+                },
             )
-        
+
         header_hash = params.get("Hash")
         if len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash",
+                },
             )
 
         if header_hash == Header.__hash__(db_block.header):
@@ -150,27 +166,31 @@ async def rpc_handler(request: RpcRequest):
                 error={"code": -32602, "message": "unexpected error"},
             )
 
-    elif method == "statistics":   
+    elif method == "statistics":
         if len(params) != 1:
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash",
+                },
             )
-        
+
         header_hash = params.get("Hash")
         if len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash",
+                },
             )
 
         if header_hash == Header.__hash__(db_block.header):
             return RpcResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                result=[db_state.pi.encode()]
+                jsonrpc="2.0", id=request.id, result=[db_state.pi.encode()]
             )
         else:
             return RpcResponse(
@@ -185,3 +205,161 @@ async def rpc_handler(request: RpcRequest):
         id=request.id,
         error={"code": -32601, "message": "Method not found"},
     )
+
+
+class SubscriptionManager:
+    def __init__(self):
+        self.connections: Dict[WebSocket, Set[str]] = {}
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.connections[websocket] = set()
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.connections:
+            del self.connections[websocket]
+
+    def subscribe(self, websocket: WebSocket, method: str):
+        if websocket in self.connections:
+            self.connections[websocket].add(method)
+            return True
+        return False
+
+    def unsubscribe(self, websocket: WebSocket, method: str):
+        if websocket in self.connections and method in self.connections[websocket]:
+            self.connections[websocket].remove(method)
+            return True
+        return False
+
+    async def broadcast(self, method: str, data: dict):
+        message = {"jsonrpc": "2.0", "method": method, "result": data}
+
+        for websocket, subscriptions in self.connections.items():
+            if method in subscriptions:
+                await websocket.send_text(json.dumps(message))
+
+
+manager = SubscriptionManager()
+
+
+@app.websocket("/rpc.tessera")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+
+    try:
+        while True:
+            # Wait for client to send subscription requests
+            data = await websocket.receive_text()
+            try:
+                request = json.loads(data)
+
+                # Handle subscription requests
+                if "method" in request and "id" in request:
+                    method = request["method"]
+
+                    if method == "subscribeStatistics":
+                        # Subscribe to statistics
+                        manager.subscribe(websocket, "subscribeStatistics")
+
+                        # Send immediate response with current data
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request["id"],
+                            "result": [db_state.pi.encode()],
+                        }
+                        await websocket.send_text(json.dumps(response))
+
+                    elif method == "subscribeTransactions":
+                        # Subscribe to transaction statistics
+                        manager.subscribe(websocket, "subscribeTransactions")
+
+                        # Send immediate response with current data
+                        current_stats = get_transaction_statistics()
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request["id"],
+                            "result": current_stats,
+                        }
+                        await websocket.send_text(json.dumps(response))
+
+                    elif method == "unsubscribe" and "params" in request:
+                        # Unsubscribe from a specific method
+                        unsub_method = request["params"]["method"]
+                        success = manager.unsubscribe(websocket, unsub_method)
+
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request["id"],
+                            "result": {"success": success},
+                        }
+                        await websocket.send_text(json.dumps(response))
+
+                    else:
+                        # Unknown method
+                        error_response = {
+                            "jsonrpc": "2.0",
+                            "error": {"code": -32601, "message": "Method not found"},
+                            "id": request["id"],
+                        }
+                        await websocket.send_text(json.dumps(error_response))
+
+            except json.JSONDecodeError:
+                error_response = {
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32700, "message": "Parse error"},
+                    "id": None,
+                }
+                await websocket.send_text(json.dumps(error_response))
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+
+@app.on_event("startup")
+async def start_broadcasters():
+    asyncio.create_task(statistics_broadcaster())
+    asyncio.create_task(transactions_broadcaster())
+
+
+async def statistics_broadcaster():
+    while True:
+        stats = get_blockchain_statistics()
+        await manager.broadcast("subscribeStatistics", stats)
+        await asyncio.sleep(5)
+
+
+async def transactions_broadcaster():
+    while True:
+        stats = get_transaction_statistics()
+        await manager.broadcast("subscribeTransactions", stats)
+        await asyncio.sleep(3)
+
+
+def get_blockchain_statistics():
+    # Generate random blockchain statistics
+    block_height = random.randint(12000, 13000)
+    transactions = random.randint(5000, 6000)
+    hash_rate = f"{random.uniform(10.0, 15.0):.1f} TH/s"
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+    return {
+        "blockHeight": block_height,
+        "transactions": transactions,
+        "hashRate": hash_rate,
+        "timestamp": timestamp,
+    }
+
+
+def get_transaction_statistics():
+    # Generate random transaction statistics
+    pending_txs = random.randint(100, 500)
+    avg_fee = random.uniform(0.001, 0.01)
+    avg_confirmation_time = random.uniform(20, 60)
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+    return {
+        "pendingTransactions": pending_txs,
+        "averageFee": f"{avg_fee:.5f}",
+        "averageConfirmationTime": f"{avg_confirmation_time:.2f} seconds",
+        "timestamp": timestamp,
+    }
