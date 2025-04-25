@@ -18,6 +18,11 @@ from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
 from jam.types.protocol.core import ServiceId,BlobLength
 from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.consensus.grandpa.finality import Finality
+from jam.types.block import Block
+from jam.consensus.grandpa.finality import Finality
+from jam.types.protocol.core import TimeSlot
+from jam.types.header import Header
 
 # Initialize FastAPI with metadata for Swagger UI
 app = FastAPI(
@@ -26,30 +31,16 @@ app = FastAPI(
     version="1.0.0",
 )
 
-
+#db path
 db_path = tempfile.mkdtemp()
-   
-# print(db_path)
+
 # Initialize store
-kv = KVStore(db_path)
-   
-# State checking:
-
-peerlist = json.load(open("../../genesis.json"))["peers"]
-peers = [Peer(port=pr["port"], host=pr["host"], san=pr["id"]) for pr in peerlist]
-validators = [ValidatorData(
-bandersnatch=BandersnatchPublic(pr["bandersnatch_public"]),
-ed25519=Ed25519Public(pr["ed25519_public"]),
-bls=BlsPublic(pr["bls_public"]), metadata=ValidatorMetadata(bytes(128)) ) for pr in peerlist]
-state = State.genesis(validators, Safrole.arrange_fallback(ByteArray32(bytes(32)), validators))
-state.save(kv)
-
+db = KVStore(db_path)
+state = State.genesis()
+block = Block.load(TimeSlot(0), db)
 print("state", state)
-
-# Dummy test block for testing
-dummy_block = json.load(open("./examples/request_example.json"))
-# print("dummy_block", dummy_block["block"]["header"]["extrinsic_hash"])
-
+print("block", block)
+print("block_hash", Header.__hash__(block.header).to_bytes(32), type (Header.__hash__(block.header).to_bytes(32)))
 
 # Following the etherum json rpc api structure
 """
@@ -70,6 +61,8 @@ class RpcRequest(BaseModel):
     id: Optional[Any]
 
 # Response models
+#block.py
+#grandpa.py
 class RpcResponse(BaseModel):
     jsonrpc: str
     result: Any = None
@@ -85,15 +78,16 @@ async def rpc_handler(request: RpcRequest):
     method = request.method
     params = request.params
 
+#block -> block.encode()
     
     if method == "bestBlock":
-        # Handle getBlock method
+        # Handle bestBlock method
         # Takes no arguments
         if len(request.params):
             return RPCResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                result=[dummy_block["block"]["header"]["extrinsic_hash"]]
+                result=[Header.__hash__(block.header).to_bytes(32), block.header.slot]
             )
             
     elif method == "finalizedBlock":
@@ -101,7 +95,7 @@ async def rpc_handler(request: RpcRequest):
             return RPCResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                result=[dummy_block["block"]["header"]["extrinsic_hash"], dummy_block["block"]["header"]["slot"]]
+                result=[Header.__hash__(load_final(db).header), load_final(db).header.slot]
             )
     elif method == "parent":
         if len(request.params) != 1:
@@ -111,14 +105,24 @@ async def rpc_handler(request: RpcRequest):
                 error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
             )
         if len(request.params):
-            return RPCResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                result=[dummy_block["block"]["header"]["extrinsic_hash"], dummy_block["block"]["header"]["slot"]]
-            )
+            if(request.params["Hash"] == Header.__hash__(block.header).to_bytes(32)):
+                # Return the parent block
+                parent_block = Block.load_parent(block.header.slot, db)
+                
+                return RPCResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    result=[Header.__hash__(parent_block.header), parent_block.header.slot]
+                )
+            else:
+                return RPCResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={"code": -32602, "message": "unexpected error"},
+                )
+        
     elif method == "stateRoot":
         # Handle stateRoot method
-        state_root = state.load(kv)
         if len(request.params) != 1:
             return RPCResponse(
                 jsonrpc="2.0",
@@ -128,7 +132,7 @@ async def rpc_handler(request: RpcRequest):
         
         # Extract header_hash from params
         header_hash = request.params.get("Hash")
-
+        
         # Validate header_hash
         if len(header_hash) != 32:
             return RPCResponse(
@@ -141,11 +145,11 @@ async def rpc_handler(request: RpcRequest):
         # db_state = state.load(kv)
 
         # Return the state root
-        if(header_hash == dummy_block["block"]["header"]["extrinsic_hash"]):
+        if(header_hash == Header.__hash__(block.header).to_bytes(32)):
             return RPCResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                result=dummy_block["post_state"]["state_root"],
+                result=[block.header.parent_state_root.encode()],
             )
         else:
             return RPCResponse(
