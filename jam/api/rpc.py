@@ -22,11 +22,22 @@ db_path = tempfile.mkdtemp()
 # Initialize store
 db = KVStore(db_path)
 state = State.genesis()
-block = Block.load(TimeSlot(0), db)
-print("state", state)
-print("block", block)
-print("block stats", state.pi)
-print("block_hash", Header.__hash__(block.header).to_bytes(32), type (Header.__hash__(block.header).to_bytes(32)))
+db_block = Block.load(TimeSlot(0), db)
+state.save(db)
+
+# Load the state from the database
+db_state = State.load(db)
+print("header hash to bytes 32", Header.__hash__(db_block.header).to_bytes(32))
+print("header hash", Header.__hash__(db_block.header))
+print("hash bytes to hex", Header.__hash__(db_block.header).to_bytes(32).hex())
+print("hash arrray", list(Header.__hash__(db_block.header).to_bytes(32)))
+# print("Retrieved State:", db_state)
+# print("db_path", db.load())
+
+# print("state", state)
+# print("block", block)
+# print("block stats", state.pi)
+# print("block_hash", Header.__hash__(block.header).to_bytes(32), type (Header.__hash__(block.header).to_bytes(32)))
 
 # Following the etherum json rpc api structure
 """
@@ -56,7 +67,7 @@ class RpcResponse(BaseModel):
     id: Optional[int]
 
 
-@app.post("/rpc.tessera", response_model=RpcRequest)
+@app.post("/rpc.tessera", response_model=RpcResponse)
 async def rpc_handler(request: RpcRequest):
     """
     RPC requests for different methods.
@@ -64,25 +75,27 @@ async def rpc_handler(request: RpcRequest):
     method = request.method
     params = request.params
 
-#block -> block.encode()
-    
     if method == "bestBlock":
-        # Handle bestBlock method
-        # Takes no arguments
-        if len(params):
-            return RpcResponse(
+        # Handle bestBlock method        
+        return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                result=[Header.__hash__(block.header).to_bytes(32), block.header.slot]
+                result=[
+                    Header.__hash__(db_block.header), 
+                    int(db_block.header.slot)]
             )
             
     elif method == "finalizedBlock":
-        if len(params):
-            return RpcResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                result=[Header.__hash__(Finality.load_final(db).header), Finality.load_final(db).header.slot]
-            )
+    # Handle finalizedBlock method without requiring params
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request.id,
+            result=[
+                Header.__hash__(Finality.load_final(db).header),
+                int(Finality.load_final(db).header.slot)
+            ]
+        )
+            
     elif method == "parent":
         if len(params) != 1:
             return RpcResponse(
@@ -91,14 +104,15 @@ async def rpc_handler(request: RpcRequest):
                 error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
             )
         if len(params):
-            if(params["Hash"] == Header.__hash__(block.header).to_bytes(32)):
+            if params["Hash"] == Header.__hash__(db_block.header):
                 # Return the parent block
-                parent_block = Block.load_parent(block.header.slot, db)
-                
+                parent_block = Block.load_parent(db_block.header.slot, db)
                 return RpcResponse(
                     jsonrpc="2.0",
                     id=request.id,
-                    result=[Header.__hash__(parent_block.header), parent_block.header.slot]
+                    result=[
+                        Header.__hash__(parent_block.header), 
+                        parent_block.header.slot]
                 )
             else:
                 return RpcResponse(
@@ -108,7 +122,6 @@ async def rpc_handler(request: RpcRequest):
                 )
         
     elif method == "stateRoot":
-        # Handle stateRoot method
         if len(params) != 1:
             return RpcResponse(
                 jsonrpc="2.0",
@@ -116,10 +129,7 @@ async def rpc_handler(request: RpcRequest):
                 error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
             )
         
-        # Extract header_hash from params
         header_hash = params.get("Hash")
-        
-        # Validate header_hash
         if len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
@@ -127,15 +137,11 @@ async def rpc_handler(request: RpcRequest):
                 error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
             )
 
-        # Fetch latest state from db
-        # db_state = state.load(kv)
-
-        # Return the state root
-        if(header_hash == Header.__hash__(block.header).to_bytes(32)):
+        if header_hash == Header.__hash__(db_block.header):
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                result=[block.header.parent_state_root.encode()],
+                result=[db_block.header.parent_state_root.encode()],
             )
         else:
             return RpcResponse(
@@ -145,17 +151,14 @@ async def rpc_handler(request: RpcRequest):
             )
 
     elif method == "statistics":   
-        # Handle parent method
         if len(params) != 1:
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
                 error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
             )
-         # Extract header_hash from params
+        
         header_hash = params.get("Hash")
-
-        # Validate header_hash
         if len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
@@ -163,12 +166,11 @@ async def rpc_handler(request: RpcRequest):
                 error={"code": -32602, "message": "Invalid parameters: expected header_hash"},
             )
 
-        # Return the state root
-        if(header_hash == Header.__hash__(block.header).to_bytes(32)):
+        if header_hash == Header.__hash__(db_block.header):
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
-                result=[state.pi.encode()]
+                result=[db_state.pi.encode()]
             )
         else:
             return RpcResponse(
@@ -176,4 +178,10 @@ async def rpc_handler(request: RpcRequest):
                 id=request.id,
                 error={"code": -32602, "message": "unexpected error"},
             )
-    
+
+    # Default case for unrecognized methods
+    return RpcResponse(
+        jsonrpc="2.0",
+        id=request.id,
+        error={"code": -32601, "message": "Method not found"},
+    )
