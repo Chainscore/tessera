@@ -1,14 +1,17 @@
+from dataclasses import dataclass
 from typing import Tuple
 from jam.pvm.instructions.table_map import InstTableMap
 from jam.pvm.memory import Memory
 from jam.pvm.program import Program
 from jam.pvm.register import Registers
-from jam.pvm.status import HALT, OUT_OF_GAS, PAGE_FAULT, PANIC, ExecutionStatus, ExecutionStatusCode
+from jam.pvm.status import OUT_OF_GAS, PAGE_FAULT, PANIC, ExecutionStatus, ExecutionStatusCode
 from jam.types.base.integers.fixed import U8
 from jam.types.protocol.core import Gas, ProgramCounter, Register, RemainingGas
 from jam.pvm.errors import PvmError, PvmErrorCodes
 
+@dataclass
 class PVM:
+
     @classmethod
     def execute(
         cls,

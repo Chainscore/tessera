@@ -1,5 +1,5 @@
 from typing import Any, Callable, Dict
-from jam.pvm.instructions.code import OpCode, OpReturn
+from jam.pvm.instructions.opcode import OpCode, OpReturn
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
 from jam.pvm.status import CONTINUE
@@ -26,10 +26,6 @@ class InstructionsWArgs2Reg1Offset(InstructionTable):
     def vx(self) -> int:
         start = self.counter + 2
         end = start + self.lx
-        print(self.program.zeta[start:end], IntegerCodec.decode_from(
-                self.lx, 
-                self.program.zeta[start:end]
-            )[0], self.lx)
         return int(self.counter) + PvmUtilities.z(
             IntegerCodec.decode_from(
                 self.lx, 
@@ -56,7 +52,6 @@ class InstructionsWArgs2Reg1Offset(InstructionTable):
         ) -> OpReturn:
             a = PvmUtilities.z(registers[self.ra], 8) if signed else registers[self.ra]
             b = PvmUtilities.z(registers[self.rb], 8) if signed else registers[self.rb]
-            print(a, b)
             status, counter = self.program.branch(
                 self.counter, 
                 ProgramCounter(self.vx), 

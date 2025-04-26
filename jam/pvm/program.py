@@ -91,7 +91,6 @@ class Program(Codable, JsonSerde):
             return CONTINUE, counter
         elif branch not in self.basic_blocks:
             raise PvmError(PvmErrorCodes.PANIC)
-        print("JUMP:", branch)
         return CONTINUE, branch
 
     def djump(
@@ -99,7 +98,6 @@ class Program(Codable, JsonSerde):
         counter: ProgramCounter, 
         a: int
     ) -> Tuple[ExecutionStatus, ProgramCounter]:
-        print(f"djumping {a}")
         if a == 2**32 - 2**16:
             return HALT, counter
         elif (
@@ -108,7 +106,6 @@ class Program(Codable, JsonSerde):
             a % PVM_ADDR_ALIGNMENT != 0 or
             self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1] not in self.basic_blocks
         ):
-            print(f"Either of {a == 0} or {a > (len(self.jump_table) * PVM_ADDR_ALIGNMENT)} or {a % PVM_ADDR_ALIGNMENT != 0}")
             raise PvmError(PvmErrorCodes.PANIC)
         return CONTINUE, self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1]
     

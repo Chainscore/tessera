@@ -1,7 +1,7 @@
 from math import floor
 from typing import Any, Callable, Dict
 from jam.pvm.errors import PvmError, PvmErrorCodes
-from jam.pvm.instructions.code import OpCode, OpReturn
+from jam.pvm.instructions.opcode import OpCode, OpReturn
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
 from jam.pvm.status import CONTINUE
@@ -63,7 +63,6 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
         OPC20: Load a 64-bit immediate value into a register.
         """
         registers[self.ra] = Register(self.vx)
-        print(f"LOAD: {int(registers[self.ra])} in Register({self.ra}) \nRegisters: {registers}")
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     @staticmethod
@@ -71,7 +70,6 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
         def load_u_impl(
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
-            print(f"Loading {memory.read(self.vx, bitsize // 8)} from {self.vx}")
             registers[self.ra] = Register(
                 IntegerCodec.decode_from(
                     bitsize // 8, 

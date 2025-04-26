@@ -1,9 +1,10 @@
-from math import floor
-from typing import Dict, Sequence
+from math import ceil, floor
+from typing import Dict, List, Self, Sequence
 from jam.pvm.errors import PvmError, PvmErrorCodes
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.utils.constants import PVM_INIT_DATA_SIZE, PVM_MEMORY_PAGE_SIZE, PVM_INIT_ZONE_SIZE
 
 
 class Memory:
@@ -11,7 +12,6 @@ class Memory:
     Memory is a class that models the memory of a program.
     """
 
-    PAGE_SIZE = 2**12
     ADDR_MOD = 2 ** 32
     LOW_BOUND = 2 ** 16
     HEAP_START = 0x100000
@@ -33,7 +33,7 @@ class Memory:
         for addr, val in data.items():
             # Validate
             if not isinstance(addr, U32) or not isinstance(val, Byte) or val < 0 or val > 255:
-                raise Exception(f"Memory: Invalid memory value at address {addr}: {val}.")
+                raise Exception(f"Memory: Invalid memory value at address {addr}: {val}. {not isinstance(addr, U32)} or {not isinstance(val, Byte)} or {val < 0} or {val > 255}")
         self.data = data
 
     def _check_address(self, addr: int, for_write=False):
@@ -47,15 +47,15 @@ class Memory:
         if addr < self.LOW_BOUND:
             raise Exception(f"Memory Panic: Address {addr} is below the allowed threshold ({self.LOW_BOUND}).")
         # Address must be in a valid page.
-        page = addr // self.PAGE_SIZE
+        page = addr // PVM_MEMORY_PAGE_SIZE
         # If writing, the page must be allowed to be written.
         if for_write:
             if page not in self.allowed_write_pages:
                 raise PvmError(PvmErrorCodes.PAGE_FAULT, f"Memory Fault: Write access denied for address {addr} (page {page}).", addr)
-        # Else (reading), the page must be allowed to be read.
+        # Else (reading), the page must be allowed to be write / read
         else:
-            if page not in self.allowed_read_pages:
-                raise PvmError(PvmErrorCodes.PAGE_FAULT, f"Memory Fault: Read access denied for address {addr} (page {page}).", addr)
+            if (page not in self.allowed_read_pages) and (page not in self.allowed_write_pages):
+                raise PvmError(PvmErrorCodes.PAGE_FAULT, f"Memory Fault: Read access denied for address {addr} (page {page}).", page)
         return addr
 
     def read(self, address: int, length: int) -> bytes:
@@ -103,5 +103,66 @@ class Memory:
             if other.data[data] != 0 and data in self.data:
                 if self.data[data] != other.data[data]:
                     data_eq = False
-        
+
         return data_eq and self.allowed_read_pages == other.allowed_read_pages and self.allowed_write_pages == other.allowed_write_pages
+    
+    
+    @classmethod
+    def from_pc(cls, read: bytes, write: bytes, args: bytes, z: int, s: int) -> Self:
+        memory = {}
+
+        read_start = PVM_INIT_ZONE_SIZE
+        read_pages = cls.get_pages(read_start, read_start + cls.total_page_size(len(read)))
+        for i, byt in enumerate(read):
+            memory[Byte(read_start+i)] = Byte(byt)
+        
+        write_start = 2*PVM_INIT_ZONE_SIZE + cls.total_zone_size(len(read))
+        write_pages = cls.get_pages(write_start, write_start + cls.total_page_size(len(write)) + (z * PVM_MEMORY_PAGE_SIZE))
+        for i, byt in enumerate(write):
+            memory[U32(write_start+i)] = Byte(byt)
+
+        write_pages.extend(
+            cls.get_pages(
+                2**32 - 2*PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE - cls.total_page_size(s), 
+                2**32 - 2*PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE
+            )
+        )
+
+        arg_start = 2**32 - PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE
+        read_pages.extend(cls.get_pages(arg_start, 2**32 - PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE + cls.total_page_size(len(args))))
+        for i, byt in enumerate(args):
+            memory[U32(arg_start+i)] = Byte(byt)
+        
+        return cls(memory, read_pages, write_pages)
+    
+    def to_pc() -> (bytes, bytes, bytes, int, int):
+        read_start = PVM_INIT_ZONE_SIZE
+
+
+    def total_page_size(blob_len: int) -> int:
+        """
+        P function from https://graypaper.fluffylabs.dev/#/cc517d7/2be0022bea02?v=0.6.5
+        Args:
+            - blob_len: len on data to be stored
+        Returns:
+            - total page length
+        """
+        return PVM_MEMORY_PAGE_SIZE*ceil(blob_len/PVM_MEMORY_PAGE_SIZE)
+    
+    def total_zone_size(blob_len: int):
+        """
+        Z function from https://graypaper.fluffylabs.dev/#/cc517d7/2be0022bea02?v=0.6.5
+        Args:
+            - blob_len: len on data to be stored
+        Returns:
+            - total zone length
+        """
+        return PVM_INIT_ZONE_SIZE*ceil(blob_len/PVM_INIT_ZONE_SIZE)
+    
+    def get_pages(start_index: int, end_index: int) -> List[int]:
+        """
+        Gives a list of page numbers that contains a specific indexed location in memory 
+        """
+        start = ceil(start_index/PVM_MEMORY_PAGE_SIZE)
+        end = floor(end_index/PVM_MEMORY_PAGE_SIZE)
+        return [i for i in range(start, end)]
