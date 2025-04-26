@@ -1,6 +1,6 @@
 from math import floor
 from typing import Dict
-from jam.pvm.instructions.code import OpCode, OpReturn
+from jam.pvm.instructions.opcode import OpCode, OpReturn
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
 from jam.pvm.utils import PvmUtilities

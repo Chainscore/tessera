@@ -1,5 +1,5 @@
 from typing import Any, Callable, Dict
-from jam.pvm.instructions.code import OpCode, OpReturn
+from jam.pvm.instructions.opcode import OpCode, OpReturn
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
 from jam.pvm.status import CONTINUE
@@ -105,8 +105,6 @@ class InstructionsWArgs2Reg1Imm(InstructionTable):
             a = int(registers[self.rb]) if not alt else self.vx
             b = self.vx if not alt else int(registers[self.rb])
 
-            print("a", a, "b", b)
-                
             registers[self.ra] = Register(
                 PvmUtilities.chi(
                     (a * 2**(b % bitsize)) % 2**bitsize, 

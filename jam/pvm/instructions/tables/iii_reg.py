@@ -1,7 +1,7 @@
 from decimal import Decimal
 from math import trunc
 from typing import Any, Callable, Dict
-from jam.pvm.instructions.code import OpCode, OpReturn
+from jam.pvm.instructions.opcode import OpCode, OpReturn
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
 from jam.pvm.status import CONTINUE
