@@ -1,6 +1,6 @@
 from typing import Dict, Tuple
 from jam.pvm.errors import PvmError, PvmErrorCodes
-from jam.pvm.instructions.code import OpCode
+from jam.pvm.instructions.opcode import OpCode
 from jam.pvm.instructions.instruction_table import InstructionTable
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
@@ -20,10 +20,6 @@ class WArgsOneOffset(InstructionTable):
     def vx(self) -> int:
         start = self.counter + 1
         end = start + self.lx
-        print(self.program.zeta[start:end], IntegerCodec.decode_from(
-                self.lx, 
-                self.program.zeta[start:end]
-            )[0], self.lx)
         return int(self.counter) + PvmUtilities.z(
             IntegerCodec.decode_from(
                 self.lx, 

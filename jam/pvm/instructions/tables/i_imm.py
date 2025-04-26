@@ -1,5 +1,5 @@
 from typing import Dict, Tuple
-from jam.pvm.instructions.code import OpCode
+from jam.pvm.instructions.opcode import OpCode
 from jam.pvm.memory import Memory
 from jam.pvm.register import Registers
 from jam.pvm.status import HOST, ExecutionStatus
