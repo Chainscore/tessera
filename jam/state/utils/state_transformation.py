@@ -221,7 +221,7 @@ class DunaDelta(Vector): ...
 class GeneralState(Codable, JsonSerde):
     alpha: Alpha
     varphi: Phi
-    beta: TestBeta
+    beta: BetaInput
     gamma: DunaGamma
     psi: Psi
     eta: Eta

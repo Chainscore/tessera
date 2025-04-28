@@ -30,9 +30,10 @@ db = KVStore(db_path)
 state = State.genesis()
 db_block = Block.load(TimeSlot(0), db)
 state.save(db)
-
+# print(state.load(db, "0x0023000000000000478648cd19b4f812f897a26976ecf312eac28508b4368d0c"))
 # Load the state from the database
 db_state = State.load(db)
+
 # print("header hash to bytes 32", Header.__hash__(db_block.header).to_bytes(32))
 # print("header hash", Header.__hash__(db_block.header))
 # print("hash bytes to hex", Header.__hash__(db_block.header).to_bytes(32).hex())
@@ -186,6 +187,41 @@ async def rpc_handler(request: RpcRequest):
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected header_hash",
+                },
+            )
+
+        header_hash = params.get("Hash")
+        if len(header_hash) != 32:
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash",
+                },
+            )
+
+        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32):
+            return RpcResponse(
+                jsonrpc="2.0", 
+                id=request.id, 
+                result=[db_state.pi.encode()]
+            )
+        else:
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "unexpected error"},
+            )
+
+    elif method == "serviceData":
+        if len(params) != 2:
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash and ServiceId",
                 },
             )
 
