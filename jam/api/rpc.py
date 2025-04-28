@@ -20,7 +20,7 @@ app = FastAPI(
     title="Tessera RPC API",
     description=""" RPC for Tessera node  
      ## Documentation Links:  
-    - [Tessera API Overview](https://example.com/tessera-api-overview)  
+    - [Tessera API Overview](https://github.com/Chainscore/tessera/blob/feature/rpc_api/jam/api/rpc_doc.md)  
     - [Refered JSON-RPC Specification JIP-2](https://docs.jamcha.in/advanced/rpc/jip2-node-rpc)  
     - Followed formatting and structure of [Ethereum JSON-RPC](https://www.quicknode.com/docs/ethereum)
     
