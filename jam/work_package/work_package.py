@@ -322,6 +322,10 @@ class WorkPackageProcessing:
         wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32(), exports_count=U16(0))
         specs = self.availability_specifier(package_hash=h, wp_bundle=wp_bundle.encode(), export_segments=Vector([]))
 
+        # segment-root -> erasure-root , assurer
+        # specs.exports_root -> specs.erasure_root, assurer, specs.hash
+        # specs.erasure_root -> wp_bundle
+
         if not isinstance(o, Bytes):
             return None
         else:
