@@ -48,7 +48,7 @@ from jam.types.base import (
     decodable_choice,
     decodable_option,
 )
-
+from jam.types.base.sequences.bytes.bit_array import BitArray
 # Crypto types
 from jam.types.protocol.crypto import (
     BandersnatchPublic,
@@ -79,9 +79,9 @@ from jam.types.protocol.core import (
 
 # Block types
 from jam.types.block import Block, Extrinsic
-
+from jam.types.protocol.epoch import EpochMark
 # Header types
-from jam.types.header import Header, TicketsMark, OffendersMark
+from jam.types.header import Header, TicketsMark, OffendersMark, EpochMark
 
 # Service types
 from jam.types.protocol.service import ServiceInfo
@@ -98,6 +98,7 @@ from jam.types.work import (
     WorkPackage,
     WorkReport,
     WorkPackageSpec,
+    SegmentRootLookup,
 )
 
 # Ticket types
@@ -127,7 +128,6 @@ from jam.types.protocol.availability import (
 
 # History types
 from jam.types.protocol.history import (
-    Mmr,
     BlockInfo,
     BlocksHistory,
     ReportedWorkPackage,
@@ -138,7 +138,6 @@ from jam.types.protocol.validators import (
     ValidatorMetadata,
     ValidatorData,
     ValidatorsData,
-    ValidatorArray,
 )
 
 __all__ = [
@@ -207,6 +206,7 @@ __all__ = [
     "Extrinsic",
     # Header types
     "Header",
+    "EpochMark",
     "TicketsMark",
     "OffendersMark",
     # Service types
@@ -222,6 +222,7 @@ __all__ = [
     "WorkPackage",
     "WorkReport",
     "WorkPackageSpec",
+    "SegmentRootLookup",
     # Ticket types
     "TicketEnvelope",
     "TicketBody",
@@ -239,7 +240,6 @@ __all__ = [
     "AvailabilityAssignment",
     "AvailabilityAssignments",
     # History types
-    "Mmr",
     "BlockInfo",
     "BlocksHistory",
     "ReportedWorkPackage",
@@ -247,5 +247,4 @@ __all__ = [
     "ValidatorMetadata",
     "ValidatorData",
     "ValidatorsData",
-    "ValidatorArray",
 ]

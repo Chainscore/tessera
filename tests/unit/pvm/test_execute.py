@@ -9,7 +9,7 @@ from jam.types.base.sequences.bytes.bytes import Bytes, Byte
 
 
 def get_testcases_starting_with(prefix: str):
-    data_dir = r"C:\Users\FAIZ AHMAD\PycharmProjects\jam-node\tests\unit\pvm\data"
+    data_dir = "tests/unit/pvm/data"
     for i, file in enumerate(os.listdir(data_dir)):
         if file.startswith(prefix):
             print(f"Reading file, now reading riscv test cases which are too large to debug:{file}")  # Print the filename

@@ -15,7 +15,7 @@ def test_merkle_initialization():
 def test_empty_merkelize():
     """Test merkelizing empty state"""
     merkle = StateMerkle(Hash.blake2b)
-    root = merkle.merkelize({})
+    root,_ = merkle.merkelize({})
     assert root == merkle.trie.node.ZERO_HASH
     assert len(merkle.get_nodes()) == 0
 

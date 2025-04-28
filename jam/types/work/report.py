@@ -1,13 +1,16 @@
 """Work report types for the JAM protocol."""
+
 from dataclasses import dataclass
 
+from jam.types.base import Vector
 from jam.types.base.null import Nullable
-from jam.types.base.integers import U16, U32
+from jam.types.base.integers import U8, U16, U32, U64
 from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.sequences.vector import Vector, decodable_vector
 
+from jam.types.work.package import WorkPackage
 from jam.types.work.refine_context import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
 from jam.types.protocol.core import (
@@ -19,10 +22,12 @@ from jam.types.protocol.core import (
     ServiceId,
     WorkPackageHash,
 )
+from jam.types.work.segment import MultiSegments
 
 from jam.utils.json.serde import JsonSerde
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+
 
 
 @decodable_choice
@@ -36,6 +41,11 @@ class WorkExecResult(Choice):
     code_oversize: Nullable
     bad_exports: Nullable
 
+
+@decodable_vector(element_type=WorkExecResult)
+class ExecResults(Vector[WorkExecResult]):
+    ...
+
 @decodable_dataclass
 @dataclass
 class RefineLoad(Codable, JsonSerde):
@@ -44,13 +54,8 @@ class RefineLoad(Codable, JsonSerde):
     gas_used: Gas
     imports: U16
     exports: U16
-    extrinsic_count: U16
-    extrinsic_size: U32
-
-@decodable_vector(element_type=WorkExecResult)
-class ExecResults(Vector[WorkExecResult]):
-    ...
-
+    extrinsic_count: U8
+    extrinsic_size: U64
 
 @decodable_dataclass
 @dataclass
@@ -62,7 +67,7 @@ class WorkResult(Codable, JsonSerde):
     payload_hash: OpaqueHash
     accumulate_gas: Gas
     result: WorkExecResult
-
+    refine_load: RefineLoad
 
 @decodable_dataclass
 @dataclass
@@ -74,6 +79,19 @@ class WorkPackageSpec(Codable, JsonSerde):
     erasure_root: ErasureRoot
     exports_root: ExportsRoot
     exports_count: U16
+
+
+@decodable_dataclass
+@dataclass
+class WorkPackageBundle(Codable, JsonSerde):
+    """Work package specification structure."""
+
+    package: WorkPackage
+    extrinsics: Vector[Vector[Bytes]]
+    import_segments: Vector[MultiSegments]
+    justifications: ExportsRoot
+    exports_count: U16
+
 
 # Deprecated Type
 # @decodable_dataclass
@@ -95,8 +113,7 @@ class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
     ...
 
 @decodable_vector(WorkResult)
-class WorkResults(Vector[WorkResult]):
-    ...
+class WorkResults(Vector[WorkResult]): ...
 
 @decodable_dataclass
 @dataclass

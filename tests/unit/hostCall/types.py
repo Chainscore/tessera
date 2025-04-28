@@ -1,24 +1,28 @@
 from dataclasses import dataclass
+
+from jam.types.base.dictionary import decodable_dictionary, Dictionary
 from jam.types.base.integers.fixed import U32
+from jam.types.base.sequences.bytes.bytes import ByteVector32, Bytes, Byte
+from jam.types.base.sequences.vector import Vector, decodable_vector
+from jam.types.base.string import String
+
+from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
+from jam.types.protocol.core import Register
+
+from jam.types.work.package import WorkPackage
+from jam.types.work.segment import Segment
+
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.serde import JsonSerde
-from jam.state.components.delta import Timestamps, AccountStorage, PreImageLookup
-from jam.hostCall.types import Segment
-from jam.types.protocol.core import Register
 from jam.utils.json.decorators import with_json_metadata
-from jam.types.base.dictionary import decodable_dictionary, Dictionary
-from jam.types.base.string import String
-from jam.types.base.sequences.bytes import Byte, Bytes
-from jam.types.base.sequences.bytes.bytes import ByteVector32
-from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
-from jam.types.protocol.validators import ValidatorsVector
+from jam.utils.json.serde import JsonSerde
+
+from jam.state.components.delta import Timestamps, AccountStorage, PreImageLookup
+from jam.types.protocol.validators import ValidatorVector
 from jam.state.components.phi import PhiVector
 from jam.state.components.chi import Chi
 from jam.pvm.pvm_memory import JsonPageMemory
-from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.hostCall.types import DeferredTransfers
-from jam.types.work.package import WorkPackage
 
 
 @decodable_dictionary(String, Register)
@@ -63,7 +67,7 @@ class TestDelta(Dictionary[String, TestService]):
 @dataclass
 class TestPartialState(Codable, JsonSerde):
     D: TestDelta
-    I: ValidatorsVector
+    I: ValidatorVector
     Q: PhiVector
     X: Chi
 
@@ -107,6 +111,7 @@ class TestRefineMap(Dictionary[String, TestBoldM]):
     initial_regs={"name": "initial-regs"},
     initial_gas={"name": "initial-gas"},
     initial_memory={"name": "initial-memory"},
+    initial_blob={"name": "initial-blob", "skip_if_none": True},
     initial_service_account={"name": "initial-service-account", "skip_if_none": True},
     initial_service_index={"name": "initial-service-index", "skip_if_none": True},
     initial_delta={"name": "initial-delta", "skip_if_none": True},

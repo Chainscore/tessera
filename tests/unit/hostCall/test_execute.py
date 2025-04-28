@@ -5,7 +5,7 @@ from jam.hostCall.transition import HostTransition
 
 
 def get_testcases_starting_with(prefix: str):
-    data_dir = r"C:\Users\FAIZ AHMAD\PycharmProjects\jam-node\tests\unit\hostCall\data\poke"
+    data_dir = "tests/unit/hostCall/data/poke"
     for i, file in enumerate(os.listdir(data_dir)):
         if file.startswith(prefix):
             print(f"Reading file, now reading riscv test cases which are too large to debug: {file}")

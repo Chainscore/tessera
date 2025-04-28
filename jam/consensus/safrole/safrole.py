@@ -1,11 +1,13 @@
-import dataclasses
 from typing import List
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 from jam.state.components.eta import Eta
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
+from jam.state.components.sigma import Sigma
+from jam.types.base.integers.fixed import U64
+from jam.types.base.null import Null
+from jam.types.header import OptionalEpochMark, OptionalTicketsMark, TicketsMark
 from .gamma import GammaS, GammaSTickets
-from jam.state.state import State
 from jam.types import TicketBody, U32, TicketsExtrinsic, TicketEnvelope
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
@@ -16,11 +18,12 @@ from jam.utils.constants import (
     TICKET_ENTRIES_PER_VALIDATOR,
     MAX_TICKETS_PER_EXTRINSIC
 )
-from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingVrfSignature, BandersnatchVrfSignature, Hash
+from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingVrfSignature, BandersnatchVrfSignature, Hash, Entropy
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.consensus.safrole.gamma import GammaK, GammaSFallback, GammaA
 from jam.types.protocol.validators import ValidatorData
+from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
 from copy import deepcopy
 
 class Safrole:
@@ -52,7 +55,7 @@ class Safrole:
         return ByteArray32(vrf.proof_to_hash(BandersnatchPoint.string_to_point(bytes(signature)[:32]))[:32])
 
     @staticmethod
-    def transition(pre_state: State, block: Block, entropy: ByteArray32) -> State:
+    def transition(pre_state: Sigma, block: Block, entropy: ByteArray32) -> Sigma:
         new_state = deepcopy(pre_state)
 
         # 1. Timekeeping
@@ -122,11 +125,7 @@ class Safrole:
             if len(new_state.gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
                 # If we have sufficient tickets accumulated,
                 # use outside-in sequencer and place the ticket in gamma.s
-                acc_tickets = []
-                for i in range(len(new_state.gamma.a) // 2):
-                    acc_tickets.append(new_state.gamma.a[i])
-                    acc_tickets.append(new_state.gamma.a[len(new_state.gamma.a) - 1 - i])
-                new_state.gamma.s = GammaS(GammaSTickets(acc_tickets))
+                new_state.gamma.s = GammaS(GammaSTickets(Safrole.outside_in(new_state.gamma.a.value)))
             # Else use the fallback mechanism
             else:
                 # Else fallback: use bandersnatch keys
@@ -219,6 +218,7 @@ class Safrole:
         """
         This function is to be called in case the ticketing system fails to accumulate valid
         tickeys.
+        https://graypaper.fluffylabs.dev/#/68eaa1f/0edf020edf02?v=0.6.4
         Args:
             Etn`2 - Upcoming eta2 or current eta1
             Kappa - List of current validators
@@ -233,3 +233,48 @@ class Safrole:
             index, _ = U32.decode_from(bytes(Bytes(hashed[:4])))
             fallback.append(validators[int(index) % len(validators)].bandersnatch)
         return GammaS(GammaSFallback(fallback))
+    
+    @staticmethod
+    def outside_in(values: list) -> list:
+        """
+        Returns the outside-in sequenced list of values
+        https://graypaper.fluffylabs.dev/#/68eaa1f/0ea8020ebb02?v=0.6.4
+        """
+        return values[::2] + values[1::2][::-1]
+
+    @staticmethod
+    def get_tickets_marker(state: Sigma, slot: U64) -> OptionalTicketsMark:
+        """
+        Returns the tickets markers for the given state
+        https://graypaper.fluffylabs.dev/#/68eaa1f/0e82030e8203?v=0.6.4
+        - Ensure we have exact EPOCH_LENGTH tickets accumulated
+        - Ticket collection phase is just getting over (m < TICKET_SUBMISSION_END <= m')
+        - We have to be in the same epoch
+        """
+        if (
+            (len(state.gamma.a) == EPOCH_LENGTH) and 
+            (state.tau % EPOCH_LENGTH > TICKET_SUBMISSION_END and TICKET_SUBMISSION_END <= slot % EPOCH_LENGTH) and
+            (slot // EPOCH_LENGTH == state.tau // EPOCH_LENGTH)
+        ):
+            return OptionalTicketsMark(TicketsMark(Safrole.outside_in(state.gamma.a.value)))
+        else:
+            return OptionalTicketsMark(Null)
+
+    @staticmethod
+    def get_epoch_marker(state: Sigma, slot: U64) -> OptionalEpochMark:
+        """
+        Returns the epoch marker for the given state
+        https://graypaper.fluffylabs.dev/#/68eaa1f/0e3d030e3e03?v=0.6.4
+        - Ensure we are moving to a new epoch
+        """
+        if slot // EPOCH_LENGTH > state.tau // EPOCH_LENGTH:
+            return OptionalEpochMark(EpochMark(
+                entropy=Entropy(state.eta[0]),
+                tickets_entropy=Entropy(state.eta[1]),
+                validators=ValidatorArray([MinValidatorData(
+                    bandersnatch=val.bandersnatch,
+                    ed25519=val.ed25519
+                ) for val in state.gamma.k])
+            ))
+        else:
+            return OptionalEpochMark(Null)

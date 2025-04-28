@@ -1,5 +1,6 @@
 from math import log2, ceil
 from typing import Optional, Callable
+from copy import deepcopy
 
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.vector import Vector
@@ -31,9 +32,7 @@ class BMRFunctions:
         Returns:
             Sequences of Hashes (in ByteArray32)
         """
-
-        new_values: Vector[OpaqueHash] = Vector()
-
+        new_values: Vector[OpaqueHash] = Vector([])
         for val in values:
             new_val = hash_fn(self._LEAF_PREFIX + bytes(val))
             new_values.append(new_val)
@@ -57,6 +56,7 @@ class BMRFunctions:
             32 octet blob or Hash for a node
         """
         sz = len(values)
+
         if sz == 0:
             return self._ZERO_HASH
 
@@ -90,7 +90,6 @@ class BMRFunctions:
         """
         sz = len(values)
         mid = (sz + 1) // 2
-
         if (index < mid) == case:
             left = values[:mid]
             return left
@@ -125,7 +124,8 @@ class BMRFunctions:
             node = self._node_fn(self._p_bool(values, index, False))
             trace.append(node)
 
-            trace_nodes = self._trace_fn(self._p_bool(values, index,True), index - self._p_i(values, index), hash_fn)
+            new_ind = self._p_i(values, index)
+            trace_nodes = self._trace_fn(self._p_bool(values, index,True), index - int(new_ind), hash_fn)
 
             trace.extend(trace_nodes)
 
@@ -193,13 +193,14 @@ class BMRFunctions:
         if index >= len(values):
             raise IndexError("index out of range")
 
-        val = ceil(log2(max(1, len(values))) - size)
+        val = ceil(log2(max(1, len(values))) - int(size))
+
         sz = max(0, val)
+        ind = (2 ** int(size)) * index
 
-        ind = (2 ** size) * index
+        leaves = self._preprocessor_fn(values, hash_fn)
 
-        path = self._trace_fn(self._preprocessor_fn(values, hash_fn), ind, hash_fn)
-
+        path = self._trace_fn(leaves, ind, hash_fn)
         return path[:sz]
 
     def leaf_page_fn(
@@ -210,15 +211,15 @@ class BMRFunctions:
         hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
     ) -> Vector[OpaqueHash]:
         """
-            Leaves Page Function Implementation as defined in Equation E.6
+        Leaves Page Function Implementation as defined in Equation E.6
 
-            Args:
-                values: Sequence of octet blobs
-                index: Node Index
-                hash_fn: Hash Function
-                size: page size = 2 ^ size
-            Returns:
-                Single page of leaves
+        Args:
+            values: Sequence of octet blobs
+            index: Node Index
+            hash_fn: Hash Function
+            size: page size = 2 ^ size
+        Returns:
+            Single page of leaves
         """
         if index >= len(values):
             raise IndexError("index out of range")
@@ -226,8 +227,8 @@ class BMRFunctions:
         page: Vector[OpaqueHash] = Vector([])
 
 
-        ind = (2 ** size) * index
-        val = min(ind + 2 ** size, len(values))
+        ind = (2 ** int(size)) * index
+        val = min(ind + 2 ** int(size), len(values))
 
         for i in range(ind, val):
             page.append(hash_fn(self._LEAF_PREFIX + bytes(values[i])))

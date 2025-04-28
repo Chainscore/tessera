@@ -14,3 +14,7 @@ Segment = ByteArray32
 @decodable_vector(Segment)
 class Segments(Vector[Segment]):
     ...
+
+@decodable_vector(Segments)
+class MultiSegments(Vector[Segments]):
+    ...

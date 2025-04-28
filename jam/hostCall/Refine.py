@@ -5,11 +5,12 @@ from jam.pvm.register import Registers
 from jam.pvm.pvm_memory import PageMemory
 from jam.types.protocol.core import Gas
 from jam.state.components.delta import Delta
-from jam.hostCall.types import XContent, RefineMap, Segment
+from jam.hostCall.types import RefineMap
 from jam.pvm.extract import Status
 from jam.types.work.package import WorkPackage
 from hashlib import blake2b
 from jam.hostCall.invocation import PsiM
+from jam.types.work.segment import MultiSegments, Segments
 
 
 class PsiR:
@@ -19,7 +20,7 @@ class PsiR:
                  i: int,
                  p: WorkPackage,
                  o: Bytes,
-                 i_segment: Segment,
+                 i_segment: MultiSegments,
                  e_offset: int,
                 ):
         self.pc = i
@@ -32,51 +33,51 @@ class PsiR:
     def refine_f(self):
         w = self.work_package.items[self.pc]
 
-        def historical_lookup(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def historical_lookup(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export, work_service_id=w.service, delta=self.delta, timeslot=self.work_package.context.lookup_anchor_slot)
             return HostCall.historical_lookup(call)
 
-        def fetch(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def fetch(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export, work_item_index=self.pc, work_package=self.work_package, segment=self.import_segment, offset=self.offset)
             return HostCall.fetch(call)
 
-        def export(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def export(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export, offset=self.offset)
             return HostCall.export(call)
 
-        def gas(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def gas(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
             return HostCall.gas(call)
 
-        def machine(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def machine(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
             return HostCall.machine(call)
 
-        def peek(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def peek(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
             return HostCall.peek(call)
 
-        def zero(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def zero(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
             return HostCall.zero(call)
 
-        def poke(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def poke(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
             return HostCall.poke(call)
 
-        def void(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def void(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
             return HostCall.void(call)
 
-        def invoke(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def invoke(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
             return HostCall.invoke(call)
 
-        def expunge(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def expunge(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
             return HostCall.expunge(call)
 
-        def default(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def default(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             _gas -= 10
             register[6] = 2 ** 64
             return Status("continue"), _gas, register
