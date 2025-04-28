@@ -12,16 +12,19 @@ from hashlib import blake2b
 from jam.hostCall.process import HostCall
 from jam.hostCall.invocation import PsiM
 from jam.types.base.integers.fixed import U32, U64, U256
+from tests.fixtures.utils import create_dummy_bytes32
+from tests.unit.accumulation.types import StateContext, OperandTuples
 
 
 def i_function(u: StateContext, s: ServiceId, _n_o: Entropy, timeslot: TimeSlot) -> XContent:
-    print("hello")
-    first = s.encode()
-    second = _n_o.encode()
-    third = timeslot.encode()
-    hashed = ByteArray32(blake2b(first+second+third))
-    value = ByteArray32.decode_from(hashed)[0]
-    i = HostCall.check(u.delta.keys(), value)
+    first = bytes(s.encode())
+    second = bytes(_n_o.encode())
+    third = bytes(timeslot.encode())
+    hashed = ByteArray32(blake2b(first + second + third, digest_size=32).digest())
+    # value = ByteArray32.decode_from(hashed)[0]
+    buffer = bytes()
+    value = ByteArray32.decode_from(bytes(hashed))
+    i = HostCall.check(u.service_accounts.keys(), value)
     result = XContent(
         s_index=s,
         partial_state=u,
@@ -32,8 +35,13 @@ def i_function(u: StateContext, s: ServiceId, _n_o: Entropy, timeslot: TimeSlot)
     return result
 
 
-def c_function(g: Gas,  x: XContent, y: XContent, o: Optional[Bytes] = Status) -> (
+def c_function(g: Gas,  o: Optional[Bytes] = Status, context: Optional[Tuple[XContent, XContent]] = None) -> (
         Tuple)[StateContext, DeferredTransfers, Optional[ByteArray32], Gas]:
+    if context is not None:
+        x, y = context
+    else:
+        x, y = None, None
+    print("inside c_function:", g, o, x, y)
     if o == Status.PANIC or o == Status.OUT_OF_GAS:
         return y.partial_state, y.deferred_transfers, y.hash, g
     elif isinstance(o, ByteArray32):
@@ -49,36 +57,37 @@ def g_function(status: Status, gas: Gas, register: Registers, memory: PageMemory
 
 
 class PsiA:
+    header_timeslot = TimeSlot(2)
+    entropy = create_dummy_bytes32()
     def __init__(self, u: StateContext,
-                 t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuple, _n_o: Entropy, header_timeslot: TimeSlot):
+                 t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples):
         self.partial_state = u
         self.timeslot = t
         self.service_id = s
         self.gas = g
-        self.operand = o
-        self.header_timeslot = header_timeslot
-        self.entropy = _n_o
+        self.operands = o
         self.f_function = self.accumulate_f()
 
     def process(self):
-        if self.partial_state.delta[self.service_id].code_hash is None:
+        # if self.partial_state.service_accounts[self.service_id].code_hash is None:
+        if self.partial_state.service_accounts.get(self.service_id) is None or self.partial_state.service_accounts.get(self.service_id).code_hash is None:
             return i_function(self.partial_state, self.service_id, self.entropy, self.header_timeslot).partial_state, [], None, 0
         else:
-            encoded_value = self.timeslot.encode() + self.service_id.encode() + self.operand.encode()
-            return c_function(*PsiM(self.partial_state.delta[self.service_id].code_hash, 5, self.gas, encoded_value, self.f_function, (i_function(self.partial_state, self.service_id, self.entropy, self.header_timeslot), i_function(self.partial_state, self.service_id, self.entropy, self.header_timeslot))).process())
+            encoded_value = self.timeslot.encode() + self.service_id.encode() + self.operands.encode()
+            return c_function(*PsiM(self.partial_state.service_accounts.get(self.service_id).code_hash, 5, self.gas, encoded_value, self.f_function, (i_function(self.partial_state, self.service_id, self.entropy, self.header_timeslot), i_function(self.partial_state, self.service_id, self.entropy, self.header_timeslot))).process())
 
     def accumulate_f(self):
 
         def read(_gas: Gas, register: Registers, memory: PageMemory, x: XContent, y: XContent):
-            call = HostCall(gas=_gas, register=register, memory=memory, service=x.partial_state.delta[x.s_index], s_index=x.s_index, delta=x.partial_state.delta)
+            call = HostCall(gas=_gas, register=register, memory=memory, service=x.partial_state.service_accounts[x.s_index], s_index=x.s_index, delta=x.partial_state.delta)
             return g_function(*HostCall.read(call), x=x, y=y)
 
         def write(_gas: Gas, register: Registers, memory: PageMemory, x: XContent, y: XContent):
-            call = HostCall(gas=_gas, register=register, memory=memory, service=x.partial_state.delta[x.s_index], s_index=x.s_index)
+            call = HostCall(gas=_gas, register=register, memory=memory, service=x.partial_state.service_accounts[x.s_index], s_index=x.s_index)
             return g_function(*HostCall.write(call), x=x, y=y)
 
         def lookup(_gas: Gas, register: Registers, memory: PageMemory, x: XContent, y: XContent):
-            call = HostCall(gas=_gas, register=register, memory=memory, service=x.partial_state.delta[x.s_index], s_index=x.s_index, delta=x.partial_state.delta)
+            call = HostCall(gas=_gas, register=register, memory=memory, service=x.partial_state.service_accounts[x.s_index], s_index=x.s_index, delta=x.partial_state.delta)
             return g_function(*HostCall.lookup(call), x=x, y=y)
 
         def gas(_gas: Gas, register: Registers, memory: PageMemory, x: XContent, y: XContent):
@@ -86,7 +95,7 @@ class PsiA:
             return HostCall.gas(call)
 
         def info(_gas: Gas, register: Registers, memory: PageMemory, x: XContent, y: XContent):
-            call = HostCall(gas=_gas, register=register, memory=memory, service=x.partial_state.delta[x.s_index], s_index=x.s_index, delta=x.partial_state.delta)
+            call = HostCall(gas=_gas, register=register, memory=memory, service=x.partial_state.service_accounts[x.s_index], s_index=x.s_index, delta=x.partial_state.delta)
             return g_function(*HostCall.info(call), x=x, y=y)
 
         def bless(_gas: Gas, register: Registers, memory: PageMemory, x: XContent, y: XContent):

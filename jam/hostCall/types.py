@@ -4,7 +4,7 @@ from typing import List
 from jam.accumulation.types import StateContext
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.integers.general import Int
-from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes
+from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes, ByteArray128
 from jam.utils.json.decorators import with_json_metadata
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass

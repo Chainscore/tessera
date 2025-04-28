@@ -1,7 +1,7 @@
 from jam.db.kv import KVStore
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.eta import Eta
-from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat
+from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat, AllServiceStats, AllCoreStats, CoreStat
 from jam.state.components.psi import Psi, PsiB, PsiG, PsiO, PsiW
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
@@ -287,7 +287,12 @@ class State(Sigma):
             phi=Phi([AuthorizationQueue([AuthorizerHash(bytes(32)) for _ in range(MAX_AUTH_QUEUE_ITEMS)]) for _ in range(CORE_COUNT)]),
             chi=Chi(chi_m=ServiceId(0), chi_a=ServiceId(0), chi_v=ServiceId(0), chi_g=ChiG({})),
             psi=Psi(good=PsiG([]), bad=PsiB([]), wonky=PsiW([]), offenders=PsiO([])),
-            pi=Pi([AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]) for _ in range(2)]),
+            pi=Pi(
+                vals_current=AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]),
+                vals_last=AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]),
+                cores=AllCoreStats([CoreStat(gas_used=U32(0), imports=U32(0), extrinsic_count=U32(0), extrinsic_size=U32(0), exports=U32(0), bundle_size=U32(0), da_load=U32(0), popularity=U32(0)) for _ in range(CORE_COUNT)]),
+                services=AllServiceStats({})
+            ),
             nu=Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)]),
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )

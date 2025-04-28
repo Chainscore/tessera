@@ -111,6 +111,7 @@ class TestRefineMap(Dictionary[String, TestBoldM]):
     initial_regs={"name": "initial-regs"},
     initial_gas={"name": "initial-gas"},
     initial_memory={"name": "initial-memory"},
+    initial_blob={"name": "initial-blob", "skip_if_none": True},
     initial_service_account={"name": "initial-service-account", "skip_if_none": True},
     initial_service_index={"name": "initial-service-index", "skip_if_none": True},
     initial_delta={"name": "initial-delta", "skip_if_none": True},

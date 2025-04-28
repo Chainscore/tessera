@@ -148,11 +148,12 @@ class Reporting:
                             "Duplicate package spec hash in other report of same guarantee"
                         )
 
-        Reporting.ensure_signature(state, block)
         Reporting.verify_report_output(block)
         Reporting.ensure_valid_refinement_context(state, block)
         Reporting.ensure_valid_report_result(state,block)
         Reporting.wrong_assignment(state, block)
+        Reporting.ensure_signature(state, block)
+
 
         for x in block.extrinsic.guarantees:
             state.rho[x.report.core_index] = OptionalWorkReportState(
@@ -319,9 +320,11 @@ class Reporting:
                     )
 
                 total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
+                # print(total_accumulate_gas)
             # --------------- work_report_gas_too_high -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15fa0015fd00?v=0.6.3
             # Eq 11.30
+            print(total_accumulate_gas, ACCUMULATION_GAS)
             if total_accumulate_gas > ACCUMULATION_GAS:
                 raise ReportingError(
                     ReportingErrorCode.WORK_REPORT_GAS_TOO_HIGH,

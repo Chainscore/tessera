@@ -1,6 +1,8 @@
 """Work report types for the JAM protocol."""
+
 from dataclasses import dataclass
 
+from jam.types.base import Vector
 from jam.types.base.null import Nullable
 from jam.types.base.integers import U8, U16, U32, U64
 from jam.types.base.choices.choice import Choice, decodable_choice
@@ -27,6 +29,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 
 
+
 @decodable_choice
 class WorkExecResult(Choice):
     """Work execution result choice."""
@@ -38,16 +41,6 @@ class WorkExecResult(Choice):
     code_oversize: Nullable
     bad_exports: Nullable
 
-@decodable_dataclass
-@dataclass
-class RefineLoad(Codable, JsonSerde):
-    """Refine load structure."""
-
-    gas_used: Gas
-    imports: U16
-    exports: U16
-    extrinsic_count: U16
-    extrinsic_size: U32
 
 @decodable_vector(element_type=WorkExecResult)
 class ExecResults(Vector[WorkExecResult]):
@@ -120,8 +113,7 @@ class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
     ...
 
 @decodable_vector(WorkResult)
-class WorkResults(Vector[WorkResult]):
-    ...
+class WorkResults(Vector[WorkResult]): ...
 
 @decodable_dataclass
 @dataclass
