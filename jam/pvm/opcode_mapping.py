@@ -5,7 +5,7 @@ from decimal import Decimal, ROUND_FLOOR
 from jam.types.base.integers.fixed import U32, U64, U128
 from jam.pvm.memory import Memory, MemoryChunk
 from jam.types.base.sequences.bytes.bytes import Bytes, Byte
-from jam.pvm.extract import Status
+from jam.pvm.types import Status
 
 class InstructionMapper:
     """Maps instruction opcodes to their respective functions and groups."""

@@ -2,6 +2,9 @@ from jam.types.base.sequences.bytes import Bytes
 from jam.types.protocol.core import Register
 from jam.types.protocol.core import ServiceId, Gas
 from typing import Any, Union, Tuple, Self, List
+from jam.types.base.integers.general import Int
+
+from jam.types.work.segment import Segments
 from jam.utils.json.serde import JsonSerde
 from jam.utils.codec.codable import Codable
 from jam.pvm.register import Registers
@@ -17,7 +20,7 @@ from jam.pvm.program import Program
 from jam.hostCall.decode_prog import derive_p
 from jam.types.work.package import WorkPackage
 from jam.hostCall.process import HostCall
-from jam.hostCall.types import RefineMap, Segment
+from jam.hostCall.types import RefineMap
 
 
 class PsiM:
@@ -42,29 +45,49 @@ class PsiM:
         if res is None:
             return self.gas, Status("panic"), self.context
         (c, w, u) = res
-        return RInvocation(*PsiH(c, self.pc, self.gas, w, u, self.host_function, self.context).process()).process()
+        return PsiM.R(self.gas, *PsiH(c, self.pc, self.gas, w, u, self.host_function, self.context).process())
 
-
-class RInvocation:
-    def __init__(self, status: Status, gas: Gas, registers: Registers, memory: PageMemory, context: Any):
-        self.status = status
-        self.gas = gas
-        self.registers = registers
-        self.memory = memory
-        self.context = context
-
-    def process(self):
+    @staticmethod
+    def R(
+            g: Gas,
+            grouped: Tuple[Status, Int, Gas, Registers, PageMemory, Any]
+    ) -> Any:
+        status, pc, _g, registers, memory, context = grouped
         result = Any
-        if self.status == "out-of-gas":
+        u = g - max(_g, 0)
+        if status == "out-of-gas":
             result = Status("out-of-gas")
-        elif self.status == "halt" and InstructionMapper.valid_address(self.memory, self.registers[6], self.registers[7]):
-            result = InstructionMapper.memory_value(self.memory, self.registers[6], self.registers[7])
-        elif self.status == "halt" and not InstructionMapper.valid_address(self.memory, self.registers[6],
-                                                                           self.registers[7]):
+        elif status == "halt" and InstructionMapper.valid_address(memory, registers[6],
+                                                                       registers[7]):
+            result = InstructionMapper.memory_value(memory, registers[6], registers[7])
+        elif status == "halt" and not InstructionMapper.valid_address(memory, registers[6],
+                                                                           registers[7]):
             result = Bytes([])
         else:
             result = Status("panic")
-        return self.registers, result, self.context
+        return u, result, context
+
+
+# class RInvocation:
+#     def __init__(self, status: Status, gas: Gas, registers: Registers, memory: PageMemory, context: Any):
+#         self.status = status
+#         self.gas = gas
+#         self.registers = registers
+#         self.memory = memory
+#         self.context = context
+#
+#     def process(self):
+#         result = Any
+#         if self.status == "out-of-gas":
+#             result = Status("out-of-gas")
+#         elif self.status == "halt" and InstructionMapper.valid_address(self.memory, self.registers[6], self.registers[7]):
+#             result = InstructionMapper.memory_value(self.memory, self.registers[6], self.registers[7])
+#         elif self.status == "halt" and not InstructionMapper.valid_address(self.memory, self.registers[6],
+#                                                                            self.registers[7]):
+#             result = Bytes([])
+#         else:
+#             result = Status("panic")
+#         return self.registers, result, self.context
 
 
 class PsiH:
@@ -106,21 +129,21 @@ class PsiH:
 
 
 class PsiI:
-    def __init__(self, p: WorkPackage, c: int):
+    def __init__(self, p: WorkPackage, c: Int):
         self.work_package = p
         self.core = c
         self.host_function = self.is_authorized_f()
 
     def process(self):
-        buffer = self.work_package.encode()
+        buffer = self.work_package.encode() + self.core.encode()
         PsiM(self.work_package.code_hash, U64(0), 50000000, buffer, self.host_function, None)
 
     def is_authorized_f(self):
-        def gas(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def gas(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
             return HostCall.gas(call)
 
-        def default(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def default(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             _gas -= 10
             register[6] = 2 ** 64
             return Status("continue"), _gas, register, memory

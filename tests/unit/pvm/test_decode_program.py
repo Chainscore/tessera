@@ -5,7 +5,7 @@ from .types import Status, Testcase
 
 def test_decode_program():
     # Read all json files from /data/pvm/programs
-    data_dir = r"C:\Users\FAIZ AHMAD\PycharmProjects\jam-node\tests\unit\pvm\data"
+    data_dir = "tests/unit/pvm/data"
     for i, file in enumerate(os.listdir(data_dir)):
         with open(os.path.join(data_dir, file), "r") as f:
             data = json.loads(f.read())

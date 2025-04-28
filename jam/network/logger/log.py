@@ -3,12 +3,12 @@ import json
 from datetime import datetime
 from aioquic.quic.connection import logger
 
-directory = "packets"
-
-if not os.path.exists(directory):
-    os.makedirs(directory)
-
 def save_decoded_data_to_json(decoded_data, stream_id):
+    directory = "packets"
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = os.path.join(directory, f"stream_{stream_id}_{timestamp}.json")
 

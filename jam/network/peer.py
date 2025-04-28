@@ -15,3 +15,6 @@ class Peer:
         self.host = host
         self.port = port
         self.san = san
+
+    def __repr__(self):
+        return f"Peer(host={self.host}, port={self.port}, san={self.san})"

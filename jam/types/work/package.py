@@ -38,12 +38,3 @@ class WorkPackage(Codable, JsonSerde):
     params: Bytes
     context: RefineContext
     items: WorkItems
-
-
-@decodable_dataclass
-@dataclass
-class AccumulationOperand(Codable, JsonSerde):
-    o: Bytes
-    l: ByteArray32
-    k: ByteArray32
-    a: Bytes

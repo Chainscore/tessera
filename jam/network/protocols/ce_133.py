@@ -1,12 +1,11 @@
 from dataclasses import dataclass
-from jam.state.state import State
-from jam.types import Int, Array
+from jam.types import Int
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.types.work.package import WorkPackage
 from jam.utils.json import JsonSerde
-from typing import cast, Any, Optional, Tuple
+from typing import cast
 
 
 @decodable_dataclass

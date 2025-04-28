@@ -2,12 +2,10 @@ import asyncio
 from time import time
 
 from jam.config.logging import logger
+from tests.dummy.utils import create_dummy_bytes32
 from .node import Node
 from jam.db.kv import KVStore
 from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data
-from tests.fixtures.utils import create_dummy_Bytes, create_dummy_bytes32
-from jam.types import WorkPackage, Authorizer, OpaqueHash, U32, Bytes
-
 
 async def work_report_request_producer(node: Node, db: KVStore):
     """
@@ -37,7 +35,7 @@ async def work_report_request_producer(node: Node, db: KVStore):
         if not node.peers:
             logger.info(f"⚠️ ({node.name}) No peers connected, skipping request")
         else:
-            request_data = CE136Data(work_report_hash=create_dummy_bytes32(20))
+            request_data = CE136Data(work_report_hash=create_dummy_bytes32())
 
             # Send request via CE 136 protocol
             RequestProtocol.transmit(node, request_data)

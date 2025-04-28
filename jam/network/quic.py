@@ -2,11 +2,12 @@ from typing import Dict
 
 from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted
-from aioquic.quic.connection import logger
+from jam.config.logging import logging as logger
 from typing_extensions import Optional
 
+# from jam.network.logger.log import save_decoded_data_to_json
 from jam.network.logger.log import save_decoded_data_to_json
-from tests.fixtures.dummy_package import create_dummy_Credential
+from tests.dummy.dummy_package import create_dummy_Credential
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -48,7 +49,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
             else:
                 print("Unidentified Protocol")
 
-            logger.info(f"🔗 Handshake completed.")
+            logger.info("🔗 Handshake completed.")
 
         elif isinstance(event, ConnectionTerminated):
             logger.warning(f"❌ Server Connection terminated: {event.error_code}")
@@ -82,6 +83,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     except Exception:
                         prefix = None
 
+
                     if prefix == PrefixType.CE133:
                         data = WorkPackageSubmission.intercept(buffer=buffer[1:])
 
@@ -93,29 +95,32 @@ class QuicServerProtocol(QuicConnectionProtocol):
                         data = WorkPackageSharing.intercept(buffer=buffer[1:])
                         logger.info(f"Received core_index : {data.core_segment.core_index} with segment mapping : {data.core_segment.segment_root_map} and Work package bundle:{data.work_package_bundle} ")
                         WorkPackageSharing.process(data=data)
-                        self.stream_and_close(stream_id=event.stream_id  ,message=create_dummy_Credential())
+                        self.stream_and_close(stream_id=event.stream_id  ,message=create_dummy_Credential().encode())
+
+                        # save_decoded_data_to_json(buffer.decode(), event.stream_id)
+
+                    elif prefix == PrefixType.CE128:
+                        self.stream_and_keep_open(event.stream_id, bytes(0))
 
                     elif prefix == PrefixType.CE135:
                         data = WorkReportDistribution.intercept(buffer=buffer[1:])
+                        logger.info(data)
                         WorkReportDistribution.process(data=data)
-                        save_decoded_data_to_json(buffer.decode(),event.stream_id)
+                        logger.info(f"📩 Received work report : {data.report} with slot {data.slot}")
+
                     elif prefix == PrefixType.CE136:
                         data = WorkReportRequest.intercept(buffer=buffer[1:])
                         WorkReportRequest.process(data=data)
-                        save_decoded_data_to_json(buffer.decode(), event.stream_id)
 
                     else:
                         try:
                             decoded_data = buffer.decode('utf-8', errors='ignore')
                             logger.warning(f"📩 Received data of size {len(buffer)} bytes")
-                            save_decoded_data_to_json(decoded_data, event.stream_id)
-                            logger.info("Saved data")
 
                         except UnicodeDecodeError:
                             logger.warning(
                                 f"❌ Failed to decode data for stream {event.stream_id}. Saving raw data in hex.")
                             decoded_data = buffer.hex()
-                            save_decoded_data_to_json(decoded_data, event.stream_id)
 
                 except Exception as e:
                     logger.exception(f"Error retrieving data from ce stream: {e}")
@@ -140,7 +145,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                             announcement = BlockAnnouncementProtocol.intercept(buffer=buffer[1:])
                             logger.info(f"📩 Received block with parent: {announcement.header.parent}")
                             self.stream_buffer[event.stream_id] = bytes(0)
-                            save_decoded_data_to_json(announcement, event.stream_id)
+                            # save_decoded_data_to_json(announcement, event.stream_id)
 
                         except Exception as ann_err:
                             logger.warning(f"❌ Failed to parse block announcement: {ann_err}")

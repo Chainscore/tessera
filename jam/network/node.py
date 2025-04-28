@@ -57,6 +57,8 @@ class Node:
         self.peers = peers
         self.is_builder = is_builder
         self.is_validator = is_validator
+        self.connections = []
+        self.peer_conn = {}
 
         if is_validator and is_builder:
             raise ValueError("Node can't be validator and builder at same time!")
@@ -123,7 +125,7 @@ class Node:
         try:
             # Skip self
             if peer.host == self.host and peer.port == self.port:
-                logger.info(f"⚠️ Skipping self ({self.host}:{self.port})")
+                logger.info(f"⚠️ ({self.name}) Skipping self ({self.host}:{self.port})")
                 return
             
             logger.info(f"🔹 ({self.name}) Creating new connection to {peer.host}:{peer.port} via QUIC...")

@@ -4,12 +4,11 @@ from time import time
 
 from jam.state.state import State
 from jam.utils.constants import EPOCH_LENGTH
+from tests.dummy.dummy_extrinsics import create_dummy_work_report
 from .node import Node
 from jam.config.logging import logger
 from jam.db.kv import KVStore
-from tests.fixtures.dummy_report import create_dummy_report
 from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
-from ..types import Int
 from jam.types.protocol.core import TimeSlot
 
 
@@ -42,11 +41,11 @@ async def work_report_producer(node: Node, db: KVStore):
 
         logger.info(f"We're in epoch slot {ts_epoch_index} and {state.gamma.s.get_key()} mode")
 
-        if node.is_builder:
-            report = create_dummy_report()
-            report_data = CE135Data(report=report, slot=TimeSlot(current_timeslot))
+        if not node.is_builder:
+            report = create_dummy_work_report()
+            report_data = CE135Data(report=report, slot=TimeSlot(int(current_timeslot)))
 
-            logger.info(f"📝 ({node.name}) Producing Work Report {report_iter}: {report}")
+            logger.info(f"📝 ({node.name}) Producing Work Report {report_iter}")
 
             ReportProtocol.transmit(node, report_data)
         else:

@@ -9,6 +9,7 @@ from jam.utils.json import JsonSerde
 from typing import cast, Any, Optional, Tuple
 from jam.types.work.report import WorkReport
 from jam.types.protocol.core import TimeSlot
+from jam.config.logging import logger
 
 
 @decodable_dataclass
@@ -29,11 +30,14 @@ class WorkReportDistribution(NetworkProtocol):
 
         for client in node.connections:
             message = self._prefix.encode() + data.report.encode() + data.slot.encode()
+            logger.info(f"📝 encoded work report + slot ")
             client.stream_and_close(message=message)
 
     @classmethod
     def intercept(cls, buffer: bytes) -> CE135Data:
+        logger.info("receiving data")
         data, offset = CE135Data.decode_from(buffer)
+        logger.info("decoded")
         data = cast(CE135Data, data)
 
         return data

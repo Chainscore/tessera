@@ -2,6 +2,8 @@ import json
 from jam.types.base.sequences.bytes.bytes import Bytes
 from hashlib import blake2b
 import os
+
+from jam.types.work.segment import Segments, Segment, MultiSegments
 from jam.utils.codec.primitives.integers import IntegerCodec
 from jam.types.base.integers.fixed import U32, U64, U256
 from jam.services import historicalLookup
@@ -14,7 +16,7 @@ from jam.pvm.register import Registers
 from jam.pvm.pvm_memory import PageMemory
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.state.components.delta import AccountData, Delta
-from jam.hostCall.types import XContent, RefineMap, Segment
+from jam.hostCall.types import XContent, RefineMap
 from jam.types.work.package import WorkPackage
 from typing import Optional
 from jam.pvm.extract import Status
@@ -35,12 +37,12 @@ class HostCall:
                  authorizer: Optional[Bytes] = None,
                  work_service_id: Optional[ServiceId] = None,
                  work_item_index: Optional[int] = None,
-                 export: Optional[Segment] = None,
+                 export: Optional[Segments] = None,
                  e_index: Optional[U32] = None,
                  timeslot: Optional[U32] = None,
                  work_package: Optional[WorkPackage] = None,
                  blob: Optional[Bytes] = None,
-                 segment: Optional[Segment] = None
+                 segment: Optional[MultiSegments] = None
                  ):
         self.initial_regs = register
         self.initial_memory = memory
