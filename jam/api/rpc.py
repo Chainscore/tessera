@@ -226,6 +226,17 @@ async def rpc_handler(request: RpcRequest):
             )
 
         header_hash = params.get("Hash")
+        service_id = params.get("ServiceId")
+        if not (0 <= service_id <= 2**32 - 1):
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
+                },
+            )
+
         if len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
@@ -236,11 +247,58 @@ async def rpc_handler(request: RpcRequest):
                 },
             )
 
-        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32):
+        #TODO: check if service id is in the state 
+        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32) :
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
-                result=[db_state.pi.encode()]
+                result=[db_state.delta]
+            )
+        else:
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "unexpected error"},
+            )
+    elif method == "serviceData":
+        if len(params) != 2:
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash and ServiceId",
+                },
+            )
+
+        header_hash = params.get("Hash")
+        service_id = params.get("ServiceId")
+        if not (0 <= service_id <= 2**32 - 1):
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
+                },
+            )
+
+        if len(header_hash) != 32:
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash",
+                },
+            )
+
+        #TODO: check if service id is in the state 
+        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32) :
+            return RpcResponse(
+                jsonrpc="2.0", 
+                id=request.id, 
+                result=[db_state.delta]
             )
         else:
             return RpcResponse(
@@ -249,6 +307,101 @@ async def rpc_handler(request: RpcRequest):
                 error={"code": -32602, "message": "unexpected error"},
             )
 
+    elif method == "servicePreimage":
+        if len(params) != 2:
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash and ServiceId",
+                },
+            )
+
+        header_hash = params.get("Hash")
+        service_id = params.get("ServiceId")
+        if not (0 <= service_id <= 2**32 - 1):
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
+                },
+            )
+
+        if len(header_hash) != 32:
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={
+                    "code": -32602,
+                    "message": "Invalid parameters: expected header_hash",
+                },
+            )
+
+        #TODO: check if service id is in the state 
+        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32) :
+            return RpcResponse(
+                jsonrpc="2.0", 
+                id=request.id, 
+                result=[db_state.delta]
+            )
+        else:
+            return RpcResponse(
+                jsonrpc="2.0",
+                id=request.id,
+                error={"code": -32602, "message": "unexpected error"},
+            )
+    elif method == "serviceRequest":
+            if len(params) != 4:
+                return RpcResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={
+                        "code": -32602,
+                        "message": "Invalid parameters: expected header_hash and ServiceId",
+                    },
+                )
+
+            header_hash = params.get("Hash")
+            service_id = params.get("ServiceId")
+            header_hash = params.get("Hash")
+            preimage_len = params.get("u32")
+            
+            if not (0 <= service_id <= 2**32 - 1):
+                return RpcResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={
+                        "code": -32602,
+                        "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
+                    },
+                )
+
+            if len(header_hash) != 32:
+                return RpcResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={
+                        "code": -32602,
+                        "message": "Invalid parameters: expected header_hash",
+                    },
+                )
+
+            #TODO: check if service id is in the state 
+            if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32) :
+                return RpcResponse(
+                    jsonrpc="2.0", 
+                    id=request.id, 
+                    result=[db_state.delta]
+                )
+            else:
+                return RpcResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={"code": -32602, "message": "unexpected error"},
+                )       
     # Default case for unrecognized methods
     return RpcResponse(
         jsonrpc="2.0",
