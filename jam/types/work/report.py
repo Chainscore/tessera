@@ -75,12 +75,6 @@ class WorkResult(Codable, JsonSerde):
     accumulate_gas: Gas
     result: WorkExecResult
     refine_load: RefineLoad
-    # refinement_gas: Gas
-    # import_count: U16
-    # extrinsic_count: U8
-    # extrinsic_size: U64
-    # export_count: U16
-
 
 @decodable_dataclass
 @dataclass

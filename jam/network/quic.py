@@ -55,6 +55,8 @@ class QuicServerProtocol(QuicConnectionProtocol):
         elif isinstance(event, StreamDataReceived):
             from jam.network.protocols.base import PrefixType
             from jam.network.protocols.ce_133 import WorkPackageSubmission
+            from jam.network.protocols.ce_135 import WorkReportDistribution
+            from jam.network.protocols.ce_136 import WorkReportRequest
 
             logger.info(f"📩 Received data of size {len(event.data)} bytes on stream {event.stream_id}")
 
@@ -89,18 +91,25 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     elif prefix == PrefixType.CE128:
                         self.stream_and_keep_open(event.stream_id, bytes(0))
 
+                    elif prefix == PrefixType.CE135:
+                        data = WorkReportDistribution.intercept(buffer=buffer[1:])
+                        logger.info(data)
+                        WorkReportDistribution.process(data=data)
+                        logger.info(f"📩 Received work report : {data.report} with slot {data.slot}")
+
+                    elif prefix == PrefixType.CE136:
+                        data = WorkReportRequest.intercept(buffer=buffer[1:])
+                        WorkReportRequest.process(data=data)
+
                     else:
                         try:
                             decoded_data = buffer.decode('utf-8', errors='ignore')
                             logger.warning(f"📩 Received data of size {len(buffer)} bytes")
-                            # save_decoded_data_to_json(decoded_data, event.stream_id)
-                            # logger.info("Saved data")
 
                         except UnicodeDecodeError:
                             logger.warning(
                                 f"❌ Failed to decode data for stream {event.stream_id}. Saving raw data in hex.")
                             decoded_data = buffer.hex()
-                            # save_decoded_data_to_json(decoded_data, event.stream_id)
 
                 except Exception as e:
                     logger.exception(f"Error retrieving data from ce stream: {e}")

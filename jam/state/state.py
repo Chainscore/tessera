@@ -285,7 +285,7 @@ class State(Sigma):
             rho=Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]),
             tau=Tau(0),
             phi=Phi([AuthorizationQueue([AuthorizerHash(bytes(32)) for _ in range(MAX_AUTH_QUEUE_ITEMS)]) for _ in range(CORE_COUNT)]),
-            chi=Chi(m=ServiceId(0), a=ServiceId(0), v=ServiceId(0), g=ChiG({})),
+            chi=Chi(chi_m=ServiceId(0), chi_a=ServiceId(0), chi_v=ServiceId(0), chi_g=ChiG({})),
             psi=Psi(good=PsiG([]), bad=PsiB([]), wonky=PsiW([]), offenders=PsiO([])),
             pi=Pi([AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]) for _ in range(2)]),
             nu=Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)]),
