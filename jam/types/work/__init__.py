@@ -7,7 +7,6 @@ from jam.types.work.report import (
     WorkExecResult,
     WorkResult,
     WorkPackageSpec,
-    SegmentRootLookupItem,
     WorkReport,
 )
 
@@ -25,6 +24,5 @@ __all__ = [
     "WorkExecResult",
     "WorkResult",
     "WorkPackageSpec",
-    "SegmentRootLookupItem",
     "WorkReport",
 ]

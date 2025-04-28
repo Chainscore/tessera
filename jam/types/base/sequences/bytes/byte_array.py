@@ -83,3 +83,7 @@ class ByteArray256(ByteArray):
 @decodable_bytearray(784)
 class ByteArray784(ByteArray):
     ...
+
+@decodable_bytearray(4104)
+class ByteArray4104(ByteArray):
+    ...

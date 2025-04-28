@@ -98,7 +98,6 @@ from jam.types.work import (
     WorkPackage,
     WorkReport,
     WorkPackageSpec,
-    SegmentRootLookupItem,
 )
 
 # Ticket types
@@ -161,7 +160,6 @@ __all__ = [
     "Bit",
     "String",
     "Array",
-    "BitSequence",
     "Vector",
     "ByteArray8",
     "ByteArray16",
@@ -209,7 +207,6 @@ __all__ = [
     "Extrinsic",
     # Header types
     "Header",
-    "EpochMark",
     "TicketsMark",
     "OffendersMark",
     # Service types
@@ -225,7 +222,6 @@ __all__ = [
     "WorkPackage",
     "WorkReport",
     "WorkPackageSpec",
-    "SegmentRootLookupItem",
     # Ticket types
     "TicketEnvelope",
     "TicketBody",
