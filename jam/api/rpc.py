@@ -18,7 +18,13 @@ from jam.types import  U32
 # Initialize FastAPI with metadata for Swagger UI
 app = FastAPI(
     title="Tessera RPC API",
-    description="RPC for Tessera node ",
+    description=""" RPC for Tessera node  
+     ## Documentation Links:  
+    - [Tessera API Overview](https://example.com/tessera-api-overview)  
+    - [Refered JSON-RPC Specification JIP-2](https://docs.jamcha.in/advanced/rpc/jip2-node-rpc)  
+    - Followed formatting and structure of [Ethereum JSON-RPC](https://www.quicknode.com/docs/ethereum)
+    
+    """,
     version="1.0.0",
 )
 
@@ -61,6 +67,18 @@ class RpcRequest(BaseModel):
     jsonrpc: str
     params: Dict[str, Any]
     id: Optional[Any]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "method": "statistics",
+                "jsonrpc": "2.0",
+                "params": {
+                    "Hash": [9, 22, 47, 0, 129, 231, 187, 27, 132, 92, 215, 134, 177, 181, 78, 139, 163, 206, 87, 173, 138, 231, 16, 253, 5, 145, 172, 130, 208, 197, 4, 223]
+                },
+                "id": 1,
+            }
+        }
 
 
 # Response models
@@ -465,12 +483,12 @@ async def websocket_endpoint(websocket: WebSocket):
                         manager.subscribe(websocket, "subscribeStatistics")
 
                         # Send immediate response with current data
-                        response = {
-                            "jsonrpc": "2.0",
-                            "id": request["id"],
-                            "result": [db_state.pi.encode()],
-                        }
-                        await websocket.send_text(json.dumps(response))
+                        response =  RpcResponse(
+                            jsonrpc="2.0",
+                            id=request["id"],
+                            result=[db_state.pi.encode()]
+                        )
+                        await websocket.send_text(response.json())
 
                     elif method == "subscribeTransactions":
                         # Subscribe to transaction statistics
