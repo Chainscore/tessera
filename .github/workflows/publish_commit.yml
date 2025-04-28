@@ -6,6 +6,13 @@ on:
     branches:
       - main
       - develop
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Run in test mode (will not send transaction)'
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   publish-commit:
