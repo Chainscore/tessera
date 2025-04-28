@@ -15,7 +15,7 @@ def create_dummy_package() -> WorkPackage:
         authorization=Bytes(create_dummy_bytes(12)),
         auth_code_host=U32(42),
         code_hash=OpaqueHash(create_dummy_bytes32()),
-        params=create_dummy_Bytes(10),
+        params=Bytes(create_dummy_bytes(10)),
         context=create_dummy_work_context(),
         items=WorkItems([])
     )

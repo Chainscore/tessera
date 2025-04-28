@@ -4,7 +4,6 @@ from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.state.components.delta import Timestamps
-from jam.state.components.delta import PartialState
 from jam.state.components.delta import Delta, AccountData, AccountStorage, PreImageLookup, LookupTimestamps, LookupTable, BlobLength
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.types.base.sequences.bytes.bytes import ByteVector32
@@ -13,7 +12,6 @@ from jam.pvm.pvm_memory import PageMemory, Memory, Access
 from jam.types.base.integers.fixed import U32, U64
 from jam.types.base.boolean import Boolean
 from jam.utils.constants import REGISTER_COUNT
-from jam.types.protocol.validators import ValidatorArray
 from jam.state.components.phi import Phi
 from jam.state.components.chi import Chi
 from jam.hostCall.types import XContent, DeferredTransfers

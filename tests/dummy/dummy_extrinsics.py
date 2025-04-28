@@ -1,4 +1,6 @@
 from random import randint
+
+from jam.types import U64
 from jam.types.extrinsics.extrinsic import Extrinsic
 from jam.types.extrinsics.tickets import TicketEnvelope, TicketsExtrinsic
 from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
@@ -6,9 +8,16 @@ from jam.types.extrinsics.guarantees import ReportGuarantee, ValidatorSignature,
 from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField, AssurancesExtrinsic
 from jam.types.extrinsics.disputes import Verdict, Verdicts, Culprits, Faults, Judgement, DisputesExtrinsic
 from jam.types.protocol.core import ServiceId, TimeSlot, ValidatorIndex, Gas
-from jam.types.base.integers.fixed import U32, U16, U8
+from jam.types.base.integers.fixed import U32, U16, U8, U64
 from jam.types.work import WorkReport
-from jam.types.work.report import SegmentRootLookup, WorkPackageSpec, WorkResult, WorkResults, WorkExecResult
+from jam.types.work.report import (
+    SegmentRootLookup,
+    WorkPackageSpec,
+    WorkResult,
+    WorkResults,
+    WorkExecResult,
+    RefineLoad
+)
 from tests.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_int
 from jam.types.work.refine_context import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, Ed25519Signature, BandersnatchRingVrfSignature
@@ -41,12 +50,21 @@ def create_dummy_work_context() -> RefineContext:
 
 def create_dummy_work_result() -> WorkResult:
     """Create dummy work result"""
+    refine_load = RefineLoad(
+        gas_used=Gas(0),
+        imports=U16(0),
+        exports=U16(0),
+        extrinsic_count=U8(0),
+        extrinsic_size=U64(0)
+    )
+
     return WorkResult(
         service_id=ServiceId(16909060),
         code_hash=create_dummy_bytes32(),
         payload_hash=create_dummy_bytes32(),
         accumulate_gas=Gas(42),
         result=WorkExecResult({"ok": Bytes(create_dummy_bytes(16))}),
+        refine_load=refine_load
     )
 
 
@@ -58,8 +76,9 @@ def create_dummy_work_report() -> WorkReport:
         core_index=U16(3),
         authorizer_hash=create_dummy_bytes32(),
         auth_output=Bytes("0x0102030405"),
-        segment_root_lookup=SegmentRootLookup([]),
+        segment_root_lookup=SegmentRootLookup({}),
         results=WorkResults([create_dummy_work_result()]),
+        auth_gas_used=Gas(0)
     )
 
 

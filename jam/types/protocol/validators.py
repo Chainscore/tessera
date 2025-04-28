@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from jam.types import decodable_vector, Vector
 from jam.types.base.integers.fixed import U16, U8
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.bytes.byte_array import ByteArray, decodable_bytearray
@@ -53,4 +54,8 @@ class ValidatorData(Codable, JsonSerde):
 """Fixed-size array of validator data with size VALIDATOR_COUNT."""
 @decodable_array(length=VALIDATOR_COUNT, element_type=ValidatorData)
 class ValidatorsData(Array[ValidatorData]):
+    ...
+
+@decodable_vector(element_type=ValidatorData)
+class ValidatorVector(Vector[ValidatorData]):
     ...
