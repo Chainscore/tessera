@@ -2,6 +2,8 @@ from jam.types.base.sequences.bytes import Bytes
 from jam.types.protocol.core import Register
 from jam.types.protocol.core import ServiceId, Gas
 from typing import Any, Union, Tuple, Self, List
+
+from jam.types.work.segment import Segments
 from jam.utils.json.serde import JsonSerde
 from jam.utils.codec.codable import Codable
 from jam.pvm.register import Registers
@@ -17,7 +19,7 @@ from jam.pvm.program import Program
 from jam.hostCall.decode_prog import derive_p
 from jam.types.work.package import WorkPackage
 from jam.hostCall.process import HostCall
-from jam.hostCall.types import RefineMap, Segment
+from jam.hostCall.types import RefineMap
 
 
 class PsiM:
@@ -116,11 +118,11 @@ class PsiI:
         PsiM(self.work_package.code_hash, U64(0), 50000000, buffer, self.host_function, None).process()
 
     def is_authorized_f(self):
-        def gas(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def gas(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
             return HostCall.gas(call)
 
-        def default(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segment):
+        def default(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
             _gas -= 10
             register[6] = 2 ** 64
             return Status("continue"), _gas, register, memory
