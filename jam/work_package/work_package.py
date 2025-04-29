@@ -46,6 +46,8 @@ from jam.hostCall.invocation import PsiI
 from tests.dummy.dummy_package import create_dummy_package
 from tests.dummy.utils import create_dummy_bytes32
 
+from jam.work_package.package_db import BundleStore, SegmentStore
+
 
 class WorkPackageProcessing:
 
@@ -180,14 +182,14 @@ class WorkPackageProcessing:
         # We have to store EC Chunks (Shards) of Segments w Proofs into D3L, when segments are exported
 
         # Also we have to create and store mappings:
-        # Mapping from wp hash -> segment root (this can be constructed via listening to reports)
+        # Mapping from wp hash -> segment root (this can be constructed via listening to reports) - done
 
-        # Mapping from segment root -> erasure root & assurer
+        # Mapping from segment root -> erasure root & assurer - done
         # Mapping from erasure root -> (audit & segment) shard pairs
 
         # On Guarantor Node
-        # Mapping from segment root -> segments
-        # Mapping from erasure root -> bundle ?? or chunks
+        # Mapping from segment root -> segments - done
+        # Mapping from erasure root -> bundle ?? or chunks -done
         # index -> segment
 
 
@@ -318,9 +320,22 @@ class WorkPackageProcessing:
         p_a = Hash.blake2b(bytes(authorizer))
 
         h = Hash.blake2b(p.encode())
+        e_bar_cap = Segments([])
+
+        for segments in e_list:
+            e_bar_cap.extend(segments)
 
         wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32(), exports_count=U16(0))
-        specs = self.availability_specifier(package_hash=h, wp_bundle=wp_bundle.encode(), export_segments=Vector([]))
+        specs = self.availability_specifier(package_hash=h, wp_bundle=wp_bundle.encode(), export_segments=e_bar_cap)
+
+        # inserting auditable bundle in db
+        bundle_db = BundleStore()
+        bundle_db.put(specs.erasure_root, wp_bundle)
+
+        #inserting segments in db
+        segment_db = SegmentStore()
+        segment_db.put(export_segment=e_bar_cap, paged_proof=self.paged_proof(e_bar_cap))
+
 
         if not isinstance(o, Bytes):
             return None

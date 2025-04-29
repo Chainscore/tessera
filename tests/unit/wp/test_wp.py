@@ -4,12 +4,12 @@ from jam.merklization import BMRFunctions
 
 from jam.db.kv import KVStore
 from jam.types.work.segment import Segments
-from tests.fixtures.utils import create_dummy_bytes32
+from tests.dummy.utils import create_dummy_bytes32
 
 
 def test_put():
     # db_path = tempfile.gettempdir()
-    db_path = "/home/faizahmad817/tessera/db/segment"
+    db_path = "db/segment"
     db = KVStore(db_path)
     merkle = BMRFunctions()
     segment = create_dummy_bytes32()
