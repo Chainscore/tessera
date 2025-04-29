@@ -1,8 +1,5 @@
 import math
-from typing import List, Union
-
-from jam.utils.conv_helper.bitarray import BitArrayConversion
-
+from typing import List
 
 class PvmUtilities:
     @staticmethod
