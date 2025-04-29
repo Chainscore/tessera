@@ -1,3 +1,6 @@
-from jam.network.protocols.up_0 import BlockAnnouncementProtocol
+from jam.network.protocols.up_0 import BlockAnnouncement
+from jam.network.protocols.ce_133 import WorkPackageSubmission
+from jam.network.protocols.ce_135 import WorkReportDistribution
+from jam.network.protocols.ce_136 import WorkReportRequest
 
-__all__ = ["BlockAnnouncementProtocol"]
+__all__ = ["BlockAnnouncement", "WorkReportDistribution", "WorkReportRequest", "WorkPackageSubmission"]

@@ -9,7 +9,8 @@ from aioquic.quic.configuration import QuicConfiguration
 from jam.types.protocol.validators import ValidatorData
 from .certificate import generate_keys
 from .peer import Peer
-from .quic import QuicServerProtocol, QuicClientProtocol
+from .quic.client import QuicClientProtocol
+from .quic.server import QuicServerProtocol
 from .sessions import SessionTicketStore
 from jam.config.logging import logger
 
