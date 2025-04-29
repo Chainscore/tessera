@@ -60,6 +60,7 @@ jobs:
           
           transaction = contract.functions.anchor(commit_hash_bytes).build_transaction({
               'chainId': 137,  # Polygon mainnet
+              'gas': 100000,
               'gasPrice': gas_price,
               'nonce': nonce,
           })
