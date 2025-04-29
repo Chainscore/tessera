@@ -4,6 +4,7 @@ from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
 from jam.consensus.safrole.safrole import Safrole
 from jam.db.kv import KVStore
+
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.dummy_wpb import wp_producer

@@ -42,19 +42,27 @@ class NetworkProtocol(ABC):
 
     @abstractmethod
     def transmit(self, node: Node, data: Any):
-        """Function to transmit data to connected peers. Must be implemented by subclasses."""
+        """
+        Function to transmit data to connected server.
+        Called on client. Must be implemented by subclasses.
+        """
         ...
 
     @classmethod
     @abstractmethod
-    def intercept(cls, buffer: bytes):
-        """Function to intercept data from connected peers. Must be implemented by subclasses."""
+    def server_intercept(cls, buffer: bytes):
+        """
+        Function to intercept & process data / query from connected client.
+        Called on server. Must be implemented by subclasses.
+        """
         ...
+
 
     @classmethod
     @abstractmethod
-    def process(cls, data: Any):
-        """Function to process intercepted data. Must be implemented by subclasses."""
+    def client_intercept(cls, buffer: bytes):
+        """
+        Function to intercept & process returned data from connected server.
+        Called on client. Must be implemented by subclasses.
+        """
         ...
-
-

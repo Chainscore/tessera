@@ -2,9 +2,7 @@ import copy
 import dataclasses
 from copy import deepcopy
 
-from jam.types.protocol.merkle import OptionHash
 from jam.types import Block, Null
-from jam.types.protocol.core import Gas, ServiceId
 from jam.accumulation.types import (
     AcclOutput,
     AccCommitmentMap,
@@ -13,12 +11,19 @@ from jam.accumulation.types import (
     OperandTuples,
     OperandTuple,
 )
+
+from jam.state.components.sigma import Sigma
 from jam.state.components.delta import Delta
 from jam.state.components.phi import Phi
 from jam.state.components.tau import Tau
 from jam.state.components.iota import Iota
 from jam.state.components.chi import ChiA, ChiG, ChiM, ChiV
 from jam.state.components.nu import AllReadyWRs, ReadyWR
+from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
+from jam.hostCall.transfer import PsiT
+
+from jam.types.protocol.merkle import OptionHash
+from jam.types.protocol.core import Gas, ServiceId
 from jam.types.work.report import (
     WorkDependencies,
     WorkReports,
@@ -26,7 +31,6 @@ from jam.types.work.report import (
     WorkReport,
 )
 from jam.utils.constants import EPOCH_LENGTH
-from jam.state.components.sigma import Sigma
 
 
 class Accumulation:
@@ -243,8 +247,8 @@ class Accumulation:
             DeferredTransfer: A list of transfers that are deferred.
             AccCommitmentMap: A mapping of service indices to their corresponding accumulation outputs.
         """
-
-        s: list[ServiceId] = []  # w_r_s service ids
+        
+        s: list[ServiceId] = [] # w_r_s service ids
 
         u: Gas = 0  # accumulated gas
         accl_output_array: AccCommitmentMap = AccCommitmentMap(
@@ -278,15 +282,15 @@ class Accumulation:
             state = updated_partial_state
 
         t_cap.sort(key=lambda x: x.sender)
-        d = Delta(state.service_accounts)
-        i = Iota(state.validator_keys)
-        q = Phi(state.authorizer_keys)
-        m = ChiM(state.privileges.m)
-        a = ChiA(state.privileges.a)
-        v = ChiV(state.privileges.v)
-        z = ChiG(state.privileges.g)
-        n = Delta({})
-        m_set = []
+        d=Delta(state.service_accounts)
+        i=Iota(state.validator_keys)
+        q=Phi(state.authorizer_keys)
+        m=ChiM(state.privileges.chi_m)
+        a=ChiA(state.privileges.chi_a)
+        v=ChiV(state.privileges.chi_v)
+        z=ChiG(state.privileges.chi_g)
+        n=Delta({})
+        m_set=[]
 
         [updated_partial_state, df_list, accl_output, gas] = (
             Accumulation.single_accumulation(
@@ -549,36 +553,37 @@ class Accumulation:
         star_work_reports.extend(accumulatable_wrs)
 
         # TODO: Testing without on chain accumulation
-        # # ----------------------
-        # # Section 12.2 Execution (Step 3)
-        # # ----------------------
-        #
-        # partial_state = StateContext(service_accounts=pre_state.delta, validator_keys=pre_state.iota, authorizer_keys=pre_state.phi, privileges=pre_state.chi)
-        #
-        # # accumulated_gas accumulated from ChiG_services
-        # service_gas=0
-        # for i in pre_state.chi.g:
-        #     service_gas+=pre_state.chi.g[i]
-        #
-        # gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT)+service_gas))
-        # [work_accl_no, updated_state, deferred_transfers, commitment_map] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, pre_state.chi.g, block.header.slot)
-        #
-        # # Update Delta Dagger, Chi, Iota, Phi
-        # new_state.delta = updated_state.service_accounts
-        # new_state.chi = updated_state.privileges
-        # new_state.iota = updated_state.validator_keys
-        # new_state.phi = updated_state.authorizer_keys
-        #
-        #
-        # # ----------------------
-        # # Section 12.3 Deferred Transfers & State Integration (Step 4)
-        # # ----------------------
-        #
-        # # Update Delta Double Dagger
-        # for s in new_state.delta:
-        #     specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
-        #     # delta_double_dagger
-        #     new_state.delta[s] = Accumulation.psi_t(new_state.delta, block.header.slot, s, specific_transfers)
+        # ----------------------
+        # Section 12.2 Execution (Step 3)
+        # ----------------------
+
+        partial_state = StateContext(service_accounts=pre_state.delta, validator_keys=pre_state.iota, authorizer_keys=pre_state.phi, privileges=pre_state.chi)
+
+        # accumulated_gas accumulated from ChiG_services
+        service_gas=0
+        for i in pre_state.chi.chi_g:
+            service_gas+=pre_state.chi.chi_g[i]
+
+        gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT)+service_gas))
+        [work_accl_no, updated_state, deferred_transfers, commitment_map] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, pre_state.chi.chi_g, block.header.slot)
+
+        # Update Delta Dagger, Chi, Iota, Phi
+        new_state.delta = updated_state.service_accounts
+        new_state.chi = updated_state.privileges
+        new_state.iota = updated_state.validator_keys
+        new_state.phi = updated_state.authorizer_keys
+
+
+        # ----------------------
+        # Section 12.3 Deferred Transfers & State Integration (Step 4)
+        # ----------------------
+
+        # Update Delta Double Dagger
+        for s in new_state.delta:
+            specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
+            # delta_double_dagger
+            # new_state.delta[s] = Accumulation.psi_t(new_state.delta, block.header.slot, s, specific_transfers)
+            new_state.delta[s] = PsiT(d=new_state.delta, t=block.header.slot, s=s, bold_t=specific_transfers).process()
 
         # Update Accumulated History, Xi
         for i in range(EPOCH_LENGTH - 1):
@@ -607,3 +612,8 @@ class Accumulation:
         # ----------------------
 
         return new_state
+
+
+# print(Accumulation.seq_accumulation(gas_limit=Gas(100), work_reports=create_dummy_reports(), services=ChiG({ServiceId(1):Gas(10)}),  partial_state=create_dummy_state_context(), timeslot=Tau(2)))
+
+# print(Accumulation.transition(pre_state=create_dummy_state(), block=create_dummy_block()))

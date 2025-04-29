@@ -17,6 +17,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._close_pending = False
+        self.stream_buffer = {}
 
     def stream_and_close(self, stream_id: int, message: bytes) -> int:
         if self._close_pending:
@@ -54,7 +55,6 @@ class QuicServerProtocol(QuicConnectionProtocol):
 
         elif isinstance(event, StreamDataReceived):
             from jam.network.protocols.base import PrefixType
-            from jam.network.protocols.ce_133 import WorkPackageSubmission
 
             logger.info(f"📩 Received data of size {len(event.data)} bytes on stream {event.stream_id}")
 
@@ -78,29 +78,46 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     except Exception:
                         prefix = None
 
-
-                    if prefix == PrefixType.CE133:
-                        data = WorkPackageSubmission.intercept(buffer=buffer[1:])
-
-                        WorkPackageSubmission.process(data=data)
-                        logger.info(f"📩 Received work package : {data.package_data.work_package} with CI {data.package_data.core_index}")
-                        # save_decoded_data_to_json(buffer.decode(), event.stream_id)
-
-                    elif prefix == PrefixType.CE128:
+                    if prefix == PrefixType.CE128:
                         self.stream_and_keep_open(event.stream_id, bytes(0))
+
+                    elif prefix == PrefixType.CE133:
+                        from jam.network.protocols.ce_133 import WorkPackageSubmission
+
+                        data = WorkPackageSubmission.server_intercept(buffer=buffer[1:])
+                        logger.info(f"📩 Processed work package : {data.package_data.work_package} with CI {data.package_data.core_index}")
+
+                        ack = prefix.encode() + b""
+                        self.stream_and_close(event.stream_id, ack)
+
+                    elif prefix == PrefixType.CE135:
+                        from jam.network.protocols.ce_135 import WorkReportDistribution
+
+                        data = WorkReportDistribution.server_intercept(buffer=buffer[1:])
+                        logger.info(f"📩 Processed work report : {data.report} with slot {data.slot}")
+
+                        ack = prefix.encode() + b""
+                        self.stream_and_close(event.stream_id, ack)
+
+                    elif prefix == PrefixType.CE136:
+                        from jam.network.protocols.ce_136 import WorkReportRequest
+
+                        data, report = WorkReportRequest.server_intercept(buffer=buffer[1:])
+
+                        ack = prefix.encode() + report.encode()
+                        self.stream_and_close(event.stream_id, ack)
+                        logger.info(f"📩 Processed work report query for WR {data.work_report_hash}")
+
 
                     else:
                         try:
                             decoded_data = buffer.decode('utf-8', errors='ignore')
                             logger.warning(f"📩 Received data of size {len(buffer)} bytes")
-                            # save_decoded_data_to_json(decoded_data, event.stream_id)
-                            # logger.info("Saved data")
 
                         except UnicodeDecodeError:
                             logger.warning(
-                                f"❌ Failed to decode data for stream {event.stream_id}. Saving raw data in hex.")
+                                f"❌ Failed to decode data for stream {event.stream_id}")
                             decoded_data = buffer.hex()
-                            # save_decoded_data_to_json(decoded_data, event.stream_id)
 
                 except Exception as e:
                     logger.exception(f"Error retrieving data from ce stream: {e}")
@@ -122,7 +139,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                         from jam.network.protocols import BlockAnnouncementProtocol
 
                         try:
-                            announcement = BlockAnnouncementProtocol.intercept(buffer=buffer[1:])
+                            announcement = BlockAnnouncementProtocol.server_intercept(buffer=buffer[1:])
                             logger.info(f"📩 Received block with parent: {announcement.header.parent}")
                             self.stream_buffer[event.stream_id] = bytes(0)
                             # save_decoded_data_to_json(announcement, event.stream_id)
@@ -137,9 +154,12 @@ class QuicServerProtocol(QuicConnectionProtocol):
 
 # QUIC Client Protocol (Initiates connections to other nodes)
 class QuicClientProtocol(QuicConnectionProtocol):
+    stream_buffer: Dict[int, bytes] = {}
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._close_pending = False
+        self.stream_buffer = {}
 
     def stream_and_close(self, message: bytes, stream_id: Optional[int] = None) -> int:
         if self._close_pending:
@@ -177,5 +197,56 @@ class QuicClientProtocol(QuicConnectionProtocol):
             self._close_pending = True
 
         elif isinstance(event, StreamDataReceived):
-            response = event.data
-            logger.info(f"📩 Received response: {response}")
+            from jam.network.protocols.base import PrefixType
+
+            logger.info(f"📩 Received data of size {len(event.data)} bytes on stream {event.stream_id}")
+
+            if event.stream_id not in self.stream_buffer:
+                self.stream_buffer[event.stream_id] = bytes(0)
+
+            self.stream_buffer[event.stream_id] += event.data
+
+            if event.end_stream:
+                try:
+
+                    buffer = self.stream_buffer[event.stream_id]
+
+                    if not buffer:
+                        logger.warning("📩 Received empty buffer.")
+                        return
+
+                    try:
+                        prefix, _ = PrefixType.decodeFrom(buffer[0:1])
+                    except Exception:
+                        prefix = None
+
+                    if prefix == PrefixType.CE133:
+                        from jam.network.protocols.ce_133 import WorkPackageSubmission
+
+                        data = WorkPackageSubmission.client_intercept(buffer=buffer[1:])
+                        logger.info(f"📩 Received acknowledgment on stream {event.stream_id}")
+
+                    elif prefix == PrefixType.CE135:
+                        from jam.network.protocols.ce_135 import WorkReportDistribution
+
+                        data = WorkReportDistribution.client_intercept(buffer=buffer[1:])
+                        logger.info(f"📩 Received acknowledgment on stream {event.stream_id}")
+
+                    elif prefix == PrefixType.CE136:
+                        from jam.network.protocols.ce_136 import WorkReportRequest
+
+                        report, h = WorkReportRequest.client_intercept(buffer=buffer[1:])
+                        logger.info(f"📩 Received Work Report with hash {h} on stream {event.stream_id}")
+
+                    else:
+                        try:
+                            decoded_data = buffer.decode('utf-8', errors='ignore')
+                            logger.warning(f"📩 Received data of size {len(buffer)} bytes")
+
+                        except UnicodeDecodeError:
+                            logger.warning(
+                                f"❌ Failed to decode data for stream {event.stream_id}")
+                            decoded_data = buffer.hex()
+
+                except Exception as e:
+                    logger.exception(f"Error retrieving data from ce stream: {e}")
