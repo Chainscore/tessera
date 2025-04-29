@@ -218,7 +218,7 @@ async def rpc_handler(request: RpcRequest):
                 },
             )
 
-        if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32):
+        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32):
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
