@@ -1,13 +1,17 @@
 from dataclasses import dataclass
-from jam.state.state import State
-from jam.types import Int, Array
+from typing import cast
+
+from jam.config.logging import logger
+from jam.network.quic.server import QuicServerProtocol
+from jam.types.work.report import WorkReport
+
+from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types.work.package import WorkPackage
-from jam.utils.json import JsonSerde
-from typing import cast, Any, Optional, Tuple
-from jam.types.protocol.crypto import  WorkReportHash
+
+from jam.types.protocol.crypto import WorkReportHash, Hash
+from tests.dummy.dummy_extrinsics import create_dummy_work_report
 
 
 @decodable_dataclass
@@ -17,6 +21,20 @@ class CE136Data(Codable, JsonSerde):
 
 
 class WorkReportRequest(NetworkProtocol):
+    """
+    CE 136 Protocol for requesting Work Report
+
+    Protocol Flow:
+        Node -> Node
+
+        --> Work-Report Hash
+        --> FIN
+        <-- Work-Report
+        <-- FIN
+    Source:
+        https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-136-work-report-request
+    """
+
     from jam.network.node import Node
 
     def __init__(self):
@@ -24,29 +42,45 @@ class WorkReportRequest(NetworkProtocol):
         self._prefix = PrefixType.CE136
 
     def transmit(self, node: Node, data: CE136Data):
+        """Request Work Report from Node (server)"""
+
+        message = self._prefix.encode() + data.work_report_hash.encode()
+        logger.info(f"Requesting Work-Report from {len(node.connections)} Validators")
+
+        # TODO: Use Original Guarantor Connection
 
         for client in node.connections:
-            message = self._prefix.encode() + data.work_report_hash.encode()
             client.stream_and_close(message=message)
 
-    @classmethod
-    def intercept(cls, buffer: bytes) -> CE136Data:
+    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+        """Intercept & Fetch requested Work Report on Node (server)"""
+
+        logger.info("Received Work Report Request")
         data, offset = CE136Data.decode_from(buffer)
         data = cast(CE136Data, data)
 
-        return data
-        # return data.package_data, data.extrinsics
+        logger.info("Fetching Work Report")
+        # TODO: Process received Work Report Query
+        report = create_dummy_work_report()
+        # Process goes here
 
-    @classmethod
-    def process(cls, data: CE136Data):
-        print("Processing work package")
+        logger.info(f"📩 Processed work report query for WR {data.work_report_hash}")
 
+        # Return requested report to client node
+        ack = self._prefix.encode() + report.encode()
+        server.stream_and_close(stream_id, ack)
 
-    # @classmethod
-    # def intercept_ext(cls, buffer: bytes) -> Tuple[WorkPackage, Array[WorkPackage]]:
-    #     data, offset = CE136Data.decode_from(buffer)
-    #
-    #     data = cast(CE136Data, data)
-    #
-    #     return (data.package_data, data.extrinsics)
+        logger.info("Requested report sent back to Node")
 
+    def client_intercept(self, buffer: bytes, stream_id: int):
+        """Intercept Requested Work Report"""
+
+        logger.info(f"Requested Report received on Node (client) via stream {stream_id}")
+        data, offset = WorkReport.decode_from(buffer)
+        data = cast(WorkReport, data)
+
+        h = Hash.blake2b(data.encode())
+
+        logger.info("Saving Work Report")
+        # TODO: Process & Save Work Report
+        # Process goes here

@@ -1,11 +1,16 @@
-from jam.network.protocols.ce_134 import WorkPackageBundle, CoreSegment, Credential
-from jam.types import  U32, Bytes, Int
+from jam.types import U32, Bytes, Int, Vector
+from jam.types.protocol.core import CoreIndex
+from jam.types.protocol.crypto import WorkReportHash
+
 from jam.types.work.package import WorkItems, OpaqueHash, WorkPackage, Authorizer
-from jam.types.work.report import SegmentRootLookup
-from jam.types.work.segment import Segments
+from jam.types.work.report import SegmentRootLookup, WorkPackageBundle
+
+from jam.network.protocols.ce_134 import CoreSegment, Credential
 
 from tests.dummy.dummy_extrinsics import create_dummy_work_context
-from tests.dummy.utils import create_dummy_bytes, create_dummy_bytes32
+from tests.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_bytes64
+
+
 def create_dummy_authorizer() -> Authorizer:
     return Authorizer(
         code_hash=OpaqueHash(create_dummy_bytes32()),
@@ -14,6 +19,7 @@ def create_dummy_authorizer() -> Authorizer:
 
 def create_dummy_package() -> WorkPackage:
     """Create dummy package spec"""
+
     return WorkPackage(
         authorization=Bytes(create_dummy_bytes(12)),
         auth_code_host=U32(42),
@@ -23,32 +29,35 @@ def create_dummy_package() -> WorkPackage:
         items=WorkItems([])
     )
 
-def create_dummy_bundle() -> WorkPackageBundle :
-    """create dummy work package bundle"""
+def create_dummy_wp_bundle() -> WorkPackageBundle :
+    """Create dummy work package bundle"""
+
     return WorkPackageBundle (
-        workPackage=create_dummy_package,
-        extrinsic=OpaqueHash(create_dummy_bytes32()),
-        import_segment= Segments([])
+        package=create_dummy_package(),
+        extrinsics=Vector([]),
+        import_segments= Vector([]),
+        justifications=Vector([])
     )
 
-def crete_dummy_coreSegment() -> CoreSegment:
+def create_dummy_core_segment() -> CoreSegment:
+    """Create dummy core index and segment root lookup dictionary"""
 
     segment_root_map = SegmentRootLookup({})
     work_package_hash = OpaqueHash(create_dummy_bytes32()),
-    segment = OpaqueHash(create_dummy_bytes32()),
+    segment_root = OpaqueHash(create_dummy_bytes32()),
 
-    segment_root_map[work_package_hash] = segment
+    segment_root_map[work_package_hash] = segment_root
 
     return CoreSegment (
-        core_index=Int(0),
+        core_index=CoreIndex(0),
         length=Int(1),
         segment_root_map=segment_root_map
     )
 
-def create_dummy_Credential() -> Credential:
+def create_dummy_credential() -> Credential:
     return Credential (
-        workreportHash=OpaqueHash(create_dummy_bytes32()),
-        ed25519signature=OpaqueHash(create_dummy_bytes32())
+        work_report_hash=WorkReportHash(create_dummy_bytes32()),
+        ed25519_signature=create_dummy_bytes64()
     )
 
 
