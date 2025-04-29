@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 from typing import Tuple
-from jam.pvm.instructions.table_map import InstTableMap
-from jam.pvm.memory import Memory
-from jam.pvm.program import Program
-from jam.pvm.register import Registers
-from jam.pvm.status import OUT_OF_GAS, PAGE_FAULT, PANIC, ExecutionStatus, ExecutionStatusCode
+from jam.execution.pvm.instructions.table_map import InstTableMap
+from jam.execution.pvm.memory import Memory
+from jam.execution.pvm.program import Program
+from jam.execution.pvm.register import Registers
+from jam.execution.pvm.status import OUT_OF_GAS, PAGE_FAULT, PANIC, ExecutionStatus, PvmError
 from jam.types.base.integers.fixed import U8
 from jam.types.protocol.core import Gas, ProgramCounter, Register, RemainingGas
-from jam.pvm.errors import PvmError, PvmErrorCodes
 
 @dataclass
 class PVM:
@@ -50,12 +49,12 @@ class PVM:
 
                 if remaining_gas < 0:
                     return OUT_OF_GAS, program_counter, remaining_gas, registers, memory
-                elif status.code == ExecutionStatusCode.HALT:
+                elif status.code == ExecutionStatus.HALT:
                     return status, program_counter, remaining_gas, registers, memory
             except PvmError as e:
-                if e.code == PvmErrorCodes.PANIC:
+                if e == ExecutionStatus.PANIC:
                     return PANIC, program_counter, remaining_gas, registers, memory
-                elif e.code == PvmErrorCodes.PAGE_FAULT:
+                elif e == ExecutionStatus.PAGE_FAULT:
                     return PAGE_FAULT(Register(e.args[1])), program_counter, remaining_gas, registers, memory
                 else:
                     raise e

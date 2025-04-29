@@ -176,6 +176,3 @@ class PsiA:
             return function_map.get(n, default)  # Default function if `n` not found
 
         return get_function  # Return the dynamic function selector
-
-
-
