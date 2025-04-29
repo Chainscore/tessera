@@ -185,11 +185,11 @@ class WorkPackageProcessing:
         # Mapping from wp hash -> segment root (this can be constructed via listening to reports) - done
 
         # Mapping from segment root -> erasure root & assurer - done
-        # Mapping from erasure root -> (audit & segment) shard pairs
+        # Mapping from erasure root + shard index -> bundle shard - done
 
         # On Guarantor Node
         # Mapping from segment root -> segments - done
-        # Mapping from erasure root -> bundle ?? or chunks -done
+        # Mapping from erasure root -> bundle  -done
         # index -> segment
 
 
@@ -414,8 +414,8 @@ class WorkPackageProcessing:
         """
         hash_length = len(value)
         first_index = ((abs(hash_length) + n - 1) // n) + 1
-        if hash_length // n != 0:
-            padding_zero = n - first_index
+        if hash_length % int(n) != 0:
+            padding_zero = n - hash_length
             for i in range(padding_zero):
                 value.append(Byte(0))
 
@@ -438,8 +438,9 @@ class WorkPackageProcessing:
         pages: Segments = Segments([])
         for x in range(page_count):
             path = self.merkle.merkle_path_fn(values=segments, size=Int(6), index=Int(x))
+            print(f"path  ", path)
             leaf = self.merkle.leaf_page_fn(values=segments, size=Int(6), index=Int(x))
-            merkle_path = bytes(len(path)) + path.encode()
+            merkle_path = bytes(len(path)) + Vector(path).encode()
             leaf =  bytes(len(leaf)) + leaf.encode()
 
             segment_proof = Segment(self.zero_padding(Bytes(merkle_path + leaf), SEGMENT_SIZE))

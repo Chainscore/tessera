@@ -7,7 +7,7 @@ from jam.types.base.null import Nullable
 from jam.types.base.integers import U8, U16, U32, U64
 from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.sequences.bytes.bytes import Bytes, Byte
 from jam.types.base.sequences.vector import Vector, decodable_vector
 
 from jam.types.work.package import WorkPackage
@@ -93,6 +93,8 @@ class WorkPackageBundle(Codable, JsonSerde):
     exports_count: U16
 
 
+
+
 # Deprecated Type
 # @decodable_dataclass
 # @dataclass
@@ -141,6 +143,10 @@ class WorkDependencies(Vector[WorkReportHash]):
 class WorkReports(Vector[WorkReport]):
     """Vector of Work Reports"""
 
+    ...
+
+@decodable_vector(element_type=Byte)
+class BundleShard(Vector[Byte]):
     ...
 
 

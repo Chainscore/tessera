@@ -9,7 +9,7 @@ from jam.utils.constants import SEGMENT_SIZE
 class ByteArray4104(ByteArray):
     ...
 
-Segment = ByteArray32
+Segment = ByteArray4104
 
 @decodable_vector(Segment)
 class Segments(Vector[Segment]):
