@@ -134,10 +134,6 @@ class Memory:
             memory[U32(arg_start+i)] = Byte(byt)
         
         return cls(memory, read_pages, write_pages)
-    
-    def to_pc() -> (bytes, bytes, bytes, int, int):
-        read_start = PVM_INIT_ZONE_SIZE
-
 
     def total_page_size(blob_len: int) -> int:
         """
