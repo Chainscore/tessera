@@ -38,6 +38,9 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+db/
+!jam/db
+!tests/unit/db
 
 # Environment
 .env
@@ -47,3 +50,20 @@ ENV/
 
 .cursorrules
 .cursorignore
+
+azure_logs/
+
+mydb/
+
+# Ignore all folders in /seeds, but not the keys.json
+/seeds/*
+!/seeds/keys.json
+
+# Ignore Session Tickets
+sessions/
+
+# Ignore Logs
+logs/
+
+# Ignore Packets
+packets/

@@ -24,13 +24,13 @@ class Hash:
     """Cryptographic hash functions that produce 32-byte outputs"""
 
     @staticmethod
-    def blake2b(data: bytes) -> ByteArray32:
+    def blake2b(data: bytes, digest_size: int = 32) -> ByteArray32:
         """Blake2b hash function"""
         from hashlib import blake2b
 
         if not isinstance(data, bytes):
             data = bytes(data)
-        return ByteArray32(blake2b(data, digest_size=32).digest())
+        return ByteArray32(blake2b(data, digest_size=digest_size).digest())
 
     @staticmethod
     def sha256(data: bytes) -> ByteArray32:

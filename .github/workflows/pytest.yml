@@ -2,9 +2,9 @@ name: Python Tests
 
 on:
   push:
-    branches: [ main, staging ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main, dev, staging ]
+    branches: [ main, develop ]
 
 jobs:
   test:
@@ -17,6 +17,11 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: '3.x'
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y librocksdb-dev
         
     - name: Install Poetry
       run: pip install poetry

@@ -22,7 +22,7 @@ class ChainSpec(Enum):
 @dataclass
 class JamConfig:
     """JAM protocol configuration."""
-
+    name: str
     chain: ChainSpec
     num_validators: int
     num_cores: int
@@ -38,6 +38,7 @@ class JamConfig:
     def tiny(cls) -> "JamConfig":
         """Create tiny chain configuration."""
         return cls(
+            name="tiny",
             chain=ChainSpec.TINY,
             num_validators=6,
             num_cores=2,
@@ -54,6 +55,7 @@ class JamConfig:
     def small(cls) -> "JamConfig":
         """Create small chain configuration."""
         return cls(
+            name="small",
             chain=ChainSpec.SMALL,
             num_validators=24,
             num_cores=8,
@@ -70,6 +72,7 @@ class JamConfig:
     def medium(cls) -> "JamConfig":
         """Create medium chain configuration."""
         return cls(
+            name="medium",
             chain=ChainSpec.MEDIUM,
             num_validators=48,
             num_cores=16,
@@ -86,6 +89,7 @@ class JamConfig:
     def large(cls) -> "JamConfig":
         """Create large chain configuration."""
         return cls(
+            name="large",
             chain=ChainSpec.LARGE,
             num_validators=96,
             num_cores=32,
@@ -102,6 +106,7 @@ class JamConfig:
     def xlarge(cls) -> "JamConfig":
         """Create xlarge chain configuration."""
         return cls(
+            name="xlarge",
             chain=ChainSpec.XLARGE,
             num_validators=192,
             num_cores=64,
@@ -118,6 +123,7 @@ class JamConfig:
     def xlarge2(cls) -> "JamConfig":
         """Create 2xlarge chain configuration."""
         return cls(
+            name="2xlarge",
             chain=ChainSpec.XLARGE2,
             num_validators=384,
             num_cores=128,
@@ -134,6 +140,7 @@ class JamConfig:
     def xlarge3(cls) -> "JamConfig":
         """Create 3xlarge chain configuration."""
         return cls(
+            name="3xlarge",
             chain=ChainSpec.XLARGE3,
             num_validators=576,
             num_cores=192,
@@ -150,6 +157,7 @@ class JamConfig:
     def full(cls) -> "JamConfig":
         """Create full chain configuration."""
         return cls(
+            name="full",
             chain=ChainSpec.FULL,
             num_validators=1023,
             num_cores=341,

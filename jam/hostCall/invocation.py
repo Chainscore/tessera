@@ -1,21 +1,27 @@
-# from jam.types.base.sequences.bytes import Bytes
-# from jam.types.protocol.core import Register
-# from jam.types.protocol.core import ServiceId, Gas
-# from typing import Any, Union, Tuple, Self, List
-# from jam.utils.json.serde import JsonSerde
-# from jam.utils.codec.codable import Codable
-# from jam.pvm.register import Registers
-# from jam.pvm.pvm_memory import PageMemory
-# from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
-# from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
-# from jam.utils.codec.utils import check_buffer_size
-# from jam.types.base.integers.fixed import U8, U64
-# from jam.pvm.extract import Status
-# from jam.pvm.opcode_mapping import InstructionMapper
-# from jam.pvm.extract import Execution
-# from jam.pvm.program import Program
-# from jam.hostCall.decode_prog import derive_p
-# from jam.types.work.package import WorkPackage
+from jam.types.base.sequences.bytes import Bytes
+from jam.types.protocol.core import Register
+from jam.types.protocol.core import ServiceId, Gas
+from typing import Any, Union, Tuple, Self, List
+from jam.types.base.integers.general import Int
+
+from jam.types.work.segment import Segments
+from jam.utils.json.serde import JsonSerde
+from jam.utils.codec.codable import Codable
+from jam.pvm.register import Registers
+from jam.pvm.pvm_memory import PageMemory
+from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
+from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
+from jam.utils.codec.utils import check_buffer_size
+from jam.types.base.integers.fixed import U8, U64
+from jam.pvm.extract import Status
+from jam.pvm.opcode_mapping import InstructionMapper
+from jam.pvm.extract import Execution
+from jam.pvm.program import Program
+from jam.hostCall.decode_prog import derive_p
+from jam.types.work.package import WorkPackage
+from jam.hostCall.process import HostCall
+from jam.hostCall.types import RefineMap
+
 
 # class PsiM:
 #     def __init__(self,
@@ -33,13 +39,33 @@
 #         self.host_function = host_function
 #         self.context = context
 
-#     def process(self):
-#         print(self.blob)
-#         res = derive_p(self.blob)
-#         if res is None:
-#             return self.gas, Status("panic"), self.context
-#         (c, w, u) = res
-#         return RInvocation(*PsiH(c, self.pc, self.gas, w, u, self.host_function, self.context).process()).process()
+    def process(self):
+        print(self.blob)
+        res = derive_p(self.blob)
+        if res is None:
+            return self.gas, Status("panic"), self.context
+        (c, w, u) = res
+        return PsiM.R(self.gas, *PsiH(c, self.pc, self.gas, w, u, self.host_function, self.context).process())
+
+    @staticmethod
+    def R(
+            g: Gas,
+            grouped: Tuple[Status, Int, Gas, Registers, PageMemory, Any]
+    ) -> Any:
+        status, pc, _g, registers, memory, context = grouped
+        result = Any
+        u = g - max(_g, 0)
+        if status == "out-of-gas":
+            result = Status("out-of-gas")
+        elif status == "halt" and InstructionMapper.valid_address(memory, registers[6],
+                                                                       registers[7]):
+            result = InstructionMapper.memory_value(memory, registers[6], registers[7])
+        elif status == "halt" and not InstructionMapper.valid_address(memory, registers[6],
+                                                                           registers[7]):
+            result = Bytes([])
+        else:
+            result = Status("panic")
+        return u, result, context
 
 
 # class RInvocation:
@@ -49,7 +75,7 @@
 #         self.registers = registers
 #         self.memory = memory
 #         self.context = context
-
+#
 #     def process(self):
 #         result = Any
 #         if self.status == "out-of-gas":
@@ -102,15 +128,34 @@
 #         return 24
 
 
-# class PsiI:
-#     def __init__(self, p: WorkPackage, c: int):
-#         self.work_package = p
-#         self.core = c
-#         self.host_function = "function"
+class PsiI:
+    def __init__(self, p: WorkPackage, c: Int):
+        self.work_package = p
+        self.core = c
+        self.host_function = self.is_authorized_f()
 
-#     def process(self):
-#         buffer = self.work_package.encode(self.work_package)
-#         PsiM(self.work_package.code_hash, U64(0), 50000000, buffer, self.host_function, None)
+    def process(self):
+        buffer = self.work_package.encode() + self.core.encode()
+        PsiM(self.work_package.code_hash, U64(0), 50000000, buffer, self.host_function, None)
+
+    def is_authorized_f(self):
+        def gas(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
+            call = HostCall(gas=_gas, register=register, memory=memory, refine=refine, export=_export)
+            return HostCall.gas(call)
+
+        def default(_gas: Gas, register: Registers, memory: PageMemory, refine: RefineMap, _export: Segments):
+            _gas -= 10
+            register[6] = 2 ** 64
+            return Status("continue"), _gas, register, memory
+
+        function_map = {
+            "gas": gas, 0: gas,
+        }
+
+        def get_function(n):
+            return function_map.get(n, default)  # Default function if `n` not found
+
+        return get_function  # Return the dynamic function selector
 
 
 

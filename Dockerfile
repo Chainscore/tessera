@@ -7,6 +7,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     librocksdb-dev \
+    iputils-ping \
+    procps \
+    net-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -17,21 +20,23 @@ ENV PATH="/root/.local/bin:$PATH"
 # Set working directory
 WORKDIR /app
 
-# Copy only dependency files first to leverage Docker cache
-COPY pyproject.toml poetry.lock ./
-
-# Install dependencies via Poetry (without dev deps)
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-dev --no-interaction --no-ansi
-
-# Copy rest of the application
+# Copy the entire application
 COPY . .
 
-# Create data directory
-RUN mkdir -p data/db
+# Configure Poetry to NOT use virtualenvs
+RUN poetry config virtualenvs.create false
+
+# Install all dependencies and the project itself
+RUN poetry install --no-interaction --no-ansi $(poetry --version | grep -q "Poetry (version 1.[0-1]" && echo "--no-dev" || echo "--without dev")
+
+# Create data directory with permissions
+RUN mkdir -p data/db && chmod -R 777 data
 
 # Expose application port
-EXPOSE 30333
+EXPOSE 8000
 
 # Run the application
-CMD ["poetry", "run", "jam"]
+#CMD ["poetry", "run", "jam"]
+
+# Run the FastAPI application
+CMD ["poetry", "run" ,"fastapi", "run", "jam/api/api-service.py", "--host", "0.0.0.0", "--port", "8000"]
