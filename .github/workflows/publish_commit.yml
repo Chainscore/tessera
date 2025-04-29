@@ -44,6 +44,10 @@ jobs:
           commit_hash = '${{ github.sha }}'
           commit_hash_bytes = bytes.fromhex(commit_hash)
           
+          # Pad the commit hash to 32 bytes if needed
+          if len(commit_hash_bytes) < 32:
+              commit_hash_bytes = commit_hash_bytes + b'\\x00' * (32 - len(commit_hash_bytes))
+
           # Create account from private key
           account = Account.from_key('${{ secrets.POLYGON_PRIVATE_KEY }}')
           
