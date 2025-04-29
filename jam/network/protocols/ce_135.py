@@ -46,6 +46,7 @@ class WorkReportDistribution(NetworkProtocol):
         # TODO: Add Validator Index & Signature as per GP
         message = self._prefix.encode() + data.report.encode() + data.slot.encode()
         logger.info(f"Transmitting Guaranteed Work-Report to {len(node.connections)} Validators")
+        # TODO: Use All Validators Connections
 
         for client in node.connections:
             client.stream_and_close(message=message)
@@ -59,7 +60,7 @@ class WorkReportDistribution(NetworkProtocol):
 
         logger.info("Processing Work Report")
         # TODO: Process received Work Report
-        # process goes here
+        # Process goes here
 
         logger.info(f"📩 Processed work report : {data.report} with slot {data.slot}")
 

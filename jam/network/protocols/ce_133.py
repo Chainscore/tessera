@@ -54,6 +54,7 @@ class WorkPackageSubmission(NetworkProtocol):
         stream_b = data.extrinsics.encode()
 
         logger.info(f"Transmitting Work-Package to {len(node.connections)} Validators")
+        # TODO: Use Particular Validators' Connections
 
         for client in node.connections:
             stream_id = client.stream_and_keep_open(message=stream_a)
@@ -68,7 +69,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
         logger.info("Processing Work Package")
         # TODO: Process received Work Package
-        # process goes here
+        # Process goes here
 
         logger.info(
             f"📩 Processed work package : {data.package_data.work_package} with CI {data.package_data.core_index}"

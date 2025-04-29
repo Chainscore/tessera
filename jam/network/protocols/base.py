@@ -35,7 +35,7 @@ class NetworkProtocol(ABC):
         - QUIC Client initiates connection.
         - Uses transmit function to send data.
         - QUIC Server intercepts and processes received data.
-        - Uses send_acknowledgment function to return ack / data on same stream id.
+        - Returns acknowledgement / data on same stream id.
         - QUIC Client then intercepts response and processes it.
     """
 

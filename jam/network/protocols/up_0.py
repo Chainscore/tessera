@@ -51,6 +51,7 @@ class BlockAnnouncement(NetworkProtocol):
         """Announce Block to Peers (servers)"""
 
         logger.info(f"Announcing blocks to {len(node.connections)} peers.")
+        # TODO: Use All Validators Connections
 
         final = Final(block_hash=data.header.parent, time_slot=data.header.slot)
         announcement = Announcement(header=data.header, final=final)
@@ -70,6 +71,7 @@ class BlockAnnouncement(NetworkProtocol):
 
         logger.info(f"Processing new block.")
         # TODO: Process new block
+        # Process goes here
 
     def client_intercept(self, buffer: bytes, stream_id: int):
         ...

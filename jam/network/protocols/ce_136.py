@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import cast, Tuple
+from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
-from jam.types import WorkReport
+from jam.types.work.report import WorkReport
 
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
@@ -47,6 +47,8 @@ class WorkReportRequest(NetworkProtocol):
         message = self._prefix.encode() + data.work_report_hash.encode()
         logger.info(f"Requesting Work-Report from {len(node.connections)} Validators")
 
+        # TODO: Use Original Guarantor Connection
+
         for client in node.connections:
             client.stream_and_close(message=message)
 
@@ -60,18 +62,18 @@ class WorkReportRequest(NetworkProtocol):
         logger.info("Fetching Work Report")
         # TODO: Process received Work Report Query
         report = create_dummy_work_report()
-        # process goes here
+        # Process goes here
 
         logger.info(f"📩 Processed work report query for WR {data.work_report_hash}")
 
-        # Return acknowledgment to Builder
+        # Return requested report to client node
         ack = self._prefix.encode() + report.encode()
         server.stream_and_close(stream_id, ack)
 
         logger.info("Requested report sent back to Node")
 
     def client_intercept(self, buffer: bytes, stream_id: int):
-        """Intercept Acknowledgement"""
+        """Intercept Requested Work Report"""
 
         logger.info(f"Requested Report received on Node (client) via stream {stream_id}")
         data, offset = WorkReport.decode_from(buffer)
@@ -81,4 +83,4 @@ class WorkReportRequest(NetworkProtocol):
 
         logger.info("Saving Work Report")
         # TODO: Process & Save Work Report
-        # process goes here
+        # Process goes here
