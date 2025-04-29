@@ -40,7 +40,6 @@ state.save(db)
 # Load the state from the database
 db_state = State.load(db)
 
-# print("header hash to bytes 32", Header.__hash__(db_block.header).to_bytes(32))
 # print("header hash", Header.__hash__(db_block.header))
 # print("hash bytes to hex", Header.__hash__(db_block.header).to_bytes(32).hex())
 # print("hash arrray", list(Header.__hash__(db_block.header).to_bytes(32)))
@@ -140,7 +139,7 @@ async def rpc_handler(request: RpcRequest):
                 },
                 )
 
-            if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32):
+            if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32):
                 # Return the parent block
                 parent_block = Block.load_parent(db_block.header.slot, db)
                 print("parent_block.header.slot", parent_block.header.slot)
@@ -182,7 +181,7 @@ async def rpc_handler(request: RpcRequest):
                 },
             )
         
-        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32):
+        if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32):
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
@@ -219,7 +218,7 @@ async def rpc_handler(request: RpcRequest):
                 },
             )
 
-        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32):
+        if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32):
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
@@ -266,7 +265,7 @@ async def rpc_handler(request: RpcRequest):
             )
 
         #TODO: check if service id is in the state 
-        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32) :
+        if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
@@ -278,8 +277,8 @@ async def rpc_handler(request: RpcRequest):
                 id=request.id,
                 error={"code": -32602, "message": "unexpected error"},
             )
-    elif method == "serviceData":
-        if len(params) != 2:
+    elif method == "serviceValue":
+        if len(params) != 3:
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
@@ -291,16 +290,8 @@ async def rpc_handler(request: RpcRequest):
 
         header_hash = params.get("Hash")
         service_id = params.get("ServiceId")
-        if not (0 <= service_id <= 2**32 - 1):
-            return RpcResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                error={
-                    "code": -32602,
-                    "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
-                },
-            )
-
+        blob = params.get("Blob")
+        
         if len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
@@ -312,7 +303,7 @@ async def rpc_handler(request: RpcRequest):
             )
 
         #TODO: check if service id is in the state 
-        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32) :
+        if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
@@ -338,16 +329,9 @@ async def rpc_handler(request: RpcRequest):
 
         header_hash = params.get("Hash")
         service_id = params.get("ServiceId")
-        if not (0 <= service_id <= 2**32 - 1):
-            return RpcResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                error={
-                    "code": -32602,
-                    "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
-                },
-            )
+        header_hash = params.get("Hash")
 
+        
         if len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
@@ -359,7 +343,7 @@ async def rpc_handler(request: RpcRequest):
             )
 
         #TODO: check if service id is in the state 
-        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32) :
+        if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
@@ -408,7 +392,81 @@ async def rpc_handler(request: RpcRequest):
                 )
 
             #TODO: check if service id is in the state 
-            if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32) :
+            if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
+                return RpcResponse(
+                    jsonrpc="2.0", 
+                    id=request.id, 
+                    result=[db_state.delta]
+                )
+            else:
+                return RpcResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={"code": -32602, "message": "unexpected error"},
+                )
+    elif method == "beefyRoot":
+            if len(params) != 1:
+                return RpcResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={
+                        "code": -32602,
+                        "message": "Invalid parameters: expected header_hash and ServiceId",
+                    },
+                )
+
+            header_hash = params.get("Hash")
+
+        
+            if len(header_hash) != 32:
+                return RpcResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={
+                        "code": -32602,
+                        "message": "Invalid parameters: expected header_hash",
+                    },
+                )
+
+            #TODO: check if service id is in the state 
+            if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
+                return RpcResponse(
+                    jsonrpc="2.0", 
+                    id=request.id, 
+                    result=[db_state.delta]
+                )
+            else:
+                return RpcResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={"code": -32602, "message": "unexpected error"},
+                )
+    elif method == "submitPreimage":
+            if len(params) != 1:
+                return RpcResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={
+                        "code": -32602,
+                        "message": "Invalid parameters: expected header_hash and ServiceId",
+                    },
+                )
+
+            header_hash = params.get("Hash")
+
+        
+            if len(header_hash) != 32:
+                return RpcResponse(
+                    jsonrpc="2.0",
+                    id=request.id,
+                    error={
+                        "code": -32602,
+                        "message": "Invalid parameters: expected header_hash",
+                    },
+                )
+
+            #TODO: check if service id is in the state 
+            if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
                 return RpcResponse(
                     jsonrpc="2.0", 
                     id=request.id, 
