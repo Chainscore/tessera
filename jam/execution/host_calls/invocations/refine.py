@@ -121,9 +121,3 @@ class PsiR:
                 return r, []
             else:
                 return r, e
-
-
-
-
-
-
