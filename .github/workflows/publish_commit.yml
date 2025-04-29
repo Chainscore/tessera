@@ -3,16 +3,6 @@ name: Publish Commit Hash
 # Test comment for workflow trigger
 on:
   push:
-    branches:
-      - main
-      - develop
-  workflow_dispatch:
-    inputs:
-      test_mode:
-        description: 'Run in test mode (will not send transaction)'
-        required: true
-        type: boolean
-        default: false
 
 jobs:
   publish-commit:
@@ -44,7 +34,7 @@ jobs:
           w3 = Web3(Web3.HTTPProvider('https://polygon-rpc.com'))
           
           # Contract address and ABI
-          contract_address = '0x0113e1920540fa9547389d02e7e79f60b4d4f503'
+          contract_address = '0x0113E1920540Fa9547389d02E7e79f60B4D4f503'
           contract_abi = [{'inputs': [{'internalType': 'bytes32', 'name': 'commitHash', 'type': 'bytes32'}], 'name': 'anchor', 'outputs': [], 'stateMutability': 'nonpayable', 'type': 'function'}]
           
           # Get the contract instance

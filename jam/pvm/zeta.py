@@ -1,5 +1,5 @@
 
-from typing import Any, List, Sequence
+from typing import Any, List
 from jam.types.base.integers.fixed import U8
 from jam.types.base.sequences.vector import Vector, decodable_vector
 
