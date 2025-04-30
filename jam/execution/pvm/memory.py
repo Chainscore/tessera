@@ -82,9 +82,16 @@ class Memory:
             addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=True)
             self.data[U32(addr)] = Byte(byte)
 
-    def is_accessible(self, address: int, length: int) -> bool:
-        ...
-        
+    def is_accessible(self, address: int, length: int, for_write = False) -> bool:
+        pages = self.get_pages(address, address+length)
+        for page in pages:
+            if for_write and page not in self.allowed_write_pages:
+                return False
+            # Else (reading), the page must be allowed to be write / read
+            elif (page not in self.allowed_read_pages) and (page not in self.allowed_write_pages):
+                return False
+        return True
+
     def dump_memory(self, start, end):
         """
         For debugging: return a list of byte values from address 'start' to 'end' (exclusive).
@@ -161,6 +168,6 @@ class Memory:
         """
         Gives a list of page numbers that contains a specific indexed location in memory 
         """
-        start = ceil(start_index/PVM_MEMORY_PAGE_SIZE)
-        end = floor(end_index/PVM_MEMORY_PAGE_SIZE)
+        start = floor(start_index/PVM_MEMORY_PAGE_SIZE)
+        end = ceil(end_index/PVM_MEMORY_PAGE_SIZE)
         return [i for i in range(start, end)]
