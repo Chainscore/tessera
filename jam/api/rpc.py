@@ -548,19 +548,6 @@ async def websocket_endpoint(websocket: WebSocket):
                         )
                         await websocket.send_text(response.json())
 
-                    elif method == "subscribeTransactions":
-                        # Subscribe to transaction statistics
-                        manager.subscribe(websocket, "subscribeTransactions")
-
-                        # Send immediate response with current data
-                        current_stats = get_transaction_statistics()
-                        response = {
-                            "jsonrpc": "2.0",
-                            "id": request["id"],
-                            "result": current_stats,
-                        }
-                        await websocket.send_text(json.dumps(response))
-
                     elif method == "unsubscribe" and "params" in request:
                         # Unsubscribe from a specific method
                         unsub_method = request["params"]["method"]
@@ -593,11 +580,26 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-
 @app.on_event("startup")
 async def start_broadcasters():
-    asyncio.create_task(statistics_broadcaster())
-    asyncio.create_task(transactions_broadcaster())
+    asyncio.create_task(poll_rocksdb())
+
+
+async def poll_rocksdb(interval=1):
+    keys = list(db.get_all().keys())  # Use get_all to retrieve keys
+    last_seen_values = {}
+
+    while True:
+        try:
+            for key in keys:
+                value = db.get(key)
+                if key not in last_seen_values or last_seen_values[key] != value:
+                    last_seen_values[key] = value
+                    stats = get_blockchain_statistics()
+                    await manager.broadcast("subscribeStatistics", stats)
+        except Exception as e:
+            print(f"[poll_rocksdb] Error: {e}")
+        await asyncio.sleep(interval)
 
 
 async def statistics_broadcaster():
@@ -605,14 +607,6 @@ async def statistics_broadcaster():
         stats = get_blockchain_statistics()
         await manager.broadcast("subscribeStatistics", stats)
         await asyncio.sleep(5)
-
-
-async def transactions_broadcaster():
-    while True:
-        stats = get_transaction_statistics()
-        await manager.broadcast("subscribeTransactions", stats)
-        await asyncio.sleep(3)
-
 
 def get_blockchain_statistics():
     # Generate random blockchain statistics
@@ -625,20 +619,5 @@ def get_blockchain_statistics():
         "blockHeight": block_height,
         "transactions": transactions,
         "hashRate": hash_rate,
-        "timestamp": timestamp,
-    }
-
-
-def get_transaction_statistics():
-    # Generate random transaction statistics
-    pending_txs = random.randint(100, 500)
-    avg_fee = random.uniform(0.001, 0.01)
-    avg_confirmation_time = random.uniform(20, 60)
-    timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
-    return {
-        "pendingTransactions": pending_txs,
-        "averageFee": f"{avg_fee:.5f}",
-        "averageConfirmationTime": f"{avg_confirmation_time:.2f} seconds",
         "timestamp": timestamp,
     }
