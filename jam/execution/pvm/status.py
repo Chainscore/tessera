@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from jam.types.base.choices.option import Option, decodable_option
 from jam.types.base.enum import Enum, decodable_enum
-from jam.types.base.integers.fixed import U8
+from jam.types.base.integers.fixed import U64, U8
 from jam.types.base.null import Null
 from jam.types.protocol.core import Register
 from jam.utils.codec.codable import Codable
@@ -28,6 +28,19 @@ class ExecutionStatus(Enum):
     HOST         : ExecValue = ExecValue(U8(4), OptionalRegister(Null))
     CONTINUE     : ExecValue = ExecValue(U8(5), OptionalRegister(Null))
 
+@decodable_enum
+class HostStatus(Enum):
+    NONE    = U64(2**64 - 1)
+    WHAT    = U64(2**64 - 2)
+    OOB     = U64(2**64 - 3)
+    WHO     = U64(2**64 - 4)
+    FULL    = U64(2**64 - 5)
+    CORE    = U64(2**64 - 6)
+    CASH    = U64(2**64 - 7)
+    LOW     = U64(2**64 - 8)
+    HUH     = U64(2**64 - 9)
+    OK      = U64(0)
+    
 
 # Constructured statuses to use directly
 # Panic

@@ -61,6 +61,18 @@ EXTRINSIC_COUNT = 128
 MAX_WORK_PACKAGE_SIZE = 12*2**20 #OCTAETS
 
 
+# Host calls
+NONE = 2**64 - 1
+WHAT = 2**64 - 2
+OOB = 2**64 - 3
+WHO = 2**64 - 4
+FULL = 2**64 - 5
+CORE = 2**64 - 6
+CASH = 2**64 - 7
+LOW = 2**64 - 8
+HUH = 2**64 - 9
+OK = 0
+
 # Signing context strings
 SIGNING_CONTEXTS = {
     "available": b"jam_available",  # Ed25519 Availability assurances
