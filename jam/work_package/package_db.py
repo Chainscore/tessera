@@ -1,10 +1,13 @@
 from jam.db.kv import KVStore
 from jam.merklization import BMRFunctions
-from jam.types.work.report import WorkPackageBundle
+from jam.types.base.sequences.bytes.byte_array import ByteArray12
+from jam.types.base.sequences.vector import Vector
+from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.work.report import WorkPackageBundle, ShardKeysVector, ShardKeys, SegmentsShard
 from jam.types.work.segment import Segments
 from jam.types.protocol.core import OpaqueHash, ValidatorIndex
 import struct
-from typing import Tuple
+from typing import Tuple, Union, Optional
 from jam.types.base.integers.fixed import U16
 from jam.types.work.report import BundleShard
 
@@ -55,7 +58,7 @@ class BundleStore:
         self.db.put(bundle_root.encode(), bundle.encode())
 
     def get(self, bundle_root: OpaqueHash) -> WorkPackageBundle:
-        bundle = self.db.get(bytes(bundle_root))
+        bundle = self.db.get(bundle_root.encode())
         if bundle is None:
             raise KeyError("Key not found")
         decoded_bundle, _ = WorkPackageBundle.decode_from(bundle)
@@ -121,37 +124,6 @@ class SegmentAssurerMap:
         self.db.close()
 
 
-class BundleShardStore:
-    def __init__(self):
-        self.db_path = "/home/faizahmad817/tessera/db/BundleShard"
-        self.db = KVStore(self.db_path)
-
-    @staticmethod
-    def make_key(erasure_root: OpaqueHash, shard_index: U16 ):
-        erasure_bytes = erasure_root.encode()
-        index_bytes = shard_index.encode()
-        erasure_root_len = struct.pack("<H", len(erasure_bytes))
-        db_key = erasure_root_len + erasure_bytes + index_bytes
-        return db_key
-
-    def put(self, erasure_root: OpaqueHash, shard_index: U16 , bundle_shard:BundleShard):
-        db_key = self.make_key(erasure_root, shard_index)
-        self.db.put(db_key, bundle_shard.encode())
-
-    def get(self, erasure_root: OpaqueHash, shard_index: U16 ) -> BundleShard:
-        bundle_shard = self.db.get(self.make_key(erasure_root, shard_index))
-        if bundle_shard is None:
-            raise KeyError("Key not found")
-        decoded_shard, _ = BundleShard.decode_from(bundle_shard)
-        return decoded_shard
-
-    def delete(self, erasure_root: OpaqueHash, shard_index: U16):
-        self.db.delete(self.make_key(erasure_root, shard_index))
-
-    def close(self):
-        self.db.close()
-
-
 class ErasureSegmentMap:
     def __init__(self):
         self.db_path = "/home/faizahmad817/tessera/db/erasureSegmentMap"
@@ -169,6 +141,100 @@ class ErasureSegmentMap:
 
     def delete(self, erasure_root: OpaqueHash):
         self.db.delete(erasure_root.encode())
+
+    def close(self):
+        self.db.close()
+
+
+class ErasureShardsMap:
+    def __init__(self):
+        self.db_path = "/home/faizahmad817/tessera/db/erasureShardsMap"
+        self.db = KVStore(self.db_path)
+
+    @staticmethod
+    def make_value(segments_shard_roots: Vector[OpaqueHash], bundles_hashes: Vector[OpaqueHash]):
+        value = ShardKeysVector()
+        for i in range(len(segments_shard_roots)):
+            value.append(ShardKeys(segments_shard_roots[i], bundles_hashes[i]))
+        return value
+
+    def put(self, erasure_root: OpaqueHash, segments_shard_roots: Vector[OpaqueHash], bundles_hashes: Vector[OpaqueHash]):
+        value = self.make_value(segments_shard_roots, bundles_hashes).encode()
+        self.db.put(erasure_root.encode(), value)
+
+    def get_shards_keys(self, erasure_root: OpaqueHash, shard_index: Optional[U16] = None) -> Union[ShardKeysVector, ShardKeys]:
+        res = self.db.get(erasure_root.encode())
+        if res is None:
+            raise KeyError("Key not found")
+
+        decoded_shard_keys_vector, _ = ShardKeysVector.decode_from(res)
+        if shard_index is None:
+            return decoded_shard_keys_vector
+        decoded_shard_keys: ShardKeys = decoded_shard_keys_vector[shard_index]
+        return decoded_shard_keys
+
+    def get_segments_shard(self, erasure_root: OpaqueHash, shard_index: U16) -> SegmentsShard:
+        keys: ShardKeys = self.get_shards_keys(erasure_root, shard_index)
+        segment_shard_db = SegmentShardMap()
+        return segment_shard_db.get(keys.segment_shard_root)
+
+    def get_segment_shard(self, erasure_root: OpaqueHash, shard_index: U16, segment_index) -> ByteArray12:
+        segments_shard: SegmentsShard = self.get_segments_shard(erasure_root, shard_index)
+        return segments_shard[segment_index]
+
+    def get_bundle_shard(self, erasure_root: OpaqueHash, shard_index: U16):
+        keys: ShardKeys = self.get_shards_keys(erasure_root, shard_index)
+        bundle_shard_db = BundleShardMap()
+        return bundle_shard_db.get(keys.bundle_shard_hash)
+
+    def delete(self, erasure_root: OpaqueHash):
+        self.db.delete(erasure_root.encode())
+
+    def close(self):
+        self.db.close()
+
+
+class SegmentShardMap:
+    def __init__(self):
+        self.db_path = "/home/faizahmad817/tessera/db/segmentShardMap"
+        self.db = KVStore(self.db_path)
+
+    def put(self, segments_shard_root: OpaqueHash,
+            segments_shard: SegmentsShard):
+        self.db.put(segments_shard_root.encode(), segments_shard.encode())
+
+    def get(self, segments_shard_root: OpaqueHash) -> SegmentsShard:
+        res = self.db.get(segments_shard_root.encode())
+        if res is None:
+            raise KeyError("Key not found")
+        decoded_data, _ = SegmentsShard.decode_from(res)
+        return decoded_data
+
+    def delete(self, segments_shard_root: OpaqueHash):
+        self.db.delete(segments_shard_root.encode())
+
+    def close(self):
+        self.db.close()
+
+
+class BundleShardMap:
+    def __init__(self):
+        self.db_path = "/home/faizahmad817/tessera/db/BundleShardMap"
+        self.db = KVStore(self.db_path)
+
+    def put(self, bundle_hash: OpaqueHash,
+            bundle_shard: Bytes):
+        self.db.put(bundle_hash.encode(), bundle_shard.encode())
+
+    def get(self, segments_shard_root: OpaqueHash) -> SegmentsShard:
+        res = self.db.get(segments_shard_root.encode())
+        if res is None:
+            raise KeyError("Key not found")
+        decoded_data, _ = Bytes.decode_from(res)
+        return decoded_data
+
+    def delete(self, segments_shard_root: OpaqueHash):
+        self.db.delete(segments_shard_root.encode())
 
     def close(self):
         self.db.close()

@@ -8,6 +8,7 @@ from jam.work_package.work_package import WorkPackageProcessing
 from jam.work_package.package_db import SegmentStore, BundleStore
 from jam.db.kv import KVStore
 from jam.types.work.segment import Segments, Segment, ByteArray4104
+from tests.dummy.dummy_bundle import create_dummy_bundle
 from tests.dummy.utils import create_dummy_bytes32, create_dummy_bytes4104
 
 
@@ -32,7 +33,8 @@ def test_segment_store():
 def test_bundle_store():
     bundle_db = BundleStore()
     root = create_dummy_bytes32()
-    dummy_bundle = WorkPackageBundle()
+    dummy_bundle = create_dummy_bundle()
+    print("dummy bundle:", dummy_bundle)
     bundle_db.put(bundle_root=root, bundle=dummy_bundle)
     fetched_bundle = bundle_db.get(bundle_root=root)
     print(fetched_bundle)
