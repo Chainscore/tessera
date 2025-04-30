@@ -82,6 +82,9 @@ class Memory:
             addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=True)
             self.data[U32(addr)] = Byte(byte)
 
+    def is_accessible(self, address: int, length: int) -> bool:
+        ...
+        
     def dump_memory(self, start, end):
         """
         For debugging: return a list of byte values from address 'start' to 'end' (exclusive).
@@ -105,7 +108,6 @@ class Memory:
                     data_eq = False
 
         return data_eq and self.allowed_read_pages == other.allowed_read_pages and self.allowed_write_pages == other.allowed_write_pages
-    
     
     @classmethod
     def from_pc(cls, read: bytes, write: bytes, args: bytes, z: int, s: int) -> Self:
