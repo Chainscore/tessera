@@ -7,7 +7,6 @@ from jam.state.components.delta import AccountData, Delta
 from jam.hostCall.process import HostCall
 from jam.pvm.extract import Status
 from copy import deepcopy
-from jam.hostCall.invocation import PsiM
 
 
 class PsiT:

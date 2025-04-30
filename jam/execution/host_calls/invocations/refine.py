@@ -1,10 +1,10 @@
+from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from jam.hostCall.process import HostCall
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.services import historicalLookup
 from jam.pvm.register import Registers
 from jam.pvm.pvm_memory import PageMemory
 from jam.types.protocol.core import Gas
-from jam.state.components.delta import Delta
 from jam.hostCall.types import RefineMap
 from jam.pvm.extract import Status
 from jam.types.work.package import WorkPackage
@@ -13,9 +13,8 @@ from jam.hostCall.invocation import PsiM
 from jam.types.work.segment import MultiSegments, Segments
 
 
-class PsiR:
-
-    delta: Delta
+class PsiR(InvocationProtocol):
+    
     def __init__(self,
                  i: int,
                  p: WorkPackage,
@@ -28,7 +27,8 @@ class PsiR:
         self.authorizer = o
         self.import_segment = i_segment
         self.offset = e_offset
-        self.f_function = self.refine_f()
+
+    def tab
 
     def refine_f(self):
         w = self.work_package.items[self.pc]
