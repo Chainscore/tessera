@@ -1,11 +1,46 @@
+from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
-from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.network.protocols.types import Final, BlockAnnouncement
-from jam.types import Block
+from jam.network.quic.server import QuicServerProtocol
 
-class BlockAnnouncementProtocol(NetworkProtocol):
+from jam.types.block import Block
+from jam.network.protocols.base import NetworkProtocol, PrefixType
+
+from jam.utils.codec import Codable
+from jam.utils.codec.decorators import decodable_dataclass
+from jam.utils.json import JsonSerde
+
+from jam.types.protocol.core import TimeSlot
+from jam.types.protocol.crypto import HeaderHash
+from jam.types import Header
+
+@decodable_dataclass
+@dataclass
+class Final(Codable, JsonSerde):
+    block_hash: HeaderHash
+    time_slot: TimeSlot
+
+@decodable_dataclass
+@dataclass
+class Announcement(Codable, JsonSerde):
+    header: Header
+    final: Final
+
+class BlockAnnouncement(NetworkProtocol):
+    """
+    UP 0 Protocol for announcing & processing new blocks to peers.
+
+    Protocol Flow:
+        Node -> Node
+
+        loop {
+            --> Announcement OR <-- Announcement (Either side may send)
+        }
+    Source:
+        https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#up-0-block-announcement
+    """
+
     from jam.network.node import Node
 
     def __init__(self):
@@ -13,39 +48,33 @@ class BlockAnnouncementProtocol(NetworkProtocol):
         self._prefix = PrefixType.UP0
 
     def transmit(self, node: Node, data: Block):
-        """
-        UP 0 Protocol for announcing new blocks to peers.
-        Args:
-            node (Node): Node which needs to announce the block
-            data (Block): Block to be announced
-        """
+        """Announce Block to Peers (servers)"""
+
         logger.info(f"Announcing blocks to {len(node.connections)} peers.")
+        # TODO: Use All Validators Connections
 
         final = Final(block_hash=data.header.parent, time_slot=data.header.slot)
-        announcement = BlockAnnouncement(header=data.header, final=final)
+        announcement = Announcement(header=data.header, final=final)
 
+        message = self._prefix.encode() + announcement.encode()
         for conn in node.peer_conn:
-            # Block Announcement
             stream_id, client = node.peer_conn[conn]
-            message = self._prefix.encode() + announcement.encode()
             client.stream_and_keep_open(stream_id=stream_id, message=message)
 
-    @classmethod
-    def intercept(cls, buffer: bytes) -> BlockAnnouncement:
-        """
-        UP 0 Protocol for intercepting new blocks from peers.
-        Args:
-            buffer (bytes): Block Announcement data received
-        Returns:
-            BlockAnnouncement: Decoded bytes data received
-        """
-        data, offset = BlockAnnouncement.decode_from(buffer)
+    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+        """Intercepting & Process new blocks from peers."""
+
+        data, offset = Announcement.decode_from(buffer)
 
         data = cast(BlockAnnouncement, data)
         logger.info(f"Received a new block with header {data.header}. Parent Block: {data.final.block_hash} in T.S {data.final.time_slot}")
 
-        return data
+        logger.info(f"Processing new block.")
+        # TODO: Process new block
+        # Process goes here
 
-    @classmethod
-    def process(cls, data: BlockAnnouncement):
-        print("Processing new block.")
+    def client_intercept(self, buffer: bytes, stream_id: int):
+        ...
+
+
+

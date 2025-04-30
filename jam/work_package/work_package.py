@@ -43,7 +43,6 @@ from jam.merklization.binary_merkle import BMRFunctions
 from jam.hostCall.Refine import PsiR
 from jam.hostCall.invocation import PsiI
 
-from tests.dummy.dummy_package import create_dummy_package
 from tests.dummy.utils import create_dummy_bytes32
 
 from jam.work_package.package_db import BundleStore, SegmentStore
@@ -325,8 +324,8 @@ class WorkPackageProcessing:
         for segments in e_list:
             e_bar_cap.extend(segments)
 
-        wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32(), exports_count=U16(0))
-        specs = self.availability_specifier(package_hash=h, wp_bundle=wp_bundle.encode(), export_segments=e_bar_cap)
+        wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32())
+        specs = self.availability_specifier(package_hash=h, wp_bundle=wp_bundle.encode(), export_segments=Vector([]))
 
         # inserting auditable bundle in db
         bundle_db = BundleStore()
@@ -336,6 +335,10 @@ class WorkPackageProcessing:
         segment_db = SegmentStore()
         segment_db.put(export_segment=e_bar_cap, paged_proof=self.paged_proof(e_bar_cap))
 
+
+        # segment-root -> erasure-root , assurer
+        # specs.exports_root -> specs.erasure_root, assurer, specs.hash
+        # specs.erasure_root -> wp_bundle
 
         if not isinstance(o, Bytes):
             return None
@@ -438,7 +441,6 @@ class WorkPackageProcessing:
         pages: Segments = Segments([])
         for x in range(page_count):
             path = self.merkle.merkle_path_fn(values=segments, size=Int(6), index=Int(x))
-            print(f"path  ", path)
             leaf = self.merkle.leaf_page_fn(values=segments, size=Int(6), index=Int(x))
             merkle_path = bytes(len(path)) + Vector(path).encode()
             leaf =  bytes(len(leaf)) + leaf.encode()

@@ -84,14 +84,12 @@ class WorkPackageSpec(Codable, JsonSerde):
 @decodable_dataclass
 @dataclass
 class WorkPackageBundle(Codable, JsonSerde):
-    """Work package specification structure."""
+    """Work package bundle specification structure."""
 
     package: WorkPackage
     extrinsics: Vector[Vector[Bytes]]
     import_segments: Vector[MultiSegments]
-    justifications: ExportsRoot
-    exports_count: U16
-
+    justifications: Vector[Vector[Vector[OpaqueHash]]]
 
 
 
