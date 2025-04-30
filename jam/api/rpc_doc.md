@@ -16,7 +16,7 @@ The **Tessera RPC API** provides a JSON-RPC 2.0 interface for interacting with t
 
 ## API Endpoint
 
-**Base URL:**  
+**Base URL(localhost):**  
 `http://127.0.0.1:8000/rpc.tessera`
 
 **Method:**  
