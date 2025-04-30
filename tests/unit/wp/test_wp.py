@@ -7,24 +7,15 @@ from jam.work_package.work_package import WorkPackageProcessing
 from jam.work_package.package_db import SegmentStore
 from jam.db.kv import KVStore
 from jam.types.work.segment import Segments, Segment, ByteArray4104
-from tests.dummy.utils import create_dummy_bytes32
+from tests.dummy.utils import create_dummy_bytes32, create_dummy_bytes4104
 
 
 def test_put():
+    print("starting")
     segment_db = SegmentStore()
-    merkle = BMRFunctions()
-    # segment = ByteArray32(create_dummy_bytes32())
-    # export_segment = Segments([])
-    # export_segment.append(segment)
-    export_segment: Segments = Segments([])
-
-    for i in range(1):
-        val = f"segment {i}".encode()
-        val = val.ljust(4104, b'\0')
-        new_seg = Segment(ByteArray4104(val))
-
-        export_segment.append(new_seg)
-
+    segment = create_dummy_bytes4104()
+    export_segment = Segments([])
+    export_segment.append(segment)
     print(export_segment)
     package_processing = WorkPackageProcessing()
     paged_proof = package_processing.paged_proof(export_segment)
