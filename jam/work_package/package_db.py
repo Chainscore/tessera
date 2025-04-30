@@ -11,7 +11,7 @@ from jam.types.work.report import BundleShard
 class SegmentStore:
 
     def __init__(self):
-        self.db_path = "db/segment"
+        self.db_path = "/home/faizahmad817/tessera/db/segment"
         self.db = KVStore(self.db_path)
 
     def put(self, export_segment: Segments, paged_proof: Segments):
@@ -48,7 +48,7 @@ class SegmentStore:
 class BundleStore:
 
     def __init__(self):
-        self.db_path = "db/bundle"
+        self.db_path = "/home/faizahmad817/tessera/db/bundle"
         self.db = KVStore(self.db_path)
 
     def put(self, bundle_root: OpaqueHash, bundle: WorkPackageBundle):
@@ -70,7 +70,7 @@ class BundleStore:
 
 class PackageSegmentMap:
     def __init__(self):
-        self.db_path = "db/packageSegmentMap"
+        self.db_path = "/home/faizahmad817/tessera/db/packageSegmentMap"
         self.db = KVStore(self.db_path)
 
     def put(self, package_hash: OpaqueHash, segment_root: OpaqueHash):
@@ -92,7 +92,7 @@ class PackageSegmentMap:
 
 class SegmentAssurerMap:
     def __init__(self):
-        self.db_path = "db/segmentAssurerMap"
+        self.db_path = "/home/faizahmad817/tessera/db/segmentAssurerMap"
         self.db = KVStore(self.db_path)
 
     def put(self, segment_root: OpaqueHash, erasure_root: OpaqueHash, assurer:ValidatorIndex):
@@ -123,7 +123,7 @@ class SegmentAssurerMap:
 
 class BundleShardStore:
     def __init__(self):
-        self.db_path = "db/BundleShard"
+        self.db_path = "/home/faizahmad817/tessera/db/BundleShard"
         self.db = KVStore(self.db_path)
 
     @staticmethod
@@ -154,7 +154,7 @@ class BundleShardStore:
 
 class ErasureSegmentMap:
     def __init__(self):
-        self.db_path = "db/erasureSegmentMap"
+        self.db_path = "/home/faizahmad817/tessera/db/erasureSegmentMap"
         self.db = KVStore(self.db_path)
 
     def put(self, erasure_root: OpaqueHash, segment_root: OpaqueHash):
