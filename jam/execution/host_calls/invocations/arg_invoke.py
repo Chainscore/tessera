@@ -34,7 +34,7 @@ class PsiM:
             result = ExecutionStatus.OUT_OF_GAS
         elif status == ExecutionStatus.HALT:
             try:
-                result = memory.read(registers[7], registers[8] - registers[7])
+                result = memory.read(int(registers[7]), int(registers[8]))
             except PvmError as e:
                 if e.code == ExecutionStatus.PAGE_FAULT:
                     result = []

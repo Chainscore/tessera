@@ -6,7 +6,7 @@ from jam.execution.pvm.register import Registers
 from jam.execution.pvm.status import ExecutionStatus, PvmError
 from jam.types.protocol.core import Gas, ProgramCounter, RemainingGas
 
-HostCallReturn = Tuple[ExecutionStatus, RemainingGas, Registers, Memory, Context]
+HostCallReturn = Tuple[ExecutionStatus, ProgramCounter, RemainingGas, Registers, Memory, Context]
 
 class PsiH:
 
