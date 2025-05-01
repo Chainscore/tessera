@@ -183,7 +183,7 @@ class ErasureCode(GF):
 
         octet_pairs = []
         for i in range(0, len(data), 2):
-            resultant = int.from_bytes(data[i:i + 2], 'little')
+            resultant = int.from_bytes(bytes(int(b) for b in data[i:i + 2]), 'little')
             octet_pairs.append(resultant)
 
         k = len(octet_pairs) // 342

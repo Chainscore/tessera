@@ -45,7 +45,7 @@ from jam.hostCall.invocation import PsiI
 
 from tests.dummy.utils import create_dummy_bytes32
 
-from jam.work_package.package_db import BundleStore, SegmentStore
+from jam.work_package.package_db import BundleStore, SegmentStore, ErasureShardsKeysMap, SegmentShardMap, BundleShardMap
 
 
 class WorkPackageProcessing:
@@ -475,11 +475,15 @@ class WorkPackageProcessing:
         encoded_wp_bundle = erasure_codec.encode(padded_wp_bundle)
 
         b_shards: Vector[OpaqueHash] = Vector([])
+        bundle_shard_db = BundleShardMap()
         for item in encoded_wp_bundle:
-            b_shards.append(Hash.blake2b(item.encode()))
+            shard_root = Hash.blake2b(item.encode())
+            b_shards.append(shard_root)
+            bundle_shard_db.put(bundle_hash=shard_root, bundle_shard=item)
+        bundle_shard_db.close()
 
         # Build Segment Shards
-        justified_segments: Segments = export_segments + self.paged_proof(export_segments)
+        justified_segments: Segments = Segments(list(export_segments) + list(self.paged_proof(export_segments)))
 
         encoded_export_segments = Vector([])
 
@@ -490,8 +494,12 @@ class WorkPackageProcessing:
         transposed_s = [Vector([encoded_export_segments[j][i] for j in range(len(encoded_export_segments))]) for i in range(len(encoded_export_segments[0]))]
 
         s_shards: Vector[OpaqueHash] = Vector([])
+        seg_shard_db = SegmentShardMap()
         for item in transposed_s:
-            s_shards.append(self.merkle.wb_merkle_fn(item))
+            shard_root = self.merkle.wb_merkle_fn(item)
+            s_shards.append(shard_root)
+            seg_shard_db.put(segments_shard_root=shard_root, segments_shard=item)
+        seg_shard_db.close()
 
         # Build Complete Shard
         shards: Vector[Vector[OpaqueHash]] = Vector([b_shards, s_shards])
@@ -506,6 +514,9 @@ class WorkPackageProcessing:
             clubbed_shards.append(ByteArray64(x_cap))
 
         u = self.merkle.wb_merkle_fn(clubbed_shards)
+        root_shards_keys = ErasureShardsKeysMap()
+        root_shards_keys.put(erasure_root=u, segments_shard_roots=s_shards, bundles_hashes=b_shards)
+        root_shards_keys.close()
 
         # TODO: Store Package Hash, Segment Root, Erasure Root & Chunks Mapping
         # TODO: Distribute Shards on Request

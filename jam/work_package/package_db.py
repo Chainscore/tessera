@@ -146,7 +146,7 @@ class ErasureSegmentMap:
         self.db.close()
 
 
-class ErasureShardsMap:
+class ErasureShardsKeysMap:
     def __init__(self):
         self.db_path = "/home/faizahmad817/tessera/db/erasureShardsMap"
         self.db = KVStore(self.db_path)
@@ -155,7 +155,7 @@ class ErasureShardsMap:
     def make_value(segments_shard_roots: Vector[OpaqueHash], bundles_hashes: Vector[OpaqueHash]):
         value = ShardKeysVector()
         for i in range(len(segments_shard_roots)):
-            value.append(ShardKeys(segments_shard_roots[i], bundles_hashes[i]))
+            value.append(ShardKeys(segment_shard_root=segments_shard_roots[i], bundle_shard_hash=bundles_hashes[i]))
         return value
 
     def put(self, erasure_root: OpaqueHash, segments_shard_roots: Vector[OpaqueHash], bundles_hashes: Vector[OpaqueHash]):

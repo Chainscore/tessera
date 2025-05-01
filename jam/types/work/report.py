@@ -129,6 +129,12 @@ class ShardKeys(Codable, JsonSerde):
     bundle_shard_hash: OpaqueHash
     segment_shard_root: OpaqueHash
 
+
+@decodable_vector(element_type=OpaqueHash)
+class SingleShardKeysVector(Vector[OpaqueHash]):
+    ...
+
+
 @decodable_vector(element_type=ShardKeys)
 class ShardKeysVector(Vector[ShardKeys]):
     ...
