@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import cast, Tuple
+from typing import cast
 
 from jam.config.logging import logger
-from jam.types import WorkReport
+from jam.network.quic.server import QuicServerProtocol
+from jam.types.work.report import WorkReport
 
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
@@ -46,11 +47,12 @@ class WorkReportRequest(NetworkProtocol):
         message = self._prefix.encode() + data.work_report_hash.encode()
         logger.info(f"Requesting Work-Report from {len(node.connections)} Validators")
 
+        # TODO: Use Original Guarantor Connection
+
         for client in node.connections:
             client.stream_and_close(message=message)
 
-    @classmethod
-    def server_intercept(cls, buffer: bytes) -> Tuple[CE136Data, WorkReport]:
+    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Fetch requested Work Report on Node (server)"""
 
         logger.info("Received Work Report Request")
@@ -59,17 +61,21 @@ class WorkReportRequest(NetworkProtocol):
 
         logger.info("Fetching Work Report")
         # TODO: Process received Work Report Query
-        # process goes here
+        report = create_dummy_work_report()
+        # Process goes here
 
-        fetched_report = create_dummy_work_report()
+        logger.info(f"📩 Processed work report query for WR {data.work_report_hash}")
 
-        return data, fetched_report
+        # Return requested report to client node
+        ack = self._prefix.encode() + report.encode()
+        server.stream_and_close(stream_id, ack)
 
-    @classmethod
-    def client_intercept(cls, buffer: bytes) -> Tuple[WorkReport, WorkReportHash]:
-        """Acknowledgement"""
+        logger.info("Requested report sent back to Node")
 
-        logger.info("Requested Report received on Node (client)")
+    def client_intercept(self, buffer: bytes, stream_id: int):
+        """Intercept Requested Work Report"""
+
+        logger.info(f"Requested Report received on Node (client) via stream {stream_id}")
         data, offset = WorkReport.decode_from(buffer)
         data = cast(WorkReport, data)
 
@@ -77,6 +83,4 @@ class WorkReportRequest(NetworkProtocol):
 
         logger.info("Saving Work Report")
         # TODO: Process & Save Work Report
-        # process goes here
-
-        return data, h
+        # Process goes here

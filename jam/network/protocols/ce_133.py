@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
+from jam.network.quic.server import QuicServerProtocol
 from jam.types.base.integers import Int
 
 from jam.utils.json import JsonSerde
@@ -53,13 +54,13 @@ class WorkPackageSubmission(NetworkProtocol):
         stream_b = data.extrinsics.encode()
 
         logger.info(f"Transmitting Work-Package to {len(node.connections)} Validators")
+        # TODO: Use Particular Validators' Connections
 
         for client in node.connections:
             stream_id = client.stream_and_keep_open(message=stream_a)
             client.stream_and_close(message=stream_b, stream_id=stream_id)
 
-    @classmethod
-    def server_intercept(cls, buffer: bytes) -> CE133Data:
+    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Work Package on Guarantor (server)"""
 
         logger.info("Received Work Package")
@@ -68,13 +69,21 @@ class WorkPackageSubmission(NetworkProtocol):
 
         logger.info("Processing Work Package")
         # TODO: Process received Work Package
-        # process goes here
+        # Process goes here
 
-        return data
+        logger.info(
+            f"📩 Processed work package : {data.package_data.work_package} with CI {data.package_data.core_index}"
+        )
 
-    @classmethod
-    def client_intercept(cls, buffer: bytes):
-        """Acknowledgement"""
-        logger.info("Work Package received on Guarantor Node")
+        # Return acknowledgment to Builder
+        ack = self._prefix.encode() + b""
+        server.stream_and_close(stream_id, ack)
+
+        logger.info("Sent acknowledgement back to builder")
+
+    def client_intercept(self, buffer: bytes, stream_id: int):
+        """Intercept Acknowledgement"""
+
+        logger.info(f"Work Package received on Guarantor Node via stream {stream_id}")
 
 

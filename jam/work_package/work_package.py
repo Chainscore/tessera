@@ -43,7 +43,6 @@ from jam.merklization.binary_merkle import BMRFunctions
 from jam.hostCall.Refine import PsiR
 from jam.hostCall.invocation import PsiI
 
-from tests.dummy.dummy_package import create_dummy_package
 from tests.dummy.utils import create_dummy_bytes32
 
 
@@ -319,7 +318,7 @@ class WorkPackageProcessing:
 
         h = Hash.blake2b(p.encode())
 
-        wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32(), exports_count=U16(0))
+        wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32())
         specs = self.availability_specifier(package_hash=h, wp_bundle=wp_bundle.encode(), export_segments=Vector([]))
 
         # segment-root -> erasure-root , assurer

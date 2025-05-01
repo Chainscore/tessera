@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
+from jam.network.quic.server import QuicServerProtocol
 
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
@@ -45,12 +46,12 @@ class WorkReportDistribution(NetworkProtocol):
         # TODO: Add Validator Index & Signature as per GP
         message = self._prefix.encode() + data.report.encode() + data.slot.encode()
         logger.info(f"Transmitting Guaranteed Work-Report to {len(node.connections)} Validators")
+        # TODO: Use All Validators Connections
 
         for client in node.connections:
             client.stream_and_close(message=message)
 
-    @classmethod
-    def server_intercept(cls, buffer: bytes) -> CE135Data:
+    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Work Report on Validator (server)"""
 
         logger.info("Received Work Report")
@@ -59,13 +60,19 @@ class WorkReportDistribution(NetworkProtocol):
 
         logger.info("Processing Work Report")
         # TODO: Process received Work Report
-        # process goes here
+        # Process goes here
 
-        return data
+        logger.info(f"📩 Processed work report : {data.report} with slot {data.slot}")
 
-    @classmethod
-    def client_intercept(cls, buffer: bytes):
-        """Acknowledgement"""
-        logger.info("Guaranteed Report received on Guarantor Node")
+        # Send Acknowledgement
+        ack = self._prefix.encode() + b""
+        server.stream_and_close(stream_id, ack)
+
+        logger.info("Sent acknowledgement back to guarantor")
+
+    def client_intercept(self, buffer: bytes, stream_id: int):
+        """Intercept Acknowledgement"""
+
+        logger.info(f"Guaranteed Report received on Guarantor Node via stream {stream_id}")
 
 

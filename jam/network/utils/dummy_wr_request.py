@@ -3,7 +3,7 @@ from time import time
 
 from jam.config.logging import logger
 from tests.dummy.utils import create_dummy_bytes32
-from .node import Node
+from jam.network.node import Node
 from jam.db.kv import KVStore
 from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data
 
