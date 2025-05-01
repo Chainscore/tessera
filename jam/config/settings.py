@@ -1,11 +1,4 @@
-from pathlib import Path
-from jam.utils.constants import (
-    SLOT_PERIOD,
-    EPOCH_LENGTH,
-    VALIDATOR_COUNT,
-    MAX_SERVICE_CODE_SIZE,
-)
-
+from jam.storage.db.kv import KVStore
 
 class Settings:
     # Node settings
@@ -15,31 +8,30 @@ class Settings:
     # Network settings
     LISTEN_ADDRESS: str = "0.0.0.0"
     LISTEN_PORT: int = 30333
-    MAX_PEERS: int = 50
 
     # Database settings
-    DB_PATH: Path = Path("data/db")
+    DB_PATH: str = "data/db"
+    AUDIT_DB_PATH: str = "data/audit"
 
-    # Consensus settings
-    EPOCH_LENGTH: int = EPOCH_LENGTH
-    SLOT_DURATION: int = SLOT_PERIOD
-    VALIDATOR_COUNT: int = VALIDATOR_COUNT
+    ENV_PREFIX = "JAM_"
+    ENV_FILE = ".env"
 
-    # PVM settings
-    PVM_MAX_MEMORY: int = 2**32  # 4GB
-    PVM_STACK_SIZE: int = 2**20  # 1MB
+    @property
+    def db(self):
+        return KVStore(self.DB_PATH)
+    
+    @property
+    def audit_db(self):
+        return KVStore(self.AUDIT_DB_PATH)
 
-    # Service settings
-    MAX_SERVICE_SIZE: int = MAX_SERVICE_CODE_SIZE
-    MAX_PREIMAGE_SIZE: int = MAX_SERVICE_CODE_SIZE
+settings: Settings | None = None
 
-    # Execution settings
-    MAX_REFINE_GAS: int = 500_000_000
-    MAX_ACCUMULATE_GAS: int = 100_000
-
-    class Config:
-        env_prefix = "JAM_"
-        env_file = ".env"
-
-
-settings = Settings()
+def setup_setting(name: str, port: int,  db_path = "data/db", node_id = None):
+    global settings
+    s = Settings()
+    s.NODE_NAME = name
+    s.LISTEN_PORT = port
+    s.DB_PATH = db_path
+    s.AUDIT_DB_PATH = db_path + "/audit"
+    s.NODE_ID = node_id
+    settings = s

@@ -71,8 +71,9 @@ class AccountData(Codable, JsonSerde):
 @decodable_dictionary(ServiceId, AccountData)
 class Delta(Dictionary[ServiceId, AccountData]):
     """Delta state"""
-
-    ...
+    
+    def __contains__(self, key):
+        return key in self.data
 
 
 # TODO - : Confirm these types + usage

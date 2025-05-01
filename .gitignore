@@ -31,16 +31,13 @@ poetry.lock
 .DS_Store
 
 # Project specific
-data/db/
+data/
 *.log
 .coverage
 htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-db/
-!jam/db
-!tests/unit/db
 
 # Environment
 .env

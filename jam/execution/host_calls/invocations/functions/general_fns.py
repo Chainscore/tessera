@@ -1,21 +1,22 @@
 
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
-from jam.execution.host_calls.invocations.protocol import DispatchNormalReturn
+from jam.execution.host_calls.invocations.protocol import Context, DispatchNormalReturn
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
+from jam.execution.pvm.status import ExecutionStatus
 from jam.types.protocol.core import Gas
 
 
 class GeneralFunctions(INVF):
-    
+
     @INVF.register(0, gas_cost=10)
-    def gas(cls, gas: Gas, registers: Registers) -> DispatchNormalReturn:
+    def gas(cls, gas: Gas, registers: Registers, memory: Memory, context: Context) -> DispatchNormalReturn:
         registers[7] = gas
-        return 
-    
+        return ExecutionStatus.CONTINUE, gas, registers, memory, context
+
     @INVF.register(1, gas_cost=10)
     def lookup(cls, gas: Gas, registers: Registers, memory: Memory, s: int, s_: int, d: dict):
-        delta_keys = self.initial_delta.keys()
+        delta_keys = initial_delta.keys()
         # Calculate `a`
         a = None
         if self.initial_service_index <= self.initial_regs[6] <= 2**64-1:
