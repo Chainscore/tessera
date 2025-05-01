@@ -10,7 +10,7 @@ from jam.error import JamError
 
 @decodable_option(Register)
 class OptionalRegister(Option):
-    ... 
+    ...
 
 @decodable_dataclass
 @dataclass
@@ -21,12 +21,12 @@ class ExecValue(Codable):
 
 @decodable_enum
 class ExecutionStatus(Enum):
-    HALT         : ExecValue = ExecValue(U8(0), OptionalRegister(Null))
-    PANIC        : ExecValue = ExecValue(U8(1), OptionalRegister(Null))
-    OUT_OF_GAS   : ExecValue = ExecValue(U8(2), OptionalRegister(Null))
-    PAGE_FAULT   : ExecValue = ExecValue(U8(3), OptionalRegister(Null))
-    HOST         : ExecValue = ExecValue(U8(4), OptionalRegister(Null))
-    CONTINUE     : ExecValue = ExecValue(U8(5), OptionalRegister(Null))
+    HALT         = ExecValue(U8(0), OptionalRegister(Null))
+    PANIC        = ExecValue(U8(1), OptionalRegister(Null))
+    OUT_OF_GAS   = ExecValue(U8(2), OptionalRegister(Null))
+    PAGE_FAULT   = ExecValue(U8(3), OptionalRegister(Null))
+    HOST         = ExecValue(U8(4), OptionalRegister(Null))
+    CONTINUE     = ExecValue(U8(5), OptionalRegister(Null))
 
 @decodable_enum
 class HostStatus(Enum):
@@ -40,7 +40,7 @@ class HostStatus(Enum):
     LOW     = U64(2**64 - 8)
     HUH     = U64(2**64 - 9)
     OK      = U64(0)
-    
+
 
 # Constructured statuses to use directly
 # Panic
@@ -50,7 +50,7 @@ def PAGE_FAULT(register: Register) -> ExecutionStatus:
     result = ExecutionStatus.PAGE_FAULT
     result.value.register = OptionalRegister(register)
     return result
-# Halt 
+# Halt
 HALT = ExecutionStatus.HALT
 # Host call with a register value
 def HOST(register: Register) -> ExecutionStatus:
