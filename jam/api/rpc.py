@@ -13,7 +13,7 @@ from jam.types.block import Block
 from jam.types.header import Header
 from jam.types.protocol.core import TimeSlot
 from jam.types import  U32
-
+from jam.storage.queue import StorageQueue
 
 # Initialize FastAPI with metadata for Swagger UI
 app = FastAPI(
@@ -486,80 +486,96 @@ async def rpc_handler(request: RpcRequest):
     )
 
 
+
 class SubscriptionManager:
     def __init__(self):
-        self.connections: Dict[WebSocket, Set[str]] = {}
-
+        self.active_connections = {}
+        self.subscriptions = {}
+        # Track the last known position in the updates queue
+        self.last_queue_position = 0
+    
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
-        self.connections[websocket] = set()
-
+        self.active_connections[websocket] = set()
+    
     def disconnect(self, websocket: WebSocket):
-        if websocket in self.connections:
-            del self.connections[websocket]
-
+        if websocket in self.active_connections:
+            # Remove all subscriptions for this client
+            for method in self.active_connections[websocket]:
+                if method in self.subscriptions and websocket in self.subscriptions[method]:
+                    self.subscriptions[method].remove(websocket)
+            del self.active_connections[websocket]
+    
     def subscribe(self, websocket: WebSocket, method: str):
-        if websocket in self.connections:
-            self.connections[websocket].add(method)
-            return True
-        return False
-
+        if method not in self.subscriptions:
+            self.subscriptions[method] = set()
+        self.subscriptions[method].add(websocket)
+        self.active_connections[websocket].add(method)
+    
     def unsubscribe(self, websocket: WebSocket, method: str):
-        if websocket in self.connections and method in self.connections[websocket]:
-            self.connections[websocket].remove(method)
-            return True
-        return False
+        if method not in self.subscriptions or websocket not in self.subscriptions[method]:
+            return False
+        self.subscriptions[method].remove(websocket)
+        self.active_connections[websocket].remove(method)
+        return True
+    
+    async def broadcast(self, method, message):
+        if method in self.subscriptions:
+            disconnected_websockets = []
+            for websocket in self.subscriptions[method]:
+                try:
+                    response = {
+                        "jsonrpc": "2.0",
+                        "method": method,
+                        "params": {"subscription": method, "result": message}
+                    }
+                    await websocket.send_text(json.dumps(response))
+                except Exception:
+                    disconnected_websockets.append(websocket)
+            
+            # Clean up disconnected websockets
+            for websocket in disconnected_websockets:
+                self.disconnect(websocket)
 
-    async def broadcast(self, method: str, data: dict):
-        message = {"jsonrpc": "2.0", "method": method, "result": data}
-
-        for websocket, subscriptions in self.connections.items():
-            if method in subscriptions:
-                await websocket.send_text(json.dumps(message))
-
-
+# Create a global instance of the subscription manager
+#TODO: Can this be used as a global
 manager = SubscriptionManager()
 
+# Create a global updates queue for tracking database changes
+updates_queue = StorageQueue("db_updates")
 
 @app.websocket("/rpc.tessera")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
-
     try:
         while True:
             # Wait for client to send subscription requests
             data = await websocket.receive_text()
             try:
                 request = json.loads(data)
-
                 # Handle subscription requests
                 if "method" in request and "id" in request:
                     method = request["method"]
-
                     if method == "subscribeStatistics":
                         # Subscribe to statistics
                         manager.subscribe(websocket, "subscribeStatistics")
-
                         # Send immediate response with current data
-                        response =  RpcResponse(
+                        response = RpcResponse(
                             jsonrpc="2.0",
                             id=request["id"],
                             result=[db_state.pi.encode()]
                         )
                         await websocket.send_text(response.json())
-
                     elif method == "unsubscribe" and "params" in request:
                         # Unsubscribe from a specific method
                         unsub_method = request["params"]["method"]
                         success = manager.unsubscribe(websocket, unsub_method)
-
                         response = {
                             "jsonrpc": "2.0",
                             "id": request["id"],
                             "result": {"success": success},
                         }
                         await websocket.send_text(json.dumps(response))
-
                     else:
                         # Unknown method
                         error_response = {
@@ -568,7 +584,6 @@ async def websocket_endpoint(websocket: WebSocket):
                             "id": request["id"],
                         }
                         await websocket.send_text(json.dumps(error_response))
-
             except json.JSONDecodeError:
                 error_response = {
                     "jsonrpc": "2.0",
@@ -576,37 +591,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     "id": None,
                 }
                 await websocket.send_text(json.dumps(error_response))
-
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-
-@app.on_event("startup")
-async def start_broadcasters():
-    asyncio.create_task(poll_rocksdb())
-
-
-async def poll_rocksdb(interval=1):
-    keys = list(db.get_all().keys())  # Use get_all to retrieve keys
-    last_seen_values = {}
-
-    while True:
-        try:
-            for key in keys:
-                value = db.get(key)
-                if key not in last_seen_values or last_seen_values[key] != value:
-                    last_seen_values[key] = value
-                    stats = get_blockchain_statistics()
-                    await manager.broadcast("subscribeStatistics", stats)
-        except Exception as e:
-            print(f"[poll_rocksdb] Error: {e}")
-        await asyncio.sleep(interval)
-
-
-async def statistics_broadcaster():
-    while True:
-        stats = get_blockchain_statistics()
-        await manager.broadcast("subscribeStatistics", stats)
-        await asyncio.sleep(5)
 
 def get_blockchain_statistics():
     # Generate random blockchain statistics
@@ -614,10 +600,61 @@ def get_blockchain_statistics():
     transactions = random.randint(5000, 6000)
     hash_rate = f"{random.uniform(10.0, 15.0):.1f} TH/s"
     timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
+    
     return {
         "blockHeight": block_height,
         "transactions": transactions,
         "hashRate": hash_rate,
         "timestamp": timestamp,
     }
+
+@app.on_event("startup")
+async def start_broadcasters():
+    # Start the queue polling task
+    asyncio.create_task(poll_updates_queue())
+
+
+async def poll_updates_queue(interval=1):
+    """
+    updates queue for new entries and broadcast them to subscribers.
+    """
+    global manager, updates_queue
+    
+    while True:
+        try:
+            # Get queue metadata to check if there are new items
+            metadata = updates_queue.metadata(db)
+            current_tail = int(metadata.tail) if metadata else 0
+            
+            # If there are new entries, process them
+            if current_tail > manager.last_queue_position:
+                # Get  new entries since last position
+                count = current_tail - manager.last_queue_position
+                new_entries = updates_queue.get(db, count, manager.last_queue_position)
+                
+                if new_entries:
+                    # Parse the entries
+                    updates = []
+                    for entry in new_entries:
+                        try:
+                             # Parse the entry into `update_data`
+                             update_data = entry.decode("utf-8")  # Example: decoding bytes to string
+                             updates.append(update_data) 
+                        except:
+                            print(f"Error parsing update: {entry}")
+                    
+                    # If we have valid updates, broadcast them
+                    if updates:
+                        # stats = get_blockchain_statistics()
+                        stats["updates"] = updates
+                        await manager.broadcast("subscribeStatistics", stats)
+                
+                # Update our position in the queue
+                manager.last_queue_position = current_tail
+                
+        except Exception as e:
+            print(f"[poll_updates_queue] Error: {e}")
+        
+        # Wait before next poll
+        await asyncio.sleep(interval)
+
