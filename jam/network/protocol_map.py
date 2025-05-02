@@ -5,7 +5,7 @@ from jam.network.protocols.ce_135 import WorkReportDistribution
 from jam.network.protocols.ce_136 import WorkReportRequest
 from jam.network.protocols.up_0 import BlockAnnouncement
 from jam.network.protocols.ce_137 import ShardDistributionProtocol
-
+from jam.network.protocols.ce_138 import AuditShardRequestProtocol
 
 class ProtocolMap:
     ALL_PROTOCOLS = {
@@ -14,7 +14,8 @@ class ProtocolMap:
         PrefixType.CE134: WorkPackageSharing,
         PrefixType.CE135: WorkReportDistribution,
         PrefixType.CE136: WorkReportRequest,
-        PrefixType.CE137: ShardDistributionProtocol
+        PrefixType.CE137: ShardDistributionProtocol,
+        PrefixType.CE138: AuditShardRequestProtocol,
     }
 
     @classmethod
