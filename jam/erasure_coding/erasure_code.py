@@ -1,7 +1,7 @@
 from typing import List
 from jam.erasure_coding.error import ErasureCodingErrorCode, ErasureCodingError
 from jam.erasure_coding.galois_field import GF
-
+from jam.types.base.sequences.bytes.bytes import Bytes
 
 class ErasureCode(GF):
 
@@ -198,10 +198,10 @@ class ErasureCode(GF):
 
         encodedChunks = []
         for i in range(0, len(transposed)):
-            resStr = ''
+            resStr = b''
             for j in range(0, k):
-                resStr += transposed[i][j].to_bytes(2, byteorder='little').hex()
-            encodedChunks.append(resStr)
+                resStr += transposed[i][j].to_bytes(2, byteorder='little')
+            encodedChunks.append(Bytes(resStr))
 
         return encodedChunks
 
