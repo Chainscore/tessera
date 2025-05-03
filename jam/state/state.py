@@ -76,50 +76,7 @@ class State(Sigma):
             Returns:
                 dict: A dictionary representation of the state in this format: {bytes -> Bytes}
         """
-        services, service_storage, service_preimages, service_lookup = {}, {}, {}, {}
-        for i in self.delta:
-            l_key, s_key = set(), set()
-            for j in self.delta[i].timestamps:
-                l_key.add(j)
-            for j in self.delta[i].storage:
-                s_key.add(j)
-            a_i = 2 * len(list(l_key)) + len(list(s_key))
-            a_s, a_l = 0, 0
-            if l_key:
-                for key in l_key:
-                    # fetching the length from the LookupTimestamps
-                    a_l += 81 + int(LookupTimestamps.get_length(key))
-            if s_key:
-                for key in s_key:
-                    a_s += 32 + len(self.delta[i].storage[key])
-
-            services[construct_state_key((255, i))] = Bytes(
-                self.delta[i].code_hash.encode()
-                + self.delta[i].balance.encode()
-                + self.delta[i].gas_limit.encode()
-                + self.delta[i].min_gas.encode()
-                + U64(a_l + a_s).encode()
-                + U32(a_i).encode()
-            )
-
-            for j in self.delta[i].storage:
-                service_storage[
-                    construct_state_key(
-                        (i, ByteArray32(Bytes(U32(2**32 - 1).encode()) + j[0:28]))
-                    )
-                ] = self.delta[i].storage[j]
-            for j in self.delta[i].lookup:
-                service_preimages[
-                    construct_state_key(
-                        (i, ByteArray32(Bytes(U32(2**32 - 2).encode()) + j[1:29]))
-                    )
-                ] = Bytes(self.delta[i].lookup[j])
-
-            for j in self.delta[i].timestamps:
-                service_lookup[construct_state_key((i, j))] = Bytes(
-                    self.delta[i].timestamps[j].encode()
-                )
-
+        services, service_storage, service_preimages, service_lookup = self.delta.transform()
         return {
             construct_state_key(1): Bytes(self.alpha.encode()),
             construct_state_key(2): Bytes(self.phi.encode()),
@@ -148,7 +105,6 @@ class State(Sigma):
         # Loop thru the whole state dict
 
         # populating the delta
-        delta = {}
         for key, value in sorted(state.items(), key=lambda x: x[0], reverse=True):
             # Start with finding all core state components 1-15
             # if (key[0] <= 15) and bytes(key[0:32]) == 0:
@@ -184,55 +140,6 @@ class State(Sigma):
                 elif int(key[0]) == 15:
                     xi, _ = Xi.decode_from(bytes(value))
 
-            # Then find all services (first byte is 255, rest is service id)
-            elif int(key[0]) == 255:
-                service_id = int.from_bytes(
-                    bytes(Bytes([key[1], key[3], key[5], key[7]]))
-                )
-                total_offset = 0
-                ac, offset = OpaqueHash.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                ab, offset = Balance.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                ag, offset = Gas.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                am, offset = Gas.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                ao, offset = Gas.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                ai, offset = U32.decode_from(bytes(value), total_offset)
-                total_offset += offset
-                delta[service_id] = AccountData(
-                    storage=AccountStorage({}),
-                    lookup=PreImageLookup({}),
-                    timestamps=LookupTimestamps({}),
-                    code_hash=ByteArray32(ac),
-                    balance=Balance(ab),
-                    gas_limit=Gas(ag),
-                    min_gas=Gas(am),
-                )
-
-            else:
-                if Bytes(key[7:0:-2]) == Bytes(2**32 - 1):
-                    # populating the storage
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                    delta[service_id].storage[
-                        ByteArray32(Bytes(key[8:32] + Bytes(bytearray(8))))
-                    ] = value
-                    print("Storage")
-                elif Bytes(key[7:0:-2]) == Bytes(2**32 - 2):
-                    # populating the lookup
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                    delta[service_id].lookup[Hash.blake2b(value)] = value
-
-                else:
-                    # populating the timestamps
-                    service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
-                    TimeStamps, _ = Timestamps.decode_from(bytes(value))
-                    timestamp_key = ByteArray32(
-                        Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
-                    )
-                    delta[service_id].timestamps[timestamp_key] = TimeStamps
 
         return State(
             alpha=alpha,
@@ -250,7 +157,7 @@ class State(Sigma):
             pi=pi,
             nu=nu,
             xi=xi,
-            delta=delta,
+            delta=Delta.detransform(state),
         )
 
     def generate_root(self) -> ByteArray32:
