@@ -16,6 +16,7 @@ from typing import (
     Sequence,
 )
 
+from jam.storage.db.kv import KVStore
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.dictionaries import DictionaryCodec
 from jam.utils.json import JsonSerde
@@ -24,7 +25,7 @@ K = TypeVar("K", bound=Codable)
 V = TypeVar("V", bound=Codable)
 
 
-class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
+class StorageDict(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
     """
     Dictionary implementation that supports codec operations.
 
@@ -46,6 +47,8 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
     key_type: Type[K]
     value_type: Type[V]
 
+    db: KVStore
+
     def __init__(self, initial: Optional[Mapping[K, V]] = None):
         """
         Initialize dictionary.
@@ -63,8 +66,13 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
 
         super().__init__(codec=DictionaryCodec())
         self.value: Dict[K, V] = {}
+
+        db = KVStore(settings)
         if initial is not None:
             self.value.update(initial)
+
+    def construct_key(self, key: bytes) -> bytes:
+        raise TypeError(f"{self.__class__.__name__} has not implemented construct_key() function. Unable to construct key")
 
     def __getitem__(self, key: K) -> V:
         """Get value for key."""
