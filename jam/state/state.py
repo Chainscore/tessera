@@ -204,11 +204,24 @@ class State(Sigma):
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
     
-    def save(self, db: KVStore):
+    def save(self, db:KVStore, updated_keys:list[ByteArray32,Bytes]=None):
+        """
+        Save state to the key-value store.
+        
+        If the root hash is not initialized (all zeros), merkelize the full state and save all key-value pairs.
+        Otherwise, update only the modified paths, root hash, and state keys in the database.
+        """
         data = self.transform()
-        # Save the regular state data
-        for key, value in data.items():
-            db.put(bytes(key), bytes(value))
+        if self._merkle.trie._root_hash == ByteArray32([0] * 32):
+            self._merkle.merkelize(data)
+            # db.put(b"general_root:",bytes(general_root))
+            for key, value in data.items():
+                db.put(bytes(key), bytes(value))
+        else:
+            root=self._merkle.update_global_root(updated_keys)
+            # db.put(b"general_root:",bytes(general_root))
+            for key,value in updated_keys.items():
+                db.put(bytes(key),bytes(value))
 
     @staticmethod
     def load(db: KVStore, keys: list[ByteArray32] = []) -> "State":
