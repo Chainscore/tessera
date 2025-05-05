@@ -1,21 +1,33 @@
 """Work report types for the JAM protocol."""
-from dataclasses import dataclass
-from typing import Any, Tuple, Union
 
-from jam.types.base.choices.choice import Choice, decodable_choice
-from jam.types.base.integers import U16, U32
-from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.base.null import Nullable
+from dataclasses import dataclass
+
 from jam.types.base import Vector
-from jam.types.base.sequences.vector import decodable_vector
+from jam.types.base.null import Nullable
+from jam.types.base.integers import U8, U16, U32, U64
+from jam.types.base.choices.choice import Choice, decodable_choice
+from jam.types.base.dictionary import decodable_dictionary, Dictionary
+from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.sequences.vector import Vector, decodable_vector
+
+from jam.types.work.package import WorkPackage
+from jam.types.work.refine_context import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
-from jam.types.protocol.core import ErasureRoot, ExportsRoot, WorkPackageHash
+from jam.types.protocol.core import (
+    CoreIndex,
+    SegmentRoot,
+    ErasureRoot,
+    ExportsRoot,
+    Gas,
+    ServiceId,
+    WorkPackageHash,
+)
+from jam.types.work.segment import MultiSegments
+
+from jam.utils.json.serde import JsonSerde
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 
-from jam.types.protocol.core import ServiceId, Gas, CoreIndex
-from jam.types.work.refine_context import RefineContext
-from jam.utils.json.serde import JsonSerde
 
 
 @decodable_choice
@@ -27,7 +39,23 @@ class WorkExecResult(Choice):
     panic: Nullable
     bad_code: Nullable
     code_oversize: Nullable
+    bad_exports: Nullable
 
+
+@decodable_vector(element_type=WorkExecResult)
+class ExecResults(Vector[WorkExecResult]):
+    ...
+
+@decodable_dataclass
+@dataclass
+class RefineLoad(Codable, JsonSerde):
+    """Refine load structure."""
+
+    gas_used: Gas
+    imports: U16
+    exports: U16
+    extrinsic_count: U8
+    extrinsic_size: U64
 
 @decodable_dataclass
 @dataclass
@@ -39,7 +67,7 @@ class WorkResult(Codable, JsonSerde):
     payload_hash: OpaqueHash
     accumulate_gas: Gas
     result: WorkExecResult
-
+    refine_load: RefineLoad
 
 @decodable_dataclass
 @dataclass
@@ -55,22 +83,35 @@ class WorkPackageSpec(Codable, JsonSerde):
 
 @decodable_dataclass
 @dataclass
-class SegmentRootLookupItem(Codable, JsonSerde):
-    """Segment root lookup item structure."""
+class WorkPackageBundle(Codable, JsonSerde):
+    """Work package bundle specification structure."""
 
-    work_package_hash: WorkPackageHash
-    segment_tree_root: OpaqueHash
+    package: WorkPackage
+    extrinsics: Vector[Vector[Bytes]]
+    import_segments: Vector[MultiSegments]
+    justifications: Vector[Vector[Vector[OpaqueHash]]]
 
+# Deprecated Type
+# @decodable_dataclass
+# @dataclass
+# class SegmentRootLookupItem(Codable, JsonSerde):
+#     """Segment root lookup item structure."""
+#
+#     work_package_hash: WorkPackageHash
+#     segment_tree_root: OpaqueHash
+#
+#
+# @decodable_vector(SegmentRootLookupItem)
+# class SegmentRootLookup(Vector[SegmentRootLookupItem]):
+#     ...
 
-@decodable_vector(SegmentRootLookupItem)
-class SegmentRootLookup(Vector[SegmentRootLookupItem]):
+@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
+class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
+    """contains all unique work-package hashes and segment root"""
     ...
-
 
 @decodable_vector(WorkResult)
-class WorkResults(Vector[WorkResult]):
-    ...
-
+class WorkResults(Vector[WorkResult]): ...
 
 @decodable_dataclass
 @dataclass
@@ -84,14 +125,20 @@ class WorkReport(Codable, JsonSerde):
     auth_output: Bytes
     segment_root_lookup: SegmentRootLookup
     results: WorkResults
+    auth_gas_used: Gas
+
 
 @decodable_vector(element_type=WorkReportHash, allow_duplicates=False)
 class WorkDependencies(Vector[WorkReportHash]):
     """Set of dependencies hashes"""
+
     ...
+
 
 @decodable_vector(element_type=WorkReport)
 class WorkReports(Vector[WorkReport]):
     """Vector of Work Reports"""
+
     ...
+
 

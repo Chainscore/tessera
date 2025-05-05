@@ -5,7 +5,7 @@ from time import time
 from jam.consensus.grandpa.finality import Finality
 from jam.consensus.safrole.safrole import Safrole
 from jam.disputes.disputes import Disputes
-from jam.network.protocols.up_0 import BlockAnnouncementProtocol
+from jam.network.protocols.up_0 import BlockAnnouncement
 from jam.state.state import State
 from jam.types.block import Block, Extrinsic
 from jam.types.extrinsics import (
@@ -50,7 +50,7 @@ class BlockProducer:
 
         # Record genesis timestamp in seconds
         genesis_ts = time()
-        up0 = BlockAnnouncementProtocol()
+        up0 = BlockAnnouncement()
 
         # TODO: If our validator is not in Kappa - skip block production till end of current epoch
         while True:

@@ -48,7 +48,7 @@ from jam.types.base import (
     decodable_choice,
     decodable_option,
 )
-
+from jam.types.base.sequences.bytes.bit_array import BitArray
 # Crypto types
 from jam.types.protocol.crypto import (
     BandersnatchPublic,
@@ -79,9 +79,9 @@ from jam.types.protocol.core import (
 
 # Block types
 from jam.types.block import Block, Extrinsic
-
+from jam.types.protocol.epoch import EpochMark
 # Header types
-from jam.types.header import Header, TicketsMark, OffendersMark
+from jam.types.header import Header, TicketsMark, OffendersMark, EpochMark
 
 # Service types
 from jam.types.protocol.service import ServiceInfo
@@ -98,7 +98,7 @@ from jam.types.work import (
     WorkPackage,
     WorkReport,
     WorkPackageSpec,
-    SegmentRootLookupItem,
+    SegmentRootLookup,
 )
 
 # Ticket types
@@ -159,7 +159,6 @@ __all__ = [
     "Bit",
     "String",
     "Array",
-    "BitSequence",
     "Vector",
     "ByteArray8",
     "ByteArray16",
@@ -223,7 +222,7 @@ __all__ = [
     "WorkPackage",
     "WorkReport",
     "WorkPackageSpec",
-    "SegmentRootLookupItem",
+    "SegmentRootLookup",
     # Ticket types
     "TicketEnvelope",
     "TicketBody",

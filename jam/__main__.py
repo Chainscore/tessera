@@ -2,17 +2,16 @@ import asyncio
 import json
 from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
-from jam.consensus.safrole.safrole import Safrole
 from jam.db.kv import KVStore
+
 from jam.network.peer import Peer
 from jam.network.node import Node
-from jam.network.dummy_wpb import wp_producer
+from jam.network.utils.dummy_wpb import wp_producer
 
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
 from jam.state.state import State
 from jam.types.base.integers.fixed import U16, U8
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic
 from jam.types.block import Block
 from jam.types.header import Header

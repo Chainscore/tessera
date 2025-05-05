@@ -1,7 +1,7 @@
 from jam.types import Array
 from jam.types.base.sequences.array import decodable_array
 
-# from jam.types.base.sequences.vector import decodable_vector
+from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.crypto import OpaqueHash
 from jam.utils.constants import CORE_COUNT, MAX_AUTH_QUEUE_ITEMS
 
@@ -19,4 +19,14 @@ class AuthorizationQueue(Array[AuthorizerHash]):
 class Phi(Array[AuthorizationQueue]):
     """φ Phi is an array of authorization queues for all cores"""
 
+    ...
+
+
+@decodable_vector(AuthorizerHash)
+class AuthorizationVector(Vector[AuthorizerHash]):
+    ...
+
+
+@decodable_vector(AuthorizationVector)
+class PhiVector(Vector[AuthorizationVector]):
     ...
