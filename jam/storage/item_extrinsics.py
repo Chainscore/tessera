@@ -74,3 +74,13 @@ class ItemExtrinsics:
             Bytes
         """
         return db.get(bytes(extrinsic_hash))
+
+
+    @classmethod
+    def compare(cls,work_item_extrinsic:ExtrinsicSpec,db:KVStore,extrinsic_hash: Optional[ByteArray32]=None)->bool:
+        if not extrinsic_hash:
+            item_extrinsic_value=db.get(bytes(work_item_extrinsic.hash))
+            return Hash.blake2b(item_extrinsic_value) == work_item_extrinsic.hash and len(item_extrinsic_value) == work_item_extrinsic.len
+        else:
+            extrinsic_value=db.get(bytes(extrinsic_hash))
+            return Hash.blake2b(extrinsic_value) == work_item_extrinsic.hash and len(extrinsic_value) == work_item_extrinsic.len
