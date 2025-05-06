@@ -1,11 +1,14 @@
 from math import ceil
 from typing import Tuple
 
+from jam.network.protocols import WorkReportDistribution
+from jam.network.protocols.ce_133 import CE133Data
+from jam.network.protocols.ce_135 import CE135Data
 from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray64
 from jam.types.base.sequences.vector import Vector
 
 from jam.types.base.integers.general import Int
-from jam.types.base.integers.fixed import U8, U16, U64
+from jam.types.base.integers.fixed import U8, U16, U64, U32
 
 
 from jam.types.work.item import WorkItem, ExtrinsicSpec
@@ -45,7 +48,14 @@ from jam.hostCall.invocation import PsiI
 
 from tests.dummy.utils import create_dummy_bytes32
 
-from jam.work_package.package_db import BundleStore, SegmentStore, ErasureShardsKeysMap, SegmentShardMap, BundleShardMap
+from jam.work_package.package_db import BundleStore, SegmentStore, ErasureShardsKeysMap, SegmentShardMap, \
+    BundleShardMap, ReportStore
+
+from hashlib import blake2b
+
+from jam.network.node import Node
+from jam.types.protocol.crypto import WorkReportHash
+
 
 
 class WorkPackageProcessing:
@@ -343,6 +353,7 @@ class WorkPackageProcessing:
         if not isinstance(o, Bytes):
             return None
         else:
+
             return WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p_a, auth_output=o, segment_root_lookup=self.segment_root_lookup_dict, results=r_list, auth_gas_used=g)
 
 
@@ -530,10 +541,40 @@ class WorkPackageProcessing:
 
         print("Building Work Report..")
         report = self.generate_wr(package, core)
+        # storing build work report in db
+        report_db = ReportStore()
+        report_hash = blake2b(report.encode(), digest_size=32).digest()
+        report_db.put(wr_hash=report_hash, report=report)
+        report_db.close()
 
         print(f"Generated Work Report {report}")
 
         print(f"Distributing Work Report to other  validators!")
         # TODO: Distribute WR to Guarantors CE135
+        # tsr_node = Node(
+        #     node_name=name,
+        #     node_id=str(port),
+        #     host="127.0.0.1",
+        #     port=port,
+        #     peers=peers,
+        #     validator_data=my_data,
+        #     is_builder=is_builder,
+        #     is_validator=True,
+        # )
+        # report_distribution = WorkReportDistribution()
+        # report_distribution.transmit(node=tsr_node, data=CE135Data(report, slot=U32(1)))
+
 
         print()
+
+    def bundle_process(self, core: CoreIndex, bundle: WorkPackageBundle, segment_lookup: SegmentRootLookup) -> WorkReportHash:
+
+        print("Building Work Report..")
+        self.segments = bundle.import_segments[0]
+        self.segment_root_lookup_dict = segment_lookup
+        report = self.generate_wr(bundle.package, core)
+
+
+        # TODO: send back Work-Report Hash ++ Ed25519 Signature to assigned Guarantor via CE134 protocol
+        return blake2b(report.encode(), digest_size=32).digest()
+

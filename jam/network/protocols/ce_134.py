@@ -13,7 +13,12 @@ from jam.utils.json import JsonSerde
 
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature
 from jam.types.protocol.core import CoreIndex
-from jam.work_package.work_package import SegmentRootLookup
+from jam.work_package.work_package import SegmentRootLookup, WorkPackageProcessing
+from tests.dummy.utils import create_dummy_bytes64
+import json
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from jam.ring_vrf.ietf.ietf import IETF_VRF
+
 
 @decodable_dataclass
 @dataclass
@@ -80,12 +85,34 @@ class WorkPackageSharing(NetworkProtocol):
 
         logger.info("Building Work Report")
         # TODO: Process received Work Package Bundle, Build Report & Return Credential if validated
+
+        # Process goes here
+        # Generating report from work package bundle
+        wp_processing = WorkPackageProcessing()
+        report_hash: WorkReportHash = wp_processing.bundle_process(core=data.core_segment.core_index, bundle=data.work_package_bundle,
+                                     segment_lookup=data.core_segment.segment_root_map)
+        # giving constant port number, but it should not be like this
+        port = 30333
+        my_keys = json.load(open("seeds/keys.json"))[str(port)]
+        ed25519_public = Ed25519PrivateKey.from_private_bytes(
+            bytes.fromhex(my_keys["ed25519_private"][2:])
+        ).public_key()
+        secret_scalar = (
+                int.from_bytes(bytes.fromhex(ed25519_public), "little")
+                % Bandersnatch_TE_Curve.ORDER
+        )
+        vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+        output_point, proof = vrf.prove(
+            bytes.fromhex(vector["alpha"]),
+            secret_scalar,
+            bytes.fromhex(vector["ad"]),
+        )
+        res_data = Credential(work_report_hash=report_hash, ed25519_signature=ed25519_public)
         from tests.dummy.dummy_package import create_dummy_credential
         credential = create_dummy_credential()
-        # Process goes here
 
         # Return Credential to OG Guarantor
-        ack = self._prefix.encode() + credential.encode()
+        ack = self._prefix.encode() + res_data.encode()
         server.stream_and_close(stream_id, ack)
 
         logger.info("Report's Credential sent back to OG Guarantor")

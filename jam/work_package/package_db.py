@@ -3,10 +3,9 @@ from jam.merklization import BMRFunctions
 from jam.types.base.sequences.bytes.byte_array import ByteArray12
 from jam.types.base.sequences.vector import Vector
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.work.report import WorkPackageBundle, ShardKeysVector, ShardKeys, SegmentsShard
-from jam.types.work.segment import Segments
+from jam.types.work.report import WorkPackageBundle, ShardKeysVector, ShardKeys, SegmentsShard, WorkReports, WorkReport
+from jam.types.work.segment import Segments, SegmentsWithProof, ErasureRootAssurers, Assurers
 from jam.types.protocol.core import OpaqueHash, ValidatorIndex
-import struct
 from typing import Tuple, Union, Optional
 from jam.types.base.integers.fixed import U16
 from jam.types.work.report import BundleShard
@@ -20,29 +19,22 @@ class SegmentStore:
     def put(self, export_segment: Segments, paged_proof: Segments):
         merkle = BMRFunctions()
         e = BMRFunctions.cd_merkle_fn(merkle, export_segment)
-        seg_bytes = export_segment.encode()
-        proof_bytes = paged_proof.encode()
-        seg_len = struct.pack("<I", len(seg_bytes))  # 4-byte little-endian
+        data = SegmentsWithProof(segment=export_segment, proof=paged_proof)
+        self.db.put(e.encode(), data.encode())
 
-        db_data = seg_len + seg_bytes + proof_bytes
-        self.db.put(e.encode(), db_data)
-
-    def get(self, segment_hash) -> Tuple[Segments, Segments]:
+    def get(self, segment_hash: OpaqueHash) -> Tuple[Segments, Segments]:
         data = self.db.get(segment_hash.encode())
         if data is None:
             raise KeyError("Segment not found")
 
-        seg_len = struct.unpack("<I", data[:4])[0]
-        seg_bytes = data[4:4 + seg_len]
-        proof_bytes = data[4 + seg_len:]
-
-        export_segment, _ = Segments.decode_from(seg_bytes)
-        paged_proof, _ = Segments.decode_from(proof_bytes)
+        decoded_data, _ = SegmentsWithProof.decode_from(data)
+        export_segment = decoded_data.segments
+        paged_proof = decoded_data.proof
 
         return export_segment, paged_proof
 
-    def delete(self, segment_hash):
-        self.db.delete(bytes(segment_hash))
+    def delete(self, segment_hash:OpaqueHash):
+        self.db.delete(segment_hash.encode())
 
     def close(self):
         self.db.close()
@@ -98,24 +90,17 @@ class SegmentAssurerMap:
         self.db_path = "/home/faizahmad817/tessera/db/segmentAssurerMap"
         self.db = KVStore(self.db_path)
 
-    def put(self, segment_root: OpaqueHash, erasure_root: OpaqueHash, assurer:ValidatorIndex):
-        erasure_bytes=  erasure_root.encode()
-        assurer_bytes = assurer.encode()
-        erasure_root_len = struct.pack("<H", len(erasure_bytes))
-        db_data = erasure_root_len + erasure_bytes + assurer_bytes
-        self.db.put(segment_root.encode(), db_data)
+    def put(self, segment_root: OpaqueHash, erasure_root: OpaqueHash, assurers:Assurers):
+        data = ErasureRootAssurers(erasure_root=erasure_root, assurers=assurers)
+        self.db.put(segment_root.encode(), data.encode())
 
     def get(self, segment_root: OpaqueHash) -> Tuple[OpaqueHash, ValidatorIndex]:
         res = self.db.get(segment_root.encode())
         if res is None:
             raise KeyError("Key not found")
 
-        erasure_root_len = struct.unpack("<H", res[:2])[0]
-        erasure_bytes = res[2:2 + erasure_root_len]
-        assurer_bytes = res[2 + erasure_root_len:]
-        erasure_root, _ = OpaqueHash.decode_from(erasure_bytes)
-        assurer, _ = ValidatorIndex.decode_from(assurer_bytes)
-        return erasure_root, assurer
+        decoded_data , _ = ErasureRootAssurers.decode_from(res)
+        return decoded_data.erasure_root, decoded_data.assurers
 
     def delete(self, segment_root: OpaqueHash):
         self.db.delete(segment_root.encode())
@@ -235,6 +220,30 @@ class BundleShardMap:
 
     def delete(self, segments_shard_root: OpaqueHash):
         self.db.delete(segments_shard_root.encode())
+
+    def close(self):
+        self.db.close()
+
+
+class ReportStore:
+
+    def __init__(self):
+        self.db_path = "/home/faizahmad817/tessera/db/report"
+        self.db = KVStore(self.db_path)
+
+    def put(self, wr_hash: OpaqueHash, report: WorkReport):
+        self.db.put(wr_hash.encode(), report.encode())
+
+    def get(self, wr_hash: OpaqueHash) -> WorkReport:
+        report = self.db.get(wr_hash.encode())
+        if report is None:
+            raise KeyError("Report not found")
+        decoded_report, _ = WorkReport.decode_from(report)
+
+        return decoded_report
+
+    def delete(self, wr_hash: OpaqueHash):
+        self.db.delete(wr_hash.encode())
 
     def close(self):
         self.db.close()
