@@ -1,7 +1,9 @@
+from typing import Optional
 from jam.db.kv import KVStore
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.crypto import Hash
+from jam.types.work.item import ExtrinsicSpec
 from jam.types.work.package import WorkPackage
 
 
@@ -18,7 +20,7 @@ class ItemExtrinsics:
             db (KVStore): Data store
 
         Raises:
-            ValueError: If the extrinsic passed (to store) is invalid - i.e hashes/length dont match 
+            ValueError: If the extrinsic passed (to store) is invalid - i.e hashes/length dont match
         """
         offset = 0
         to_store = {}
@@ -34,7 +36,7 @@ class ItemExtrinsics:
                 to_store[extrinsic.hash] = value
         if offset != len(data):
             raise ValueError("Invalid WP: Extrinsic data mismatch")
-        
+
         # Storing data
         for key, value in to_store.items():
             db.put(bytes(key), bytes(value))
@@ -51,3 +53,13 @@ class ItemExtrinsics:
             Bytes
         """
         return db.get(bytes(extrinsic_hash))
+
+
+    @classmethod
+    def compare(cls,work_item_extrinsic:ExtrinsicSpec,db:KVStore,extrinsic_hash: Optional[ByteArray32]=None)->bool:
+        if not extrinsic_hash:
+            item_extrinsic_value=db.get(bytes(work_item_extrinsic.hash))
+            return Hash.blake2b(item_extrinsic_value) == work_item_extrinsic.hash and len(item_extrinsic_value) == work_item_extrinsic.len
+        else:
+            extrinsic_value=db.get(bytes(extrinsic_hash))
+            return Hash.blake2b(extrinsic_value) == work_item_extrinsic.hash and len(extrinsic_value) == work_item_extrinsic.len

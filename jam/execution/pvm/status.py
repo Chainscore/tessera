@@ -23,9 +23,9 @@ class ExecValue(Codable):
 class ExecutionStatus(Enum):
     HALT         = ExecValue(U8(0), OptionalRegister(Null))
     PANIC        = ExecValue(U8(1), OptionalRegister(Null))
-    OUT_OF_GAS   = ExecValue(U8(2), OptionalRegister(Null))
-    PAGE_FAULT   = ExecValue(U8(3), OptionalRegister(Null))
-    HOST         = ExecValue(U8(4), OptionalRegister(Null))
+    PAGE_FAULT   = ExecValue(U8(2), OptionalRegister(Null))
+    HOST         = ExecValue(U8(3), OptionalRegister(Null))
+    OUT_OF_GAS   = ExecValue(U8(4), OptionalRegister(Null))
     CONTINUE     = ExecValue(U8(5), OptionalRegister(Null))
 
 @decodable_enum

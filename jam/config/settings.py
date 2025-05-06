@@ -19,12 +19,12 @@ class Settings:
     @property
     def db(self):
         return KVStore(self.DB_PATH)
-    
+
     @property
     def audit_db(self):
         return KVStore(self.AUDIT_DB_PATH)
 
-settings: Settings | None = None
+settings: Settings = Settings()
 
 def setup_setting(name: str, port: int,  db_path = "data/db", node_id = None):
     global settings
