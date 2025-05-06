@@ -12,7 +12,9 @@ ServiceId = U32
 Balance = U64
 BlobLength = U32
 Register = U64
-ProgramCounter = U32
+ProgramCounter = U64
+
+
 
 
 # Hash type aliases

@@ -1,5 +1,10 @@
 from jam.types.base.enum import Enum
 
+class Accessibility(Enum):
+    null:"Non-Accessible"
+    write:"Writable"
+    read:"Readable"
+
 class Status(Enum):
     PANIC = "panic"
     HALT = "halt"
