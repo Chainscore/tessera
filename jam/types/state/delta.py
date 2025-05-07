@@ -58,7 +58,8 @@ class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
 class AccountData(Codable, JsonSerde):
     storage: AccountStorage  
     lookup: PreImageLookup # preimages
-    timestamps: LookupTimestamps 
+    timestamps: LookupTimestamps
+
     code_hash: ServiceCodeHash # code_hash
     balance: Balance # balance
     gas_limit: Gas # min_item_gas
