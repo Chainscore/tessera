@@ -1,11 +1,7 @@
 [
             {
 
-<<<<<<< HEAD
                     "json_data": [
-=======
-                    "file": [
->>>>>>> 2de3b1803307569c9b15986bb880471d0a866d7b
                         {
                             "anchor": "0x0cffbf67aae50aeed3c6f8f0d9bf7d854ffd87cef8358cbbaa587a9e3bd1a776",
                             "bitfield": "0x01",
@@ -18,12 +14,6 @@
                             "validator_index": 1,
                             "signature": "0xdda7a577f150ee83afedc9d3b50a4f00fcf21248e6f73097abcc4bb634f854aedc53769838d294b09c0184fb0e66f09bae8cc243f842a6cc401488591e9ffdb1"
                         }
-<<<<<<< HEAD
                     ]
-=======
-                    ],
-                    "label": "assurances_extrinsic"
-
->>>>>>> 2de3b1803307569c9b15986bb880471d0a866d7b
             }
         ]
