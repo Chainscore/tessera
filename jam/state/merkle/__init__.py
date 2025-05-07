@@ -1,5 +1,4 @@
 from jam.state.merkle.node import Node
-from jam.state.merkle.trie import MerkleTrie
-from jam.state.merkle.merkle import StateMerkle
+from jam.state.merkle.merkle import StateTrie
 
-__all__ = ["Node", "MerkleTrie", "StateMerkle"]
+__all__ = ["Node", "StateTrie"]

@@ -12,7 +12,7 @@ from jam.state.components.sigma import Sigma
 from jam.state.components.iota import Iota
 from jam.state.components.nu import AllReadyWRs, Nu
 from jam.state.components.xi import Xi
-from jam.state.merkle import StateMerkle
+from jam.state.merkle import StateTrie
 from jam.state.utils.key_constructor import construct_state_key
 from jam.state.components.phi import AuthorizationQueue, AuthorizerHash, Phi
 from jam.state.components.beta import Beta
@@ -62,12 +62,11 @@ class State(Sigma):
     def __init__(self, **kwargs):
         """Initialize state with component kwargs"""
         super().__init__(**kwargs)
-        self._merkle = StateMerkle(Hash.blake2b)
+        self._merkle = StateTrie()
 
     @staticmethod
     def from_random(seed = 0) -> "State":
         from tests.dummy.dummy_state_comp import create_dummy_state_components
-
         return State(**create_dummy_state_components())
 
     def transform(self) -> dict:
