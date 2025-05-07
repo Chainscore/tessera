@@ -1,13 +1,13 @@
 import pytest
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 from jam.consensus.safrole.safrole import Safrole
-from jam.state.components.eta import Eta
+from jam.types.state.eta import Eta
 from jam.types.base.integers.fixed import U32
-from jam.state.components.kappa import Kappa
+from jam.types.state.kappa import Kappa
 from jam.consensus.safrole.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
-from jam.state.components.psi import PsiO
-from jam.state.components.iota import Iota
-from jam.state.components.lambda_ import Lambda_
+from jam.types.state.psi import PsiO
+from jam.types.state.iota import Iota
+from jam.types.state.lambda_ import Lambda_
 from jam.types.protocol.crypto import ByteArray32
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
 from jam.utils.constants import EPOCH_LENGTH

@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple, Optional
 from jam.state.merkle.node import Node
 from jam.state.merkle.utils import ZERO_HASH, NodeHash, NodeType, encode_branch, encode_leaf
-from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
+from jam.types.base.sequences.bytes import ByteArray32, ByteArray64, Bytes
 from jam.types.protocol.crypto import Hash
 from jam.db.kv import KVStore
 
@@ -72,7 +72,7 @@ class StateTrie:
         # Partition items by current bit
         left_items, right_items = [], []
         for leaf in leaves:
-            if leaf[1][bit_index]:
+            if leaf[1 + bit_index//8][bit_index % 8]:
                 right_items.append(leaf)
             else:
                 left_items.append(leaf)
@@ -95,7 +95,7 @@ class StateTrie:
 
     def merkelize(
         self,
-        state_dict: Dict[ByteArray32, ByteArray32],
+        state_dict: Dict[ByteArray32, Bytes],
         db: Optional[KVStore] = None
     ) -> Tuple[NodeHash, Dict[NodeHash, Node]]:
         """
@@ -133,7 +133,7 @@ class StateTrie:
         self.nodes.clear()
         self.root_hash = ZERO_HASH
 
-    def update(self, key, new_value) -> NodeHash:
+    def update(self, key: ByteArray32, new_value: Bytes) -> NodeHash:
         """
         Update a single leaf value 'new_value' at 'key', then update only
         the branch nodes on its path, rewiring hashes upward to the root.

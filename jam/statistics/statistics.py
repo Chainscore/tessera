@@ -2,14 +2,14 @@ import math
 from copy import deepcopy
 from typing import Dict, List
 
-from jam.state.components.pi import (
+from jam.types.state.pi import (
     AllServiceStats,
     CoreStat,
     ServiceStat,
 )
 from jam.types.base.integers.fixed import U32
-from jam.state.components.pi import ValidatorStat
-from jam.state.components.sigma import Sigma
+from jam.types.state.pi import ValidatorStat
+from jam.types.state.sigma import Sigma
 from jam.types.block import Block
 from jam.types.protocol.core import Gas, ServiceId
 from jam.types.work.report import WorkReport

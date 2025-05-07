@@ -12,13 +12,13 @@ from jam.accumulation.types import (
     OperandTuple,
 )
 
-from jam.state.components.sigma import Sigma
-from jam.state.components.delta import Delta
-from jam.state.components.phi import Phi
-from jam.state.components.tau import Tau
-from jam.state.components.iota import Iota
-from jam.state.components.chi import ChiA, ChiG, ChiM, ChiV
-from jam.state.components.nu import AllReadyWRs, ReadyWR
+from jam.types.state.sigma import Sigma
+from jam.types.state.delta import Delta
+from jam.types.state.phi import Phi
+from jam.types.state.tau import Tau
+from jam.types.state.iota import Iota
+from jam.types.state.chi import ChiA, ChiG, ChiM, ChiV
+from jam.types.state.nu import AllReadyWRs, ReadyWR
 from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
 from jam.hostCall.transfer import PsiT
 

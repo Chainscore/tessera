@@ -1,4 +1,4 @@
-from jam.state.components.delta import Delta
+from jam.types.state import Delta
 from jam.state.state import State
 from tests.dummy.utils import create_dummy_bytes, create_dummy_bytes32
 

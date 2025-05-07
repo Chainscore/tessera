@@ -15,7 +15,7 @@ import copy
 from jam.pvm.register import Registers
 from jam.pvm.pvm_memory import PageMemory
 from jam.types.protocol.core import Balance, Gas, ServiceId
-from jam.state.components.delta import AccountData, Delta
+from jam.types.state.delta import AccountData, Delta
 from jam.hostCall.types import XContent, RefineMap
 from jam.types.work.package import WorkPackage
 from typing import Optional

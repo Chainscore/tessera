@@ -2,10 +2,10 @@ from typing import Dict
 
 from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
-from jam.state.components.alpha import Alpha, AuthorizationPool, AuthorizerHash
-from jam.state.components.beta import Beta, BlockHistory, PackageDict
-from jam.state.components.chi import Chi, ChiG
-from jam.state.components.delta import (
+from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
+from jam.types.state.beta import Beta, BlockHistory, PackageDict
+from jam.types.state.chi import Chi, ChiG
+from jam.types.state.delta import (
     AccountData,
     AccountStorage,
     Delta,
@@ -14,17 +14,17 @@ from jam.state.components.delta import (
     ServiceCodeHash,
     Timestamps,
 )
-from jam.state.components.eta import Eta
-from jam.state.components.iota import Iota
-from jam.state.components.kappa import Kappa
-from jam.state.components.lambda_ import Lambda_
-from jam.state.components.phi import AuthorizationQueue, Phi
-from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat, AllCoreStats, CoreStat, AllServiceStats
-from jam.state.components.psi import Psi, PsiB, PsiG, PsiO, PsiW
-from jam.state.components.rho import OptionalWorkReportState, Rho
-from jam.state.components.tau import Tau
-from jam.state.components.nu import AllReadyWRs, Nu
-from jam.state.components.xi import Xi
+from jam.types.state.eta import Eta
+from jam.types.state.iota import Iota
+from jam.types.state.kappa import Kappa
+from jam.types.state.lambda_ import Lambda_
+from jam.types.state.phi import AuthorizationQueue, Phi
+from jam.types.state.pi import AllValidatorStats, Pi, ValidatorStat, AllCoreStats, CoreStat, AllServiceStats
+from jam.types.state.psi import Psi, PsiB, PsiG, PsiO, PsiW
+from jam.types.state.rho import OptionalWorkReportState, Rho
+from jam.types.state.tau import Tau
+from jam.types.state.nu import AllReadyWRs, Nu
+from jam.types.state.xi import Xi
 
 from jam.types import TicketBody, Array, Vector
 

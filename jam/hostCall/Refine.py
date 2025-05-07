@@ -4,7 +4,7 @@ from jam.services import historicalLookup
 from jam.pvm.register import Registers
 from jam.pvm.pvm_memory import PageMemory
 from jam.types.protocol.core import Gas
-from jam.state.components.delta import Delta
+from jam.types.state.delta import Delta
 from jam.hostCall.types import RefineMap
 from jam.pvm.extract import Status
 from jam.types.work.package import WorkPackage

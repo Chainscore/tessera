@@ -4,13 +4,10 @@ from jam.types.base.integers.fixed import U32, U64
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.base.sequences.bytes import ByteArray32, Bytes
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
-from jam.types.protocol.crypto import Hash
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.types.protocol.crypto import Hash
-from jam.state.components.phi import Phi
-from jam.state.components.chi import Chi
 
 ServiceCodeHash = ByteArray32
 
@@ -61,7 +58,8 @@ class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
 class AccountData(Codable, JsonSerde):
     storage: AccountStorage  
     lookup: PreImageLookup # preimages
-    timestamps: LookupTimestamps 
+    timestamps: LookupTimestamps
+
     code_hash: ServiceCodeHash # code_hash
     balance: Balance # balance
     gas_limit: Gas # min_item_gas
@@ -71,7 +69,6 @@ class AccountData(Codable, JsonSerde):
 @decodable_dictionary(ServiceId, AccountData)
 class Delta(Dictionary[ServiceId, AccountData]):
     """Delta state"""
-
     ...
 
 
