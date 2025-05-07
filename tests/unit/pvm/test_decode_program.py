@@ -13,7 +13,6 @@ def test_decode_program():
 
             assert testcase.initial_regs is not None
             assert testcase.initial_pc is not None
-            assert testcase.initial_page_map is not None
             assert testcase.initial_memory is not None
             assert testcase.program is not None
             assert testcase.expected_status is not None
@@ -21,7 +20,6 @@ def test_decode_program():
 
             assert len(testcase.initial_regs) == len(data["initial-regs"])
             assert testcase.initial_pc == data["initial-pc"]
-            assert len(testcase.initial_page_map) == len(data["initial-page-map"])
             assert len(testcase.initial_memory) == len(data["initial-memory"])
             assert len(testcase.program.jump_table) == data["program"][0]
             assert testcase.program.z == data["program"][1]

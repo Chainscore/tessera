@@ -40,12 +40,80 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
 
 from jam.utils.json.decorators import with_json_metadata
-
-from tests.fixtures.dummy_state import create_dummy_state
-from tests.unit.recent_history.types import BetaInput as TestBeta
-from tests.unit.statistics.types import Pi as TestPi
 from jam.types.protocol.core import BlobLength
+from jam.types.protocol.merkle import MMR
+from jam.types.protocol.crypto import HeaderHash, StateRoot
+from jam.state.components.beta import PackageDict, Beta, BlockHistory
+from jam.types.protocol.core import (
+    SegmentRoot,
+    WorkPackageHash,
+)
+from jam.state.components.pi import AllValidatorStats
 
+
+@decodable_dataclass
+@dataclass
+class TestPi(Codable, JsonSerde):
+    """Test Pi structure."""
+
+    current: AllValidatorStats
+    last: AllValidatorStats
+
+@decodable_dataclass
+@dataclass
+class MMRInput(Codable, JsonSerde):
+    """Input Structure for MMR Peaks in Block History for Recent History"""
+    peaks: MMR
+
+    def to_mmr(self) -> MMR:
+        return self.peaks
+    
+@decodable_dataclass
+@dataclass
+class WorkPackage(Codable, JsonSerde):
+    """Input Work Packages Structure"""
+
+    hash: OpaqueHash
+    exports_root: OpaqueHash
+
+
+@decodable_vector(WorkPackage)
+class PackageDictInput(Vector):
+    """Work Packages Input for Recent History"""
+
+    def to_dict(self)->PackageDict:
+        package_dict: PackageDict[WorkPackageHash, SegmentRoot] = PackageDict()
+
+        for pair in self:
+            key = pair.hash
+            value = pair.exports_root
+            package_dict[key]=value
+
+        return package_dict
+    
+@decodable_dataclass
+@dataclass
+class BlockHistoryInput(Codable, JsonSerde):
+    """Block History Item in test vectors for Recent History"""
+
+    header_hash: HeaderHash
+    mmr: MMRInput
+    state_root: StateRoot
+    reported: PackageDictInput
+
+@decodable_vector(BlockHistoryInput)
+class BetaInput(Vector[BlockHistoryInput]):
+    """Beta format in test vectors for Recent History"""
+
+    def to_beta(self)->Beta:
+        """Function to convert Beta from Input Format to System Format"""
+
+        b= Beta([])
+        for h in self:
+            block_history = BlockHistory(h.header_hash, h.mmr.peaks, h.state_root, h.reported.to_dict())
+            b.append(block_history)
+
+        return b
 
 @decodable_dataclass
 @dataclass
@@ -174,7 +242,7 @@ class GeneralState(Codable, JsonSerde):
     # TODO: Fix parsing error when Delta incomplete
 
     def to_state(self) -> State:
-        state = create_dummy_state()
+        state = State.from_random()
 
         if self.alpha:
             state.alpha = self.alpha

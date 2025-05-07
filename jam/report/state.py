@@ -1,5 +1,5 @@
 from jam.state.components.rho import WorkReportState, OptionalWorkReportState
-from jam.state.state import State
+from jam.state.components.sigma import Sigma
 from jam.types import Block, Null, Bytes
 import  dataclasses
 from jam.types.protocol.crypto import Hash
@@ -19,7 +19,7 @@ class U32Vector(Vector): ...
 class Reporting:
 
     @staticmethod
-    def transition(state:State, block:Block)->State:
+    def transition(state: Sigma, block:Block) -> Sigma:
         """
         Description:
             This function takes two arguments: state, block. This transition function check all the boundary cases for work_report and update the state Rho.
@@ -30,7 +30,7 @@ class Reporting:
         Returns:
             Returns the updated Rho(workreport, timeslot)
         """
-        new_state:State = dataclasses.replace(state)
+        new_state: Sigma = dataclasses.replace(state)
 
         for x in block.extrinsic.guarantees:
 
@@ -148,11 +148,12 @@ class Reporting:
                             "Duplicate package spec hash in other report of same guarantee"
                         )
 
-        Reporting.ensure_signature(state, block)
         Reporting.verify_report_output(block)
         Reporting.ensure_valid_refinement_context(state, block)
         Reporting.ensure_valid_report_result(state,block)
         Reporting.wrong_assignment(state, block)
+        Reporting.ensure_signature(state, block)
+
 
         for x in block.extrinsic.guarantees:
             state.rho[x.report.core_index] = OptionalWorkReportState(
@@ -166,7 +167,7 @@ class Reporting:
         return new_state
 
     @staticmethod
-    def ensure_signature(state: State, block: Block):
+    def ensure_signature(state: Sigma, block: Block):
         """
         Description : This function make sure that signature for the work_report is valid (ensure that report are signed by correct validators which are assigned, to that particular core, through guarantor assignment).
 
@@ -209,7 +210,7 @@ class Reporting:
             )
 
     @staticmethod
-    def ensure_valid_refinement_context(state:State,block:Block):
+    def ensure_valid_refinement_context(state: Sigma, block: Block):
 
         """
         Description: This function takes two arguments and checks for all the testcases related to refinement contex section of each report.
@@ -250,12 +251,14 @@ class Reporting:
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
                     "Anchor hash should match with header hash of any block in recent history"
                 )
+                
             # --------------- bad_state_root -------------------
             if not any(item.state_root == context.state_root for item in state.beta):
                 raise ReportingError(
                     ReportingErrorCode.BAD_STATE_ROOT,
                     "State_root should match with any block state_root in recent history"
                 )
+                
             # --------------- dependency_missing -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
             # Eq 11.39
@@ -266,6 +269,7 @@ class Reporting:
                             ReportingErrorCode.DEPENDENCY_MISSING,
                             "prerequisite's hash should match the package_specification's hash of any of the reports"
                         )
+                        
             # --------------- segment_root_lookup_invalid -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
             if  y.report.segment_root_lookup != Null:
@@ -277,7 +281,7 @@ class Reporting:
                         )
 
     @staticmethod
-    def ensure_valid_report_result(state:State,block:Block):
+    def ensure_valid_report_result(state: Sigma, block: Block):
 
         """
                Description: This function takes two arguments and checks for all the testcases related to results section of each report.
@@ -301,6 +305,7 @@ class Reporting:
                         ReportingErrorCode.BAD_SERVICE_ID,
                         "Service_id of each report should match with id of delta"
                     )
+                    
                 # --------------- bad_code_hash -------------------
                 # https://graypaper.fluffylabs.dev/#/85129da/153302153502?v=0.6.3
                 # Eq 11.42
@@ -309,6 +314,7 @@ class Reporting:
                         ReportingErrorCode.BAD_CODE_HASH,
                         "Result code_hash should match with state's delta code_hash"
                     )
+                    
                 # --------------- service_item_gas_too_low -------------------
                 # https://graypaper.fluffylabs.dev/#/85129da/15f80015fa00?v=0.6.3
                 # Eq 11.30
@@ -319,9 +325,11 @@ class Reporting:
                     )
 
                 total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
+               
             # --------------- work_report_gas_too_high -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15fa0015fd00?v=0.6.3
             # Eq 11.30
+            print(total_accumulate_gas, ACCUMULATION_GAS)
             if total_accumulate_gas > ACCUMULATION_GAS:
                 raise ReportingError(
                     ReportingErrorCode.WORK_REPORT_GAS_TOO_HIGH,
@@ -329,7 +337,7 @@ class Reporting:
                 )
 
     @staticmethod
-    def wrong_assignment(state: State, block: Block):
+    def wrong_assignment(state: Sigma, block: Block):
         """
         Description : This function check assign validator to the core is correct or not.
 

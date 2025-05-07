@@ -3,6 +3,7 @@ from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.protocol.core import Gas, ServiceId
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from jam.utils.json.decorators import with_json_metadata
 
 
 """Index of Manager service that can alter Chi"""
@@ -25,7 +26,7 @@ class ChiG(Dictionary[ServiceId, Gas]):
 class Chi(Codable):
     """Chi state"""
 
-    m: ChiM
-    a: ChiA
-    v: ChiV
-    g: ChiG
+    chi_m: ChiM
+    chi_a: ChiA
+    chi_v: ChiV
+    chi_g: ChiG

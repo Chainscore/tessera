@@ -8,7 +8,6 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde 
 
-
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
 class PackageDict(Dictionary[WorkPackageHash, SegmentRoot]):
     """Work Package hashes of each item reported (no more than CORE_COUNT)"""

@@ -2,7 +2,7 @@
 from jam.db.kv import KVStore
 from jam.state.components.alpha import Alpha, AuthorizationPool
 from jam.state.components.eta import Eta
-from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat
+from jam.state.components.pi import AllValidatorStats, Pi, ValidatorStat, AllServiceStats, AllCoreStats, CoreStat
 from jam.state.components.psi import Psi, PsiB, PsiG, PsiO, PsiW
 from jam.state.components.kappa import Kappa
 from jam.state.components.lambda_ import Lambda_
@@ -18,7 +18,8 @@ from jam.state.utils.key_constructor import construct_state_key
 from jam.state.components.phi import AuthorizationQueue, AuthorizerHash, Phi
 from jam.state.components.beta import Beta
 from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaZ
-from jam.types.base.integers.fixed import U64, U32
+from jam.types.block import Block
+from jam.types.base.integers.fixed import U64, U32, U8, U16
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
@@ -33,9 +34,19 @@ from jam.state.components.delta import (
     PreImageLookup,
     Timestamps,
 )
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata, ValidatorName, ValidatorsData
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_AUTH_QUEUE_ITEMS, VALIDATOR_COUNT
+from jam.accumulation.accumulation import Accumulation
+from jam.report.state import Reporting
+from jam.authorization.authorization import Authorization
+from jam.recent_history.recent_history import RecentHistory
+from jam.consensus.safrole.safrole import Safrole
+from jam.assurances.assurances import Assurances
+from jam.disputes.disputes import Disputes
+from jam.preimages.preimages import Preimages
+from jam.statistics.statistics import Statistics
+import json
 
 
 class State(Sigma):
@@ -52,6 +63,12 @@ class State(Sigma):
         """Initialize state with component kwargs"""
         super().__init__(**kwargs)
         self._merkle = StateMerkle(Hash.blake2b)
+
+    @staticmethod
+    def from_random(seed = 0) -> "State":
+        from tests.dummy.dummy_state_comp import create_dummy_state_components
+
+        return State(**create_dummy_state_components())
 
     def transform(self) -> dict:
         """
@@ -236,7 +253,7 @@ class State(Sigma):
 
     def generate_root(self) -> ByteArray32:
         """Generate the root hash of the state"""
-        return self._merkle.merkelize(self.transform())
+        return self._merkle.merkelize(self.transform())[0]
 
     def get_merkle_nodes(self) -> dict:
         """Get all nodes in the state Merkle trie"""
@@ -244,31 +261,37 @@ class State(Sigma):
         return self._merkle.get_nodes()
     
     @staticmethod
-    def genesis(peers: list[ValidatorData], fallback: GammaS) -> "State":
+    def genesis(genesis_path = "genesis.json") -> "State":
         """Generate the genesis state"""
-
-        empty_validators = [ValidatorData(
+        peers = ValidatorsData.from_json(json.load(open(genesis_path))["peers"])
+        empty_set = [ValidatorData(
             bandersnatch=BandersnatchPublic(bytes(32)),
             ed25519=Ed25519Public(bytes(32)),
             bls=BlsPublic(bytes(144)),
-            metadata=ValidatorMetadata(bytes(128))
+            metadata=ValidatorMetadata(ValidatorName(""), IPAddress([U8(127), U8(0), U8(0), U8(1)]), U16(0))
         ) for _ in range(VALIDATOR_COUNT)]
+        fallback = Safrole.arrange_fallback(ByteArray32(bytes(32)), peers)
 
         return State(
             alpha=Alpha([AuthorizationPool([]) for _ in range(CORE_COUNT)]),
             beta=Beta([]),
-            gamma=Gamma(a=GammaA([]), k=GammaK(peers), s=fallback, z=GammaZ(bytes(144))),
+            gamma=Gamma(a=GammaA([]), k=GammaK(peers.value), s=fallback, z=GammaZ(bytes(144))),
             delta=Delta({}),
             eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
-            iota=Iota(empty_validators),
-            kappa=Kappa(peers),
-            lambda_=Lambda_(empty_validators),
+            iota=Iota(empty_set),
+            kappa=Kappa(peers.value),
+            lambda_=Lambda_(empty_set),
             rho=Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]),
             tau=Tau(0),
             phi=Phi([AuthorizationQueue([AuthorizerHash(bytes(32)) for _ in range(MAX_AUTH_QUEUE_ITEMS)]) for _ in range(CORE_COUNT)]),
-            chi=Chi(m=ServiceId(0), a=ServiceId(0), v=ServiceId(0), g=ChiG({})),
+            chi=Chi(chi_m=ServiceId(0), chi_a=ServiceId(0), chi_v=ServiceId(0), chi_g=ChiG({})),
             psi=Psi(good=PsiG([]), bad=PsiB([]), wonky=PsiW([]), offenders=PsiO([])),
-            pi=Pi([AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]) for _ in range(2)]),
+            pi=Pi(
+                vals_current=AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]),
+                vals_last=AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]),
+                cores=AllCoreStats([CoreStat(gas_used=U32(0), imports=U32(0), extrinsic_count=U32(0), extrinsic_size=U32(0), exports=U32(0), bundle_size=U32(0), da_load=U32(0), popularity=U32(0)) for _ in range(CORE_COUNT)]),
+                services=AllServiceStats({})
+            ),
             nu=Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)]),
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
@@ -278,35 +301,67 @@ class State(Sigma):
         # Save the regular state data
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
-    
+
     @staticmethod
-    def load(db: KVStore, keys: list[ByteArray32] = None) -> "State":
+    def load(db: KVStore, keys: list[ByteArray32] = []) -> "State":
         data = {}
         service_ids:set[ServiceId]=set()
 
-        if keys is None:
-            for key, value in db.get_all().items():
-                data[key] = Bytes(value)
-        else:
-            for i in range(1,16):
-                state_key=construct_state_key(i)
-                # print(type(state_key))
-                data[state_key] = Bytes(db.get(bytes(state_key)))
-            for key in keys:
-                if int.from_bytes(
+        for i in range(1,16):
+            state_key=construct_state_key(i)
+            # print(type(state_key))
+            data[state_key] = Bytes(db.get(bytes(state_key)))
+        for key in keys:
+            if int.from_bytes(
+                bytes(Bytes([key[0], key[2], key[4], key[6]]))
+            ) not in service_ids:
+                service_ids.add(ServiceId(int.from_bytes(
                     bytes(Bytes([key[0], key[2], key[4], key[6]]))
-                ) not in service_ids:
-                    service_ids.add(ServiceId(int.from_bytes(
-                        bytes(Bytes([key[0], key[2], key[4], key[6]]))
-                    )))
-                data[key] = Bytes(db.get(bytes(key)))
-            for service_id in service_ids:
-                service_key=construct_state_key((255,service_id))
-                data[service_key]=Bytes(db.get(bytes(service_key)))
+                )))
+            data[key] = Bytes(db.get(bytes(key)))
+        for service_id in service_ids:
+            service_key=construct_state_key((255,service_id))
+            data[service_key]=Bytes(db.get(bytes(service_key)))
 
         state = State.detransform(data)
 
         return state
 
+    def transition(self, block: Block) -> "State":
+        """
+        Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
 
+        Args:
+            pre_state: Current state
+            block: Incoming block
 
+        Returns:
+            State: The transitioned state
+        """
+
+        # TODO: Validate block headers
+        # Epoch markers - make sure eta0_1 are the same as current etas
+        # Tickets mark - make sure tickets are valid, present in gamma_a and outside in sequenced
+        # Offenders mark - make sure offenders are present in psi.offenders
+
+        # 1. Safrole
+        entropy = ByteArray32(bytes(32))
+        sigma = Safrole.transition(self, block, entropy)
+        # 2. Disputes
+        sigma = Disputes.transition(sigma, block)
+        # 3. Assurances
+        sigma = Assurances.transition(sigma, block)
+        # 4. Reporting
+        sigma = Reporting.transition(sigma, block)
+        # 5. Accumulation
+        sigma = Accumulation.transition(sigma, block)
+        # 6. Authorization
+        sigma = Authorization.transition(sigma, block)
+        # 7. Recent History
+        sigma = RecentHistory.transition(sigma, block, ByteArray32([0] * 32))
+        # 8. Preimages
+        sigma = Preimages.transition(sigma, block)
+        # 9. Statistics
+        sigma = Statistics.transition(sigma, block)
+
+        return sigma
