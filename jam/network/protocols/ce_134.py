@@ -97,16 +97,16 @@ class WorkPackageSharing(NetworkProtocol):
         ed25519_public = Ed25519PrivateKey.from_private_bytes(
             bytes.fromhex(my_keys["ed25519_private"][2:])
         ).public_key()
-        secret_scalar = (
-                int.from_bytes(bytes.fromhex(ed25519_public), "little")
-                % Bandersnatch_TE_Curve.ORDER
-        )
-        vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        output_point, proof = vrf.prove(
-            bytes.fromhex(vector["alpha"]),
-            secret_scalar,
-            bytes.fromhex(vector["ad"]),
-        )
+        # secret_scalar = (
+        #         int.from_bytes(bytes.fromhex(ed25519_public), "little")
+        #         % Bandersnatch_TE_Curve.ORDER
+        # )
+        # vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+        # output_point, proof = vrf.prove(
+        #     bytes.fromhex(vector["alpha"]),
+        #     secret_scalar,
+        #     bytes.fromhex(vector["ad"]),
+        # )
         res_data = Credential(work_report_hash=report_hash, ed25519_signature=ed25519_public)
         from tests.dummy.dummy_package import create_dummy_credential
         credential = create_dummy_credential()

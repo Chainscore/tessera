@@ -22,7 +22,7 @@ from jam.types.work.report import (
     WorkExecResult,
     WorkReport,
     WorkPackageSpec,
-    SegmentRootLookup, WorkPackageBundle
+    SegmentRootLookup, WorkPackageBundle, SuperSegments, Justifications, Extrinsics
 )
 
 from jam.utils.constants import (
@@ -62,6 +62,7 @@ class WorkPackageProcessing:
 
     segment_root_lookup_dict: SegmentRootLookup
     segments: MultiSegments
+    bundle: WorkPackageBundle
     # d: ??
 
     def __init__(self):
@@ -300,7 +301,7 @@ class WorkPackageProcessing:
             # r, e, u = PsiR(int(c), p, o, self.fetch_imports(w), l)
 
             # TODO: Fix later on receiving more clarity
-            r, e, u = PsiR(int(c), p, o, self.segments, l)
+            r, e, u = PsiR(int(c), p, o, self.fetch_imports(w), l)
 
             segment = Segment([Byte(0)] * 4104)
             segment_length = w.export_count
@@ -334,12 +335,12 @@ class WorkPackageProcessing:
         for segments in e_list:
             e_bar_cap.extend(segments)
 
-        wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32())
-        specs = self.availability_specifier(package_hash=h, wp_bundle=wp_bundle.encode(), export_segments=Vector([]))
+        # wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32())
+        specs = self.availability_specifier(package_hash=h, wp_bundle=self.bundle.encode(), export_segments=e_bar_cap)
 
         # inserting auditable bundle in db
         bundle_db = BundleStore()
-        bundle_db.put(specs.erasure_root, wp_bundle)
+        bundle_db.put(specs.erasure_root, self.bundle)
 
         #inserting segments in db
         segment_db = SegmentStore()
@@ -539,6 +540,8 @@ class WorkPackageProcessing:
         print("Validating Work Package..")
         self.validate_wp(package)
 
+        # fetch imports and generate bundle before calling generate_wr function
+
         print("Building Work Report..")
         report = self.generate_wr(package, core)
         # storing build work report in db
@@ -570,9 +573,10 @@ class WorkPackageProcessing:
     def bundle_process(self, core: CoreIndex, bundle: WorkPackageBundle, segment_lookup: SegmentRootLookup) -> WorkReportHash:
 
         print("Building Work Report..")
-        self.segments = bundle.import_segments[0]
         self.segment_root_lookup_dict = segment_lookup
+        self.bundle = bundle
         report = self.generate_wr(bundle.package, core)
+
 
 
         # TODO: send back Work-Report Hash ++ Ed25519 Signature to assigned Guarantor via CE134 protocol
