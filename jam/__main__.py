@@ -7,6 +7,7 @@ from jam.db.kv import KVStore
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.utils.dummy_wpb import wp_producer
+from jam.network.utils.dummy_segment_shard import segment_shard_request
 
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
@@ -114,7 +115,9 @@ async def main(
                 if tsr_node.is_builder:
                     tg.create_task(wp_producer(tsr_node, db))
                 else:
-                    tg.create_task(block_producer.run())
+                    tg.create_task(segment_shard_request(tsr_node, db))
+                    # tg.create_task(block_producer.run())
+
 
         else:
             # TODO: Sync from peers

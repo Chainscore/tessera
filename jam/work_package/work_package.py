@@ -1,9 +1,6 @@
 from math import ceil
 from typing import Tuple
 
-from jam.network.protocols import WorkReportDistribution
-from jam.network.protocols.ce_133 import CE133Data
-from jam.network.protocols.ce_135 import CE135Data
 from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray64
 from jam.types.base.sequences.vector import Vector
 
