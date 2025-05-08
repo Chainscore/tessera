@@ -31,7 +31,6 @@ poetry.lock
 .DS_Store
 
 # Project specific
-data/
 data/main
 data/d3l
 data/audit
