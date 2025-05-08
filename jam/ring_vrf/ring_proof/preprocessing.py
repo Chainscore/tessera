@@ -104,6 +104,8 @@ Result_point=relation_to_prove(3,secret_t,Blinding_Base,Ring_of_pk)
 print("Result Point",Result_point)
 Result_plus_Seed=point_addition(Result_point, twisted_edward_to_sw(SeedPoint))
 
+print("Result_plus_seed:", Result_plus_Seed)
+print("seed sw:", twisted_edward_to_sw(SeedPoint))
 max_ring_pk=pad_padding_point(Ring_of_pk,PaddingPoint)
 
 H_vector=h_vector(Blinding_Base)
