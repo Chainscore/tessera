@@ -1,75 +1,9 @@
-######
+
 from jam.ring_vrf.ring_proof.constants import S_PRIME, D
 from sympy import  symbols, expand,Poly
+from sympy import symbols
+x=symbols('x')
 import numpy as np
-
-
-##initail
-# def polynomial_interpolation(x_coords, y_coords):
-#     """
-#         input: list of points
-#         output: A ploynomial passing through the given list of points
-#         Resources:https://en.wikipedia.org/wiki/Lagrange_polynomial,
-#         https://www.youtube.com/watch?v=F5pJG422781213702924172180523978385542388841346373992886390990881355510284839737428YfQxs
-#     """
-#     x = symbols('x')
-#     lagranges_x = []
-#
-#     for i in range(len(y_coords)):
-#         # l_x[i]= Phi(X-Xj / (Xi-Xj))... (& i!=j)
-#         l_x = 1
-#         for j in range(len(y_coords)):
-#             if i != j:
-#                 denominator = x_coords[i] - x_coords[j]
-#                 if denominator == 0:
-#                     raise ValueError("Duplicate x-values detected, interpolation is undefined.")
-#
-#                 # Modular inverse within finite  field
-#                 denom_inv = mod_inverse(denominator, S_PRIME)
-#                 l_x *= (x - x_coords[j]) * denom_inv % S_PRIME
-#
-#         lagranges_x.append(l_x)
-#     # construct the final polynomial
-#     # P(x) =∑YiLi(X)
-#     polynomial = 0
-#     for i in range(0, len(y_coords)):
-#         polynomial += y_coords[i] * lagranges_x[i] % S_PRIME
-#     return expand(polynomial) %S_PRIME
-
-# def check_is_valid(interpolated_poly,D,p_v):
-#     """
-#     """
-#     x = symbols('x')
-#     for i in range(len(D)):
-#         evaluated = interpolated_poly.subs(x, D[i]) % S_PRIME
-#         # print("for py1")
-#         # print(f"Evaluated_Y: {evaluated}, Expected_Y: {p_v[i] % S_PRIME}")
-#         assert evaluated == (p_v[i] % S_PRIME), "Invalid Polynomial"
-#     return True
-
-
-# def interpolated_poly_at_index(idx,interpolated_poly,D,p_v):
-#     x= symbols('x')
-#
-#     evaluated = interpolated_poly.subs(x, D[idx]) % S_PRIME
-#     assert evaluated == (p_v[idx] % S_PRIME), "Invalid Polynomial"
-#     return evaluated
-
-def selector_vector(size=512):
-    """
-    input: ring of public key's
-    output: selecting vector having 0/1
-    """
-    s_vector = []
-    N_K=255 #len(Ring_of_pk)
-
-    for i in range(size):
-        if i<N_K:
-            s_vector.append(1)
-        else:
-            s_vector.append(0)
-
-    return s_vector
 
 ## Up Dated ##
 
@@ -134,16 +68,6 @@ def poly_multiply(poly1, poly2, prime):
     return result
 
 
-#fft
-
-# def fft_poly_mul(A, B, omega_root, p):
-#     size = next_power_of_2(len(A) + len(B) - 1)
-#
-#     # Pointwise multiplication
-#     C_vals = [(a * b) % p for a, b in zip(A, B)]
-#     # Optional: trim trailing 0s
-
-
 
 def poly_scalar(poly, scalar, prime):
     """Multiply a polynomial by a scalar in a prime field."""
@@ -191,6 +115,8 @@ def polynomial_interpolation(x_coords, y_coords, prime=S_PRIME):
 
     return result
 
+
+
 def lagrange_basis_polynomial(x_coords, i, prime=S_PRIME):
     """
     Compute the i-th Lagrange basis polynomial.
@@ -219,9 +145,6 @@ def lagrange_basis_polynomial(x_coords, i, prime=S_PRIME):
 
     return basis_poly
 
-
-
-
 def represent_as_poly(coeffs):
     x = symbols('x')
     n = len(coeffs)
@@ -231,36 +154,59 @@ def represent_as_poly(coeffs):
 
     return polynomial
 
-from sympy import symbols
-x=symbols('x')
 
-L_0_x = lagrange_basis_polynomial(D, 0)
+#vector subtraction
+def vect_sub(a,b, prime):
+    if isinstance(a, int) and isinstance(b, list):
+        n=len(b)
+        a=[a]*n
+        result=[(i-j)%prime for i,j in zip(a,b)]
+        return result
+    elif isinstance(a,list) and isinstance(b, int):
+        n=len(a)
+        b=[b]*n
+        result= [(i-j)% prime for i, j in zip(a,b)]
+        return result
+    else:
+        result=[(i-j)%prime for i, j in zip(a,b)]
+        return result
 
-# print("is 1:",represent_as_poly(L_0_x).subs(x,D[0]))
-L_N_4_x = lagrange_basis_polynomial(D, 512 - 4)
-p2=represent_as_poly(L_N_4_x)
-p1=represent_as_poly(L_0_x)
 
-print(L_0_x)
-print(L_N_4_x)
-print(p1)
-print(p1.subs(x,D[0])%S_PRIME)
-print(p2.subs(x,D[0])%S_PRIME)
-print(p1.subs(x,D[-4])%S_PRIME)
-print(p2.subs(x,D[-4])%S_PRIME)
+#vector adddition
 
+def vect_add(a, b, prime):
+    if isinstance(a, int) and isinstance(b, list):
+        n=len(b)
+        a=[a]*n
+        result=[(i+j)%prime for i,j in zip(a,b)]
+        return result
+    elif isinstance(a,list) and isinstance(b, int):
+        n=len(a)
+        b=[b]*n
+        result= [(i+j)% prime for i, j in zip(a,b)]
+        return result
+    else:
+        result=[(i+j)%prime for i, j in zip(a,b)]
+        return result
 
-# import time
-# def main():
-#     start=time.time()
-#     x_cord = D
-#     y_cord = selector_vector()
-#     coeff_poly = polynomial_interpolation(x_cord, y_cord, S_PRIME)
-#     print(represent_as_poly(coeff_poly))
-#     end=time.time()
-#     print(end-start)
-#
-#
-# if __name__=="__main__":
-#     main()
+#vector multiplictaion
+
+def vect_mul(a, b, prime):
+    if isinstance(a, int) and isinstance(b, list):
+        n=len(b)
+        a=[a]*n
+        result=[(i*j)%prime for i,j in zip(a,b)]
+        return result
+    elif isinstance(a,list) and isinstance(b, int):
+        n=len(a)
+        b=[b]*n
+        result= [(i*j)% prime for i, j in zip(a,b)]
+        return result
+    else:
+        result=[(i*j)%prime for i, j in zip(a,b)]
+        return result
+
+def vect_scalar_mul(vec, scalar, mod=None):
+    """Multiply each element in the vector by the scalar"""
+    return [(x * scalar) % mod if mod else x * scalar for x in vec]
 
