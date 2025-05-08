@@ -11,7 +11,6 @@ from sympy import mod_inverse
 from py_ecc.optimized_bls12_381 import multiply, add, Z1, curve_order
 from jam.ring_vrf.ring_proof.aggregation_poly_proof_construction import prover_proof as verifier_proof
 
-
 E_zeta=zeta[0]
 
 def recover_fiat_shamir_challeneges(Proof_Phi):
