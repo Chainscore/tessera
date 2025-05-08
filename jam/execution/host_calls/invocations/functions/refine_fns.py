@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 from jam.config.settings import Settings,settings
+from jam.execution.host_calls._types import integrated_pvm_type, refine_context
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.program import Program
 from jam.execution.pvm.pvm import PVM
@@ -31,23 +32,6 @@ from jam.work_package.work_package import WorkPackageProcessing
 
 
 
-@decodable_dataclass
-@dataclass
-class integrated_pvm_type(Codable, JsonSerde):
-    program_code:bytes
-    memory:Memory
-    instruction_counter: ProgramCounter
-
-
-@decodable_dictionary(Int,integrated_pvm_type)
-class refinement_map(Dictionary[Int,integrated_pvm_type]):
-    """Integrated PVM Dict(m) """
-
-@decodable_dataclass
-@dataclass
-class refine_context(Codable, JsonSerde):
-    m: refinement_map
-    e: Segments
 
 class refineFunctions(INVF):
 
@@ -81,7 +65,6 @@ class refineFunctions(INVF):
         else:
             return(CONTINUE,len(v),v[f:l])
 
-    #TODO: Keeping the (m,e) context type later on redefine the types of it
     @INVF.register(18, gas_cost=10)
     def fetch(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context,work_item_index:int,workpackage:WorkPackage,auth_trace:bytes,imp_segment:MultiSegments):
 
