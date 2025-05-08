@@ -10,7 +10,7 @@ from jam.types.base.sequences.bytes.bytes import Bytes
 def test_ext_encode(db_path):
     """Test encoiding extrinsic data."""
     db = KVStore(db_path)
-    test_data = [[b'12345']]
+    test_data = [b'12345']
     ext_data, specs = ItemExtrinsics.encode(test_data)
 
     mock_item = MagicMock()
@@ -19,7 +19,7 @@ def test_ext_encode(db_path):
     mock_package = MagicMock(spec=WorkPackage)
     mock_package.items = [mock_item]
 
-    ItemExtrinsics.store(mock_package, ext_data, db)
+    ItemExtrinsics.store(mock_package, [ext_data], db)
 
 
 def test_store_extrinsics(db_path):
