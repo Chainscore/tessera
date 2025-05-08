@@ -32,6 +32,8 @@ poetry.lock
 
 # Project specific
 data/main
+data/d3l
+data/audit
 
 *.log
 .coverage
