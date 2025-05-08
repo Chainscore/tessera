@@ -187,6 +187,10 @@ def verify_kzg_proof(
     # print('right pairing',right_pairing)
 
     # Check if pairings match
+
+    print("Left Pairing Res=", left_pairing)
+    print("Right Pairing Res=", right_pairing)
+
     return left_pairing == right_pairing
 
 
