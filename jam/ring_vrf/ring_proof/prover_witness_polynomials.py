@@ -2,7 +2,7 @@ import time
 from jam.ring_vrf.ring_proof.KZG_polynomial_commit_open_verify import commit_to_polynomial
 from jam.ring_vrf.ring_proof.get_ring_points import secret_t
 from jam.ring_vrf.ring_proof.helpers import unzip
-from jam.ring_vrf.ring_proof.polynomial_interpolation import polynomial_interpolation
+from jam.ring_vrf.ring_proof.polynomial_vect_ops import polynomial_interpolation
 from jam.ring_vrf.ring_proof.preprocessing import pre_pd_pk_ring, s_vector
 from jam.ring_vrf.ring_proof.short_weierstrass import  twisted_edward_to_sw
 from jam.ring_vrf.ring_proof.constants import SeedPoint, S_PRIME, omega, Blinding_Base, D
