@@ -1,11 +1,6 @@
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchParams
 from sympy import mod_inverse
 from jam.ring_vrf.ring_proof.constants import SeedPoint, PaddingPoint, Blinding_Base, S_A, S_B, S_PRIME
-from jam.utils.vrf.ietf import point_mul
-
-# from jam.ring_vrf.ring_proof.short_weierstrass_curve_ops import point_multiplication
-# from jam.ring_vrf.ring_proof.short_weierstrass_curve_ops import point_addition, point_multiplication, point_doubling
-
 
 
 mont_a=29978822694968839326280996386011761570173833766074948509196803838190355340952#2*(BandersnatchParams.EDWARDS_A + BandersnatchParams.EDWARDS_D) % BandersnatchParams.ORDER * mod_inverse(BandersnatchParams.EDWARDS_A-BandersnatchParams.EDWARDS_D, BandersnatchParams.PRIME_FIELD) % BandersnatchParams.ORDER
@@ -47,11 +42,6 @@ def is_on_weierstrass(point):
     #y^2=x^3+a*x+b
     lhs=pow(y,2,S_PRIME)
     rhs=(pow(x,3,S_PRIME) + S_A * x  % S_PRIME + S_B % S_PRIME) % S_PRIME
-    # print("weierstrass:")
-    # print(lhs)
-    # print(rhs)
-    # print(lhs>S_PRIME)
-    # print(rhs>S_PRIME)
     return lhs==rhs
 
 
@@ -60,19 +50,7 @@ def is_on_monty(point):
     # B*y**2=x**3+a*x**2+x
     lhs= mont_b *pow(y,2,S_PRIME) % S_PRIME
     rhs= (pow(x,3,S_PRIME) % S_PRIME + mont_a *pow(x,2,S_PRIME) % S_PRIME +x % S_PRIME ) % S_PRIME
-    # print("monty:")
-    # print(lhs>S_PRIME)
-    # print(rhs>S_PRIME)
-    # print(lhs)
-    # print(rhs)
     return lhs==rhs
-
-# print(PaddingPoint)
-# print("TE_2_Mont:",twisted_edward_to_mont(PaddingPoint))
-# print("IS ON MONTY:",is_on_monty(twisted_edward_to_mont(PaddingPoint)))
-# print(twisted_edward_to_sw(PaddingPoint))
-# print("IS ON SW:",is_on_weierstrass(twisted_edward_to_sw(PaddingPoint)))
-
 
 ##SHORT WEIERSTRASS TO TWISTED_EDWARD##
 
@@ -97,38 +75,3 @@ def short_to_te(sw_point):
     te_point=monty_to_twisted_edward(mont_point)
     return  te_point
 
-
-
-# print(twisted_edward_to_sw(Blinding_Base))
-# print(twisted_edward_to_sw(PaddingPoint))
-# print(twisted_edward_to_sw(SeedPoint))
-
-
-#
-# print("Padding_point",PaddingPoint)
-# print("TO SW",twisted_edward_to_sw(PaddingPoint))
-# print("is on monty:",is_on_monty(twisted_edward_to_mont(PaddingPoint)))
-# print("is on weierstrass:",is_on_weierstrass(twisted_edward_to_sw(PaddingPoint)))
-#
-# print("TO TE",short_to_te((twisted_edward_to_sw(PaddingPoint))))
-# print("is on monty:", is_on_monty(short_ws_to_monty(twisted_edward_to_sw(PaddingPoint))))
-# print("is same:",short_to_te((twisted_edward_to_sw(PaddingPoint)))==PaddingPoint)
-# print(S_PRIME)
-#
-# print(0x4247698f4e32ad45a293959b4ca17afa4a2d2317e4c6ce5023e1fd63d1b5de98)
-#
-# print(0x300c3385d13bedb7c9e229e185c4ce8b1dd3b71366bb97c30855c0aa41d62727)
-#
-#
-# print("Pont_Addition:",point_addition(twisted_edward_to_sw(SeedPoint),twisted_edward_to_sw(PaddingPoint)))
-#
-# # print(point_addition(SeedPoint,PaddingPoint))
-#
-# # print(short_to_te((12954616677420236926222952785603269645790775774441715450822160404842410846770, 11424733789376569733845001755790233162374185428666073594796525539674801483128)
-# # ))
-#
-# print(twisted_edward_to_sw((23085768010608148908463662140689848067024076940671416153027483252777019931540, 37130114727445837959967920519999914008769419672480317539580862224934694126365)
-# ))
-# print(is_on_weierstrass(twisted_edward_to_sw(SeedPoint)))
-# p_m_v=point_multiplication(2,SeedPoint)
-# print(is_on_weierstrass(p_m_v))
