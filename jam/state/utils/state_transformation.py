@@ -1,7 +1,7 @@
 # from dataclasses import dataclass
 #
 #
-# from jam.consensus.safrole.gamma import GammaA, GammaK, GammaS, GammaZ
+# from jam.types.state.gamma import GammaA, GammaK, GammaS, GammaZ
 # from jam.types.state.alpha import Alpha
 # from jam.types.state.chi import ChiA, ChiG, ChiM, ChiV
 # from jam.types.state.delta import (

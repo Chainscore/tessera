@@ -1,6 +1,6 @@
 from jam.db.kv import KVStore
 
-main_db = KVStore("data")
+main_db = KVStore("data/main")
 audit_da = KVStore("data/audit")
 d3l = KVStore("data/d3l")
 

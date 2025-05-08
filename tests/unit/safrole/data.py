@@ -4,7 +4,7 @@ from jam.state.state import State
 from jam.types.base.integers.fixed import U32
 from jam.types.block import Block
 from jam.types.state.kappa import Kappa
-from jam.consensus.safrole.gamma import GammaK, GammaA, GammaS, GammaZ
+from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_

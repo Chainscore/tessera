@@ -1,6 +1,6 @@
 from typing import Dict
 
-from jam.consensus.safrole.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
+from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
 from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
 from jam.types.state.beta import Beta, BlockHistory, PackageDict
