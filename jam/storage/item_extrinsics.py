@@ -46,25 +46,21 @@ class ItemExtrinsics:
             db.put(bytes(key), bytes(value))
 
     @classmethod
-    def encode(cls, ext_data: List[List[Bytes]]) -> (List[Bytes], ExtrinsicSpecs):
+    def encode(cls, wi_data: List[Bytes]) -> (Bytes, ExtrinsicSpecs):
         """
-        Encode each work item extrinsic to Extrinsic Specs
+        Encode a bundle of work item extrinsics to extrinsic bytes and ExtrinsicSpecs
         Args:
-
-
+            - wi_data: List of extrinsics of a work item
         Returns:
-
+            - extrinsic bytes of this work item
+            - extrinsic spec of this work item
         """
         extr_specs = ExtrinsicSpecs([])
-        data = []
-        for wi_data in ext_data:
-            wi = b""
-            for ex_data in wi_data:
-                extr_specs.append(ExtrinsicSpec(hash=Hash.blake2b(ex_data), len=U32(len(ex_data))))
-                wi += ex_data
-            data.append(wi)
-        return data, extr_specs
-
+        wi = b""
+        for ex_data in wi_data:
+            extr_specs.append(ExtrinsicSpec(hash=Hash.blake2b(ex_data), len=U32(len(ex_data))))
+            wi += ex_data
+        return wi, extr_specs
 
     @classmethod
     def get(cls, extrinsic_hash: ByteArray32, db: KVStore) -> bytes:
