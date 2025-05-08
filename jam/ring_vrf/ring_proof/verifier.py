@@ -38,7 +38,6 @@ def contributions_to_constraints_eval_at_zeta(Proof_Phi, zeta, result, sp, D):
     MOD = curve_order
 
     # Constraint 1
-
     term1 = (b_zeta * s_zeta) % MOD
     inner_sum = (accip_zeta + term1) % MOD
     negated = (-inner_sum) % MOD  # Ensures result is positive in the field
@@ -111,7 +110,6 @@ def divide(numr,denom):
     return q_zeta
 
 
-
 def evaluation_of_quotient_poly_at_zeta(Proof_Phi,  pp_commitments, zeta, result, sp, D):
     """
     input: commitments, alphas, zeta,
@@ -174,7 +172,6 @@ def evaluation_of_quotient_poly_at_zeta(Proof_Phi,  pp_commitments, zeta, result
 
 def evaluation_of_linearization_poly_at_zeta_omega(Proof_Phi,zeta):
     Cb, Caccip, Caccx, Caccy, px_zeta, py_zeta, s_zeta, b_zeta, accip_zeta, accx_zeta, accy_zeta, Cq, l_zeta_omega, Phi_zeta, Phi_zeta_omega = Proof_Phi
-    #CL1,2,3, generation depends on the Commitment types(scalar/points)
 
     # Cl1=(zeta - D[-4])*Caccip
     Cl1=multiply(Caccip, (zeta-D[-4])%curve_order)
