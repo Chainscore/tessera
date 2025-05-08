@@ -1,8 +1,6 @@
 from math import log2, ceil
 from typing import Optional, Callable
-from copy import deepcopy
 
-from jam.types.base.integers.general import Int
 from jam.types.base.sequences.vector import Vector
 from jam.types.base.sequences.bytes import ByteArray32, Bytes
 
@@ -37,6 +35,12 @@ class BMRFunctions:
             new_val = hash_fn(self._LEAF_PREFIX + bytes(val))
             new_values.append(new_val)
 
+        length = len(values)
+        padded_length = 2 ** (ceil(log2(max(1, length))))
+
+        for i in range(padded_length - length):
+            new_values.append(self._ZERO_HASH)
+
         return new_values
 
     def _node_fn(
@@ -68,10 +72,14 @@ class BMRFunctions:
 
             left = values[:mid]
             right = values[mid:]
-            return hash_fn(self._NODE_PREFIX + bytes(self._node_fn(left, hash_fn)) + bytes(self._node_fn(right, hash_fn)))
+
+            left_node = self._node_fn(left, hash_fn)
+            right_node = self._node_fn(right, hash_fn)
+
+            return hash_fn(self._NODE_PREFIX + bytes(left_node) + bytes(right_node))
 
     @staticmethod
-    def _p_i(values: Vector[Bytes], index: Int) -> Int:
+    def _p_i(values: Vector[Bytes], index: int) -> int:
         """
         Util Function P_I Implementation for Trace Function
         """
@@ -79,12 +87,12 @@ class BMRFunctions:
         mid = (sz+1) // 2
 
         if index < mid:
-            return Int(0)
+            return 0
         else:
-            return Int(mid)
+            return mid
 
     @staticmethod
-    def _p_bool(values: Vector[Bytes], index: Int, case: bool) -> Vector[Bytes]:
+    def _p_bool(values: Vector[Bytes], index: int, case: bool) -> Vector[Bytes]:
         """
         Util Function P_s Implementation for Trace Function
         """
@@ -97,10 +105,10 @@ class BMRFunctions:
             right = values[mid:]
             return right
 
-    def _trace_fn(
+    def trace_fn(
         self,
         values: Vector[Bytes],
-        index: Int,
+        index: int,
         hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
     ) -> Vector[Bytes | ByteArray32]:
         """
@@ -125,7 +133,7 @@ class BMRFunctions:
             trace.append(node)
 
             new_ind = self._p_i(values, index)
-            trace_nodes = self._trace_fn(self._p_bool(values, index,True), index - int(new_ind), hash_fn)
+            trace_nodes = self._trace_fn(self._p_bool(values, index,True), index - new_ind, hash_fn)
 
             trace.extend(trace_nodes)
 
@@ -170,13 +178,14 @@ class BMRFunctions:
             32 octet Hash Root
         """
 
-        return self._node_fn(self._preprocessor_fn(values, hash_fn), hash_fn)
+        leaves = self._preprocessor_fn(values, hash_fn)
+        return self._node_fn(leaves, hash_fn)
 
     def merkle_path_fn(
         self,
         values: Vector[Bytes],
-        size: Int,
-        index: Int,
+        size: int,
+        index: int,
         hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
     ) -> Vector[OpaqueHash]:
         """
@@ -193,10 +202,10 @@ class BMRFunctions:
         if index >= len(values):
             raise IndexError("index out of range")
 
-        val = ceil(log2(max(1, len(values))) - int(size))
+        val = ceil(log2(max(1, len(values))) - size)
 
         sz = max(0, val)
-        ind = (2 ** int(size)) * index
+        ind = (2 ** size) * index
 
         leaves = self._preprocessor_fn(values, hash_fn)
 
@@ -206,8 +215,8 @@ class BMRFunctions:
     def leaf_page_fn(
         self,
         values: Vector[Bytes],
-        size: Int,
-        index: Int,
+        size: int,
+        index: int,
         hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
     ) -> Vector[OpaqueHash]:
         """
@@ -227,10 +236,33 @@ class BMRFunctions:
         page: Vector[OpaqueHash] = Vector([])
 
 
-        ind = (2 ** int(size)) * index
-        val = min(ind + 2 ** int(size), len(values))
+        ind = (2 ** size) * index
+        val = min(ind + 2 ** size, len(values))
 
         for i in range(ind, val):
             page.append(hash_fn(self._LEAF_PREFIX + bytes(values[i])))
 
         return page
+
+    def verify_proof(self, trace: Vector[OpaqueHash], leaves: Vector[OpaqueHash], leaf_index: int, og_root: OpaqueHash) -> bool:
+        """
+        Merkle Proof Verification Function (not provided in GP)
+
+        Args:
+            trace: Sequence of nodes depicting path of a tree to a particular index
+            leaves: Sequence of leaf nodes
+            leaf_index: Node Index
+            og_root: Previous root to match proof with
+        Returns:
+            Verification Result
+        """
+
+        root = self._node_fn(leaves)
+        for sibling in reversed(trace):
+            if leaf_index % 2 == 0:
+                root = self._node_fn(Vector([root, sibling]))
+            else:
+                root = self._node_fn(Vector([sibling, root]))
+            leaf_index = leaf_index // 2
+
+        return og_root == root
