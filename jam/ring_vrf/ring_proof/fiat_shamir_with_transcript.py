@@ -1,6 +1,12 @@
+import math
+import hashlib, struct
+from traceback import print_tb
+from typing import Any
+from jam.ring_vrf.ring_proof.constants import S_PRIME
+from jam.ring_vrf.ring_proof.helpers import bls_g1_compress
 from typing import Any, Tuple
 from py_ecc.bls12_381 import curve_order
-from jam.ring_vrf.ring_proof.pcs_raw_vk import g1_points, g2_points
+
 
 # (QuadExtField(352701069587466618187139116011060144890029952792775240219908644239793785735715026873347600343865175952761926303160
 #               + 3059144344244213709971259814753781636986470325476647558659373206291635324768958432433509563104347017837885763365758
@@ -18,6 +24,8 @@ fixed_column_commitments=[(21843224087004430547403478283857563958874504995449614
  ,(2222889968827206885680289387487836215699680640435571691849910457746642206407839358287853588403334593295834133157025, 3775467963124612154874263095238481633395061438101857405422420054510930838229011019841213453476026844481467689115510)
  ,(2908850075820590559825558591796489926137468891350244723135070577033834833074699096095104618216690855741912718144719, 436343574607707198583869582232412021753441754571435491281710311907340647898134029725340232367691953082908705963261)
 ] # px, py, s commitments
+g1_points=(3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507, 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569)
+
 
 g2_points_affine=[(352701069587466618187139116011060144890029952792775240219908644239793785735715026873347600343865175952761926303160,
                     3059144344244213709971259814753781636986470325476647558659373206291635324768958432433509563104347017837885763365758)
@@ -45,64 +53,111 @@ witness_commitments=[(1332310689855977281988073361583473861448181703578082464893
                        3880149744675340773693842704377702960563691427832818693891594250964317384604403130285779991132012905121890796337854),
                       (2099484474692952046119311146814746722623650964260983548272397559530954731156540861451355986202655309318717421274032,
                        608054885751253195670196163882239137920749686204297379566519172189040854866614063627708313340299408889892231573333)] #b, accip, accx, accy
-#update
-#digest
-#transcript  -start with empty transcript
 
-#add verifier key to transcript - label: 'vk'
 
-#add the piop result - conditional_addition_result - label:'instance'
-
-#add the wittness commitments - label:'committed_cols'
-
-# get the alphas - label: 'constraints_aggregation' n=7
-
-from hashlib import shake_128
 
 class Transcript:
-    def __init__(self):
-        self.buffer = bytearray()
-        self.last_pos = 0
+    def __init__(self, modulus: int, initial: bytes):
+        self.modulus = modulus
+        self._shake = hashlib.shake_128()
+        self._length = None
+        self.label(initial)
 
-    # add the label
-    def add_label(self, label: Any):
-        self.separator()
-        self.buffer += label
-        self.separator()
+    def separate(self):
+        if self._length is not None:
+            self._shake.update(struct.pack(">I", self._length))
+        self._length = None
 
-    # add the data
-    def add_data(self, data: Any):
-        self.separator()
-        self.buffer += self.serialize_object(data)
-        self.separator()
+    def write(self, data: bytes):
+        if self._length is None:
+            self._length = 0
+        self._shake.update(data)
+        self._length += len(data)
 
-    #add serialize
-    def add_serialized(self, label: bytes, data: Any):
-        self.add_label(label)
-        self.add_data(data)
+    def write_bytes(self, data: bytes):
+        """
+        Write `data` into the transcript, breaking into <=2^31-1 chunks
+        and inserting length-footers between them.
+        """
+        HIGH = 1 << 31
+        idx = 0
+        total_len = len(data)
+        while idx < total_len:
+            # Initialize or fetch the byte-counter since last separator
+            if self._length is None:
+                self._length = 0
+            # How many bytes can we consume before hitting (2^31-1)
+            remaining_allowed = (HIGH - 1) - self._length
+            to_take = min(remaining_allowed, total_len - idx)
 
-    #implement the seperator
-    def separator(self):
-        length = len(self.buffer) - self.last_pos
-        self.last_pos = len(self.buffer)
-        self.buffer += length.to_bytes(4, 'big')
+            # Absorb that slice
+            chunk = data[idx: idx + to_take]
+            self.write(chunk)
+
+            # Advance
+            idx += to_take
+
+            # If we're done, exit
+            if idx >= total_len:
+                return
+
+            # Otherwise we hit the chunk-size limit: set the MSB flag
+            self._length |= HIGH
+
+            # Emit a separator and loop for the rest
+            self.separate()
+
+    def label(self, lbl: bytes):
+        self.separate()
+        self.write(lbl)
+        self.separate()
+
+    def challenge(self, label: bytes) -> int:
+        self.label(label)
+        self.write(b"challenge")
+        ret = self.read_reduce()
+        self.separate()
+        return ret
+
+    def _read_xof(self, n: int) -> bytes:
+        shake_copy = self._shake.copy()
+        return shake_copy.digest(n)
+
+    def append(self, data):
+        self.separate()
+        self.write_bytes(data)
+        self.separate()
+
+    def add_serialized(self, label: bytes, data):
+        self.label(label)
+        self.append(data)
+
+    def read_reduce(self) -> int:
+        # (bitlen(p) + 128 + 7) // 8 bytes
+        n = math.ceil((self.modulus.bit_length() + 128) / 8)
+        rnd = self._read_xof(n)
+        # reverse for BE→LE
+        val = int.from_bytes(rnd[::-1], "little")
+        return val % self.modulus
+
+    def get_constraints_aggregation_coeffs(self, n):
+        out = []
+        for _ in range(n):
+            out.append(self.challenge(b"constraints_aggregation"))
+        return out
+
+    def get_evaluation_point(self,n=1):
+        out =list()
+        out.append(self.challenge(b"evaluation_point"))
+        return out
+
+    def get_kzg_aggregation_challenges(self,n):
+        out=[]
+        for _ in range(n):
+            out.append(self.challenge(b"kzg_aggregation"))
+        return out
 
 
-    #get the chalenge
-    def get_challenge(self, label: bytes, num_bytes=32) -> bytes:
-        tmp = self.buffer.copy()
-        length = len(tmp)
-        tmp += (len(tmp) - 0).to_bytes(4, 'big')
-        tmp += label
-        tmp += (len(tmp) - length).to_bytes(4, 'big')
-        tmp += b"challenge"
-
-        hasher = shake_128()
-        hasher.update(tmp)
-        return hasher.digest(num_bytes)
-
-
-    #converting the input object to string
     def serialize_object(self, obj: Any) -> bytes:
         """Serialize different types of objects to bytes"""
         if isinstance(obj, int):
@@ -136,7 +191,7 @@ class Transcript:
                     result += self.serialize_object(g2_item)
 
                 # Add commitments if present
-            elif 'commitments' in obj:
+            if 'commitments' in obj:
                 commitments = obj['commitments']
                 for commitment in commitments:
                     result += self.serialize_object(commitment)
@@ -148,32 +203,19 @@ class Transcript:
             raise TypeError(f"Unsupported object type for serialization: {type(obj)}")
 
 
-# Initialize the transcript
-t = Transcript()
+# parameters
+FIELD_MODULUS = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001  # 2**252 + 27742317777372353535851937790883648493
+# EXPECTED_ALPHA = [
+#     3165673106281559266159313066158106710348332148729366168335618841077311553028,
+#     31437445451485411535926935126955111316042867257526583262561126713855533399451,
+#     32135243170343130169257551478188467893109023500130284122852039226791388002910,
+#     4058296338429739086470498883992312724603870807378672552012928905338184418911,
+#     48615831940266114583267834804086509195305850308655546655958481143931106958601,
+#     44354760564144373011211197311926807842941320148153285290337660373654464310566,
+#     15516577800732113960005258497940525908725189743947670164893663887971694173031,
+# ]
 
-# Add fake verifier key
-t.add_serialized(b"vk", verifier_key)
-
-t.add_serialized(b"instance", cnd_add_res)
-
-t.add_serialized(b'committed_cols', witness_commitments)
-
-alpha = t.get_challenge(b"constraints_aggregation",224)
-
-alphas=[]
-start=0
-end=32
-for i in range(7):
-    alphas.append(alpha[start:end])
-    start=end
-    end=end+32
-alphas=[int.from_bytes(each, 'big')  % curve_order for each in alphas]
-
-for i in range(len(alphas)):
-    print(f"Alpha {i}: {alphas[i]}")
-
-
-Expected_Alphas = [23426295910140870709614097412433960347746242342772840884066757906985100343590,
+EXPECTED_ALPHA = [23426295910140870709614097412433960347746242342772840884066757906985100343590,
                        46433544455077235545632682909406958794646428824021350807274305193686650751236,
                        78101732610314093593150729898315267434854171850795179589607409285815531790,
                        593197255987830876876009860956149019051956889376694517098490195230307214182,
@@ -181,19 +223,174 @@ Expected_Alphas = [2342629591014087070961409741243396034774624234277284088406675
                        34948741935357743784650851171470586551760506493489743006361967647813201562252,
                        48766446903835583133423634840534770408834461876682423474505157724475361584745]
 
-for i in range(len(alphas)):
-    print(alphas[i]==Expected_Alphas)
+DATA = [
+    (b"vk",
+     [23, 241, 211, 167, 49, 151, 215, 148, 38, 149, 99, 140, 79, 169, 172, 15, 195, 104, 140, 79, 151,
+      116, 185, 5, 161, 78, 58, 63, 23, 27, 172, 88, 108, 85, 232, 63, 249, 122, 26, 239, 251, 58, 240,
+      10, 219, 34, 198, 187, 8, 179, 244, 129, 227, 170, 160, 241, 160, 158, 48, 237, 116, 29, 138, 228,
+      252, 245, 224, 149, 213, 208, 10, 246, 0, 219, 24, 203, 44, 4, 179, 237, 208, 60, 199, 68, 162, 136,
+      138, 228, 12, 170, 35, 41, 70, 197, 231, 225, 19, 224, 43, 96, 82, 113, 159, 96, 125, 172, 211, 160,
+      136, 39, 79, 101, 89, 107, 208, 208, 153, 32, 182, 26, 181, 218, 97, 187, 220, 127, 80, 73, 51, 76,
+      241, 18, 19, 148, 93, 87, 229, 172, 125, 5, 93, 4, 43, 126, 2, 74, 162, 178, 240, 143, 10, 145, 38,
+      8, 5, 39, 45, 197, 16, 81, 198, 228, 122, 212, 250, 64, 59, 2, 180, 81, 11, 100, 122, 227, 209, 119,
+      11, 172, 3, 38, 168, 5, 187, 239, 212, 128, 86, 200, 193, 33, 189, 184, 6, 6, 196, 160, 46, 167, 52,
+      204, 50, 172, 210, 176, 43, 194, 139, 153, 203, 62, 40, 126, 133, 167, 99, 175, 38, 116, 146, 171, 87,
+      46, 153, 171, 63, 55, 13, 39, 92, 236, 29, 161, 170, 169, 7, 95, 240, 95, 121, 190, 12, 229, 213, 39,
+      114, 125, 110, 17, 140, 201, 205, 198, 218, 46, 53, 26, 173, 253, 155, 170, 140, 189, 211, 167, 109,
+      66, 154, 105, 81, 96, 209, 44, 146, 58, 201, 204, 59, 172, 162, 137, 225, 147, 84, 134, 8, 184, 40, 1,
+      17, 107, 34, 80, 252, 75, 48, 152, 204, 173, 249, 236, 88, 82, 106, 236, 243, 7, 210, 30, 35, 63, 101,
+      17, 5, 84, 238, 4, 70, 15, 114, 166, 22, 244, 208, 112, 148, 27, 7, 150, 222, 93, 239, 218, 41, 25, 110,
+      64, 1, 54, 69, 184, 81, 142, 85, 104, 231, 93, 50, 13, 168, 184, 58, 135, 225, 36, 6, 149, 107, 156, 116,
+      73, 30, 229, 236, 240, 109, 194, 151, 186, 17, 134, 1, 98, 9, 215, 143, 216, 50, 193, 110, 246, 47, 196,
+      158, 255, 11, 200, 50, 251, 135, 140, 47, 102, 173, 221, 132, 106, 168, 89, 84, 184, 86, 195, 188, 112,
+      216, 115, 68, 249, 0, 104, 137, 229, 142, 176, 236, 87, 52, 21, 31, 153, 185, 165, 182, 83, 233, 145, 36,
+      122, 213, 6, 208, 251, 18, 219, 62, 46, 131, 24, 182, 71, 83, 127, 0, 230, 183, 2, 252, 133, 38, 232, 201,
+      16, 26, 123, 124, 188, 65, 15, 191, 143, 96, 33, 242, 228, 83, 147, 200, 105, 100, 49, 193, 166, 252, 199,
+      245, 167, 217, 10, 185, 153, 14, 49, 27, 181, 154, 109, 151, 123, 152, 231, 249, 48, 170, 239, 99, 216, 154,
+      2, 3, 167, 186, 118, 175, 75, 194, 13, 221, 55, 195, 148, 239, 63, 194, 51, 7, 184, 33, 168, 18, 220, 218,
+      146, 33, 116, 188, 100, 234, 29, 4, 9, 88, 111, 10, 225, 192, 115, 110, 211, 36, 150, 193, 64, 188, 121, 35,
+      111, 68, 252, 152, 52, 113, 97, 43, 158, 163, 254, 94, 224, 156, 65, 227, 87, 235, 33, 254, 247, 98, 196, 179,
+      55, 129, 58, 218, 75, 238, 4, 14, 113, 65, 159, 33, 84, 106, 206, 164, 149, 196, 199, 242, 82, 135, 174, 86,
+      115, 203, 197, 43, 147, 132, 30, 12, 205, 237, 156, 27, 12, 61, 103, 32, 118, 2, 146, 25, 66, 217, 124, 129,
+      76, 77, 149, 94, 145, 212, 161, 24, 135, 155, 24, 175, 32, 7, 176, 235, 140, 221, 232, 28, 46, 158, 22, 246,
+      151, 110, 19, 51, 48, 37, 57, 202, 202, 206, 117, 19, 253, 109, 193, 217, 212, 182, 20, 57, 37, 128, 238, 9,
+      206, 87, 57, 203, 170, 159, 118, 18, 230, 48, 174, 43, 20, 231, 88, 171, 9, 96, 227, 114, 23, 34, 3, 244, 201,
+      164, 23, 119, 218, 221, 82, 153, 113, 215, 171, 157, 35, 171, 41, 254, 14, 156, 133, 236, 69, 5, 5, 221, 231,
+      245, 172, 3, 130, 116, 207, 2, 213, 193, 87, 122, 120, 201, 143, 4, 118, 147, 5, 209, 73, 177, 159, 131, 71,
+      125, 44, 241, 225, 238, 47, 164, 24, 98, 48, 18, 81, 57, 94, 246, 173, 118, 55, 168, 208, 31, 168, 234, 165,
+      217, 153, 89, 54, 60, 253]),
+
+    (b"instance",
+     [67, 0, 183, 188, 31, 56, 162, 80, 232, 161, 239, 23, 250, 132, 96, 36, 138, 144, 105, 180, 80, 122, 20, 16, 247, 241,
+      238, 156, 4, 38, 254, 5, 77, 235, 54, 175, 108, 108, 87, 147, 192, 11, 42, 126, 228, 23, 221, 96, 88, 52, 217, 197, 91,
+      27, 33, 168, 226, 249, 231, 130, 139, 109, 24, 86, 128]),
+    (b"committed_cols",
+     [8, 167, 252, 138, 138, 231, 210, 149, 189, 210, 101, 83, 176, 109, 41, 140, 125, 127, 219, 63, 8, 116, 106, 186, 142,
+      51, 18, 215, 130, 84, 162, 1, 61, 76, 211, 190, 167, 182, 33, 86, 181, 165, 176, 164, 46, 126, 69, 23, 7, 9, 121, 36,
+      191, 58, 209, 113, 189, 17, 153, 141, 4, 193, 244, 113, 130, 54, 238, 218, 189, 84, 184, 34, 89, 20, 74, 39, 170, 178,
+      90, 168, 126, 11, 209, 6, 155, 3, 66, 214, 145, 150, 4, 8, 188, 24, 19, 5, 17, 7, 189, 32, 254, 148, 160, 17, 87, 118,
+      74, 171, 95, 48, 13, 126, 47, 203, 162, 23, 140, 184, 8, 81, 137, 10, 101, 109, 137, 85, 13, 11, 235, 246, 12, 202, 140,
+      35, 87, 80, 17, 210, 243, 124, 220, 6, 220, 221, 7, 92, 19, 97, 95, 217, 19, 192, 136, 33, 149, 114, 207, 150, 85, 18,
+      24, 12, 229, 115, 174, 135, 138, 47, 61, 71, 8, 247, 27, 144, 198, 197, 78, 109, 201, 81, 219, 229, 101, 247, 77, 162, 169,
+      191, 154, 102, 205, 17, 1, 90, 210, 11, 219, 34, 169, 164, 74, 137, 32, 233, 183, 134, 115, 77, 165, 210, 29, 126, 175, 122,
+      160, 252, 97, 252, 27, 28, 204, 178, 115, 104, 206, 227, 128, 170, 179, 188, 53, 134, 155, 164, 133, 154, 204, 254, 191, 34,
+      25, 53, 184, 45, 185, 7, 20, 242, 242, 130, 57, 141, 94, 81, 222, 227, 20, 98, 209, 1, 85, 37, 43, 35, 130, 20, 197, 93, 143,
+      24, 203, 141, 31, 0, 163, 250, 56, 123, 249, 207, 86, 34, 8, 72, 133, 136, 122, 190, 13, 164, 0, 14, 203, 189, 87, 144, 154,
+      191, 110, 118, 181, 212, 141, 101, 34, 128, 8, 120, 128, 127, 111, 148, 52, 174, 64, 103, 194, 180, 29, 73, 11, 251, 38, 128,
+      169, 116, 200, 128, 221, 55, 123, 75, 151, 98, 67, 176, 3, 243, 91, 84, 18, 88, 234, 162, 173, 93, 80, 130, 54, 242, 229, 93,
+      6, 214, 42, 180, 102, 154, 211, 145, 245, 15, 80, 51, 104, 231, 56, 116, 156, 235, 123, 175, 190, 11, 45, 94, 56, 130, 226, 93,
+      50, 1, 239, 85]),
+]
+
+def to_bytes(a:int)->bytes:
+    return a.to_bytes(32,'little')
+
+t1 = Transcript(FIELD_MODULUS, b"Bandersnatch_SHA-512_ELL2")
 
 
 
+g2_points_affine=[(y,x) for (x,y) in g2_points_affine]
+
+verifier_key={'g1':g1_points,
+              'g2':g2_points_affine,
+              'commitments':fixed_column_commitments} #g1(one pt(x,y)) , g2[(x,y)..(xn,yn), fc_commitments]
+
+#2
+cnd_add_res=(2710605788098020115969868248537441665859558254081583689800100488017991893059, 38942065359286004884825904391036291403783556903118477722228967817717281647437)
+
+#3
+witness_commitments=[(1332310689855977281988073361583473861448181703578082464893324255082586328540004758008760342419545320465710360446231,
+                       1083094159812582322688886646243817038393280166989720523735466912565067215129958786830520140761135404613535398368005),
+                      (2621192239526746493690276760363672663454509538346148804895722177661106008210052886974309467617179955564514764053725,
+                       1132756997463485914985424635482244867407668321196232613772498458907825975896958220234840325938268628831098913606929),
+                      (208517810521014456969594821902236745146650230125672150449544355893015815481257798374873866369450527071881310158626,
+                       3880149744675340773693842704377702960563691427832818693891594250964317384604403130285779991132012905121890796337854),
+                      (2099484474692952046119311146814746722623650964260983548272397559530954731156540861451355986202655309318717421274032,
+                       608054885751253195670196163882239137920749686204297379566519172189040854866614063627708313340299408889892231573333)] #b, accip, accx, accy
 
 
+for data in DATA:
+    t1.add_serialized(data[0], bytes(data[1]))
+
+# t1.add_serialized( b"vk",t1.serialize_object(verifier_key))
+# t1.add_serialized(b"instance", t1.serialize_object(cnd_add_res))
+# t1.add_serialized(b"committed_cols", t1.serialize_object(witness_commitments))
+
+alphas = t1.get_constraints_aggregation_coeffs(len(EXPECTED_ALPHA))
+
+C_q_commitment=(2549617373447607513991960595997283247309914767560258740520327486362563366281642266428195629369789554374774378038686,
+ 2533053437940829391551014576321233915087611078555948078165800094261952712805435708755714584312615895714192869980011)
+
+C_q_bytes=t1.serialize_object(C_q_commitment)
+# print("C_q_bytes:", C_q_bytes)
+
+t1.add_serialized(b"quotient", C_q_bytes)
+
+zeta=t1.get_evaluation_point(1)
+# print("zeta", zeta)
 
 
+P_x_zeta =51661965445089587819320049751583786375164447966727445464203134654815915588661
+P_y_zeta= 37677903892786504698626961257993799069550081708377744789604954646604979928172
+s_zeta= 31830864498423299983513330344445285252604438446220124847358647029236256819548
+b_zeta= 2862392824402782508413951591912393597556229147964652793866091017499021712351
+acip_zeta=3687942561837054344693651945369831752849919356025525195242591992348029951548
+acc_x_zeta= 7914979119298103019530467201196476028021784095563860206196072523175263701020
+acc_y_zeta= 30713297100934553101812845767340019317731271289940620926880944610066654978333
+L_Zeta_omega= 49499219101665281774193159448437049075993807294762252099097581130130875122570
 
 
+evals= to_bytes(P_x_zeta)+ to_bytes(P_y_zeta)+ to_bytes(s_zeta)+ to_bytes(b_zeta)+to_bytes(acip_zeta)+to_bytes(acc_x_zeta)+ to_bytes(acc_y_zeta)
+t1.add_serialized(b"register_evaluations", evals)
+
+linearized_evals=to_bytes(L_Zeta_omega)
+t1.add_serialized(b"shifted_linearization_evaluation", linearized_evals)
+
+cf_vectors=t1.get_kzg_aggregation_challenges(8)
 
 
+# print("vectors:",cf_vectors)
+#
+# print(f"\nalphas: {alphas} \n\nEXPECTED_ALPHA: {EXPECTED_ALPHA}")
 
 
+#checks
+#
+# print("Cnd Add Res")
+# print(cnd_add_res[0].to_bytes(32, 'little').hex()+ cnd_add_res[1].to_bytes(32,'little').hex())
+# print(bytes(DATA[1][1]).hex())
+#
+# print("witness cmts")
+# print(t1.serialize_object(witness_commitments).hex())
+# print(bytes(DATA[2][1]).hex())
+# #
+# print("verifier key")
+# print(t1.serialize_object(verifier_key).hex())
+# print("given:",bytes(DATA[0][1]).hex())
+#
+# print("fixed_columns:",t1.serialize_object(fixed_column_commitments).hex())
 
+# print(len("17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1")) #g1
+
+# print(len("17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e113e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801116b2250fc4b3098ccadf9ec58526aecf307d21e233f65110554ee04460f72a616f4d070941b0796de5defda29196e40013645b8518e5568e75d320da8b83a87e12406956b9c74491ee5ecf06dc297ba1186016209d78fd832c16ef62fc49eff0bc832fb878c2f66addd846aa85954b856c3bc70d87344f9006889e58eb0ec5734151f99b9a5b653e991247ad506d0fb12db3e2e8318b647537f00e6b702fc8526e8c9101a7b7cbc410fbf8f6021f2e45393c8696431c1a6fcc7f5a7d90ab9990e311bb59a6d977b98e7f930aaef63d89a0203a7ba76af4bc20ddd37c394ef3fc23307b821a812dcda922174bc64ea1d0409586f0ae1c0736ed32496c140bc79236f44fc983471612b9ea3fe5ee09c41e357eb21fef762c4b337813ada4bee040e71419f21546acea495c4c7f25287ae5673cbc52b93841e0ccded9c1b0c3d67207602921942d97c814c4d955e91d4a118879b18af2007b0eb8cdde81c2e9e16f6976e1333302539cacace7513fd6dc1d9d4b614392580ee09ce5739cbaa9f7612e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf02d5c1577a78c98f04769305d149b19f83477d2cf1e1ee2fa41862301251395ef6ad7637a8d01fa8eaa5d99959363cfd"))
+#
+# # print(768 //48)
+#
+# print(len("0e311bb59a6d977b98e7f930aaef63d89a0203a7ba76af4bc20ddd37c394ef3fc23307b821a812dcda922174bc64ea1d0409586f0ae1c0736ed32496c140bc79236f44fc983471612b9ea3fe5ee09c41e357eb21fef762c4b337813ada4bee040e71419f21546acea495c4c7f25287ae5673cbc52b93841e0ccded9c1b0c3d67207602921942d97c814c4d955e91d4a118879b18af2007b0eb8cdde81c2e9e16f6976e1333302539cacace7513fd6dc1d9d4b614392580ee09ce5739cbaa9f7612e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf02d5c1577a78c98f04769305d149b19f83477d2cf1e1ee2fa41862301251395ef6ad7637a8d01fa8eaa5d99959363cfd"))
+#
+# print("13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801116b2250fc4b3098ccadf9ec58526aecf307d21e233f65110554ee04460f72a616f4d070941b0796de5defda29196e40013645b8518e5568e75d320da8b83a87e12406956b9c74491ee5ecf06dc297ba1186016209d78fd832c16ef62fc49eff0bc832fb878c2f66addd846aa85954b856c3bc70d87344f9006889e58eb0ec5734151f99b9a5b653e991247ad506d0fb12db3e2e8318b647537f00e6b702fc8526e8c9101a7b7cbc410fbf8f6021f2e45393c8696431c1a6fcc7f5a7d90ab999")
+# print("g2_points:",t1.serialize_object(g2_points_affine).hex())
+
+
+# data=352701069587466618187139116011060144890029952792775240219908644239793785735715026873347600343865175952761926303160
+#
+# print(t1.serialize_object(data).hex())
+
+# print(len("4300b7bc1f38a250e8a1ef17fa8460248a9069b4507a1410f7f1ee9c0426fe054deb36af6c6c5793c00b2a7ee417dd605834d9c55b1b21a8e2f9e7828b6d185680"))
+
+
+# 65
+# 32 + 32 +1
+
+# print(cnd_add_res[1] <= S_PRIME -1 //2)
+# print(1<<7)
