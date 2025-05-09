@@ -61,8 +61,8 @@ class DeferredTransfers(Vector[DeferredTransfer]):
     ...
 
 @decodable_dictionary(ServiceId,Gas)
-class g_dict(Dictionary[ServiceId,Gas]):
-
+class service_dict(Dictionary[ServiceId,Gas]):
+    ...
 
 @decodable_dictionary(ServiceId,Bytes)
 class preimage_dict(Dictionary[ServiceId,Bytes]):
