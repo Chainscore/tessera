@@ -5,7 +5,7 @@ from jam.execution.host_calls._types import integrated_pvm_type, refine_context
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.program import Program
 from jam.execution.pvm.pvm import PVM
-from jam.execution.pvm.status import HOST, PANIC,CONTINUE, ExecutionStatus
+from jam.execution.pvm.status import HOST, PANIC,CONTINUE, ExecutionStatus, HostStatus
 from jam.execution.pvm.types import Accessibility
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
@@ -25,7 +25,8 @@ from jam.types.work.segment import MultiSegments, Segments,Segment
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.codec.primitives.integers import IntegerCodec
-from jam.utils.constants import HUH, MAX_EXPORT_ITEM, NONE, OK, OOB, PVM_MEMORY_PAGE_SIZE, SEGMENT_SIZE, WHO
+from jam.utils.constants import  MAX_EXPORT_ITEM, PVM_MEMORY_PAGE_SIZE, SEGMENT_SIZE
+
 from jam.types.protocol.crypto import Hash
 from jam.utils.json.serde import JsonSerde
 from jam.work_package.work_package import WorkPackageProcessing
@@ -61,7 +62,7 @@ class refineFunctions(INVF):
         if v is False or not memory.is_accessible(o, l, True):
             return (PANIC,registers[7],memory.read(o,l))
         elif v is None:
-            return (CONTINUE,NONE,memory.read(o,l))
+            return (CONTINUE,HostStatus.NONE,memory.read(o,l))
         else:
             return(CONTINUE,len(v),v[f:l])
 
@@ -101,7 +102,7 @@ class refineFunctions(INVF):
         if v is not memory.is_accessible(o, l, True):
             return (PANIC,registers[7],memory.read(o,l))
         elif v is False:
-            return (CONTINUE,NONE,memory.read(o,l))
+            return (CONTINUE,HostStatus.NONE,memory.read(o,l))
         else:
             return (CONTINUE,len(v),v[f:l])
 
@@ -114,7 +115,7 @@ class refineFunctions(INVF):
         else:
             return (PANIC,registers[7],context.m)
         if export_segment_offset+len(context.e)>= MAX_EXPORT_ITEM:
-            return (CONTINUE,HUH,context.m)
+            return (CONTINUE,HostStatus.HUH,context.m)
         else:
             return(CONTINUE,export_segment_offset+len(context.e),context.e.append(Segment(x)))
 
@@ -142,7 +143,7 @@ class refineFunctions(INVF):
             context.m[n]=integrated_pvm_type(program_code=p,memory=u,instruction_counter=i)
             return(CONTINUE,n,context.m)
         except:
-            return (CONTINUE,HUH,context.m)
+            return (CONTINUE,HostStatus.HUH,context.m)
 
     @INVF.register(21, gas_cost=10)
     def peek(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
@@ -150,12 +151,12 @@ class refineFunctions(INVF):
         if memory.is_accessible(o,z,True):
             return(PANIC,registers[7],memory)
         elif n not in context.m:
-            return(CONTINUE,WHO,memory)
+            return(CONTINUE,HostStatus.WHO,memory)
         elif not context.m[n].memory.is_accessible(s,z):
-            return(CONTINUE,OOB,memory)
+            return(CONTINUE,HostStatus.OOB,memory)
         else:
             memory.write(o,context.m[n].memory.read(s,z))
-            return(CONTINUE,OK,memory)
+            return(CONTINUE,HostStatus.OK,memory)
 
 
 
@@ -166,7 +167,7 @@ class refineFunctions(INVF):
         if memory.is_accessible(s,z):
             return(PANIC,registers[7],context.m)
         elif n not in context.m:
-            return(CONTINUE,WHO,context.m)
+            return(CONTINUE,HostStatus.WHO,context.m)
         elif not context.m[n].memory.is_accessible(o,z,True):
             return(CONTINUE,OOB,context.m)
         else:
@@ -183,13 +184,13 @@ class refineFunctions(INVF):
             u.alter_accessibility(p,c,Accessibility.write)
         else:
             # u=False
-            return (WHO,context.m)
+            return (HostStatus.WHO,context.m)
 
         if p<16 or p+c>= 2**32/PVM_MEMORY_PAGE_SIZE:
-            return(HUH,context.m)
+            return(HostStatus.HUH,context.m)
         else:
             context.m[n].memory=u
-            return(OK,context.m)
+            return(HostStatus.OK,context.m)
 
     @INVF.register(24, gas_cost=10)
     def void(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
@@ -200,20 +201,20 @@ class refineFunctions(INVF):
             u.alter_accessibility(p,c,Accessibility.null)
         else:
             # u=False
-            return (WHO,context.m)
+            return (HostStatus.WHO,context.m)
 
         if p<16 or p+c>= 2*32/PVM_MEMORY_PAGE_SIZE or not u.is_accessible(p,c):
-            return(HUH,context.m)
+            return(HostStatus.HUH,context.m)
         else:
             context.m[n].memory=u
-            return(OK,context.m)
+            return(HostStatus.OK,context.m)
 
     @INVF.register(25, gas_cost=10)
     def invoke(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
         [n,o]=registers[7,8]
         if memory.is_accessible(o,112,True):
             if n not in context.m:
-                return(CONTINUE,WHO,registers[8],memory,context.m)
+                return(CONTINUE,HostStatus.WHO,registers[8],memory,context.m)
             m_bytes=memory.read(o,112)
             #bytes->14size array of 8elements each 0->gas(g) 1-13->register_data(w)
             m_array = [m_bytes[i:i + 8] for i in range(0, len(m_bytes), 8)]
@@ -247,7 +248,7 @@ class refineFunctions(INVF):
     def expunge(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
         n=registers[7]
         if n not in context.m:
-            return(WHO,context.m)
+            return(HostStatus.WHO,context.m)
         else:
             i_c=context.m.instruction_counter
             context.m.pop(n)

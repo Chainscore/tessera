@@ -1,12 +1,14 @@
-from jam.execution.host_calls._types import accumulation_context,service_dict
+from ast import Bytes
+from jam.execution.host_calls._types import DeferredTransfer, accumulation_context,service_dict
+from jam.execution.host_calls.invocations.accumulate import PsiA, check, fetch_t
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
-from jam.execution.pvm.status import CONTINUE, PANIC
+from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus
 from jam.state.components.delta import AccountData, AccountStorage, LookupTable, LookupTimestamps, PreImageLookup, ServiceCodeHash
 from jam.types.base.integers.fixed import U32, U64
-from jam.types.protocol.core import BlobLength, Gas
-from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE, CORE, CORE_COUNT, MAX_AUTH_QUEUE_ITEMS, OK, VALIDATOR_COUNT, WHO
+from jam.types.protocol.core import BlobLength, Gas, ServiceId
+from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE, CASH, CORE, CORE_COUNT, MAX_AUTH_QUEUE_ITEMS, OK, TRANSFER_MEMO_SIZE, VALIDATOR_COUNT, WHO
 
 
 class accumulateFunctions(INVF):
@@ -70,6 +72,7 @@ class accumulateFunctions(INVF):
     @INVF.register(9, gas_cost=10)
     def new(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
         [o,l,g,m]=registers[7:7+4]
+        delta=context.x.partial_state.service_accounts
         if memory.is_accessible(o,32) and isinstance(l, U32):
             c=memory.read(0,32)
             """
@@ -81,7 +84,41 @@ class accumulateFunctions(INVF):
             # AccountData Lookup type needs to be fixed before this func is called
             a=AccountData(code_hash=ServiceCodeHash(c),storage=AccountStorage(),timestamps=LookupTimestamps(LookupTable(hash=ServiceCodeHash(c),length=BlobLength(l)),[]),lookup=PreImageLookup(),balance=a_t,gas_limit=g,min_gas=m)
             #TODO: Need to re-do it
-            s=context.x.partial_state.service_accounts[context.x.s_index]
+            s=delta[context.x.s_index]
             s.balance=s.balance-a_t
+            if (s.balence<fetch_t(delta[context.x.s_index])):
+                return(CONTINUE,CASH,context.x.i_index,delta)
+            else:
+                return(CONTINUE,check(u=context.x.partial_state,i=(2**28+context.x.i_index-2**8+42)%(2**32-2**9)),delta.append(context.x.i_index,s))
         else:
-            return(PANIC,registers[7],context.x.i_index,context.x.partial_state.delta)
+            return(PANIC,registers[7],context.x.i_index,delta)
+
+    @INVF.register(10, gas_cost=10)
+    def upgrade(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+        [o,g,m]=registers[7:7+3]
+        if memory.is_accessible(o,32):
+            c=memory.read(o,32)
+            return(CONTINUE,OK,c,g,m)
+        else:
+            X_s=context.x.partial_state.service_accounts[context.x.s_index]
+            return(PANIC,registers[7],X_s.code_hash,X_s.gas,X_s.min_gas)
+
+    @INVF.register(11, gas_cost=10)
+    def transfer(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+        [d,a,l,o]=registers[7:7+4]
+        delta=context.x.partial_state.service_accounts
+        if memory.is_accessible(o,TRANSFER_MEMO_SIZE):
+            t:DeferredTransfer=DeferredTransfer(sender=context.x.s_index,receiver=d,amount=a,memo=Bytes(memory.read(o,TRANSFER_MEMO_SIZE)),gas=l)
+            b=delta[context.x.s_index].balance-a
+
+            if delta[d] is None:
+                return(CONTINUE,HostStatus.WHO,context.x.deferred_transfers,delta[context.x.s_index].balence)
+            elif l<delta[d].min_gas:
+                return(CONTINUE,HostStatus.LOW,context.x.deferred_transfers,delta[context.x.s_index].balence)
+            elif b<:delta[context.x.s_index]
+                return(CONTINUE,HostStatus.CASH,context.x.deferred_transfers,delta[context.x.s_index].balence)
+
+
+        else:
+            service_acc=delta[context.x.s_index]
+            return(PANIC,registers[7],context.x.deferred_transfers,service_acc.balance)
