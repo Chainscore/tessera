@@ -1,6 +1,8 @@
 import time
-from jam.ring_vrf.ring_proof.fiat_shamir_with_transcript import cf_vectors
 start_is=time.time()
+from jam.ring_vrf.ring_proof.fiat_shamir_with_transcript import cf_vectors
+from jam.ring_vrf.ring_proof.get_ring_points import Expected_proof
+from jam.ring_vrf.ring_proof.helpers import bls_g1_compress, to_bytes
 from py_ecc.optimized_bls12_381 import normalize
 from jam.ring_vrf.ring_proof.constants import S_PRIME
 from jam.ring_vrf.ring_proof.polynomial_vect_ops import poly_add, poly_scalar, poly_evaluate
@@ -74,10 +76,16 @@ phi_z, phi_zw=proof_contents_phi(agg_poly,l_agg,Evaluation_point_Zeta, zeta_omeg
 prover_proof=construct_proof(C_b_v,C_acc_ip,C_acc_x,C_acc_y,P_x_zeta,P_y_zeta,s_zeta,b_zeta,acc_ip_zeta,acc_x_zeta, acc_y_zeta,C_q, l_agg_at_zeta_omega, phi_z,phi_zw)
 
 end_is=time.time()
-print("veriferEnd_proof:",prover_proof)
+print("Prover End_proof:",prover_proof)
 print("proof generation time:", end_is- start_is)
 
 print(normalize(phi_z))
 print(normalize(phi_zw))
 
+# (Cb, Caccip, Caccx, Caccy, px, ζ, py, ζ, sζ, bζ, ipζ, acx, ζ, acy, ζ, Cq, lζω, Πζ, Πζω)
 
+proof_str_array=bls_g1_compress(C_b_v) + bls_g1_compress(C_acc_ip) + bls_g1_compress(C_acc_x)+ bls_g1_compress(C_acc_y)+ to_bytes(P_x_zeta)+ to_bytes(P_y_zeta)+to_bytes(s_zeta)+ to_bytes(b_zeta)+to_bytes(acc_ip_zeta)+ to_bytes(acc_x_zeta)+ to_bytes(acc_y_zeta)+ bls_g1_compress(C_q)+ to_bytes(l_agg_at_zeta_omega)+ bls_g1_compress(phi_z)+ bls_g1_compress(phi_zw)
+print("Proof Byte Array:", proof_str_array)
+
+#IS proof as Expected?
+print("Is proof as Expected:", Expected_proof== proof_str_array)
