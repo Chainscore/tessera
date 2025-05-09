@@ -28,7 +28,10 @@ class PsiR(InvocationProtocol):
         self.import_segment = i_segment
         self.offset = e_offset
 
-    def tab
+    def table(cls):
+        return{
+            17:()
+        }
 
     def refine_f(self):
         w = self.work_package.items[self.pc]

@@ -11,6 +11,7 @@ class Settings:
 
     # Database settings
     DB_PATH: str = "data/db"
+    AUDIT_DB_PATH: str = "data/audit"
 
     ENV_PREFIX = "JAM_"
     ENV_FILE = ".env"
@@ -19,7 +20,11 @@ class Settings:
     def db(self):
         return KVStore(self.DB_PATH)
 
-s: Settings | None = None
+    @property
+    def audit_db(self):
+        return KVStore(self.AUDIT_DB_PATH)
+
+settings: Settings = Settings()
 
 def setup_setting(name: str, port: int,  db_path = "data/db", node_id = None):
     global settings
