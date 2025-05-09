@@ -31,10 +31,15 @@ class WorkItems(Vector[WorkItem]):
 @dataclass
 class WorkPackage(Codable, JsonSerde):
     """Work package structure."""
-
+    # j
     authorization: Bytes
+    # h
     auth_code_host: ServiceId
+    # u
     code_hash: OpaqueHash
+    # p
     params: Bytes
+    # x
     context: RefineContext
+    # w
     items: WorkItems
