@@ -1,9 +1,9 @@
-from jam.state.components.delta import AccountData, Delta
+from jam.types.state.delta import AccountData, Delta
 from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot
 from jam.hostCall.types import XContent, DeferredTransfers
 from jam.pvm.register import Registers
 from jam.pvm.pvm_memory import PageMemory
-from jam.state.components.delta import AccountData, Delta
+from jam.types.state.delta import AccountData, Delta
 from jam.hostCall.process import HostCall
 from jam.pvm.extract import Status
 from copy import deepcopy

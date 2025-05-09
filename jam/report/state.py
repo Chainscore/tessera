@@ -1,5 +1,5 @@
-from jam.state.components.rho import WorkReportState, OptionalWorkReportState
-from jam.state.components.sigma import Sigma
+from jam.types.state.rho import WorkReportState, OptionalWorkReportState
+from jam.types.state.sigma import Sigma
 from jam.types import Block, Null, Bytes
 import  dataclasses
 from jam.types.protocol.crypto import Hash

@@ -1,9 +1,9 @@
-# from hashlib import blake2b
-from jam.state.components.delta import AccountData
-# from jam.types.base.integers.fixed import U32, U64
 from jam.types.protocol.core import TimeSlot
 from jam.types.base.sequences.bytes import ByteArray32
-from jam.state.components.delta import Timestamps
+from jam.types.state.delta import Timestamps, AccountData
+from hashlib import blake2b
+from jam.types.state.delta import AccountData
+from jam.types.base.integers.fixed import U32, U64
 
 def historical_lookup_fn(accountData: AccountData, timeslot: TimeSlot, preimageHash: ByteArray32):
     """

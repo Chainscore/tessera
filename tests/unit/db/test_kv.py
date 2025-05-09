@@ -4,7 +4,7 @@ import shutil
 import tempfile
 from jam.db.kv import KVStore
 import json
-from jam.state.state import State
+from jam.state.ghost import GhostState as State
 from jam.network.peer import Peer
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.base.sequences.bytes.byte_array import ByteArray32

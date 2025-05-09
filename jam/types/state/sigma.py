@@ -1,26 +1,27 @@
 from dataclasses import dataclass
 
-from jam.state.components.alpha import Alpha
-from jam.state.components.beta import Beta
-from jam.state.components.chi import Chi
-from jam.state.components.eta import Eta
-from jam.consensus.safrole.gamma import Gamma
-from jam.state.components.delta import Delta
-from jam.state.components.iota import Iota
-from jam.state.components.kappa import Kappa
-from jam.state.components.lambda_ import Lambda_
-from jam.state.components.pi import Pi
-from jam.state.components.psi import Psi
-from jam.state.components.rho import Rho
-from jam.state.components.phi import Phi
-from jam.state.components.tau import Tau
-from jam.state.components.nu import Nu
-from jam.state.components.xi import Xi
+from jam.types.state import (
+    Alpha,
+    Phi,
+    Beta,
+    Eta,
+    Pi,
+    Psi,
+    Kappa,
+    Lambda_,
+    Rho,
+    Tau,
+    Chi,
+    Iota,
+    Nu,
+    Xi,
+    Gamma,
+    Delta
+)
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.decorators import with_json_metadata
 from jam.utils.json.serde import JsonSerde
-
 
 @dataclass(kw_only=True)
 @with_json_metadata(
