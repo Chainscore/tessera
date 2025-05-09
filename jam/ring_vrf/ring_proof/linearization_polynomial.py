@@ -38,7 +38,7 @@ def linearization_contraint_aggregated(l1,l2,l3,alphas):
 
 import time
 st_time=time.time()
-l_agg=linearization_contraint_aggregated(l1,l2,l3,alpha_values)\
+l_agg=linearization_contraint_aggregated(l1,l2,l3,alpha_values)
 
 #check
 l_agg_cmt=commit_to_polynomial(l_agg)#
