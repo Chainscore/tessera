@@ -11,10 +11,8 @@ class StateTrie:
     https://graypaper.fluffylabs.dev/#/68eaa1f/392f0039af00?v=0.6.4
     
     - Builds a binary Merkle trie in-memory and records mapping nodes: entries with type, metadata, and encoded bytes for path updates.
-    - merkelize(): full rebuild from a key->value dict, optionally persisting value blobs via KVStore.
-    - find_path(): walks nodes from root to leaf for a given key, returning node-hash path.
-    - update_path(): rewrites just the leaf and its branch ancestors in-memory, updating both mappings.
-    - update_global_root(): applies multiple leaf updates sequentially, updating the root hash each time.
+    - merkelize(): full rebuild from a key->value dict
+    - update(): Rewrites the leaf and its branch ancestors in-memory, updating both mappings. Applies path based leaf updates sequentially, updating the root hash each time.
     """
     
     # Dictionary mapping a node hash to Node data (encoded data [ba64], bit_index, left and right node hashes)
@@ -54,8 +52,7 @@ class StateTrie:
 
         # Empty subtree => return ZERO_HASH and a 64-byte zero encoding
         if not leaves:
-            empty_encoded = ByteArray64([0] * 64)
-            return (ZERO_HASH, empty_encoded)
+            return (ZERO_HASH, ByteArray64([0] * 64))
 
         # Single-item subtree => leaf
         if len(leaves) == 1:
@@ -110,7 +107,7 @@ class StateTrie:
         self.clear()
         if not state_dict:
             return ZERO_HASH, self.nodes
-        items = sorted([encode_leaf(key, value) for key, value in state_dict.items()])
+        items = [encode_leaf(key, value) for key, value in state_dict.items()]
         root_hash, _ = self._merkelize_recursive(items, 0)
         self.root_hash = root_hash
         if db is not None:
@@ -159,7 +156,7 @@ class StateTrie:
                 self.nodes.pop(root)
                 return nh
             # else create a new trie from here, and attach it
-            return self._merkelize_recursive(sorted([current_node.encoded, node.encoded]), bit_index=bit_index)[0]
+            return self._merkelize_recursive([current_node.encoded, node.encoded], bit_index=bit_index)[0]
         # Branch [update]
         else:
             # if 0, go left
