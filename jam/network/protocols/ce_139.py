@@ -2,11 +2,14 @@ from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
+from jam.merklization import BMRFunctions
 from jam.network.quic import QuicServerProtocol
 from jam.types import ByteArray32
 from jam.types.base.integers import Int
 from jam.types.base.integers.fixed import U16
-from jam.types.base.sequences.bytes.byte_array import ByteArray12
+from jam.types.base.sequences.bytes.byte_array import ByteArray12, ByteArray32
+from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.work.report import SegmentsShard
 
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
@@ -33,8 +36,8 @@ class ShardRequest(Codable, JsonSerde):
     seg_indexes : SegmentIndexes
 
 
-@decodable_vector(ByteArray32)
-class Justifications(Vector[ByteArray32]):
+@decodable_vector(Bytes)
+class Justifications(Vector[Bytes]):
     ...
 
 
@@ -139,8 +142,23 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         request = self.parse_request(buffer)
         logger.info("Handling CE140 shard + justification request")
+        response = JustifiedResponse()
+        for item in request:
+            shards = create_dummy_bytes12()
+            segment_shard = SegmentsShard([
+                shards,
+                create_dummy_bytes12(),
+                create_dummy_bytes12(),
+                create_dummy_bytes12(),
+                create_dummy_bytes12(),
+            ])
+            bundle_shard_hash = [Bytes(create_dummy_bytes32())]
+            merkle = BMRFunctions()
+            justify = merkle._trace_fn(values=segment_shard, index=Int(item.shard_Index))
+            justify.extend(bundle_shard_hash)
+            item_res = ShardWithJustification(shards=shards, justifications=justify)
+            response.append(item_res)
 
-        response = JustifiedResponse([ShardWithJustification(shards=create_dummy_bytes12(), justifications=Justifications([create_dummy_bytes32()]))])
         ack = self._prefix.encode() + response.encode()
         server.stream_and_close(stream_id, ack)
 

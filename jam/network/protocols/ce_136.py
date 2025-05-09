@@ -44,7 +44,7 @@ class WorkReportRequest(NetworkProtocol):
     def transmit(self, node: Node, data: CE136Data):
         """Request Work Report from Node (server)"""
 
-        message = self._prefix.encode() + data.work_report_hash.encode()
+        message = self._prefix.encode() + data.encode()
         logger.info(f"Requesting Work-Report from {len(node.connections)} Validators")
 
         # TODO: Use Original Guarantor Connection
@@ -78,8 +78,6 @@ class WorkReportRequest(NetworkProtocol):
         logger.info(f"Requested Report received on Node (client) via stream {stream_id}")
         data, offset = WorkReport.decode_from(buffer)
         data = cast(WorkReport, data)
-
-        h = Hash.blake2b(data.encode())
 
         logger.info("Saving Work Report")
         # TODO: Process & Save Work Report
