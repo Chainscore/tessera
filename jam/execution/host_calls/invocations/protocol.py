@@ -27,8 +27,7 @@ class InvocationProtocol(Protocol):
         """Starting point of execution"""
         ...
 
-    @classmethod
-    def table(cls) -> Dict[int, InvocationInfo]: ...
+    def table(self) -> Dict[int, InvocationInfo]: ...
 
     def dispatch(self, host_call: int, gas: Gas, registers: Registers, memory: Memory, x: Context) -> DispatchReturn:
         if host_call not in self.table():

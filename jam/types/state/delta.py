@@ -54,37 +54,7 @@ class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
     ...
 
 
-@decodable_dataclass
-@dataclass
-class AccountData(Codable, JsonSerde):
-    storage: AccountStorage  
-    lookup: PreImageLookup # preimages
-    timestamps: LookupTimestamps 
-    code_hash: ServiceCodeHash # code_hash
-    balance: Balance # balance
-    gas_limit: Gas # min_item_gas
-    min_gas: Gas # min_memo_gas
 
-    @property
-    def num_i(self):
-        return len(self.storage) + 2 * len(self.lookup)
-
-    @property
-    def num_o(self):
-        return sum([81 + lookup.length for lookup in self.timestamps]) + sum([32 + len(data) for data in self.storage])
-
-    @property
-    def t(self):
-        return BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
-
-
-@decodable_dictionary(ServiceId, AccountData)
-class Delta(Dictionary[ServiceId, AccountData]):
-    """Delta state"""
-    ...
-
-
-# TODO - : Confirm these types + usage
 """Number of items in the account storage"""
 Ai = U32
 
@@ -93,3 +63,41 @@ Ao = U64
 
 """The minimum, or threshold, balance needed for any given service account"""
 At = Balance
+
+
+@decodable_dataclass
+@dataclass
+class AccountData(Codable, JsonSerde):
+    # s
+    storage: AccountStorage  
+    # p
+    lookup: PreImageLookup
+    # l
+    timestamps: LookupTimestamps
+    # c
+    code_hash: ServiceCodeHash
+    # b
+    balance: Balance
+    # g
+    gas_limit: Gas # min_item_gas
+    # m
+    min_gas: Gas # min_memo_gas
+
+    @property
+    def num_i(self):
+        return Ai(len(self.storage) + 2 * len(self.lookup))
+
+    @property
+    def num_o(self):
+        return Ao(sum([81 + lookup.length for lookup in self.timestamps]) + sum([32 + len(data) for data in self.storage]))
+
+    @property
+    def t(self):
+        return At(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o)
+
+
+@decodable_dictionary(ServiceId, AccountData)
+class Delta(Dictionary[ServiceId, AccountData]):
+    """Delta state"""
+    ...
+
