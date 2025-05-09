@@ -6,6 +6,7 @@ from jam.types.base.sequences.bytes import ByteArray32, Bytes
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 from jam.utils.json import JsonSerde
 from jam.types.protocol.crypto import Hash
 
@@ -64,11 +65,22 @@ class AccountData(Codable, JsonSerde):
     gas_limit: Gas # min_item_gas
     min_gas: Gas # min_memo_gas
 
+    @property
+    def num_i(self):
+        return len(self.storage) + 2 * len(self.lookup)
+
+    @property
+    def num_o(self):
+        return sum([81 + lookup.length for lookup in self.timestamps]) + sum([32 + len(data) for data in self.storage])
+
+    @property
+    def t(self):
+        return BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
+
 
 @decodable_dictionary(ServiceId, AccountData)
 class Delta(Dictionary[ServiceId, AccountData]):
     """Delta state"""
-
     ...
 
 

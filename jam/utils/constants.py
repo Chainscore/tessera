@@ -1,91 +1,146 @@
 """Constants for the JAM protocol as defined in the specification."""
 from jam.chainspec import chain_config
 
-# Time constants
-AUDIT_PERIOD = 8  # seconds between audit tranches
-SLOT_PERIOD = chain_config.slot_duration  # seconds
-EPOCH_LENGTH = chain_config.epoch_duration  # timeslots
-ROTATION_PERIOD = (
-    chain_config.rotation_period
-)  # timeslots for validator-core assignments
-LOOKUP_ANCHOR_MAX_AGE = 14_400  # maximum age in timeslots
-TICKET_SUBMISSION_END = chain_config.ticket_submission_end  # slots into epoch
-UNAVAILABLE_WORK_EXPIRY = 5  # timeslots
-CONTEST_DURATION = chain_config.contest_duration
+# ───────────────────────────────────────
+# Constants (I.4.4, JAM Graypaper Order)
+# ───────────────────────────────────────
 
-# Balance constants
-BASIC_MINIMUM_BALANCE = 100
+# A — The period, in seconds, between audit tranches.
+AUDIT_PERIOD = 8
+
+# B_I — Additional minimum balance per item of elective service state.
 ADDITIONAL_BALANCE_PER_ITEM = 10
+
+# B_L — Additional minimum balance per octet of elective service state.
 ADDITIONAL_BALANCE_PER_OCTET = 1
 
-# Core and validator constants
-CORE_COUNT = chain_config.num_cores
-VALIDATOR_COUNT = chain_config.num_validators
-TICKET_ENTRIES_PER_VALIDATOR = chain_config.tickets_per_validator
+# B_S — Basic minimum balance which all services require.
+BASIC_MINIMUM_BALANCE = 100
+
+# C — The total number of cores.
+CORE_COUNT = chain_config.num_cores  # e.g. 341
+
+# D — Timeslot count after which an unreferenced preimage may be expunged.
+PREIMAGE_EVICTION_TIMESLOTS = 19200
+
+# E — Length of an epoch, in timeslots.
+EPOCH_LENGTH = chain_config.epoch_duration
+
+# F — Audit bias factor; expected # of additional validators who will audit due to prior no-show.
 AUDIT_BIAS_FACTOR = 2
-VALIDATORS_SUPER_MAJORITY = 2 * VALIDATOR_COUNT // 3 + 1
-VALIDATORS_WONKY = 1 * VALIDATOR_COUNT // 3
-MIN_VALIDATOR_PER_REPORT = (VALIDATOR_COUNT/CORE_COUNT) * 2/3
 
-# Gas constants
+# G_A — Gas allocated to invoke a work-report’s Accumulation logic.
 ACCUMULATION_GAS = 10_000_000
-IS_AUTHORIZED_GAS = 50_000_000
-REFINE_GAS = 5_000_000_000
-TOTAL_GAS = 3_000_000_000
 
-# Size and count limits
-MAX_WORK_ITEMS = 4
-MAX_DEPENDENCIES = 8
-MAX_TICKETS_PER_EXTRINSIC = chain_config.max_tickets_per_extrinsic
-MAX_AUTH_POOL_ITEMS = 8
-MAX_AUTH_QUEUE_ITEMS = 80
-MAX_ACCUMULATION_ENTRIES = 1024
+# G_I — Gas allocated to invoke a work-package’s Is-Authorized logic.
+IS_AUTHORIZED_GAS = 50_000_000
+
+# G_R — Gas allocated to invoke a work-package’s Refine logic.
+REFINE_GAS = 5_000_000_000
+
+# G_T — Total gas allocated across all accumulation. Must satisfy: G_T ≥ G_A ⋅ C + Σ_gas(vkg)
+TOTAL_GAS = 3_500_000_000
+
+# H — Size of recent block history, in blocks.
 RECENT_HISTORY_SIZE = 8
 
-# Memory and storage constants
-REGISTER_COUNT = 13
-PVM_ADDR_ALIGNMENT = 2
-PVM_INIT_DATA_SIZE = 2**24
-PVM_MEMORY_PAGE_SIZE = 2**12
-PVM_INIT_ZONE_SIZE = 2**16
-MAX_SERVICE_CODE_SIZE = 4_000_000  # octets
-BASIC_ERASURE_SIZE = 684  # octets
-SEGMENT_SIZE = 4104  # octets
-MAX_MANIFEST_ENTRIES = 2**11
-ERASURE_PIECES_PER_SEGMENT = 6
-MAX_WORK_REPORT_SIZE = 48 * 2**10  # octets
-TRANSFER_MEMO_SIZE = 128  # octets
-MAX_EXPORT_ITEM = 3072
-MAX_IMPORT_ITEM = 3072
+# I — Max number of work items in a package.
+MAX_WORK_ITEMS = 16
+
+# J — Max number of dependency items in a work-report.
+MAX_DEPENDENCIES = 8
+
+# K — Max number of tickets that can be submitted in a single extrinsic.
+MAX_TICKETS_PER_EXTRINSIC = 16
+
+# L — Max age (in timeslots) of the lookup anchor.
+LOOKUP_ANCHOR_MAX_AGE = 14_400
+
+# N — Ticket entries per validator.
+TICKET_ENTRIES_PER_VALIDATOR = 2
+
+# O — Max number of items in the authorizations pool.
+MAX_AUTH_POOL_ITEMS = 8
+
+# P — Slot period in seconds.
+SLOT_PERIOD = chain_config.slot_duration
+
+# Q — Max number of items in the authorizations queue.
+MAX_AUTH_QUEUE_ITEMS = 80
+
+# R — Rotation period of validator-core assignments, in timeslots.
+ROTATION_PERIOD = chain_config.rotation_period
+
+# S — Max entries in the accumulation queue.
+MAX_ACCUMULATION_ENTRIES = 1024
+
+# T — Max number of extrinsics in a work-package.
 EXTRINSIC_COUNT = 128
-MAX_WORK_PACKAGE_SIZE = 12*2**20 #OCTAETS
 
+# U — Timeslot period after which unavailable work may be replaced.
+UNAVAILABLE_WORK_EXPIRY = 5
 
-# Host calls
-NONE = 2**64 - 1
-WHAT = 2**64 - 2
-OOB = 2**64 - 3
-WHO = 2**64 - 4
-FULL = 2**64 - 5
-CORE = 2**64 - 6
-CASH = 2**64 - 7
-LOW = 2**64 - 8
-HUH = 2**64 - 9
-OK = 0
+# V — Total number of validators.
+VALIDATOR_COUNT = chain_config.num_validators
 
-# Signing context strings
+# W_A — Max size of is-authorized code (in octets).
+MAX_AUTH_CODE_SIZE = 64_000
+
+# W_B — Max encoded size of a work-package (extrinsics + imports), in octets.
+MAX_ENCODED_WORK_PACKAGE_SIZE = 2 ** 20  # 2^20 octets
+
+# W_C — Max size of service code, in octets.
+MAX_SERVICE_CODE_SIZE = 4_000_000
+
+# W_E — Basic size of erasure-coded pieces (in octets). See equation H.6
+BASIC_ERASURE_SIZE = 684
+
+# W_G — Size of a segment in octets.
+SEGMENT_SIZE = 4104  # = W_P * W_E
+
+# W_M — Max number of imports in a work-package.
+MAX_IMPORT_ITEM = 3072
+
+# W_P — Number of erasure-coded pieces in a segment.
+ERASURE_PIECES_PER_SEGMENT = 6
+
+# W_R — Total size of all unbounded blobs in work-report (in octets).
+MAX_WORK_REPORT_SIZE = 48 * 1024  # = 48 KiB
+
+# W_T — Size of transfer memo in octets.
+TRANSFER_MEMO_SIZE = 128
+
+# W_X — Max number of exports in a work-package.
+MAX_EXPORT_ITEM = 3072
+
+# X — Context strings for signing.
 SIGNING_CONTEXTS = {
-    "available": b"jam_available",  # Ed25519 Availability assurances
-    "beefy": b"jam_beefy",  # BLS Accumulate-result-root-MMR commitment
-    "entropy": b"jam_entropy",  # On-chain entropy generation
-    "fallback_seal": b"jam_fallback_seal",  # Bandersnatch Fallback block seal
-    "guarantee": b"jam_guarantee",  # Ed25519 Guarantee statements
-    "announce": b"jam_announce",  # Ed25519 Audit announcement statements
-    "ticket_seal": b"jam_ticket_seal",  # Bandersnatch RingVRF Ticket generation/block seal
-    "audit": b"jam_audit",  # Bandersnatch Audit selection entropy
-    "valid": b"jam_valid",  # Ed25519 Judgments for valid work-reports
-    "invalid": b"jam_invalid",  # Ed25519 Judgments for invalid work-reports
+    "available": b"jam_available",         # Ed25519 Availability assurances
+    "beefy": b"jam_beefy",                 # BLS MMR commitments
+    "entropy": b"jam_entropy",             # On-chain entropy randomness
+    "fallback_seal": b"jam_fallback_seal", # Bandersnatch fallback block seal
+    "guarantee": b"jam_guarantee",         # Ed25519 Guarantee statements
+    "announce": b"jam_announce",           # Ed25519 Audit announcements
+    "ticket_seal": b"jam_ticket_seal",     # RingVRF ticket gen / sealing
+    "audit": b"jam_audit",                 # Bandersnatch Audit selection entropy
+    "valid": b"jam_valid",                 # Ed25519 valid work-report judgments
+    "invalid": b"jam_invalid",             # Ed25519 invalid work-report judgments
 }
 
-# Maximum number of judgements per dispute
-MAX_JUDGEMENTS_PER_DISPUTE = 32
+# Y — Number of slots into an epoch where ticket submission ends.
+TICKET_SUBMISSION_END = chain_config.ticket_submission_end
+
+# Z_A — PVM dynamic address alignment factor. See equation A.18
+PVM_ADDR_ALIGNMENT = 2
+
+# Z_I — PVM program init input data size. See A.7
+PVM_INIT_DATA_SIZE = 2 ** 24
+
+# Z_P — PVM memory page size. See equation 4.24
+PVM_MEMORY_PAGE_SIZE = 2 ** 12
+
+# Z_Z — PVM init zone size. See A.7
+PVM_INIT_ZONE_SIZE = 2 ** 16
+
+# Z_R — Number of registers in the standard PVM
+REGISTER_COUNT = 13

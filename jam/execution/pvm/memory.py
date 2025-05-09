@@ -2,7 +2,7 @@ from math import ceil, floor
 from typing import Dict, List, Self, Sequence
 from jam.execution.pvm.types import Accessibility
 from jam.pvm.errors import PvmError, PvmErrorCodes
-from jam.types.base.integers.fixed import U32
+from jam.types.base.integers.fixed import U32, FixedInt
 from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.utils.constants import PVM_INIT_DATA_SIZE, PVM_MEMORY_PAGE_SIZE, PVM_INIT_ZONE_SIZE
@@ -84,7 +84,8 @@ class Memory:
             addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=True)
             self.data[U32(addr)] = Byte(byte)
 
-    def is_accessible(self, address: int, length: int, for_write = False) -> bool:
+    def is_accessible(self, address: int|FixedInt, length: int, for_write = False) -> bool:
+        address = int(address)
         pages = self.get_pages(address, address+length)
         for page in pages:
             if for_write and page not in self.allowed_write_pages:
