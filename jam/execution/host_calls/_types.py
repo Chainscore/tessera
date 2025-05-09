@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing_extensions import Optional
 from jam.execution.pvm.memory import Memory
+from jam.state.components.delta import Delta
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes

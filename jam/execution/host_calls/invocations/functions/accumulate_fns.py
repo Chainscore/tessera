@@ -3,9 +3,10 @@ from jam.execution.host_calls.invocations.functions.protocol import InvocationFu
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
 from jam.execution.pvm.status import CONTINUE, PANIC
+from jam.state.components.delta import AccountData, AccountStorage, LookupTable, LookupTimestamps, PreImageLookup, ServiceCodeHash
 from jam.types.base.integers.fixed import U32, U64
-from jam.types.protocol.core import Gas
-from jam.utils.constants import CORE, CORE_COUNT, MAX_AUTH_QUEUE_ITEMS, OK, VALIDATOR_COUNT, WHO
+from jam.types.protocol.core import BlobLength, Gas
+from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE, CORE, CORE_COUNT, MAX_AUTH_QUEUE_ITEMS, OK, VALIDATOR_COUNT, WHO
 
 
 class accumulateFunctions(INVF):
@@ -68,9 +69,19 @@ class accumulateFunctions(INVF):
 
     @INVF.register(9, gas_cost=10)
     def new(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
-        [o,l,g,m]=registers[7,7+4]
+        [o,l,g,m]=registers[7:7+4]
         if memory.is_accessible(o,32) and isinstance(l, U32):
             c=memory.read(0,32)
-
+            """
+            creating a new service account results to empty storage/preimage nad lookup with hash(c) and length(l from w8)
+            Not Doing unwanted calc of a_i/a_o finding the direct value of a_t for assigning it to the balence for the newly created service_acc
+            NOTE: While creating a new service_acc it will have a single lookup(key with a value[])
+            """
+            a_t=BASIC_MINIMUM_BALANCE+ADDITIONAL_BALANCE_PER_ITEM*2+ADDITIONAL_BALANCE_PER_OCTET*(81+l)
+            # AccountData Lookup type needs to be fixed before this func is called
+            a=AccountData(code_hash=ServiceCodeHash(c),storage=AccountStorage(),timestamps=LookupTimestamps(LookupTable(hash=ServiceCodeHash(c),length=BlobLength(l)),[]),lookup=PreImageLookup(),balance=a_t,gas_limit=g,min_gas=m)
+            #TODO: Need to re-do it
+            s=context.x.partial_state.service_accounts[context.x.s_index]
+            s.balance=s.balance-a_t
         else:
             return(PANIC,registers[7],context.x.i_index,context.x.partial_state.delta)
