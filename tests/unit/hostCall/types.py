@@ -17,10 +17,10 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.decorators import with_json_metadata
 from jam.utils.json.serde import JsonSerde
 
-from jam.state.components.delta import Timestamps, AccountStorage, PreImageLookup
+from jam.types.state.delta import Timestamps, AccountStorage, PreImageLookup
 from jam.types.protocol.validators import ValidatorVector
-from jam.state.components.phi import PhiVector
-from jam.state.components.chi import Chi
+from jam.types.state.phi import PhiVector
+from jam.types.state.chi import Chi
 from jam.pvm.pvm_memory import JsonPageMemory
 from jam.hostCall.types import DeferredTransfers
 

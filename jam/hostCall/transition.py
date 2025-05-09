@@ -5,8 +5,8 @@ from jam.types.base.dictionary import Dictionary
 from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.state.components.delta import Timestamps
-from jam.state.components.delta import Delta, AccountData, AccountStorage, PreImageLookup, LookupTimestamps, LookupTable, BlobLength
+from jam.types.state.delta import Timestamps
+from jam.types.state.delta import Delta, AccountData, AccountStorage, PreImageLookup, LookupTimestamps, LookupTable, BlobLength
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.types.base.sequences.bytes.bytes import ByteVector32
 from jam.pvm.register import Registers, Register
@@ -14,12 +14,12 @@ from jam.pvm.pvm_memory import PageMemory, Memory, Access
 from jam.types.base.integers.fixed import U32, U64
 from jam.types.base.boolean import Boolean
 from jam.utils.constants import REGISTER_COUNT
-from jam.state.components.phi import Phi
-from jam.state.components.chi import Chi
+from jam.types.state.phi import Phi
+from jam.types.state.chi import Chi
 from jam.hostCall.types import XContent, DeferredTransfers
 from jam.hostCall.types import RefineMap
 from jam.hostCall.types import BoldM
-from jam.state.components.iota import Iota
+from jam.types.state.iota import Iota
 ServiceCodeHash = ByteArray32
 
 

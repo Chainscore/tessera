@@ -7,6 +7,7 @@ from jam.types.work.package import WorkPackage
 from jam.types.base.sequences.bytes.bytes import Bytes
 
 
+
 def test_ext_encode(db_path):
     """Test encoiding extrinsic data."""
     db = KVStore(db_path)
@@ -43,6 +44,7 @@ def test_store_extrinsics(db_path):
     db_data = db.get(bytes(mock_extrinsic.hash))
     assert db_data is not None
     assert db_data == test_data
+    
 
 def test_store_invalid_hash(db_path):
     """Test that storing with invalid hash raises an error."""

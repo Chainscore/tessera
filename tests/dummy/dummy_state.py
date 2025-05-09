@@ -1,4 +1,4 @@
-from jam.state.state import State
+from jam.state.ghost import GhostState as State
 from tests.dummy.dummy_state_comp import create_dummy_state_components
 
 

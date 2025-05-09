@@ -1,5 +1,5 @@
 from hashlib import blake2b
-from jam.state.components.delta import AccountData
+from jam.types.state.delta import AccountData
 from jam.types.base.integers.fixed import U32, U64
 
 

@@ -31,7 +31,10 @@ poetry.lock
 .DS_Store
 
 # Project specific
-data/db/
+data/main
+data/d3l
+data/audit
+
 *.log
 .coverage
 htmlcov/

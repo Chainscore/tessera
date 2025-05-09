@@ -9,8 +9,8 @@ from jam.utils.json.decorators import with_json_metadata
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
-from jam.state.components.delta import Timestamps
-# from jam.state.components.delta import PartialState
+from jam.types.state.delta import Timestamps
+# from jam.types.state.delta import PartialState
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.pvm.register import Register
