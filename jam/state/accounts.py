@@ -9,11 +9,12 @@ from jam.types.state.delta import ServiceCodeHash, Ao, Ai, LookupTable, Timestam
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.json import JsonSerde
+from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 
 
 @dataclass
 @decodable_dataclass
-class AccountData(Codable, JsonSerde):
+class AccountMetadata(Codable, JsonSerde):
     code_hash: ServiceCodeHash  # code_hash
     balance: Balance  # balance
     gas_limit: Gas  # min_item_gas
@@ -23,7 +24,7 @@ class AccountData(Codable, JsonSerde):
 
 
 class Account:
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie, data: AccountData):
+    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie, data: AccountMetadata):
         self.id = id
         self.DB = db
         self.TRIE = trie
@@ -84,6 +85,10 @@ class Account:
         self.TRIE.update(k, Bytes(v))
 
     @property
+    def t(self):
+        return BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
+
+    @property
     def storage(self):
         return StorageView(self.id, self.DB, self.TRIE)
 
@@ -103,19 +108,20 @@ class DeltaView:
 
     def __getitem__(self, key: ServiceId):
         data = self.DB.get(bytes(construct_state_key((255, key))))
-        if data is None:
-            raise KeyError(f"Service not found {key}")
         return Account(
             id=key,
             db=self.DB,
             trie=self.TRIE,
-            data=AccountData.decode_from(data)[0]
-        )
+            data=AccountMetadata.decode_from(data)[0]
+        )  if data else data
 
-    def __setitem__(self, key: ServiceId, value: AccountData):
+    def __setitem__(self, key: ServiceId, value: AccountMetadata):
         k, v = construct_state_key((255, key)), value.encode()
         self.DB.put(bytes(k), v)
         self.TRIE.update(k, Bytes(v))
+
+    def __contains__(self, key: ServiceId):
+        return self.DB.get(bytes(construct_state_key(255, key))) is not None
 
 class StorageView:
     def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
@@ -125,7 +131,7 @@ class StorageView:
 
     def __getitem__(self, key: ByteArray32):
         data = self.DB.get(bytes(construct_state_key((self.id, ByteArray32(Bytes(U32(2**32 - 1).encode()) + key[0:28])))))
-        return Bytes(data)
+        return Bytes(data) if data else data
 
     def __setitem__(self, key: ByteArray32, value: Bytes):
         k = construct_state_key((self.id, ByteArray32(Bytes(U32(2 ** 32 - 1).encode()) + key[0:28])))
@@ -143,7 +149,7 @@ class PreImageView:
 
     def __getitem__(self, key: ByteArray32):
         data = self.DB.get(bytes(construct_state_key((self.id, ByteArray32(Bytes(U32(2**32 - 2).encode()) + key[1:29])))))
-        return Bytes(data)
+        return Bytes(data) if data else data
 
     def __setitem__(self, key: ByteArray32, value: Bytes):
         k = construct_state_key((self.id, ByteArray32(Bytes(U32(2 ** 32 - 2).encode()) + key[1:29])))
@@ -161,7 +167,7 @@ class TimestampsView:
 
     def __getitem__(self, key: LookupTable):
         data = self.DB.get(bytes(construct_state_key((self.id, ByteArray32(Bytes(U32(key.length).encode()) + key.hash[2:30])))))
-        return Timestamps.decode_from(data)[0]
+        return Timestamps.decode_from(data)[0] if data else data
 
     def __setitem__(self, key: LookupTable, value: Timestamps):
         k = construct_state_key((self.id, ByteArray32(Bytes(U32(key.length).encode()) + key.hash[2:30])))
