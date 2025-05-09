@@ -12,9 +12,27 @@ from hashlib import blake2b
 from jam.hostCall.process import HostCall
 from jam.hostCall.invocation import PsiM
 from jam.types.base.integers.fixed import U32, U64, U256
+from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE
 from tests.fixtures.utils import create_dummy_bytes32
 from tests.unit.accumulation.types import StateContext, OperandTuples
 
+#Find the a_t of a Service Account
+# https://graypaper.fluffylabs.dev/#/9a08063/112701116701?v=0.6.6
+def fetch_t(account:AccountData):
+    a_i = 2 * len(account.lookup) + len(account.storage)
+    a_o=0
+    for hash,length in account.lookup:
+        a_o+=81+length
+    for code in account.storage:
+        a_o+=31+len(code)
+    a_t = BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * a_i + a_o*ADDITIONAL_BALANCE_PER_OCTET
+    return a_t
+
+def check(u:StateContext,i:ServiceId):
+    if u.service_accounts[i] is None:
+        return i;
+    else:
+        return check(u,(i-2**8)%(2**32-2**9)+2**8)
 
 def i_function(u: StateContext, s: ServiceId, _n_o: Entropy, timeslot: TimeSlot) -> XContent:
     first = bytes(s.encode())
