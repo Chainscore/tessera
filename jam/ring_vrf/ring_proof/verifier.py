@@ -1,6 +1,5 @@
 import time
 from jam.ring_vrf.ring_proof.constants import S_PRIME, SIZE, D, omega,SeedPoint
-start_is=time.time()
 from jam.ring_vrf.ring_proof.fiat_shamir_with_transcript import alphas, zeta, cf_vectors
 from jam.ring_vrf.ring_proof.polynomial_vect_ops import lagrange_basis_polynomial, poly_evaluate
 from jam.ring_vrf.ring_proof.preprocessing import C_px, C_py, C_s, Result_plus_Seed
@@ -12,6 +11,7 @@ from py_ecc.optimized_bls12_381 import multiply, add, Z1, curve_order
 from jam.ring_vrf.ring_proof.aggregation_poly_proof_construction import prover_proof as verifier_proof
 
 E_zeta=zeta[0]
+start_is=time.time()
 
 def recover_fiat_shamir_challeneges(Proof_Phi):
     """
@@ -221,7 +221,6 @@ def evaluation_of_linearization_poly_at_zeta_omega(Proof_Phi,zeta):
 
 
 pp_commitments=[C_px,C_py, C_s ]
-
 proof_1, cs= evaluation_of_quotient_poly_at_zeta(verifier_proof, pp_commitments, E_zeta, Result_point,SeedPoint,D)
 proof_2=evaluation_of_linearization_poly_at_zeta_omega(verifier_proof,E_zeta)
 end_is=time.time()
@@ -230,3 +229,4 @@ print("proof 2 is valid:", proof_2)
 print("evaluation_point_zeta:",E_zeta)
 print("Overall time is:",end_is-start_is)
 print("constriants_at_zeta", cs)
+print("Proof Verification Success:", proof_1 and proof_2)
