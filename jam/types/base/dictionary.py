@@ -118,6 +118,9 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
         """Get view of values."""
         return self.value.values()
 
+    def __delitem__(self, key):
+        del self.value[key]
+
     def to_json(self) -> Dict[Any, Any]:
         """Convert to JSON representation."""
         return {k.to_json(): v.to_json() for k, v in self.items()}

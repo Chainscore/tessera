@@ -86,7 +86,7 @@ class Account:
 
     @property
     def t(self):
-        return BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
+        return Balance(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o)
 
     @property
     def storage(self):
@@ -135,11 +135,18 @@ class StorageView:
 
     def __setitem__(self, key: ByteArray32, value: Bytes):
         k = construct_state_key((self.id, ByteArray32(Bytes(U32(2 ** 32 - 1).encode()) + key[0:28])))
+        # TODO - check for gas before adding, throw error if insufficient. This is supposed to be handled in relevent invocation
         self.DB.put(
             bytes(k),
             bytes(value)
         )
         self.TRIE.update(k, value)
+        # TODO - update ai, ao
+
+    def __delitem__(self, key):
+        self.DB.delete(bytes(key))
+        #TODO: Implement trie update once trie can delete nodes
+        raise ValueError("Not yet implemented. Contact Prasad")
 
 class PreImageView:
     def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
