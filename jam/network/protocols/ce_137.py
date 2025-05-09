@@ -1,19 +1,19 @@
-from jam.state.state import State
+import hashlib
 from typing import cast
 
 from dataclasses import dataclass
 from jam.config.logging import logger
 from jam.types import decodable_vector, Vector
-from jam.types.base.integers import Int
 from jam.network.quic.server import QuicServerProtocol
-from jam.types.base.sequences.bytes.bit_array import Byte
+from jam.types.base.sequences.bytes import Bytes
+
+from jam.merklization import BMRFunctions
 
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 
 from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types.work.package import WorkPackage
 from jam.types.base import (
     ByteArray32
 )
@@ -31,15 +31,16 @@ class SegmentShards(Vector[SegmentShard]):
 
 @decodable_dataclass
 @dataclass
-class CE137Data(Codable, JsonSerde):
-    Erasure_Root: ByteArray32
-    Shard_Index: U16
+class CE137TransmitData(Codable, JsonSerde):
+    erasure_root: ByteArray32
+    shard_index: U16
 
 @decodable_dataclass
 @dataclass
-class CE137Data2(Codable, JsonSerde):
-    Bundle_Shard: ByteArray
-    Segment_Shard: SegmentShards
+class CE137InterceptData(Codable, JsonSerde):
+    bundle_shard: ByteArray
+    segment_shard: SegmentShards
+    justification: Vector[Bytes | ByteArray32]
 
 
 class ShardDistributionProtocol(NetworkProtocol):
@@ -49,11 +50,11 @@ class ShardDistributionProtocol(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE137
 
-    def transmit(self, node: Node, data:CE137Data):
+    def transmit(self, node: Node, data:CE137TransmitData):
         """
         """
-        stream_a = self._prefix.encode() + data.Erasure_Root.encode()
-        stream_b = data.Shard_Index.encode()
+        stream_a = self._prefix.encode() + data.erasure_root.encode()
+        stream_b = data.shard_index.encode()
 
         logger.info(f"Transmitting shard index & erasure root to {len(node.connections)} guarantors")
 
@@ -68,12 +69,15 @@ class ShardDistributionProtocol(NetworkProtocol):
         """
         """
         logger.info("Received Shard index & erasure root")
-        data, offset = CE137Data.decode_from(buffer)
-        data = cast(CE137Data, data)
+        data, offset = CE137TransmitData.decode_from(buffer)
+        data = cast(CE137TransmitData, data)
 
         logger.info("Processing")
         # TODO: Process received erasure code & shard index
-        bundle_shard = '3b8987132d58aea08ec55247fd64436c3a553e3ab42260c6a31bf27931ee2cba868d4c59b626fb1d365fa5cb0edd5f1e2d72b7d6d7998ad0995314ad9eee86c3'
+        bundle_shard = ByteArray('3b8987132d58aea08ec55247fd64436c3a553e3ab42260c6a31bf27931ee2cba868d4c59b626fb1d365fa5cb0edd5f1e2d72b7d6d7998ad0995314ad9eee86c3')
+
+        segment_shard_root = ByteArray('3b8987132d58aea08ec55247fd64436c3a553e3ab42260c6a31bf27931ee2cba868d4c59b626fb1d365fa5cb0edd5f1e2d72b7d6d7998ad0995314ad9eee86c3')
+
         segment_shard = SegmentShards([
                          ByteArray12('8a84add96a80d1566e789df3'),
                          ByteArray12('1162d08611b468d38af07ca5'),
@@ -82,18 +86,39 @@ class ShardDistributionProtocol(NetworkProtocol):
                          ByteArray12('fc12fb3db7a24b0b52fb57f6'),
                         ])
 
+        bundle_shard_hash = hashlib.blake2b(bytes(bundle_shard))
+        s = Vector([ bundle_shard_hash, segment_shard_root])
+
+        bmr = BMRFunctions()
+        justification = bmr.trace_fn(values=s, index=int(data.shard_index))
+
         stream_a = self._prefix.encode() + bundle_shard.encode()
         stream_b = segment_shard.encode()
+        stream_c = justification.encode()
 
         server.stream_and_keep_open(stream_id, stream_a)
-        server.stream_and_close(stream_id, stream_b)
-
+        server.stream_and_keep_open(stream_id, stream_b)
+        server.stream_and_close(stream_id, stream_c)
 
 
     @classmethod
     def client_intercept(self, buffer: bytes, stream_id: int):
         logger.info("Data received on Assurer Node")
-        data, offset = CE137Data2.decode_from(buffer)
-        data = cast(CE137Data2, data)
+        data, offset = CE137InterceptData.decode_from(buffer)
+        data = cast(CE137InterceptData, data)
+
+        # TODO: move this verification part to outside this client_intercept as we dont have shard_index and erasure_root here
+        # bmr = BMRFunctions()
+        # segment_shard_root = bmr.wb_merkle_fn(Vector([Bytes(data.segment_shard)]))
+        # bundle_shard_hash = hashlib.blake2b(bytes(data.bundle_shard))
+        # s = Vector([ bundle_shard_hash, segment_shard_root])
+        #
+        # root = bmr.verify_proof(data.justification, s, shard_index)
+        #
+        # if root == erasure_root:
+        # #TODO: save the justification for CE139/140 and proceed further with data
+        # else:
+        # #TODO: Discard the data
+
         logger.info("Received bundle shard and segment shard")
 

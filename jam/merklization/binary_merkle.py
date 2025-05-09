@@ -133,7 +133,7 @@ class BMRFunctions:
             trace.append(node)
 
             new_ind = self._p_i(values, index)
-            trace_nodes = self._trace_fn(self._p_bool(values, index,True), index - new_ind, hash_fn)
+            trace_nodes = self.trace_fn(self._p_bool(values, index,True), index - new_ind, hash_fn)
 
             trace.extend(trace_nodes)
 
@@ -209,7 +209,8 @@ class BMRFunctions:
 
         leaves = self._preprocessor_fn(values, hash_fn)
 
-        path = self._trace_fn(leaves, ind, hash_fn)
+        path = self.trace_fn(leaves, ind, hash_fn)
+
         return path[:sz]
 
     def leaf_page_fn(
@@ -244,7 +245,7 @@ class BMRFunctions:
 
         return page
 
-    def verify_proof(self, trace: Vector[OpaqueHash], leaves: Vector[OpaqueHash], leaf_index: int, og_root: OpaqueHash) -> bool:
+    def verify_proof(self, trace: Vector[OpaqueHash], leaves: Vector[OpaqueHash], leaf_index: int) -> OpaqueHash:
         """
         Merkle Proof Verification Function (not provided in GP)
 
@@ -252,7 +253,6 @@ class BMRFunctions:
             trace: Sequence of nodes depicting path of a tree to a particular index
             leaves: Sequence of leaf nodes
             leaf_index: Node Index
-            og_root: Previous root to match proof with
         Returns:
             Verification Result
         """
@@ -265,4 +265,4 @@ class BMRFunctions:
                 root = self._node_fn(Vector([sibling, root]))
             leaf_index = leaf_index // 2
 
-        return og_root == root
+        return root
