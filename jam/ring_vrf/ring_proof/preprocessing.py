@@ -1,9 +1,8 @@
-# from jam.ring_vrf.ring_proof.KZG_poly_affine_powers_of_tau import commit_to_polynomial
-from py_ecc.optimized_bls12_381 import normalize
 
+from py_ecc.optimized_bls12_381 import normalize as nm
 from jam.ring_vrf.ring_proof.constants import omega, S_PRIME, Blinding_Base, PaddingPoint, S_ORDER, Max_ring_size, \
     SeedPoint
-from jam.ring_vrf.ring_proof.get_ring_points import pk_x_y_list, secret_t
+from jam.ring_vrf.ring_proof.get_ring_points import pk_x_y_list, secret_t, producer_index
 from jam.ring_vrf.ring_proof.helpers import unzip
 from jam.ring_vrf.ring_proof.poly_interpolation_fft import fft, poly_interpolate_fft
 from jam.ring_vrf.ring_proof.short_weierstrass import twisted_edward_to_sw
@@ -100,7 +99,7 @@ def pad_padding_point(int_pk_ring,padding_element):
 
 Ring_of_pk=pk_x_y_list
 
-Result_point=relation_to_prove(3,secret_t,Blinding_Base,Ring_of_pk)
+Result_point=relation_to_prove(producer_index,secret_t,Blinding_Base,Ring_of_pk)
 print("Result Point",Result_point)
 Result_plus_Seed=point_addition(Result_point, twisted_edward_to_sw(SeedPoint))
 
@@ -136,6 +135,7 @@ print("is Evaluations valid:",py_v==fft(py_I,omega,S_PRIME))
 print("Interpolated_s",s_v_I)
 print("is Evaluations valid:",s_vector==fft(s_v_I,omega,S_PRIME))
 
+
 end_time=time.time()
 print("interpolation_time:",end_time - start_time)
 
@@ -143,8 +143,11 @@ start_time=time.time()
 C_px=commitment_to_constructed_vectors(px_I)
 C_py=commitment_to_constructed_vectors(py_I)
 C_s=commitment_to_constructed_vectors(s_v_I)
+print("")
+C_px_nm=nm(C_px)
+C_py_nm=nm(C_py)
+C_s_nm=nm(C_s)
 
 end_time=time.time()
 
-print(normalize(C_px),'\n',normalize(C_py),'\n',normalize(C_s))
 print("commitment time:", end_time -start_time)

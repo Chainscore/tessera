@@ -1,6 +1,6 @@
 import time
 from jam.ring_vrf.ring_proof.KZG_polynomial_commit_open_verify import commit_to_polynomial
-from jam.ring_vrf.ring_proof.get_ring_points import secret_t
+from jam.ring_vrf.ring_proof.get_ring_points import secret_t, producer_index
 from jam.ring_vrf.ring_proof.helpers import unzip
 from jam.ring_vrf.ring_proof.polynomial_vect_ops import polynomial_interpolation
 from jam.ring_vrf.ring_proof.preprocessing import pre_pd_pk_ring, s_vector
@@ -8,7 +8,7 @@ from jam.ring_vrf.ring_proof.short_weierstrass import  twisted_edward_to_sw
 from jam.ring_vrf.ring_proof.constants import SeedPoint, S_PRIME, omega, Blinding_Base, D
 from jam.ring_vrf.ring_proof import short_weierstrass_curve_ops as sw
 from jam.ring_vrf.ring_proof.poly_interpolation_fft import poly_interpolate_fft
-# from jam.ring_vrf.ring_proof.KZG_polynomial_commit_open_verify import commit_to_polynomial
+from py_ecc.optimized_bls12_381 import normalize as nm
 
 size= 512 #sample size
 
@@ -104,17 +104,16 @@ def commitment(interpolated_polynomial):
     cmt=commit_to_polynomial(interpolated_polynomial)
     return cmt
 
-b_v=bits_vector(3,secret_t)
+b_v=bits_vector(producer_index,secret_t)
 
 # print('this len:',len(bin(secret_t).zfill(256)[2:]))
 print('b_v',b_v)
-
 acc_x,acc_y=conditional_sum_accumulator(SeedPoint,b_v,pre_pd_pk_ring)
 acc_ip=inner_product_accumulator(b_v,s_vector)
 print("accx:",len(acc_x),acc_x)
 print("accy:",len(acc_y),acc_y)
 print("acc_ip",len(acc_ip),acc_ip)
-Result_point= relation_to_prove(pre_pd_pk_ring, 3,secret_t, Blinding_Base)
+Result_point= relation_to_prove(pre_pd_pk_ring, producer_index,secret_t, Blinding_Base)
 print("b_v:",len(b_v))
 
 start_time=time.time()
@@ -132,14 +131,26 @@ end_time=time.time()
 print("interpolation time:",end_time-start_time)
 
 start_time=time.time()
+
+
 # Commitments as Affine Co-ordinates
 C_b_v=commitment(b_v_I)
 C_acc_x=commitment(acc_x_I)
 C_acc_y=commitment(acc_y_I)
 C_acc_ip=commitment(acc_ip_I)
 
+C_b_v_nm=nm(C_b_v)
+C_acc_ip_nm=nm(C_acc_ip)
+C_acc_x_nm=nm(C_acc_x)
+C_acc_y_nm=nm(C_acc_y)
+
 import py_ecc.optimized_bls12_381 as c
 # print("commitment to bits_poly:",C_b_v)
 end_time=time.time()
 print("commitment time:", end_time - start_time)
 print("bits_v_commitment:",c.normalize(C_b_v))
+
+
+# (Cb, Caccip , Caccx , Caccy , px,ζ , py,ζ , sζ , bζ , ipζ , acx,ζ , acy,ζ , Cq , lζω , Πζ , Πζω )
+
+
