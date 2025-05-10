@@ -6,8 +6,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from jam.assurances.errors import AssurancesError, AssurancesErrorCode
-from jam.state.components.rho import OptionalWorkReportState
-from jam.state.state import State
+from jam.types.state.rho import OptionalWorkReportState
+from jam.types.state.sigma import Sigma
 from jam.types.base.null import Null
 from jam.types.block import Block
 from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField
@@ -23,7 +23,7 @@ class Assurances:
     """State transition function for the processing of Assurances."""
 
     @staticmethod
-    def transition(state: State, block: Block) -> State:
+    def transition(state: Sigma, block: Block) -> Sigma:
         """
         Process the assurances extrinsic.
         

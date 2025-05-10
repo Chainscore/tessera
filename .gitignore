@@ -31,13 +31,19 @@ poetry.lock
 .DS_Store
 
 # Project specific
-data/db/
+data/main
+data/d3l
+data/audit
+
 *.log
 .coverage
 htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+db/
+!jam/db
+!tests/unit/db
 
 # Environment
 .env
@@ -49,3 +55,18 @@ ENV/
 .cursorignore
 
 azure_logs/
+
+mydb/
+
+# Ignore all folders in /seeds, but not the keys.json
+/seeds/*
+!/seeds/keys.json
+
+# Ignore Session Tickets
+sessions/
+
+# Ignore Logs
+logs/
+
+# Ignore Packets
+packets/

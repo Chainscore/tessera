@@ -1,21 +1,19 @@
 from jam.consensus.safrole.safrole import Safrole
-from jam.state.components.eta import Eta
+from jam.types.state.eta import Eta
 from jam.state.state import State
 from jam.types.base.integers.fixed import U32
 from jam.types.block import Block
-from jam.state.components.kappa import Kappa
-from jam.consensus.safrole.gamma import GammaK, GammaA, GammaS, GammaZ
-from jam.state.components.psi import PsiO
-from jam.state.components.iota import Iota
-from jam.state.components.lambda_ import Lambda_
+from jam.types.state.kappa import Kappa
+from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaZ
+from jam.types.state.psi import PsiO
+from jam.types.state.iota import Iota
+from jam.types.state.lambda_ import Lambda_
 from jam.types.extrinsics import (
     TicketsExtrinsic,
 )
-from jam.types.header import OptionalEpochMark
-from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, ByteArray32, Ed25519Public
+from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
-from tests.fixtures.dummy_block import create_dummy_block
-from tests.fixtures.dummy_state import create_dummy_state
+from tests.dummy.dummy_state import create_dummy_state
 
 def validators():
     return [
@@ -73,17 +71,12 @@ def generate_ticket():
     """Generate a test ticket envelope"""
     return Safrole.generate_ticket()
 
-def create_block(slot: U32, entropy: ByteArray32, tickets: list) -> Block:
+def create_block(slot: U32, tickets: list) -> Block:
     """Create a dummy block with specified parameters"""
     # Create a simple header
-    block = create_dummy_block()
+    block = Block.from_random()
     block.extrinsic.tickets = TicketsExtrinsic(tickets)
     block.header.slot = slot
-    optional_entropy_mark = block.header.epoch_mark
-    entropy_mark = optional_entropy_mark.get_value()
-    entropy_mark.entropy = entropy
-    optional_entropy_mark = OptionalEpochMark(entropy_mark)
-    block.header.epoch_mark = optional_entropy_mark
     return block
 
 def create_state(
@@ -120,7 +113,7 @@ def create_validator_data_from_keys():
             bandersnatch=BandersnatchPublic(v["bandersnatch_public"]),
             ed25519=Ed25519Public(v["ed25519_public"]),
             bls=BlsPublic(bytes(144)),  # Dummy BLS key
-            metadata=ValidatorMetadata(bytes(128))  # Dummy metadata
+            metadata=ValidatorMetadata.from_json({"name": "test", "host": [0,0,0,0], "port": 1000})  # Dummy metadata
         )
         for v in validators()
     ]

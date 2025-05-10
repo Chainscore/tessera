@@ -2,8 +2,8 @@ import dataclasses
 from copy import deepcopy
 
 from jam.preimages.errors import PreimageError, PreimageErrorEnum
-from jam.state.components.delta import LookupTable
-from jam.state.state import State
+from jam.types.state.delta import LookupTable
+from jam.types.state.sigma import Sigma
 from jam.types.block import Block
 from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
 from jam.types.protocol.crypto import Hash
@@ -11,7 +11,7 @@ from jam.types.protocol.crypto import Hash
 
 class Preimages:
     @staticmethod
-    def transition(pre_state: State, block: Block) -> State:
+    def transition(pre_state: Sigma, block: Block) -> Sigma:
         """
         Transition the state with Preimages logic.
 

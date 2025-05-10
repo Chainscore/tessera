@@ -1,11 +1,11 @@
 from jam.consensus.safrole.safrole import Safrole
-from jam.state.components.eta import Eta
+from jam.types.state.eta import Eta
 from jam.types.base.integers.fixed import U32
-from jam.state.components.kappa import Kappa
-from jam.consensus.safrole.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
-from jam.state.components.psi import PsiO
-from jam.state.components.iota import Iota
-from jam.state.components.lambda_ import Lambda_
+from jam.types.state.kappa import Kappa
+from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
+from jam.types.state.psi import PsiO
+from jam.types.state.iota import Iota
+from jam.types.state.lambda_ import Lambda_
 from jam.types.protocol.crypto import ByteArray32, Hash
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
 from jam.utils.constants import EPOCH_LENGTH
@@ -31,10 +31,10 @@ def test_entropy_accumulation():
     
     # Create a block with block entropy
     block_entropy = ByteArray32(bytes([42] * 32))
-    new_block = create_block(slot=U32(6), entropy=block_entropy, tickets=[])
+    new_block = create_block(slot=U32(6), tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block)
+    new_state = Safrole.transition(initial_state, new_block, block_entropy)
     
     # Check that the entropy was accumulated η'₀ = H(η₀ || VRF_output(H_v))
     expected_new_entropy = Hash.blake2b(bytes(initial_state.eta[0]) + bytes(block_entropy))
@@ -74,10 +74,10 @@ def test_entropy_rotation_at_epoch_boundary():
     # Create block for first slot of next epoch
     first_slot_in_next_epoch = U32(EPOCH_LENGTH)
     entropy = ByteArray32(bytes([42] * 32))
-    new_block = create_block(slot=first_slot_in_next_epoch, entropy=entropy, tickets=[])
+    new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block)
+    new_state = Safrole.transition(initial_state, new_block, entropy)
     
     # Calculate expected new η₀ value
     expected_new_eta0 = Hash.blake2b(bytes(initial_state.eta[0]) + bytes(entropy))

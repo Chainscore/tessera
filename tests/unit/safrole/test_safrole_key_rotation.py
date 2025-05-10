@@ -1,11 +1,11 @@
 from jam.consensus.safrole.safrole import Safrole
-from jam.state.components.eta import Eta
+from jam.types.state.eta import Eta
 from jam.types.base.integers.fixed import U32
-from jam.state.components.kappa import Kappa
-from jam.consensus.safrole.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
-from jam.state.components.psi import PsiO
-from jam.state.components.iota import Iota
-from jam.state.components.lambda_ import Lambda_
+from jam.types.state.kappa import Kappa
+from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
+from jam.types.state.psi import PsiO
+from jam.types.state.iota import Iota
+from jam.types.state.lambda_ import Lambda_
 from jam.types.protocol.crypto import ByteArray32, Ed25519Public
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
 from jam.utils.constants import EPOCH_LENGTH
@@ -33,10 +33,10 @@ def test_key_rotation_at_epoch_boundary():
     
     # Create a block for the first slot of the next epoch
     first_slot_in_next_epoch = U32(EPOCH_LENGTH)
-    new_block = create_block(slot=first_slot_in_next_epoch, entropy=ByteArray32(bytes(32)), tickets=[])
+    new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block)
+    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
     
     # Verify key rotation
     # λ' = κ (lambda becomes previous kappa)
@@ -80,10 +80,10 @@ def test_offender_filtering():
     
     # Create a block for the first slot of the next epoch
     first_slot_in_next_epoch = U32(EPOCH_LENGTH)
-    new_block = create_block(slot=first_slot_in_next_epoch, entropy=ByteArray32(bytes(32)), tickets=[])
+    new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block)
+    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
     
     # Check that the offender was replaced with a null key in gamma_k
     filtered_validators = new_state.gamma.k
@@ -120,10 +120,10 @@ def test_all_validators_are_offenders():
     
     # Create a block for the first slot of the next epoch
     first_slot_in_next_epoch = U32(EPOCH_LENGTH)
-    new_block = create_block(slot=first_slot_in_next_epoch, entropy=ByteArray32(bytes(32)), tickets=[])
+    new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block)
+    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
     
     # Verify all validators in gamma_k are replaced with null keys
     for validator in new_state.gamma.k:

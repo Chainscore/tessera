@@ -18,7 +18,7 @@ class Settings:
     MAX_PEERS: int = 50
 
     # Database settings
-    DB_PATH: Path = Path("data/db")
+    DB_PATH = "data/db"
 
     # Consensus settings
     EPOCH_LENGTH: int = EPOCH_LENGTH

@@ -1,10 +1,12 @@
-from jam.state.state import State
-from jam.state.components.beta import BlockHistory, PackageDict
+from copy import deepcopy
+from jam.types.state.beta import BlockHistory, PackageDict
+from jam.types.state.sigma import Sigma
 from jam.types import ByteArray32
 from jam.types.block import Block
 from jam.types.extrinsics import GuaranteesExtrinsic
 from jam.types.protocol.crypto import Hash
-from jam.merklization import MMRFunctions, MMR
+from jam.merklization import MMRFunctions
+from jam.types.protocol.merkle import MMR
 from jam.types.protocol.crypto import OpaqueHash
 from jam.utils.constants import RECENT_HISTORY_SIZE
 from jam.types.protocol.core import WorkPackageHash, SegmentRoot
@@ -28,7 +30,7 @@ def package(packages: GuaranteesExtrinsic) -> PackageDict:
 class RecentHistory:
 
     @staticmethod
-    def transition(pre_state: State, block: Block, accumulate_root: OpaqueHash) -> State:
+    def transition(pre_state: Sigma, block: Block, accumulate_root: OpaqueHash) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -72,7 +74,7 @@ class RecentHistory:
         """
 
         # Make a copy of the state
-        new_state: State = dataclasses.replace(pre_state)
+        new_state: Sigma = deepcopy(pre_state)
 
         # Step 1
         if len(new_state.beta):
