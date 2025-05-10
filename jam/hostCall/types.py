@@ -13,8 +13,8 @@ from jam.types.state.delta import Timestamps
 # from jam.types.state.delta import PartialState
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.protocol.core import Balance, Gas, ServiceId
-from jam.pvm.register import Register
-from jam.pvm.pvm_memory import PageMemory
+from jam.execution.pvm.register import Register
+from jam.execution.pvm.memory import Memory
 ServiceCodeHash = ByteArray32
 
 
@@ -22,7 +22,7 @@ ServiceCodeHash = ByteArray32
 @dataclass
 class BoldM(Codable, JsonSerde):
     blob: List
-    memory: PageMemory
+    memory: Memory
     i: Register
 
 

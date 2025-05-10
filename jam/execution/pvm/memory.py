@@ -1,8 +1,8 @@
 from math import ceil, floor
 from typing import Dict, List, Self, Sequence
 from jam.execution.pvm.types import Accessibility
-from jam.pvm.errors import PvmError, PvmErrorCodes
-from jam.types.base.integers.fixed import U32, FixedInt
+from jam.execution.pvm.status import PvmError, PAGE_FAULT
+from jam.types.base.integers.fixed import U32, FixedInt, U64
 from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.utils.constants import PVM_INIT_DATA_SIZE, PVM_MEMORY_PAGE_SIZE, PVM_INIT_ZONE_SIZE
@@ -53,11 +53,11 @@ class Memory:
         # If writing, the page must be allowed to be written.
         if for_write:
             if page not in self.allowed_write_pages:
-                raise PvmError(PvmErrorCodes.PAGE_FAULT, f"Memory Fault: Write access denied for address {addr} (page {page}).", addr)
+                raise  PAGE_FAULT(U64(addr))
         # Else (reading), the page must be allowed to be write / read
         else:
             if (page not in self.allowed_read_pages) and (page not in self.allowed_write_pages):
-                raise PvmError(PvmErrorCodes.PAGE_FAULT, f"Memory Fault: Read access denied for address {addr} (page {page}).", page)
+                raise PAGE_FAULT(U64(addr))
         return addr
 
     def read(self, address: int, length: int) -> bytes:

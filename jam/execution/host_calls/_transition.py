@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from jam.accumulation.types import StateContext
+from jam.execution.pvm.memory import Memory
 from jam.types.base.dictionary import Dictionary
 from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes
 from jam.utils.codec.codable import Codable
@@ -9,10 +10,8 @@ from jam.types.state.delta import Timestamps
 from jam.types.state.delta import Delta, AccountData, AccountStorage, PreImageLookup, LookupTimestamps, LookupTable, BlobLength
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.types.base.sequences.bytes.bytes import ByteVector32
-from jam.pvm.register import Registers, Register
-from jam.pvm.pvm_memory import PageMemory, Memory, Access
+from jam.execution.pvm.register import Registers, Register
 from jam.types.base.integers.fixed import U32, U64
-from jam.types.base.boolean import Boolean
 from jam.utils.constants import REGISTER_COUNT
 from jam.types.state.phi import Phi
 from jam.types.state.chi import Chi
@@ -45,26 +44,6 @@ class HostTransition(Codable):
             initial_regs[index] = value  # Assign the U64 value
         return initial_regs
 
-    @staticmethod
-    def memory_transition(json_page_memory):
-        PAGE_SIZE = 4096
-        converted_pages = {}
-        for key, memory in json_page_memory.pages.items():
-            page_number = U32(int(str(key)))
-            existing_bytes = memory.value
-            padded_bytes = existing_bytes[:PAGE_SIZE] + [Byte(0x00)] * (PAGE_SIZE - len(existing_bytes))
-            new_memory = Memory(
-                access=Access(
-                    inaccessible=Boolean(memory.access.inaccessible.value),
-                    writable=Boolean(memory.access.writable.value),
-                    readable=Boolean(True)
-                ),
-                value=Bytes(padded_bytes)
-            )
-
-            converted_pages[page_number] = new_memory
-
-        return PageMemory(pages=Dictionary(converted_pages))
 
     @staticmethod
     def service_transition(test_service) -> AccountData:
@@ -131,7 +110,7 @@ class HostTransition(Codable):
             return StateContext(delta=Delta({}), next_val_key=Iota([]), phi=Phi([]),
                                 chi=Chi(chi_m=U32(0), chi_a=U32(0), chi_v=U32(0), chi_g=Dictionary({})))
 
-        # delta = HostTransition.delta_transition(data.D) if data.D is not None else Delta({})
+        delta = HostTransition.delta_transition(data.D) if data.D is not None else Delta({})
 
         # Extract other fields safely
         next_val_key = data.I if data.I is not None else Iota([])
@@ -175,11 +154,11 @@ class HostTransition(Codable):
         for key, value in input_dict.items():
             if not value:  # If value is None, create a default BoldM object
                 blob = []
-                memory = PageMemory(pages={})
+                memory = Memory()
                 i = U64(0)
             else:
                 blob = [byte.value for byte in getattr(value.P, "bytes", [])] if value.P else []
-                memory = value.U if value.U else PageMemory(pages={})
+                memory = value.U if value.U else Memory()
                 i = value.I if value.I else U64(0)
 
             refine_map[int(str(key))] = BoldM(blob=blob, memory=memory, i=i)

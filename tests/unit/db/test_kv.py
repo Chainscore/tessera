@@ -2,7 +2,7 @@ import pytest
 import os
 import shutil
 import tempfile
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 import json
 from jam.state.ghost import GhostState as State
 from jam.network.peer import Peer

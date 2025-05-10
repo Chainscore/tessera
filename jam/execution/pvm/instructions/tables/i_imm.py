@@ -1,10 +1,10 @@
 from typing import Dict, Tuple
-from jam.pvm.instructions.opcode import OpCode
-from jam.pvm.memory import Memory
-from jam.pvm.register import Registers
-from jam.pvm.status import HOST, ExecutionStatus
-from jam.pvm.utils import PvmUtilities
-from jam.pvm.instructions.instruction_table import InstructionTable
+from jam.execution.pvm.instructions.opcode import OpCode
+from jam.execution.pvm.memory import Memory
+from jam.execution.pvm.register import Registers
+from jam.execution.pvm.status import HOST, ExecutionStatus
+from jam.execution.pvm.utils import PvmUtilities
+from jam.execution.pvm.instructions.instruction_table import InstructionTable
 from jam.types.protocol.core import Gas, ProgramCounter, Register
 from jam.utils.codec.primitives.integers import IntegerCodec
 

@@ -1,76 +1,87 @@
 from dataclasses import dataclass
-from typing import List
-from jam.config.settings import Settings,settings
-from jam.execution.host_calls._types import integrated_pvm_type, refine_context
+
+from jam.config.settings import settings
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.program import Program
 from jam.execution.pvm.pvm import PVM
-from jam.execution.pvm.status import HOST, PANIC,CONTINUE, ExecutionStatus, HostStatus
+from jam.execution.pvm.status import PANIC,CONTINUE, ExecutionStatus, HostStatus
 from jam.execution.pvm.types import Accessibility
 from jam.storage.item_extrinsics import ItemExtrinsics
-from jam.types.base.dictionary import Dictionary, decodable_dictionary
+from jam.types.base import decodable_dictionary, Dictionary
 from jam.types.base.integers.general import Int
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.protocol.core import Gas, ProgramCounter
+from jam.types.protocol.core import Gas, Register, ProgramCounter
 from jam.execution.pvm.register import Registers
 from jam.execution.pvm.memory import Memory
 from jam.services.historicalLookup import historical_lookup_fn
 from jam.types.protocol.core import ServiceId,TimeSlot
-from jam.state.components.delta import Delta
+from jam.types.state.delta import Delta
 from jam.types.base.sequences import ByteArray32
-from jam.types.work.item import ImportSpecs
 from jam.types.work.package import WorkPackage
-from jam.types.work.segment import MultiSegments, Segments,Segment
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from jam.types.work.segment import MultiSegments, Segment, Segments
+from jam.utils.codec import Codable
+from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.codec.primitives.integers import IntegerCodec
 from jam.utils.constants import  MAX_EXPORT_ITEM, PVM_MEMORY_PAGE_SIZE, SEGMENT_SIZE
-
-from jam.types.protocol.crypto import Hash
-from jam.utils.json.serde import JsonSerde
+from jam.utils.json import JsonSerde
 from jam.work_package.work_package import WorkPackageProcessing
 
+@decodable_dataclass
+@dataclass
+class IntegratedPVM(Codable, JsonSerde):
+    program_code:bytes
+    memory:Memory
+    instruction_counter: ProgramCounter
 
+@decodable_dictionary(Int,IntegratedPVM)
+class RefinementMap(Dictionary[Int,IntegratedPVM]):
+    """Integrated PVM Dict(m) """
 
+@decodable_dataclass
+@dataclass
+class RefineContext(Codable, JsonSerde):
+    m: RefinementMap
+    e: Segments
 
-class refineFunctions(INVF):
+class RefineFunctions(INVF):
 
-
+    @classmethod
     @INVF.register(17, gas_cost=10)
-    def historical_lookup(cls, gas: Gas, registers: Registers, memory: Memory, context: refine_context, service_id: ServiceId, delta: Delta, timeslot: TimeSlot):
+    def historical_lookup(cls, gas: Gas, registers: Registers, memory: Memory, context: RefineContext, service_id: ServiceId, delta: Delta, timeslot: TimeSlot):
 
+        a = None
         if delta[service_id] is not None and registers[7]==2**64-1:
             a=delta[service_id]
         elif delta[registers[7]] is not None:
             a=delta[registers[7]]
-        else:
-            a=None
-        h, o = registers[8:10]
+
+        [h, o] = registers[8:10]
 
         if not memory.is_accessible(h,32):
-            # Not returning right away to return memory(o,l)
-            v= False
-        elif a==None:
-            v= None
+            raise PANIC
+        elif a is not None:
+            v = historical_lookup_fn(a, timeslot, ByteArray32(memory.read(h,32)))
         else:
-            v=historical_lookup_fn(a,timeslot,ByteArray32(memory.read(h,32)))
+            registers[7] = HostStatus.NONE
+            return CONTINUE, registers, memory
 
-        f = min(registers[10], 0 if v is None or v is False else len(v))
-        l = min(registers[11], 0-f if v is None or v is False else len(v)-f)
+        f = min(int(registers[10]), len(v))
+        l = min(int(registers[11]), len(v)-f)
 
-        if v is False or not memory.is_accessible(o, l, True):
-            return (PANIC,registers[7],memory.read(o,l))
-        elif v is None:
-            return (CONTINUE,HostStatus.NONE,memory.read(o,l))
-        else:
-            return(CONTINUE,len(v),v[f:l])
+        if memory.is_accessible(o, l, True):
+            raise PANIC
 
+        registers[7] = Register(len(v))
+        memory.write(f, v[f:l])
+        return CONTINUE, registers, memory, context
+
+    @classmethod
     @INVF.register(18, gas_cost=10)
-    def fetch(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context,work_item_index:int,workpackage:WorkPackage,auth_trace:bytes,imp_segment:MultiSegments):
+    def fetch(cls,gas:Gas,registers:Registers,memory:Memory, context:RefineContext,work_item_index:int,workpackage:WorkPackage,auth_trace:bytes,imp_segment:MultiSegments):
 
         db=settings.db
-        if registers[10]==0
+        if registers[10]==0:
             v=workpackage.encode()
         elif registers[10]==1:
             v=auth_trace
@@ -106,8 +117,9 @@ class refineFunctions(INVF):
         else:
             return (CONTINUE,len(v),v[f:l])
 
+    @classmethod
     @INVF.register(19, gas_cost=10)
-    def export(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context,export_segment_offset:int):
+    def export(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext,export_segment_offset:int):
         p=registers[7]
         z=min(registers[8],SEGMENT_SIZE)
         if memory.is_accessible(p,z,True):
@@ -119,8 +131,9 @@ class refineFunctions(INVF):
         else:
             return(CONTINUE,export_segment_offset+len(context.e),context.e.append(Segment(x)))
 
+    @classmethod
     @INVF.register(20, gas_cost=10)
-    def machine(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
+    def machine(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
         [p_o,p_z,i]=registers[7:10]
         if memory.is_accessible(p_o,p_z):
             p=memory.read(p_o,p_z)
@@ -145,8 +158,9 @@ class refineFunctions(INVF):
         except:
             return (CONTINUE,HostStatus.HUH,context.m)
 
+    @classmethod
     @INVF.register(21, gas_cost=10)
-    def peek(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
+    def peek(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
         [n,o,s,z]=registers[7:11]
         if memory.is_accessible(o,z,True):
             return(PANIC,registers[7],memory)
@@ -159,9 +173,9 @@ class refineFunctions(INVF):
             return(CONTINUE,HostStatus.OK,memory)
 
 
-
+    @classmethod
     @INVF.register(22, gas_cost=10)
-    def poke(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
+    def poke(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
         [n,o,s,z]=registers[7:11]
 
         if memory.is_accessible(s,z):
@@ -169,14 +183,15 @@ class refineFunctions(INVF):
         elif n not in context.m:
             return(CONTINUE,HostStatus.WHO,context.m)
         elif not context.m[n].memory.is_accessible(o,z,True):
-            return(CONTINUE,OOB,context.m)
+            return(CONTINUE,HostStatus.OOB,context.m)
         else:
             context.m[n].memory.write(o,memory.read(s,z))
             return(CONTINUE,n,context.m)
 
 
+    @classmethod
     @INVF.register(23, gas_cost=10)
-    def zero(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
+    def zero(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
         [n,p,c]=registers[7:10]
         if n in context.m:
             u=context.m[n].memory
@@ -192,8 +207,9 @@ class refineFunctions(INVF):
             context.m[n].memory=u
             return(HostStatus.OK,context.m)
 
+    @classmethod
     @INVF.register(24, gas_cost=10)
-    def void(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
+    def void(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
         [n,p,c]=registers[7:10]
         if n in context.m:
             u=context.m[n].memory
@@ -209,8 +225,9 @@ class refineFunctions(INVF):
             context.m[n].memory=u
             return(HostStatus.OK,context.m)
 
+    @classmethod
     @INVF.register(25, gas_cost=10)
-    def invoke(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
+    def invoke(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
         [n,o]=registers[7,8]
         if memory.is_accessible(o,112,True):
             if n not in context.m:
@@ -243,9 +260,9 @@ class refineFunctions(INVF):
         else:
             return(PANIC,registers[7],registers[8],memory,context.m)
 
-
+    @classmethod
     @INVF.register(26, gas_cost=10)
-    def expunge(cls,gas:Gas,registers:Registers,memory:Memory,context:refine_context):
+    def expunge(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
         n=registers[7]
         if n not in context.m:
             return(HostStatus.WHO,context.m)

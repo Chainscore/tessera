@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.state.merkle import StateTrie
 from jam.state.utils.key_constructor import construct_state_key
-from jam.types import ServiceId, ByteArray32, U32, Bytes
-from jam.types.protocol.core import Balance, Gas
+from jam.types.base import Bytes, ByteArray32, U32
+from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.types.state.delta import ServiceCodeHash, Ao, Ai, LookupTable, Timestamps
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass

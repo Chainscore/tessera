@@ -3,7 +3,7 @@ from jam.state.merkle.node import Node
 from jam.state.merkle.utils import ZERO_HASH, NodeHash, NodeType, encode_branch, encode_leaf
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64, Bytes
 from jam.types.protocol.crypto import Hash
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 
 class StateTrie:
     """

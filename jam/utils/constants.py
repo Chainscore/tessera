@@ -1,5 +1,5 @@
 """Constants for the JAM protocol as defined in the specification."""
-from jam.chainspec import chain_config
+from jam.config.chainspec import chain_config
 
 # ───────────────────────────────────────
 # Constants (I.4.4, JAM Graypaper Order)
@@ -144,3 +144,8 @@ PVM_INIT_ZONE_SIZE = 2 ** 16
 
 # Z_R — Number of registers in the standard PVM
 REGISTER_COUNT = 13
+
+
+# ======= #
+VALIDATORS_SUPER_MAJORITY = 1 + 2 * VALIDATOR_COUNT // 3
+VALIDATORS_WONKY = VALIDATOR_COUNT // 3
