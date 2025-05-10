@@ -1,23 +1,21 @@
 from dataclasses import dataclass
 
-from jam.types.state import (
-    Alpha,
-    Phi,
-    Beta,
-    Eta,
-    Pi,
-    Psi,
-    Kappa,
-    Lambda_,
-    Rho,
-    Tau,
-    Chi,
-    Iota,
-    Nu,
-    Xi,
-    Gamma,
-    Delta
-)
+from jam.types.state.alpha import Alpha
+from jam.types.state.phi import Phi
+from jam.types.state.beta import Beta
+from jam.types.state.eta import Eta
+from jam.types.state.pi import Pi
+from jam.types.state.psi import Psi
+from jam.types.state.kappa import Kappa
+from jam.types.state.lambda_ import Lambda_
+from jam.types.state.rho import Rho
+from jam.types.state.tau import Tau
+from jam.types.state.chi import Chi
+from jam.types.state.iota import Iota
+from jam.types.state.nu import Nu
+from jam.types.state.xi import Xi
+from jam.types.state.gamma import Gamma
+from jam.types.state.delta import Delta
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.decorators import with_json_metadata

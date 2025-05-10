@@ -1,10 +1,10 @@
 from typing import Dict, Tuple
-from jam.pvm.errors import PvmError, PvmErrorCodes
-from jam.pvm.instructions.opcode import OpCode
-from jam.pvm.memory import Memory
-from jam.pvm.register import Registers
-from jam.pvm.status import ExecutionStatus, CONTINUE
-from jam.pvm.instructions.instruction_table import InstructionTable
+from jam.execution.pvm.status import PvmError, PANIC
+from jam.execution.pvm.instructions.opcode import OpCode
+from jam.execution.pvm.memory import Memory
+from jam.execution.pvm.register import Registers
+from jam.execution.pvm.status import ExecutionStatus, CONTINUE
+from jam.execution.pvm.instructions.instruction_table import InstructionTable
 from jam.types.protocol.core import Gas, ProgramCounter
 
 
@@ -22,7 +22,7 @@ class InstructionsWoArgs(InstructionTable):
         """
         OPC0: Trap the execution.
         """
-        raise PvmError(PvmErrorCodes.PANIC)
+        raise PANIC
 
     def fallthrough(
         self, registers: Registers, memory: Memory

@@ -1,11 +1,11 @@
 from typing import Dict, Protocol, Tuple
-from jam.pvm.instructions.opcode import OpCode
-from jam.pvm.memory import Memory
-from jam.pvm.register import Registers
-from jam.pvm.status import ExecutionStatus
+from jam.execution.pvm.instructions.opcode import OpCode
+from jam.execution.pvm.memory import Memory
+from jam.execution.pvm.register import Registers
+from jam.execution.pvm.status import ExecutionStatus
 from jam.types.base.integers.fixed import U8
 from jam.types.protocol.core import ProgramCounter
-# from jam.pvm.program import Program
+# from jam.execution.pvm.program import Program
 
 class InstructionTable(Protocol):
     """

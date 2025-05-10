@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 
 @contextmanager
 def open_database(path):

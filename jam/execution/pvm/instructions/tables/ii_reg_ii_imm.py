@@ -1,10 +1,10 @@
 from math import floor
 from typing import Dict
-from jam.pvm.instructions.opcode import OpCode, OpReturn
-from jam.pvm.memory import Memory
-from jam.pvm.register import Registers
-from jam.pvm.utils import PvmUtilities
-from jam.pvm.instructions.instruction_table import InstructionTable
+from jam.execution.pvm.instructions.opcode import OpCode, OpReturn
+from jam.execution.pvm.memory import Memory
+from jam.execution.pvm.register import Registers
+from jam.execution.pvm.utils import PvmUtilities
+from jam.execution.pvm.instructions.instruction_table import InstructionTable
 from jam.types.protocol.core import Gas, Register
 from jam.utils.codec.primitives.integers import IntegerCodec
 

@@ -15,8 +15,7 @@ from jam.types.header import OffendersMark
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import (
     EPOCH_LENGTH,
-    VALIDATORS_SUPER_MAJORITY,
-    VALIDATORS_WONKY,
+    VALIDATORS_SUPER_MAJORITY
 )
 
 # Define minimum requirements

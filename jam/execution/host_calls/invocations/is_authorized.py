@@ -1,8 +1,8 @@
 from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
-from jam.types import OpaqueHash
 from jam.types.protocol.core import CoreIndex, ProgramCounter
+from jam.types.protocol.crypto import OpaqueHash
 from jam.types.work.package import WorkPackage
 from jam.utils.constants import IS_AUTHORIZED_GAS
 
@@ -19,9 +19,9 @@ class PsiI(InvocationProtocol):
         }
 
     def execute(self):
-        if
+        _, pc = self.work_package.m_c
         PsiM(
-            self.work_package.code_hash, # TODO: update this
+            pc,
             ProgramCounter(0),
             IS_AUTHORIZED_GAS,
             self.core.encode(),

@@ -1,9 +1,8 @@
-from jam.types import (
+from jam.types.protocol.core import TimeSlot, ValidatorIndex
+from jam.types.protocol.crypto import (
     HeaderHash,
     StateRoot,
     OpaqueHash,
-    TimeSlot,
-    ValidatorIndex,
     BandersnatchVrfSignature,
 )
 from jam.types.base.null import Null

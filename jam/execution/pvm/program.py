@@ -1,10 +1,10 @@
 from math import floor
 from typing import List, Self, Tuple, Union
 
-from jam.pvm.errors import PvmError, PvmErrorCodes
-from jam.pvm.instructions.table_map import InstTableMap
-from jam.pvm.status import CONTINUE, HALT, PANIC, ExecutionStatus
-from jam.pvm.zeta import Zeta
+from jam.execution.pvm.status import PvmError
+from jam.execution.pvm.instructions.table_map import InstTableMap
+from jam.execution.pvm.status import CONTINUE, HALT, PANIC, ExecutionStatus
+from jam.execution.pvm.zeta import Zeta
 from jam.types.base.integers.fixed import U8, U32
 from jam.types.protocol.core import ProgramCounter
 from jam.utils.codec.codable import Codable

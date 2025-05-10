@@ -31,7 +31,7 @@ class Code(Codable):
         return PVM.execute(blob=self.code, program_counter=pc, gas=gas, registers=self.registers, memory=self.memory)
         
     @classmethod
-    def decode_from(cls, pc: bytes) -> None|"Self":
+    def decode_from(cls, pc: bytes) -> None|Self:
         try:
             offset = 0
             o_len, decoded = IntegerCodec.decode_from(3, pc, offset)
