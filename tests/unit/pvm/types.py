@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
-from jam.pvm.memory import Memory
-from jam.pvm.register import Registers
-from jam.pvm.status import ExecutionStatusCode
+from jam.execution.pvm.memory import Memory
+from jam.execution.pvm.register import Registers
+from jam.execution.pvm.status import ExecutionStatusCode
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.types.base.sequences.vector import Vector, decodable_vector

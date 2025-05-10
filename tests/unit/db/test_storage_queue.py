@@ -1,4 +1,4 @@
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.storage.queue import StorageQueue
 
 def test_storage_queue(db_path):

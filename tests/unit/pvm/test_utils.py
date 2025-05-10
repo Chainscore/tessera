@@ -1,4 +1,4 @@
-from jam.pvm.utils import PvmUtilities
+from jam.execution.pvm.utils import PvmUtilities
 
 
 def test_b_fn(): 

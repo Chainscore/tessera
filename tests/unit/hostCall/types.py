@@ -21,7 +21,7 @@ from jam.types.state.delta import Timestamps, AccountStorage, PreImageLookup
 from jam.types.protocol.validators import ValidatorVector
 from jam.types.state.phi import PhiVector
 from jam.types.state.chi import Chi
-from jam.pvm.pvm_memory import JsonPageMemory
+from jam.execution.pvm.memory import Memory
 from jam.hostCall.types import DeferredTransfers
 
 
@@ -98,7 +98,7 @@ class JsonP(Vector[Byte]):
 @dataclass
 class TestBoldM(Codable, JsonSerde):
     P: JsonP
-    U: JsonPageMemory
+    U: Memory
     I: Register
 
 
@@ -136,7 +136,7 @@ class TestRefineMap(Dictionary[String, TestBoldM]):
 @dataclass
 class TestCases(Codable, JsonSerde):
     initial_regs: TestRegister
-    initial_memory: JsonPageMemory
+    initial_memory: Memory
     initial_gas: Gas
     initial_service_account: TestService
     initial_service_index: U32
@@ -150,7 +150,7 @@ class TestCases(Codable, JsonSerde):
     initial_blob: Bytes
     initial_timeslot: U32
     expected_regs: TestRegister
-    expected_memory: JsonPageMemory
+    expected_memory: Memory
     expected_gas: Gas
     expected_service_account: TestService
     expected_delta: TestDelta

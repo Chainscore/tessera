@@ -1,4 +1,4 @@
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.state.accounts import AccountData
 from jam.state.ghost import GhostState
 from jam.state.state import setup_state, state

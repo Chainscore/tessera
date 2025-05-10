@@ -27,10 +27,9 @@ from jam.utils.constants import (
     MAX_IMPORT_ITEM,
     EXTRINSIC_COUNT,
     BASIC_ERASURE_SIZE,
-    MAX_WORK_PACKAGE_SIZE,
     SEGMENT_SIZE,
     REFINE_GAS,
-    ACCUMULATION_GAS
+    ACCUMULATION_GAS, MAX_ENCODED_WORK_PACKAGE_SIZE
 )
 
 from jam.types.protocol.core import SegmentRoot, CoreIndex, Gas
@@ -40,8 +39,8 @@ from jam.erasure_coding.erasure_code import ErasureCode
 from jam.merklization.binary_merkle import BMRFunctions
 
 
-from jam.hostCall.Refine import PsiR
-from jam.hostCall.invocation import PsiI
+from jam.execution.host_calls.invocations.refine import PsiR
+from jam.execution.host_calls.invocations.is_authorized import PsiI
 
 from tests.dummy.utils import create_dummy_bytes32
 
@@ -98,7 +97,7 @@ class WorkPackageProcessing:
             item_count = len(x.payload) + len(x.import_segments) * SEGMENT_SIZE + extrinsic_len
 
         package_size = auth_token + parameterization + item_count
-        if package_size > MAX_WORK_PACKAGE_SIZE:
+        if package_size > MAX_ENCODED_WORK_PACKAGE_SIZE:
             raise WorkPackageError(
                 WorkPackagesErrorCode.BAD_WORK_PACKAGE_SIZE,
                 "count of extrinsic more than are more than actual value"

@@ -1,7 +1,8 @@
 from typing import List, Tuple
 
-from jam.db.kv import KVStore
-from jam.types import U32
+from jam.config.data_stores import main_db
+from jam.storage.db.kv import KVStore
+from jam.types.base.integers import U32
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.crypto import Hash
@@ -11,16 +12,17 @@ from jam.types.work.package import WorkPackage
 
 class ItemExtrinsics:
     """Place to store and get extrinsics that are received along with Work Package"""
+    DB = main_db
+
 
     @classmethod
-    def store(cls, package: WorkPackage, data: List[Bytes], db: KVStore):
+    def store(cls, package: WorkPackage, data: List[Bytes]):
         """
         Stores the extrinsic data, decoded as per work items and extrinsic lengths we get from WP
 
         Args:
             package (WorkPackage): Relevent WP
             data ([Bytes]): Extrinsic data we receive with WP, seperated by Work Item
-            db (KVStore): Data store
 
         Raises:
             ValueError: If the extrinsic passed (to store) is invalid - i.e hashes/length dont match 
@@ -43,7 +45,8 @@ class ItemExtrinsics:
         
         # Storing data
         for key, value in to_store.items():
-            db.put(bytes(key), bytes(value))
+            cls.DB.put(bytes(key), bytes(value))
+
 
     @classmethod
     def encode(cls, wi_data: List[Bytes]) -> (Bytes, ExtrinsicSpecs):
@@ -62,8 +65,9 @@ class ItemExtrinsics:
             wi += ex_data
         return wi, extr_specs
 
+
     @classmethod
-    def get(cls, extrinsic_hash: ByteArray32, db: KVStore) -> bytes:
+    def get(cls, extrinsic_hash: ByteArray32) -> bytes:
         """Gets the relevent extrinsic, assuming we already know its hash (as its stored in WI)
 
         Args:
@@ -73,14 +77,18 @@ class ItemExtrinsics:
         Returns:
             Bytes
         """
-        return db.get(bytes(extrinsic_hash))
+        return cls.DB.get(bytes(extrinsic_hash))
 
 
     @classmethod
-    def compare(cls,work_item_extrinsic:ExtrinsicSpec,db:KVStore,extrinsic_hash: Optional[ByteArray32]=None)->bool:
-        if not extrinsic_hash:
-            item_extrinsic_value=db.get(bytes(work_item_extrinsic.hash))
-            return Hash.blake2b(item_extrinsic_value) == work_item_extrinsic.hash and len(item_extrinsic_value) == work_item_extrinsic.len
-        else:
-            extrinsic_value=db.get(bytes(extrinsic_hash))
-            return Hash.blake2b(extrinsic_value) == work_item_extrinsic.hash and len(extrinsic_value) == work_item_extrinsic.len
+    def get_all(cls, wp: WorkPackage) -> List[List[bytes]]:
+        result = []
+        for item in wp.items:
+            item_extr = []
+            for extrinsics in item.extrinsic:
+                ext = cls.get(extrinsics.hash)
+                if len(ext) != extrinsics.len:
+                    raise ValueError("Critical: Invalid extrinsic!")
+                item_extr.append(ext)
+            result.append(item_extr)
+        return result

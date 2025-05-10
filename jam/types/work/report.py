@@ -1,15 +1,12 @@
 """Work report types for the JAM protocol."""
 
 from dataclasses import dataclass
-
-from jam.types.base import Vector
 from jam.types.base.null import Nullable
 from jam.types.base.integers import U8, U16, U32, U64
 from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.sequences.vector import Vector, decodable_vector
-
 from jam.types.work.package import WorkPackage
 from jam.types.work.refine_context import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
@@ -23,7 +20,6 @@ from jam.types.protocol.core import (
     WorkPackageHash,
 )
 from jam.types.work.segment import MultiSegments
-
 from jam.utils.json.serde import JsonSerde
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass

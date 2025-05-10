@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from jam.pvm.pvm import PVM
+from jam.execution.pvm.pvm import PVM
 from .types import Testcase
 
 TEST_DATA_DIR = Path("tests/unit/pvm")

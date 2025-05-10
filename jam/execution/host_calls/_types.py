@@ -1,12 +1,19 @@
 from dataclasses import dataclass
 from typing_extensions import Optional
+
+from jam.accumulation.types import StateContext
 from jam.execution.pvm.memory import Memory
-from jam.state.components.delta import Delta
+from jam.types.protocol.crypto import OpaqueHash
+from jam.types.state.chi import Chi
+from jam.types.state.delta import Delta
+
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.types.protocol.core import Balance, Gas, ProgramCounter, ServiceId
+from jam.types.protocol.core import Balance, Gas, ProgramCounter, ServiceId, WorkPackageHash
+from jam.types.state.iota import Iota
+from jam.types.state.phi import Phi
 from jam.types.work.report import WorkExecResult
 from jam.types.work.segment import Segments
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -14,38 +21,22 @@ from jam.utils.codec.codable import Codable
 from jam.utils.json import JsonSerde
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 
-# from typing import List
-# from jam.types.base.integers.general import Int
-# from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes, ByteArray128
-# from jam.utils.json.decorators import with_json_metadata
+from typing import List
+from jam.types.base.integers.general import Int
+from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes, ByteArray128
+from jam.utils.json.decorators import with_json_metadata
 
-# from jam.state.components.delta import Timestamps
-# # from jam.state.components.delta import PartialState
-# from jam.types.base.sequences.vector import Vector, decodable_vector
-# from jam.types.protocol.core import Balance, Gas, ServiceId
-# from jam.pvm.register import Register
-# from jam.pvm.pvm_memory import PageMemory
+from jam.types.state.delta import Timestamps
+# from jam.state.components.delta import PartialState
+from jam.types.base.sequences.vector import Vector, decodable_vector
+from jam.types.protocol.core import Balance, Gas, ServiceId
+
 
 
 
 #Refine Types
-@decodable_dataclass
-@dataclass
-class integrated_pvm_type(Codable, JsonSerde):
-    program_code:bytes
-    memory:Memory
-    instruction_counter: ProgramCounter
 
 
-@decodable_dictionary(Int,integrated_pvm_type)
-class refinement_map(Dictionary[Int,integrated_pvm_type]):
-    """Integrated PVM Dict(m) """
-
-@decodable_dataclass
-@dataclass
-class refine_context(Codable, JsonSerde):
-    m: refinement_map
-    e: Segments
 
 # Accumulation Types
 @decodable_dataclass
@@ -76,7 +67,7 @@ class accu_Xcontext(Codable, JsonSerde):
     partial_state: StateContext
     i_index: ServiceId
     deferred_transfers: DeferredTransfers
-    hash: Optional[Bytes] = None
+    hash: Optional[Bytes]
     preimage:preimage_dict
 
 @decodable_dataclass

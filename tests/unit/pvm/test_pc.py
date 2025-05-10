@@ -1,5 +1,5 @@
-from jam.pvm.code import Code
-from jam.pvm.status import HALT
+from jam.execution.pvm.code import Code
+from jam.execution.pvm.status import HALT
 from jam.types.protocol.core import Gas
 
 fib_instructions = [0,0,39,54,7,0,0,255,254,51,8,1,51,9,1,40,3,0,149,119,255,81,7,12,100,138,200,152,8,100,169,40,243,100,135,51,8,51,9,1,50,0,65,210,164,84,53]

@@ -1,14 +1,14 @@
 from typing import List
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
+from jam.types.extrinsics import TicketEnvelope, TicketBody, TicketsExtrinsic
 from jam.types.state.eta import Eta
 from jam.types.state.kappa import Kappa
 from jam.types.state.lambda_ import Lambda_
 from jam.types.state.sigma import Sigma
-from jam.types.base.integers.fixed import U64
+from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.null import Null
 from jam.types.header import OptionalEpochMark, OptionalTicketsMark, TicketsMark
 from jam.types.state.gamma import GammaS, GammaSTickets
-from jam.types import TicketBody, U32, TicketsExtrinsic, TicketEnvelope
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.block import Block

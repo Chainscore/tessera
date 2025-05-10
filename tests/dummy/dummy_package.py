@@ -1,4 +1,4 @@
-from jam.types import U32, Bytes, Int, Vector
+from jam.types.base import Bytes, U32, Int, Vector
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import WorkReportHash
 
