@@ -60,16 +60,16 @@ class RefineFunctions(INVF):
 
         if not memory.is_accessible(h,32):
             raise PANIC
-        elif a is not None:
-            v = historical_lookup_fn(a, timeslot, ByteArray32(memory.read(h,32)))
-        else:
+        elif a is None:
             registers[7] = HostStatus.NONE
             return CONTINUE, registers, memory
+        else:
+            v = historical_lookup_fn(a, timeslot, ByteArray32(memory.read(h,32)))
 
         f = min(int(registers[10]), len(v))
         l = min(int(registers[11]), len(v)-f)
 
-        if memory.is_accessible(o, l, True):
+        if not memory.is_accessible(o, l, True):
             raise PANIC
 
         registers[7] = Register(len(v))
@@ -79,7 +79,6 @@ class RefineFunctions(INVF):
     @classmethod
     @INVF.register(18, gas_cost=10)
     def fetch(cls,gas:Gas,registers:Registers,memory:Memory, context:RefineContext,work_item_index:int,workpackage:WorkPackage,auth_trace:bytes,imp_segment:MultiSegments):
-
         db=settings.db
         if registers[10]==0:
             v=workpackage.encode()
@@ -87,7 +86,6 @@ class RefineFunctions(INVF):
             v=auth_trace
         elif registers[10]==2 and registers[11]< len(workpackage.items):
             v=workpackage.items[registers[11]].payload
-
         # TODO: Comparing the context(x (not m,e)) as WI Extrinsics from the db(dummy)
         # https://graypaper.fluffylabs.dev/#/cc517d7/35990035a700?v=0.6.5
         elif registers[10]==3 and registers[11]<len(workpackage.items) and  ItemExtrinsics.compare(work_item_extrinsic=workpackage.items[registers[11]].extrinsic[registers[12]],db=db):
@@ -111,11 +109,17 @@ class RefineFunctions(INVF):
         f = min(registers[8], length)
         l=min(registers[9],length-f)
         if v is not memory.is_accessible(o, l, True):
-            return (PANIC,registers[7],memory.read(o,l))
+            raise PANIC
+            # return (PANIC,registers[7],memory.read(o,l))
         elif v is False:
-            return (CONTINUE,HostStatus.NONE,memory.read(o,l))
+            registers[7]=HostStatus.NONE
+            return(CONTINUE,registers,memory,context)
+            # return (CONTINUE,HostStatus.NONE,memory.read(o,l))
         else:
-            return (CONTINUE,len(v),v[f:l])
+            registers[7]=len(v)
+            memory.write(o,v[f:l])
+            return (CONTINUE,registers,memory,context)
+            # return (CONTINUE,registers,v[f:l])
 
     @classmethod
     @INVF.register(19, gas_cost=10)
@@ -125,11 +129,16 @@ class RefineFunctions(INVF):
         if memory.is_accessible(p,z,True):
             x=WorkPackageProcessing.zero_padding(value=Bytes(memory.read(p,z)),n=Int(SEGMENT_SIZE))
         else:
-            return (PANIC,registers[7],context.m)
+            raise PANIC
+            # return (PANIC,registers[7],context.m)
         if export_segment_offset+len(context.e)>= MAX_EXPORT_ITEM:
-            return (CONTINUE,HostStatus.HUH,context.m)
+            registers[7]=HostStatus.HUH
+            return CONTINUE,registers,memory
+
         else:
-            return(CONTINUE,export_segment_offset+len(context.e),context.e.append(Segment(x)))
+            context.e.append(Segment(x))
+            registers[7]=export_segment_offset+len(context.e)
+            return CONTINUE,registers,memory,context
 
     @classmethod
     @INVF.register(20, gas_cost=10)
@@ -138,10 +147,7 @@ class RefineFunctions(INVF):
         if memory.is_accessible(p_o,p_z):
             p=memory.read(p_o,p_z)
         else:
-            # p=False
-            return (PANIC,registers[7],context.m)
-
-
+            raise PANIC
         # Finding the lowest Natural number not existing in the commitment_map iterating from 1 and goes on...
         # 2nd approach by using sorted list...
         # https://graypaper.fluffylabs.dev/#/cc517d7/352e02353a02?v=0.6.5
@@ -153,24 +159,30 @@ class RefineFunctions(INVF):
         try:
             Program.decode_from(p)
             # TODO: Updating the commitment map, need to see how the dict is appended
-            context.m[n]=integrated_pvm_type(program_code=p,memory=u,instruction_counter=i)
-            return(CONTINUE,n,context.m)
+            context.m[n]=IntegratedPVM(program_code=p,memory=u,instruction_counter=i)
+            registers[7]=n
+            return CONTINUE,registers,memory, context
         except:
-            return (CONTINUE,HostStatus.HUH,context.m)
+            registers[7]=HostStatus.HUH
+            return CONTINUE,registers,context
 
     @classmethod
     @INVF.register(21, gas_cost=10)
     def peek(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
         [n,o,s,z]=registers[7:11]
-        if memory.is_accessible(o,z,True):
-            return(PANIC,registers[7],memory)
+        if not memory.is_accessible(o,z,True):
+            raise PANIC
+            # return(PANIC,registers[7],memory)
         elif n not in context.m:
-            return(CONTINUE,HostStatus.WHO,memory)
+            registers[7]=HostStatus.WHO
+            return CONTINUE,registers,memory
         elif not context.m[n].memory.is_accessible(s,z):
-            return(CONTINUE,HostStatus.OOB,memory)
+            registers[7]=HostStatus.OOB
+            return CONTINUE,registers,memory
         else:
             memory.write(o,context.m[n].memory.read(s,z))
-            return(CONTINUE,HostStatus.OK,memory)
+            registers[7]=HostStatus.OK
+            return CONTINUE,registers,memory
 
 
     @classmethod
@@ -178,15 +190,19 @@ class RefineFunctions(INVF):
     def poke(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
         [n,o,s,z]=registers[7:11]
 
-        if memory.is_accessible(s,z):
-            return(PANIC,registers[7],context.m)
+        if not memory.is_accessible(s,z):
+            raise PANIC
+            # return(PANIC,registers[7],context.m)
         elif n not in context.m:
-            return(CONTINUE,HostStatus.WHO,context.m)
+            registers[7]=HostStatus.WHO
+            return CONTINUE,registers,memory
         elif not context.m[n].memory.is_accessible(o,z,True):
-            return(CONTINUE,HostStatus.OOB,context.m)
+            registers[7]=HostStatus.OOB
+            return CONTINUE,registers,memory
         else:
             context.m[n].memory.write(o,memory.read(s,z))
-            return(CONTINUE,n,context.m)
+            registers[7]=n
+            return CONTINUE,registers,memory,context
 
 
     @classmethod
@@ -199,13 +215,17 @@ class RefineFunctions(INVF):
             u.alter_accessibility(p,c,Accessibility.write)
         else:
             # u=False
-            return (HostStatus.WHO,context.m)
+            registers[7]=HostStatus.WHO
+            return (registers,context)
 
         if p<16 or p+c>= 2**32/PVM_MEMORY_PAGE_SIZE:
-            return(HostStatus.HUH,context.m)
+            registers[7]=HostStatus.HUH
+            return(registers,context)
         else:
             context.m[n].memory=u
-            return(HostStatus.OK,context.m)
+            registers[7]=HostStatus.OK
+
+            return registers,memory,context
 
     @classmethod
     @INVF.register(24, gas_cost=10)
@@ -258,7 +278,8 @@ class RefineFunctions(INVF):
                     return(CONTINUE,ExecutionStatus.HALT,registers[8],memory,context.m)
 
         else:
-            return(PANIC,registers[7],registers[8],memory,context.m)
+            raise PANIC
+            # return(PANIC,registers[7],registers[8],memory,context.m)
 
     @classmethod
     @INVF.register(26, gas_cost=10)

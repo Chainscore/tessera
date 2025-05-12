@@ -18,7 +18,7 @@ class OperandTuple(Codable, JsonSerde):
     l: OpaqueHash
     a: Bytes
     k: WorkPackageHash
-    
+
 @decodable_vector(OperandTuple)
 class OperandTuples(Vector[OperandTuple]):
     ...
