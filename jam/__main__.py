@@ -3,14 +3,13 @@ import json
 from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
 from jam.db.kv import KVStore
-
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.utils.dummy_wpb import wp_producer
-
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
-from jam.state.state import State
+from jam.types.state.sigma import Sigma
+from jam.state.state import setup_state
 from jam.types.base.integers.fixed import U16, U8
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic
 from jam.types.block import Block
@@ -104,8 +103,8 @@ async def main(
             block.header = Header.from_json(genesis["header"])
             block.save(db)
 
-            state = State.genesis()
-            state.save(db)
+            # Set genesis state
+            setup_state(Sigma.genesis(), db)
 
             block_producer = BlockProducer(tsr_node, db)
 
