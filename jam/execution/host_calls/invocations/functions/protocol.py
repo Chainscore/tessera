@@ -6,7 +6,7 @@ from jam.types.protocol.core import Gas, Register
 
 
 class InvocationFunctions(Protocol):
-    HANDLERS = {}
+    HANDLERS: Dict[str, ] = {}
 
     @classmethod
     def register(cls, host_call: int, gas_cost: int):

@@ -8,6 +8,7 @@ from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.types.state.delta import ServiceCodeHash, Ao, Ai, LookupTable, Timestamps
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
+from jam.utils.codec.primitives.bytes import BytesCodec
 from jam.utils.json import JsonSerde
 from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 
@@ -99,6 +100,12 @@ class Account:
     @property
     def timestamps(self):
         return TimestampsView(self.id, self.DB, self.TRIE)
+
+    def m_c(self) -> (bytes, bytes):
+        service_data = self.lookup[self.code_hash])
+        pm, offset = BytesCodec.decode_from(service_data)
+        pc = service_data[offset:]
+        return pm, pc
 
 
 class DeltaView:
