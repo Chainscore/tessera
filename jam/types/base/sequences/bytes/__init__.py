@@ -1,5 +1,6 @@
 from .byte_array import (
     ByteArray8,
+    ByteArray12,
     ByteArray16,
     ByteArray32,
     ByteArray64,
@@ -14,6 +15,7 @@ from .bytes import Bytes
 
 __all__ = [
     "ByteArray8",
+    "ByteArray12",
     "ByteArray16",
     "ByteArray32",
     "ByteArray64",
