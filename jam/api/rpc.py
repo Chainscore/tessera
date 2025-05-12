@@ -14,6 +14,8 @@ from jam.types.header import Header
 from jam.types.protocol.core import TimeSlot
 from jam.types import  U32
 from jam.storage.queue import StorageQueue
+from jam.config.data_stores import main_db #swithing to main_db
+
 
 # Initialize FastAPI with metadata for Swagger UI
 app = FastAPI(
@@ -28,25 +30,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# db path
-db_path = tempfile.mkdtemp()
+db = main_db
+# Get state and block from db
+state = State.load(self.db)
+block = Block.load(state.tau, self.db)
 
-# Initialize store
-db = KVStore(db_path)
-state = State.genesis()
-db_block = Block.load(TimeSlot(0), db)
-state.save(db)
-# print(state.load(db, "0x0023000000000000478648cd19b4f812f897a26976ecf312eac28508b4368d0c"))
-# Load the state from the database
-db_state = State.load(db)
-
-# print("header hash", Header.__hash__(db_block.header))
-# print("hash bytes to hex", Header.__hash__(db_block.header).to_bytes(32).hex())
-# print("hash arrray", list(Header.__hash__(db_block.header).to_bytes(32)))
-# hash_array = list(Header.__hash__(db_block.header).to_bytes(32))
-# hash_bytes = bytes(hash_array)
-# print(hash_bytes)
-# print("db_block.header.slot", db_state)
 
 # Following the etherum json rpc api structure
 """
@@ -103,7 +91,7 @@ async def rpc_handler(request: RpcRequest):
         return RpcResponse(
             jsonrpc="2.0",
             id=request.id,
-            result=[Header.__hash__(db_block.header), int(db_block.header.slot)],
+            result=[Header.__hash__(block.header), int(block.header.slot)],
         )
 
     elif method == "finalizedBlock":
@@ -112,7 +100,7 @@ async def rpc_handler(request: RpcRequest):
             jsonrpc="2.0",
             id=request.id,
             result=[
-                Header.__hash__(Finality.load_final(db).header),
+                Header.__hash__(Finality.load_final(main).header),
                 int(Finality.load_final(db).header.slot),
             ],
         )
@@ -129,7 +117,7 @@ async def rpc_handler(request: RpcRequest):
             )
         if len(params):
 
-            if db_block.header.slot == U32(0):
+            if block.header.slot == U32(0):
                 return RpcResponse(
                     jsonrpc="2.0",
                     id=request.id,
@@ -139,9 +127,9 @@ async def rpc_handler(request: RpcRequest):
                 },
                 )
 
-            if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32):
+            if bytes(params["Hash"]) == hash(block.header).to_bytes(32):
                 # Return the parent block
-                parent_block = Block.load_parent(db_block.header.slot, db)
+                parent_block = Block.load_parent(block.header.slot, db)
                 print("parent_block.header.slot", parent_block.header.slot)
 
                 return RpcResponse(
@@ -181,12 +169,12 @@ async def rpc_handler(request: RpcRequest):
                 },
             )
         
-        if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32):
+        if bytes(params["Hash"]) == hash(block.header).to_bytes(32):
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
                 result=[
-                    bytes(db_block.header.parent_state_root).hex(),
+                    bytes(block.header.parent_state_root).hex(),
                     ],
             )
         else:
@@ -218,11 +206,11 @@ async def rpc_handler(request: RpcRequest):
                 },
             )
 
-        if bytes(params["Hash"]) == Header.__hash__(db_block.header).to_bytes(32):
+        if bytes(params["Hash"]) == Header.__hash__(block.header).to_bytes(32):
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
-                result=[db_state.pi.encode()]
+                result=[state.pi.encode()]
             )
         else:
             return RpcResponse(
@@ -265,11 +253,11 @@ async def rpc_handler(request: RpcRequest):
             )
 
         #TODO: check if service id is in the state 
-        if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
+        if bytes(params["Hash"]) == hash(block.header).to_bytes(32) :
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
-                result=[db_state.delta]
+                result=[state.delta]
             )
         else:
             return RpcResponse(
@@ -303,11 +291,11 @@ async def rpc_handler(request: RpcRequest):
             )
 
         #TODO: check if service id is in the state 
-        if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
+        if bytes(params["Hash"]) == hash(block.header).to_bytes(32) :
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
-                result=[db_state.delta]
+                result=[state.delta]
             )
         else:
             return RpcResponse(
@@ -343,11 +331,11 @@ async def rpc_handler(request: RpcRequest):
             )
 
         #TODO: check if service id is in the state 
-        if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
+        if bytes(params["Hash"]) == hash(block.header).to_bytes(32) :
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
-                result=[db_state.delta]
+                result=[state.delta]
             )
         else:
             return RpcResponse(
@@ -392,11 +380,11 @@ async def rpc_handler(request: RpcRequest):
                 )
 
             #TODO: check if service id is in the state 
-            if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
+            if bytes(params["Hash"]) == hash(block.header).to_bytes(32) :
                 return RpcResponse(
                     jsonrpc="2.0", 
                     id=request.id, 
-                    result=[db_state.delta]
+                    result=[state.delta]
                 )
             else:
                 return RpcResponse(
@@ -429,11 +417,11 @@ async def rpc_handler(request: RpcRequest):
                 )
 
             #TODO: check if service id is in the state 
-            if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
+            if bytes(params["Hash"]) == hash(block.header).to_bytes(32) :
                 return RpcResponse(
                     jsonrpc="2.0", 
                     id=request.id, 
-                    result=[db_state.delta]
+                    result=[state.delta]
                 )
             else:
                 return RpcResponse(
@@ -466,11 +454,11 @@ async def rpc_handler(request: RpcRequest):
                 )
 
             #TODO: check if service id is in the state 
-            if bytes(params["Hash"]) == hash(db_block.header).to_bytes(32) :
+            if bytes(params["Hash"]) == hash(block.header).to_bytes(32) :
                 return RpcResponse(
                     jsonrpc="2.0", 
                     id=request.id, 
-                    result=[db_state.delta]
+                    result=[state.delta]
                 )
             else:
                 return RpcResponse(
@@ -563,7 +551,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         response = RpcResponse(
                             jsonrpc="2.0",
                             id=request["id"],
-                            result=[db_state.pi.encode()]
+                            result=[state.pi.encode()]
                         )
                         await websocket.send_text(response.json())
                     elif method == "unsubscribe" and "params" in request:
