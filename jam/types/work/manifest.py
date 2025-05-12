@@ -38,8 +38,8 @@ class SuperSegments(Vector[MultiSegments]):
 class SegmentDict(Dictionary[ExportsRoot, Segments]):
     ...
 
-@dataclass
 @decodable_dataclass
+@dataclass
 class ProvedSegments(Codable):
     segment: Segments
     proof: Segments
@@ -48,8 +48,8 @@ class ProvedSegments(Codable):
 class Assurers(Vector[ValidatorIndex]):
     ...
 
-@dataclass
 @decodable_dataclass
+@dataclass
 class ReportAssurers(Codable):
     report_hash: WorkReportHash
     assurers: Assurers

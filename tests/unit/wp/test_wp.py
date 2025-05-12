@@ -1,43 +1,33 @@
-import shutil
-import tempfile
 from jam.merklization import BMRFunctions
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
-from jam.types.base.sequences.vector import Vector
-from jam.types.work.report import WorkPackageBundle
+from jam.work_package.stores.segments import SegmentsDA
 from jam.work_package.work_package import WorkPackageProcessing
-from jam.work_package.package_db import SegmentStore, BundleStore
 from jam.db.kv import KVStore
-from jam.types.work.manifest import Segments, Segment, ByteArray4104
+from jam.types.work.manifest import Segments, Segment, ByteArray4104, ProvedSegments
 from tests.dummy.dummy_bundle import create_dummy_bundle
 from tests.dummy.utils import create_dummy_bytes32, create_dummy_bytes4104
 
 
-def test_segment_store():
+def test_segment_store(db_path):
     print("starting")
-    segment_db = SegmentStore()
+    d3l = KVStore(db_path)
+    segment_db = SegmentsDA(d3l)
+
     segment = create_dummy_bytes4104()
     export_segment = Segments([])
     export_segment.append(segment)
     print(export_segment)
     package_processing = WorkPackageProcessing()
     paged_proof = package_processing.paged_proof(export_segment)
-    segment_db.put(export_segment, paged_proof)
-    print("stored successfully")
-    merkle = BMRFunctions()
-    e = BMRFunctions.cd_merkle_fn(merkle, export_segment)
-    imports, proof = segment_db.get(e)
-    print(imports)
-    print("proof: ", proof)
-    segment_db.close()
 
-def test_bundle_store():
-    bundle_db = BundleStore()
-    root = create_dummy_bytes32()
-    dummy_bundle = create_dummy_bundle()
-    print("dummy bundle:", dummy_bundle)
-    bundle_db.put(bundle_root=root, bundle=dummy_bundle)
-    fetched_bundle = bundle_db.get(bundle_root=root)
-    print(fetched_bundle)
-    bundle_db.close()
-    print("db closed")
+    proved_segments = ProvedSegments(segment=export_segment, proof=paged_proof)
+
+    merkle = BMRFunctions()
+    e = merkle.cd_merkle_fn(export_segment)
+    segment_db.put(e, proved_segments)
+    print("stored successfully")
+
+    data = segment_db.get(e)
+
+    assert  (export_segment, paged_proof) == data
+    segment_db.close()
 

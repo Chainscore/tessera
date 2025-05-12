@@ -133,7 +133,7 @@ class BMRFunctions:
             trace.append(Bytes(bytes(node)))
 
             new_ind = self._p_i(values, index)
-            trace_nodes = self._trace_fn(self._p_bool(values, index,True), index - new_ind, hash_fn)
+            trace_nodes = self.trace_fn(self._p_bool(values, index,True), index - new_ind, hash_fn)
 
             trace.extend(trace_nodes)
 
@@ -209,7 +209,7 @@ class BMRFunctions:
 
         leaves = self._preprocessor_fn(values, hash_fn)
 
-        path = self._trace_fn(leaves, ind, hash_fn)
+        path = self.trace_fn(leaves, ind, hash_fn)
         return path[:sz]
 
     def leaf_page_fn(

@@ -1,6 +1,7 @@
 from typing import Tuple
 
 from jam.db.kv import KVStore
+from jam.types import Null
 
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import WorkPackageHash, ExportsRoot, ErasureRoot, WorkReportHash
@@ -178,6 +179,21 @@ class ErasureShardsMap(DA):
 
         return ss_roots
 
+    def get_ss_root(self, root: ErasureRoot, shard_index: ShardIndex):
+        key = self.prefix + root.encode()
+        data = self.db.get(key)
+        if data is None:
+            raise KeyError("Shards not found in DA")
+
+        data, _ = ShardKeyUnits.decode_from(data)
+
+        for key in data:
+            ss_key = SSKeysUnit(key.shard_index, key.segment_shard_root)
+            if key.shard_index == shard_index:
+                return ss_key
+
+        return Null
+
     def get_bs_hashes(self, root: ErasureRoot) -> BSKeysUnits:
         key = self.prefix + root.encode()
         data = self.db.get(key)
@@ -192,6 +208,21 @@ class ErasureShardsMap(DA):
             bs_hashes.append(bs_key)
 
         return bs_hashes
+
+    def get_bs_hash(self, root: ErasureRoot, shard_index: ShardIndex):
+        key = self.prefix + root.encode()
+        data = self.db.get(key)
+        if data is None:
+            raise KeyError("Shards not found in DA")
+
+        data, _ = ShardKeyUnits.decode_from(data)
+
+        for key in data:
+            bs_key = BSKeysUnit(key.shard_index, key.bundle_shard_hash)
+            if key.shard_index == shard_index:
+                return bs_key
+
+        return Null
 
     def delete(self, root: ErasureRoot) -> None:
         key = self.prefix + root.encode()

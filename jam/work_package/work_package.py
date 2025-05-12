@@ -449,8 +449,8 @@ class WorkPackageProcessing:
 
         pages: Segments = Segments([])
         for x in range(page_count):
-            path = self.merkle.merkle_path_fn(values=segments, size=Int(6), index=Int(x))
-            leaf = self.merkle.leaf_page_fn(values=segments, size=Int(6), index=Int(x))
+            path = self.merkle.merkle_path_fn(values=segments, size=6, index=x)
+            leaf = self.merkle.leaf_page_fn(values=segments, size=6, index=x)
             merkle_path = bytes(len(path)) + Vector(path).encode()
             leaf =  bytes(len(leaf)) + leaf.encode()
 
@@ -484,6 +484,7 @@ class WorkPackageProcessing:
         n = len(export_segments)
 
         erasure_codec = ErasureCode()
+        print("paplu", settings.D3L_PATH)
         d3l = KVStore(settings.D3L_PATH)
 
         # Build Bundle Shards
