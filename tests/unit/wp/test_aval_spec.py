@@ -1,4 +1,4 @@
-from jam.types.work.segment import Segments
+from jam.types.work.manifest import Segments
 
 from jam.work_package.work_package import WorkPackageProcessing
 from tests.dummy.utils import create_dummy_bytes32, create_dummy_bytes, create_dummy_bytes4104

@@ -1,7 +1,7 @@
 import random
 
 from jam.types.base.sequences.bytes.byte_array import ByteArray32, ByteArray12
-from jam.types.work.segment import ByteArray4104
+from jam.types.work.manifest import ByteArray4104
 
 from jam.types.base.sequences.bytes.byte_array import ByteArray32, ByteArray64
 
