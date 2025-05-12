@@ -6,6 +6,7 @@ from jam.types.base.sequences.bytes import ByteArray32, Bytes
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from jam.utils.codec.primitives.bytes import BytesCodec
 from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 from jam.utils.json import JsonSerde
 from jam.types.protocol.crypto import Hash
@@ -94,6 +95,12 @@ class AccountData(Codable, JsonSerde):
     @property
     def t(self):
         return At(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o)
+
+    def m_c(self) -> (bytes, bytes):
+        service_data = self.lookup[self.code_hash])
+        pm, offset = BytesCodec.decode_from(service_data)
+        pc = service_data[offset:]
+        return pm, pc
 
 
 @decodable_dictionary(ServiceId, AccountData)
