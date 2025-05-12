@@ -1,16 +1,21 @@
 from math import ceil
 from typing import Tuple
 
-from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray64
+from jam.config.settings import settings
+from jam.db.kv import KVStore
+from jam.types.base.sequences.bytes import Bytes, Byte
 from jam.types.base.sequences.vector import Vector
 
 from jam.types.base.integers.general import Int
-from jam.types.base.integers.fixed import U8, U16, U64, U32
+from jam.types.base.integers.fixed import U8, U16, U64
 
 
 from jam.types.work.item import WorkItem, ExtrinsicSpec
 from jam.types.work.package import  WorkPackage
-from jam.types.work.segment import Segments, Segment, MultiSegments
+from jam.types.work.manifest import Segments, Segment, MultiSegments, Justifications, Justification, \
+    Extrinsics, SegmentDict, MultiJustifications, MultiExtrinsics, ProvedSegments
+from jam.types.work.shard import BundleShardHashes, BundleShardUnit, SegmentsShards, \
+    SegmentsShard, SegmentsShardRoots, SegmentsShardUnit, ShardKeys, ShardKey
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
 from jam.types.work.report import (
     WorkResult,
@@ -19,7 +24,7 @@ from jam.types.work.report import (
     WorkExecResult,
     WorkReport,
     WorkPackageSpec,
-    SegmentRootLookup, WorkPackageBundle, SuperSegments, Justifications, Extrinsics
+    SegmentRootLookup, WorkPackageBundle
 )
 
 from jam.utils.constants import (
@@ -42,50 +47,37 @@ from jam.merklization.binary_merkle import BMRFunctions
 
 from jam.hostCall.Refine import PsiR
 from jam.hostCall.invocation import PsiI
+from jam.work_package.stores.audits import AuditShardsDA
+from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap, ErasureShardsMap
+from jam.work_package.stores.reports import ReportsDA
+from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
 
-from tests.dummy.utils import create_dummy_bytes32
-
-from jam.work_package.package_db import BundleStore, SegmentStore, ErasureShardsKeysMap, SegmentShardMap, \
-    BundleShardMap, ReportStore
-
-from hashlib import blake2b
-
-from jam.network.node import Node
 from jam.types.protocol.crypto import WorkReportHash
 
-
-
-class WorkPackageProcessing:
-
-    segment_root_lookup_dict: SegmentRootLookup
-    segments: MultiSegments
-    bundle: WorkPackageBundle
-    # d: ??
-
-    def __init__(self):
-        self.merkle = BMRFunctions()
+class WorkPackageValidation:
+    """Functions to validate work package"""
 
     # https://graypaper.fluffylabs.dev/#/68eaa1f/1a9f001ad000?v=0.6.4
     @staticmethod
-    def export_count (item : WorkItem):
+    def export_count(item: WorkItem):
         if item.export_count > MAX_EXPORT_ITEM:
             raise WorkPackageError(
                 WorkPackagesErrorCode.BAD_EXPORT_ITEM,
                 "count of import segment are more than actual value"
             )
 
-    #https://graypaper.fluffylabs.dev/#/68eaa1f/1a9f001ad000?v=0.6.4
+    # https://graypaper.fluffylabs.dev/#/68eaa1f/1a9f001ad000?v=0.6.4
     @staticmethod
-    def import_count(item : WorkItem):
+    def import_count(item: WorkItem):
         if item.import_segments > MAX_IMPORT_ITEM:
-            raise WorkPackageError (
+            raise WorkPackageError(
                 WorkPackagesErrorCode.BAD_IMPORT_ITEM,
                 "count of import segment are more than actual value"
             )
 
     # https://graypaper.fluffylabs.dev/#/68eaa1f/1a9f001ad000?v=0.6.4
     @staticmethod
-    def extrinsic_count(item : WorkItem):
+    def extrinsic_count(item: WorkItem):
         if item.extrinsic > EXTRINSIC_COUNT:
             raise WorkPackageError(
                 WorkPackagesErrorCode.BAD_EXTRINSIC_COUNT,
@@ -152,8 +144,52 @@ class WorkPackageProcessing:
             print(f"WP Validation failed! Error {err.code}: {err.message}")
             return False
 
+class WorkPackageProcessing:
+
+    merkle: BMRFunctions
+    sr_lookup: SegmentRootLookup
+    segments_lookup: Vector[SegmentDict]
+
+    def __init__(self):
+        self.merkle = BMRFunctions()
+        self.sr_lookup = SegmentRootLookup({})
+        self.segments_lookup = Vector([])
+
+    def build_lookup(self, p: WorkPackage) -> SegmentRootLookup:
+        d3l = KVStore(settings.D3L_PATH)
+
+        map_da = PackageSegmentMap(d3l)
+        sr_lookup = SegmentRootLookup({})
+
+        for item in p.items:
+            for (h, n) in item.import_segments:
+                s_root = map_da.get(h)
+                if s_root and len(sr_lookup) < 8:
+                    sr_lookup[h] = s_root
+
+        self.sr_lookup = SegmentRootLookup
+        d3l.close()
+        return sr_lookup
+
+    def lookup_root(self, r: OpaqueHash) -> SegmentRoot:
+        """
+        Segment root lookup function L defined in Eqn 14.12
+        Collapses a union of segment-roots and work-package hashes into segment-roots using lookup dictionary
+
+        Source:
+            https://graypaper.fluffylabs.dev/#/68eaa1f/1b7c011b9c01?v=0.6.4
+        Args:
+            r: OpaqueHash
+        Returns:
+            r if r is already a segment root else Segment root from dictionary if r is a work package hash.
+        """
+        if r in self.sr_lookup:
+            return self.sr_lookup[r]
+        else:
+            return r
+
     @staticmethod
-    def fetch_extrinsics(w: WorkItem) -> Vector[Bytes]:
+    def fetch_extrinsics(w: WorkItem) -> Extrinsics:
         """
         Function X defined in Eqn 14.14
         Takes Work Item & retrieves its required extrinsic data
@@ -165,15 +201,14 @@ class WorkPackageProcessing:
         Returns:
            Extrinsic data (Vector[Bytes])
         """
-        data: Vector[Bytes] = Vector([])
+        data: Extrinsics = Extrinsics([])
 
-        # <!-- Currently remains unclear -->
         # TODO: Fetch extrinsic from db / some pre-sent data whose hash and length are present in w.extrinsic
+        # Extrinsic Store Ready (Integration Remaining)
 
         return data
 
-    @staticmethod
-    def fetch_imports(w: WorkItem) -> MultiSegments:
+    def fetch_imports(self, w: WorkItem) -> Segments:
         """
         Function S defined in Eqn 14.14
         Takes Work Item & retrieves required import segments
@@ -186,57 +221,56 @@ class WorkPackageProcessing:
             Import Segments (Vector[Segment])
         """
 
-        # We have to store EC Chunks (Shards) of Segments w Proofs into D3L, when segments are exported
+        imports: Segments = Segments([])
+        d3l = KVStore(settings.D3L_PATH)
 
-        # Also we have to create and store mappings:
-        # Mapping from wp hash -> segment root (this can be constructed via listening to reports) - done
-
-        # Mapping from segment root -> erasure root & assurer - done
-        # Mapping from erasure root + shard index -> bundle shard - done
-
-        # On Guarantor Node
-        # Mapping from segment root -> segments - done
-        # Mapping from erasure root -> bundle  -done
-        # index -> segment
+        seg_da = SegmentsDA(d3l)
+        sr_er_da = SegmentErasureMap(d3l)
+        er_shards_da = ErasureShardsMap(d3l)
+        shards_da = SegmentShardsDA(d3l)
 
 
-        # How to store?
-        # We merklize all the chunks and can we store entire tree?
-        # Or should we just map  root -> hashes and store segments as hash -> segment
+        seg_dict = SegmentDict({})
 
-        # Cleanup Service?
-        # A service to clear certain data if it expires or reach it's max storage duration
+        for (h, n) in w.import_segments:
+            s_root = self.lookup_root(h)
 
-        #  For importing segments,
-        # We first check if that segment_root is located in our DA system
-        # if yes:
-        #    then we fetch the segments directly from our DB / DA Layer / D3L
-        # else:
-        #    if we have all the segment chunks in DA:
-        #         we reconstruct them to form segments
-        #    else:
-        #         we request unavailable shard from respective assurer
-        #         and reconstruct them to form segments
+            try:
+                # Fetch segments directly from db first
+                if s_root in seg_dict:
+                    segments = seg_dict[s_root]
+                    imports.append(segments[n])
+                else:
+                    segments, _ = seg_da.get(s_root)
+                    seg_dict[s_root] = segments
+                    imports.append(segments[n])
 
-        # Protocols to link up with DA Layer
+            except KeyError as e:
+                print(f"Warning! {e}")
+                print("Looking for segment shards in DA!")
+                try:
+                    e_root = sr_er_da.get(s_root)
+                    shard_roots = er_shards_da.get_ss_roots(e_root)
 
-        # TODO: Fetch proper segments
-        segments: MultiSegments = MultiSegments([])
+                    if len(shard_roots) > 342:
+                        # TODO: Reconstruct Shards
+                        ...
+                    else:
+                        # TODO: Fetch Missing Shards
+                        ...
 
-        # For other guarantors
-        # Segment root -> erasure coded chunks & assurers
+                except KeyError as e2:
+                    print(f"Warning! {e2}")
+                    print("Fetching all segment shards from assurers!")
 
-        # db.get(b"{segment_root}")
+                    # TODO: Fetch All Shards
 
-        # merkle_root = self.merkle.cd_merkle_fn(self.segments)
-        #
-        # for (r, n) in w.import_segments:
-        #     if self.segment_root_lookup(r) == merkle_root:
-        #             segments.append(self.segments[n])
+        self.segments_lookup.append(seg_dict)
+        d3l.close()
 
-        return segments
+        return imports
 
-    def fetch_justifications(self, w: WorkItem) -> Vector[Vector[OpaqueHash]]:
+    def fetch_justifications(self, w: WorkItem, i: int) -> Justifications:
         """
         Function J defined in Eqn 14.14
         Takes work item and compiles justifications of import segments data
@@ -244,137 +278,29 @@ class WorkPackageProcessing:
         Source:
             https://graypaper.fluffylabs.dev/#/68eaa1f/1bf0011bfe01?v=0.6.4
         Args:
-            w: WorkItem
+            w: Work Item
+            i: Item Index
         Returns:
             Length prefixed justification
         """
-        pages: Vector[Vector[OpaqueHash]] = Vector([])
-        segments: Segments = Segments([])
-        merkle_root = self.merkle.cd_merkle_fn(segments)
 
-        # TODO: Compile proper justifications
+        justifications: Justifications = Justifications([])
+        seg_dict = self.segments_lookup[i]
+
         for (r, n) in w.import_segments:
-            if self.segment_root_lookup(r) == merkle_root:
-                pages.append(self.merkle.merkle_path_fn(segments, Int(0), n))
-        return pages
+            s_root = self.lookup_root(r)
 
-    def generate_wr(self, p: WorkPackage, c: CoreIndex):
-        """
-        Work Report Computation function Ξ defined in Eqn 14.11
+            segments = seg_dict[s_root]
+            pages = self.merkle.merkle_path_fn(segments, 0, int(n))
+            justification = Justification(Int(len(pages)), pages)
 
-        Source:
-            https://graypaper.fluffylabs.dev/#/68eaa1f/1b7c001be700?v=0.6.4
-        Args:
-            p: WorkPackage
-            c: CoreIndex
-        Returns:
-            Work Report
-        """
-        o, g = PsiI(p, int(c)).process()
-        lookup_keys = []
-        for item in p.items:
-            for (h, n) in item.import_segments:
-                if len(lookup_keys) <= 8:
-                    lookup_keys.append(h)
+            justifications.append(justification)
 
-
-        # TODO: Build segment root lookup dictionary from DB
-        self.segment_root_lookup_dict = SegmentRootLookup({})
-
-        def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
-            """
-            Function I defined in Eqn 14.11
-            Performs Ordered Accumulation of work items in a package p
-
-            https://graypaper.fluffylabs.dev/#/cc517d7/1b3f011b8d01?v=0.6.5
-            """
-
-            w = p.items[j]
-
-            l = 0
-            k = int(j)
-            for i in range(k):
-                l += p.items[i].export_count
-            # r, e, u = PsiR(int(c), p, o, self.fetch_imports(w), l)
-
-            # TODO: Fix later on receiving more clarity
-            r, e, u = PsiR(int(c), p, o, self.fetch_imports(w), l)
-
-            segment = Segment([Byte(0)] * 4104)
-            segment_length = w.export_count
-            zero_segment = Segments([segment for _ in range(segment_length)])
-
-            if len(e) == w.export_count:
-                return r, u, e
-            elif not isinstance(r, Bytes):
-                return r, u, zero_segment
-            else:
-                return WorkExecResult(bad_exports=None), u,zero_segment
-
-        r_list = WorkResults([])
-        e_list = MultiSegments([])
-
-        for _j in range(len(p.items)):
-            _r, _u, _e = utils_i(_j)
-
-            comp = self.item_to_digest(p.items[_j], _r, _u)
-            r_list.append(comp)
-            e_list.append(_e)
-
-        # TODO: Handle Errors and Segment Storage
-
-        authorizer = p.code_hash + p.params
-        p_a = Hash.blake2b(bytes(authorizer))
-
-        h = Hash.blake2b(p.encode())
-        e_bar_cap = Segments([])
-
-        for segments in e_list:
-            e_bar_cap.extend(segments)
-
-        # wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32())
-        specs = self.availability_specifier(package_hash=h, wp_bundle=self.bundle.encode(), export_segments=e_bar_cap)
-
-        # inserting auditable bundle in db
-        bundle_db = BundleStore()
-        bundle_db.put(specs.erasure_root, self.bundle)
-
-        #inserting segments in db
-        segment_db = SegmentStore()
-        segment_db.put(export_segment=e_bar_cap, paged_proof=self.paged_proof(e_bar_cap))
-
-
-        # segment-root -> erasure-root , assurer
-        # specs.exports_root -> specs.erasure_root, assurer, specs.hash
-        # specs.erasure_root -> wp_bundle
-
-        if not isinstance(o, Bytes):
-            return None
-        else:
-
-            return WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p_a, auth_output=o, segment_root_lookup=self.segment_root_lookup_dict, results=r_list, auth_gas_used=g)
-
-
-    def segment_root_lookup(self, r: OpaqueHash) -> SegmentRoot:
-        """
-        Segment root lookup function L defined in Eqn 14.12
-        Collapses a union of segment-roots and work-package hashes into segment-roots using lookup dictionary
-
-        Source:
-            https://graypaper.fluffylabs.dev/#/68eaa1f/1b7c011b9c01?v=0.6.4
-        Args:
-            r: OpaqueHash
-        Returns:
-            r if r is already a segment root else Segment root from dictionary if r is a work package hash.
-        """
-        if r in self.segment_root_lookup_dict:
-            return self.segment_root_lookup_dict[r]
-        else:
-            return r
+        return justifications
 
     # TODO: Change Work Result to Work Digest (0.6.4 Sync)
     @staticmethod
-    def item_to_digest(item : WorkItem, result: WorkExecResult, gas: Gas) -> WorkResult:
+    def item_to_digest(item: WorkItem, result: WorkExecResult, gas: Gas) -> WorkResult:
         """
         Item to Digest function C defined in Eqn 14.8
 
@@ -393,13 +319,6 @@ class WorkPackageProcessing:
 
         payload_hash = Hash.blake2b(bytes(item.payload))
 
-        # l: WorkResult = WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=payload_hash,
-        #                            accumulate_gas=item.accumulate_gas_limit, result=result, refinement_gas=gas,
-        #                            import_count=U16(len(item.import_segments)), export_count=item.export_count,
-        #                            extrinsic_count=U8(len(item.extrinsic)), extrinsic_size=extrinsic_size)
-        #
-        # return l
-
         imports_count: U16 = U16(len(item.import_segments))
         exports_count: U16 = U16(item.export_count)
         extrinsic_count: U8 = U8(len(item.extrinsic))
@@ -409,6 +328,87 @@ class WorkPackageProcessing:
 
         return WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=payload_hash,
                           accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)
+
+    def build_report(self, b: WorkPackageBundle, c: CoreIndex):
+        """
+        Work Report Computation function Ξ defined in Eqn 14.11
+        To be used by main guarantor
+
+        Source:
+            https://graypaper.fluffylabs.dev/#/68eaa1f/1b7c001be700?v=0.6.4
+        Args:
+            b: WorkPackageBundle
+            c: CoreIndex
+        Returns:
+            Work Report
+        """
+
+        # Work Package, p
+        p = b.package
+
+        # Auth Output o & Gas g
+        o, g = PsiI(p, int(c)).process()
+
+        def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
+            """
+            Function I defined in Eqn 14.11
+            Performs Ordered Accumulation of work items in a package p
+
+            https://graypaper.fluffylabs.dev/#/cc517d7/1b3f011b8d01?v=0.6.5
+            """
+
+            w = p.items[j]
+
+            l = 0
+            k = int(j)
+            for i in range(k):
+                l += p.items[i].export_count
+
+            r, e, u = PsiR(int(c), p, o, b.import_segments, l)
+
+            segment = Segment([Byte(0)] * 4104)
+            segment_length = w.export_count
+            zero_segment = Segments([segment for _ in range(segment_length)])
+
+            if len(e) == w.export_count:
+                return r, u, e
+            elif not isinstance(r, Bytes):
+                return r, u, zero_segment
+            else:
+                return WorkExecResult(bad_exports=None), u,zero_segment
+
+        # Work Results, r
+        r_list = WorkResults([])
+
+        e_list = MultiSegments([])
+
+        for _j in range(len(p.items)):
+            _r, _u, _e = utils_i(_j)
+
+            comp = self.item_to_digest(p.items[_j], _r, _u)
+            r_list.append(comp)
+            e_list.append(_e)
+
+
+        # Work Package Hash, h
+        h = Hash.blake2b(p.encode())
+
+        # Accumulate all exported segments
+        e_bar_cap = Segments([])
+        for segments in e_list:
+            e_bar_cap.extend(segments)
+
+        # Availability Specification, s
+        specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
+
+        # Authorizer Hash, a
+        authorizer = p.code_hash + p.params
+        p_a = Hash.blake2b(bytes(authorizer))
+
+        if not isinstance(o, Bytes):
+            return None
+        else:
+            return WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p_a, auth_output=o, segment_root_lookup=self.sr_lookup, results=r_list, auth_gas_used=g)
 
     @staticmethod
     def zero_padding(value: Bytes, n : Int):
@@ -424,12 +424,12 @@ class WorkPackageProcessing:
         Returns:
             New list containing padded byte arrays. Each element's length is now a multiple of n, padded with zeroes at the end.
         """
-        hash_length = len(value)
-        first_index = ((abs(hash_length) + n - 1) // n) + 1
-        if hash_length % int(n) != 0:
-            padding_zero = n - hash_length
-            for i in range(padding_zero):
-                value.append(Byte(0))
+
+        length = len(value)
+        padding = n - (((length + n - 1) % n) + 1)
+
+        for i in range(padding):
+            value.append(Byte(0))
 
         return value
 
@@ -459,7 +459,7 @@ class WorkPackageProcessing:
 
         return pages
 
-    def availability_specifier(self, package_hash: OpaqueHash, wp_bundle: Bytes, export_segments: Segments) -> WorkPackageSpec:
+    def availability_specifier(self, package_hash: OpaqueHash, wp_bundle: bytes, export_segments: Segments) -> WorkPackageSpec:
         """
         Availability Specification function defined in Eqn 14.16
         Creates a package specification from the package hash, work-package bundle and the sequence of exported segments
@@ -473,109 +473,168 @@ class WorkPackageProcessing:
         Returns:
             s: Availability specifier
         """
+
+        # Work Bundle Length, l
         l = len(wp_bundle)
+
+        # Segment Root, e
         e = self.merkle.cd_merkle_fn(export_segments)
+
+        # Segments Count, n
         n = len(export_segments)
 
         erasure_codec = ErasureCode()
+        d3l = KVStore(settings.D3L_PATH)
 
         # Build Bundle Shards
-        padded_wp_bundle = self.zero_padding(wp_bundle, BASIC_ERASURE_SIZE)
-        encoded_wp_bundle = erasure_codec.encode(padded_wp_bundle)
+        audits_da = AuditShardsDA(d3l)
 
-        b_shards: Vector[OpaqueHash] = Vector([])
-        bundle_shard_db = BundleShardMap()
-        for item in encoded_wp_bundle:
-            shard_root = Hash.blake2b(item.encode())
-            b_shards.append(shard_root)
-            bundle_shard_db.put(bundle_hash=shard_root, bundle_shard=item)
-        bundle_shard_db.close()
+        padded_wp_bundle = self.zero_padding(Bytes(wp_bundle), BASIC_ERASURE_SIZE)
+        bundle_shards = erasure_codec.encode(padded_wp_bundle)
+
+        bs_hashes = BundleShardHashes([])
+
+        for si, bs in enumerate(bundle_shards):
+            bs_hash = Hash.blake2b(bs.encode())
+
+            bs_unit = BundleShardUnit(U16(si), bs)
+
+            # Store Bundle Shard
+            audits_da.put(bs_hash, bs_unit)
+            bs_hashes.append(bs_hash)
+
+
+        # Store Exported Segments
+        seg_da = SegmentsDA(d3l)
+
+        proofs = self.paged_proof(export_segments)
+        proved_segments = ProvedSegments(export_segments, proofs)
+        seg_da.put(e, proved_segments)
 
         # Build Segment Shards
-        justified_segments: Segments = Segments(list(export_segments) + list(self.paged_proof(export_segments)))
+        s_shards_da = SegmentShardsDA(d3l)
 
-        encoded_export_segments = Vector([])
+        justified_segments: Segments = export_segments
+        justified_segments.extend(proofs)
+
+        all_chunks = Vector([])
 
         for item in justified_segments:
-            encoded = erasure_codec.encode(item)
-            encoded_export_segments.append(encoded)
+            seg_chunks = erasure_codec.encode(item)
+            all_chunks.append(seg_chunks)
 
-        transposed_s = [Vector([encoded_export_segments[j][i] for j in range(len(encoded_export_segments))]) for i in range(len(encoded_export_segments[0]))]
+        segments_shards = SegmentsShards(
+            [SegmentsShard(
+                [all_chunks[j][i] for j in range(len(all_chunks))]
+            ) for i in range(len(all_chunks[0]))])
 
-        s_shards: Vector[OpaqueHash] = Vector([])
-        seg_shard_db = SegmentShardMap()
-        for item in transposed_s:
-            shard_root = self.merkle.wb_merkle_fn(item)
-            s_shards.append(shard_root)
-            seg_shard_db.put(segments_shard_root=shard_root, segments_shard=item)
-        seg_shard_db.close()
+        ss_roots = SegmentsShardRoots([])
 
-        # Build Complete Shard
-        shards: Vector[Vector[OpaqueHash]] = Vector([b_shards, s_shards])
-        transposed_shards = Vector([Vector([shards[j][i] for j in range(len(shards))]) for i in range(len(shards[0]))])
+        for si, ss in segments_shards:
+            ss_root = self.merkle.wb_merkle_fn(ss)
 
-        clubbed_shards: Vector[ByteArray64] = Vector([])
+            ss_unit = SegmentsShardUnit(U16(si), ss)
 
-        for item in transposed_shards:
-            x_cap = b""
-            for i in item:
-                x_cap += bytes(i)
-            clubbed_shards.append(ByteArray64(x_cap))
+            # Store Segments Shard
+            s_shards_da.put(ss_root, ss_unit)
+            ss_roots.append(ss_root)
 
-        u = self.merkle.wb_merkle_fn(clubbed_shards)
-        root_shards_keys = ErasureShardsKeysMap()
-        root_shards_keys.put(erasure_root=u, segments_shard_roots=s_shards, bundles_hashes=b_shards)
-        root_shards_keys.close()
 
-        # TODO: Store Package Hash, Segment Root, Erasure Root & Chunks Mapping
-        # TODO: Distribute Shards on Request
+        # Build Complete Shard Key
+        if len(ss_roots) != 1023 or len(bs_hashes) != 1023:
+            raise ValueError("Length of both batches should be 1023")
 
-        specification = WorkPackageSpec(hash=package_hash, length=l, erasure_root=u, exports_root=e, exports_count=n)
-        return specification
+        shards_keys: ShardKeys = ShardKeys([])
+        for i in range(1023):
+            shards_key = ShardKey(bs_hashes[i], ss_roots[i])
+            shards_keys.append(shards_key)
 
-    def process(self, package: WorkPackage, core: CoreIndex):
+        # Erasure Root
+        u = self.merkle.wb_merkle_fn(shards_keys)
+
+        # Store Erasure Root - Shards Mapping
+        er_shards_da = ErasureShardsMap(d3l)
+
+        er_shards_da.put_batch(u, ss_roots, bs_hashes)
+
+        spec = WorkPackageSpec(hash=package_hash, length=l, erasure_root=u, exports_root=e, exports_count=n)
+
+        d3l.close()
+        return spec
+
+    def build_bundle(self, p: WorkPackage) -> WorkPackageBundle:
+        """Function to build Work Package Bundle"""
+
+        all_imp = MultiSegments([])
+        all_jfn = MultiJustifications([])
+        all_ext = MultiExtrinsics([])
+
+        for j, item in enumerate(p.items):
+            # Fetch Imports
+            imports = self.fetch_imports(item)
+            all_imp.append(imports)
+
+            # Fetch Justifications
+            justifications = self.fetch_justifications(item, j)
+            all_jfn.append(justifications)
+
+            # Fetch Extrinsics
+            extrinsics = self.fetch_extrinsics(item)
+            all_ext.append(extrinsics)
+
+        bundle = WorkPackageBundle(p, all_ext, all_imp, all_jfn)
+
+        return bundle
+
+
+    def process(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
         print("Validating Work Package..")
-        self.validate_wp(package)
+        validator = WorkPackageValidation()
+        validator.validate_wp(package)
 
-        # fetch imports and generate bundle before calling generate_wr function
+        d3l = KVStore(settings.D3L_PATH)
+
+        # Build Segment Root Lookup Dictionary
+        print("Building Lookup Dictionary..")
+        lookup = self.build_lookup(package)
+
+        # Build Work Package Bundle
+        print("Building Work Package Bundle..")
+        bundle = self.build_bundle(package)
+
+        # TODO: Distribute Bundle to other Guarantors
 
         print("Building Work Report..")
-        report = self.generate_wr(package, core)
-        # storing build work report in db
-        report_db = ReportStore()
-        report_hash = blake2b(report.encode(), digest_size=32).digest()
-        report_db.put(wr_hash=report_hash, report=report)
-        report_db.close()
+        report = self.build_report(bundle, core)
 
+        # Store Report
+        reports_da = ReportsDA(d3l)
+
+        wr_hash = Hash.blake2b(report.encode())
+        reports_da.put(wr_hash, report)
+
+        d3l.close()
         print(f"Generated Work Report {report}")
 
         print(f"Distributing Work Report to other  validators!")
         # TODO: Distribute WR to Guarantors CE135
-        # tsr_node = Node(
-        #     node_name=name,
-        #     node_id=str(port),
-        #     host="127.0.0.1",
-        #     port=port,
-        #     peers=peers,
-        #     validator_data=my_data,
-        #     is_builder=is_builder,
-        #     is_validator=True,
-        # )
-        # report_distribution = WorkReportDistribution()
-        # report_distribution.transmit(node=tsr_node, data=CE135Data(report, slot=U32(1)))
 
-
-        print()
 
     def bundle_process(self, core: CoreIndex, bundle: WorkPackageBundle, segment_lookup: SegmentRootLookup) -> WorkReportHash:
+        d3l = KVStore(settings.D3L_PATH)
+
+        self.sr_lookup = segment_lookup
 
         print("Building Work Report..")
-        self.segment_root_lookup_dict = segment_lookup
-        self.bundle = bundle
-        report = self.generate_wr(bundle.package, core)
+        report = self.build_report(bundle, core)
 
+        # Store Report
+        reports_da = ReportsDA(d3l)
 
-
+        wr_hash = Hash.blake2b(report.encode())
+        reports_da.put(wr_hash, report)
         # TODO: send back Work-Report Hash ++ Ed25519 Signature to assigned Guarantor via CE134 protocol
-        return blake2b(report.encode(), digest_size=32).digest()
+
+
+        return wr_hash
 
