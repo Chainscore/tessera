@@ -1,3 +1,4 @@
+from typing_extensions import Optional
 from jam.types.protocol.core import TimeSlot
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.state.delta import Timestamps, AccountData

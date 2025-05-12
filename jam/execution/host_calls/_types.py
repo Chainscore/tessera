@@ -83,7 +83,7 @@ class StateContext(Codable,JsonSerde):
 @dataclass
 class accumulation_context(Codable, JsonSerde):
     x:accu_Xcontext
-    y:accu_Xcontext
+    y:ByteArray32
 
 
 
