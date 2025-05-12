@@ -41,7 +41,7 @@ async def work_report_producer(node: Node, db: KVStore):
 
         logger.info(f"We're in epoch slot {ts_epoch_index} and {state.gamma.s.get_key()} mode")
 
-        if not node.is_builder:
+        if not node.is_validator:
             report = create_dummy_work_report()
             report_data = CE135Data(report=report, slot=TimeSlot(int(current_timeslot)))
 

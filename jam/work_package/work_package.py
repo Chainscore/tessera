@@ -5,7 +5,7 @@ from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray64
 from jam.types.base.sequences.vector import Vector
 
 from jam.types.base.integers.general import Int
-from jam.types.base.integers.fixed import U8, U16, U64
+from jam.types.base.integers.fixed import U8, U16, U64, U32
 
 
 from jam.types.work.item import WorkItem, ExtrinsicSpec
@@ -19,7 +19,7 @@ from jam.types.work.report import (
     WorkExecResult,
     WorkReport,
     WorkPackageSpec,
-    SegmentRootLookup, WorkPackageBundle
+    SegmentRootLookup, WorkPackageBundle, SuperSegments, Justifications, Extrinsics
 )
 
 from jam.utils.constants import (
@@ -45,11 +45,21 @@ from jam.hostCall.invocation import PsiI
 
 from tests.dummy.utils import create_dummy_bytes32
 
+from jam.work_package.package_db import BundleStore, SegmentStore, ErasureShardsKeysMap, SegmentShardMap, \
+    BundleShardMap, ReportStore
+
+from hashlib import blake2b
+
+from jam.network.node import Node
+from jam.types.protocol.crypto import WorkReportHash
+
+
 
 class WorkPackageProcessing:
 
     segment_root_lookup_dict: SegmentRootLookup
     segments: MultiSegments
+    bundle: WorkPackageBundle
     # d: ??
 
     def __init__(self):
@@ -179,14 +189,14 @@ class WorkPackageProcessing:
         # We have to store EC Chunks (Shards) of Segments w Proofs into D3L, when segments are exported
 
         # Also we have to create and store mappings:
-        # Mapping from wp hash -> segment root (this can be constructed via listening to reports)
+        # Mapping from wp hash -> segment root (this can be constructed via listening to reports) - done
 
-        # Mapping from segment root -> erasure root & assurer
-        # Mapping from erasure root -> (audit & segment) shard pairs
+        # Mapping from segment root -> erasure root & assurer - done
+        # Mapping from erasure root + shard index -> bundle shard - done
 
         # On Guarantor Node
-        # Mapping from segment root -> segments
-        # Mapping from erasure root -> bundle ?? or chunks
+        # Mapping from segment root -> segments - done
+        # Mapping from erasure root -> bundle  -done
         # index -> segment
 
 
@@ -288,7 +298,7 @@ class WorkPackageProcessing:
             # r, e, u = PsiR(int(c), p, o, self.fetch_imports(w), l)
 
             # TODO: Fix later on receiving more clarity
-            r, e, u = PsiR(int(c), p, o, self.segments, l)
+            r, e, u = PsiR(int(c), p, o, self.fetch_imports(w), l)
 
             segment = Segment([Byte(0)] * 4104)
             segment_length = w.export_count
@@ -317,9 +327,22 @@ class WorkPackageProcessing:
         p_a = Hash.blake2b(bytes(authorizer))
 
         h = Hash.blake2b(p.encode())
+        e_bar_cap = Segments([])
 
-        wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32())
-        specs = self.availability_specifier(package_hash=h, wp_bundle=wp_bundle.encode(), export_segments=Vector([]))
+        for segments in e_list:
+            e_bar_cap.extend(segments)
+
+        # wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32())
+        specs = self.availability_specifier(package_hash=h, wp_bundle=self.bundle.encode(), export_segments=e_bar_cap)
+
+        # inserting auditable bundle in db
+        bundle_db = BundleStore()
+        bundle_db.put(specs.erasure_root, self.bundle)
+
+        #inserting segments in db
+        segment_db = SegmentStore()
+        segment_db.put(export_segment=e_bar_cap, paged_proof=self.paged_proof(e_bar_cap))
+
 
         # segment-root -> erasure-root , assurer
         # specs.exports_root -> specs.erasure_root, assurer, specs.hash
@@ -328,6 +351,7 @@ class WorkPackageProcessing:
         if not isinstance(o, Bytes):
             return None
         else:
+
             return WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p_a, auth_output=o, segment_root_lookup=self.segment_root_lookup_dict, results=r_list, auth_gas_used=g)
 
 
@@ -402,8 +426,8 @@ class WorkPackageProcessing:
         """
         hash_length = len(value)
         first_index = ((abs(hash_length) + n - 1) // n) + 1
-        if hash_length // n != 0:
-            padding_zero = n - first_index
+        if hash_length % int(n) != 0:
+            padding_zero = n - hash_length
             for i in range(padding_zero):
                 value.append(Byte(0))
 
@@ -427,7 +451,7 @@ class WorkPackageProcessing:
         for x in range(page_count):
             path = self.merkle.merkle_path_fn(values=segments, size=Int(6), index=Int(x))
             leaf = self.merkle.leaf_page_fn(values=segments, size=Int(6), index=Int(x))
-            merkle_path = bytes(len(path)) + path.encode()
+            merkle_path = bytes(len(path)) + Vector(path).encode()
             leaf =  bytes(len(leaf)) + leaf.encode()
 
             segment_proof = Segment(self.zero_padding(Bytes(merkle_path + leaf), SEGMENT_SIZE))
@@ -460,11 +484,15 @@ class WorkPackageProcessing:
         encoded_wp_bundle = erasure_codec.encode(padded_wp_bundle)
 
         b_shards: Vector[OpaqueHash] = Vector([])
+        bundle_shard_db = BundleShardMap()
         for item in encoded_wp_bundle:
-            b_shards.append(Hash.blake2b(item.encode()))
+            shard_root = Hash.blake2b(item.encode())
+            b_shards.append(shard_root)
+            bundle_shard_db.put(bundle_hash=shard_root, bundle_shard=item)
+        bundle_shard_db.close()
 
         # Build Segment Shards
-        justified_segments: Segments = export_segments + self.paged_proof(export_segments)
+        justified_segments: Segments = Segments(list(export_segments) + list(self.paged_proof(export_segments)))
 
         encoded_export_segments = Vector([])
 
@@ -475,8 +503,12 @@ class WorkPackageProcessing:
         transposed_s = [Vector([encoded_export_segments[j][i] for j in range(len(encoded_export_segments))]) for i in range(len(encoded_export_segments[0]))]
 
         s_shards: Vector[OpaqueHash] = Vector([])
+        seg_shard_db = SegmentShardMap()
         for item in transposed_s:
-            s_shards.append(self.merkle.wb_merkle_fn(item))
+            shard_root = self.merkle.wb_merkle_fn(item)
+            s_shards.append(shard_root)
+            seg_shard_db.put(segments_shard_root=shard_root, segments_shard=item)
+        seg_shard_db.close()
 
         # Build Complete Shard
         shards: Vector[Vector[OpaqueHash]] = Vector([b_shards, s_shards])
@@ -491,6 +523,9 @@ class WorkPackageProcessing:
             clubbed_shards.append(ByteArray64(x_cap))
 
         u = self.merkle.wb_merkle_fn(clubbed_shards)
+        root_shards_keys = ErasureShardsKeysMap()
+        root_shards_keys.put(erasure_root=u, segments_shard_roots=s_shards, bundles_hashes=b_shards)
+        root_shards_keys.close()
 
         # TODO: Store Package Hash, Segment Root, Erasure Root & Chunks Mapping
         # TODO: Distribute Shards on Request
@@ -502,12 +537,45 @@ class WorkPackageProcessing:
         print("Validating Work Package..")
         self.validate_wp(package)
 
+        # fetch imports and generate bundle before calling generate_wr function
+
         print("Building Work Report..")
         report = self.generate_wr(package, core)
+        # storing build work report in db
+        report_db = ReportStore()
+        report_hash = blake2b(report.encode(), digest_size=32).digest()
+        report_db.put(wr_hash=report_hash, report=report)
+        report_db.close()
 
         print(f"Generated Work Report {report}")
 
         print(f"Distributing Work Report to other  validators!")
         # TODO: Distribute WR to Guarantors CE135
+        # tsr_node = Node(
+        #     node_name=name,
+        #     node_id=str(port),
+        #     host="127.0.0.1",
+        #     port=port,
+        #     peers=peers,
+        #     validator_data=my_data,
+        #     is_builder=is_builder,
+        #     is_validator=True,
+        # )
+        # report_distribution = WorkReportDistribution()
+        # report_distribution.transmit(node=tsr_node, data=CE135Data(report, slot=U32(1)))
+
 
         print()
+
+    def bundle_process(self, core: CoreIndex, bundle: WorkPackageBundle, segment_lookup: SegmentRootLookup) -> WorkReportHash:
+
+        print("Building Work Report..")
+        self.segment_root_lookup_dict = segment_lookup
+        self.bundle = bundle
+        report = self.generate_wr(bundle.package, core)
+
+
+
+        # TODO: send back Work-Report Hash ++ Ed25519 Signature to assigned Guarantor via CE134 protocol
+        return blake2b(report.encode(), digest_size=32).digest()
+

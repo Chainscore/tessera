@@ -2,12 +2,14 @@
 
 from dataclasses import dataclass
 
+from jam.types import ByteArray32
 from jam.types.base import Vector
 from jam.types.base.null import Nullable
 from jam.types.base.integers import U8, U16, U32, U64
 from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.sequences.bytes.byte_array import ByteArray12
+from jam.types.base.sequences.bytes.bytes import Bytes, Byte
 from jam.types.base.sequences.vector import Vector, decodable_vector
 
 from jam.types.work.package import WorkPackage
@@ -81,15 +83,65 @@ class WorkPackageSpec(Codable, JsonSerde):
     exports_count: U16
 
 
+@decodable_vector(element_type=MultiSegments)
+class SuperSegments(Vector[MultiSegments]):
+    ...
+
+
+@decodable_vector(element_type=Bytes)
+class Extrinsic(Vector[Bytes]):
+    ...
+
+
+@decodable_vector(element_type=Extrinsic)
+class Extrinsics(Vector[Extrinsic]):
+    ...
+
+@decodable_vector(element_type=OpaqueHash)
+class HashVector(Vector[OpaqueHash]):
+    ...
+
+
+@decodable_vector(element_type=HashVector)
+class JustificationItem(Vector[HashVector]):
+    ...
+
+
+@decodable_vector(element_type=JustificationItem)
+class Justifications(Vector[JustificationItem]):
+    ...
+
+
 @decodable_dataclass
 @dataclass
 class WorkPackageBundle(Codable, JsonSerde):
     """Work package bundle specification structure."""
 
     package: WorkPackage
-    extrinsics: Vector[Vector[Bytes]]
-    import_segments: Vector[MultiSegments]
-    justifications: Vector[Vector[Vector[OpaqueHash]]]
+    extrinsics: Extrinsics
+    import_segments: SuperSegments
+    justifications: Justifications
+
+
+@decodable_dataclass
+@dataclass
+class ShardKeys(Codable, JsonSerde):
+    bundle_shard_hash: OpaqueHash
+    segment_shard_root: OpaqueHash
+
+
+@decodable_vector(element_type=OpaqueHash)
+class SingleShardKeysVector(Vector[OpaqueHash]):
+    ...
+
+
+@decodable_vector(element_type=ShardKeys)
+class ShardKeysVector(Vector[ShardKeys]):
+    ...
+
+@decodable_vector(element_type=ByteArray12)
+class SegmentsShard(Vector[ByteArray12]):
+    ...
 
 # Deprecated Type
 # @decodable_dataclass
@@ -139,6 +191,10 @@ class WorkDependencies(Vector[WorkReportHash]):
 class WorkReports(Vector[WorkReport]):
     """Vector of Work Reports"""
 
+    ...
+
+@decodable_vector(element_type=Byte)
+class BundleShard(Vector[Byte]):
     ...
 
 

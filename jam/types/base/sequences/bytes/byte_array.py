@@ -56,6 +56,11 @@ class ByteArray32(ByteArray):
     ...
 
 
+@decodable_bytearray(12)
+class ByteArray12(ByteArray):
+    ...
+
+
 @decodable_bytearray(64)
 class ByteArray64(ByteArray):
     ...

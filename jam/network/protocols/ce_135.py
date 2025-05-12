@@ -65,7 +65,7 @@ class WorkReportDistribution(NetworkProtocol):
         logger.info(f"📩 Processed work report : {data.report} with slot {data.slot}")
 
         # Send Acknowledgement
-        ack = self._prefix.encode() + b""
+        ack = self._prefix.encode()
         server.stream_and_close(stream_id, ack)
 
         logger.info("Sent acknowledgement back to guarantor")

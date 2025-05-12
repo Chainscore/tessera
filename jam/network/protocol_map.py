@@ -3,6 +3,7 @@ from jam.network.protocols.ce_133 import WorkPackageSubmission
 from jam.network.protocols.ce_134 import WorkPackageSharing
 from jam.network.protocols.ce_135 import WorkReportDistribution
 from jam.network.protocols.ce_136 import WorkReportRequest
+from jam.network.protocols.ce_139 import SegmentShardRequest, SegmentShardRequestWithJustifications
 from jam.network.protocols.up_0 import BlockAnnouncement
 
 
@@ -13,6 +14,8 @@ class ProtocolMap:
         PrefixType.CE134: WorkPackageSharing,
         PrefixType.CE135: WorkReportDistribution,
         PrefixType.CE136: WorkReportRequest,
+        PrefixType.CE139: SegmentShardRequest,
+        PrefixType.CE140: SegmentShardRequestWithJustifications
     }
 
     @classmethod

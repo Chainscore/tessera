@@ -130,7 +130,7 @@ class BMRFunctions:
             trace = Vector([])
 
             node = self._node_fn(self._p_bool(values, index, False))
-            trace.append(node)
+            trace.append(Bytes(bytes(node)))
 
             new_ind = self._p_i(values, index)
             trace_nodes = self._trace_fn(self._p_bool(values, index,True), index - new_ind, hash_fn)
