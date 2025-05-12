@@ -37,6 +37,21 @@ class CE138InterceptData(Codable, JsonSerde):
 
 
 class AuditShardRequestProtocol(NetworkProtocol):
+    """
+        CE 138 Protocol for Audit shard request
+
+        Auditor -> Assurer
+
+        --> Erasure-Root ++ Shard Index
+        --> FIN
+        <-- Bundle Shard
+        <-- Justification
+        <-- FIN
+
+        Source:
+            https://docs.jamcha.in/advanced/simple-networking/spec#ce-138-shard-distribution
+    """
+
     from jam.network.node import Node
 
     def __init__(self):
@@ -44,8 +59,8 @@ class AuditShardRequestProtocol(NetworkProtocol):
         self._prefix = PrefixType.CE138
 
     def transmit(self, node: Node, data:CE138TransmitData):
-        """
-        """
+        """Transmit Erasure-Root and Shard Index from Auditor (client) to Assurer (server)"""
+
         stream_a = self._prefix.encode() + data.erasure_root.encode()
         stream_b = data.shard_index.encode()
 
@@ -59,8 +74,8 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
     @classmethod
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
-        """
-        """
+        """Intercept & Process Erasure-Root and Shard Index on Assurer (server)"""
+
         logger.info("Received Shard index & erasure root")
         data, offset = CE138TransmitData.decode_from(buffer)
         data = cast(CE138TransmitData, data)
@@ -96,6 +111,8 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
     @classmethod
     def client_intercept(self, buffer: bytes, stream_id: int):
+        """Intercept Bundle Shard and Justification"""
+
         logger.info("Data received on Auditor Node")
         data, offset = CE138InterceptData.decode_from(buffer)
         data = cast(CE138InterceptData, data)

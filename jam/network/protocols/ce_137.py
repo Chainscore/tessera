@@ -44,6 +44,22 @@ class CE137InterceptData(Codable, JsonSerde):
 
 
 class ShardDistributionProtocol(NetworkProtocol):
+    """
+        CE 137 Protocol for shard distribution
+
+        Assurer -> Guarantor
+
+        --> Erasure-Root ++ Shard Index
+        --> FIN
+        <-- Bundle Shard
+        <-- [Segment Shard] (Should include all exported and proof segment shards with the given index)
+        <-- Justification
+        <-- FIN
+
+        Source:
+            https://docs.jamcha.in/advanced/simple-networking/spec#ce-137-shard-distribution
+    """
+
     from jam.network.node import Node
 
     def __init__(self):
@@ -51,8 +67,8 @@ class ShardDistributionProtocol(NetworkProtocol):
         self._prefix = PrefixType.CE137
 
     def transmit(self, node: Node, data:CE137TransmitData):
-        """
-        """
+        """Transmit Erasure-Root and Shard Index from Assurer (client) to Guarantor (server)"""
+
         stream_a = self._prefix.encode() + data.erasure_root.encode()
         stream_b = data.shard_index.encode()
 
@@ -66,8 +82,8 @@ class ShardDistributionProtocol(NetworkProtocol):
 
     @classmethod
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
-        """
-        """
+        """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
+
         logger.info("Received Shard index & erasure root")
         data, offset = CE137TransmitData.decode_from(buffer)
         data = cast(CE137TransmitData, data)
@@ -103,6 +119,8 @@ class ShardDistributionProtocol(NetworkProtocol):
 
     @classmethod
     def client_intercept(self, buffer: bytes, stream_id: int):
+        """Intercept Bundle Shard, [Segment Shard] and Justification"""
+
         logger.info("Data received on Assurer Node")
         data, offset = CE137InterceptData.decode_from(buffer)
         data = cast(CE137InterceptData, data)
