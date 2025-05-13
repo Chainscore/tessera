@@ -11,6 +11,7 @@ from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.utils.dummy_wpb import wp_producer
 from jam.network.utils.dummy_segment_shard import segment_shard_request
+from jam.network.utils.dummy_assurance import assurance_distribution
 
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
@@ -127,7 +128,8 @@ async def main(
                 if tsr_node.is_builder:
                     tg.create_task(wp_producer(tsr_node, db))
                 else:
-                    tg.create_task(segment_shard_request(tsr_node, db))
+                    # tg.create_task(segment_shard_request(tsr_node, db))
+                    tg.create_task(assurance_distribution(tsr_node, db))
                     # tg.create_task(block_producer.run())
 
 

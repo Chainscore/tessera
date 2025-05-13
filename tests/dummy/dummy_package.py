@@ -60,10 +60,3 @@ def create_dummy_credential() -> Credential:
         work_report_hash=WorkReportHash(create_dummy_bytes32()),
         ed25519_signature=create_dummy_bytes64()
     )
-
-def create_dummy_assurances() -> Assurance:
-    return Assurance (
-        header_hash=OpaqueHash(create_dummy_bytes32()) ,
-        bitfield=AvailBitField("0x01"),
-        ed25519_signature=Ed25519Public(create_dummy_bytes64())
-    )
