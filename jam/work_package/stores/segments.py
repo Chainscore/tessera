@@ -31,10 +31,10 @@ class SegmentsDA(DA):
             raise KeyError("Segment not found in Segments DA")
 
         decoded_data, _ = ProvedSegments.decode_from(data)
-        segments = decoded_data.segments
-        proofs = decoded_data.proof
+        segment = decoded_data.segment
+        proof = decoded_data.proof
 
-        return segments, proofs
+        return segment, proof
 
     def delete(self, root: ExportsRoot) -> None:
         key = self.prefix + root.encode()

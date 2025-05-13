@@ -218,7 +218,7 @@ class BMRFunctions:
         size: int,
         index: int,
         hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
-    ) -> Vector[OpaqueHash]:
+    ) -> Vector[Bytes]:
         """
         Leaves Page Function Implementation as defined in Equation E.6
 
@@ -233,14 +233,14 @@ class BMRFunctions:
         if index >= len(values):
             raise IndexError("index out of range")
 
-        page: Vector[OpaqueHash] = Vector([])
+        page: Vector[Bytes] = Vector([])
 
 
         ind = (2 ** size) * index
         val = min(ind + 2 ** size, len(values))
 
         for i in range(ind, val):
-            page.append(hash_fn(self._LEAF_PREFIX + bytes(values[i])))
+            page.append(Bytes(hash_fn(self._LEAF_PREFIX + bytes(values[i]))))
 
         return page
 

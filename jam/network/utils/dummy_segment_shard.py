@@ -2,8 +2,9 @@ import asyncio
 from math import floor
 from time import time
 
-from jam.network.protocols import SegmentShardRequestWithJustifications
-from jam.network.protocols.ce_139 import SegmentShardRequest, ShardRequest, SegmentIndexes, CE139Data
+from jam.network.protocols.ce_140 import SegmentShardRequestWithJustifications
+from jam.network.protocols.ce_139_base import ShardRequest, SegmentIndexes, CE139Data
+from jam.network.protocols.ce_139 import SegmentShardRequest
 from jam.state.state import State
 from jam.utils.constants import EPOCH_LENGTH
 from tests.dummy.dummy_extrinsics import create_dummy_work_report
