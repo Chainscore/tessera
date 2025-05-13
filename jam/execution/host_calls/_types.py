@@ -1,11 +1,12 @@
 from dataclasses import dataclass
+from typing import List
 from typing_extensions import Optional
 
-from jam.accumulation.types import StateContext
 from jam.execution.pvm.memory import Memory
+from jam.types.base.null import Nullable
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.state.chi import Chi
-from jam.types.state.delta import Delta
+from jam.types.state.delta import Delta, PreImageLookup
 
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
@@ -21,7 +22,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.json import JsonSerde
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 
-from typing import List
+
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes, ByteArray128
 from jam.utils.json.decorators import with_json_metadata
@@ -63,19 +64,29 @@ class preimage_dict(Dictionary[ServiceId,Bytes]):
 @decodable_dataclass
 @dataclass
 class accu_Xcontext(Codable, JsonSerde):
+    #s
     s_index: ServiceId
+    #u
     partial_state: StateContext
+    #i
     i_index: ServiceId
+    #t
     deferred_transfers: DeferredTransfers
+    #y
     hash: Optional[Bytes]
+    #p
     preimage:preimage_dict
 
 @decodable_dataclass
 @dataclass
 class StateContext(Codable,JsonSerde):
-    service_accounts: Delta
+    #d
+    service_accounts:Delta
+    #i
     validator_keys: Iota
+    #q
     authorizer_keys: Phi
+    #x
     privileges: Chi
 
 
@@ -83,7 +94,7 @@ class StateContext(Codable,JsonSerde):
 @dataclass
 class accumulation_context(Codable, JsonSerde):
     x:accu_Xcontext
-    y:ByteArray32
+    y:accu_Xcontext
 
 
 
@@ -103,7 +114,13 @@ class OperandTuples(Vector[OperandTuple]):
     ...
 
 
+@decodable_choice
+class output(Choice):
+    """Work execution result choice."""
 
+    ok: Bytes
+    out_of_gas: Nullable
+    panic: Nullable
 
 
 # @dataclass

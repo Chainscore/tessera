@@ -8,6 +8,7 @@ from jam.execution.pvm.status import PANIC,CONTINUE, ExecutionStatus, HostStatus
 from jam.execution.pvm.types import Accessibility
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types.base import decodable_dictionary, Dictionary
+from jam.types.base.integers.fixed import U64
 from jam.types.base.integers.general import Int
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes.bytes import Bytes
@@ -110,16 +111,13 @@ class RefineFunctions(INVF):
         l=min(registers[9],length-f)
         if v is not memory.is_accessible(o, l, True):
             raise PANIC
-            # return (PANIC,registers[7],memory.read(o,l))
         elif v is False:
             registers[7]=HostStatus.NONE
             return(CONTINUE,registers,memory,context)
-            # return (CONTINUE,HostStatus.NONE,memory.read(o,l))
         else:
             registers[7]=len(v)
             memory.write(o,v[f:l])
             return (CONTINUE,registers,memory,context)
-            # return (CONTINUE,registers,v[f:l])
 
     @classmethod
     @INVF.register(19, gas_cost=10)
@@ -130,10 +128,9 @@ class RefineFunctions(INVF):
             x=WorkPackageProcessing.zero_padding(value=Bytes(memory.read(p,z)),n=Int(SEGMENT_SIZE))
         else:
             raise PANIC
-            # return (PANIC,registers[7],context.m)
         if export_segment_offset+len(context.e)>= MAX_EXPORT_ITEM:
             registers[7]=HostStatus.HUH
-            return CONTINUE,registers,memory
+            return CONTINUE,registers,memory,context
 
         else:
             context.e.append(Segment(x))
@@ -164,7 +161,7 @@ class RefineFunctions(INVF):
             return CONTINUE,registers,memory, context
         except:
             registers[7]=HostStatus.HUH
-            return CONTINUE,registers,context
+            return CONTINUE,registers,context,context
 
     @classmethod
     @INVF.register(21, gas_cost=10)
@@ -214,18 +211,16 @@ class RefineFunctions(INVF):
             u.zero_memory_range(p*PVM_MEMORY_PAGE_SIZE,c*PVM_MEMORY_PAGE_SIZE)
             u.alter_accessibility(p,c,Accessibility.write)
         else:
-            # u=False
             registers[7]=HostStatus.WHO
-            return (registers,context)
+            return CONTINUE,registers,memory,context
 
         if p<16 or p+c>= 2**32/PVM_MEMORY_PAGE_SIZE:
             registers[7]=HostStatus.HUH
-            return(registers,context)
+            return CONTINUE,registers,memory,context
         else:
             context.m[n].memory=u
             registers[7]=HostStatus.OK
-
-            return registers,memory,context
+            return CONTINUE,registers,memory,context
 
     @classmethod
     @INVF.register(24, gas_cost=10)
@@ -236,50 +231,58 @@ class RefineFunctions(INVF):
             u.zero_memory_range(p*PVM_MEMORY_PAGE_SIZE,c*PVM_MEMORY_PAGE_SIZE)
             u.alter_accessibility(p,c,Accessibility.null)
         else:
-            # u=False
-            return (HostStatus.WHO,context.m)
+            registers[7]=HostStatus.WHO
+            return CONTINUE,registers,memory,context
 
         if p<16 or p+c>= 2*32/PVM_MEMORY_PAGE_SIZE or not u.is_accessible(p,c):
-            return(HostStatus.HUH,context.m)
+            registers[7]=HostStatus.HUH
+            return CONTINUE,registers,memory,context
         else:
             context.m[n].memory=u
-            return(HostStatus.OK,context.m)
+            registers[7]=HostStatus.OK
+            return CONTINUE,registers,memory,context
 
     @classmethod
     @INVF.register(25, gas_cost=10)
     def invoke(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
         [n,o]=registers[7,8]
-        if memory.is_accessible(o,112,True):
-            if n not in context.m:
-                return(CONTINUE,HostStatus.WHO,registers[8],memory,context.m)
-            m_bytes=memory.read(o,112)
-            #bytes->14size array of 8elements each 0->gas(g) 1-13->register_data(w)
-            m_array = [m_bytes[i:i + 8] for i in range(0, len(m_bytes), 8)]
-            g,_=IntegerCodec.decode_from(8,bytes(m_array[0]))
-            w=[
-                IntegerCodec.decode_from(8, bytes(m_array[i]))[0]
-                for i in range(1,14)
-            ]
-            [c,i_dash,g_dash,w_dash,u_dash]=PVM.execute(context.m[n].program_code,context.m[n].instruction_counter,g,w,context.m[n].memory)
-            memory.write(o,g_dash.encode()+w_dash.encode())
-            context.m[n].memory=u_dash
-            if c==ExecutionStatus.HOST:
-                context.m[n].instruction_counter=i_dash+1
-                return(CONTINUE,ExecutionStatus.HOST,c.value.register)
-            else:
-                context.m[n].instruction_counter=i_dash
-                if(c==ExecutionStatus.PAGE_FAULT):
-                    return(CONTINUE,ExecutionStatus.FAULT,c.value.register,memory,context.m)
-                elif(c==ExecutionStatus.OUT_OF_GAS):
-                    return(CONTINUE,ExecutionStatus.OUT_OF_GAS,registers[8],memory,context.m)
-                elif(c==ExecutionStatus.PANIC):
-                    return(CONTINUE,ExecutionStatus.PANIC,registers[8],memory,context.m)
-                elif(c==ExecutionStatus.HALT):
-                    return(CONTINUE,ExecutionStatus.HALT,registers[8],memory,context.m)
-
-        else:
+        if not memory.is_accessible(o,112,True):
             raise PANIC
-            # return(PANIC,registers[7],registers[8],memory,context.m)
+        if n not in context.m:
+            registers[7]=HostStatus.WHO
+            return CONTINUE,registers,memory,context
+        m_bytes=memory.read(o,112)
+        #bytes->14size array of 8elements each 0->gas(g) 1-13->register_data(w)
+        m_array = [m_bytes[i:i + 8] for i in range(0, len(m_bytes), 8)]
+        g,_=IntegerCodec.decode_from(8,bytes(m_array[0]))
+        w=[
+            IntegerCodec.decode_from(8, bytes(m_array[i]))[0]
+            for i in range(1,14)
+        ]
+        [c,i_dash,g_dash,w_dash,u_dash]=PVM.execute(context.m[n].program_code,context.m[n].instruction_counter,g,w,context.m[n].memory)
+        memory.write(o,g_dash.encode()+w_dash.encode())
+        context.m[n].memory=u_dash
+        if c==ExecutionStatus.HOST:
+            context.m[n].instruction_counter=i_dash+1
+            registers[7]=U64(ExecutionStatus.HOST) # NOTE: Saving the ExecValu on register[7]
+            registers[8]=c.value.register
+            return CONTINUE,registers,memory,context
+        else:
+            context.m[n].instruction_counter=i_dash
+            if(c==ExecutionStatus.PAGE_FAULT):
+                registers[7]=U64(ExecutionStatus.PAGE_FAULT)
+                registers[8]=c.value.register
+                return CONTINUE,registers,memory,context
+            elif(c==ExecutionStatus.OUT_OF_GAS):
+                registers[7]=U64(ExecutionStatus.OUT_OF_GAS)
+                return CONTINUE,registers,memory,context
+            elif(c==ExecutionStatus.PANIC):
+                registers[7]=U64(ExecutionStatus.PANIC)
+                return CONTINUE,registers,memory,context
+            elif(c==ExecutionStatus.HALT):
+                registers[7]=U64(ExecutionStatus.HALT)
+                return CONTINUE,registers,memory,context
+
 
     @classmethod
     @INVF.register(26, gas_cost=10)

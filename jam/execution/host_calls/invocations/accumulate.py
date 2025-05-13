@@ -1,60 +1,107 @@
-# from jam.accumulation.types import StateContext, OperandTuple
-# from jam.execution.pvm.extract import Status
-# from typing import Optional, Tuple
-# from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes
-# from jam.hostCall.types import XContent, DeferredTransfers
-# from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot
-# from jam.execution.pvm.register import Registers
-# from jam.execution.pvm.pvm_memory import PageMemory
-# from jam.types.state.delta import AccountData, Delta
-# from jam.types.protocol.crypto import Entropy
-# from hashlib import blake2b
-# from jam.hostCall.process import HostCall
-# from jam.hostCall.invocation import PsiM
-# from jam.types.base.integers.fixed import U32, U64, U256
-# from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE
-# from tests.fixtures.utils import create_dummy_bytes32
-# from tests.unit.accumulation.types import StateContext, OperandTuples
-#
-# #Find the a_t of a Service Account
-# # https://graypaper.fluffylabs.dev/#/9a08063/112701116701?v=0.6.6
-# def fetch_t(account:AccountData):
-#     a_i = 2 * len(account.lookup) + len(account.storage)
-#     a_o=0
-#     for hash,length in account.lookup:
-#         a_o+=81+length
-#     for code in account.storage:
-#         a_o+=31+len(code)
-#     a_t = BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * a_i + a_o*ADDITIONAL_BALANCE_PER_OCTET
-#     return a_t
-#
-# def check(u:StateContext,i:ServiceId):
-#     if u.service_accounts[i] is None:
-#         return i;
-#     else:
-#         return check(u,(i-2**8)%(2**32-2**9)+2**8)
-#
-# def i_function(u: StateContext, s: ServiceId, _n_o: Entropy, timeslot: TimeSlot) -> XContent:
-#     first = bytes(s.encode())
-#     second = bytes(_n_o.encode())
-#     third = bytes(timeslot.encode())
-#     hashed = ByteArray32(blake2b(first + second + third, digest_size=32).digest())
-#     # value = ByteArray32.decode_from(hashed)[0]
-#     buffer = bytes()
-#     value = ByteArray32.decode_from(bytes(hashed))
-#     i = HostCall.check(u.service_accounts.keys(), value)
-#     result = XContent(
-#         s_index=s,
-#         partial_state=u,
-#         i_index=i,
-#         deferred_transfers=[],
-#         hash=None
-#     )
-#     return result
+
+from typing import Tuple
+from jam.execution.host_calls._types import  DeferredTransfers, OperandTuples, accu_Xcontext,StateContext, accumulation_context, preimage_dict
+from jam.execution.host_calls.invocations.arg_invoke import PsiM
+from jam.execution.host_calls.invocations.protocol import InvocationProtocol
+from jam.execution.pvm.memory import Memory
+from jam.execution.pvm.register import Registers
+from jam.types.base.integers.fixed import U32
+from jam.types.base.sequences.bytes.byte_array import ByteArray32
+from jam.types.protocol.core import Gas, ProgramCounter, ServiceId, TimeSlot
+from jam.types.protocol.crypto import Hash
+from jam.state.state import state
+from jam.types.state.delta import AccountData, PreImageLookup
+from jam.execution.host_calls.invocations.functions.accumulate_fns import AccumulateFunctions, check
+from jam.execution.pvm.status import ExecutionStatus, PvmError
+from jam.utils.constants import MAX_SERVICE_CODE_SIZE
+
+
+
+
+class PsiA(InvocationProtocol):
+
+    def __init__(self, u: StateContext, t:TimeSlot, s:ServiceId, g:Gas,o:OperandTuples ):
+        self.partial_state = u
+        self.timeslot = t
+        self.service_id=s
+        self.gas=g
+        self.operandTuples=o
+
+    def table(self):
+        return {
+            5: (AccumulateFunctions, ()), # bless (Updates previlaged accounts)
+            6: (AccumulateFunctions, ()), # assign (Updates authorizer_keys/Phi)
+            7: (AccumulateFunctions, ()), # designate (Updates validator_keys/Iota)
+            8: (AccumulateFunctions, ()), # checkpoint (Special function to update the context[y])
+            9: (AccumulateFunctions, ()), # new (Updates the delta with a new service)
+            10: (AccumulateFunctions, ()), # upgrade (Updates the service account)
+            11: (AccumulateFunctions, ()), # transfer (Updates service deferred transfers & balance)
+            12: (AccumulateFunctions, ()), # eject (Removal of service account)
+            13: (AccumulateFunctions, ()), # query (Updates registers[7,8] wrt lookupTimestamps)
+            14: (AccumulateFunctions, ()), # solicit (Updated the lookupTimestamps)
+            15: (AccumulateFunctions, ()), # forget (Updates lookupTimestamp & preimage)
+            16: (AccumulateFunctions, ()), # yield_ (Updates context[x]_hash)
+            27: (AccumulateFunctions, ()), # provide (Updates preimage)
+
+        }
+
+    def execute(self):
+        _, c = self.partial_state.service_accounts[self.service_id].m_c
+
+        if c is None or len(c)>MAX_SERVICE_CODE_SIZE:
+            return self.partial_state,DeferredTransfers(),None,Gas(0),preimage_dict({})
+        else:
+            context=self.i_function(self.service_id,self.partial_state)
+            PsiM(
+                c,
+                ProgramCounter(5),
+                self.gas,
+                self.timeslot.encode() + self.service_id.encode() + len(self.operandTuples).encode(),
+                self.dispatch,
+                accumulation_context(context,context),
+            )
+
+
+
+
+
+    @staticmethod
+    def i_function(s: ServiceId,stateContext:StateContext) -> accu_Xcontext:
+        # first = bytes(s.encode())
+        # second = bytes(_n_o.encode())
+        # third = bytes(timeslot.encode())
+        # hashed = ByteArray32(blake2b(first + second + third, digest_size=32).digest())
+        # value = ByteArray32.decode_from(hashed)[0]
+
+        # buffer = bytes()
+        value = U32.decode_from(bytes(Hash.blake2b(s.encode()+state.eta[0].encode()+state.tau.encode())))[0] %(2**32-2**9)+2**8
+        i = check(stateContext, value)
+        context = accu_Xcontext(
+            s_index=s,
+            partial_state=stateContext,
+            i_index=i,
+            deferred_transfers=DeferredTransfers(),
+            hash=None,
+            preimage=preimage_dict({}),
+        )
+        return context
+
+    #NOTE: In gray paper (status,gas,registers,memory),(x,y) as args So it might differ afterwards.
+    @staticmethod
+    def g_function(status:ExecutionStatus,gas:Gas,registers:Registers,memory:Memory,accountData:AccountData,x:accu_Xcontext,y:ByteArray32)->Tuple[ExecutionStatus,Gas,Registers,Memory,accu_Xcontext,ByteArray32]:
+        x.partial_state.service_accounts[x.s_index]=accountData
+        return status,gas,registers,memory,x,y # returning the updated (x*) component
+
+
+
+    @classmethod
+    def c_function(cls,status:ExecutionStatus | bytes,gas:Gas,x:accu_Xcontext,y:ByteArray32)->Tuple[StateContext,DeferredTransfers,preimage_dict]:
+
+
 #
 #
 # def c_function(g: Gas,  o: Optional[Bytes] = Status, context: Optional[Tuple[XContent, XContent]] = None) -> (
-#         Tuple)[StateContext, DeferredTransfers, Optional[ByteArray32], Gas]:
+#         Tuple)[StateContext, DeferredTrasnsfers, Optional[ByteArray32], Gas]:
 #     if context is not None:
 #         x, y = context
 #     else:
@@ -78,7 +125,7 @@
 #     header_timeslot = TimeSlot(2)
 #     entropy = create_dummy_bytes32()
 #     def __init__(self, u: StateContext,
-#                  t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples):
+#                  t: TimeSlot, s: ServiceId, g: Gas, o: ):
 #         self.partial_state = u
 #         self.timeslot = t
 #         self.service_id = s
