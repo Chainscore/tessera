@@ -5,6 +5,8 @@ from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional, Union, Literal
+
+from jam.assurances.errors import AssurancesError
 from jam.report.state import Reporting
 from jam.accumulation.accumulation import Accumulation
 from jam.assurances.assurances import Assurances
@@ -421,7 +423,7 @@ def export_authorization(request_data: RequestData):
 
         return {"ok": None}
 
-    except AssurancesError as e:
+    except AssertionError as e:
         return {"err": e.code._value_}
     except Exception as e:
         return {"err": "unexpected_error"}
@@ -451,7 +453,7 @@ def  export_disputes(request_data: RequestData):
 
         return {"ok": None}
 
-    except AssurancesError as e:
+    except AssertionError as e:
         return {"err": e.code._value_}
     except Exception as e:
         return {"err": "unexpected_error"}
@@ -474,7 +476,7 @@ def export_assurances(request_data: RequestData):
         try:
             assert transition_output == output_state, "output_mismatch"
             
-        except AssertionError as e:
+        except AssurancesError as e:
             return {"err": str(e)}
 
         return {"ok": None}
@@ -493,8 +495,7 @@ def export_report(request_data: RequestData):
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
-        ##TODO: Add reports once added.
-        output_state = Reporting.transition(test_state, test_block)
+        transition_output = Reporting.transition(test_state, test_block)
 
         if request_data.output is None:
             return {"result": True}
@@ -509,7 +510,7 @@ def export_report(request_data: RequestData):
 
         return {"ok": None}
 
-    except AssurancesError as e:
+    except AssertionError as e:
         return {"err": e.code._value_}
     except Exception as e:
         return {"err": "unexpected_error"}
@@ -538,7 +539,7 @@ def  export_accumulate(request_data: RequestData):
 
         return {"ok": None}
 
-    except AssurancesError as e:
+    except AssertionError as e:
         return {"err": e.code._value_}
     except Exception as e:
         return {"err": "unexpected_error"}
@@ -567,7 +568,7 @@ def export_preimages(request_data: RequestData):
 
         return {"ok": None}
 
-    except AssurancesError as e:
+    except AssertionError as e:
         return {"err": e.code._value_}
     except Exception as e:
         return {"err": "unexpected_error"}
@@ -596,7 +597,7 @@ def  export_statistics(request_data: RequestData):
 
         return {"ok": None}
 
-    except AssurancesError as e:
+    except AssertionError as e:
         return {"err": e.code._value_}
     except Exception as e:
         return {"err": "unexpected_error"}
