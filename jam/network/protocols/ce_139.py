@@ -9,7 +9,7 @@ from jam.types.base.integers import Int
 from jam.types.base.integers.fixed import U16
 from jam.types.base.sequences.bytes.byte_array import ByteArray12, ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.work.report import SegmentsShard
+from jam.types.work.shard import SegmentsShard
 
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
@@ -154,7 +154,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
             ])
             bundle_shard_hash = [Bytes(create_dummy_bytes32())]
             merkle = BMRFunctions()
-            justify = merkle._trace_fn(values=segment_shard, index=Int(item.shard_Index))
+            justify = merkle.trace_fn(values=segment_shard, index=Int(item.shard_Index))
             justify.extend(bundle_shard_hash)
             item_res = ShardWithJustification(shards=shards, justifications=justify)
             response.append(item_res)

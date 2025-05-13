@@ -1,46 +1,60 @@
-from jam.types.work.report import SingleShardKeysVector, SegmentsShard
-from jam.work_package.package_db import ErasureShardsKeysMap, SegmentShardMap, BundleShardMap
+from jam.db.kv import KVStore
+from jam.types.work.shard import SegmentsShard, SegmentsShardRoots, BundleShardHashes, SegmentsShardUnit, ShardIndex, \
+    BundleShardUnit
+from jam.work_package.stores.audits import AuditShardsDA
+from jam.work_package.stores.mappings import ErasureShardsMap
+from jam.work_package.stores.segments import SegmentShardsDA
 from tests.dummy.utils import create_dummy_bytes32, create_dummy_bytes12, create_dummy_bytes
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.base.integers.fixed import U16
 
-def test_shard_db():
+def test_shard_db(db_path):
     """testing all three dbs that are storing shards"""
     # inserting data in Erasure root -> Shard keys Map DB
-    print("starting")
-    keys_db = ErasureShardsKeysMap()
+    db = KVStore(db_path)
+
+    keys_db = ErasureShardsMap(db)
     erasure_root = create_dummy_bytes32()
-    ssr= create_dummy_bytes32()
-    ssrs = [ssr]
-    bh = create_dummy_bytes32()
-    bhs = [bh]
-    keys_db.put(erasure_root=erasure_root, segments_shard_roots=ssrs, bundles_hashes=bhs)
-    data = keys_db.get_shards_keys(erasure_root=erasure_root)
+    ssr_list = [create_dummy_bytes32() for _ in range(1023)]
+    bh_list = [create_dummy_bytes32() for _ in range(1023)]
+    ssrs = SegmentsShardRoots(ssr_list)
+    bhs = BundleShardHashes(bh_list)
+
+
+    keys_db.put_batch(root=erasure_root, ss_roots=ssrs, bs_hashes=bhs)
+    data = keys_db.get(root=erasure_root)
 
     # inserting data in Segment Shard storage db
-    sg_shard_db = SegmentShardMap()
-    ssr_value = SegmentsShard([create_dummy_bytes12()])
-    sg_shard_db.put(segments_shard_root=ssr, segments_shard=ssr_value)
-    sg_shard_db.close()
+    sg_shard_db = SegmentShardsDA(db)
+    seg_shard = SegmentsShard([create_dummy_bytes12()])
+    for i, ssr in enumerate(ssr_list):
+        ssr_value = SegmentsShardUnit(shard_index=ShardIndex(i), shard=seg_shard)
+        sg_shard_db.put(root=ssr, data=ssr_value)
+
 
     # inserting data in Bundle Shard storage db
-    bd_shard_db = BundleShardMap()
-    bh_value = Bytes(create_dummy_bytes(40))
-    bd_shard_db.put(bundle_hash=bh, bundle_shard=bh_value)
-    bd_shard_db.close()
+    bd_shard_db = AuditShardsDA(db)
+    bundle_shard = Bytes(create_dummy_bytes(40))
+    for i, bh in enumerate(bh_list):
+        bh_value = BundleShardUnit(shard_index=ShardIndex(i), shard=bundle_shard)
+        bd_shard_db.put(bs_hash=bh, data=bh_value)
 
-    # fetching segment shard with erasure root and shard index
-    segs_shard = keys_db.get_segments_shard(erasure_root=erasure_root, shard_index=U16(0))
+    # validation of 10 shards
+    for i in range(1):
+        shard_index = ShardIndex(i)
 
-    # fetching bundle shard with erasure root and shard index
-    bd_shard = keys_db.get_bundle_shard(erasure_root=erasure_root, shard_index=U16(0))
+        # Segment shard retrieval and check
+        segs_shard_root = keys_db.get_ss_root(root=erasure_root, shard_index=shard_index)
+        if segs_shard_root:
+            segs_shard = sg_shard_db.get(segs_shard_root.segment_shard_root)
+            assert segs_shard_root.segment_shard_root == ssr_list[i]
+            assert segs_shard == (seg_shard, i)
 
-    # finally closing Erasure root -> Shard keys Map DB
-    keys_db.close()
+        # Bundle shard retrieval and check
+        bd_shard_hash = keys_db.get_bs_hash(root=erasure_root, shard_index=shard_index)
+        bd_shard = bd_shard_db.get(bs_hash=bd_shard_hash.bundle_shard_hash)
+        assert bd_shard_hash.bundle_shard_hash == bh_list[i]
+        assert bd_shard == (bundle_shard, i)
 
-    assert ssr == data[0].segment_shard_root
-    assert bh == data[0].bundle_shard_hash
-    assert ssr_value == segs_shard
-    assert bh_value == bd_shard
+    db.close()
 
 

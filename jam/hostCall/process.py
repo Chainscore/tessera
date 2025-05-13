@@ -3,7 +3,7 @@ from jam.types.base.sequences.bytes.bytes import Bytes
 from hashlib import blake2b
 import os
 
-from jam.types.work.segment import Segments, Segment, MultiSegments
+from jam.types.work.manifest import Segments, Segment, MultiSegments
 from jam.utils.codec.primitives.integers import IntegerCodec
 from jam.types.base.integers.fixed import U32, U64, U256
 from jam.services import historicalLookup

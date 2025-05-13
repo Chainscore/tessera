@@ -2,14 +2,11 @@
 
 from dataclasses import dataclass
 
-from jam.types import ByteArray32
-from jam.types.base import Vector
 from jam.types.base.null import Nullable
 from jam.types.base.integers import U8, U16, U32, U64
 from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
-from jam.types.base.sequences.bytes.byte_array import ByteArray12
-from jam.types.base.sequences.bytes.bytes import Bytes, Byte
+from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.sequences.vector import Vector, decodable_vector
 
 from jam.types.work.package import WorkPackage
@@ -24,13 +21,11 @@ from jam.types.protocol.core import (
     ServiceId,
     WorkPackageHash,
 )
-from jam.types.work.segment import MultiSegments
+from jam.types.work.manifest import MultiJustifications, MultiSegments, MultiExtrinsics
 
 from jam.utils.json.serde import JsonSerde
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-
-
 
 @decodable_choice
 class WorkExecResult(Choice):
@@ -40,6 +35,7 @@ class WorkExecResult(Choice):
     out_of_gas: Nullable
     panic: Nullable
     bad_code: Nullable
+    result_oversize: Nullable
     code_oversize: Nullable
     bad_exports: Nullable
 
@@ -82,80 +78,16 @@ class WorkPackageSpec(Codable, JsonSerde):
     exports_root: ExportsRoot
     exports_count: U16
 
-
-@decodable_vector(element_type=MultiSegments)
-class SuperSegments(Vector[MultiSegments]):
-    ...
-
-
-@decodable_vector(element_type=Bytes)
-class Extrinsic(Vector[Bytes]):
-    ...
-
-
-@decodable_vector(element_type=Extrinsic)
-class Extrinsics(Vector[Extrinsic]):
-    ...
-
-@decodable_vector(element_type=OpaqueHash)
-class HashVector(Vector[OpaqueHash]):
-    ...
-
-
-@decodable_vector(element_type=HashVector)
-class JustificationItem(Vector[HashVector]):
-    ...
-
-
-@decodable_vector(element_type=JustificationItem)
-class Justifications(Vector[JustificationItem]):
-    ...
-
-
 @decodable_dataclass
 @dataclass
 class WorkPackageBundle(Codable, JsonSerde):
     """Work package bundle specification structure."""
 
     package: WorkPackage
-    extrinsics: Extrinsics
-    import_segments: SuperSegments
-    justifications: Justifications
+    extrinsics: MultiExtrinsics
+    import_segments: MultiSegments
+    justifications: MultiJustifications
 
-
-@decodable_dataclass
-@dataclass
-class ShardKeys(Codable, JsonSerde):
-    bundle_shard_hash: OpaqueHash
-    segment_shard_root: OpaqueHash
-
-
-@decodable_vector(element_type=OpaqueHash)
-class SingleShardKeysVector(Vector[OpaqueHash]):
-    ...
-
-
-@decodable_vector(element_type=ShardKeys)
-class ShardKeysVector(Vector[ShardKeys]):
-    ...
-
-@decodable_vector(element_type=ByteArray12)
-class SegmentsShard(Vector[ByteArray12]):
-    ...
-
-# Deprecated Type
-# @decodable_dataclass
-# @dataclass
-# class SegmentRootLookupItem(Codable, JsonSerde):
-#     """Segment root lookup item structure."""
-#
-#     work_package_hash: WorkPackageHash
-#     segment_tree_root: OpaqueHash
-#
-#
-# @decodable_vector(SegmentRootLookupItem)
-# class SegmentRootLookup(Vector[SegmentRootLookupItem]):
-#     ...
 
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
 class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
@@ -179,22 +111,14 @@ class WorkReport(Codable, JsonSerde):
     results: WorkResults
     auth_gas_used: Gas
 
-
 @decodable_vector(element_type=WorkReportHash, allow_duplicates=False)
 class WorkDependencies(Vector[WorkReportHash]):
     """Set of dependencies hashes"""
 
     ...
 
-
 @decodable_vector(element_type=WorkReport)
 class WorkReports(Vector[WorkReport]):
     """Vector of Work Reports"""
 
     ...
-
-@decodable_vector(element_type=Byte)
-class BundleShard(Vector[Byte]):
-    ...
-
-

@@ -1,17 +1,12 @@
 from jam.types.base.sequences.bytes import Bytes
 from jam.types.protocol.core import Register
-from jam.types.protocol.core import ServiceId, Gas
-from typing import Any, Union, Tuple, Self, List
+from jam.types.protocol.core import Gas
+from typing import Any, Tuple
 from jam.types.base.integers.general import Int
 
-from jam.types.work.segment import Segments
-from jam.utils.json.serde import JsonSerde
-from jam.utils.codec.codable import Codable
+from jam.types.work.manifest import Segments
 from jam.pvm.register import Registers
 from jam.pvm.pvm_memory import PageMemory
-from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
-from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
-from jam.utils.codec.utils import check_buffer_size
 from jam.types.base.integers.fixed import U8, U64
 from jam.pvm.extract import Status
 from jam.pvm.opcode_mapping import InstructionMapper

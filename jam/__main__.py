@@ -1,7 +1,10 @@
 import asyncio
 import json
+import os
+
 from jam.config.logging import setup_logging, logger
 from jam.chainspec import chain_config
+from jam.config.settings import settings
 from jam.db.kv import KVStore
 
 from jam.network.peer import Peer
@@ -29,7 +32,6 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 async def main(
     name: str,
     genesis_path: str,
-    db_path: str,
     port: int,
     start_genesis: bool,
     theme: str,
@@ -95,7 +97,17 @@ async def main(
             is_validator=is_validator,
         )
 
-        db = KVStore(db_path)
+        settings.NODE_NAME = name
+        settings.LISTEN_PORT = port
+        settings.NODE_PATH = f"db/{port}"
+        settings.DB_PATH = f"{settings.NODE_PATH}/node"
+        settings.D3L_PATH = f"{settings.NODE_PATH}/d3l"
+
+        os.makedirs(settings.DB_PATH, exist_ok=True)
+        os.makedirs(settings.D3L_PATH, exist_ok=True)
+
+        logger.info(f"Node Running on port: {settings.LISTEN_PORT}. Dbs: {settings.DB_PATH} {settings.D3L_PATH}")
+        db = KVStore(settings.DB_PATH)
 
         if start_genesis:
             # Start from genesis

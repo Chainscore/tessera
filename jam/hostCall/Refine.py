@@ -10,7 +10,7 @@ from jam.pvm.extract import Status
 from jam.types.work.package import WorkPackage
 from hashlib import blake2b
 from jam.hostCall.invocation import PsiM
-from jam.types.work.segment import MultiSegments, Segments
+from jam.types.work.manifest import MultiSegments, Segments
 
 
 class PsiR:

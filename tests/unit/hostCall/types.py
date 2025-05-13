@@ -10,7 +10,7 @@ from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId
 from jam.types.protocol.core import Register
 
 from jam.types.work.package import WorkPackage
-from jam.types.work.segment import Segment
+from jam.types.work.manifest import Segment
 
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
