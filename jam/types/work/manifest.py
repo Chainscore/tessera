@@ -30,17 +30,13 @@ class Segments(Vector[Segment]):
 class MultiSegments(Vector[Segments]):
     ...
 
-@decodable_vector(element_type=MultiSegments)
-class SuperSegments(Vector[MultiSegments]):
-    ...
-
 @decodable_dictionary(key_type=ExportsRoot, value_type=Segments)
 class SegmentDict(Dictionary[ExportsRoot, Segments]):
     ...
 
 @decodable_dataclass
 @dataclass
-class ProvedSegments(Codable):
+class ProvedSegments(Codable, JsonSerde):
     segment: Segments
     proof: Segments
 
@@ -50,7 +46,7 @@ class Assurers(Vector[ValidatorIndex]):
 
 @decodable_dataclass
 @dataclass
-class ReportAssurers(Codable):
+class ReportAssurers(Codable, JsonSerde):
     report_hash: WorkReportHash
     assurers: Assurers
 
