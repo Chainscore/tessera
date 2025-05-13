@@ -7,16 +7,9 @@ from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types.extrinsics.assurances import AvailAssurance
-from tests.dummy.dummy_extrinsics import create_dummy_assurances
+from jam.types.extrinsics.assurances import Assurance
+from tests.dummy.dummy_package import create_dummy_assurances
 
-
-@decodable_dataclass
-@dataclass
-class Assurance(Codable, JsonSerde):
-    header_hash : AvailAssurance.anchor
-    bitfield : AvailAssurance.bitfield
-    ed25519_signature : AvailAssurance.signature
 
 class CE141Data(Codable, JsonSerde):
     assurance : Assurance
@@ -44,24 +37,28 @@ class AssuranceDistribution(NetworkProtocol):
         self._prefix = PrefixType.CE141
 
     def transmit(self, node: Node, data: CE141Data):
-        """share assurance for particular work report work-package's chunks"""
-        message = self._prefix.encode() + data.assurance.encode()
-        logger.info(f"Give assurance for work report by the validators")
+        """ send assurance, Assurer to validator """
+
+        data = create_dummy_assurances()
+        stream = self._prefix.encode() + data.encode()
+
+        logger.info(f"Giving assurance {data} to the the validators with prefix {self._prefix}")
+
+
+        # TODO: send assurance to particular (which share the report) validator
+
+        for client in node.connections:
+            client.stream_and_close(message=stream)
 
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
-        """intercept Assurer signature for work-report from validators  """
+        ...
+
+    def client_intercept(self, buffer: bytes, stream_id: int):
+        """ intercept assurance list """
+
         data, offset = CE141Data.decode_from(buffer)
         data = cast(CE141Data, data)
 
-        logger.info(f"Receive assurance for work report from Assurer")
+        logger.info(f"Receive assurance { data } from the assurer")
 
-        assurance = create_dummy_assurances()
-
-        ack = self._prefix.encode() + assurance.encode()
-        server.stream_and_close(stream_id, ack)
-
-    def client_intercept(self, buffer: bytes, stream_id: int):
-        """ intercept assurance list"""
-        logger.info(f"recived validator assurance")
-
-        # TODO: Process & Save Work report
+        # TODO: Save the assure and signature in the database

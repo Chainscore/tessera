@@ -25,6 +25,14 @@ class AvailAssurance(Codable, JsonSerde):
     signature: Ed25519Signature
 
 
+
 @decodable_vector(AvailAssurance)
 class AssurancesExtrinsic(Vector[AvailAssurance]):
     ...
+
+@decodable_dataclass
+@dataclass
+class Assurance(Codable, JsonSerde):
+    header_hash : OpaqueHash
+    bitfield : AvailBitField
+    ed25519_signature : Ed25519Signature
