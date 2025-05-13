@@ -1,21 +1,19 @@
 import asyncio
 import json
 import random
-import tempfile
 from datetime import datetime
 from typing import Any, Dict, Optional, Set
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from jam.consensus.grandpa.finality import Finality
-from jam.db.kv import KVStore
-from jam.state.state import State
 from jam.types.block import Block
 from jam.types.header import Header
-from jam.types.protocol.core import TimeSlot
 from jam.types import  U32
 from jam.storage.queue import StorageQueue
 from jam.config.data_stores import main_db #swithing to main_db
-
+from jam.state.merkle import StateTrie
+from jam.state.state import State
+from jam.types.protocol.core import ServiceId
 
 # Initialize FastAPI with metadata for Swagger UI
 app = FastAPI(
@@ -32,8 +30,7 @@ app = FastAPI(
 
 db = main_db
 # Get state and block from db
-state = State.load(self.db)
-block = Block.load(state.tau, self.db)
+block = Block.load(State.tau, db)
 
 
 # Following the etherum json rpc api structure
@@ -80,11 +77,12 @@ class RpcResponse(BaseModel):
 
 @app.post("/rpc.tessera", response_model=RpcResponse)
 async def rpc_handler(request: RpcRequest):
-    """
+    """z
     RPC requests for different methods.
     """
     method = request.method
     params = request.params
+##---------------------------------------------------------------------------
 
     if method == "bestBlock":
         # Handle bestBlock method
@@ -94,17 +92,20 @@ async def rpc_handler(request: RpcRequest):
             result=[Header.__hash__(block.header), int(block.header.slot)],
         )
 
+##----------------------------------------------------------------------------
+
     elif method == "finalizedBlock":
         # Handle finalizedBlock method without requiring params
         return RpcResponse(
             jsonrpc="2.0",
             id=request.id,
             result=[
-                Header.__hash__(Finality.load_final(main).header),
+                Header.__hash__(Finality.load_final(db).header),
                 int(Finality.load_final(db).header.slot),
             ],
         )
 
+##---------------------------------------------------------------------------
     elif method == "parent":
         if len(params) != 1:
             return RpcResponse(
@@ -116,7 +117,7 @@ async def rpc_handler(request: RpcRequest):
                 },
             )
         if len(params):
-
+            ## condition if the time slot is of genesis block
             if block.header.slot == U32(0):
                 return RpcResponse(
                     jsonrpc="2.0",
@@ -127,10 +128,11 @@ async def rpc_handler(request: RpcRequest):
                 },
                 )
 
-            if bytes(params["Hash"]) == hash(block.header).to_bytes(32):
+            ## using state trie function
+            ## TODO: Make a rocksdb search function that will fetch block with needed hash. As of now returning current state
+            if bytes(params["Hash"]):
                 # Return the parent block
                 parent_block = Block.load_parent(block.header.slot, db)
-                print("parent_block.header.slot", parent_block.header.slot)
 
                 return RpcResponse(
                     jsonrpc="2.0",
@@ -146,6 +148,8 @@ async def rpc_handler(request: RpcRequest):
                     id=request.id,
                     error={"code": -32602, "message": "unexpected error"},
                 )
+
+##-------------------------------------------------------------------------------------
 
     elif method == "stateRoot":
         if len(params) != 1:
@@ -168,13 +172,13 @@ async def rpc_handler(request: RpcRequest):
                     "message": "Invalid parameters: expected header_hash",
                 },
             )
-        
-        if bytes(params["Hash"]) == hash(block.header).to_bytes(32):
+        ## TODO: Make a rocksdb search function that will fetch block with needed hash. As of now returning current state
+        if bytes(params["Hash"]):
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
                 result=[
-                    bytes(block.header.parent_state_root).hex(),
+                        StateTrie.root_hash,
                     ],
             )
         else:
@@ -183,6 +187,8 @@ async def rpc_handler(request: RpcRequest):
                 id=request.id,
                 error={"code": -32602, "message": "unexpected error"},
             )
+
+##--------------------------------------------------------------------------------
 
     elif method == "statistics":
         if len(params) != 1:
@@ -206,11 +212,13 @@ async def rpc_handler(request: RpcRequest):
                 },
             )
 
-        if bytes(params["Hash"]) == Header.__hash__(block.header).to_bytes(32):
+        ## TODO: Make a rocksdb search function that will fetch block with needed hash. As of now returning current state
+
+        if bytes(params["Hash"]):
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
-                result=[state.pi.encode()]
+                result=[State.pi.encode()]
             )
         else:
             return RpcResponse(
@@ -218,7 +226,7 @@ async def rpc_handler(request: RpcRequest):
                 id=request.id,
                 error={"code": -32602, "message": "unexpected error"},
             )
-
+##------------------------------------------------------------------------
     elif method == "serviceData":
         if len(params) != 2:
             return RpcResponse(
@@ -257,7 +265,7 @@ async def rpc_handler(request: RpcRequest):
             return RpcResponse(
                 jsonrpc="2.0", 
                 id=request.id, 
-                result=[state.delta]
+                result=[]
             )
         else:
             return RpcResponse(
@@ -294,8 +302,9 @@ async def rpc_handler(request: RpcRequest):
         if bytes(params["Hash"]) == hash(block.header).to_bytes(32) :
             return RpcResponse(
                 jsonrpc="2.0", 
-                id=request.id, 
-                result=[state.delta]
+                id=request.id,
+                ##TODO: resolve this correctly
+                result=[State.delta]
             )
         else:
             return RpcResponse(
