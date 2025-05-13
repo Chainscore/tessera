@@ -7,7 +7,8 @@ from jam.network.protocols.ce_139 import SegmentShardRequest
 from jam.network.protocols.ce_140 import SegmentShardRequestWithJustifications
 
 from jam.network.protocols.up_0 import BlockAnnouncement
-
+from jam.network.protocols.ce_137 import ShardDistributionProtocol
+from jam.network.protocols.ce_138 import AuditShardRequestProtocol
 
 class ProtocolMap:
     ALL_PROTOCOLS = {
@@ -16,6 +17,8 @@ class ProtocolMap:
         PrefixType.CE134: WorkPackageSharing,
         PrefixType.CE135: WorkReportDistribution,
         PrefixType.CE136: WorkReportRequest,
+        PrefixType.CE137: ShardDistributionProtocol,
+        PrefixType.CE138: AuditShardRequestProtocol,
         PrefixType.CE139: SegmentShardRequest,
         PrefixType.CE140: SegmentShardRequestWithJustifications
     }

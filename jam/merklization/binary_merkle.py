@@ -244,7 +244,7 @@ class BMRFunctions:
 
         return page
 
-    def verify_proof(self, trace: Vector[OpaqueHash], leaves: Vector[OpaqueHash], leaf_index: int, og_root: OpaqueHash) -> bool:
+    def verify_proof(self, trace: Vector[OpaqueHash], leaves: Vector[OpaqueHash], leaf_index: int) -> OpaqueHash:
         """
         Merkle Proof Verification Function (not provided in GP)
 
@@ -252,7 +252,6 @@ class BMRFunctions:
             trace: Sequence of nodes depicting path of a tree to a particular index
             leaves: Sequence of leaf nodes
             leaf_index: Node Index
-            og_root: Previous root to match proof with
         Returns:
             Verification Result
         """
@@ -265,4 +264,4 @@ class BMRFunctions:
                 root = self._node_fn(Vector([sibling, root]))
             leaf_index = leaf_index // 2
 
-        return og_root == root
+        return root
