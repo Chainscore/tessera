@@ -1,3 +1,4 @@
+from typing import Tuple
 from dataclasses import dataclass
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.integers.fixed import U32, U64
@@ -70,7 +71,7 @@ At = Balance
 @dataclass
 class AccountData(Codable, JsonSerde):
     # s
-    storage: AccountStorage  
+    storage: AccountStorage
     # p
     lookup: PreImageLookup
     # l
@@ -107,4 +108,3 @@ class AccountData(Codable, JsonSerde):
 class Delta(Dictionary[ServiceId, AccountData]):
     """Delta state"""
     ...
-
