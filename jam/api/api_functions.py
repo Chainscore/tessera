@@ -5,7 +5,6 @@ from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional, Union, Literal
-
 from jam.assurances.errors import AssurancesError
 from jam.report.state import Reporting
 from jam.accumulation.accumulation import Accumulation
@@ -60,54 +59,41 @@ def fetch_type():
 
     return type_json
 
+
 def export_cases_types():
     """
     Get an overview of all available types.
-    
+
     Only a subset of types is exposed here for testing. More will follow.
     """
     return fetch_type()
 
+
 def export_json_to_codec(request_data: RequestDataCodec,
-        type_id : str = Query("assurances_extrinsic", enum = [
-        "assurances_extrinsic",
-        "block",
-        "disputes_extrinsic",
-        "extrinsic",
-        "guarantees_extrinsic",
-        "header",
-        "preimages_extrinsic",
-        "refine_context",
-        "tickets_extrinsic",
-        "work_item",
-        "work_package",
-        "work_report",
-        "work_result"
-    ])):
+                         type_id: str = Query("assurances_extrinsic", enum=[
+                             "assurances_extrinsic",
+                             "block",
+                             "disputes_extrinsic",
+                             "extrinsic",
+                             "guarantees_extrinsic",
+                             "header",
+                             "preimages_extrinsic",
+                             "refine_context",
+                             "tickets_extrinsic",
+                             "work_item",
+                             "work_package",
+                             "work_report",
+                             "work_result"
+                         ])):
     """
     Convert JSON data to codec format.
-    
+
     Takes JSON data and a type label, and returns the hex-encoded codec format.
-    
-    Available labels:
-    - assurances_extrinsic: Assurances extrinsic data structure
-    - block: Block data structure containing extrinsics and header  
-    - disputes_extrinsic: Disputes extrinsic data structure
-    - extrinsic: Generic extrinsic data structure
-    - guarantees_extrinsic: Guarantees extrinsic data structure
-    - header: Block header data structure
-    - preimages_extrinsic: Preimages extrinsic data structure
-    - refine_context: Refine context for work items
-    - tickets_extrinsic: Tickets extrinsic data structure
-    - work_item: Work item data structure
-    - work_package: Work package data structure
-    - work_report: Work report data structure
-    - work_result: Work result data structure
     """
     try:
         json_file = request_data.input.json_data
         label = type_id
-    
+
         if label == "assurances_extrinsic":
             assurance = AssurancesExtrinsic.from_json(json_file)
             return {"data": assurance.encode().hex(), "status": "Ok"}
@@ -164,41 +150,26 @@ def export_json_to_codec(request_data: RequestDataCodec,
         raise HTTPException(status_code=400, detail=f"Conversion failed: {str(e)}")
 
 
-def export_codec_to_json(request_data: RequestDataJson, type_id : str = Query("assurances_extrinsic", enum = [
-        "assurances_extrinsic",
-        "block",
-        "disputes_extrinsic",
-        "extrinsic",
-        "guarantees_extrinsic",
-        "header",
-        "preimages_extrinsic",
-        "refine_context",
-        "tickets_extrinsic",
-        "work_item",
-        "work_package",
-        "work_report",
-        "work_result"
-    ])):
+def export_codec_to_json(request_data: RequestDataJson, type_id: str = Query("assurances_extrinsic", enum=[
+    "assurances_extrinsic",
+    "block",
+    "disputes_extrinsic",
+    "extrinsic",
+    "guarantees_extrinsic",
+    "header",
+    "preimages_extrinsic",
+    "refine_context",
+    "tickets_extrinsic",
+    "work_item",
+    "work_package",
+    "work_report",
+    "work_result"
+])):
     """
     Convert codec data to JSON format.
-    
+
     Takes hex-encoded codec data and a type label, and returns the JSON representation.
-    
-    Available labels:
-    - assurances_extrinsic: Assurances extrinsic data structure
-    - block: Block data structure containing extrinsics and header  
-    - disputes_extrinsic: Disputes extrinsic data structure
-    - extrinsic: Generic extrinsic data structure
-    - guarantees_extrinsic: Guarantees extrinsic data structure
-    - header: Block header data structure
-    - preimages_extrinsic: Preimages extrinsic data structure
-    - refine_context: Refine context for work items
-    - tickets_extrinsic: Tickets extrinsic data structure
-    - work_item: Work item data structure
-    - work_package: Work package data structure
-    - work_report: Work report data structure
-    - work_result: Work result data structure
-    """
+"""
     try:
         label = type_id
         hex_string = request_data.input.codec
@@ -263,31 +234,32 @@ def export_codec_to_json(request_data: RequestDataJson, type_id : str = Query("a
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Conversion failed: {str(e)}")
 
-def export_safrole(request_data: RequestData,    
-type_id : str = Query("non_keyval", enum = [
-        "non_keyval",
-        "keyval"
-    ])):
+
+def export_safrole(request_data: RequestData,
+                   type_id: str = Query("non_keyval", enum=[
+                       "non_keyval",
+                       "keyval"
+                   ])):
     """
     Validate state transition according to Safrole consensus.
-    
+
     Compares the output of the Safrole transition function with the expected output state.
     """
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
-      
+
         epoch_mark = test_block.header.epoch_mark.value
         if 'none' in epoch_mark:
             entropy = ByteArray32(bytes(32))
         else:
             entropy = test_block.header.epoch_mark.value['some'].entropy
-       
+
         transition_output = Safrole.transition(test_state, test_block, entropy)
-        
+
         if request_data.output is None:
             return {"ok": None}
-            
+
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
         try:
@@ -314,7 +286,8 @@ type_id : str = Query("non_keyval", enum = [
     except SafroleError as e:
         return JSONResponse(status_code=400, content={"err": e.code._value_})
     except Exception as e:
-         return JSONResponse(status_code=400, content={"err": "unexpected_error"})
+        return JSONResponse(status_code=400, content={"err": "unexpected_error"})
+
 
 def export_safrole_keyval(request_data: RequestData):
     """
@@ -329,7 +302,7 @@ def export_safrole_keyval(request_data: RequestData):
             entropy = ByteArray32(bytes(32))
         else:
             entropy = test_block.header.epoch_mark.value['some'].entropy
-       
+
         transition_output = Safrole.transition(test_state, test_block, entropy)
 
         if request_data.output is None:
@@ -362,10 +335,11 @@ def export_safrole_keyval(request_data: RequestData):
     except Exception as e:
         return {"err": "unexpected_error"}
 
+
 def export_shuffle_validate(request_data: RequestDataShuffle):
     """
     Validate shuffling operation.
-    
+
     Uses the provided entropy to shuffle the input sequence and returns the result.
     """
     try:
@@ -379,17 +353,17 @@ def export_shuffle_validate(request_data: RequestDataShuffle):
 def export_recent_history(request_data: RequestData):
     """
     Validate state transition according to Recent History rules.
-    
+
     Compares the output of the Recent History transition function with the expected output state.
     """
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
-        transition_output = RecentHistory.transition(test_state, test_block, ByteArray32([0]*32))
-        
+        transition_output = RecentHistory.transition(test_state, test_block, ByteArray32([0] * 32))
+
         if request_data.output is None:
             return {"ok": None}
-            
+
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
         assert transition_output == output_state
@@ -402,22 +376,22 @@ def export_recent_history(request_data: RequestData):
 def export_authorization(request_data: RequestData):
     """
     Validate state transition according to Authorization rules.
-    
+
     Compares the output of the Authorization transition function with the expected output state.
     """
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
         transition_output = Authorization.transition(test_state, test_block)
-        
+
         if request_data.output is None:
             return {"result": True}
-            
+
         output_state = GeneralState.from_json(request_data.output.state).to_state()
-        
+
         try:
             assert transition_output == output_state, "output_mismatch"
-            
+
         except AssertionError as e:
             return {"err": str(e)}
 
@@ -429,25 +403,25 @@ def export_authorization(request_data: RequestData):
         return {"err": "unexpected_error"}
 
 
-def  export_disputes(request_data: RequestData):
+def export_disputes(request_data: RequestData):
     """
     Validate state transition according to Disputes resolution rules.
-    
+
     Compares the output of the Disputes transition function with the expected output state.
     """
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
         transition_output = Disputes.transition(test_state, test_block)
-        
+
         if request_data.output is None:
             return {"result": True}
-            
+
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
         try:
             assert transition_output == output_state, "output_mismatch"
-            
+
         except AssertionError as e:
             return {"err": str(e)}
 
@@ -458,24 +432,25 @@ def  export_disputes(request_data: RequestData):
     except Exception as e:
         return {"err": "unexpected_error"}
 
+
 def export_assurances(request_data: RequestData):
     """
     Validate state transition according to Assurances rules.
-    
+
     Compares the output of the Assurances transition function with the expected output state.
     """
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
         transition_output = Assurances.transition(test_state, test_block)
-        
+
         if request_data.output is None:
             return {"result": True}
-            
+
         output_state = GeneralState.from_json(request_data.output.state).to_state()
         try:
             assert transition_output == output_state, "output_mismatch"
-            
+
         except AssurancesError as e:
             return {"err": str(e)}
 
@@ -486,10 +461,11 @@ def export_assurances(request_data: RequestData):
     except Exception as e:
         return {"err": "unexpected_error"}
 
+
 def export_report(request_data: RequestData):
     """
     Validate state transition according to Report rules.
-    
+
     Compares the output of the Report transition function with the expected output state.
     """
     try:
@@ -499,12 +475,12 @@ def export_report(request_data: RequestData):
 
         if request_data.output is None:
             return {"result": True}
-            
+
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
         try:
             assert transition_output == output_state, "output_mismatch"
-            
+
         except AssertionError as e:
             return {"err": str(e)}
 
@@ -515,25 +491,26 @@ def export_report(request_data: RequestData):
     except Exception as e:
         return {"err": "unexpected_error"}
 
-def  export_accumulate(request_data: RequestData):
+
+def export_accumulate(request_data: RequestData):
     """
     Validate state transition according to Accumulation rules.
-    
+
     Compares the output of the Accumulation transition function with the expected output state.
     """
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
         transition_output = Accumulation.transition(test_state, test_block)
-        
+
         if request_data.output is None:
             return {"result": True}
-            
+
         output_state = GeneralState.from_json(request_data.output.state).to_state()
-        
+
         try:
             assert transition_output == output_state, "output_mismatch"
-            
+
         except AssertionError as e:
             return {"err": str(e)}
 
@@ -544,25 +521,26 @@ def  export_accumulate(request_data: RequestData):
     except Exception as e:
         return {"err": "unexpected_error"}
 
+
 def export_preimages(request_data: RequestData):
     """
     Validate state transition according to Preimages rules.
-    
+
     Compares the output of the Preimages transition function with the expected output state.
     """
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
         transition_output = Preimages.transition(test_state, test_block)
-        
+
         if request_data.output is None:
             return {"result": True}
-            
+
         output_state = GeneralState.from_json(request_data.output.state).to_state()
 
         try:
             assert transition_output == output_state, "output_mismatch"
-            
+
         except AssertionError as e:
             return {"err": str(e)}
 
@@ -573,25 +551,26 @@ def export_preimages(request_data: RequestData):
     except Exception as e:
         return {"err": "unexpected_error"}
 
-def  export_statistics(request_data: RequestData):
+
+def export_statistics(request_data: RequestData):
     """
     Validate state transition according to Statistics rules.
-    
+
     Compares the output of the Statistics transition function with the expected output state.
     """
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GeneralState.from_json(request_data.input.state).to_state()
         transition_output = Statistics.transition(test_state, test_block)
-        
+
         if request_data.output is None:
             return {"result": True}
-            
+
         output_state = GeneralState.from_json(request_data.output.state).to_state()
-        
+
         try:
             assert transition_output == output_state, "output_mismatch"
-            
+
         except AssertionError as e:
             return {"err": str(e)}
 
