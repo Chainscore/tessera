@@ -5,7 +5,9 @@ from pathlib import Path
 import pytest
 
 from jam.accumulation.accumulation import Accumulation
-from jam.state.state import state
+from jam.config.data_stores import main_db
+from jam.state.ghost import GhostState
+from jam.state.state import setup_state
 from jam.types.protocol.core import ServiceId
 # from jam.accumulation.accumulation import Accumulation
 
@@ -34,6 +36,9 @@ def load_test_vectors():
 
 @pytest.mark.parametrize("vector", load_test_vectors(), ids=lambda v: v.input.slot)
 def test_accumulation(vector: TestcasePsiA):
+		setup_state(GhostState.genesis(), main_db)
+		from jam.state.state import state
+
 		partial_state = StateContext(
 				service_accounts=vector.pre_state.accounts,
 				validator_keys=[],

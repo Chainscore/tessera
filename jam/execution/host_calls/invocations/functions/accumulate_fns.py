@@ -16,8 +16,8 @@ from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_
 
 
 def check(u:StateContext,i:ServiceId):
-    if u.service_accounts[i] is None:
-        return i;
+    if u.service_accounts.get(i) is None:
+        return i
     else:
         return check(u,(i-2**8)%(2**32-2**9)+2**8)
 

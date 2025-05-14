@@ -47,9 +47,10 @@ class PVM:
                 status, program_counter, registers, memory = table.execute(opcode, registers, memory)
                 remaining_gas -= int(table.table()[opcode].gas)
 
+                print("status", status)
                 if remaining_gas < 0:
                     return OUT_OF_GAS, program_counter, remaining_gas, registers, memory
-                elif status.code == ExecutionStatus.HALT:
+                elif status == ExecutionStatus.HALT:
                     return status, program_counter, remaining_gas, registers, memory
             except PvmError as e:
                 if e == ExecutionStatus.PANIC:
