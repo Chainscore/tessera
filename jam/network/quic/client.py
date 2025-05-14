@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, Optional
 
 from aioquic.asyncio import QuicConnectionProtocol
@@ -15,8 +16,9 @@ class QuicClientProtocol(QuicConnectionProtocol):
         super().__init__(*args, **kwargs)
         self._close_pending = False
         self.stream_buffer = {}
+        self.waiter = None
 
-    def stream_and_close(self, message: bytes, stream_id: Optional[int] = None) -> int:
+    async def stream_and_close(self, message: bytes, stream_id: Optional[int] = None):
         if self._close_pending:
             raise ConnectionError("Connection is closing")
 
@@ -26,8 +28,10 @@ class QuicClientProtocol(QuicConnectionProtocol):
         logger.info(f"📤 Sending message of size {len(message)} bytes (stream {stream_id})")
         self._quic.send_stream_data(stream_id, message, end_stream=True)
 
+        waiter = self._loop.create_future()
+        self.waiter = waiter
         self.transmit()
-        return stream_id
+        return await asyncio.shield(waiter)
 
     def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
         if self._close_pending:
@@ -52,38 +56,49 @@ class QuicClientProtocol(QuicConnectionProtocol):
             self._close_pending = True
 
         elif isinstance(event, StreamDataReceived):
-            from jam.network.protocols.base import PrefixType
+            if self.waiter is not None:
+                from jam.network.protocols.base import PrefixType
 
-            logger.info(f"📩 Received data of size {len(event.data)} bytes on stream {event.stream_id}")
+                logger.info(f"📩 Received data of size {len(event.data)} bytes on stream {event.stream_id}")
 
-            if event.stream_id not in self.stream_buffer:
-                self.stream_buffer[event.stream_id] = bytes(0)
+                if event.stream_id not in self.stream_buffer:
+                    self.stream_buffer[event.stream_id] = bytes(0)
 
-            self.stream_buffer[event.stream_id] += event.data
+                self.stream_buffer[event.stream_id] += event.data
 
-            if event.end_stream:
-                try:
-                    buffer = self.stream_buffer[event.stream_id]
-
-                    if not buffer:
-                        logger.warning("📩 Received empty buffer.")
-                        return
-
+                if event.end_stream:
                     try:
-                        prefix, _ = PrefixType.decodeFrom(buffer[0:1])
-                    except Exception:
-                        prefix = None
+                        buffer = self.stream_buffer[event.stream_id]
 
-                    # Map the request to its corresponding protocol function
-                    from jam.network.protocol_map import ProtocolMap
+                        if not buffer:
+                            logger.warning("📩 Received empty buffer.")
+                            return
 
-                    protocol = ProtocolMap.get_protocol(prefix)()
-                    protocol.client_intercept(buffer[1:], event.stream_id)
+                        try:
+                            prefix, _ = PrefixType.decodeFrom(buffer[0:1])
+                        except Exception:
+                            prefix = None
 
-                    # Clear buffer
-                    self.stream_buffer[event.stream_id] = b""
-                except Exception as e:
+                        # Map the request to its corresponding protocol function
+                        from jam.network.protocol_map import ProtocolMap
 
-                    # Clear buffer
-                    self.stream_buffer[event.stream_id] = b""
-                    logger.exception(f"Error retrieving data from ce stream: {e}")
+                        protocol = ProtocolMap.get_protocol(prefix)()
+                        data = protocol.client_intercept(buffer[1:], event.stream_id)
+
+                        # Wait for acknowledgment
+                        waiter = self.waiter
+                        self.waiter = None
+                        waiter.set_result(data)
+
+                        # Clear buffer
+                        self.stream_buffer[event.stream_id] = b""
+
+                    except Exception as e:
+
+                        waiter = self.waiter
+                        self.waiter = None
+                        waiter.set_result("failed to retrieve data")
+
+                        # Clear buffer
+                        self.stream_buffer[event.stream_id] = b""
+                        logger.exception(f"Error retrieving data from ce stream: {e}")

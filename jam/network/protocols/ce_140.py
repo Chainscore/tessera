@@ -53,8 +53,10 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
         ack = self._prefix.encode() + response.encode()
         server.stream_and_close(stream_id, ack)
 
-    def client_intercept(self, buffer: bytes, stream_id: int):
+    def client_intercept(self, buffer: bytes, stream_id: int) -> JustifiedResponse:
         response, _ = JustifiedResponse.decode_from(buffer)
         response = cast(JustifiedResponse, response)
         logger.info(f"client response: {response}")
         logger.info("Received CE140 shard+justification response")
+
+        return response

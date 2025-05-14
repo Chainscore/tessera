@@ -11,12 +11,12 @@ from jam.types.base.integers.general import Int
 from jam.types.base.integers.fixed import U8, U16, U64
 
 
-from jam.types.work.item import WorkItem, ExtrinsicSpec
+from jam.types.work.item import WorkItem
 from jam.types.work.package import  WorkPackage
 from jam.types.work.manifest import Segments, Segment, MultiSegments, Justifications, Justification, \
     Extrinsics, SegmentDict, MultiJustifications, MultiExtrinsics, ProvedSegments
 from jam.types.work.shard import BundleShardHashes, BundleShardUnit, SegmentsShards, \
-    SegmentsShard, SegmentsShardRoots, SegmentsShardUnit, ShardKeys, ShardKey
+    SegmentsShard, SegmentsShardRoots, SegmentsShardUnit, ShardKey
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
 from jam.types.work.report import (
     WorkResult,
@@ -621,7 +621,7 @@ class WorkPackageProcessing:
         # TODO: Distribute WR to Guarantors CE135
 
 
-    def bundle_process(self, core: CoreIndex, bundle: WorkPackageBundle, segment_lookup: SegmentRootLookup) -> WorkReportHash:
+    def bundle_process(self, core: CoreIndex, bundle: WorkPackageBundle, segment_lookup: SegmentRootLookup) -> Tuple[WorkReport, WorkReportHash]:
         d3l = KVStore(settings.D3L_PATH)
 
         self.sr_lookup = segment_lookup
@@ -637,5 +637,5 @@ class WorkPackageProcessing:
         # TODO: send back Work-Report Hash ++ Ed25519 Signature to assigned Guarantor via CE134 protocol
 
 
-        return wr_hash
+        return report, wr_hash
 
