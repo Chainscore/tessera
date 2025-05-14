@@ -53,11 +53,11 @@ class Memory:
         # If writing, the page must be allowed to be written.
         if for_write:
             if page not in self.allowed_write_pages:
-                raise  PAGE_FAULT(U64(addr))
+                raise PvmError(PAGE_FAULT(U64(addr)))
         # Else (reading), the page must be allowed to be write / read
         else:
             if (page not in self.allowed_read_pages) and (page not in self.allowed_write_pages):
-                raise PAGE_FAULT(U64(addr))
+                raise PvmError(PAGE_FAULT(U64(addr)))
         return addr
 
     def read(self, address: int, length: int) -> bytes:

@@ -23,5 +23,6 @@ class InvocationFunctions(Protocol):
         call = cls.table()[host_call]
         if kwargs.gas < call.gas:
             return ExecutionStatus.OUT_OF_GAS, kwargs.gas, kwargs.registers, kwargs.memory
-        
+
+        print(f"Executing host call {call.execute}")
         return call.execute(kwargs)
