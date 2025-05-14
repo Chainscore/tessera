@@ -65,7 +65,7 @@ class AllCoreStats(Array[CoreStat]):
     ...
 
 
-@decodable_dictionary(ServiceId, ServiceStat)
+@decodable_dictionary(ServiceId, ServiceStat ,key_name="id", value_name="record")
 class AllServiceStats(Dictionary[ServiceId, ServiceStat]):
     """All service stats"""
 

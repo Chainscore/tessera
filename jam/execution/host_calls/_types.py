@@ -2,7 +2,9 @@ from dataclasses import dataclass
 from typing import List
 from typing_extensions import Optional
 
+from jam.accumulation.types import StateContext
 from jam.execution.pvm.memory import Memory
+from jam.types.base import decodable_choice, Choice
 from jam.types.base.null import Nullable
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.state.chi import Chi
@@ -12,7 +14,7 @@ from jam.types.base.integers.general import Int
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.types.protocol.core import Balance, Gas, ProgramCounter, ServiceId, WorkPackageHash
+from jam.types.protocol.core import Balance, Gas, ProgramCounter, ServiceId, WorkPackageHash, ExportsRoot
 from jam.types.state.iota import Iota
 from jam.types.state.phi import Phi
 from jam.types.work.report import WorkExecResult
@@ -102,11 +104,12 @@ class AccumulationContext(Codable, JsonSerde):
 @dataclass
 class OperandTuple(Codable, JsonSerde):
     d: WorkExecResult
-    l: OpaqueHash
+    g: Gas
+    y: OpaqueHash
+    o: Bytes
+    e: ExportsRoot
+    h: WorkPackageHash
     a: Bytes
-    k: WorkPackageHash
-
-
 
 
 @decodable_vector(OperandTuple)
