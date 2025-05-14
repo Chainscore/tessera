@@ -102,7 +102,7 @@ class Account:
         return TimestampsView(self.id, self.DB, self.TRIE)
 
     def m_c(self) -> (bytes, bytes):
-        service_data = self.lookup[self.code_hash])
+        service_data = self.lookup[self.code_hash]
         pm, offset = BytesCodec.decode_from(service_data)
         pc = service_data[offset:]
         return pm, pc
