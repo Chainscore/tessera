@@ -1,5 +1,5 @@
 
-from typing import Tuple
+from typing import Optional, Tuple
 from jam.execution.host_calls._types import  DeferredTransfers, OperandTuples, accu_Xcontext,StateContext, accumulation_context, preimage_dict
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
@@ -52,7 +52,7 @@ class PsiA(InvocationProtocol):
             return self.partial_state,DeferredTransfers(),None,Gas(0),preimage_dict({})
         else:
             context=self.i_function(self.service_id,self.partial_state)
-            PsiM(
+            gas,status,context=PsiM.execute(
                 c,
                 ProgramCounter(5),
                 self.gas,
@@ -60,6 +60,7 @@ class PsiA(InvocationProtocol):
                 self.dispatch,
                 accumulation_context(context,context),
             )
+            self.partial_state,self.deferred_transfers,hash,self.gas,preimage=self.c_function(status,gas,context)
 
 
 
@@ -94,8 +95,16 @@ class PsiA(InvocationProtocol):
 
 
 
-    @classmethod
-    def c_function(cls,status:ExecutionStatus | bytes,gas:Gas,x:accu_Xcontext,y:ByteArray32)->Tuple[StateContext,DeferredTransfers,preimage_dict]:
+    @staticmethod
+    def c_function(status:ExecutionStatus | bytes,gas:Gas,context:accumulation_context)->Tuple[StateContext,DeferredTransfers,Optional[bytes],Gas,preimage_dict]:
+        if status == ExecutionStatus.PANIC or status == ExecutionStatus.OUT_OF_GAS:
+            return context.y.partial_state, context.y.deferred_transfers, context.y.hash, gas,context.y.preimage
+        elif isinstance(status, bytes):
+            return context.x.partial_state, context.x.deferred_transfers, status, gas,context.x.preimage
+        else:
+            return context.x.partial_state, context.x.deferred_transfers, context.x.hash, gas,context.x.preimage
+
+
 
 
 #
