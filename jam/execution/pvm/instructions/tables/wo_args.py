@@ -22,7 +22,7 @@ class InstructionsWoArgs(InstructionTable):
         """
         OPC0: Trap the execution.
         """
-        raise PANIC
+        raise PvmError(PANIC)
 
     def fallthrough(
         self, registers: Registers, memory: Memory
