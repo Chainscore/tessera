@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from http.client import responses
 from typing import cast
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
+from jam.types import Vector
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
@@ -35,7 +37,7 @@ class AssuranceDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE141
 
-    def transmit(self, node: Node, data: CE141Data):
+    async def transmit(self, node: Node, data: CE141Data):
         """ Transmit assurance, From Assurer (client) to Validator (server) """
 
         stream = self._prefix.encode() + data.encode()
@@ -44,28 +46,26 @@ class AssuranceDistribution(NetworkProtocol):
 
 
         # TODO: send assurance to particular (that share the report) validator
-        if node.is_validator:
-            for client in node.connections:
-                client.stream_and_close(message=stream)
+
+        responses = Vector([])
+        for client in node.connections:
+            data = await client.stream_and_close(message=stream)
+            responses.append(data)
+
+        return responses
 
 
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
-        """  """
-        logger.info("Received assurance")
-        data, offset = CE141Data.decode_from(buffer)
-        data = cast(CE141Data, data)
-
-        logger.info("Processing assurance")
-        # TODO: Save the assure (signature) in the database for work report and process
-
-
-        # Send Acknowledgement
-        ack =  self._prefix.encode() + b""
-        server.stream_and_close(stream_id, ack)
-
-        logger.info("Sent acknowledgement back to assurer")
+       ...
 
     def client_intercept(self, buffer: bytes, stream_id: int):
         """ intercept assurance list """
 
-        logger.info(f"Receive assurance on assurer Node from server via stream { stream_id}")
+        data, offset = CE141Data.decode_from(buffer)
+        data = cast(CE141Data, data)
+
+        logger.info(f"Receive assurance {data} from the assurer")
+
+        # TODO: Save the assure and signature in the database
+
+        return data.assurance
