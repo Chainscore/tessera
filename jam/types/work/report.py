@@ -57,11 +57,15 @@ class RefineLoad(Codable, JsonSerde):
 @dataclass
 class WorkResult(Codable, JsonSerde):
     """Work result structure."""
-
+    # s
     service_id: ServiceId
+    # h
     code_hash: OpaqueHash
+    # y
     payload_hash: OpaqueHash
+    # g
     accumulate_gas: Gas
+    # d
     result: WorkExecResult
     refine_load: RefineLoad
 
@@ -69,11 +73,15 @@ class WorkResult(Codable, JsonSerde):
 @dataclass
 class WorkPackageSpec(Codable, JsonSerde):
     """Work package specification structure."""
-
+    # h
     hash: WorkPackageHash
+    # l
     length: U32
+    # u
     erasure_root: ErasureRoot
+    # e
     exports_root: ExportsRoot
+    # n
     exports_count: U16
 
 
@@ -113,14 +121,21 @@ class WorkResults(Vector[WorkResult]): ...
 @dataclass
 class WorkReport(Codable, JsonSerde):
     """Work report structure."""
-
+    # s
     package_spec: WorkPackageSpec
+    # x
     context: RefineContext
+    # c
     core_index: CoreIndex
+    # a
     authorizer_hash: OpaqueHash
+    # o
     auth_output: Bytes
+    # l
     segment_root_lookup: SegmentRootLookup
+    # r
     results: WorkResults
+    # g
     auth_gas_used: Gas
 
 
