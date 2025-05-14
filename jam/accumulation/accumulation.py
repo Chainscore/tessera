@@ -2,7 +2,8 @@ import copy
 import dataclasses
 from copy import deepcopy
 
-from jam.types import Block, Null
+from jam.types.block import Block
+from jam.types.base.null import Null
 from jam.accumulation.types import (
     PreimageDict,
     GasAccumulations,
@@ -32,6 +33,7 @@ from jam.types.work.report import (
     WorkReport,
 )
 from jam.utils.constants import EPOCH_LENGTH
+
 
 
 class Accumulation:

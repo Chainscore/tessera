@@ -1,5 +1,7 @@
 # from ast import Bytes
 from dataclasses import dataclass
+
+from jam.types.base import decodable_dictionary, Dictionary
 from jam.types.base.integers.fixed import U32, U64
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.sequences.vector import Vector, decodable_vector
@@ -10,7 +12,7 @@ from jam.types.state.delta import Delta
 from jam.types.state.iota import Iota
 from jam.types.state.nu import Nu
 from jam.types.state.phi import Phi
-from jam.types.state.pi import Pi
+from jam.types.state.pi import Pi, AllServiceStats
 from jam.types.state.xi import Xi
 from jam.types.work.report import WorkExecResult, WorkReports
 from jam.utils.codec.codable import Codable
@@ -76,14 +78,8 @@ class InputService(Codable,JsonSerde):
     bytes: U64
     items: U32
 
-@decodable_dataclass
-@dataclass
-class InputPreimage(Codable,JsonSerde):
-    hash: OpaqueHash
-    blob: Bytes
-
-@decodable_vector(InputPreimage)
-class InputPreimages(Vector[InputPreimage]):
+@decodable_dictionary(OpaqueHash, Bytes, key_name="hash", value_name="blob")
+class InputPreimages(Dictionary):
     ...
 
 @decodable_dataclass
@@ -92,14 +88,8 @@ class AccountData(Codable,JsonSerde):
     service: InputService
     preimages: InputPreimages
 
-@decodable_dataclass
-@dataclass
-class Account(Codable,JsonSerde):
-    id:ServiceId
-    data:AccountData
-
-@decodable_vector(Account)
-class Accounts(Vector[Account]):
+@decodable_dictionary(ServiceId, AccountData, key_name="id", value_name="data")
+class Accounts(Dictionary):
     ...
 
 @decodable_dataclass
@@ -134,7 +124,7 @@ class PreState(Codable, JsonSerde):
     ready_queue: Nu
     accumulated: Xi
     privileges: ChiCustom
-    statistics: Pi # TODO: Need Modifications
+    statistics: AllServiceStats
     accounts: Accounts
 
 PostState=PreState
