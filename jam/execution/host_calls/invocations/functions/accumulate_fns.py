@@ -190,7 +190,10 @@ class AccumulateFunctions(INVF):
         elif delta.num_i!=2 or delta.timestamps[LookupTable(h,l)] is None:
             registers[7]=HostStatus.HUH
             return CONTINUE,registers,memory,context
-        elif len(delta.timestamps[LookupTable(h,l)])==2 and delta.timestamps[LookupTable(h,l)][1]<block_timeslot-PREIMAGE_EVICTION_TIMESLOTS # [1] refers to x 2nd timestamp which should be smaller than Block Timeslot - PreImage Eviction Timeslot
+        elif (
+                len(delta.timestamps[LookupTable(h,l)])==2 and
+                delta.timestamps[LookupTable(h,l)][1]<block_timeslot-PREIMAGE_EVICTION_TIMESLOTS
+        ): # [1] refers to x 2nd timestamp which should be smaller than Block Timeslot - PreImage Eviction Timeslot
             registers[7]=HostStatus.OK
             del context.x.partial_state.service_accounts[d]
             context.x.partial_state.service_accounts[context.x.s_index].balance+=delta.balance

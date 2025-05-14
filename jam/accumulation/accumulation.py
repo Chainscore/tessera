@@ -2,8 +2,9 @@ import copy
 import dataclasses
 from copy import deepcopy
 
-from jam.state import state
-from jam.types import Block, Null
+from jam.execution.host_calls.invocations.accumulate import PsiA
+from jam.types.block import Block
+from jam.types.base.null import Null
 from jam.accumulation.types import (
     PreimageDict,
     GasAccumulations,
@@ -14,7 +15,6 @@ from jam.accumulation.types import (
     OperandTuple,
 )
 
-from jam.types.protocol.crypto import Hash
 from jam.types.state.sigma import Sigma
 from jam.types.state.delta import Delta
 from jam.types.state.phi import Phi
@@ -23,7 +23,7 @@ from jam.types.state.iota import Iota
 from jam.types.state.chi import ChiA, ChiG, ChiM, ChiV
 from jam.types.state.nu import AllReadyWRs, ReadyWR
 from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
-from jam.hostCall.transfer import PsiT
+# from jam.hostCall.transfer import PsiT
 
 from jam.types.protocol.merkle import OptionHash
 from jam.types.protocol.core import Gas, ServiceId
@@ -34,6 +34,7 @@ from jam.types.work.report import (
     WorkReport,
 )
 from jam.utils.constants import EPOCH_LENGTH
+
 
 
 class Accumulation:
@@ -223,9 +224,9 @@ class Accumulation:
 
         deferred_transfers_star.extend(deferred_transfers)
         gas_accumulations_star.extend(gas_accumulations)
-        # Efficiently update accl_outputs_star only for keys not already in accl_outputs_star
-        accl_outputs_star.update({key: accl_outputs[key] for key in accl_outputs if key not in accl_outputs_star})
-
+        for i in accl_outputs:
+            if i not in accl_outputs_star:
+                accl_outputs_star[i]=accl_outputs[i]
 
         return index + j, partial_state_dash, deferred_transfers_star, accl_outputs_star,gas_accumulations_star
 
@@ -258,19 +259,13 @@ class Accumulation:
 
         # s: list[ServiceId] = []
         s: set[ServiceId] = set()  # set of wr_service_ids && previleged service_ids
-        dict_keys=set()
-        for service_id in initial_state.service_accounts:
-            dict_keys.add(service_id)
+
         u: Gas = 0  # accumulated gas
         accl_output_pair = AccumulationOutput(
             {}
         )  # accumulation-output pairings (b/B)
-        accumulated_gas=GasAccumulations([])
         t_cap: DeferredTransfers = DeferredTransfers([])
         state: StateContext = initial_state
-        n=Delta({})
-        m_set=set()
-        preimage_dict=PreimageDict({})
 
         # collect all service_ids from the work-reports
         for wr in work_reports:
@@ -379,17 +374,20 @@ class Accumulation:
         """
 
         g = 0
-        p = []
+        p = OperandTuples([])
 
         for i in work_reports:
             for j in i.results:
                 if j.service_id == service_id:
                     p.append(
                         OperandTuple(
-                            o=j.result,
-                            l=j.payload_hash,
-                            a=i.auth_output,
-                            k=i.package_spec.hash,
+                            d=j.result,
+                            g=j.accumulate_gas,
+                            y=j.payload_hash,
+                            o=i.auth_output,
+                            e=i.package_spec.exports_root,
+                            h=i.package_spec.hash,
+                            a=i.auth_output
                         )
                     )
 
@@ -403,9 +401,7 @@ class Accumulation:
                 if j.service_id == service_id:
                     g += j.accumulate_gas
 
-        [posterior_state, transfers, optional_hash, gas] = Accumulation.psi_a(
-            initial_state, timeslot, service_id, g, p
-        )
+        [posterior_state, transfers, optional_hash, gas] = PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=p).execute()
 
         return posterior_state, transfers, optional_hash, gas
 
@@ -593,7 +589,8 @@ class Accumulation:
             specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
             # delta_double_dagger
             # new_state.delta[s] = Accumulation.psi_t(new_state.delta, block.header.slot, s, specific_transfers)
-            new_state.delta[s] = PsiT(d=new_state.delta, t=block.header.slot, s=s, bold_t=specific_transfers).process()
+            # TODO uncomment
+            # new_state.delta[s] = PsiT(d=new_state.delta, t=block.header.slot, s=s, bold_t=specific_transfers).process()
 
         # Update Accumulated History, Xi
         for i in range(EPOCH_LENGTH - 1):

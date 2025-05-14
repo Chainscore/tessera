@@ -52,7 +52,7 @@ class PsiA(InvocationProtocol):
         }
 
     def execute(self):
-        _, c = self.partial_state.service_accounts[self.service_id].m_c
+        _, c = self.partial_state.service_accounts[self.service_id].m_c()
 
         if c is None or len(c)>MAX_SERVICE_CODE_SIZE:
             return self.partial_state,DeferredTransfers(),None,Gas(0),PreimageDict({})

@@ -17,6 +17,7 @@ from jam.types.state.xi import Xi
 from jam.types.work.report import WorkExecResult, WorkReports
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from jam.utils.codec.primitives.bytes import BytesCodec
 from jam.utils.json.serde import JsonSerde
 
 @decodable_dataclass
@@ -88,6 +89,12 @@ class AccountData(Codable,JsonSerde):
     service: InputService
     preimages: InputPreimages
 
+    def m_c(self) -> (bytes, bytes):
+        service_data = bytes(self.preimages[self.service.code_hash])
+        pm, offset = BytesCodec.decode_from(bytes(service_data))
+        pc = service_data[offset:]
+        return pm, pc
+
 @decodable_dictionary(ServiceId, AccountData, key_name="id", value_name="data")
 class Accounts(Dictionary):
     ...
@@ -110,20 +117,12 @@ class Input(Codable, JsonSerde):
 
 @decodable_dataclass
 @dataclass
-class ChiCustom(Codable, JsonSerde):
-    bless: ServiceId  # ChiM - manager that can alter Chi
-    assign: ServiceId  # ChiA - can alter Delta
-    designate: ServiceId  # ChiV - can alter Iota
-    always_acc: AlwaysAcc  # ChiG -
-
-@decodable_dataclass
-@dataclass
 class PreState(Codable, JsonSerde):
     slot: U32
     entropy: Entropy
     ready_queue: Nu
     accumulated: Xi
-    privileges: ChiCustom
+    privileges: Chi
     statistics: AllServiceStats
     accounts: Accounts
 
