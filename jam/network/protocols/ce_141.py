@@ -44,9 +44,10 @@ class AssuranceDistribution(NetworkProtocol):
 
 
         # TODO: send assurance to particular (that share the report) validator
+        if node.is_validator:
+            for client in node.connections:
+                client.stream_and_close(message=stream)
 
-        for client in node.connections:
-            client.stream_and_close(message=stream)
 
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """  """
@@ -55,7 +56,8 @@ class AssuranceDistribution(NetworkProtocol):
         data = cast(CE141Data, data)
 
         logger.info("Processing assurance")
-        # TODO: Save the assure (signature) in the database for work report
+        # TODO: Save the assure (signature) in the database for work report and process
+
 
         # Send Acknowledgement
         ack =  self._prefix.encode() + b""
@@ -66,4 +68,4 @@ class AssuranceDistribution(NetworkProtocol):
     def client_intercept(self, buffer: bytes, stream_id: int):
         """ intercept assurance list """
 
-        logger.info(f"Receive assurance on Validator Node from server via stream { stream_id}")
+        logger.info(f"Receive assurance on assurer Node from server via stream { stream_id}")
