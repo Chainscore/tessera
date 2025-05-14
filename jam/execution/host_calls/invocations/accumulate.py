@@ -1,6 +1,6 @@
 
 from typing import Optional, Tuple
-from jam.execution.host_calls._types import  DeferredTransfers, OperandTuples, accu_Xcontext,StateContext, accumulation_context, preimage_dict
+from jam.execution.host_calls._types import  DeferredTransfers, OperandTuples, AccuContextX,StateContext, AccumulationContext, PreimageDict
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
@@ -55,9 +55,9 @@ class PsiA(InvocationProtocol):
         _, c = self.partial_state.service_accounts[self.service_id].m_c
 
         if c is None or len(c)>MAX_SERVICE_CODE_SIZE:
-            return self.partial_state,DeferredTransfers(),None,Gas(0),preimage_dict({})
+            return self.partial_state,DeferredTransfers(),None,Gas(0),PreimageDict({})
         else:
-            self.context=accumulation_context(self.i_function(self.service_id,self.partial_state),self.i_function(self.service_id,self.partial_state))
+            self.context=AccumulationContext(self.i_function(self.service_id,self.partial_state),self.i_function(self.service_id,self.partial_state))
             gas,status,context=PsiM.execute(
                 c,
                 ProgramCounter(5),
@@ -69,12 +69,8 @@ class PsiA(InvocationProtocol):
             self.partial_state,self.deferred_transfers,hash,self.gas,preimage=self.c_function(status,gas,context)
             return self.partial_state,self.deferred_transfers,hash,self.gas,preimage
 
-
-
-
-
     @staticmethod
-    def i_function(s: ServiceId,stateContext:StateContext) -> accu_Xcontext:
+    def i_function(s: ServiceId,stateContext:StateContext) -> AccuContextX:
         # first = bytes(s.encode())
         # second = bytes(_n_o.encode())
         # third = bytes(timeslot.encode())
@@ -84,26 +80,26 @@ class PsiA(InvocationProtocol):
         # buffer = bytes()
         value = U32.decode_from(bytes(Hash.blake2b(s.encode()+state.eta[0].encode()+state.tau.encode())))[0] %(2**32-2**9)+2**8
         i = check(stateContext, value)
-        context = accu_Xcontext(
+        context = AccuContextX(
             s_index=s,
             partial_state=stateContext,
             i_index=i,
             deferred_transfers=DeferredTransfers(),
             hash=None,
-            preimage=preimage_dict({}),
+            preimage=PreimageDict({}),
         )
         return context
 
 
     @staticmethod
-    def g_function(status:ExecutionStatus,gas:Gas,registers:Registers,memory:Memory,accountData:AccountData,x:accu_Xcontext,y:ByteArray32)->Tuple[ExecutionStatus,Gas,Registers,Memory,accu_Xcontext,ByteArray32]:
+    def g_function(status:ExecutionStatus,gas:Gas,registers:Registers,memory:Memory,accountData:AccountData,x:AccuContextX,y:ByteArray32)->Tuple[ExecutionStatus,Gas,Registers,Memory,AccuContextX,ByteArray32]:
         x.partial_state.service_accounts[x.s_index]=accountData
         return status,gas,registers,memory,x,y # returning the updated (x*) component
 
 
 
     @staticmethod
-    def c_function(status:ExecutionStatus | bytes,gas:Gas,context:accumulation_context)->Tuple[StateContext,DeferredTransfers,Optional[bytes],Gas,preimage_dict]:
+    def c_function(status:ExecutionStatus | bytes,gas:Gas,context:AccumulationContext)->Tuple[StateContext,DeferredTransfers,Optional[bytes],Gas,PreimageDict]:
         if status == ExecutionStatus.PANIC or status == ExecutionStatus.OUT_OF_GAS:
             return context.y.partial_state, context.y.deferred_transfers, context.y.hash, gas,context.y.preimage
         elif isinstance(status, bytes):

@@ -58,12 +58,12 @@ class service_dict(Dictionary[ServiceId,Gas]):
     ...
 
 @decodable_dictionary(ServiceId,Bytes)
-class preimage_dict(Dictionary[ServiceId,Bytes]):
+class PreimageDict(Dictionary[ServiceId,Bytes]):
     ...
 
 @decodable_dataclass
 @dataclass
-class accu_Xcontext(Codable, JsonSerde):
+class AccuContextX(Codable, JsonSerde):
     #s
     s_index: ServiceId
     #u
@@ -75,7 +75,7 @@ class accu_Xcontext(Codable, JsonSerde):
     #y
     hash: Optional[Bytes]
     #p
-    preimage:preimage_dict
+    preimage:PreimageDict
 
 @decodable_dataclass
 @dataclass
@@ -92,9 +92,9 @@ class StateContext(Codable,JsonSerde):
 
 @decodable_dataclass
 @dataclass
-class accumulation_context(Codable, JsonSerde):
-    x:accu_Xcontext
-    y:accu_Xcontext
+class AccumulationContext(Codable, JsonSerde):
+    x:AccuContextX
+    y:AccuContextX
 
 
 
