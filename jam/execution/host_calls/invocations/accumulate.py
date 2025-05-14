@@ -2,14 +2,16 @@
 from typing import Optional, Tuple
 from jam.execution.host_calls._types import  DeferredTransfers, OperandTuples, accu_Xcontext,StateContext, accumulation_context, preimage_dict
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
+from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.core import Gas, ProgramCounter, ServiceId, TimeSlot
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.state.state import state
+from jam.types.state import eta
 from jam.types.state.delta import AccountData, PreImageLookup
 from jam.execution.host_calls.invocations.functions.accumulate_fns import AccumulateFunctions, check
 from jam.execution.pvm.status import ExecutionStatus, PvmError
@@ -26,9 +28,15 @@ class PsiA(InvocationProtocol):
         self.service_id=s
         self.gas=g
         self.operandTuples=o
+        self.context=None
 
     def table(self):
         return {
+            0: (GeneralFunctions, ()), # gas (Returns the gas remaining)
+            1: (GeneralFunctions, (self.service_id,self.context.x.s_index,state.delta)), # lookup
+            2: (GeneralFunctions, (self.service_id,self.context.x.s_index,state.delta)), # read
+            3: (GeneralFunctions, (self.service_id,self.context.x.s_index)), # write
+            4: (GeneralFunctions, (self.context.x.s_index,state.delta)), # info
             5: (AccumulateFunctions, ()), # bless (Updates previlaged accounts)
             6: (AccumulateFunctions, ()), # assign (Updates authorizer_keys/Phi)
             7: (AccumulateFunctions, ()), # designate (Updates validator_keys/Iota)
@@ -36,11 +44,12 @@ class PsiA(InvocationProtocol):
             9: (AccumulateFunctions, ()), # new (Updates the delta with a new service)
             10: (AccumulateFunctions, ()), # upgrade (Updates the service account)
             11: (AccumulateFunctions, ()), # transfer (Updates service deferred transfers & balance)
-            12: (AccumulateFunctions, ()), # eject (Removal of service account)
+            12: (AccumulateFunctions, (self.timeslot)), # eject (Removal of service account)
             13: (AccumulateFunctions, ()), # query (Updates registers[7,8] wrt lookupTimestamps)
             14: (AccumulateFunctions, ()), # solicit (Updated the lookupTimestamps)
             15: (AccumulateFunctions, ()), # forget (Updates lookupTimestamp & preimage)
             16: (AccumulateFunctions, ()), # yield_ (Updates context[x]_hash)
+            18: (GeneralFunctions, (self.operandTuples,state.eta[0],self.context,OpaqueHash([0] * 32))), # fetch (Updates context[x]_hash)
             27: (AccumulateFunctions, ()), # provide (Updates preimage)
 
         }
@@ -51,16 +60,17 @@ class PsiA(InvocationProtocol):
         if c is None or len(c)>MAX_SERVICE_CODE_SIZE:
             return self.partial_state,DeferredTransfers(),None,Gas(0),preimage_dict({})
         else:
-            context=self.i_function(self.service_id,self.partial_state)
+            self.context=accumulation_context(self.i_function(self.service_id,self.partial_state),self.i_function(self.service_id,self.partial_state))
             gas,status,context=PsiM.execute(
                 c,
                 ProgramCounter(5),
                 self.gas,
                 self.timeslot.encode() + self.service_id.encode() + len(self.operandTuples).encode(),
                 self.dispatch,
-                accumulation_context(context,context),
+                self.context,
             )
             self.partial_state,self.deferred_transfers,hash,self.gas,preimage=self.c_function(status,gas,context)
+            return self.partial_state,self.deferred_transfers,hash,self.gas,preimage
 
 
 
