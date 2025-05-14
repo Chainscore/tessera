@@ -39,8 +39,8 @@ class InstructionsWArgs2Reg(InstructionTable):
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
     
     def sbrk(self, registers: Registers, memory: Memory) -> OpReturn:
-        # TODO
-        ...
+        # TODO Remove this call
+        return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     @staticmethod
     def count_set_bits(bitsize: int) -> Callable[[Any, Registers, Memory], OpReturn]:
