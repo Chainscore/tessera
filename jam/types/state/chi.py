@@ -20,7 +20,12 @@ class ChiG(Dictionary[ServiceId, Gas]):
 
     ...
 
-
+@with_json_metadata(
+    chi_m={"name": "bless"},
+    chi_a={"name": "assign"},
+    chi_v={"name": "designate"},
+    chi_g={"name": "always_acc"}
+)
 @decodable_dataclass
 @dataclass
 class Chi(Codable):

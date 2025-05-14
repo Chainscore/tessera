@@ -4,8 +4,10 @@ from pathlib import Path
 
 import pytest
 
-# from jam.execution.host_calls.invocations.accumulate import PsiA
-# from jam.types.state.delta import Delta
+from jam.accumulation.accumulation import Accumulation
+from jam.state.state import state
+from jam.types.protocol.core import ServiceId
+# from jam.accumulation.accumulation import Accumulation
 
 from tests.unit.psiA.type_psiA import TestcasePsiA, StateContext, OperandTuple, OperandTuples
 
@@ -32,15 +34,17 @@ def load_test_vectors():
 
 @pytest.mark.parametrize("vector", load_test_vectors(), ids=lambda v: v.input.slot)
 def test_accumulation(vector: TestcasePsiA):
-		print("vector", vector)
-		# partial_state = StateContext(
-		# 		service_accounts=Delta({acc.id: acc.data for acc in vector.pre_state.accounts}),
-		#
-		#
-		# )
-		# timeslot = None
-		# service_id = None
-		# gas = 0
-		# operandTuples = OperandTuples([OperandTuple() for w in work_reports])
-		# context = None
-		# PsiA()
+		partial_state = StateContext(
+				service_accounts=vector.pre_state.accounts,
+				validator_keys=[],
+				authorizer_keys=[],
+				privileges=vector.pre_state.privileges
+		)
+
+		Accumulation.single_accumulation(
+				partial_state,
+				work_reports=vector.input.reports,
+				services=vector.pre_state.privileges.chi_g,
+				service_id=ServiceId(1729),
+				timeslot=state.tau
+		)
