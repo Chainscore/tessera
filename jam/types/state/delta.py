@@ -104,7 +104,7 @@ class AccountData(Codable, JsonSerde):
         return pm, pc
 
 
-@decodable_dictionary(ServiceId, AccountData)
-class Delta(Dictionary[ServiceId, AccountData]):
+@decodable_dictionary(ServiceId, AccountData, key_name="id", value_name="data")
+class Delta(Dictionary):
     """Delta state"""
     ...

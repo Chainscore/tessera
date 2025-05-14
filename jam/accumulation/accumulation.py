@@ -2,6 +2,7 @@ import copy
 import dataclasses
 from copy import deepcopy
 
+from jam.execution.host_calls.invocations.accumulate import PsiA
 from jam.types.block import Block
 from jam.types.base.null import Null
 from jam.accumulation.types import (
@@ -22,7 +23,7 @@ from jam.types.state.iota import Iota
 from jam.types.state.chi import ChiA, ChiG, ChiM, ChiV
 from jam.types.state.nu import AllReadyWRs, ReadyWR
 from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
-from jam.hostCall.transfer import PsiT
+# from jam.hostCall.transfer import PsiT
 
 from jam.types.protocol.merkle import OptionHash
 from jam.types.protocol.core import Gas, ServiceId
@@ -373,17 +374,20 @@ class Accumulation:
         """
 
         g = 0
-        p = []
+        p = OperandTuples([])
 
         for i in work_reports:
             for j in i.results:
                 if j.service_id == service_id:
                     p.append(
                         OperandTuple(
-                            o=j.result,
-                            l=j.payload_hash,
-                            a=i.auth_output,
-                            k=i.package_spec.hash,
+                            d=j.result,
+                            g=j.accumulate_gas,
+                            y=j.payload_hash,
+                            o=i.auth_output,
+                            e=i.package_spec.exports_root,
+                            h=i.package_spec.hash,
+                            a=i.auth_output
                         )
                     )
 
@@ -397,9 +401,7 @@ class Accumulation:
                 if j.service_id == service_id:
                     g += j.accumulate_gas
 
-        [posterior_state, transfers, optional_hash, gas] = Accumulation.psi_a(
-            initial_state, timeslot, service_id, g, p
-        )
+        [posterior_state, transfers, optional_hash, gas] = PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=p).execute()
 
         return posterior_state, transfers, optional_hash, gas
 
@@ -587,7 +589,8 @@ class Accumulation:
             specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
             # delta_double_dagger
             # new_state.delta[s] = Accumulation.psi_t(new_state.delta, block.header.slot, s, specific_transfers)
-            new_state.delta[s] = PsiT(d=new_state.delta, t=block.header.slot, s=s, bold_t=specific_transfers).process()
+            # TODO uncomment
+            # new_state.delta[s] = PsiT(d=new_state.delta, t=block.header.slot, s=s, bold_t=specific_transfers).process()
 
         # Update Accumulated History, Xi
         for i in range(EPOCH_LENGTH - 1):

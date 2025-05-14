@@ -83,7 +83,7 @@ class AccuContextX(Codable, JsonSerde):
 @dataclass
 class StateContext(Codable,JsonSerde):
     #d
-    service_accounts:Delta
+    service_accounts: Delta
     #i
     validator_keys: Iota
     #q
