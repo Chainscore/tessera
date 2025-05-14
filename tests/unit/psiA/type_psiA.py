@@ -135,7 +135,7 @@ class Output(Codable,JsonSerde):
     ok: Entropy
 
 
-@decodable_dataclass
+ @decodable_dataclass
 @dataclass
 class TestcasePsiA(Codable,JsonSerde):
     input: Input

@@ -6,6 +6,7 @@ from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.state.merkle import StateTrie
 from jam.state.utils.key_constructor import construct_state_key
+from jam.types.base import Bytes
 from jam.types.state.alpha import Alpha, AuthorizationPool
 from jam.types.state.eta import Eta
 from jam.types.state.nu import Nu
@@ -30,6 +31,8 @@ from jam.utils.codec import Codable
 def make_state_prop(state_key: int, cl: Type[Codable]):
     def fget(self):
         raw = self.DB.get(bytes(construct_state_key(state_key)))
+        if raw is None:
+            raise ValueError(f"State component missing from DB: {cl.__name__}")
         return cl.decode_from(raw)[0]
 
     def fset(self, value):
@@ -83,3 +86,4 @@ def setup_state(ghost: GhostState, db: KVStore):
     new_state = State(db, trie)
     global state
     state = new_state
+    return state

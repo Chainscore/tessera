@@ -6,6 +6,7 @@ from jam.execution.host_calls.invocations.functions.general_fns import GeneralFu
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
+from jam.types.base import Int
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.core import Gas, ProgramCounter, ServiceId, TimeSlot
@@ -22,10 +23,10 @@ class PsiA(InvocationProtocol):
     def __init__(self, u: StateContext, t:TimeSlot, s:ServiceId, g:Gas,o:OperandTuples ):
         self.partial_state = u
         self.timeslot = t
-        self.service_id=s
-        self.gas=g
-        self.operandTuples=o
-        self.context=None
+        self.service_id= s
+        self.gas= g
+        self.operandTuples = o
+        self.context = None
 
     def table(self):
         return {
@@ -58,16 +59,17 @@ class PsiA(InvocationProtocol):
             return self.partial_state,DeferredTransfers(),None,Gas(0),PreimageDict({})
         else:
             self.context=AccumulationContext(self.i_function(self.service_id,self.partial_state),self.i_function(self.service_id,self.partial_state))
-            gas,status,context=PsiM.execute(
+            gas, status, context=PsiM.execute(
                 c,
                 ProgramCounter(5),
                 self.gas,
-                self.timeslot.encode() + self.service_id.encode() + len(self.operandTuples).encode(),
+                self.timeslot.encode() + self.service_id.encode() + Int(len(self.operandTuples)).encode(),
                 self.dispatch,
                 self.context,
             )
-            self.partial_state,self.deferred_transfers,hash,self.gas,preimage=self.c_function(status,gas,context)
-            return self.partial_state,self.deferred_transfers,hash,self.gas,preimage
+            print("Execution status", gas, status, context)
+            self.partial_state, self.deferred_transfers, hash, self.gas, preimage = self.c_function(status,gas,context)
+            return self.partial_state, self.deferred_transfers, hash, self.gas, preimage
 
     @staticmethod
     def i_function(s: ServiceId,stateContext:StateContext) -> AccuContextX:
@@ -78,7 +80,9 @@ class PsiA(InvocationProtocol):
         # value = ByteArray32.decode_from(hashed)[0]
 
         # buffer = bytes()
-        value = U32.decode_from(bytes(Hash.blake2b(s.encode()+state.eta[0].encode()+state.tau.encode())))[0] %(2**32-2**9)+2**8
+        value = U32.decode_from(
+            bytes(Hash.blake2b(s.encode() + state.eta[0].encode() + state.tau.encode()))
+        )[0] % (2**32-2**9)+2**8
         i = check(stateContext, value)
         context = AccuContextX(
             s_index=s,

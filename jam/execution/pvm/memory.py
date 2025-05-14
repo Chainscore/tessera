@@ -126,7 +126,7 @@ class Memory:
         read_start = PVM_INIT_ZONE_SIZE
         read_pages = cls.get_pages(read_start, read_start + cls.total_page_size(len(read)))
         for i, byt in enumerate(read):
-            memory[Byte(read_start+i)] = Byte(byt)
+            memory[U32(read_start+i)] = Byte(byt)
 
         write_start = 2*PVM_INIT_ZONE_SIZE + cls.total_zone_size(len(read))
         write_pages = cls.get_pages(write_start, write_start + cls.total_page_size(len(write)) + (z * PVM_MEMORY_PAGE_SIZE))
