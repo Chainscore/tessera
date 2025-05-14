@@ -3,6 +3,7 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
+from jam.types import Vector, Null
 from jam.types.base.integers import Int
 
 from jam.utils.json import JsonSerde
@@ -47,7 +48,7 @@ class WorkPackageSubmission(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE133
 
-    def transmit(self, node: Node, data: CE133Data):
+    async def transmit(self, node: Node, data: CE133Data):
         """Transmit Work Package from Builder (client) to Guarantor (server)"""
 
         stream_a = self._prefix.encode() + data.package_data.encode()
@@ -56,9 +57,13 @@ class WorkPackageSubmission(NetworkProtocol):
         logger.info(f"Transmitting Work-Package to {len(node.connections)} Validators")
         # TODO: Use Particular Validators' Connections
 
+        responses = Vector([])
         for client in node.connections:
             stream_id = client.stream_and_keep_open(message=stream_a)
-            client.stream_and_close(message=stream_b, stream_id=stream_id)
+            data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
+            responses.append(data)
+
+        return responses
 
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Work Package on Guarantor (server)"""
@@ -85,5 +90,5 @@ class WorkPackageSubmission(NetworkProtocol):
         """Intercept Acknowledgement"""
 
         logger.info(f"Work Package received on Guarantor Node via stream {stream_id}")
-
+        return Null
 

@@ -53,7 +53,7 @@ async def wp_producer(node: Node, db: KVStore):
             logger.info(f"⛏️ ({node.name}) Producing Work Package { wp}")
             # TODO: Implement package transmission
 
-            C133.transmit(node, data)
+            await C133.transmit(node, data)
         else:
             logger.info(f"⛏️ ({node.name}) skipping Node")
 

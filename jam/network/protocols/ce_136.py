@@ -3,6 +3,7 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
+from jam.types import Vector
 from jam.types.work.report import WorkReport
 
 from jam.utils.json import JsonSerde
@@ -41,7 +42,7 @@ class WorkReportRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE136
 
-    def transmit(self, node: Node, data: CE136Data):
+    async def transmit(self, node: Node, data: CE136Data):
         """Request Work Report from Node (server)"""
 
         message = self._prefix.encode() + data.encode()
@@ -49,8 +50,12 @@ class WorkReportRequest(NetworkProtocol):
 
         # TODO: Use Original Guarantor Connection
 
+        responses = Vector([])
         for client in node.connections:
-            client.stream_and_close(message=message)
+            data = await client.stream_and_close(message=message)
+            responses.append(data)
+
+        return responses
 
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Fetch requested Work Report on Node (server)"""
@@ -72,7 +77,7 @@ class WorkReportRequest(NetworkProtocol):
 
         logger.info("Requested report sent back to Node")
 
-    def client_intercept(self, buffer: bytes, stream_id: int):
+    def client_intercept(self, buffer: bytes, stream_id: int) -> WorkReport:
         """Intercept Requested Work Report"""
 
         logger.info(f"Requested Report received on Node (client) via stream {stream_id}")
@@ -82,3 +87,5 @@ class WorkReportRequest(NetworkProtocol):
         logger.info("Saving Work Report")
         # TODO: Process & Save Work Report
         # Process goes here
+
+        return data

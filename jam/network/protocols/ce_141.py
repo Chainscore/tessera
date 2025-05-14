@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import cast
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
+from jam.types import Vector
 
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.json import JsonSerde
@@ -36,7 +37,7 @@ class AssuranceDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE141
 
-    def transmit(self, node: Node, data: CE141Data):
+    async def transmit(self, node: Node, data: CE141Data):
         """ send assurance, Assurer to validator """
 
         data = create_dummy_assurances()
@@ -47,13 +48,18 @@ class AssuranceDistribution(NetworkProtocol):
 
         # TODO: send assurance to particular (which share the report) validator
 
+        responses = Vector([])
         for client in node.connections:
-            client.stream_and_close(message=stream)
+            data = await client.stream_and_close(message=stream)
+            responses.append(data)
+
+        return responses
+
 
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         ...
 
-    def client_intercept(self, buffer: bytes, stream_id: int):
+    def client_intercept(self, buffer: bytes, stream_id: int) -> Assurance:
         """ intercept assurance list """
 
         data, offset = CE141Data.decode_from(buffer)
@@ -62,3 +68,5 @@ class AssuranceDistribution(NetworkProtocol):
         logger.info(f"Receive assurance { data } from the assurer")
 
         # TODO: Save the assure and signature in the database
+
+        return data.assurance

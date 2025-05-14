@@ -45,7 +45,7 @@ class NetworkProtocol(ABC):
     max_buffer_size: int
 
     @abstractmethod
-    def transmit(self, node: Node, data: Any):
+    async def transmit(self, node: Node, data: Any):
         """
         Function to transmit data to connected server.
         Called on client. Must be implemented by subclasses.

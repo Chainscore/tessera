@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
-from jam.types.base.integers import Int
+from jam.types.base.integers import Int, U16
 from jam.types.base.sequences.vector import decodable_vector, Vector
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.sequences.bytes.byte_array import decodable_bytearray, ByteArray
@@ -21,6 +21,7 @@ class ByteArray4104(ByteArray):
     ...
 
 Segment = ByteArray4104
+SegmentIndex = U16
 
 @decodable_vector(Segment)
 class Segments(Vector[Segment]):

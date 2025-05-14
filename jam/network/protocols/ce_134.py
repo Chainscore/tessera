@@ -3,6 +3,7 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
+from jam.types import Vector
 from jam.types.base.integers import Int
 from jam.types.work.report import WorkPackageBundle
 
@@ -11,7 +12,7 @@ from jam.utils.codec.decorators import decodable_dataclass
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.utils.json import JsonSerde
 
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature
+from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
 from jam.types.protocol.core import CoreIndex
 from jam.work_package.work_package import SegmentRootLookup, WorkPackageProcessing
 from tests.dummy.utils import create_dummy_bytes64
@@ -63,7 +64,7 @@ class WorkPackageSharing(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE134
 
-    def transmit(self, node: Node, data: CE134Data):
+    async def transmit(self, node: Node, data: CE134Data):
         """Request Work Report from Node (server)"""
 
         logger.info(f"Transmitting Work-Package-Bundle to {len(node.connections)} Guarantors")
@@ -72,9 +73,13 @@ class WorkPackageSharing(NetworkProtocol):
         stream_a = self._prefix.encode() + data.core_segment.encode()
         stream_b = data.work_package_bundle.encode()
 
+        responses = Vector([])
         for client in node.connections:
             stream_id = client.stream_and_keep_open(message=stream_a)
-            client.stream_and_close(message=stream_b, stream_id=stream_id)
+            data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
+            responses.append(data)
+
+        return responses
 
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept Work Package Bundle & Build Work Report on Core's Guarantors (server)"""
@@ -89,35 +94,33 @@ class WorkPackageSharing(NetworkProtocol):
         # Process goes here
         # Generating report from work package bundle
         wp_processing = WorkPackageProcessing()
-        report_hash: WorkReportHash = wp_processing.bundle_process(core=data.core_segment.core_index, bundle=data.work_package_bundle,
+        report, report_hash = wp_processing.bundle_process(core=data.core_segment.core_index, bundle=data.work_package_bundle,
                                      segment_lookup=data.core_segment.segment_root_map)
-        # giving constant port number, but it should not be like this
+
+        # TODO: Establish some connection with node so as to access keys.
         port = 30333
         my_keys = json.load(open("seeds/keys.json"))[str(port)]
-        ed25519_public = Ed25519PrivateKey.from_private_bytes(
+        ed25519_key = Ed25519PrivateKey.from_private_bytes(
             bytes.fromhex(my_keys["ed25519_private"][2:])
-        ).public_key()
-        # secret_scalar = (
-        #         int.from_bytes(bytes.fromhex(ed25519_public), "little")
-        #         % Bandersnatch_TE_Curve.ORDER
-        # )
-        # vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        # output_point, proof = vrf.prove(
-        #     bytes.fromhex(vector["alpha"]),
-        #     secret_scalar,
-        #     bytes.fromhex(vector["ad"]),
-        # )
-        res_data = Credential(work_report_hash=report_hash, ed25519_signature=ed25519_public)
-        from tests.dummy.dummy_package import create_dummy_credential
-        credential = create_dummy_credential()
+        )
+
+        # Build Guarantee
+        payload =  report.core_index.encode() + report.encode()
+        guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
+
+        # Sign the Guarantee
+        sign = Ed25519Signature(ed25519_key.sign(guarantee))
+
+        # Build Credential
+        cred = Credential(work_report_hash=report_hash, ed25519_signature=sign)
 
         # Return Credential to OG Guarantor
-        ack = self._prefix.encode() + res_data.encode()
+        ack = self._prefix.encode() + cred.encode()
         server.stream_and_close(stream_id, ack)
 
         logger.info("Report's Credential sent back to OG Guarantor")
 
-    def client_intercept(self, buffer: bytes, stream_id: int):
+    def client_intercept(self, buffer: bytes, stream_id: int) -> Credential:
         """Intercept validated Work Report from guarantors"""
 
         logger.info(f"Report's Credential received on OG guarantor (client) via stream {stream_id}")
@@ -127,3 +130,5 @@ class WorkPackageSharing(NetworkProtocol):
         logger.info("Distributing this Work Report after achieving majority")
         # TODO: Save Work Report & Check Majority & Distribute
         # Process goes here
+
+        return data

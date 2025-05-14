@@ -3,6 +3,7 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
+from jam.types import Null, Vector
 
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
@@ -40,7 +41,7 @@ class WorkReportDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE135
 
-    def transmit(self, node: Node, data: CE135Data):
+    async def transmit(self, node: Node, data: CE135Data):
         """Transmit Work Report from Guarantor (client) to Validator (server)"""
 
         # TODO: Add Validator Index & Signature as per GP
@@ -48,8 +49,12 @@ class WorkReportDistribution(NetworkProtocol):
         logger.info(f"Transmitting Guaranteed Work-Report to {len(node.connections)} Validators")
         # TODO: Use All Validators Connections
 
+        responses = Vector([])
         for client in node.connections:
-            client.stream_and_close(message=message)
+            data = await client.stream_and_close(message=message)
+            responses.append(data)
+
+        return responses
 
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Work Report on Validator (server)"""
@@ -74,5 +79,6 @@ class WorkReportDistribution(NetworkProtocol):
         """Intercept Acknowledgement"""
 
         logger.info(f"Guaranteed Report received on Guarantor Node via stream {stream_id}")
+        return Null
 
 

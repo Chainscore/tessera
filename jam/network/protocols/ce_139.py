@@ -35,7 +35,9 @@ class SegmentShardRequest(SegmentShardRequestBase):
         ack = self._prefix.encode() + response.encode()
         server.stream_and_close(stream_id, ack)
 
-    def client_intercept(self, buffer: bytes, stream_id: int):
+    def client_intercept(self, buffer: bytes, stream_id: int) -> Response:
         response, _ = Response.decode_from(buffer)
         response = cast(Response, response)
         logger.info(f"Received CE139 shard response: {response}")
+
+        return response
