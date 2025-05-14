@@ -1,9 +1,10 @@
 from math import ceil
 from typing import Tuple
+import os
 
 from jam.config.settings import settings
 from jam.db.kv import KVStore
-from jam.types.base.sequences.bytes import Bytes, Byte
+from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray12
 from jam.types.base.sequences.vector import Vector
 
 from jam.types.base.integers.general import Int
@@ -485,6 +486,7 @@ class WorkPackageProcessing:
 
         erasure_codec = ErasureCode()
         print("paplu", settings.D3L_PATH)
+        os.makedirs("db/30333/d3l", exist_ok=True)
         d3l = KVStore(settings.D3L_PATH)
 
         # Build Bundle Shards
@@ -509,7 +511,7 @@ class WorkPackageProcessing:
         seg_da = SegmentsDA(d3l)
 
         proofs = self.paged_proof(export_segments)
-        proved_segments = ProvedSegments(export_segments, proofs)
+        proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
         seg_da.put(e, proved_segments)
 
         # Build Segment Shards
@@ -523,15 +525,13 @@ class WorkPackageProcessing:
         for item in justified_segments:
             seg_chunks = erasure_codec.encode(item)
             all_chunks.append(seg_chunks)
-
         segments_shards = SegmentsShards(
             [SegmentsShard(
-                [all_chunks[j][i] for j in range(len(all_chunks))]
+                [ByteArray12(all_chunks[j][i]) for j in range(len(all_chunks))]
             ) for i in range(len(all_chunks[0]))])
 
         ss_roots = SegmentsShardRoots([])
-
-        for si, ss in segments_shards:
+        for si, ss in enumerate(segments_shards):
             ss_root = self.merkle.wb_merkle_fn(ss)
 
             ss_unit = SegmentsShardUnit(U16(si), ss)
@@ -545,10 +545,10 @@ class WorkPackageProcessing:
         if len(ss_roots) != 1023 or len(bs_hashes) != 1023:
             raise ValueError("Length of both batches should be 1023")
 
-        shards_keys: ShardKeys = ShardKeys([])
+        shards_keys = Vector([])
         for i in range(1023):
             shards_key = ShardKey(bs_hashes[i], ss_roots[i])
-            shards_keys.append(shards_key)
+            shards_keys.append(shards_key.encode())
 
         # Erasure Root
         u = self.merkle.wb_merkle_fn(shards_keys)

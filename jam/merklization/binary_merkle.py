@@ -218,7 +218,7 @@ class BMRFunctions:
         size: int,
         index: int,
         hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
-    ) -> Vector[OpaqueHash]:
+    ) -> Vector[Bytes]:
         """
         Leaves Page Function Implementation as defined in Equation E.6
 
@@ -233,18 +233,18 @@ class BMRFunctions:
         if index >= len(values):
             raise IndexError("index out of range")
 
-        page: Vector[OpaqueHash] = Vector([])
+        page: Vector[Bytes] = Vector([])
 
 
         ind = (2 ** size) * index
         val = min(ind + 2 ** size, len(values))
 
         for i in range(ind, val):
-            page.append(hash_fn(self._LEAF_PREFIX + bytes(values[i])))
+            page.append(Bytes(hash_fn(self._LEAF_PREFIX + bytes(values[i]))))
 
         return page
 
-    def verify_proof(self, trace: Vector[OpaqueHash], leaves: Vector[OpaqueHash], leaf_index: int, og_root: OpaqueHash) -> bool:
+    def verify_proof(self, trace: Vector[OpaqueHash], leaves: Vector[OpaqueHash], leaf_index: int) -> OpaqueHash:
         """
         Merkle Proof Verification Function (not provided in GP)
 
@@ -252,7 +252,6 @@ class BMRFunctions:
             trace: Sequence of nodes depicting path of a tree to a particular index
             leaves: Sequence of leaf nodes
             leaf_index: Node Index
-            og_root: Previous root to match proof with
         Returns:
             Verification Result
         """
@@ -265,4 +264,4 @@ class BMRFunctions:
                 root = self._node_fn(Vector([sibling, root]))
             leaf_index = leaf_index // 2
 
-        return og_root == root
+        return root

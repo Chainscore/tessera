@@ -68,6 +68,8 @@ def test_merkle():
     leaves = bmr.leaf_page_fn(segments, 0, 1)
 
     root = bmr.cd_merkle_fn(segments)
+    print(type(leaves), type(proofs))
+    print(type(leaves[0]),leaves[0], type(proofs[0]))
 
     root_2 = verify_merkle_proof(leaves, proofs, 1)
 
