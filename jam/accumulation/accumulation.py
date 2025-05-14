@@ -254,40 +254,38 @@ class Accumulation:
             AccumulationOutput: A mapping of service indices to their corresponding accumulation outputs.
         """
 
-        s: list[ServiceId] = [] # w_r_s service ids
+        # s: list[ServiceId] = []
+        s: set[ServiceId] = set()  # set of wr_service_ids && previleged service_ids
 
         u: Gas = 0  # accumulated gas
-        accl_output_array = AccumulationOutput(
+        accl_output_pair = AccumulationOutput(
             {}
         )  # accumulation-output pairings (b/B)
         t_cap: DeferredTransfers = DeferredTransfers([])
         state: StateContext = initial_state
 
-        for i in work_reports:
-            for j in i.results:
-                if j.service_id not in s:
-                    s.append(j.service_id)
+        # collect all service_ids from the work-reports
+        for wr in work_reports:
+            for result in wr.results:
+                s.add(result.service_id)
 
-        free_services = [key for key in services]
-
-        for i in free_services:
-            if i not in s:
-                s.append(i)
+        for service_id in services:
+            s.add(service_id)
 
         for i in s:
-            [updated_partial_state, df_list, accl_output, gas] = (
+            [updated_partial_state, df_list, accl_output, gas,preimages] = (
                 Accumulation.single_accumulation(
                     state, work_reports, services, ServiceId(i), timeslot
                 )
             )
             u += gas
             if accl_output is not None:
-                accl_output_array[i]=accl_output
+                accl_output_pair[i]=accl_output
             for t in df_list:
                 t_cap.append(t)
             state = updated_partial_state
 
-        t_cap.sort(key=lambda x: x.sender)
+        # t_cap.sort(key=lambda x: x.sender)
         d=Delta(state.service_accounts)
         i=Iota(state.validator_keys)
         q=Phi(state.authorizer_keys)
@@ -352,7 +350,7 @@ class Accumulation:
         state.validator_keys = i_dash
         state.authorizer_keys = q_dash
 
-        return u, state, t_cap, accl_output_array
+        return u, state, t_cap, accl_output_pair
 
     @staticmethod
     def single_accumulation(
@@ -412,6 +410,10 @@ class Accumulation:
         )
 
         return posterior_state, transfers, optional_hash, gas
+
+    # @staticmethod
+    # def p_function(accounts:Delta,preimages:PreimageDict)->Delta:
+
 
     @staticmethod
     def psi_a(
