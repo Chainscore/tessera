@@ -17,9 +17,6 @@ from jam.execution.host_calls.invocations.functions.accumulate_fns import Accumu
 from jam.execution.pvm.status import ExecutionStatus, PvmError
 from jam.utils.constants import MAX_SERVICE_CODE_SIZE
 
-
-
-
 class PsiA(InvocationProtocol):
 
     def __init__(self, u: StateContext, t:TimeSlot, s:ServiceId, g:Gas,o:OperandTuples ):
@@ -97,7 +94,7 @@ class PsiA(InvocationProtocol):
         )
         return context
 
-    #NOTE: In gray paper (status,gas,registers,memory),(x,y) as args So it might differ afterwards.
+
     @staticmethod
     def g_function(status:ExecutionStatus,gas:Gas,registers:Registers,memory:Memory,accountData:AccountData,x:accu_Xcontext,y:ByteArray32)->Tuple[ExecutionStatus,Gas,Registers,Memory,accu_Xcontext,ByteArray32]:
         x.partial_state.service_accounts[x.s_index]=accountData
