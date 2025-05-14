@@ -43,11 +43,25 @@ class StateContext(Codable,JsonSerde):
     authorizer_keys: Phi
     privileges: Chi
 
-@dataclass
-class AcclOutput(Codable,JsonSerde):
-    service_id: ServiceId
-    hash: OpaqueHash
+# @dataclass
+# class AcclOutput(Codable,JsonSerde):
+#     service_id: ServiceId
+#     hash: OpaqueHash
 
-@decodable_vector(AcclOutput)  # It should be a set
-class AccCommitmentMap(Vector[AcclOutput]):
+@decodable_dictionary(ServiceId,bytes)
+class AccumulationOutput(Dictionary[ServiceId,bytes]): #U
+    ...
+
+@decodable_dataclass
+@dataclass
+class GasAccumulated(Codable, JsonSerde):
+    service_id: ServiceId
+    accumulated_gas: Gas
+
+@decodable_vector(GasAccumulated)
+class GasAccumulations(Vector[GasAccumulated]):
+    ...
+
+@decodable_dictionary(ServiceId,Bytes)
+class PreimageDict(Dictionary[ServiceId,Bytes]):
     ...

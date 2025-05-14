@@ -4,8 +4,9 @@ from copy import deepcopy
 
 from jam.types import Block, Null
 from jam.accumulation.types import (
-    AcclOutput,
-    AccCommitmentMap,
+    PreimageDict,
+    GasAccumulations,
+    AccumulationOutput,
     DeferredTransfers,
     StateContext,
     OperandTuples,
@@ -164,7 +165,7 @@ class Accumulation:
         partial_state: StateContext,
         services: ChiG,
         timeslot: Tau,
-    ) -> tuple[int, StateContext, DeferredTransfers, AccCommitmentMap]:
+    ) -> tuple[int, StateContext, DeferredTransfers, AccumulationOutput,GasAccumulations]:
         """
         Outer accumulation function ∆+ defined in Eq 12.16
         Sequential Execution Pattern
@@ -179,11 +180,11 @@ class Accumulation:
             timeslot (Tau): Curr TimeSlot τ′
 
         Returns:
-            A tuple (int, StateContext, DeferredTransfer, AccCommitmentMap) where:
+            A tuple (int, StateContext, DeferredTransfer, AccumulationOutput) where:
             Integer: Number of work results successfully accumulated.
             StateContext: The updated state context after applying accumulation.
             DeferredTransfer: A list of transfers that are deferred.
-            AccCommitmentMap: A mapping of service indices to their corresponding accumulation outputs.
+            AccumulationOutput: A mapping of service indices to their corresponding accumulation outputs.
         """
 
         index = 0
@@ -196,30 +197,35 @@ class Accumulation:
             index = index + 1
 
         if index == 0:
-            return 0, partial_state, DeferredTransfers([]), AccCommitmentMap([])
+            return 0, partial_state, DeferredTransfers([]), AccumulationOutput({}),GasAccumulations([])
 
-        work_reports_start = work_reports[:index]
-        [gas_star, partial_state_star, deferred_transfers_star, accl_outputs_star] = (
+        work_reports_start = work_reports[:index+1]
+        [partial_state_star, deferred_transfers_star, accl_outputs_star,gas_accumulations_star] = (
             Accumulation.parallel_accumulation(
                 partial_state, work_reports_start, services, timeslot
             )
         )
 
         work_reports_end = work_reports[index:]
+        gas_star=0
+        for i in gas_accumulations_star:
+            gas_star+=i.accumulated_gas
+
         gas_diff = gas_limit - gas_star
-        [j, partial_state_dash, deferred_transfers, accl_outputs] = (
+
+        [j, partial_state_dash, deferred_transfers, accl_outputs,gas_accumulations] = (
             Accumulation.seq_accumulation(
                 gas_diff, work_reports_end, partial_state_star, ChiG({}), timeslot
             )
         )
 
         deferred_transfers_star.extend(deferred_transfers)
-
+        gas_accumulations_star.extend(gas_accumulations)
         for i in accl_outputs:
             if i not in accl_outputs_star:
-                accl_outputs_star.append(i)
+                accl_outputs_star[i]=accl_outputs[i]
 
-        return index + j, partial_state_dash, deferred_transfers_star, accl_outputs_star
+        return index + j, partial_state_dash, deferred_transfers_star, accl_outputs_star,gas_accumulations_star
 
     @staticmethod
     def parallel_accumulation(
@@ -227,7 +233,7 @@ class Accumulation:
         work_reports: WorkReports,
         services: ChiG,
         timeslot: Tau,
-    ) -> tuple[Gas, StateContext, DeferredTransfers, AccCommitmentMap]:
+    ) -> tuple[StateContext, DeferredTransfers, AccumulationOutput,GasAccumulations]:
         """
         Parallelized accumulation function ∆* defined in Eq 12.17
         Non-Sequential, Service-Aggregated Execution Pattern
@@ -241,18 +247,18 @@ class Accumulation:
             timeslot (Tau): Curr TimeSlot τ′
 
         Returns:
-            A tuple (int, StateContext, DeferredTransfer, AccCommitmentMap) where:
+            A tuple (int, StateContext, DeferredTransfer, AccumulationOutput) where:
             Integer: Total gas utilized in PVM.
             StateContext: The updated state context after applying accumulation.
             DeferredTransfer: A list of transfers that are deferred.
-            AccCommitmentMap: A mapping of service indices to their corresponding accumulation outputs.
+            AccumulationOutput: A mapping of service indices to their corresponding accumulation outputs.
         """
-        
+
         s: list[ServiceId] = [] # w_r_s service ids
 
         u: Gas = 0  # accumulated gas
-        accl_output_array: AccCommitmentMap = AccCommitmentMap(
-            []
+        accl_output_array = AccumulationOutput(
+            {}
         )  # accumulation-output pairings (b/B)
         t_cap: DeferredTransfers = DeferredTransfers([])
         state: StateContext = initial_state
@@ -276,7 +282,7 @@ class Accumulation:
             )
             u += gas
             if accl_output is not None:
-                accl_output_array.append(AcclOutput(service_id=i, hash=accl_output))
+                accl_output_array[i]=accl_output
             for t in df_list:
                 t_cap.append(t)
             state = updated_partial_state
@@ -355,7 +361,7 @@ class Accumulation:
         services: ChiG,
         service_id: ServiceId,
         timeslot: Tau,
-    ) -> tuple[StateContext, DeferredTransfers, OptionHash, Gas]:
+    ) -> tuple[StateContext, DeferredTransfers, OptionHash, Gas,PreimageDict]:
         """
         Single-Service accumulation function ∆1 defined in Eq 12.19
         Transforms Initial Partial State, Sequence of Work Reports, Dictionary of services (free, privileged accumulation), and Service index

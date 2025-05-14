@@ -98,7 +98,7 @@ class AccountData(Codable, JsonSerde):
         return At(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o)
 
     def m_c(self) -> (bytes, bytes):
-        service_data = self.lookup[self.code_hash])
+        service_data = self.lookup[self.code_hash]
         pm, offset = BytesCodec.decode_from(service_data)
         pc = service_data[offset:]
         return pm, pc
