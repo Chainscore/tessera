@@ -1,5 +1,5 @@
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.execution.host_calls._types import DeferredTransfer, accumulation_context,service_dict,StateContext
+from jam.execution.host_calls._types import DeferredTransfer, AccumulationContext,service_dict,StateContext
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm import register
 from jam.execution.pvm.memory import Memory
@@ -25,7 +25,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(5, gas_cost=10)
-    def bless(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+    def bless(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         [m,a,v,o,n]=registers[7,7+5]
         if not memory.is_accessible(o,12*n):
             raise PANIC
@@ -50,7 +50,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(6, gas_cost=10)
-    def assign(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+    def assign(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         o=registers[8]
         if not memory.is_accessible(o,32*MAX_AUTH_QUEUE_ITEMS):
             raise PANIC
@@ -71,7 +71,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(7, gas_cost=10)
-    def designate(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+    def designate(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         o=registers[7]
         if not memory.is_accessible(o,VALIDATOR_COUNT*336):
             raise PANIC
@@ -85,14 +85,14 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(8, gas_cost=10)
-    def checkpoint(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+    def checkpoint(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         context.y=context.x
         registers[7]=gas
         return CONTINUE,registers,memory,context
 
     @classmethod
     @INVF.register(9, gas_cost=10)
-    def new(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+    def new(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         [o,l,g,m]=registers[7:7+4]
         delta=context.x.partial_state.service_accounts
         if not(memory.is_accessible(o,32) and isinstance(l, U32)):
@@ -128,7 +128,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(10, gas_cost=10)
-    def upgrade(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+    def upgrade(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         [o,g,m]=registers[7:7+3]
         if not memory.is_accessible(o,32):
             raise PANIC
@@ -143,7 +143,7 @@ class AccumulateFunctions(INVF):
     # TODO: Need to update the gas with registers[9]
     @classmethod
     @INVF.register(11, gas_cost=10)
-    def transfer(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+    def transfer(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         [d,a,l,o]=registers[7:7+4]
         delta=context.x.partial_state.service_accounts
         if not memory.is_accessible(o,TRANSFER_MEMO_SIZE):
@@ -171,7 +171,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(12, gas_cost=10)
-    def eject(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context,block_timeslot:TimeSlot):
+    def eject(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
         [d,o]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PANIC
@@ -201,7 +201,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(13, gas_cost=10)
-    def query(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+    def query(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PANIC
@@ -230,7 +230,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(14, gas_cost=10)
-    def solicit(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context,block_timeslot:TimeSlot):
+    def solicit(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PANIC
@@ -259,7 +259,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(15, gas_cost=10)
-    def forget(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context,block_timeslot:TimeSlot):
+    def forget(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PANIC
@@ -282,7 +282,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(16, gas_cost=10)
-    def yield_(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context):
+    def yield_(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         o=registers[7]
         if not memory.is_accessible(o,32):
             raise PANIC
@@ -292,7 +292,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(27, gas_cost=10)
-    def provide(cls, gas: Gas, registers: Registers, memory: Memory, context: accumulation_context,service_id:ServiceId):
+    def provide(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,service_id:ServiceId):
         [o,z]=registers[8,9]
         d=context.x.partial_state.service_accounts
         s_star=registers[7]
