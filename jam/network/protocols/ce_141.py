@@ -2,14 +2,12 @@ from dataclasses import dataclass
 from typing import cast
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
-from jam.types import Vector
-
+from jam.types import Vector, Null
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.types.extrinsics.assurances import Assurance
-from tests.dummy.dummy_package import create_dummy_assurances
 
 @decodable_dataclass
 @dataclass
@@ -39,15 +37,14 @@ class AssuranceDistribution(NetworkProtocol):
         self._prefix = PrefixType.CE141
 
     async def transmit(self, node: Node, data: CE141Data):
-        """ send assurance, Assurer to validator """
+        """ Transmit assurance, From Assurer (client) to Validator (server) """
 
-        data = create_dummy_assurances()
         stream = self._prefix.encode() + data.encode()
 
-        logger.info(f"Giving assurance {data} to the the validators with prefix {self._prefix}")
+        logger.info(f"Transmitting assurance {data} to the {len(node.connections)} validators with prefix {self._prefix}")
 
 
-        # TODO: send assurance to particular (which share the report) validator
+        # TODO: send assurance to particular (that share the report) validator
 
         responses = Vector([])
         for client in node.connections:
@@ -58,16 +55,12 @@ class AssuranceDistribution(NetworkProtocol):
 
 
     def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
-        ...
-
-    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Assurance:
-        """ intercept assurance list """
-
         data, offset = CE141Data.decode_from(buffer)
         data = cast(CE141Data, data)
 
-        logger.info(f"Receive assurance { data } from the assurer")
+        logger.info(f"Receive assurance {data} from the assurer")
 
         # TODO: Save the assure and signature in the database
 
-        return data.assurance
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Assurance:
+        return Null
