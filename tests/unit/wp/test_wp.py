@@ -1,6 +1,6 @@
 from jam.merklization import BMRFunctions
 from jam.work_package.stores.segments import SegmentsDA
-from jam.work_package.work_package import WorkPackageProcessing
+from jam.work_package.processor import WorkPackageProcessing
 from jam.db.kv import KVStore
 from jam.types.work.manifest import Segments, Segment, ByteArray4104, ProvedSegments
 from tests.dummy.dummy_bundle import create_dummy_bundle

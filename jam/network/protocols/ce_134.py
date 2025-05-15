@@ -14,7 +14,7 @@ from jam.utils.json import JsonSerde
 
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
 from jam.types.protocol.core import CoreIndex
-from jam.work_package.work_package import SegmentRootLookup, WorkPackageProcessing
+from jam.work_package.processor import SegmentRootLookup, WorkPackageProcessing
 from tests.dummy.utils import create_dummy_bytes64
 import json
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey

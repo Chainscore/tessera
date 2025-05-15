@@ -1,7 +1,7 @@
 from jam.db.kv import KVStore
 from jam.types.work.manifest import Segments
 
-from jam.work_package.work_package import WorkPackageProcessing
+from jam.work_package.processor import WorkPackageProcessing
 from tests.dummy.utils import create_dummy_bytes32, create_dummy_bytes, create_dummy_bytes4104
 from jam.types.base.sequences.bytes.bytes import Bytes
 
