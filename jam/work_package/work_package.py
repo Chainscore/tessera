@@ -55,6 +55,9 @@ from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
 
 from jam.types.protocol.crypto import WorkReportHash
 
+from jam.network.protocols.ce_134 import WorkPackageSharing, CE134Data, CoreSegment
+from jam.network.node import Node
+
 class WorkPackageValidation:
     """Functions to validate work package"""
 
@@ -604,6 +607,17 @@ class WorkPackageProcessing:
         bundle = self.build_bundle(package)
 
         # TODO: Distribute Bundle to other Guarantors
+        CE134 = WorkPackageSharing()
+
+        core_segment = CoreSegment(core_index=core, segment_root_map=lookup, length=Int(1))
+
+        data = CE134Data(work_package_bundle=bundle, core_segment=core_segment)
+
+        node: Node = {
+
+        }
+
+        CE134.transmit(node=node, data=data)
 
         print("Building Work Report..")
         report = self.build_report(bundle, core)
@@ -634,8 +648,6 @@ class WorkPackageProcessing:
 
         wr_hash = Hash.blake2b(report.encode())
         reports_da.put(wr_hash, report)
-        # TODO: send back Work-Report Hash ++ Ed25519 Signature to assigned Guarantor via CE134 protocol
-
 
         return report, wr_hash
 
