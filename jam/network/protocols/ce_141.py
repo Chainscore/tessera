@@ -11,7 +11,8 @@ from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.types.extrinsics.assurances import Assurance
 from tests.dummy.dummy_package import create_dummy_assurances
 
-
+@decodable_dataclass
+@dataclass
 class CE141Data(Codable, JsonSerde):
     assurance : Assurance
 
@@ -56,10 +57,10 @@ class AssuranceDistribution(NetworkProtocol):
         return responses
 
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         ...
 
-    def client_intercept(self, buffer: bytes, stream_id: int) -> Assurance:
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Assurance:
         """ intercept assurance list """
 
         data, offset = CE141Data.decode_from(buffer)

@@ -1,3 +1,5 @@
+import json
+
 from dataclasses import dataclass
 from typing import cast
 
@@ -5,7 +7,7 @@ from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
 from jam.types import Vector
 from jam.types.base.integers import Int
-from jam.types.work.report import WorkPackageBundle
+from jam.types.work.report import WorkPackageBundle, SegmentRootLookup
 
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
@@ -14,11 +16,10 @@ from jam.utils.json import JsonSerde
 
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
 from jam.types.protocol.core import CoreIndex
-from jam.work_package.processor import SegmentRootLookup, WorkPackageProcessing
-from tests.dummy.utils import create_dummy_bytes64
-import json
+from jam.work_package.processor import Processor
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jam.ring_vrf.ietf.ietf import IETF_VRF
+from jam.work_package.validator import Validator
 
 
 @decodable_dataclass
@@ -81,21 +82,24 @@ class WorkPackageSharing(NetworkProtocol):
 
         return responses
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept Work Package Bundle & Build Work Report on Core's Guarantors (server)"""
 
         logger.info("Received Work Package Bundle from OG Guarantor")
         data, offset = CE134Data.decode_from(buffer)
         data = cast(CE134Data, data)
 
-        logger.info("Building Work Report")
-        # TODO: Process received Work Package Bundle, Build Report & Return Credential if validated
+        bundle = data.work_package_bundle
 
-        # Process goes here
+        logger.info("Validating Work Package..")
+        validator = Validator()
+        validator.validate_wp(bundle.package)
+
+        logger.info("Building Work Report")
         # Generating report from work package bundle
-        wp_processing = WorkPackageProcessing()
-        report, report_hash = wp_processing.bundle_process(core=data.core_segment.core_index, bundle=data.work_package_bundle,
-                                     segment_lookup=data.core_segment.segment_root_map)
+        processor = Processor(node)
+        report, report_hash = processor.process_bundle(core=data.core_segment.core_index, bundle=bundle,
+                                     sr_lookup=data.core_segment.segment_root_map)
 
         # TODO: Establish some connection with node so as to access keys.
         port = 30333
@@ -120,7 +124,7 @@ class WorkPackageSharing(NetworkProtocol):
 
         logger.info("Report's Credential sent back to OG Guarantor")
 
-    def client_intercept(self, buffer: bytes, stream_id: int) -> Credential:
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Credential:
         """Intercept validated Work Report from guarantors"""
 
         logger.info(f"Report's Credential received on OG guarantor (client) via stream {stream_id}")

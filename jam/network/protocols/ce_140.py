@@ -27,10 +27,12 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
         Source:
             https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
     """
+    from jam.network.node import Node
+
     def __init__(self):
         super().__init__(PrefixType.CE140)
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         request = self.parse_request(buffer)
         logger.info("Handling CE140 shard + justification request")
         response = JustifiedResponse()
@@ -53,7 +55,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
         ack = self._prefix.encode() + response.encode()
         server.stream_and_close(stream_id, ack)
 
-    def client_intercept(self, buffer: bytes, stream_id: int) -> JustifiedResponse:
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> JustifiedResponse:
         response, _ = JustifiedResponse.decode_from(buffer)
         response = cast(JustifiedResponse, response)
         logger.info(f"client response: {response}")

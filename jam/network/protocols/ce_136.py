@@ -57,9 +57,8 @@ class WorkReportRequest(NetworkProtocol):
 
         return responses
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Fetch requested Work Report on Node (server)"""
-
         logger.info("Received Work Report Request")
         data, offset = CE136Data.decode_from(buffer)
         data = cast(CE136Data, data)
@@ -77,7 +76,7 @@ class WorkReportRequest(NetworkProtocol):
 
         logger.info("Requested report sent back to Node")
 
-    def client_intercept(self, buffer: bytes, stream_id: int) -> WorkReport:
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> WorkReport:
         """Intercept Requested Work Report"""
 
         logger.info(f"Requested Report received on Node (client) via stream {stream_id}")

@@ -4,27 +4,29 @@ from typing import cast
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
 from jam.types import Vector, Null
-from jam.types.base.integers import Int
+from jam.types.work.manifest import Extrinsics
 
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 
 from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.types.protocol.core import CoreIndex
 from jam.types.work.package import WorkPackage
+from jam.work_package.processor import Processor
 
 
 @decodable_dataclass
 @dataclass
 class WorkPackageCore(Codable, JsonSerde):
     work_package : WorkPackage
-    core_index : Int
+    core_index : CoreIndex
 
 @decodable_dataclass
 @dataclass
 class CE133Data(Codable, JsonSerde):
     package_data: WorkPackageCore
-    extrinsics: Int
+    extrinsics: Extrinsics
 
 
 class WorkPackageSubmission(NetworkProtocol):
@@ -65,7 +67,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
         return responses
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    async def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Work Package on Guarantor (server)"""
 
         logger.info("Received Work Package")
@@ -73,8 +75,9 @@ class WorkPackageSubmission(NetworkProtocol):
         data = cast(CE133Data, data)
 
         logger.info("Processing Work Package")
-        # TODO: Process received Work Package
-        # Process goes here
+        processor = Processor(node)
+
+        wr, wr_hash = await processor.process(data.package_data.work_package, data.package_data.core_index, data.extrinsics)
 
         logger.info(
             f"📩 Processed work package : {data.package_data.work_package} with CI {data.package_data.core_index}"
@@ -86,7 +89,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
         logger.info("Sent acknowledgement back to builder")
 
-    def client_intercept(self, buffer: bytes, stream_id: int):
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int):
         """Intercept Acknowledgement"""
 
         logger.info(f"Work Package received on Guarantor Node via stream {stream_id}")

@@ -127,8 +127,8 @@ async def main(
                 if tsr_node.is_builder:
                     tg.create_task(wp_producer(tsr_node, db))
                 else:
-                    tg.create_task(segment_shard_request(tsr_node, db))
-                    # tg.create_task(block_producer.run())
+                    # tg.create_task(segment_shard_request(tsr_node, db))
+                    tg.create_task(block_producer.run())
 
 
         else:

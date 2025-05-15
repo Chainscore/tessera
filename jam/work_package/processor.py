@@ -1,15 +1,21 @@
 import os
+import json
 from math import ceil
 from typing import Tuple
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.config.logging import logger
 from jam.config.settings import settings
 from jam.db.kv import KVStore
+from jam.types import Ed25519Signature, TimeSlot
 from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray12
 from jam.types.base.sequences.vector import Vector
 
 from jam.types.base.integers.general import Int
 from jam.types.base.integers.fixed import U8, U16, U64
+from jam.types.extrinsics import ValidatorSignature
+from jam.types.extrinsics.guarantees import ValidatorSignatures
 
 from jam.types.work.item import WorkItem
 from jam.types.work.package import WorkPackage
@@ -60,7 +66,6 @@ from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
 
 from jam.types.protocol.crypto import WorkReportHash
 
-from jam.network.protocols.ce_134 import WorkPackageSharing, CE134Data, CoreSegment
 from jam.network.node import Node
 from jam.work_package.validator import Validator
 
@@ -263,8 +268,7 @@ class Processor:
         n = len(export_segments)
 
         erasure_codec = ErasureCode()
-        print("paplu", settings.D3L_PATH)
-        os.makedirs("db/30333/d3l", exist_ok=True)
+        os.makedirs(settings.D3L_PATH, exist_ok=True)
         d3l = KVStore(settings.D3L_PATH)
 
         # Build Bundle Shards
@@ -359,7 +363,10 @@ class Processor:
 
         return report, wr_hash
 
-    def process(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
+    async def process(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
+        from jam.network.protocols.ce_134 import WorkPackageSharing, CE134Data, CoreSegment
+        from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
+
         logger.info("Validating Work Package..")
         validator = Validator()
         validator.validate_wp(package)
@@ -376,19 +383,47 @@ class Processor:
         logger.info("Building Work Package Bundle..")
         bundle = bundler.build_bundle(package)
 
-        # TODO: Distribute Bundle to other Guarantors
+        # Distribute Bundle to other Guarantors CE134
         CE134 = WorkPackageSharing()
 
-        core_segment = CoreSegment(core_index=core, segment_root_map=lookup, length=Int(1))
-
+        core_segment = CoreSegment(core_index=core, segment_root_map=lookup, length=Int(len(lookup)))
         data = CE134Data(work_package_bundle=bundle, core_segment=core_segment)
 
-
-        # CE134.transmit(node=node, data=data)
+        responses = await CE134.transmit(node=self.node, data=data)
 
         # Build & Store Report
         wr, wr_hash = self.process_bundle(core, bundle, lookup)
 
-        # Distribute Report
-        # TODO: Distribute WR to Guarantors CE135
+        # Self guarantee
+        port = 30333
+        my_keys = json.load(open("seeds/keys.json"))[str(port)]
+        ed25519_key = Ed25519PrivateKey.from_private_bytes(
+            bytes.fromhex(my_keys["ed25519_private"][2:])
+        )
+
+        # Build Guarantee
+        payload = wr.core_index.encode() + wr.encode()
+        guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
+
+        # Sign the Guarantee
+        sign = Ed25519Signature(ed25519_key.sign(guarantee))
+
+        og_guarantee = ValidatorSignature(validator_index=U16(0), signature=sign)
+
+        # Check majority & Build guarantees:
+        guarantees = ValidatorSignatures([og_guarantee])
+        for response in responses:
+            if response.work_report_hash == wr_hash:
+                guarantee = ValidatorSignature(validator_index=U16(0), signature=response.ed25519_signature)
+                guarantees.append(guarantee)
+
+
+        # Distribute Guaranteed WR to Validators CE135
         logger.info(f"Distributing Work Report to other  validators!")
+        if len(guarantees) > 1:
+            CE135 = WorkReportDistribution()
+            data = CE135Data(report=wr, slot=TimeSlot(0), len=Int(len(guarantees)), signatures=guarantees)
+
+            responses = await CE135.transmit(node=self.node, data=data)
+
+        return wr, wr_hash

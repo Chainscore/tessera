@@ -12,11 +12,12 @@ class QuicClientProtocol(QuicConnectionProtocol):
     """Quic Client Protocol for initiating connections to peers."""
     stream_buffer: Dict[int, bytes] = {}
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, node, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._close_pending = False
         self.stream_buffer = {}
         self.waiter = None
+        self.node = node
 
     async def stream_and_close(self, message: bytes, stream_id: Optional[int] = None):
         if self._close_pending:
@@ -83,7 +84,7 @@ class QuicClientProtocol(QuicConnectionProtocol):
                         from jam.network.protocol_map import ProtocolMap
 
                         protocol = ProtocolMap.get_protocol(prefix)()
-                        data = protocol.client_intercept(buffer[1:], event.stream_id)
+                        data = protocol.client_intercept(self.node ,buffer[1:], event.stream_id)
 
                         # Wait for acknowledgment
                         waiter = self.waiter

@@ -9,8 +9,7 @@ from aioquic.quic.configuration import QuicConfiguration
 from jam.types.protocol.validators import ValidatorData
 from .certificate import generate_keys
 from .peer import Peer
-from .quic.client import QuicClientProtocol
-from .quic.server import QuicServerProtocol
+
 from .sessions import SessionTicketStore
 from jam.config.logging import logger
 
@@ -43,8 +42,7 @@ class Node:
     is_initialized: bool = False
     is_builder: bool = False
     is_validator: bool = True
-
-    # state: State
+    from .quic.client import QuicClientProtocol
 
     peer_conn: Dict[Peer, Tuple[int, QuicClientProtocol]] = {}
     connections: list[QuicClientProtocol] = []
@@ -101,6 +99,8 @@ class Node:
         """
         Function to initialize server connection of the node.
         """
+        from .quic.server import QuicServerProtocol
+
         session_ticket_store = SessionTicketStore(self.port)
 
         logger.info(f"🚀 ({self.name}) Listening on {self.host}:{self.port}")
@@ -109,7 +109,7 @@ class Node:
             self.host,
             self.port,
             configuration=self.configuration(is_client=False),
-            create_protocol=QuicServerProtocol,
+            create_protocol=lambda *args, **kwargs: QuicServerProtocol(*args, node=self, **kwargs),
             session_ticket_fetcher=session_ticket_store.pop,
             session_ticket_handler=session_ticket_store.add,
         )
@@ -122,6 +122,7 @@ class Node:
         Function to connect the node to a peer.
         """
         session_ticket_store = SessionTicketStore(self.port)
+        from .quic.client import QuicClientProtocol
 
         try:
             # Skip self
@@ -135,7 +136,7 @@ class Node:
                     peer.host,
                     peer.port,
                     configuration=self.configuration(),
-                    create_protocol=QuicClientProtocol,
+                    create_protocol=lambda *args, **kwargs: QuicClientProtocol(*args, node=self, **kwargs),
                     session_ticket_handler=session_ticket_store.add,
             ) as client:
 

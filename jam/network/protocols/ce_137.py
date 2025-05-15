@@ -70,7 +70,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             if data is not None:
                 return data
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
 
         logger.info("Received Shard index & erasure root")
@@ -106,7 +106,7 @@ class ShardDistributionProtocol(NetworkProtocol):
         server.stream_and_keep_open(stream_id, stream_b)
         server.stream_and_close(stream_id, stream_c)
 
-    def client_intercept(self, buffer: bytes, stream_id: int) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
         """Intercept Bundle Shard, [Segment Shard] and Justification"""
 
         logger.info("Data received on Assurer Node")

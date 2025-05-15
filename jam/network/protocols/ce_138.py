@@ -70,7 +70,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         return responses
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Erasure-Root and Shard Index on Assurer (server)"""
 
         logger.info("Received Shard index & erasure root")
@@ -104,7 +104,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
         server.stream_and_keep_open(stream_id, stream_a)
         server.stream_and_close(stream_id, stream_b)
 
-    def client_intercept(self, buffer: bytes, stream_id: int) -> Tuple[BundleShard, Bytes]:
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Tuple[BundleShard, Bytes]:
         """Intercept Bundle Shard and Justification"""
 
         logger.info("Data received on Auditor Node")

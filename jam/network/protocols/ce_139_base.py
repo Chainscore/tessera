@@ -82,8 +82,8 @@ class SegmentShardRequestBase(NetworkProtocol):
         shard_request = cast(CE139Data, data)
         return shard_request
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         ...
 
-    def client_intercept(self, buffer: bytes, stream_id: int):
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int):
         ...

@@ -23,10 +23,12 @@ class SegmentShardRequest(SegmentShardRequestBase):
         Source:
             https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
     """
+    from jam.network.node import Node
+
     def __init__(self):
         super().__init__(PrefixType.CE139)
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         request = self.parse_request(buffer)
         logger.info("Handling CE139 shard request")
 
@@ -35,7 +37,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
         ack = self._prefix.encode() + response.encode()
         server.stream_and_close(stream_id, ack)
 
-    def client_intercept(self, buffer: bytes, stream_id: int) -> Response:
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Response:
         response, _ = Response.decode_from(buffer)
         response = cast(Response, response)
         logger.info(f"Received CE139 shard response: {response}")

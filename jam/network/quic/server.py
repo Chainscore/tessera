@@ -11,10 +11,11 @@ class QuicServerProtocol(QuicConnectionProtocol):
     """Quic Server Protocol for handling incoming connections from peers."""
     stream_buffer: Dict[int, bytes] = {}
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, node, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._close_pending = False
         self.stream_buffer = {}
+        self.node = node
 
     def stream_and_close(self, stream_id: int, message: bytes) -> int:
         if self._close_pending:
@@ -36,7 +37,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
         self.transmit()
         return stream_id
 
-    def quic_event_received(self, event: QuicEvent):
+    async def quic_event_received(self, event: QuicEvent):
         if isinstance(event, HandshakeCompleted):
             if event.alpn_protocol == f"jamnp-s/{protocol_version}/{genesis_hash}/builder":
                 print("Connected with a builder")
@@ -78,7 +79,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     from jam.network.protocol_map import ProtocolMap
 
                     protocol = ProtocolMap.get_protocol(prefix)()
-                    protocol.server_intercept(buffer[1:], self, event.stream_id)
+                    await protocol.server_intercept(self.node, buffer[1:], self, event.stream_id)
 
                     # Clear buffer
                     self.stream_buffer[event.stream_id] = b""
@@ -104,7 +105,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     if prefix == PrefixType.UP0:
                         from jam.network.protocol_map import ProtocolMap
                         protocol = ProtocolMap.get_protocol(prefix)()
-                        protocol.server_intercept(buffer[1:], self, event.stream_id)
+                        protocol.server_intercept(self.node, buffer[1:], self, event.stream_id)
 
 
                 except Exception as e:
