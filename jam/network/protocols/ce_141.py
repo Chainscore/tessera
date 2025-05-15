@@ -3,7 +3,7 @@ from http.client import responses
 from typing import cast
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
-from jam.types import Vector
+from jam.types import Vector, Null
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
@@ -56,9 +56,6 @@ class AssuranceDistribution(NetworkProtocol):
 
 
     def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
-       ...
-
-    def client_intercept(self, buffer: bytes, stream_id: int):
         """ intercept assurance list """
 
         data, offset = CE141Data.decode_from(buffer)
@@ -68,4 +65,7 @@ class AssuranceDistribution(NetworkProtocol):
 
         # TODO: Save the assure and signature in the database
 
-        return data.assurance
+
+    def client_intercept(self, buffer: bytes, stream_id: int):
+        ...
+        return Null
