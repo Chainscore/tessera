@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.types.protocol.core import ExportsRoot
 from jam.types.work.manifest import Segments, ProvedSegments
 from jam.types.work.shard import SegmentsShardRoot, SegmentsShardUnit, SegmentsShard, ShardIndex, SegmentsShardRoots

@@ -20,7 +20,7 @@ from jam.types.protocol.core import ServiceId,TimeSlot
 from jam.types.state.delta import Delta
 from jam.types.base.sequences import ByteArray32
 from jam.types.work.package import WorkPackage
-from jam.types.work.segment import MultiSegments, Segment, Segments
+from jam.types.work.manifest import MultiSegments, Segment, Segments
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.codec.primitives.integers import IntegerCodec

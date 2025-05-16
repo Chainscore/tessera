@@ -5,7 +5,7 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
-from jam.types import Vector
+from jam.types.base.sequences.vector import Vector
 from jam.types.base.integers import Int
 from jam.types.work.report import WorkPackageBundle, SegmentRootLookup
 

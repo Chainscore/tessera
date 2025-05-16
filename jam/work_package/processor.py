@@ -7,8 +7,9 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.config.logging import logger
 from jam.config.settings import settings
-from jam.db.kv import KVStore
-from jam.types import Ed25519Signature, TimeSlot
+from jam.storage.db.kv import KVStore
+from jam.types.protocol.core import TimeSlot
+from jam.types.protocol.crypto import Ed25519Signature
 from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray12
 from jam.types.base.sequences.vector import Vector
 
@@ -56,8 +57,8 @@ from jam.erasure_coding.erasure_code import ErasureCode
 from jam.merklization.binary_merkle import BMRFunctions
 
 
-from jam.hostCall.Refine import PsiR
-from jam.hostCall.invocation import PsiI
+from jam.execution.host_calls.invocations.refine import PsiR
+from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.work_package.bundler import Bundler
 from jam.work_package.stores.audits import AuditShardsDA
 from jam.work_package.stores.mappings import ErasureShardsMap

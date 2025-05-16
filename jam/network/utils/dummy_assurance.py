@@ -3,9 +3,9 @@ from math import floor
 
 from sympy.physics.units import current
 
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.state.state import State
-from jam.types import Ed25519Signature
+from jam.types.protocol.crypto import Ed25519Signature
 from jam.types.extrinsics.assurances import AvailBitField
 from jam.types.work.package import OpaqueHash
 from jam.utils.constants import EPOCH_LENGTH

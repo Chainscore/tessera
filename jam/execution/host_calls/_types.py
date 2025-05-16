@@ -18,7 +18,7 @@ from jam.types.protocol.core import Balance, Gas, ProgramCounter, ServiceId, Wor
 from jam.types.state.iota import Iota
 from jam.types.state.phi import Phi
 from jam.types.work.report import WorkExecResult
-from jam.types.work.segment import Segments
+from jam.types.work.manifest import Segments
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.codec.codable import Codable
 from jam.utils.json import JsonSerde

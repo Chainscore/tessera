@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.types.work.shard import BundleShardHash, BundleShardUnit, BundleShard, ShardIndex
 
 from jam.work_package.store import DA

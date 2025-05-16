@@ -5,10 +5,16 @@ from rich.diagnose import report
 
 from jam.config.logging import logger
 from jam.config.settings import settings
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.merklization import BMRFunctions
 from jam.network.quic.server import QuicServerProtocol
-from jam.types import Null, Vector, Int, ValidatorIndex
+from jam.types.base.sequences.vector import Vector
+from jam.types.base.null import Null
+from jam.types.base.integers.general import Int
+from jam.types.protocol.core import ValidatorIndex
+
+
+
 from jam.types.extrinsics.guarantees import ValidatorSignatures
 from jam.types.protocol.crypto import Hash
 from jam.types.work.shard import ShardIndex, BundleShardUnit, SegmentsShardUnit
@@ -98,7 +104,7 @@ class WorkReportDistribution(NetworkProtocol):
         # TODO: Change 342 to Recovery Threshold based on Network Spec
         shard_index = ShardIndex((report.core_index * 342 + validator_index) % settings.VALIDATOR_COUNT)
 
-        from tests.dummy.dummy_package import create_dummy_assurances
+        from jam.network.utils.dummy_assurance import create_dummy_assurances
         from jam.network.protocols.ce_137 import ShardDistributionProtocol, CE137TransmitData
         CE137 = ShardDistributionProtocol()
 

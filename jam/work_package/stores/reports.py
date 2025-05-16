@@ -1,4 +1,4 @@
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.types.protocol.crypto import Hash
 from jam.work_package.store import DA
 from jam.types.work.report import WorkReport, WorkReportHash

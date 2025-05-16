@@ -1,5 +1,7 @@
 from jam.storage.db.kv import KVStore
+import os
 
+os.makedirs("data/main", exist_ok=True)
 main_db = KVStore("data/main")
 audit_da = KVStore("data/audit")
 d3l = KVStore("data/d3l")

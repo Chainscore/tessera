@@ -3,7 +3,8 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
-from jam.types import Vector, Null
+from jam.types.base.sequences.vector import Vector
+from jam.types.base.null import Null
 from jam.types.work.manifest import Extrinsics
 
 from jam.utils.json import JsonSerde

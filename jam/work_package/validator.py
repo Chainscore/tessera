@@ -4,7 +4,7 @@ from jam.utils.constants import (
     MAX_EXPORT_ITEM,
     MAX_IMPORT_ITEM,
     EXTRINSIC_COUNT,
-    MAX_WORK_PACKAGE_SIZE,
+    MAX_ENCODED_WORK_PACKAGE_SIZE,
     SEGMENT_SIZE,
     REFINE_GAS,
     ACCUMULATION_GAS
@@ -61,7 +61,7 @@ class Validator:
             item_count = len(x.payload) + len(x.import_segments) * SEGMENT_SIZE + extrinsic_len
 
         package_size = auth_token + parameterization + item_count
-        if package_size > MAX_WORK_PACKAGE_SIZE:
+        if package_size > MAX_ENCODED_WORK_PACKAGE_SIZE:
             raise WorkPackageError(
                 WorkPackagesErrorCode.BAD_WORK_PACKAGE_SIZE,
                 "count of extrinsic more than are more than actual value"

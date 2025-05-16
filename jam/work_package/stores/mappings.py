@@ -1,7 +1,7 @@
 from typing import Tuple
 
-from jam.db.kv import KVStore
-from jam.types import Null
+from jam.storage.db.kv import KVStore
+from jam.types.base.null import Null
 
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import WorkPackageHash, ExportsRoot, ErasureRoot, WorkReportHash
