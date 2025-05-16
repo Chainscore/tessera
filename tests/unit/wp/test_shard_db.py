@@ -1,4 +1,4 @@
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.types.work.shard import SegmentsShard, SegmentsShardRoots, BundleShardHashes, SegmentsShardUnit, ShardIndex, \
     BundleShardUnit
 from jam.work_package.stores.audits import AuditShardsDA

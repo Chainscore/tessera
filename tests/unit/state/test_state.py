@@ -1,11 +1,16 @@
 from jam.storage.db.kv import KVStore
-from jam.state.accounts import AccountData
+from jam.types.state.delta import AccountData
 from jam.state.ghost import GhostState
 from jam.state.state import setup_state, state
-from jam.types import ByteArray32, ServiceId, U64, U32, Bytes
+from jam.types.base.sequences.bytes.byte_array import ByteArray32
+from jam.types.base.integers.fixed import U64, U32
+from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.protocol.core import ServiceId
 from jam.types.protocol.core import Balance
 from jam.types.protocol.crypto import Hash
-from jam.types.state import Eta, Tau, LookupTimestamps, LookupTable, Timestamps
+from jam.types.state.delta import LookupTimestamps, LookupTable, Timestamps
+from jam.types.state.tau import Tau
+from jam.types.state.eta import Eta
 from tests.dummy.utils import create_dummy_bytes
 
 
