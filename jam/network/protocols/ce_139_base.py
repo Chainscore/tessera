@@ -65,13 +65,13 @@ class SegmentShardRequestBase(NetworkProtocol):
         super().__init__()
         self._prefix = prefix
 
-    async def transmit(self, node: Node, data: CE139Data):
+    def transmit(self, node: Node, data: CE139Data):
         logger.info(f"Sending segment shard request with prefix {self._prefix}")
         stream = self._prefix.encode() + data.encode()
 
         responses = Vector([])
         for client in node.connections:
-            data = await client.stream_and_close(message=stream)
+            data = client.stream_and_close(message=stream)
             responses.append(data)
 
         return data

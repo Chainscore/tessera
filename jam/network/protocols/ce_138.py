@@ -54,7 +54,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE138
 
-    async def transmit(self, node: Node, data:CE138TransmitData):
+    def transmit(self, node: Node, data:CE138TransmitData):
         """Transmit Erasure-Root and Shard Index from Auditor (client) to Assurer (server)"""
 
         stream_a = self._prefix.encode() + data.erasure_root.encode()
@@ -65,7 +65,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
         responses = Vector([])
         for client in node.connections:
             stream_id = client.stream_and_keep_open(message=stream_a)
-            data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
+            data = client.stream_and_close(message=stream_b, stream_id=stream_id)
             responses.append(data)
 
         return responses

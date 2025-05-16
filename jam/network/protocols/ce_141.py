@@ -36,7 +36,7 @@ class AssuranceDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE141
 
-    async def transmit(self, node: Node, data: CE141Data):
+    def transmit(self, node: Node, data: CE141Data):
         """ Transmit assurance, From Assurer (client) to Validator (server) """
 
         stream = self._prefix.encode() + data.encode()
@@ -48,7 +48,7 @@ class AssuranceDistribution(NetworkProtocol):
 
         responses = Vector([])
         for client in node.connections:
-            data = await client.stream_and_close(message=stream)
+            data = client.stream_and_close(message=stream)
             responses.append(data)
 
         return responses
