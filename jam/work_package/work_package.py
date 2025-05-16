@@ -39,7 +39,7 @@ from jam.erasure_coding.erasure_code import ErasureCode
 from jam.merklization.binary_merkle import BMRFunctions
 
 
-from jam.execution.host_calls.invocations.refine import PsiR
+# from jam.execution.host_calls.invocations.refine import PsiR
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 
 from tests.dummy.utils import create_dummy_bytes32
@@ -287,7 +287,7 @@ class WorkPackageProcessing:
             # r, e, u = PsiR(int(c), p, o, self.fetch_imports(w), l)
 
             # TODO: Fix later on receiving more clarity
-            r, e, u = PsiR(int(c), p, o, self.segments, l)
+            # r, e, u = PsiR(int(c), p, o, self.segments, l)
 
             segment = Segment([Byte(0)] * 4104)
             segment_length = w.export_count

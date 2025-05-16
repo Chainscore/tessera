@@ -1,16 +1,20 @@
 from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
+from jam.execution.host_calls.invocations.functions.refine_fns import RefineFunctions
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
+from jam.execution.utils import decode_code_hash
+from jam.state.state import state
 from jam.storage.item_extrinsics import ItemExtrinsics
+from jam.types.base import U16
 from jam.types.protocol.core import CoreIndex, ProgramCounter
-from jam.types.protocol.crypto import OpaqueHash
+from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.work.package import WorkPackage
 from jam.utils.constants import IS_AUTHORIZED_GAS
 
 
 class PsiR(InvocationProtocol):
     def __init__(self, item_index: int, p: WorkPackage, auth_trace: bytes, i_segments: bytes, e_offset: int):
-        self.item_index = item_index
+        self.item_index = U16(item_index)
         self.work_package = p
         self.auth_trace = auth_trace
         self.i_segments = i_segments
@@ -21,19 +25,22 @@ class PsiR(InvocationProtocol):
         return {
             0: (GeneralFunctions, ()),
             18: (GeneralFunctions, (self.work_package, OpaqueHash([0] * 32), self.auth_trace, self.item_index, self.i_segments, ItemExtrinsics.get_all(self.work_package))),
-
+            19: (RefineFunctions, (self.e_offset))
         }
 
     def execute(self):
-        _, pc = self.work_package.m_c
-        PsiM(
+        wi = self.work_package.items[self.item_index]
+        _, pc = decode_code_hash(state.delta[wi.service].historical_lookup(self.work_package.context.lookup_anchor_slot, wi.code_hash))
+        args = self.item_index.encode() + wi.service.encode() + wi.payload.encode() + bytes(Hash.blake2b(self.work_package.encode()))
+        u, r, (m, e) = PsiM.execute(
             pc,
             ProgramCounter(0),
             IS_AUTHORIZED_GAS,
-            self.core.encode(),
+            args,
             self.dispatch,
-            None,
+            (None, []),
         )
+        print(f"u: {u} | r: {r} | (m, e): ({m}, {e})")
 
     # def process(self):
     #     w = self.work_package.items[self.pc]
