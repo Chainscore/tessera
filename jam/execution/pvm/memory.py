@@ -167,6 +167,7 @@ class Memory:
         """
         return PVM_INIT_ZONE_SIZE*ceil(blob_len/PVM_INIT_ZONE_SIZE)
 
+    @staticmethod
     def get_pages(start_index: int, end_index: int) -> List[int]:
         """
         Gives a list of page numbers that contains a specific indexed location in memory

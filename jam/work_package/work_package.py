@@ -386,7 +386,7 @@ class WorkPackageProcessing:
                           accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)
 
     @staticmethod
-    def zero_padding(value: Bytes, n : Int):
+    def zero_padding(value: Bytes, n: Int):
         """
         Zero Padding function P defined in Eqn 14.17
         Ensures that the length of individual byte array becomes a multiple of a given integer n.
@@ -399,12 +399,12 @@ class WorkPackageProcessing:
         Returns:
             New list containing padded byte arrays. Each element's length is now a multiple of n, padded with zeroes at the end.
         """
-        hash_length = len(value)
-        first_index = ((abs(hash_length) + n - 1) // n) + 1
-        if hash_length // n != 0:
-            padding_zero = n - first_index
-            for i in range(padding_zero):
-                value.append(Byte(0))
+
+        length = len(value)
+        padding = n - (((length + n - 1) % n) + 1)
+
+        for i in range(padding):
+            value.append(Byte(0))
 
         return value
 
