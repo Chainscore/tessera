@@ -1,16 +1,13 @@
 from dataclasses import dataclass
 
-from jam.config.settings import settings
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.program import Program
 from jam.execution.pvm.pvm import PVM
-from jam.execution.pvm.status import PANIC,CONTINUE, ExecutionStatus, HostStatus
+from jam.execution.pvm.status import PANIC, CONTINUE, ExecutionStatus, HostStatus, PvmError
 from jam.execution.pvm.types import Accessibility
-from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types.base import decodable_dictionary, Dictionary
 from jam.types.base.integers.fixed import U64
 from jam.types.base.integers.general import Int
-from jam.types.base.null import Null
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.core import Gas, Register, ProgramCounter
 from jam.execution.pvm.register import Registers
@@ -18,8 +15,7 @@ from jam.execution.pvm.memory import Memory
 from jam.types.protocol.core import ServiceId,TimeSlot
 from jam.types.state.delta import Delta
 from jam.types.base.sequences import ByteArray32
-from jam.types.work.package import WorkPackage
-from jam.types.work.segment import MultiSegments, Segment, Segments
+from jam.types.work.segment import Segment, Segments
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.codec.primitives.integers import IntegerCodec
@@ -76,65 +72,22 @@ class RefineFunctions(INVF):
         memory.write(f, v[f:l])
         return CONTINUE, registers, memory, context
 
-    @classmethod
-    @INVF.register(18, gas_cost=10)
-    def fetch(cls,gas:Gas,registers:Registers,memory:Memory, context:RefineContext,work_item_index:int,workpackage:WorkPackage,auth_trace:bytes,imp_segment:MultiSegments):
-        db=settings.db
-        if registers[10]==0:
-            v=workpackage.encode()
-        elif registers[10]==1:
-            v=auth_trace
-        elif registers[10]==2 and registers[11]< len(workpackage.items):
-            v=workpackage.items[registers[11]].payload
-        # TODO: Comparing the context(x (not m,e)) as WI Extrinsics from the db(dummy)
-        # https://graypaper.fluffylabs.dev/#/cc517d7/35990035a700?v=0.6.5
-        elif registers[10]==3 and registers[11]<len(workpackage.items) and  ItemExtrinsics.compare(work_item_extrinsic=workpackage.items[registers[11]].extrinsic[registers[12]],db=db):
-            v=db.get(bytes(workpackage.items[registers[11]].extrinsic[registers[12]].hash))
-        elif registers[10]==4 and registers[11]<len(workpackage.items[work_item_index].extrinsic) and ItemExtrinsics.compare(workpackage.items[work_item_index].extrinsic[registers[11]],db=db):
-            v=db.get(bytes(workpackage.items[work_item_index].extrinsic[registers[11]].hash))
-        elif registers[10]==5 and registers[11]<len(imp_segment) and registers[12]<len(imp_segment[registers[11]]):
-            v=imp_segment[registers[11][12]]
-        elif registers[10]==6 and registers[11]<len(imp_segment[work_item_index]):
-            v=imp_segment[work_item_index][registers[11]]
-        elif registers[10]==7:
-            v=workpackage.params
-        else:
-            v=Null
-
-        o=registers
-        try:
-            length = len(v)
-        except (TypeError, AttributeError):
-            length = 0
-        f = min(registers[8], length)
-        l=min(registers[9],length-f)
-        if v is not memory.is_accessible(o, l, True):
-            raise PANIC
-        elif v is False:
-            registers[7]=HostStatus.NONE
-            return(CONTINUE,registers,memory,context)
-        else:
-            registers[7]=len(v)
-            memory.write(o,v[f:l])
-            return (CONTINUE,registers,memory,context)
-
-    @classmethod
+    @staticmethod
     @INVF.register(19, gas_cost=10)
-    def export(cls,gas:Gas,registers:Registers,memory:Memory,context:RefineContext,export_segment_offset:int):
-        p=registers[7]
-        z=min(registers[8],SEGMENT_SIZE)
-        if memory.is_accessible(p,z,True):
-            x=WorkPackageProcessing.zero_padding(value=Bytes(memory.read(p,z)),n=Int(SEGMENT_SIZE))
+    def export(gas:Gas, registers:Registers, memory:Memory, context:RefineContext, export_segment_offset:int):
+        p = registers[7]
+        z = min(registers[8], SEGMENT_SIZE)
+        if memory.is_accessible(address=p, length=z, for_write=True):
+            x = WorkPackageProcessing.zero_padding(value=Bytes(memory.read(p,z)), n=Int(SEGMENT_SIZE))
         else:
-            raise PANIC
-        if export_segment_offset+len(context.e)>= MAX_EXPORT_ITEM:
-            registers[7]=HostStatus.HUH
-            return CONTINUE,registers,memory,context
-
+            raise PvmError(PANIC)
+        if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:
+            registers[7] = HostStatus.HUH
+            return CONTINUE, gas, registers, memory, context
         else:
             context.e.append(Segment(x))
-            registers[7]=export_segment_offset+len(context.e)
-            return CONTINUE,registers,memory,context
+            registers[7] = Register(export_segment_offset+len(context.e))
+            return CONTINUE, gas, registers, memory, context
 
     @classmethod
     @INVF.register(20, gas_cost=10)

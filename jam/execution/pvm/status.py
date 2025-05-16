@@ -48,14 +48,14 @@ PANIC = ExecutionStatus.PANIC
 # Page fault with a register value
 def PAGE_FAULT(register: Register) -> ExecutionStatus:
     result = ExecutionStatus.PAGE_FAULT
-    result.value.register = OptionalRegister(register)
+    result.register = OptionalRegister(register)
     return result
 # Halt
 HALT = ExecutionStatus.HALT
 # Host call with a register value
 def HOST(register: Register) -> ExecutionStatus:
     result = ExecutionStatus.HOST
-    result.value.register = OptionalRegister(register)
+    result.register = OptionalRegister(register)
     return result
 # Out of gas
 OUT_OF_GAS = ExecutionStatus.OUT_OF_GAS
