@@ -158,7 +158,7 @@ class VRF(ABC):
         proof_to_hash_domain_separator_front = b"\x03"
         proof_to_hash_domain_separator_back = b"\x00"
         beta_string = Hash.sha512(
-            self.curve.SUITE_STRING.encode() + 
+            self.curve.SUITE_STRING+
             proof_to_hash_domain_separator_front + 
             (
                 gamma
