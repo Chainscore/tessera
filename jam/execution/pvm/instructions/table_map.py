@@ -43,7 +43,7 @@ class InstTableMap:
         for key, value in cls.ALL_INSTRUCTION_TABLES.items():
             if opcode < key:
                 return value
-        raise PANIC
+        raise PvmError(PANIC)
 
     @classmethod
     def terminating_blocks(cls) -> List[int]:

@@ -42,7 +42,7 @@ class GeneralFunctions(INVF):
         h, o = registers[8], registers[9]
 
         if not memory.is_accessible(h, 32):
-            raise PANIC
+            raise PvmError(PANIC)
 
         v: None|Bytes = None
         data = memory.read(int(h), 32)
@@ -54,7 +54,7 @@ class GeneralFunctions(INVF):
         l = min(int(registers[11]), len(v) - f)
 
         if not memory.is_accessible(o, l):
-            raise PANIC
+            raise PvmError(PANIC)
 
         if v is None:
             registers[7] = HostStatus.NONE
@@ -178,7 +178,7 @@ class GeneralFunctions(INVF):
         ko, kz, o = registers[8], registers[9], registers[10]
 
         if not memory.is_accessible(ko, kz - ko):
-            raise PANIC
+            raise PvmError(PANIC)
 
         v: None|Bytes = None
         k = Hash.blake2b(s_star.encode() + memory.read(ko, kz - ko))
@@ -191,7 +191,7 @@ class GeneralFunctions(INVF):
         l = min(int(registers[12]), len(v) - f)
 
         if not memory.is_accessible(o, l):
-            raise PANIC
+            raise PvmError(PANIC)
 
         if v is None:
             registers[7] = HostStatus.NONE
@@ -207,11 +207,11 @@ class GeneralFunctions(INVF):
         # Get key,value start,end
         [ko, kz, vo, vz] = registers[7: 7+4]
         if not memory.is_accessible(ko, kz - ko):
-            raise PANIC
+            raise PvmError(PANIC)
         k = Hash.blake2b(service_index.encode() + memory.read(ko, kz - ko))
 
         if not memory.is_accessible(vo, vz - vo):
-            raise PANIC
+            raise PvmError(PANIC)
         a = service_data.storage
         if vz == 0:
             del a[k]
@@ -240,7 +240,7 @@ class GeneralFunctions(INVF):
                 registers[7] = HostStatus.OK
                 memory.write(o, m)
             else:
-                raise PANIC
+                raise PvmError(PANIC)
         else:
             registers[7] = HostStatus.NONE
 
