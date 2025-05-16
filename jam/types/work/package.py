@@ -1,16 +1,20 @@
 """Work package types for the JAM protocol."""
 from dataclasses import dataclass
+
+
+from jam.services.historicalLookup import historical_lookup_fn
 from jam.types.base import Bytes
 from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
+from jam.types.state.delta import Delta
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.types.protocol.crypto import OpaqueHash
+from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.protocol.core import ServiceId
 from jam.types.work.item import WorkItem
 from jam.types.work.refine_context import RefineContext
+from jam.utils.codec.primitives.bytes import BytesCodec
 from jam.utils.json.serde import JsonSerde
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
 
 
 @decodable_dataclass
@@ -26,15 +30,29 @@ class Authorizer(Codable, JsonSerde):
 class WorkItems(Vector[WorkItem]):
     ...
 
-
 @decodable_dataclass
 @dataclass
 class WorkPackage(Codable, JsonSerde):
     """Work package structure."""
-
+    # j
     authorization: Bytes
+    # h
     auth_code_host: ServiceId
+    # u
     code_hash: OpaqueHash
+    # p
     params: Bytes
+    # x
     context: RefineContext
+    # w
     items: WorkItems
+
+    def m_c(self, delta: Delta) -> (bytes, bytes):
+        service_data = historical_lookup_fn(delta[self.auth_code_host], self.context.lookup_anchor_slot, self.code_hash)
+        pm, offset = BytesCodec.decode_from(service_data)
+        pc = service_data[offset:]
+        return pm, pc
+
+    @property
+    def a(self) -> OpaqueHash:
+        return Hash.blake2b(self.code_hash + self.params)

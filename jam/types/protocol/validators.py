@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from jam.types import decodable_vector, Vector
+from jam.types.base.sequences.vector import decodable_vector, Vector
 from jam.types.base.integers.fixed import U16, U8
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.bytes.byte_array import ByteArray, decodable_bytearray

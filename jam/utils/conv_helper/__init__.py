@@ -37,10 +37,9 @@ class ConversionHelper(HexConversion,StrConversion):
         return HexConversion.bytes_to_hex(ConversionHelper.to_bytes(value))
 
     @staticmethod
-    def to_hash(value:bytes)->  bytes:
+    def to_hash(value: bytes)->  bytes:
         return hashlib.sha512(value).digest()
-
-
+    
     # Convert everything to bytes
     @staticmethod
     def int_to_bytes(value: int, length: int = None, byteorder: Literal["big", "little"] = "big") -> bytes:

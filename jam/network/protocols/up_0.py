@@ -6,6 +6,7 @@ from jam.network.quic.server import QuicServerProtocol
 
 from jam.types.block import Block
 from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.types.header import Header
 
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
@@ -13,7 +14,6 @@ from jam.utils.json import JsonSerde
 
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
-from jam.types import Header
 
 @decodable_dataclass
 @dataclass

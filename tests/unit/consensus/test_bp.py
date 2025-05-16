@@ -1,8 +1,8 @@
 import pytest
 from jam.consensus.bp_engine import BlockProducer
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.network.node import Node
-from jam.state.state import State
+from jam.state.ghost import GhostState as State
 from jam.types.block import Block
 from jam.types.protocol.core import TimeSlot
 from jam.consensus.grandpa.finality import Finality

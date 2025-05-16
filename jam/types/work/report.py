@@ -8,7 +8,6 @@ from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.sequences.vector import Vector, decodable_vector
-
 from jam.types.work.package import WorkPackage
 from jam.types.work.refine_context import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
@@ -59,11 +58,15 @@ class RefineLoad(Codable, JsonSerde):
 @dataclass
 class WorkResult(Codable, JsonSerde):
     """Work result structure."""
-
+    # s
     service_id: ServiceId
+    # h
     code_hash: OpaqueHash
+    # y
     payload_hash: OpaqueHash
+    # g
     accumulate_gas: Gas
+    # d
     result: WorkExecResult
     refine_load: RefineLoad
 
@@ -71,11 +74,15 @@ class WorkResult(Codable, JsonSerde):
 @dataclass
 class WorkPackageSpec(Codable, JsonSerde):
     """Work package specification structure."""
-
+    # h
     hash: WorkPackageHash
+    # l
     length: U32
+    # u
     erasure_root: ErasureRoot
+    # e
     exports_root: ExportsRoot
+    # n
     exports_count: U16
 
 @decodable_dataclass
@@ -89,7 +96,7 @@ class WorkPackageBundle(Codable, JsonSerde):
     justifications: MultiJustifications
 
 
-@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
+@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot,key_name="work_package_hash", value_name="segment_tree_root")
 class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
     ...
@@ -101,14 +108,21 @@ class WorkResults(Vector[WorkResult]): ...
 @dataclass
 class WorkReport(Codable, JsonSerde):
     """Work report structure."""
-
+    # s
     package_spec: WorkPackageSpec
+    # x
     context: RefineContext
+    # c
     core_index: CoreIndex
+    # a
     authorizer_hash: OpaqueHash
+    # o
     auth_output: Bytes
+    # l
     segment_root_lookup: SegmentRootLookup
+    # r
     results: WorkResults
+    # g
     auth_gas_used: Gas
 
 @decodable_vector(element_type=WorkReportHash, allow_duplicates=False)

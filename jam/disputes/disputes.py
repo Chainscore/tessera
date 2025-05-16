@@ -5,8 +5,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from jam.disputes.error import DisputesError, DisputesErrorCode
-from jam.state.components.rho import OptionalWorkReportState
-from jam.state.components.sigma import Sigma
+from jam.types.state.rho import OptionalWorkReportState
+from jam.types.state.sigma import Sigma
 from jam.types.base.null import Null
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
 from jam.types.block import Block
@@ -15,8 +15,7 @@ from jam.types.header import OffendersMark
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import (
     EPOCH_LENGTH,
-    VALIDATORS_SUPER_MAJORITY,
-    VALIDATORS_WONKY,
+    VALIDATORS_SUPER_MAJORITY
 )
 
 # Define minimum requirements

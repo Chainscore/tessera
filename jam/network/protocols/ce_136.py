@@ -3,7 +3,7 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
-from jam.types import Vector
+from jam.types.base import Vector
 from jam.types.work.report import WorkReport
 
 from jam.utils.json import JsonSerde

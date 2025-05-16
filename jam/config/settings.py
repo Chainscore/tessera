@@ -1,11 +1,4 @@
-from pathlib import Path
-from jam.utils.constants import (
-    SLOT_PERIOD,
-    EPOCH_LENGTH,
-    VALIDATOR_COUNT,
-    MAX_SERVICE_CODE_SIZE,
-)
-
+from jam.storage.db.kv import KVStore
 
 class Settings:
     # Node settings
@@ -22,26 +15,25 @@ class Settings:
     DB_PATH = f"{NODE_PATH}/node"
     D3L_PATH = f"{NODE_PATH}/d3l"
 
-    # Consensus settings
-    EPOCH_LENGTH: int = EPOCH_LENGTH
-    SLOT_DURATION: int = SLOT_PERIOD
-    VALIDATOR_COUNT: int = VALIDATOR_COUNT
+    ENV_PREFIX = "JAM_"
+    ENV_FILE = ".env"
 
-    # PVM settings
-    PVM_MAX_MEMORY: int = 2**32  # 4GB
-    PVM_STACK_SIZE: int = 2**20  # 1MB
+    @property
+    def db(self):
+        return KVStore(self.DB_PATH)
 
-    # Service settings
-    MAX_SERVICE_SIZE: int = MAX_SERVICE_CODE_SIZE
-    MAX_PREIMAGE_SIZE: int = MAX_SERVICE_CODE_SIZE
+    @property
+    def d3l(self):
+        return KVStore(self.D3L_PATH)
 
-    # Execution settings
-    MAX_REFINE_GAS: int = 500_000_000
-    MAX_ACCUMULATE_GAS: int = 100_000
+settings: Settings = Settings()
 
-    class Config:
-        env_prefix = "JAM_"
-        env_file = ".env"
-
-
-settings = Settings()
+def setup_setting(name: str, port: int,  db_path = "data/db", node_id = None):
+    global settings
+    s = Settings()
+    s.NODE_NAME = name
+    s.LISTEN_PORT = port
+    s.DB_PATH = db_path
+    s.AUDIT_DB_PATH = db_path + "/audit"
+    s.NODE_ID = node_id
+    settings = s

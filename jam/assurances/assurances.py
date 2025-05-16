@@ -6,8 +6,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from jam.assurances.errors import AssurancesError, AssurancesErrorCode
-from jam.state.components.rho import OptionalWorkReportState
-from jam.state.components.sigma import Sigma
+from jam.types.state.rho import OptionalWorkReportState
+from jam.types.state.sigma import Sigma
 from jam.types.base.null import Null
 from jam.types.block import Block
 from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField
