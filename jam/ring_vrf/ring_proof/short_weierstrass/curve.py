@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 from sympy import mod_inverse
 
-from jam.ring_vrf.Ring_Proof.constants import (
+from jam.ring_vrf.ring_proof.constants import (
     S_PRIME as P,
     S_A as A,
     S_B as B,

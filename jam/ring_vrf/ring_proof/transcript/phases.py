@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from typing import Any, List, Sequence
 
-from jam.ring_vrf.Ring_Proof.transcript.serializer import serialize
-from jam.ring_vrf.Ring_Proof.transcript.transcript import Transcript
+from jam.ring_vrf.ring_proof.transcript.serializer import serialize
+from jam.ring_vrf.ring_proof.transcript.transcript import Transcript
 
 __all__ = [
     "phase1_alphas",

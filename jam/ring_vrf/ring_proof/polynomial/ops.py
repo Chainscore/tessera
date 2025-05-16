@@ -1,4 +1,4 @@
-from jam.ring_vrf.Ring_Proof.constants import S_PRIME, D_512 as D
+from jam.ring_vrf.ring_proof.constants import S_PRIME, D_512 as D
 from sympy import symbols
 
 def mod_inverse(val, prime):

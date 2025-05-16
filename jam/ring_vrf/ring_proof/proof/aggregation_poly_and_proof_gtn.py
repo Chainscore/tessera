@@ -1,10 +1,10 @@
 import time
 start_time=time.time()
-from jam.ring_vrf.Ring_Proof.constants import S_PRIME
-from jam.ring_vrf.Ring_Proof.polynomial.ops import poly_add, poly_scalar
-from jam.ring_vrf.Ring_Proof.transcript.phases import phase3_nu_vector
-from jam.ring_vrf.Ring_Proof.pcs.kzg import KZG
-from jam.ring_vrf.Ring_Proof.helpers import  Helpers as H
+from jam.ring_vrf.ring_proof.constants import S_PRIME
+from jam.ring_vrf.ring_proof.polynomial.ops import poly_add, poly_scalar
+from jam.ring_vrf.ring_proof.transcript.phases import phase3_nu_vector
+from jam.ring_vrf.ring_proof.pcs.kzg import KZG
+from jam.ring_vrf.ring_proof.helpers import  Helpers as H
 
 kzg=KZG.default()
 

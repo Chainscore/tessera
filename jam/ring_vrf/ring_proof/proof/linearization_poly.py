@@ -1,10 +1,10 @@
 import sys
-from jam.ring_vrf.Ring_Proof.constants import OMEGA as omega, D_512 as D, S_PRIME
-from jam.ring_vrf.Ring_Proof.polynomial.ops import (
+from jam.ring_vrf.ring_proof.constants import OMEGA as omega, D_512 as D, S_PRIME
+from jam.ring_vrf.ring_proof.polynomial.ops import (
     poly_add, poly_scalar
 )
-from jam.ring_vrf.Ring_Proof.polynomial.ops import poly_evaluate
-from jam.ring_vrf.Ring_Proof.transcript.phases import phase2_eval_point
+from jam.ring_vrf.ring_proof.polynomial.ops import poly_evaluate
+from jam.ring_vrf.ring_proof.transcript.phases import phase2_eval_point
 
 class LAggPoly:
 

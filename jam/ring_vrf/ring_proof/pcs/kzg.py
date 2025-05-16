@@ -13,7 +13,7 @@ from py_ecc.optimized_bls12_381 import (
     pairing, )
 from py_ecc.optimized_bls12_381 import FQ, FQ2
 
-from jam.ring_vrf.Ring_Proof.pcs.load_powers import (
+from jam.ring_vrf.ring_proof.pcs.load_powers import (
     g1_points as _RAW_G1_POWERS,
     g2_points as _RAW_G2_POWERS, g2_points,
 )

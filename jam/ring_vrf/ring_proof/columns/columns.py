@@ -2,14 +2,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Tuple
 import py_ecc.optimized_bls12_381 as bls
-from jam.ring_vrf.Ring_Proof.helpers import Helpers as H
-from jam.ring_vrf.Ring_Proof.pcs.load_powers import g1_points, g2_points
-from jam.ring_vrf.Ring_Proof.polynomial.interpolation import poly_interpolate_fft
-from jam.ring_vrf.Ring_Proof.pcs.kzg import KZG
-from jam.ring_vrf.Ring_Proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
+from jam.ring_vrf.ring_proof.helpers import Helpers as H
+from jam.ring_vrf.ring_proof.pcs.load_powers import g1_points, g2_points
+from jam.ring_vrf.ring_proof.polynomial.interpolation import poly_interpolate_fft
+from jam.ring_vrf.ring_proof.pcs.kzg import KZG
+from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
 from functools import lru_cache
 
-from jam.ring_vrf.Ring_Proof.constants import (
+from jam.ring_vrf.ring_proof.constants import (
     S_PRIME,
     OMEGA as OMEGA,
     Blinding_Base,
@@ -50,7 +50,7 @@ class Column:
 def _get_default_kzg() -> KZG:
 
     # Build an SRS with proper Jacobian conversion via the helper.
-    from jam.ring_vrf.Ring_Proof.pcs.kzg import SRS
+    from jam.ring_vrf.ring_proof.pcs.kzg import SRS
     return KZG(SRS(g1_points, g2_points))
 
 

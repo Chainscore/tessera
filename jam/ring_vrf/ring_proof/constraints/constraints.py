@@ -1,10 +1,10 @@
 from __future__ import annotations
-from jam.ring_vrf.Ring_Proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
-from jam.ring_vrf.Ring_Proof.constants import SeedPoint
+from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
+from jam.ring_vrf.ring_proof.constants import SeedPoint
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Sequence, Any
 
-from jam.ring_vrf.Ring_Proof.constants import (
+from jam.ring_vrf.ring_proof.constants import (
     S_PRIME,
     OMEGA,
     D_512 as D,
@@ -12,7 +12,7 @@ from jam.ring_vrf.Ring_Proof.constants import (
     D_2048,
 )
 
-from jam.ring_vrf.Ring_Proof.polynomial.ops import (
+from jam.ring_vrf.ring_proof.polynomial.ops import (
     vect_add,
     vect_sub,
     vect_mul,

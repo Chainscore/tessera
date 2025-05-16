@@ -1,6 +1,6 @@
 from py_ecc.optimized_bls12_381 import normalize as nm
-from jam.ring_vrf.Ring_Proof.pcs.kzg import KZG
-from jam.ring_vrf.Ring_Proof.polynomial.ops import poly_division_general
+from jam.ring_vrf.ring_proof.pcs.kzg import KZG
+from jam.ring_vrf.ring_proof.polynomial.ops import poly_division_general
 kzg=KZG.default()
 
 class QuotientPoly:

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from jam.ring_vrf.Ring_Proof.constants import S_PRIME
+from jam.ring_vrf.ring_proof.constants import S_PRIME
 
 __all__ = ["serialize"]
 

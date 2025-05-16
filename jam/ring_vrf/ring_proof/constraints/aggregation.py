@@ -1,16 +1,16 @@
 from __future__ import  annotations
 from typing import List, Sequence
-from jam.ring_vrf.Ring_Proof.helpers import Helpers as H
-from jam.ring_vrf.Ring_Proof.pcs.load_powers import g1_points, g2_points
-from jam.ring_vrf.Ring_Proof.transcript.transcript import Transcript
-from jam.ring_vrf.Ring_Proof.transcript.phases import phase1_alphas
+from jam.ring_vrf.ring_proof.helpers import Helpers as H
+from jam.ring_vrf.ring_proof.pcs.load_powers import g1_points, g2_points
+from jam.ring_vrf.ring_proof.transcript.transcript import Transcript
+from jam.ring_vrf.ring_proof.transcript.phases import phase1_alphas
 from py_ecc.optimized_bls12_381 import normalize as nm
-from jam.ring_vrf.Ring_Proof.constants import S_PRIME
-from jam.ring_vrf.Ring_Proof.polynomial.ops import (
+from jam.ring_vrf.ring_proof.constants import S_PRIME
+from jam.ring_vrf.ring_proof.polynomial.ops import (
     poly_multiply, vect_scalar_mul, vect_add,
 )
-from jam.ring_vrf.Ring_Proof.constants import OMEGA_2048 as omega_2048, D_512 as D
-from jam.ring_vrf.Ring_Proof.polynomial.interpolation  import poly_interpolate_fft
+from jam.ring_vrf.ring_proof.constants import OMEGA_2048 as omega_2048, D_512 as D
+from jam.ring_vrf.ring_proof.polynomial.interpolation  import poly_interpolate_fft
 
 __all__ = [
     "vanishing_poly",

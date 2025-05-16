@@ -1,22 +1,22 @@
 import json
 import time
 start_time=time.time()
-from jam.ring_vrf.Ring_Proof.pcs.load_powers import g1_points, g2_points
-from jam.ring_vrf.Ring_Proof.transcript.phases import phase1_alphas
-from jam.ring_vrf.Ring_Proof.transcript.transcript import Transcript
+from jam.ring_vrf.ring_proof.pcs.load_powers import g1_points, g2_points
+from jam.ring_vrf.ring_proof.transcript.phases import phase1_alphas
+from jam.ring_vrf.ring_proof.transcript.transcript import Transcript
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
-from jam.ring_vrf.Ring_Proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
-from jam.ring_vrf.Ring_Proof.constants import Blinding_Base, S_PRIME, OMEGA_2048, SeedPoint
-from jam.ring_vrf.Ring_Proof.columns.columns import WitnessColumnBuilder, PublicColumnBuilder
-from jam.ring_vrf.Ring_Proof.constraints.constraints import RingConstraintBuilder
-from jam.ring_vrf.Ring_Proof.helpers import Helpers as H
+from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
+from jam.ring_vrf.ring_proof.constants import Blinding_Base, S_PRIME, OMEGA_2048, SeedPoint
+from jam.ring_vrf.ring_proof.columns.columns import WitnessColumnBuilder, PublicColumnBuilder
+from jam.ring_vrf.ring_proof.constraints.constraints import RingConstraintBuilder
+from jam.ring_vrf.ring_proof.helpers import Helpers as H
 from py_ecc.optimized_bls12_381 import  normalize as nm
-from jam.ring_vrf.Ring_Proof.constraints.aggregation import aggregate_constraints
-from jam.ring_vrf.Ring_Proof.proof.quotient_poly import QuotientPoly
-from jam.ring_vrf.Ring_Proof.proof.linearization_poly import LAggPoly
-from jam.ring_vrf.Ring_Proof.proof.aggregation_poly_and_proof_gtn import AggPoly
-from jam.ring_vrf.Ring_Proof.verfiey import Verify
-from jam.ring_vrf.Ring_Proof.constants import D_512 as D
+from jam.ring_vrf.ring_proof.constraints.aggregation import aggregate_constraints
+from jam.ring_vrf.ring_proof.proof.quotient_poly import QuotientPoly
+from jam.ring_vrf.ring_proof.proof.linearization_poly import LAggPoly
+from jam.ring_vrf.ring_proof.proof.aggregation_poly_and_proof_gtn import AggPoly
+from jam.ring_vrf.ring_proof.verfiey import Verify
+from jam.ring_vrf.ring_proof.constants import D_512 as D
 
 
 

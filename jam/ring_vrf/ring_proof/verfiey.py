@@ -1,18 +1,18 @@
 import time
-from jam.ring_vrf.Ring_Proof.pcs.load_powers import g1_points, g2_points
+from jam.ring_vrf.ring_proof.pcs.load_powers import g1_points, g2_points
 start_time=time.time()
 from sympy import mod_inverse
-from jam.ring_vrf.Ring_Proof.constants import S_PRIME, SeedPoint, SIZE, D_512 as D, OMEGA
-from jam.ring_vrf.Ring_Proof.transcript.transcript import Transcript
-from jam.ring_vrf.Ring_Proof.transcript.phases import phase1_alphas, phase2_eval_point, phase3_nu_vector
-from jam.ring_vrf.Ring_Proof.polynomial.ops import lagrange_basis_polynomial, poly_evaluate
-# from jam.ring_vrf.Ring_Proof.proof.aggregation_poly_and_proof_gtn import proof_ptr
-# from jam.ring_vrf.Ring_Proof.columns.columns import fixed_cols as fs, witness_relation_res as cnd_res, Result_plus_Seed
-from jam.ring_vrf.Ring_Proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
+from jam.ring_vrf.ring_proof.constants import S_PRIME, SeedPoint, SIZE, D_512 as D, OMEGA
+from jam.ring_vrf.ring_proof.transcript.transcript import Transcript
+from jam.ring_vrf.ring_proof.transcript.phases import phase1_alphas, phase2_eval_point, phase3_nu_vector
+from jam.ring_vrf.ring_proof.polynomial.ops import lagrange_basis_polynomial, poly_evaluate
+# from jam.ring_vrf.ring_proof.proof.aggregation_poly_and_proof_gtn import proof_ptr
+# from jam.ring_vrf.ring_proof.columns.columns import fixed_cols as fs, witness_relation_res as cnd_res, Result_plus_Seed
+from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
 from py_ecc.optimized_bls12_381 import  normalize as nm
-from jam.ring_vrf.Ring_Proof.pcs.kzg import KZG
+from jam.ring_vrf.ring_proof.pcs.kzg import KZG
 from py_ecc.optimized_bls12_381 import multiply, add, Z1, curve_order
-from jam.ring_vrf.Ring_Proof.helpers import Helpers as H
+from jam.ring_vrf.ring_proof.helpers import Helpers as H
 
 # fixed_col_commits=[H.to_int(nm(fs[0].commitment)), H.to_int(nm(fs[1].commitment)), H.to_int(nm(fs[2].commitment))]
 #
