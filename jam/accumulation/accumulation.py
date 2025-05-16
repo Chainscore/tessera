@@ -400,7 +400,6 @@ class Accumulation:
             for j in i.results:
                 if j.service_id == service_id:
                     g += j.accumulate_gas
-
         posterior_state, transfers, optional_hash, gas, preimage = PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=p).execute()
 
         print("PsiA result:", posterior_state, transfers, optional_hash, gas, preimage)
