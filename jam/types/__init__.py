@@ -81,7 +81,7 @@ from jam.types.protocol.core import (
 from jam.types.block import Block, Extrinsic
 from jam.types.protocol.epoch import EpochMark
 # Header types
-from jam.types.header import Header, TicketsMark, OffendersMark, EpochMark
+from jam.types.header import Header, TicketsMark, OffendersMark
 
 # Service types
 from jam.types.protocol.service import ServiceInfo

@@ -1,0 +1,170 @@
+from dataclasses import dataclass
+
+from jam.db.kv import KVStore
+from jam.state.merkle import StateTrie
+from jam.state.utils.key_constructor import construct_state_key
+from jam.types import ServiceId, ByteArray32, U32, Bytes
+from jam.types.protocol.core import Balance, Gas
+from jam.types.state.delta import ServiceCodeHash, Ao, Ai, LookupTable, Timestamps
+from jam.utils.codec import Codable
+from jam.utils.codec.decorators import decodable_dataclass
+from jam.utils.json import JsonSerde
+
+
+@dataclass
+@decodable_dataclass
+class AccountData(Codable, JsonSerde):
+    code_hash: ServiceCodeHash  # code_hash
+    balance: Balance  # balance
+    gas_limit: Gas  # min_item_gas
+    min_gas: Gas  # min_memo_gas
+    num_o: Ao
+    num_i: Ai
+
+
+class Account:
+    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie, data: AccountData):
+        self.id = id
+        self.DB = db
+        self.TRIE = trie
+        self.data = data
+
+    @property
+    def code_hash(self):    return self.data.code_hash
+    @code_hash.setter
+    def code_hash(self, value):
+        self.data.code_hash = value
+        k, v = construct_state_key((255, self.id)), self.data.encode()
+        self.DB.put(bytes(k), v)
+        self.TRIE.update(k, Bytes(v))
+
+    @property
+    def balance(self):      return self.data.balance
+    @balance.setter
+    def balance(self, value):
+        self.data.balance = value
+        k, v = construct_state_key((255, self.id)), self.data.encode()
+        self.DB.put(bytes(k), v)
+        self.TRIE.update(k, Bytes(v))
+
+    @property
+    def gas_limit(self):    return self.data.gas_limit
+    @gas_limit.setter
+    def gas_limit(self, value):
+        self.data.gas_limit = value
+        k, v = construct_state_key((255, self.id)), self.data.encode()
+        self.DB.put(bytes(k), v)
+        self.TRIE.update(k, Bytes(v))
+
+    @property
+    def min_gas(self):    return self.data.min_gas
+    @min_gas.setter
+    def min_gas(self, value):
+        self.data.min_gas = value
+        k, v = construct_state_key((255, self.id)), self.data.encode()
+        self.DB.put(bytes(k), v)
+        self.TRIE.update(k, Bytes(v))
+
+    @property
+    def num_o(self):    return self.data.num_o
+    @num_o.setter
+    def num_o(self, value):
+        self.data.num_o = value
+        k, v = construct_state_key((255, self.id)), self.data.encode()
+        self.DB.put(bytes(k), v)
+        self.TRIE.update(k, Bytes(v))
+
+    @property
+    def num_i(self):    return self.data.num_i
+    @num_i.setter
+    def num_i(self, value):
+        self.data.num_i = value
+        k, v = construct_state_key((255, self.id)), self.data.encode()
+        self.DB.put(bytes(k), v)
+        self.TRIE.update(k, Bytes(v))
+
+    @property
+    def storage(self):
+        return StorageView(self.id, self.DB, self.TRIE)
+
+    @property
+    def lookup(self):
+        return PreImageView(self.id, self.DB, self.TRIE)
+
+    @property
+    def timestamps(self):
+        return TimestampsView(self.id, self.DB, self.TRIE)
+
+
+class DeltaView:
+    def __init__(self, db: KVStore, trie: StateTrie):
+        self.DB = db
+        self.TRIE = trie
+
+    def __getitem__(self, key: ServiceId):
+        data = self.DB.get(bytes(construct_state_key((255, key))))
+        if data is None:
+            raise KeyError(f"Service not found {key}")
+        return Account(
+            id=key,
+            db=self.DB,
+            trie=self.TRIE,
+            data=AccountData.decode_from(data)[0]
+        )
+
+    def __setitem__(self, key: ServiceId, value: AccountData):
+        k, v = construct_state_key((255, key)), value.encode()
+        self.DB.put(bytes(k), v)
+        self.TRIE.update(k, Bytes(v))
+
+class StorageView:
+    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+        self.id = id
+        self.DB = db
+        self.TRIE = trie
+
+    def __getitem__(self, key: ByteArray32):
+        data = self.DB.get(bytes(construct_state_key((self.id, ByteArray32(Bytes(U32(2**32 - 1).encode()) + key[0:28])))))
+        return Bytes(data)
+
+    def __setitem__(self, key: ByteArray32, value: Bytes):
+        k = construct_state_key((self.id, ByteArray32(Bytes(U32(2 ** 32 - 1).encode()) + key[0:28])))
+        self.DB.put(
+            bytes(k),
+            bytes(value)
+        )
+        self.TRIE.update(k, value)
+
+class PreImageView:
+    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+        self.id = id
+        self.DB = db
+        self.TRIE = trie
+
+    def __getitem__(self, key: ByteArray32):
+        data = self.DB.get(bytes(construct_state_key((self.id, ByteArray32(Bytes(U32(2**32 - 2).encode()) + key[1:29])))))
+        return Bytes(data)
+
+    def __setitem__(self, key: ByteArray32, value: Bytes):
+        k = construct_state_key((self.id, ByteArray32(Bytes(U32(2 ** 32 - 2).encode()) + key[1:29])))
+        self.DB.put(
+            bytes(k),
+            bytes(value)
+        )
+        self.TRIE.update(k, value)
+
+class TimestampsView:
+    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+        self.id = id
+        self.DB = db
+        self.TRIE = trie
+
+    def __getitem__(self, key: LookupTable):
+        data = self.DB.get(bytes(construct_state_key((self.id, ByteArray32(Bytes(U32(key.length).encode()) + key.hash[2:30])))))
+        return Timestamps.decode_from(data)[0]
+
+    def __setitem__(self, key: LookupTable, value: Timestamps):
+        k = construct_state_key((self.id, ByteArray32(Bytes(U32(key.length).encode()) + key.hash[2:30])))
+        v = value.encode()
+        self.DB.put(bytes(k), bytes(v))
+        self.TRIE.update(k, Bytes(value))
