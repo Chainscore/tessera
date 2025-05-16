@@ -3,16 +3,12 @@ import os
 from jam.config.settings import settings
 from jam.storage.db.kv import KVStore
 
-# os.makedirs(settings.DB_PATH, exist_ok=True)
-# os.makedirs(settings.D3L_PATH, exist_ok=True)
-# os.makedirs(settings.AUDIT_DB_PATH, exist_ok=True)
+os.makedirs(settings.DB_PATH, exist_ok=True)
 main_db = KVStore(settings.DB_PATH)
+# os.makedirs(settings.AUDIT_DB_PATH, exist_ok=True)
 # audit_da = KVStore(settings.AUDIT_DB_PATH)
+# os.makedirs(settings.D3L_PATH, exist_ok=True)
 # d3l = KVStore(settings.D3L_PATH)
-
-# main_db: KVStore
-# audit_da: KVStore
-# d3l: KVStore
 
 def configure_db_paths(parent_path = "data", port = 30333):
     global main_db
