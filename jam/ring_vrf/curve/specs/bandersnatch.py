@@ -78,7 +78,7 @@ class BandersnatchCurve(TECurve):
             EdwardsA=BandersnatchParams.EDWARDS_A,
             EdwardsD=BandersnatchParams.EDWARDS_D,
             SUITE_STRING=BandersnatchParams.SUITE_STRING,
-            DST=BandersnatchParams.SUITE_STRING,
+            DST=BandersnatchParams.DST,
             E2C=E2C_Variant.ELL2,
             BBx=BandersnatchParams.BBx,
             BBy=BandersnatchParams.BBy
