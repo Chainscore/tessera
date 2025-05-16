@@ -39,12 +39,16 @@ class PVM:
         """
         program, _ = Program.decode_from(blob)
         remaining_gas = int(gas)
+        print("# \t Inst \t  Bitmask ")
+        for i, inst in enumerate(program.instruction_set):
+            print(f"{i} \t {inst} \t {"✅" if program.offset_bitmask[i] else ""}")
+        print(program.basic_blocks)
         while True:
             try:
                 opcode: U8 = program.zeta[program_counter]
                 table = InstTableMap.get_instructions_table(opcode)(counter=program_counter, program=program)
 
-                print(f"Executing opcode {opcode} on {table.__class__.__name__}")
+                print(f">> Executing opcode {opcode} on {table.__class__.__name__}")
                 status, program_counter, registers, memory = table.execute(opcode, registers, memory)
                 remaining_gas -= int(table.table()[opcode].gas)
 
@@ -55,6 +59,7 @@ class PVM:
                     return status, program_counter, remaining_gas, registers, memory
 
             except PvmError as e:
+                print("PVM ERR", e.code)
                 if e.code == PANIC:
                     return PANIC, program_counter, remaining_gas, registers, memory
                 elif e.code == PAGE_FAULT:

@@ -38,6 +38,7 @@ class WArgsOneOffset(InstructionTable):
         registers: Registers, 
         memory: Memory
     ) -> Tuple[ExecutionStatus, ProgramCounter, Registers, Memory]:
+        print(self.counter, U32(self.vx))
         status, counter = self.program.branch(self.counter, U32(self.vx), True)
         if status == CONTINUE and counter != self.counter:
             return status, counter, registers, memory
