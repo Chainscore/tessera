@@ -2,6 +2,7 @@ import asyncio
 from math import floor
 from time import time
 
+from jam.state.ghost import GhostState
 from jam.state.state import State
 from jam.types.work.manifest import Extrinsics, Extrinsic
 from jam.utils.constants import EPOCH_LENGTH
@@ -38,7 +39,7 @@ async def wp_producer(node: Node, db: KVStore):
             continue
 
         # Get state from db
-        state = State.load(db)
+        state = GhostState.load(db)
         current_timeslot = (time() - genesis_ts) // 6
 
         # Get current timeslot

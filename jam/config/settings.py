@@ -38,12 +38,14 @@ def setup_setting(name: str, port: int,  db_path = "data", node_id = None):
     s = Settings()
 
     node_path = f"{db_path}/{port}"
-    s.NODE_PATH = node_path
+    settings.NODE_PATH = node_path
 
-    s.NODE_NAME = name
-    s.LISTEN_PORT = port
-    s.DB_PATH = f"{node_path}/main"
-    s.AUDIT_DB_PATH = f"{node_path}/audit"
-    s.D3L_PATH = f"{node_path}/d3l"
-    s.NODE_ID = node_id
-    settings = s
+    settings.NODE_NAME = name
+    settings.LISTEN_PORT = port
+    settings.DB_PATH = f"{node_path}/main"
+    settings.AUDIT_DB_PATH = f"{node_path}/audit"
+    settings.D3L_PATH = f"{node_path}/d3l"
+    settings.NODE_ID = node_id
+   # settings = s
+
+    print("settings updated to", settings)

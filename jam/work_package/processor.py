@@ -1,4 +1,3 @@
-import os
 import json
 from math import ceil
 from typing import Tuple
@@ -181,7 +180,7 @@ class Processor:
         p = b.package
 
         # Auth Output o & Gas g
-        o, g = PsiI(p, c).process()
+        o, g = PsiI(p, c).execute()
 
         def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
             """

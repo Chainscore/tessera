@@ -1,7 +1,8 @@
 import asyncio
 import json
+import os
 
-from jam.config.data_stores import main_db
+from jam.config.data_stores import configure_db_paths
 from jam.config.logging import setup_logging, logger
 from jam.config.chainspec import chain_config
 from jam.config.settings import settings, setup_setting
@@ -12,6 +13,7 @@ from jam.network.utils.dummy_wpb import wp_producer
 
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
+from jam.state.ghost import GhostState
 from jam.types.state.sigma import Sigma
 from jam.state.state import setup_state
 from jam.types.base.integers.fixed import U16, U8
@@ -46,8 +48,18 @@ async def main(
         listen_port=port,
     )
 
+    print("old settings", settings)
+
     # Setup Settings
     setup_setting(name, port)
+
+    print("new settings", settings)
+
+    # Reconfigure Dbs
+    configure_db_paths(port=port)
+    os.makedirs(settings.DB_PATH, exist_ok=True)
+    os.makedirs(settings.D3L_PATH, exist_ok=True)
+    os.makedirs(settings.AUDIT_DB_PATH, exist_ok=True)
 
     try:
         # Initialize components
@@ -103,6 +115,7 @@ async def main(
 
 
         logger.info(f"Node Running on port: {settings.LISTEN_PORT}. Dbs: {settings.DB_PATH} {settings.D3L_PATH}")
+        from jam.config.data_stores import main_db
         db = main_db
 
         if start_genesis:
@@ -114,7 +127,7 @@ async def main(
             block.save(db)
 
             # Set genesis state
-            setup_state(Sigma.genesis(), db)
+            setup_state(GhostState.genesis(), db)
 
             block_producer = BlockProducer(tsr_node, db)
 
