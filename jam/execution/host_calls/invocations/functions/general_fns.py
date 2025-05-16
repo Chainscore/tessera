@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional, List
 
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.host_calls.invocations.protocol import Context, DispatchNormalReturn
@@ -24,16 +24,16 @@ from jam.utils.constants import (
 
 class GeneralFunctions(INVF):
 
-    @classmethod
+    @staticmethod
     @INVF.register(0, gas_cost=10)
-    def gas(cls, gas: Gas, registers: Registers, memory: Memory, context: Context) -> DispatchNormalReturn:
+    def gas(gas: Gas, registers: Registers, memory: Memory, context: Context) -> DispatchNormalReturn:
         registers[7] = gas
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
 
-    @classmethod
+    @staticmethod
     @INVF.register(1, gas_cost=10)
-    def lookup(cls, gas: Gas, registers: Registers, memory: Memory, service_data: AccountData, service_index: ServiceId, accounts: Delta):
+    def lookup(gas: Gas, registers: Registers, memory: Memory, service_data: AccountData, service_index: ServiceId, accounts: Delta):
         a: None|AccountData = None
         if service_index <= registers[7] <= 2**64-1:
             a = service_data
@@ -42,7 +42,7 @@ class GeneralFunctions(INVF):
         h, o = registers[8], registers[9]
 
         if not memory.is_accessible(h, 32):
-            raise PANIC
+            raise PvmError(PANIC)
 
         v: None|Bytes = None
         data = memory.read(int(h), 32)
@@ -54,7 +54,7 @@ class GeneralFunctions(INVF):
         l = min(int(registers[11]), len(v) - f)
 
         if not memory.is_accessible(o, l):
-            raise PANIC
+            raise PvmError(PANIC)
 
         if v is None:
             registers[7] = HostStatus.NONE
@@ -64,22 +64,21 @@ class GeneralFunctions(INVF):
         return CONTINUE, gas, registers, memory
 
 
-    @classmethod
+    @staticmethod
     @INVF.register(host_call=18, gas_cost=10)
     def fetch(
-            cls,
             gas: Gas,
             registers: Registers,
             memory: Memory,
             context: Any,
             package: WorkPackage,
-            n: OpaqueHash,
-            r: OpaqueHash,
-            i: int,
-            i_bar,
-            x_bar,
-            o,
-            t
+            entropy: OpaqueHash,
+            trace: Bytes,
+            item_index: int,
+            import_segments: Optional[List],
+            extrinsics: Optional[List],
+            o: Optional[List],
+            t: Optional[List]
         ):
         w10 = registers[10]
         w11 = registers[11]
@@ -96,19 +95,19 @@ class GeneralFunctions(INVF):
                 U32(BASIC_ERASURE_SIZE).encode() + U32(SEGMENT_SIZE).encode() + U32(MAX_IMPORT_ITEM).encode() + U32(ERASURE_PIECES_PER_SEGMENT).encode() +
                 U32(MAX_WORK_REPORT_SIZE).encode() + U32(TRANSFER_MEMO_SIZE).encode() + U32(MAX_EXPORT_ITEM).encode() + U32(TICKET_SUBMISSION_END).encode()
             )
-        elif w10 == 1 and n is not None:
-            v = n
-        elif w10 == 2 and r is not None:
-            v = r
-        elif i is not None:
-            if w10 == 3 and w11 < len(x_bar) and w12 < len(x_bar[int(w11)]):
-                v = x_bar[w11][int(w12)]
-            elif w10 == 4 and w11 < len(x_bar[i]):
-                v = x_bar[i][w11]
-            elif w10 == 5 and w11 < len(i_bar) and w12 < len(i_bar[w11]):
-                v = i_bar[w11][w12]
-            elif w10 == 6 and w11 < len(i_bar[i]):
-                v = i_bar[i][w11]
+        elif w10 == 1 and entropy is not None:
+            v = entropy
+        elif w10 == 2 and trace is not None:
+            v = trace
+        elif item_index is not None:
+            if w10 == 3 and w11 < len(extrinsics) and w12 < len(extrinsics[int(w11)]):
+                v = extrinsics[w11][int(w12)]
+            elif w10 == 4 and w11 < len(extrinsics[item_index]):
+                v = extrinsics[item_index][w11]
+            elif w10 == 5 and w11 < len(import_segments) and w12 < len(import_segments[w11]):
+                v = import_segments[w11][w12]
+            elif w10 == 6 and w11 < len(import_segments[item_index]):
+                v = import_segments[item_index][w11]
         elif package is not None:
             def s_cap(w: WorkItem):
                 return (w.service.encode() +
@@ -138,34 +137,35 @@ class GeneralFunctions(INVF):
                 v = package.items[w11].payload
         elif o is not None:
             if w10 == 14:
-                return o.encode()
+                v = o.encode()
             elif w10 == 15 and w11 < len(o):
-                return o[w11]
+                v = o[w11]
         elif t is not None:
             if w10 == 16:
-                return t.encode()
+                v = t.encode()
             elif w10 == 17 and w11 < len(t):
-                return t[w11]
+                v = t[w11]
+
+        if v is None:
+            registers[7] = HostStatus.NONE.value
+            return CONTINUE, gas, registers, memory, context
 
         memory_start = registers[7]
         f = min(int(registers[8]), len(v))
         l = min(int(registers[9]), len(v) - f)
 
         if not memory.is_accessible(memory_start, l, for_write=True):
-            raise PANIC
-
-        if v is None:
-            registers[7] = HostStatus.NONE
-            return CONTINUE, gas, registers, memory, context
+            raise PvmError(PANIC)
 
         registers[7] = Register(len(v))
+        print(f"Writing {v[f:l]} to {memory_start}")
         memory.write(memory_start, v[f:l])
         return CONTINUE, gas, registers, memory, context
 
 
-    @classmethod
+    @staticmethod
     @INVF.register(host_call=2, gas_cost=10)
-    def read(cls, gas: Gas, registers: Registers, memory: Memory, service_data: AccountData, service_index: ServiceId, accounts: Delta):
+    def read(gas: Gas, registers: Registers, memory: Memory, service_data: AccountData, service_index: ServiceId, accounts: Delta):
         s_star = ServiceId(registers[7])
         if s_star == 2**64 - 1:
             s_star = service_index
@@ -178,7 +178,7 @@ class GeneralFunctions(INVF):
         ko, kz, o = registers[8], registers[9], registers[10]
 
         if not memory.is_accessible(ko, kz - ko):
-            raise PANIC
+            raise PvmError(PANIC)
 
         v: None|Bytes = None
         k = Hash.blake2b(s_star.encode() + memory.read(ko, kz - ko))
@@ -191,7 +191,7 @@ class GeneralFunctions(INVF):
         l = min(int(registers[12]), len(v) - f)
 
         if not memory.is_accessible(o, l):
-            raise PANIC
+            raise PvmError(PANIC)
 
         if v is None:
             registers[7] = HostStatus.NONE
@@ -201,17 +201,17 @@ class GeneralFunctions(INVF):
         return CONTINUE, gas, registers, memory
 
 
-    @classmethod
+    @staticmethod
     @INVF.register(host_call=3, gas_cost=10)
-    def write(cls, gas: Gas, registers: Registers, memory: Memory, service_data: AccountData, service_index: ServiceId):
+    def write(gas: Gas, registers: Registers, memory: Memory, service_data: AccountData, service_index: ServiceId):
         # Get key,value start,end
         [ko, kz, vo, vz] = registers[7: 7+4]
         if not memory.is_accessible(ko, kz - ko):
-            raise PANIC
+            raise PvmError(PANIC)
         k = Hash.blake2b(service_index.encode() + memory.read(ko, kz - ko))
 
         if not memory.is_accessible(vo, vz - vo):
-            raise PANIC
+            raise PvmError(PANIC)
         a = service_data.storage
         if vz == 0:
             del a[k]
@@ -226,9 +226,9 @@ class GeneralFunctions(INVF):
         return CONTINUE, gas, registers, memory
 
 
-    @classmethod
+    @staticmethod
     @INVF.register(host_call=4, gas_cost=10)
-    def info(cls, gas: Gas, registers: Registers, memory: Memory, service_index: ServiceId, accounts: Delta):
+    def info(gas: Gas, registers: Registers, memory: Memory, service_index: ServiceId, accounts: Delta):
         t = accounts[registers[7]]
         if registers[7] == 2**64 - 1:
             t = accounts[service_index]
@@ -240,7 +240,7 @@ class GeneralFunctions(INVF):
                 registers[7] = HostStatus.OK
                 memory.write(o, m)
             else:
-                raise PANIC
+                raise PvmError(PANIC)
         else:
             registers[7] = HostStatus.NONE
 

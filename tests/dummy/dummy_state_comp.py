@@ -1,5 +1,6 @@
 from typing import Dict
 
+from jam.types.extrinsics import TicketBody
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
 from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
@@ -25,8 +26,6 @@ from jam.types.state.rho import OptionalWorkReportState, Rho
 from jam.types.state.tau import Tau
 from jam.types.state.nu import AllReadyWRs, Nu
 from jam.types.state.xi import Xi
-
-from jam.types.extrinsics.tickets import TicketBody
 
 from jam.state.state import State
 from jam.types.base import Bytes

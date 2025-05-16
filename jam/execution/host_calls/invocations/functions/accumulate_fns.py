@@ -28,7 +28,7 @@ class AccumulateFunctions(INVF):
     def bless(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         [m,a,v,o,n]=registers[7,7+5]
         if not memory.is_accessible(o,12*n):
-            raise PANIC
+            raise PvmError(PANIC)
         # read all n records at once
         buf: bytes = memory.read(o, 12 * n)
 
@@ -53,7 +53,7 @@ class AccumulateFunctions(INVF):
     def assign(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         o=registers[8]
         if not memory.is_accessible(o,32*MAX_AUTH_QUEUE_ITEMS):
-            raise PANIC
+            raise PvmError(PANIC)
         buf: bytes=memory.read(o,32*MAX_AUTH_QUEUE_ITEMS)
         c=[]
         for index in range(0, len(buf), 32):
@@ -74,7 +74,7 @@ class AccumulateFunctions(INVF):
     def designate(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         o=registers[7]
         if not memory.is_accessible(o,VALIDATOR_COUNT*336):
-            raise PANIC
+            raise PvmError(PANIC)
         buf: bytes=memory.read(o,336*VALIDATOR_COUNT)
         v=[]
         for index in range(0, len(buf), 336):
@@ -96,7 +96,7 @@ class AccumulateFunctions(INVF):
         [o,l,g,m]=registers[7:7+4]
         delta=context.x.partial_state.service_accounts
         if not(memory.is_accessible(o,32) and isinstance(l, U32)):
-            raise PANIC
+            raise PvmError(PANIC)
         c=memory.read(0,32)
         """
             Creating a new service account initializes empty storage, preimage, and lookup (key = hash(c), len = w8).
@@ -131,7 +131,7 @@ class AccumulateFunctions(INVF):
     def upgrade(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         [o,g,m]=registers[7:7+3]
         if not memory.is_accessible(o,32):
-            raise PANIC
+            raise PvmError(PANIC)
         X_s=context.x.partial_state.service_accounts[context.x.s_index]
         X_s.code_hash=memory.read(o,32)
         X_s.gas=g
@@ -147,7 +147,7 @@ class AccumulateFunctions(INVF):
         [d,a,l,o]=registers[7:7+4]
         delta=context.x.partial_state.service_accounts
         if not memory.is_accessible(o,TRANSFER_MEMO_SIZE):
-            raise PANIC
+            raise PvmError(PANIC)
         t:DeferredTransfer=DeferredTransfer(sender=context.x.s_index,receiver=d,amount=a,memo=Bytes(memory.read(o,TRANSFER_MEMO_SIZE)),gas=l)
         b=delta[context.x.s_index].balance
 
@@ -174,7 +174,7 @@ class AccumulateFunctions(INVF):
     def eject(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
         [d,o]=registers[7,8]
         if not memory.is_accessible(o,32):
-            raise PANIC
+            raise PvmError(PANIC)
         accounts=context.x.partial_state.service_accounts
 
         h=ByteArray32(memory.read(o,32))
@@ -207,7 +207,7 @@ class AccumulateFunctions(INVF):
     def query(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
-            raise PANIC
+            raise PvmError(PANIC)
         h=memory.read(o,32)
         if not context.x.partial_state.service_accounts[context.x.s_index].timestamps[LookupTable(h,z)]:
             registers[7]=HostStatus.NONE
@@ -236,7 +236,7 @@ class AccumulateFunctions(INVF):
     def solicit(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
-            raise PANIC
+            raise PvmError(PANIC)
         h=ByteArray32(memory.read(o,32))
         a = context.x.partial_state.service_accounts[context.x.s_index]
         init_lookup_val=a.timestamps[LookupTable(h,z)] # storing the initial lookup value
@@ -265,7 +265,7 @@ class AccumulateFunctions(INVF):
     def forget(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
-            raise PANIC
+            raise PvmError(PANIC)
         h=ByteArray32(memory.read(o,32))
         a = context.x.partial_state.service_accounts[context.x.s_index]
         if len(a.timestamps[LookupTable(h,z)])==0 or (len(a.timestamps[LookupTable(h,z)])==2 and (a.timestamps[LookupTable(h,z)][1]<block_timeslot-PREIMAGE_EVICTION_TIMESLOTS)):
@@ -288,7 +288,7 @@ class AccumulateFunctions(INVF):
     def yield_(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
         o=registers[7]
         if not memory.is_accessible(o,32):
-            raise PANIC
+            raise PvmError(PANIC)
         context.x.hash=Bytes(memory.read(o,32))
         registers[7]=HostStatus.OK
         return CONTINUE,registers,memory,context
@@ -302,7 +302,7 @@ class AccumulateFunctions(INVF):
         if registers[7]==2**64-1:
             s_star=service_id
         if not memory.is_accessible(o,z):
-            raise PANIC
+            raise PvmError(PANIC)
         i=memory.read(o,z)
         if d[s_star] is None:
             registers[7]=HostStatus.WHO

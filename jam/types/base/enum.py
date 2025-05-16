@@ -100,6 +100,10 @@ class Enum(Codable, JsonSerde, OGEnum, metaclass=EnumMeta):
         """
         return self._value_
 
+    @property
+    def value(self):
+        return self._value_
+
 def decodable_enum(cls: Type[Enum]) -> Type[Enum]:
     """Decorator to make an enum class decodable
 

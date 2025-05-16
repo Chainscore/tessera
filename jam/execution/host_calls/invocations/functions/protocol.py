@@ -6,7 +6,7 @@ from jam.types.protocol.core import Gas, Register
 
 
 class InvocationFunctions(Protocol):
-    HANDLERS: Dict[str, Dict] = {}
+    HANDLERS: Dict[int, Dict] = {}
 
     @classmethod
     def register(cls, host_call: int, gas_cost: int):
@@ -19,10 +19,9 @@ class InvocationFunctions(Protocol):
         return decorator
     
     @classmethod
-    def execute(cls, host_call: int, **kwargs):
-        call = cls.table()[host_call]
-        if kwargs.gas < call.gas:
-            return ExecutionStatus.OUT_OF_GAS, kwargs.gas, kwargs.registers, kwargs.memory
+    def execute(cls, host_call: int, gas: Gas, registers: Registers, memory: Memory, context, args):
+        call = cls.HANDLERS[host_call]
+        if gas < call['gas']:
+            return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context
 
-        print(f"Executing host call {call.execute}")
-        return call.execute(kwargs)
+        return call['execute'](gas=gas, registers=registers, memory=memory, context=context, **args)

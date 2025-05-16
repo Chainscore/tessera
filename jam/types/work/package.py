@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 
 
-from jam.services.historicalLookup import historical_lookup_fn
+from jam.execution.utils import decode_code_hash
 from jam.types.base import Bytes
 from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
@@ -48,10 +48,8 @@ class WorkPackage(Codable, JsonSerde):
     items: WorkItems
 
     def m_c(self, delta: Delta) -> (bytes, bytes):
-        service_data = historical_lookup_fn(delta[self.auth_code_host], self.context.lookup_anchor_slot, self.code_hash)
-        pm, offset = BytesCodec.decode_from(service_data)
-        pc = service_data[offset:]
-        return pm, pc
+        service_data = delta[self.auth_code_host].historical_lookup(self.context.lookup_anchor_slot, self.code_hash)
+        return decode_code_hash(service_data)
 
     @property
     def a(self) -> OpaqueHash:
