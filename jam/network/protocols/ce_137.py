@@ -2,10 +2,12 @@ from typing import cast, Tuple
 
 from dataclasses import dataclass
 from jam.config.logging import logger
-from jam.types import Vector
-from jam.network.quic.server import QuicServerProtocol
-
 from jam.merklization import BMRFunctions
+from jam.network.quic.server import QuicServerProtocol
+from jam.network.protocols.base import NetworkProtocol, PrefixType
+
+from jam.types.base.sequences.bytes.byte_array import ByteArray
+from jam.types.base.sequences.vector import Vector
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
@@ -15,8 +17,6 @@ from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 
-from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types.base.sequences.bytes.byte_array import ByteArray
 
 @decodable_dataclass
 @dataclass

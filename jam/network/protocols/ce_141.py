@@ -1,13 +1,18 @@
 from dataclasses import dataclass
 from typing import cast
+
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
-from jam.types import Vector, Null
+from jam.network.protocols.base import NetworkProtocol, PrefixType
+
+from jam.types.base.null import Null
+from jam.types.base.sequences.vector import Vector
+from jam.types.extrinsics.assurances import Assurance
+
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
-from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types.extrinsics.assurances import Assurance
+
 
 @decodable_dataclass
 @dataclass

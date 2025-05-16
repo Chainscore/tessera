@@ -47,7 +47,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
             ])
             bundle_shard_hash = [Bytes(create_dummy_bytes32())]
             merkle = BMRFunctions()
-            justify = merkle.trace_fn(values=segment_shard, index=Int(item.shard_Index))
+            justify = merkle.trace_fn(values=segment_shard, index=int(item.shard_Index))
             justify.extend(bundle_shard_hash)
             item_res = ShardWithJustification(shards=shards, justifications=justify)
             response.append(item_res)
