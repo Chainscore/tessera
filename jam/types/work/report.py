@@ -109,7 +109,7 @@ class WorkPackageBundle(Codable, JsonSerde):
 # class SegmentRootLookup(Vector[SegmentRootLookupItem]):
 #     ...
 
-@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
+@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot,key_name="work_package_hash", value_name="segment_tree_root")
 class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
     ...
@@ -151,5 +151,3 @@ class WorkReports(Vector[WorkReport]):
     """Vector of Work Reports"""
 
     ...
-
-
