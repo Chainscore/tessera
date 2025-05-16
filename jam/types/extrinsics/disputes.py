@@ -44,7 +44,7 @@ class Fault(Codable, JsonSerde):
     signature: Ed25519Signature
 
 
-@decodable_array(length=(VALIDATOR_COUNT * 2 // 3), element_type=Judgement)
+@decodable_array(length=( 1 + 2 * VALIDATOR_COUNT // 3), element_type=Judgement)
 class JudgementVotes(Array[Judgement]):
     ...
 

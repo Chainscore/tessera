@@ -1,5 +1,5 @@
 from jam.state.merkle import StateTrie
-from jam.types.state import Delta
+from jam.types.state.delta import Delta
 from jam.state.ghost import GhostState as State
 from tests.dummy.utils import create_dummy_bytes, create_dummy_bytes32
 

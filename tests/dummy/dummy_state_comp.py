@@ -26,7 +26,7 @@ from jam.types.state.tau import Tau
 from jam.types.state.nu import AllReadyWRs, Nu
 from jam.types.state.xi import Xi
 
-from jam.types import TicketBody, Array, Vector
+from jam.types.extrinsics.tickets import TicketBody
 
 from jam.state.state import State
 from jam.types.base import Bytes

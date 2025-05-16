@@ -3,7 +3,12 @@ from math import ceil
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.merklization import BMRFunctions
-from jam.types import Int, Bytes, Byte, Vector, ByteArray32, WorkReport, Ed25519Signature
+from jam.types.base.integers.general import Int
+from jam.types.base.sequences.bytes.bytes import Bytes, Byte
+from jam.types.protocol.crypto import Ed25519Signature
+from jam.types.work.report import WorkReport
+from jam.types.base.sequences.vector import Vector
+
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.work.manifest import Segments, Segment, ByteArray4104
 from jam.utils.constants import SEGMENT_SIZE

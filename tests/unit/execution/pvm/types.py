@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
-from jam.execution.pvm.status import ExecutionStatusCode
+from jam.execution.pvm.status import ExecutionStatus
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.types.base.sequences.vector import Vector, decodable_vector
@@ -76,7 +76,7 @@ class Testcase(Codable, JsonSerde):
     initial_memory: MemoryChunk
     initial_gas: Gas
     program: Bytes
-    expected_status: ExecutionStatusCode
+    expected_status: ExecutionStatus
     expected_regs: Registers
     expected_pc: U32
     expected_memory: MemoryChunk

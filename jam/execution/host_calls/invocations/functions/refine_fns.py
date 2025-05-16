@@ -20,13 +20,13 @@ from jam.types.protocol.core import ServiceId,TimeSlot
 from jam.types.state.delta import Delta
 from jam.types.base.sequences import ByteArray32
 from jam.types.work.package import WorkPackage
-from jam.types.work.segment import MultiSegments, Segment, Segments
+from jam.types.work.manifest import MultiSegments, Segment, Segments
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.codec.primitives.integers import IntegerCodec
 from jam.utils.constants import  MAX_EXPORT_ITEM, PVM_MEMORY_PAGE_SIZE, SEGMENT_SIZE
 from jam.utils.json import JsonSerde
-from jam.work_package.work_package import WorkPackageProcessing
+from jam.work_package.processor import Processor
 
 @decodable_dataclass
 @dataclass
@@ -125,7 +125,7 @@ class RefineFunctions(INVF):
         p=registers[7]
         z=min(registers[8],SEGMENT_SIZE)
         if memory.is_accessible(p,z,True):
-            x=WorkPackageProcessing.zero_padding(value=Bytes(memory.read(p,z)),n=Int(SEGMENT_SIZE))
+            x=Processor.zero_padding(value=Bytes(memory.read(p,z)),n=Int(SEGMENT_SIZE))
         else:
             raise PANIC
         if export_segment_offset+len(context.e)>= MAX_EXPORT_ITEM:
