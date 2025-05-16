@@ -19,7 +19,7 @@ class QuicClientProtocol(QuicConnectionProtocol):
         self.waiter = None
         self.node = node
 
-    async def stream_and_close(self, message: bytes, stream_id: Optional[int] = None):
+    def stream_and_close(self, message: bytes, stream_id: Optional[int] = None):
         if self._close_pending:
             raise ConnectionError("Connection is closing")
 
@@ -32,7 +32,7 @@ class QuicClientProtocol(QuicConnectionProtocol):
         waiter = self._loop.create_future()
         self.waiter = waiter
         self.transmit()
-        return await asyncio.shield(waiter)
+        return asyncio.shield(waiter)
 
     def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
         if self._close_pending:

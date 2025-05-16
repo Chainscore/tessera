@@ -42,7 +42,7 @@ class WorkReportRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE136
 
-    async def transmit(self, node: Node, data: CE136Data):
+    def transmit(self, node: Node, data: CE136Data):
         """Request Work Report from Node (server)"""
 
         message = self._prefix.encode() + data.encode()
@@ -52,7 +52,7 @@ class WorkReportRequest(NetworkProtocol):
 
         responses = Vector([])
         for client in node.connections:
-            data = await client.stream_and_close(message=message)
+            data = client.stream_and_close(message=message)
             responses.append(data)
 
         return responses

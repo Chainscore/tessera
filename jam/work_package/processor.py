@@ -180,7 +180,7 @@ class Processor:
         p = b.package
 
         # Auth Output o & Gas g
-        o, g = PsiI(p, int(c)).process()
+        o, g = PsiI(p, c).process()
 
         def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
             """
@@ -363,15 +363,13 @@ class Processor:
 
         return report, wr_hash
 
-    async def process(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
+    def process(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
         from jam.network.protocols.ce_134 import WorkPackageSharing, CE134Data, CoreSegment
         from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
 
         logger.info("Validating Work Package..")
         validator = Validator()
         validator.validate_wp(package)
-
-        d3l = KVStore(settings.D3L_PATH)
 
         bundler = Bundler()
 
@@ -389,7 +387,7 @@ class Processor:
         core_segment = CoreSegment(core_index=core, segment_root_map=lookup, length=Int(len(lookup)))
         data = CE134Data(work_package_bundle=bundle, core_segment=core_segment)
 
-        responses = await CE134.transmit(node=self.node, data=data)
+        responses = CE134.transmit(node=self.node, data=data)
 
         # Build & Store Report
         wr, wr_hash = self.process_bundle(core, bundle, lookup)
@@ -424,6 +422,6 @@ class Processor:
             CE135 = WorkReportDistribution()
             data = CE135Data(report=wr, slot=TimeSlot(0), len=Int(len(guarantees)), signatures=guarantees)
 
-            responses = await CE135.transmit(node=self.node, data=data)
+            responses = CE135.transmit(node=self.node, data=data)
 
         return wr, wr_hash

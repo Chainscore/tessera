@@ -55,7 +55,7 @@ class WorkReportDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE135
 
-    async def transmit(self, node: Node, data: CE135Data):
+    def transmit(self, node: Node, data: CE135Data):
         """Transmit Work Report from Guarantor (client) to Validator (server)"""
 
         message = self._prefix.encode() + data.encode()
@@ -65,12 +65,12 @@ class WorkReportDistribution(NetworkProtocol):
 
         responses = Vector([])
         for client in node.connections:
-            data = await client.stream_and_close(message=message)
+            data = client.stream_and_close(message=message)
             responses.append(data)
 
         return responses
 
-    async def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Work Report on Validator (server)"""
 
         logger.info("Received Work Report")
@@ -103,7 +103,7 @@ class WorkReportDistribution(NetworkProtocol):
         CE137 = ShardDistributionProtocol()
 
         data = CE137TransmitData(shard_index=shard_index, erasure_root=er_root)
-        shard =  await CE137.transmit(node=node, data=data)
+        shard = CE137.transmit(node=node, data=data)
 
         # Save Shard
         if shard is not None:
@@ -133,7 +133,7 @@ class WorkReportDistribution(NetworkProtocol):
 
         assurance = create_dummy_assurances()
         data = CE141Data(assurance)
-        ack = await CE141.transmit(node=node, data=data)
+        ack = CE141.transmit(node=node, data=data)
 
         # Save Report
         d3l = KVStore(settings.D3L_PATH)

@@ -65,7 +65,7 @@ class WorkPackageSharing(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE134
 
-    async def transmit(self, node: Node, data: CE134Data):
+    def transmit(self, node: Node, data: CE134Data):
         """Request Work Report from Node (server)"""
 
         logger.info(f"Transmitting Work-Package-Bundle to {len(node.connections)} Guarantors")
@@ -77,7 +77,7 @@ class WorkPackageSharing(NetworkProtocol):
         responses = Vector([])
         for client in node.connections:
             stream_id = client.stream_and_keep_open(message=stream_a)
-            data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
+            data = client.stream_and_close(message=stream_b, stream_id=stream_id)
             responses.append(data)
 
         return responses

@@ -37,7 +37,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
         self.transmit()
         return stream_id
 
-    async def quic_event_received(self, event: QuicEvent):
+    def quic_event_received(self, event: QuicEvent):
         if isinstance(event, HandshakeCompleted):
             if event.alpn_protocol == f"jamnp-s/{protocol_version}/{genesis_hash}/builder":
                 print("Connected with a builder")
@@ -78,8 +78,9 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     # Map the request to its corresponding protocol function
                     from jam.network.protocol_map import ProtocolMap
 
+                    print("buf", buffer[1:])
                     protocol = ProtocolMap.get_protocol(prefix)()
-                    await protocol.server_intercept(self.node, buffer[1:], self, event.stream_id)
+                    protocol.server_intercept(self.node, buffer[1:], self, event.stream_id)
 
                     # Clear buffer
                     self.stream_buffer[event.stream_id] = b""

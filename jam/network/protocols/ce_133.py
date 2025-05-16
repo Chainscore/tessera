@@ -50,7 +50,7 @@ class WorkPackageSubmission(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE133
 
-    async def transmit(self, node: Node, data: CE133Data):
+    def transmit(self, node: Node, data: CE133Data):
         """Transmit Work Package from Builder (client) to Guarantor (server)"""
 
         stream_a = self._prefix.encode() + data.package_data.encode()
@@ -62,12 +62,12 @@ class WorkPackageSubmission(NetworkProtocol):
         responses = Vector([])
         for client in node.connections:
             stream_id = client.stream_and_keep_open(message=stream_a)
-            data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
+            data = client.stream_and_close(message=stream_b, stream_id=stream_id)
             responses.append(data)
 
         return responses
 
-    async def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Work Package on Guarantor (server)"""
 
         logger.info("Received Work Package")
@@ -77,7 +77,7 @@ class WorkPackageSubmission(NetworkProtocol):
         logger.info("Processing Work Package")
         processor = Processor(node)
 
-        wr, wr_hash = await processor.process(data.package_data.work_package, data.package_data.core_index, data.extrinsics)
+        wr, wr_hash = processor.process(data.package_data.work_package, data.package_data.core_index, data.extrinsics)
 
         logger.info(
             f"📩 Processed work package : {data.package_data.work_package} with CI {data.package_data.core_index}"
