@@ -15,8 +15,18 @@ class PsiI(InvocationProtocol):
 
     def table(self):
         return {
-            0: (GeneralFunctions, ()),
-            18: (GeneralFunctions, (self.work_package, OpaqueHash([0] * 32)))
+            0: (GeneralFunctions, {}),
+            18: (GeneralFunctions, {
+                    "package": self.work_package,
+                    "entropy": OpaqueHash([0] * 32),
+                    "trace": None,
+                    "item_index": None,
+                    "import_segments": None,
+                    "extrinsics": None,
+                    "o": None,
+                    "t": None
+                    }
+                 )
         }
 
     def execute(self):

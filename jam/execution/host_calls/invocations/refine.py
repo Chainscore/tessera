@@ -22,9 +22,18 @@ class PsiR(InvocationProtocol):
         self.i_segments = i_segments
         self.e_offset = e_offset
 
+    @property
+    def wi(self):
+        return self.work_package.items[self.item_index]
+
     def table(self):
         return {
             0: (GeneralFunctions, ()),
+            17: (RefineFunctions, {
+                "service_id": self.wi.service,
+                "delta": state.delta,
+                "timeslot": self.work_package.context.lookup_anchor_slot
+            }),
             18: (GeneralFunctions, {
                          "package": self.work_package,
                          "entropy": OpaqueHash([0] * 32),
@@ -39,12 +48,18 @@ class PsiR(InvocationProtocol):
             19: (RefineFunctions, {
                 "export_segment_offset": self.e_offset
             }),
+            20: (RefineFunctions, {}),
+            21: (RefineFunctions, {}),
+            22: (RefineFunctions, {}),
+            23: (RefineFunctions, {}),
+            24: (RefineFunctions, {}),
+            25: (RefineFunctions, {}),
+            26: (RefineFunctions, {}),
         }
 
     def execute(self):
-        wi = self.work_package.items[self.item_index]
-        _, pc = decode_code_hash(state.delta[wi.service].historical_lookup(self.work_package.context.lookup_anchor_slot, wi.code_hash))
-        args = self.item_index.encode() + wi.service.encode() + wi.payload.encode() + bytes(Hash.blake2b(self.work_package.encode()))
+        _, pc = decode_code_hash(state.delta[self.wi.service].historical_lookup(self.work_package.context.lookup_anchor_slot, self.wi.code_hash))
+        args = self.item_index.encode() + self.wi.service.encode() + self.wi.payload.encode() + bytes(Hash.blake2b(self.work_package.encode()))
         u, r, context = PsiM.execute(
             pc,
             ProgramCounter(0),
