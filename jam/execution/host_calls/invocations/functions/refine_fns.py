@@ -70,7 +70,7 @@ class RefineFunctions(INVF):
 
         registers[7] = Register(len(v))
         memory.write(f, v[f:l])
-        return CONTINUE, registers, memory, context
+        return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(19, gas_cost=10)
@@ -92,7 +92,7 @@ class RefineFunctions(INVF):
     @staticmethod
     @INVF.register(20, gas_cost=10)
     def machine(gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
-        [p_o,p_z,i]=registers[7:10]
+        [p_o,p_z,i] = registers[7:10]
         if memory.is_accessible(p_o,p_z):
             p=memory.read(p_o,p_z)
         else:
@@ -104,74 +104,73 @@ class RefineFunctions(INVF):
         while n in context.m:
                 n += 1
 
-        u=Memory()
+        u = Memory()
         try:
             Program.decode_from(p)
             # TODO: Updating the commitment map, need to see how the dict is appended
-            context.m[n]=IntegratedPVM(program_code=p,memory=u,instruction_counter=i)
-            registers[7]=n
-            return CONTINUE,registers,memory, context
+            context.m[n] = IntegratedPVM(program_code=p,memory=u,instruction_counter=i)
+            registers[7] = n
+            return CONTINUE ,gas ,registers ,memory, context
         except:
             registers[7]=HostStatus.HUH
-            return CONTINUE,registers,context,context
+            return CONTINUE ,gas ,registers ,context ,context
 
     @staticmethod
     @INVF.register(21, gas_cost=10)
     def peek(gas:Gas, registers:Registers, memory:Memory, context:RefineContext):
-        [n,o,s,z]=registers[7:11]
+        [n,o,s,z] = registers[7:11]
         if not memory.is_accessible(o,z,True):
             raise PvmError(PANIC)
         elif n not in context.m:
-            registers[7]=HostStatus.WHO
-            return CONTINUE,registers,memory
+            registers[7] = HostStatus.WHO
+            return CONTINUE, gas, registers,memory
         elif not context.m[n].memory.is_accessible(s,z):
-            registers[7]=HostStatus.OOB
-            return CONTINUE,registers,memory
+            registers[7] = HostStatus.OOB
+            return CONTINUE, gas, registers, memory
         else:
             memory.write(o,context.m[n].memory.read(s,z))
-            registers[7]=HostStatus.OK
-            return CONTINUE,registers,memory
+            registers[7] = HostStatus.OK
+            return CONTINUE, gas, registers, memory
 
 
     @staticmethod
     @INVF.register(22, gas_cost=10)
     def poke(gas:Gas, registers:Registers, memory:Memory, context:RefineContext):
-        [n,o,s,z]=registers[7:11]
+        [n,o,s,z] = registers[7:11]
 
         if not memory.is_accessible(s,z):
             raise PvmError(PANIC)
-            # return(PANIC,registers[7],context.m)
         elif n not in context.m:
             registers[7]=HostStatus.WHO
-            return CONTINUE,registers,memory
+            return CONTINUE, gas, registers ,memory
         elif not context.m[n].memory.is_accessible(o,z,True):
             registers[7]=HostStatus.OOB
-            return CONTINUE,registers,memory
+            return CONTINUE, gas, registers ,memory
         else:
             context.m[n].memory.write(o,memory.read(s,z))
-            registers[7]=n
-            return CONTINUE,registers,memory,context
+            registers[7] = n
+            return CONTINUE, gas, registers,memory,context
 
 
     @staticmethod
     @INVF.register(23, gas_cost=10)
     def zero(gas:Gas, registers:Registers, memory:Memory, context:RefineContext):
-        [n,p,c]=registers[7:10]
+        [n,p,c] = registers[7:10]
         if n in context.m:
-            u=context.m[n].memory
+            u = context.m[n].memory
             u.zero_memory_range(p*PVM_MEMORY_PAGE_SIZE,c*PVM_MEMORY_PAGE_SIZE)
             u.alter_accessibility(p,c,Accessibility.write)
         else:
             registers[7] = HostStatus.WHO
-            return CONTINUE,registers,memory,context
+            return CONTINUE, gas, registers, memory, context
 
         if p<16 or p+c>= 2**32/PVM_MEMORY_PAGE_SIZE:
             registers[7] = HostStatus.HUH
-            return CONTINUE,registers,memory,context
+            return CONTINUE, gas ,registers, memory, context
         else:
             context.m[n].memory=u
             registers[7] = HostStatus.OK
-            return CONTINUE,registers,memory,context
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(24, gas_cost=10)
@@ -183,15 +182,15 @@ class RefineFunctions(INVF):
             u.alter_accessibility(p,c,Accessibility.null)
         else:
             registers[7]=HostStatus.WHO
-            return CONTINUE,registers,memory,context
+            return CONTINUE, gas, registers, memory, context
 
         if p<16 or p+c>= 2*32/PVM_MEMORY_PAGE_SIZE or not u.is_accessible(p,c):
             registers[7]=HostStatus.HUH
-            return CONTINUE,registers,memory,context
+            return CONTINUE, gas, registers, memory, context
         else:
             context.m[n].memory=u
             registers[7]=HostStatus.OK
-            return CONTINUE,registers,memory,context
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(25, gas_cost=10)
@@ -200,8 +199,8 @@ class RefineFunctions(INVF):
         if not memory.is_accessible(o,112,True):
             raise PvmError(PANIC)
         if n not in context.m:
-            registers[7]=HostStatus.WHO
-            return CONTINUE,registers,memory,context
+            registers[7] = HostStatus.WHO
+            return CONTINUE, gas, registers, memory, context
         m_bytes=memory.read(o,112)
         #bytes->14size array of 8elements each 0->gas(g) 1-13->register_data(w)
         m_array = [m_bytes[i:i + 8] for i in range(0, len(m_bytes), 8)]
@@ -217,7 +216,7 @@ class RefineFunctions(INVF):
             context.m[n].instruction_counter=i_dash+1
             registers[7]=U64(ExecutionStatus.HOST) # NOTE: Saving the ExecValu on register[7]
             registers[8]=c.value.register
-            return CONTINUE,registers,memory,context
+            return CONTINUE, gas, registers, memory, context
         else:
             context.m[n].instruction_counter=i_dash
             if(c==ExecutionStatus.PAGE_FAULT):
