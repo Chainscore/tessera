@@ -1,9 +1,10 @@
 from jam.config.logging import logger
 from jam.config.settings import settings
-from jam.db.kv import KVStore
-from jam.types.base.sequences.vector import Vector
+
+from jam.storage.db.kv import KVStore
 
 from jam.types.base.integers.general import Int
+from jam.types.base.sequences.vector import Vector
 
 from jam.types.work.item import WorkItem
 from jam.types.work.package import  WorkPackage

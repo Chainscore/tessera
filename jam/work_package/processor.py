@@ -7,15 +7,22 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.config.logging import logger
 from jam.config.settings import settings
-from jam.db.kv import KVStore
-from jam.types import Ed25519Signature, TimeSlot
-from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray12
-from jam.types.base.sequences.vector import Vector
+
+from jam.execution.host_calls.invocations.is_authorized import PsiI
+from jam.execution.host_calls.invocations.refine import PsiR
+
+from jam.storage.db.kv import KVStore
 
 from jam.types.base.integers.general import Int
 from jam.types.base.integers.fixed import U8, U16, U64
+from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray12
+from jam.types.base.sequences.vector import Vector
+
 from jam.types.extrinsics import ValidatorSignature
 from jam.types.extrinsics.guarantees import ValidatorSignatures
+
+from jam.types.protocol.core import CoreIndex, Gas, TimeSlot
+from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
 
 from jam.types.work.item import WorkItem
 from jam.types.work.package import WorkPackage
@@ -24,7 +31,6 @@ from jam.types.work.manifest import (
     Segment,
     MultiSegments,
     Extrinsics,
-    SegmentDict,
     ProvedSegments
 )
 from jam.types.work.shard import (
@@ -49,25 +55,20 @@ from jam.types.work.report import (
 
 from jam.utils.constants import BASIC_ERASURE_SIZE, SEGMENT_SIZE
 
-from jam.types.protocol.core import CoreIndex, Gas
-from jam.types.protocol.crypto import OpaqueHash, Hash
+
 
 from jam.erasure_coding.erasure_code import ErasureCode
 from jam.merklization.binary_merkle import BMRFunctions
 
 
-from jam.hostCall.Refine import PsiR
-from jam.hostCall.invocation import PsiI
 from jam.work_package.bundler import Bundler
 from jam.work_package.stores.audits import AuditShardsDA
 from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
-
-from jam.types.protocol.crypto import WorkReportHash
+from jam.work_package.validator import Validator
 
 from jam.network.node import Node
-from jam.work_package.validator import Validator
 
 
 class Processor:

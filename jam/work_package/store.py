@@ -1,5 +1,5 @@
 from abc import ABC
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 
 class DA(ABC):
     db_path: str
