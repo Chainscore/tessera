@@ -1,17 +1,14 @@
 import asyncio
 import json
-import os
 
+from jam.config.data_stores import main_db
 from jam.config.logging import setup_logging, logger
 from jam.config.chainspec import chain_config
-from jam.storage.db.kv import KVStore
 from jam.config.settings import settings, setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.utils.dummy_wpb import wp_producer
-from jam.network.utils.dummy_segment_shard import segment_shard_request
-from jam.network.utils.dummy_assurance import assurance_distribution
 
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
@@ -48,6 +45,10 @@ async def main(
         spec=chain_config.name,
         listen_port=port,
     )
+
+    # Setup Settings
+    setup_setting(name, port)
+
     try:
         # Initialize components
         genesis = json.load(open(genesis_path))
@@ -99,14 +100,10 @@ async def main(
             is_validator=is_validator,
         )
 
-        setup_setting(name, port)
 
-        os.makedirs(settings.DB_PATH, exist_ok=True)
-        os.makedirs(settings.D3L_PATH, exist_ok=True)
-        os.makedirs(settings.AUDIT_DB_PATH, exist_ok=True)
 
         logger.info(f"Node Running on port: {settings.LISTEN_PORT}. Dbs: {settings.DB_PATH} {settings.D3L_PATH}")
-        db = KVStore(settings.DB_PATH)
+        db = main_db
 
         if start_genesis:
             # Start from genesis
@@ -127,8 +124,8 @@ async def main(
                     tg.create_task(wp_producer(tsr_node, db))
                 else:
                     # tg.create_task(segment_shard_request(tsr_node, db))
-                    tg.create_task(assurance_distribution(tsr_node, db))
-                    # tg.create_task(block_producer.run())
+                    # tg.create_task(assurance_distribution(tsr_node, db))
+                    tg.create_task(block_producer.run())
 
 
         else:
