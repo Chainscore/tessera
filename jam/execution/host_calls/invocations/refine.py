@@ -38,7 +38,7 @@ class PsiR(InvocationProtocol):
                  ),
             19: (RefineFunctions, {
                 "export_segment_offset": self.e_offset
-            })
+            }),
         }
 
     def execute(self):
@@ -54,5 +54,5 @@ class PsiR(InvocationProtocol):
             RefineContext(m=RefinementMap({}), e=Segments([])),
         )
         if r == PANIC or r == OUT_OF_GAS:
-            return (r, Segments([]), u)
-        return (r, context.e, u)
+            return r, Segments([]), u
+        return r, context.e, u
