@@ -90,7 +90,8 @@ class Program(Codable, JsonSerde):
         if not condition:
             return CONTINUE, counter
         elif branch not in self.basic_blocks:
-            raise PvmError(PvmErrorCodes.PANIC)
+            print(f"Branching to {branch}, but its not a basic block")
+            raise PvmError(PANIC)
         return CONTINUE, branch
 
     def djump(

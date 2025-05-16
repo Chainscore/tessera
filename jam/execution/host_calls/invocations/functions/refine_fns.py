@@ -15,7 +15,6 @@ from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.core import Gas, Register, ProgramCounter
 from jam.execution.pvm.register import Registers
 from jam.execution.pvm.memory import Memory
-from jam.services.historicalLookup import historical_lookup_fn
 from jam.types.protocol.core import ServiceId,TimeSlot
 from jam.types.state.delta import Delta
 from jam.types.base.sequences import ByteArray32
@@ -65,7 +64,7 @@ class RefineFunctions(INVF):
             registers[7] = HostStatus.NONE
             return CONTINUE, registers, memory
         else:
-            v = historical_lookup_fn(a, timeslot, ByteArray32(memory.read(h,32)))
+            v = a.historical_lookup(timeslot, ByteArray32(memory.read(h,32)))
 
         f = min(int(registers[10]), len(v))
         l = min(int(registers[11]), len(v)-f)
