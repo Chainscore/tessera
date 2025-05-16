@@ -47,15 +47,15 @@ class Program(Codable, JsonSerde):
     def zeta(self) -> Zeta:
         return Zeta(self.instruction_set)
     
-    def skip(self, i) -> int:
+    def skip(self, pc) -> int:
         """
         Skip the instructions until the next opcode is found.
         Args:
-            i: Current index
+            pc: Current index
         Returns:
             Distance to the next opcode.
         """
-        i = int(i)
+        i = int(pc)
         extended_bitmask = self.offset_bitmask + [True] * (100)
         value = len(extended_bitmask)
         for j in range(i + 1, len(extended_bitmask)):
