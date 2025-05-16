@@ -1,9 +1,9 @@
-from jam.db.kv import KVStore
-from jam.types import Int
-from jam.work_package.store import DA
+from jam.storage.db.kv import KVStore
+
 from jam.types.extrinsics.assurances import Assurance
 from jam.types.work.report import WorkReport
-from jam.types.block import Block
+
+from jam.work_package.store import DA
 
 class AssurancesDA(DA):
     """

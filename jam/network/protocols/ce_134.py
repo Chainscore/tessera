@@ -4,22 +4,24 @@ from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
+
 from jam.network.quic import QuicServerProtocol
+from jam.network.protocols.base import NetworkProtocol, PrefixType
+
 from jam.types.base.sequences.vector import Vector
 from jam.types.base.integers import Int
+from jam.types.protocol.core import CoreIndex
+from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
 from jam.types.work.report import WorkPackageBundle, SegmentRootLookup
 
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
-from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.utils.json import JsonSerde
 
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
-from jam.types.protocol.core import CoreIndex
 from jam.work_package.processor import Processor
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.work_package.validator import Validator
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
 @decodable_dataclass

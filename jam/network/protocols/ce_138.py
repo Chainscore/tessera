@@ -1,13 +1,14 @@
-import hashlib
 from typing import cast, Tuple
 
 from dataclasses import dataclass
 from jam.config.logging import logger
-from jam.types import Vector
 from jam.network.quic.server import QuicServerProtocol
+
 from jam.types.base.sequences.bytes import Bytes
+from jam.types.base.sequences.vector import Vector
 from jam.types.protocol.core import ErasureRoot
-from jam.types.work.manifest import Segment, Justification
+from jam.types.protocol.crypto import Hash
+from jam.types.work.manifest import Segment
 from jam.types.work.shard import SegmentsShard, ShardIndex, BundleShard
 
 from jam.utils.json import JsonSerde
@@ -15,7 +16,6 @@ from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 
 from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types.base.sequences.bytes.byte_array import ByteArray
 from jam.merklization import BMRFunctions
 
 
@@ -79,7 +79,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         logger.info("Processing")
         # TODO: Process received erasure code & shard index
-        bundle_shard = ByteArray('3b8987132d58aea08ec55247fd64436c3a553e3ab42260c6a31bf27931ee2cba868d4c59b626fb1d365fa5cb0edd5f1e2d72b7d6d7998ad0995314ad9eee86c3')
+        bundle_shard = BundleShard('3b8987132d58aea08ec55247fd64436c3a553e3ab42260c6a31bf27931ee2cba868d4c59b626fb1d365fa5cb0edd5f1e2d72b7d6d7998ad0995314ad9eee86c3')
 
         # TODO: Get segment shards received from CE-137 to generate segment shard root for justification
         segment_shard = SegmentsShard([
@@ -90,7 +90,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
             Segment('fc12fb3db7a24b0b52fb57f6'),
         ])
 
-        bundle_shard_hash = hashlib.blake2b(bytes(bundle_shard))
+        bundle_shard_hash = Hash.blake2b(bytes(bundle_shard))
 
         bmr = BMRFunctions()
         segment_shard_root = bmr.wb_merkle_fn(Vector([Bytes(segment_shard)]))

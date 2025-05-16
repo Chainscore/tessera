@@ -87,7 +87,7 @@ VALIDATOR_COUNT = chain_config.num_validators
 MAX_AUTH_CODE_SIZE = 64_000
 
 # W_B — Max encoded size of a work-package (extrinsics + imports), in octets.
-MAX_ENCODED_WORK_PACKAGE_SIZE = 2 ** 20  # 2^20 octets
+MAX_ENCODED_WORK_PACKAGE_SIZE = 12 * (2 ** 20)  # 12 * 2^20 octets
 
 # W_C — Max size of service code, in octets.
 MAX_SERVICE_CODE_SIZE = 4_000_000

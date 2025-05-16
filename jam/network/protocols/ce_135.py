@@ -1,31 +1,27 @@
 from dataclasses import dataclass
 from typing import cast
 
-from rich.diagnose import report
-
 from jam.config.logging import logger
 from jam.config.settings import settings
+
 from jam.storage.db.kv import KVStore
 from jam.merklization import BMRFunctions
 from jam.network.quic.server import QuicServerProtocol
+from jam.network.protocols.base import NetworkProtocol, PrefixType
+
 from jam.types.base.sequences.vector import Vector
 from jam.types.base.null import Null
-from jam.types.base.integers.general import Int
-from jam.types.protocol.core import ValidatorIndex
-
-
-
+from jam.types.base.integers import Int
 from jam.types.extrinsics.guarantees import ValidatorSignatures
+from jam.types.protocol.core import ValidatorIndex, TimeSlot
 from jam.types.protocol.crypto import Hash
+from jam.types.work.report import WorkReport
 from jam.types.work.shard import ShardIndex, BundleShardUnit, SegmentsShardUnit
 
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
-from jam.network.protocols.base import NetworkProtocol, PrefixType
 
-from jam.types.work.report import WorkReport
-from jam.types.protocol.core import TimeSlot
 from jam.work_package.stores.audits import AuditShardsDA
 from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.reports import ReportsDA
@@ -104,7 +100,6 @@ class WorkReportDistribution(NetworkProtocol):
         # TODO: Change 342 to Recovery Threshold based on Network Spec
         shard_index = ShardIndex((report.core_index * 342 + validator_index) % settings.VALIDATOR_COUNT)
 
-        from jam.network.utils.dummy_assurance import create_dummy_assurances
         from jam.network.protocols.ce_137 import ShardDistributionProtocol, CE137TransmitData
         CE137 = ShardDistributionProtocol()
 
@@ -137,6 +132,7 @@ class WorkReportDistribution(NetworkProtocol):
         from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
         CE141 = AssuranceDistribution()
 
+        from jam.network.utils.dummy_assurance import create_dummy_assurances
         assurance = create_dummy_assurances()
         data = CE141Data(assurance)
         ack = CE141.transmit(node=node, data=data)

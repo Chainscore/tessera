@@ -4,9 +4,9 @@ from typing import cast
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
 
-from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.network.protocols.base import PrefixType
 
-from tests.dummy.utils import create_dummy_bytes12, create_dummy_bytes32
+from tests.dummy.utils import create_dummy_bytes12
 
 
 class SegmentShardRequest(SegmentShardRequestBase):

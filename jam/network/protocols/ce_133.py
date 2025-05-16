@@ -3,17 +3,18 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
-from jam.types.base.sequences.vector import Vector
+from jam.network.protocols.base import NetworkProtocol, PrefixType
+
 from jam.types.base.null import Null
+from jam.types.base.sequences.vector import Vector
+from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
+from jam.types.work.package import WorkPackage
 
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 
-from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types.protocol.core import CoreIndex
-from jam.types.work.package import WorkPackage
 from jam.work_package.processor import Processor
 
 
