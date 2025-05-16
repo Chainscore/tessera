@@ -269,11 +269,12 @@ class Processor:
         n = len(export_segments)
 
         erasure_codec = ErasureCode()
-        os.makedirs(settings.D3L_PATH, exist_ok=True)
+
         d3l = KVStore(settings.D3L_PATH)
+        audits = KVStore(settings.AUDIT_DB_PATH)
 
         # Build Bundle Shards
-        audits_da = AuditShardsDA(d3l)
+        audits_da = AuditShardsDA(audits)
 
         padded_wp_bundle = self.zero_padding(Bytes(wp_bundle), BASIC_ERASURE_SIZE)
         bundle_shards = erasure_codec.encode(padded_wp_bundle)
@@ -343,6 +344,7 @@ class Processor:
 
         spec = WorkPackageSpec(hash=package_hash, length=l, erasure_root=u, exports_root=e, exports_count=n)
 
+        audits.close()
         d3l.close()
         return spec
 

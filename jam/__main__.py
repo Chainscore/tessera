@@ -5,7 +5,7 @@ import os
 from jam.config.logging import setup_logging, logger
 from jam.config.chainspec import chain_config
 from jam.storage.db.kv import KVStore
-from jam.config.settings import settings
+from jam.config.settings import settings, setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
@@ -99,14 +99,11 @@ async def main(
             is_validator=is_validator,
         )
 
-        settings.NODE_NAME = name
-        settings.LISTEN_PORT = port
-        settings.NODE_PATH = f"db/{port}"
-        settings.DB_PATH = f"{settings.NODE_PATH}/node"
-        settings.D3L_PATH = f"{settings.NODE_PATH}/d3l"
+        setup_setting(name, port)
 
         os.makedirs(settings.DB_PATH, exist_ok=True)
         os.makedirs(settings.D3L_PATH, exist_ok=True)
+        os.makedirs(settings.AUDIT_DB_PATH, exist_ok=True)
 
         logger.info(f"Node Running on port: {settings.LISTEN_PORT}. Dbs: {settings.DB_PATH} {settings.D3L_PATH}")
         db = KVStore(settings.DB_PATH)

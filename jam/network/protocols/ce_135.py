@@ -110,8 +110,9 @@ class WorkReportDistribution(NetworkProtocol):
         if shard is not None:
             bmr = BMRFunctions()
             d3l = KVStore(settings.D3L_PATH)
+            audits = KVStore(settings.AUDIT_DB_PATH)
 
-            bs_da = AuditShardsDA(d3l)
+            bs_da = AuditShardsDA(audits)
             ss_da = SegmentShardsDA(d3l)
             er_shard_map = ErasureShardsMap(d3l)
 
@@ -126,6 +127,7 @@ class WorkReportDistribution(NetworkProtocol):
 
             er_shard_map.put(er_root, bs_hash, ss_root, shard_index)
 
+            audits.close()
             d3l.close()
 
         # Distribute Assurance
