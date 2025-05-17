@@ -4,7 +4,7 @@ from time import time
 
 from jam.state.state import State
 from jam.utils.constants import EPOCH_LENGTH
-from tests.dummy.dummy_extrinsics import create_dummy_work_report
+from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
 from jam.network.node import Node
 from jam.config.logging import logger
 from jam.storage.db.kv import KVStore

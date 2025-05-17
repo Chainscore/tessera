@@ -6,8 +6,8 @@ from jam.state.state import State
 from jam.utils.constants import EPOCH_LENGTH
 from jam.network.node import Node
 from jam.config.logging import logger
+from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.storage.db.kv import KVStore
-from tests.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.base.integers import Int

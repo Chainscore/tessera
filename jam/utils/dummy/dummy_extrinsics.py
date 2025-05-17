@@ -18,7 +18,7 @@ from jam.types.work.report import (
     WorkExecResult,
     RefineLoad
 )
-from tests.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_int
+from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_int
 from jam.types.work.refine_context import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, Ed25519Signature, BandersnatchRingVrfSignature
 from jam.types.base.sequences.bytes.bytes import Bytes

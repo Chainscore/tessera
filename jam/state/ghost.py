@@ -44,7 +44,7 @@ class GhostState(Sigma):
 
     @staticmethod
     def from_random(seed = 0) -> "GhostState":
-        from tests.dummy.dummy_state_comp import create_dummy_state_components
+        from jam.utils.dummy.dummy_state_comp import create_dummy_state_components
         return GhostState(**create_dummy_state_components())
 
     def transform(self) -> dict:
