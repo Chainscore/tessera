@@ -1,6 +1,7 @@
-#[build-system]
-#requires = ["poetry-core>=1.0.0"]
-#build-backend = "poetry.core.masonry.api"
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 
 [tool.poetry]
 name = "tessera"
@@ -40,10 +41,3 @@ sphinx = "8.1.3"
 
 [tool.poetry.scripts]
 jam = "jam:run_jam"
-
-[project.optional-dependencies]
-dev = ["mypy"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
