@@ -7,6 +7,10 @@ from jam.types.state.sigma import Sigma
 from jam.types.block import Block
 from jam.types.header import Header
 from jam.types.extrinsics.extrinsic import Extrinsic
+from jam.state.accounts import AccountMetadata
+from jam.types.state.delta import ServiceCodeHash, Ao, Ai, LookupTable, Timestamps
+from jam.types.protocol.core import Balance, Gas, ServiceId
+
 
 from jam.accumulation.accumulation import Accumulation
 from jam.config.data_stores import main_db
@@ -41,37 +45,40 @@ def load_test_vectors():
 def test_accumulation(vector: AccuTestCase):
     setup_state(GhostState.genesis(), main_db)
     from jam.state.state import state
-    # for service_id, data in vector.pre_state.accounts.items():
-    #     state.delta[service_id] = data
-    state.chi = vector.pre_state.privileges
-    # partial_state = StateContext(
-    #     service_accounts=vector.pre_state.accounts,
-    #     validator_keys=[],
-    #     authorizer_keys=[],
-    #     privileges=state.chi
-    # )
-    pre_state = Sigma(
-        alpha=state.alpha,
-        beta=state.beta,
-        gamma=state.gamma,
-        delta=vector.pre_state.accounts,
-        eta=state.eta,
-        iota=state.iota,
-        kappa=state.iota,
-        lambda_=state.lambda_,
-        rho=state.rho,
-        tau=vector.pre_state.slot,
-        phi=state.phi,
-        chi=vector.pre_state.privileges,
-        psi=state.psi,
-        pi=state.pi,
-        nu=vector.pre_state.ready_queue,
-        xi=vector.pre_state.accumulated
-    )
-    pre_state.pi.services = vector.pre_state.statistics
+
+    # state.eta[0]=vector.pre_state.entropy
+    # state.chi = vector.pre_state.privileges
+
+    for wr_index in range(0,len(vector.pre_state.ready_queue)):
+        state.nu[wr_index]=vector.pre_state.ready_queue[wr_index]
+
+
+    state.xi=vector.pre_state.accumulated
+    state.pi.services=vector.pre_state.statistics
+    state.tau=vector.pre_state.slot
+
+    print(state.nu)
+    # print("prestate",type(vector.pre_state.ready_queue[0]))
+
+    for key in vector.pre_state.accounts:
+        account_metadata = AccountMetadata(
+            code_hash=ServiceCodeHash(vector.pre_state.accounts[key].service.code_hash),
+            balance=Balance(vector.pre_state.accounts[key].service.balance),
+            gas_limit=Gas(vector.pre_state.accounts[key].service.min_item_gas),
+            min_gas=Gas(vector.pre_state.accounts[key].service.min_memo_gas),
+            num_o=Ao(vector.pre_state.accounts[key].service.bytes),
+            num_i=Ai(vector.pre_state.accounts[key].service.items)
+        )
+        state.delta[key]=account_metadata
 
     block = Block(header=Header.genesis(path="genesis.json"), extrinsic=Extrinsic.empty())
     block.header.slot = vector.input.slot
     block.extrinsic.guarantees = vector.input.reports
-    print(state.delta)
-    # Accumulation.transition(pre_state=pre_state, block=block)
+    # print(vector.pre_state.accounts[key])
+    # print(state.delta[1729])
+    post_state=Accumulation.transition(pre_state=state, block=block)
+    # print(post_state.tau)
+    # print(post_state.chi)
+    # print(post_state.nu)
+    # print(post_state.xi)
+    # print(post_state.eta[0])
