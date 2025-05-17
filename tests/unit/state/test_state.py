@@ -1,4 +1,3 @@
-from jam.storage.db.kv import KVStore
 from jam.state.accounts import AccountData
 from jam.state.ghost import GhostState
 from jam.state.state import setup_state, state
@@ -6,7 +5,7 @@ from jam.types import ByteArray32, ServiceId, U64, U32, Bytes
 from jam.types.protocol.core import Balance
 from jam.types.protocol.crypto import Hash
 from jam.types.state import Eta, Tau, LookupTimestamps, LookupTable, Timestamps
-from tests.dummy.utils import create_dummy_bytes
+from jam.utils.dummy.utils import create_dummy_bytes
 
 
 def test_state_sync(db_path):

@@ -13,7 +13,7 @@ from jam.types.extrinsics import (
 )
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
-from tests.dummy.dummy_state import create_dummy_state
+from jam.utils.dummy.dummy_state import create_dummy_state
 
 def validators():
     return [

@@ -8,8 +8,8 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.serde import JsonSerde
 from jam.types.protocol.crypto import Hash
-from tests.dummy.dummy_extrinsics import create_dummy_extrinsics
-from tests.dummy.dummy_header import create_dummy_header
+from jam.utils.dummy.dummy_extrinsics import create_dummy_extrinsics
+from jam.utils.dummy.dummy_header import create_dummy_header
 from jam.types.protocol.core import TimeSlot
 
 @decodable_dataclass

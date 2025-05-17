@@ -1,5 +1,5 @@
 from jam.state.ghost import GhostState as State
-from tests.dummy.dummy_state_comp import create_dummy_state_components
+from jam.utils.dummy.dummy_state_comp import create_dummy_state_components
 
 
 def create_dummy_state() -> State:

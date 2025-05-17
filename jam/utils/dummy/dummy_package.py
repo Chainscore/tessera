@@ -7,8 +7,8 @@ from jam.types.work.report import SegmentRootLookup, WorkPackageBundle
 
 from jam.network.protocols.ce_134 import CoreSegment, Credential
 
-from tests.dummy.dummy_extrinsics import create_dummy_work_context
-from tests.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_bytes64
+from jam.utils.dummy.dummy_extrinsics import create_dummy_work_context
+from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_bytes64
 
 
 def create_dummy_authorizer() -> Authorizer:
