@@ -1,22 +1,19 @@
 import asyncio
 import json
 import random
+import tempfile
 from datetime import datetime
-from sqlite3 import Time
 from typing import Any, Dict, Optional, Set
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from jam.consensus.grandpa.finality import Finality
-from jam.types import ByteArray32
+from jam.db.kv import KVStore
+from jam.state.state import State
 from jam.types.block import Block
 from jam.types.header import Header
+from jam.types.protocol.core import TimeSlot
 from jam.types import  U32
 from jam.storage.queue import StorageQueue
-from jam.config.data_stores import main_db #swithing to main_db
-from jam.state.merkle import StateTrie
-from jam.state.state import State, state
-from jam.state.accounts import DeltaView, StorageView, PreImageView, TimestampsView
-from jam.types.state.delta import LookupTable
 
 # Initialize FastAPI with metadata for Swagger UI
 app = FastAPI(
@@ -31,9 +28,15 @@ app = FastAPI(
     version="1.0.0",
 )
 
-db = main_db
-# Get state and block from db
-block = Block.load(State.tau, db)
+# db path
+db_path = tempfile.mkdtemp()
+
+# Initialize store
+db = KVStore(db_path)
+state = State.genesis()
+db_block = Block.load(TimeSlot(0), db)
+state.save(db)
+db_state = State.load(db)
 
 
 # Following the etherum json rpc api structure
@@ -48,68 +51,38 @@ curl https://docs-demo.quiknode.pro/ \
 """
 
 
-# Request model
-class RpcRequest(BaseModel):
-    method: str
-    jsonrpc: str
-    params: Dict[str, Any]
-    id: Optional[Any]
+def best_block_handler(params, request_id):
+    print("Best block handler called with params:", params)
+    if len(params) != 0:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request_id,
+                error={"code": -32602, "message": "Invalid parameters: expected no params"},
+            )
+    return [Header.__hash__(db_block.header), int(db_block.header.slot)]
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "method": "statistics",
-                "jsonrpc": "2.0",
-                "params": {
-                    "Hash": [9, 22, 47, 0, 129, 231, 187, 27, 132, 92, 215, 134, 177, 181, 78, 139, 163, 206, 87, 173, 138, 231, 16, 253, 5, 145, 172, 130, 208, 197, 4, 223]
-                },
-                "id": 1,
-            }
-        }
+def finalized_block_handler(params, request_id):
+    if len(params) != 0:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request_id,
+                error={"code": -32602, "message": "Invalid parameters: expected no params"},
+            )
+    final = Finality.load_final(db)
+    return [Header.__hash__(final.header), int(final.header.slot)]
 
+def finalized_block_handler(params, request_id):
+    if len(params) != 0:
+            return RPCResponse(
+                jsonrpc="2.0",
+                id=request_id,
+                error={"code": -32602, "message": "Invalid parameters: expected no params"},
+            )
+    final = Finality.load_final(db)
+    return [Header.__hash__(final.header), int(final.header.slot)]
 
-# Response models
-class RpcResponse(BaseModel):
-    jsonrpc: str
-    result: Any = None
-    error: Optional[Dict[str, Any]] = None
-    id: Optional[int]
-
-
-@app.post("/rpc.tessera", response_model=RpcResponse)
-async def rpc_handler(request: RpcRequest):
-    """
-    RPC requests for different methods.
-    """
-    method = request.method
-    params = request.params
-
-##---------------------------------------------------------------------------
-
-    if method == "bestBlock":
-        # Handle bestBlock method
-        return RpcResponse(
-            jsonrpc="2.0",
-            id=request.id,
-            result=[Header.__hash__(block.header), int(block.header.slot)],
-        )
-
-##----------------------------------------------------------------------------
-
-    elif method == "finalizedBlock":
-        # Handle finalizedBlock method without requiring params
-        return RpcResponse(
-            jsonrpc="2.0",
-            id=request.id,
-            result=[
-                Header.__hash__(Finality.load_final(db).header),
-                int(Finality.load_final(db).header.slot),
-            ],
-        )
-
-##---------------------------------------------------------------------------
-    elif method == "parent":
-        if len(params) != 1:
+def parent(params, request_id):
+    if len(params) != 1:
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
@@ -117,11 +90,12 @@ async def rpc_handler(request: RpcRequest):
                     "code": -32602,
                     "message": "Invalid parameters: expected header_hash",
                 },
-            )
-        if len(params):
+            )   
+    
+    if len(params):
             ## condition if the time slot is of genesis block
-            if block.header.slot == U32(0):
-                return RpcResponse(
+        if block.header.slot == U32(0):
+            return RpcResponse(
                     jsonrpc="2.0",
                     id=request.id,
                     error={
@@ -135,29 +109,46 @@ async def rpc_handler(request: RpcRequest):
             if bytes(params["Hash"]):
                 # Return the parent block
                 parent_block = Block.load_parent(block.header.slot, db)
+                return [ Header.__hash__(parent_block.header), int(parent_block.header.slot) ]
 
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    result=[
-                        Header.__hash__(parent_block.header),
-                        int(parent_block.header.slot),
-                    ],
-                )
-            else:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={"code": -32602, "message": "unexpected error"},
-                )
+def state_root_handler(params, request_id):
+    if len(params) != 1:
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request_id,
+            error={
+                "code": -32602,
+                "message": "Invalid parameters: expected header_hash",
+            },
+        )
 
-##-------------------------------------------------------------------------------------
+    header_hash = params.get("Hash")
+    if header_hash is None or len(header_hash) != 32:
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request_id,
+            error={
+                "code": -32602,
+                "message": "Invalid parameters: expected header_hash",
+            },
+        )
+    # TODO: Make a rocksdb search function that will fetch block with needed hash. As of now returning current state
+    if bytes(params["Hash"]):
+        return [
+            StateTrie.root_hash
+        ]
+    else:
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request_id,
+            error={"code": -32602, "message": "unexpected error"},
+        )
 
-    elif method == "stateRoot":
-        if len(params) != 1:
-            return RpcResponse(
+def statistics_handler(params, request_id):
+     if len(params) != 1:
+        return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected header_hash",
@@ -168,46 +159,7 @@ async def rpc_handler(request: RpcRequest):
         if header_hash is None or len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
-                error={
-                    "code": -32602,
-                    "message": "Invalid parameters: expected header_hash",
-                },
-            )
-        ## TODO: Make a rocksdb search function that will fetch block with needed hash. As of now returning current state
-        if bytes(params["Hash"]):
-            return RpcResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                result=[
-                        StateTrie.root_hash,
-                    ],
-            )
-        else:
-            return RpcResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                error={"code": -32602, "message": "unexpected error"},
-            )
-
-##--------------------------------------------------------------------------------
-
-    elif method == "statistics":
-        if len(params) != 1:
-            return RpcResponse(
-                jsonrpc="2.0",
-                id=request.id,
-                error={
-                    "code": -32602,
-                    "message": "Invalid parameters: expected header_hash",
-                },
-            )
-
-        header_hash = params.get("Hash")
-        if header_hash is None or len(header_hash) != 32:
-            return RpcResponse(
-                jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected header_hash",
@@ -218,23 +170,20 @@ async def rpc_handler(request: RpcRequest):
         # As of now returning current state
 
         if bytes(params["Hash"]):
-            return RpcResponse(
-                jsonrpc="2.0", 
-                id=request.id, 
-                result=[State.pi.encode()]
-            )
+            return [State.pi.encode()]
+            
         else:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={"code": -32602, "message": "unexpected error"},
             )
-##------------------------------------------------------------------------
-    elif method == "serviceData":
-        if len(params) != 2:
-            return RpcResponse(
+
+def service_data_handler(params, request_id):
+    if len(params) != 2:
+        return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected header_hash and ServiceId",
@@ -247,7 +196,7 @@ async def rpc_handler(request: RpcRequest):
         if service_id is None:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
@@ -257,7 +206,7 @@ async def rpc_handler(request: RpcRequest):
         if header_hash is None or len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected header_hash",
@@ -269,29 +218,24 @@ async def rpc_handler(request: RpcRequest):
 
         
         if params["serviceId"]:
-            return RpcResponse(
-                jsonrpc="2.0", 
-                id=request.id, 
-                result=[state.delta[service_id]]              
-                    )
+            return [state.delta[service_id]]              
+                    
         else:
             return RpcResponse(
                 jsonrpc="2.0",
                 id=request.id,
                 error={"code": -32602, "message": "unexpected error"},
             )
-        
-##--------------------------------------------------------------------------------
-    elif method == "serviceValue":
-        if len(params) or not(params) != 3:
-            return RpcResponse(
+def service_value_handler(params, request_id):
+    if len(params) or not(params) != 3:
+        return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected header_hash and ServiceId",
                 },
-            )
+             )
 
         header_hash = params.get("Hash")
         service_id = params.get("ServiceId")
@@ -300,7 +244,7 @@ async def rpc_handler(request: RpcRequest):
         if header_hash is None or len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected header_hash",
@@ -310,7 +254,7 @@ async def rpc_handler(request: RpcRequest):
         if service_id is None:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
@@ -320,7 +264,7 @@ async def rpc_handler(request: RpcRequest):
         if blob is None:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected Blob",
@@ -333,24 +277,21 @@ async def rpc_handler(request: RpcRequest):
             return StorageView(service_id, main_db, StateTrie())
 
         if bytes(params["Hash"]) and params["serviceId"] and params["Blob"] :
-            return RpcResponse(
-                jsonrpc="2.0", 
-                id=request.id,
                 ##TODO: resolve this correctly
-                result=[service_storage()[ByteArray32(blob_key)]]
-            )
+            return [service_storage()[ByteArray32(blob_key)]]
+            
         else:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={"code": -32602, "message": "unexpected error"},
             )
 
-    elif method == "servicePreimage":
-        if params is None or len(params) != 2:
-            return RpcResponse(
+def service_preimage_handler(params, request_id):
+    if params is None or len(params) != 2:
+        return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected header_hash and ServiceId",
@@ -365,7 +306,7 @@ async def rpc_handler(request: RpcRequest):
         if header_hash is None or len(header_hash) != 32:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected header_hash",
@@ -375,7 +316,7 @@ async def rpc_handler(request: RpcRequest):
         if service_id is None:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
@@ -384,7 +325,7 @@ async def rpc_handler(request: RpcRequest):
         if blob is None:
             return RpcResponse(
                 jsonrpc="2.0",
-                id=request.id,
+                id=request_id,
                 error={
                     "code": -32602,
                     "message": "Invalid parameters: expected Blob",
@@ -409,328 +350,143 @@ async def rpc_handler(request: RpcRequest):
                 id=request.id,
                 error={"code": -32602, "message": "unexpected error"},
             )
-    elif method == "serviceRequest":
-            if len(params) != 4:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={
-                        "code": -32602,
-                        "message": "Invalid parameters: expected header_hash and ServiceId",
-                    },
-                )
-
-            header_hash = params.get("Hash")
-            service_id = params.get("ServiceId")
-            hash = params.get("Hash")
-            preimage_len = params.get("u32")
-            
-            if header_hash is None or len(header_hash) != 32:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={
-                        "code": -32602,
-                        "message": "Invalid parameters: expected header_hash",
-                    },
-                )
-        
-            if service_id is None:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={
-                        "code": -32602,
-                        "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
-                    },
-                )
-            if hash is None:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={
-                        "code": -32602,
-                        "message": "Invalid parameters: expected hash",
-                    },
-                )
-            
-            if preimage_len is None:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={
-                        "code": -32602,
-                        "message": "Invalid parameters: expected preimage_len",
-                    },
-                )
-            def service_lookup()-> TimestampsView:
-                return TimestampsView(service_id, main_db, StateTrie())
-        
-   
-            #TODO: check if service id is in the state 
-            if  params["Hash"] and params["u32"]:
-                return RpcResponse(
-                    jsonrpc="2.0", 
-                    id=request.id, 
-                    result=[service_lookup()[LookupTable(hash, preimage_len)]]
-                )
-            else:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={"code": -32602, "message": "unexpected error"},
-                )
-    elif method == "beefyRoot":
-            if len(params) != 1:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={
-                        "code": -32602,
-                        "message": "Invalid parameters: expected header_hash and ServiceId",
-                    },
-                )
-
-            header_hash = params.get("Hash")
-
-        
-            if header_hash is None or  len(header_hash) != 32:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={
-                        "code": -32602,
-                        "message": "Invalid parameters: expected header_hash",
-                    },
-                )
-
-            #TODO: check if service id is in the state 
-            if bytes(params["Hash"]) :
-                return RpcResponse(
-                    jsonrpc="2.0", 
-                    id=request.id, 
-                    result=[State.delta]
-                )
-            else:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={"code": -32602, "message": "unexpected error"},
-                )
-    elif method == "submitPreimage":
-            if len(params) != 1:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={
-                        "code": -32602,
-                        "message": "Invalid parameters: expected header_hash and ServiceId",
-                    },
-                )
-
-            header_hash = params.get("Hash")
-
-        
-            if header_hash is None or len(header_hash) != 32:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={
-                        "code": -32602,
-                        "message": "Invalid parameters: expected header_hash",
-                    },
-                )
-
-            #TODO: check if service id is in the state 
-            if bytes(params["Hash"]):
-                return RpcResponse(
-                    jsonrpc="2.0", 
-                    id=request.id, 
-                    result=[State.delta]
-                )
-            else:
-                return RpcResponse(
-                    jsonrpc="2.0",
-                    id=request.id,
-                    error={"code": -32602, "message": "unexpected error"},
-                )       
-    # Default case for unrecognized methods
-    return RpcResponse(
-        jsonrpc="2.0",
-        id=request.id,
-        error={"code": -32601, "message": "Method not found"},
-    )
-
-
-
-class SubscriptionManager:
-    def __init__(self):
-        self.active_connections = {}
-        self.subscriptions = {}
-        # Track the last known position in the updates queue
-        self.last_queue_position = 0
     
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections[websocket] = set()
-    
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            # Remove all subscriptions for this client
-            for method in self.active_connections[websocket]:
-                if method in self.subscriptions and websocket in self.subscriptions[method]:
-                    self.subscriptions[method].remove(websocket)
-            del self.active_connections[websocket]
-    
-    def subscribe(self, websocket: WebSocket, method: str):
-        if method not in self.subscriptions:
-            self.subscriptions[method] = set()
-        self.subscriptions[method].add(websocket)
-        self.active_connections[websocket].add(method)
-    
-    def unsubscribe(self, websocket: WebSocket, method: str):
-        if method not in self.subscriptions or websocket not in self.subscriptions[method]:
-            return False
-        self.subscriptions[method].remove(websocket)
-        self.active_connections[websocket].remove(method)
-        return True
-    
-    async def broadcast(self, method, message):
-        if method in self.subscriptions:
-            disconnected_websockets = []
-            for websocket in self.subscriptions[method]:
-                try:
-                    response = {
-                        "jsonrpc": "2.0",
-                        "method": method,
-                        "params": {"subscription": method, "result": message}
-                    }
-                    await websocket.send_text(json.dumps(response))
-                except Exception:
-                    disconnected_websockets.append(websocket)
-            
-            # Clean up disconnected websockets
-            for websocket in disconnected_websockets:
-                self.disconnect(websocket)
+def service_request_handler(params, request_id):
+    if len(params) != 4:
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request_id,
+            error={
+                "code": -32602,
+                "message": "Invalid parameters: expected header_hash and ServiceId",
+            },
+        )
 
-# Create a global instance of the subscription manager
-#TODO: Can this be used as a global
-manager = SubscriptionManager()
+    header_hash = params.get("Hash")
+    service_id = params.get("ServiceId")
+    hash = params.get("Hash")
+    preimage_len = params.get("u32")
 
-# Create a global updates queue for tracking database changes
-updates_queue = StorageQueue("db_updates")
+    if header_hash is None or len(header_hash) != 32:
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request_id,
+            error={
+                "code": -32602,
+                "message": "Invalid parameters: expected header_hash",
+            },
+        )
 
-@app.websocket("/rpc.tessera")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+    if service_id is None:
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request_id,
+            error={
+                "code": -32602,
+                "message": "Invalid parameters: expected ServiceId as single numeric item between 0 and 2^(32)−1 inclusive",
+            },
+        )
+
+    if hash is None:
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request_id,
+            error={
+                "code": -32602,
+                "message": "Invalid parameters: expected hash",
+            },
+        )
+
+    if preimage_len is None:
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request_id,
+            error={
+                "code": -32602,
+                "message": "Invalid parameters: expected preimage_len",
+            },
+        )
+
+    def service_lookup() -> TimestampsView:
+        return TimestampsView(service_id, main_db, StateTrie())
+
+    # TODO: check if service id is in the state
+    if params["Hash"] and params["u32"]:
+        return [service_lookup()[LookupTable(hash, preimage_len)]]
+    else:
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request_id,
+            error={"code": -32602, "message": "unexpected error"},
+        )
+
+method_map = {
+    "bestBlock": best_block_handler,
+    "finalizedBlock": finalized_block_handler,
+    "parent": parent_block_handler,
+    "stateRoot": state_root_handler,
+    "statistics": statistics_handler,
+    "serviceData" : service_data_handler,
+    "serviceValue" : service_value_handler,
+    "servicePreimage" : service_preimage_handler,
+    "serviceRequest" : service_request_handler,
+    "beefyRoot" : beefy_root_handler,
+    "submitPreimage" : submit_preimage_handler,
+}
+
+# Request model
+class RpcRequest(BaseModel):
+    method: str
+    jsonrpc: str
+    params: Dict[str, Any]
+    id: Optional[Any]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "method": "statistics",
+                "jsonrpc": "2.0",
+                "params": {
+                    "Hash": [9, 22, 47, 0, 129, 231, 187, 27, 132, 92, 215, 134, 177, 181, 78, 139, 163, 206, 87, 173, 138, 231, 16, 253, 5, 145, 172, 130, 208, 197, 4, 223]
+                },
+                "id": 1,
+            }
+        }
+
+class RpcResponse(BaseModel):
+    jsonrpc: str
+    result: Any = None
+    error: Optional[Dict[str, Any]] = None
+    id: Optional[int]
+
+
+@app.post("/rpc.tessera", response_model=RpcResponse)
+async def rpc_handler(request: RpcRequest):
+    """
+    RPC requests for different methods.
+    """
+    method = request.method
+    handler = method_map.get(method)
+
+    if not handler:
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request.id,
+            error={"code": -32601, "message": f"Method '{method}' not found"}
+        )
+
     try:
-        while True:
-            # Wait for client to send subscription requests
-            data = await websocket.receive_text()
-            try:
-                request = json.loads(data)
-                # Handle subscription requests
-                if "method" in request and "id" in request:
-                    method = request["method"]
-                    if method == "subscribeStatistics":
-                        # Subscribe to statistics
-                        manager.subscribe(websocket, "subscribeStatistics")
-                        # Send immediate response with current data
-                        response = RpcResponse(
-                            jsonrpc="2.0",
-                            id=request["id"],
-                            result=[State.pi.encode()]
-                        )
-                        await websocket.send_text(response.json())
-                    elif method == "unsubscribe" and "params" in request:
-                        # Unsubscribe from a specific method
-                        unsub_method = request["params"]["method"]
-                        success = manager.unsubscribe(websocket, unsub_method)
-                        response = {
-                            "jsonrpc": "2.0",
-                            "id": request["id"],
-                            "result": {"success": success},
-                        }
-                        await websocket.send_text(json.dumps(response))
-                    else:
-                        # Unknown method
-                        error_response = {
-                            "jsonrpc": "2.0",
-                            "error": {"code": -32601, "message": "Method not found"},
-                            "id": request["id"],
-                        }
-                        await websocket.send_text(json.dumps(error_response))
-            except json.JSONDecodeError:
-                error_response = {
-                    "jsonrpc": "2.0",
-                    "error": {"code": -32700, "message": "Parse error"},
-                    "id": None,
-                }
-                await websocket.send_text(json.dumps(error_response))
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-
-def get_blockchain_statistics():
-    # Generate random blockchain statistics
-    block_height = random.randint(12000, 13000)
-    transactions = random.randint(5000, 6000)
-    hash_rate = f"{random.uniform(10.0, 15.0):.1f} TH/s"
-    timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    
-    return {
-        "blockHeight": block_height,
-        "transactions": transactions,
-        "hashRate": hash_rate,
-        "timestamp": timestamp,
-    }
-
-@app.on_event("startup")
-async def start_broadcasters():
-    # Start the queue polling task
-    asyncio.create_task(poll_updates_queue())
-
-
-async def poll_updates_queue(interval=1):
-    """
-    updates queue for new entries and broadcast them to subscribers.
-    """
-    global manager, updates_queue
-    
-    while True:
-        try:
-            # Get queue metadata to check if there are new items
-            metadata = updates_queue.metadata(db)
-            current_tail = int(metadata.tail) if metadata else 0
-            
-            # If there are new entries, process them
-            if current_tail > manager.last_queue_position:
-                # Get  new entries since last position
-                count = current_tail - manager.last_queue_position
-                new_entries = updates_queue.get(db, count, manager.last_queue_position)
-                
-                if new_entries:
-                    # Parse the entries
-                    updates = []
-                    for entry in new_entries:
-                        try:
-                             # Parse the entry into `update_data`
-                             update_data = entry.decode("utf-8")  # Example: decoding bytes to string
-                             updates.append(update_data) 
-                        except:
-                            print(f"Error parsing update: {entry}")
-                    
-                    # If we have valid updates, broadcast them
-                    if updates:
-                        stats = get_blockchain_statistics()
-                        stats["updates"] = updates
-                        await manager.broadcast("subscribeStatistics", stats)
-                
-                # Update our position in the queue
-                manager.last_queue_position = current_tail
-                
-        except Exception as e:
-            print(f"[poll_updates_queue] Error: {e}")
-        
-        # Wait before next poll
-        await asyncio.sleep(interval)
-
+        result = handler(request.params, request.id)
+        print(f"Handler result: {result}")
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request.id,
+            result=result
+        )
+    except Exception as e:
+        print(f"Error in handler: {e}")
+        return RpcResponse(
+            jsonrpc="2.0",
+            id=request.id,
+            error={"code": -32000, "message": str(e)}
+        )
