@@ -435,7 +435,7 @@ class Accumulation:
 
     @staticmethod
     def selection_fn(
-        deferred_transfers: DeferredTransfers, service_id: ServiceId
+        deferred_transfers: DeferredTransfers, delta: Delta
     ) -> DeferredTransfers:
         """
         Selection function R defined in Eq 12.23
@@ -452,7 +452,7 @@ class Accumulation:
 
         service_transfers = DeferredTransfers([])
         for i in deferred_transfers:
-            if i.receiver == service_id:
+            if i.receiver in delta:
                 service_transfers.append(i)
         return service_transfers
 
@@ -499,7 +499,7 @@ class Accumulation:
         # Section 12.1: History & Queuing (Step 1 & 2)
         # ----------------------
 
-        new_state: Sigma = dataclasses.replace(pre_state)
+        new_state =pre_state
 
         # Ready Queue
         nu = new_state.nu
@@ -575,7 +575,7 @@ class Accumulation:
         [work_accl_no, updated_state, deferred_transfers, commitment_map,gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, pre_state.chi.chi_g, block.header.slot)
 
         # Update Delta Dagger, Chi, Iota, Phi
-        new_state.delta = updated_state.service_accounts
+        # new_state.delta = updated_state.service_accounts
         new_state.chi = updated_state.privileges
         new_state.iota = updated_state.validator_keys
         new_state.phi = updated_state.authorizer_keys
@@ -586,8 +586,10 @@ class Accumulation:
         # ----------------------
 
         # Update Delta Double Dagger
-        for s in new_state.delta:
-            specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
+        specific_transfers = Accumulation.selection_fn(deferred_transfers,new_state.delta)
+
+        # for s in new_state.delta:
+        #     specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
             # delta_double_dagger
             # new_state.delta[s] = Accumulation.psi_t(new_state.delta, block.header.slot, s, specific_transfers)
             # TODO uncomment
