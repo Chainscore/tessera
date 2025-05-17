@@ -13,7 +13,7 @@ from jam.types.header import (
     OptionalTicketsMark,
     OffendersMark,
 )
-from tests.dummy.utils import create_dummy_bytes32, create_dummy_bytes
+from jam.utils.dummy.utils import create_dummy_bytes32, create_dummy_bytes
 
 
 def create_dummy_header() -> Header:

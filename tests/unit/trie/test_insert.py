@@ -3,7 +3,7 @@ from jam.state.merkle.utils import ZERO_HASH
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.utils.byte_utils import ByteUtils
-from tests.dummy.utils import create_dummy_bytes
+from jam.utils.dummy.utils import create_dummy_bytes
 
 def to_32by(value: list) -> bytes:
     return ByteUtils.bitarray_to_bytes(value + [0] * (256 - len(value)))

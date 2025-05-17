@@ -43,7 +43,7 @@ from jam.merklization.binary_merkle import BMRFunctions
 from jam.hostCall.Refine import PsiR
 from jam.hostCall.invocation import PsiI
 
-from tests.dummy.utils import create_dummy_bytes32
+from jam.utils.dummy.utils import create_dummy_bytes32
 
 
 class WorkPackageProcessing:

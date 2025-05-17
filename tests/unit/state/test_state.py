@@ -6,7 +6,7 @@ from jam.types import ByteArray32, ServiceId, U64, U32, Bytes
 from jam.types.protocol.core import Balance
 from jam.types.protocol.crypto import Hash
 from jam.types.state import Eta, Tau, LookupTimestamps, LookupTable, Timestamps
-from tests.dummy.utils import create_dummy_bytes
+from jam.utils.dummy.utils import create_dummy_bytes
 
 
 def test_state_sync(db_path):

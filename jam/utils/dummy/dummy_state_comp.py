@@ -63,7 +63,7 @@ from jam.utils.constants import (
     MAX_AUTH_QUEUE_ITEMS,
     VALIDATOR_COUNT,
 )
-from tests.dummy.utils import create_dummy_bytes, create_dummy_bytes32
+from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32
 
 
 def create_dummy_state_components() -> Dict[str, object]:
