@@ -79,6 +79,7 @@ class Program(Codable, JsonSerde):
         branch: ProgramCounter, 
         condition: bool
     ) -> Tuple[ExecutionStatus, ProgramCounter]:
+        print(f"🦘 Jump {int(branch)} if {condition}")
         if not condition:
             return CONTINUE, counter
         elif branch not in self.basic_blocks:
