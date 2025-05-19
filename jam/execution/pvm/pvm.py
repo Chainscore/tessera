@@ -39,9 +39,9 @@ class PVM:
         """
         program, _ = Program.decode_from(blob)
         remaining_gas = int(gas)
-        print("# \t Inst \t  Bitmask ")
-        for i, inst in enumerate(program.instruction_set[int(program_counter):]):
-            print(f"{i} \t {inst} \t {"✅" if program.offset_bitmask[i] else ""}")
+        # print("# \t Inst \t  Bitmask ")
+        # for i, inst in enumerate(program.instruction_set[int(program_counter):]):
+        #     print(f"{i} \t {inst} \t {"✅" if program.offset_bitmask[i] else ""}")
         while True:
             try:
                 opcode: U8 = program.zeta[program_counter]

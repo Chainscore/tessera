@@ -30,6 +30,7 @@ class Program(Codable, JsonSerde):
     jump_table: List
     instruction_set: List
     offset_bitmask: List
+    basic_blocks: List
 
     def __init__(
         self,
@@ -42,6 +43,14 @@ class Program(Codable, JsonSerde):
         self.jump_table = jump_table
         self.instruction_set = instruction_set
         self.offset_bitmask = offset_bitmask
+        basic_blocks = [0]
+        for n in range(len(self.instruction_set)):
+            if (
+                    self.offset_bitmask[n] and
+                    self.instruction_set[n].value in InstTableMap.terminating_blocks()
+            ):
+                basic_blocks.append(n + 1 + self.skip(n))
+        self.basic_blocks = basic_blocks
 
     @property
     def zeta(self) -> Zeta:
@@ -64,23 +73,6 @@ class Program(Codable, JsonSerde):
                 break
         return min(24, value) # Reached the end of the bitmask.
 
-    @property
-    def basic_blocks(self) -> List[int]:
-        """Get the basic blocks of the program. ie. sequences of instructions
-        where the code sequence starts.
-
-        Returns:
-            List[U8]: List of basic blocks
-        """
-        basic_blocks = [0]
-        for n in range(len(self.instruction_set)):
-            if (
-                self.offset_bitmask[n] and 
-                self.instruction_set[n].value in InstTableMap.terminating_blocks()
-            ):
-                basic_blocks.append(n + 1 + self.skip(n))
-        return basic_blocks
-    
     def branch(
         self,
         counter: ProgramCounter, 
@@ -107,7 +99,7 @@ class Program(Codable, JsonSerde):
             a % PVM_ADDR_ALIGNMENT != 0 or
             self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1] not in self.basic_blocks
         ):
-            raise PvmError(PvmErrorCodes.PANIC)
+            raise PvmError(PANIC)
         return CONTINUE, self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1]
     
     def encode_size(self) -> int:
