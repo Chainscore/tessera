@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+
+from jam.types.base import String
 from jam.types.base.choices.option import Option, decodable_option
 from jam.types.base.enum import Enum, decodable_enum
 from jam.types.base.integers.fixed import U64, U8
@@ -15,18 +17,19 @@ class OptionalRegister(Option):
 @decodable_dataclass
 @dataclass
 class ExecValue(Codable):
+    name: String
     code: U8
     register: OptionalRegister
 
 
 @decodable_enum
 class ExecutionStatus(Enum):
-    HALT         = ExecValue(U8(0), OptionalRegister(Null))
-    PANIC        = ExecValue(U8(1), OptionalRegister(Null))
-    PAGE_FAULT   = ExecValue(U8(2), OptionalRegister(Null))
-    HOST         = ExecValue(U8(3), OptionalRegister(Null))
-    OUT_OF_GAS   = ExecValue(U8(4), OptionalRegister(Null))
-    CONTINUE     = ExecValue(U8(5), OptionalRegister(Null))
+    HALT         = ExecValue(String("halt"), U8(0), OptionalRegister(Null))
+    PANIC        = ExecValue(String("panic"), U8(1), OptionalRegister(Null))
+    PAGE_FAULT   = ExecValue(String("page-fault"), U8(2), OptionalRegister(Null))
+    HOST         = ExecValue(String("host"), U8(3), OptionalRegister(Null))
+    OUT_OF_GAS   = ExecValue(String("out-of-gas"), U8(4), OptionalRegister(Null))
+    CONTINUE     = ExecValue(String("continue"), U8(5), OptionalRegister(Null))
 
 @decodable_enum
 class HostStatus(Enum):
@@ -48,14 +51,15 @@ PANIC = ExecutionStatus.PANIC
 # Page fault with a register value
 def PAGE_FAULT(register: Register) -> ExecutionStatus:
     result = ExecutionStatus.PAGE_FAULT
-    result.register = OptionalRegister(register)
+    result.value.register = OptionalRegister(register)
+    print(result.value, OptionalRegister(register), register)
     return result
 # Halt
 HALT = ExecutionStatus.HALT
 # Host call with a register value
 def HOST(register: Register) -> ExecutionStatus:
     result = ExecutionStatus.HOST
-    result.register = OptionalRegister(register)
+    result.value.register = OptionalRegister(register)
     return result
 # Out of gas
 OUT_OF_GAS = ExecutionStatus.OUT_OF_GAS
