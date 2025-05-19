@@ -3,6 +3,7 @@ from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.protocol.core import Gas, ServiceId
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from jam.utils.json import JsonSerde
 from jam.utils.json.decorators import with_json_metadata
 
 
@@ -28,7 +29,7 @@ class ChiG(Dictionary[ServiceId, Gas]):
 )
 @decodable_dataclass
 @dataclass
-class Chi(Codable):
+class Chi(Codable, JsonSerde):
     """Chi state"""
 
     chi_m: ChiM

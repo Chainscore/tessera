@@ -15,18 +15,18 @@ class Memory:
     """
 
     ADDR_MOD = 2 ** 32
-    LOW_BOUND = 2 ** 16
-    HEAP_START = 0x100000
+    LOW_BOUND = 0
+    HEAP_START = 0
 
     data: Dict[int, int]
 
-    def __init__(self, data: Dict[int, int] = {}, allowed_read_pages=[], allowed_write_pages=[]):
+    def __init__(self, data: Dict[int, int] = {}, allowed_read_pages=[], allowed_write_pages=[], heap = 0):
         """
         Initialize the Memory structure.
 
         Args:
-            allowed_read_pages (set): Set of page numbers allowed for read access.
-            allowed_write_pages (set): Set of page numbers allowed for write access.
+            allowed_read_pages (list): Set of page numbers allowed for read access.
+            allowed_write_pages (list): Set of page numbers allowed for write access.
         """
         self.allowed_read_pages = allowed_read_pages
         self.allowed_write_pages = allowed_write_pages
@@ -37,6 +37,20 @@ class Memory:
             if not isinstance(addr, U32) or not isinstance(val, Byte) or val < 0 or val > 255:
                 raise Exception(f"Memory: Invalid memory value at address {addr}: {val}. {not isinstance(addr, U32)} or {not isinstance(val, Byte)} or {val < 0} or {val > 255}")
         self.data = data
+        self.HEAP_START = heap
+        self.heap_break = heap
+
+    def page_aligned(self, addr: int) -> int:
+        return (addr + PVM_MEMORY_PAGE_SIZE - 1) & ~(PVM_MEMORY_PAGE_SIZE - 1)
+
+    def mark_heap_pages(self, pages: list[int]) -> None:
+        # RW for the VM means: present in allowed_write_pages
+        for p in pages:
+            if p not in self.allowed_write_pages:
+                self.allowed_write_pages.append(p)
+            # make them readable too (symmetric mapping helps debugging)
+            if p not in self.allowed_read_pages:
+                self.allowed_read_pages.append(p)
 
     def _check_address(self, addr: int, for_write=False):
         """
@@ -145,7 +159,7 @@ class Memory:
         for i, byt in enumerate(args):
             memory[U32(arg_start+i)] = Byte(byt)
 
-        return cls(memory, read_pages, write_pages)
+        return cls(memory, read_pages, write_pages, heap=write_start)
 
     def total_page_size(blob_len: int) -> int:
         """

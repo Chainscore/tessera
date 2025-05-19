@@ -233,8 +233,8 @@ class InstructionsWArgs3Reg(InstructionTable):
     
     def _op(op: str, inv_a = False, inv_b = False, inv_res = False):
         def op_impl(self, registers: Registers, memory: Memory) -> OpReturn:
-            ba = PvmUtilities.b(registers[self.ra], 8)
-            bb = PvmUtilities.b(registers[self.rb], 8)
+            ba = PvmUtilities.b(int(registers[self.ra]), 8)
+            bb = PvmUtilities.b(int(registers[self.rb]), 8)
             result = [0] * 64
             for i in range(64):
                 a = (not ba[i]) if inv_a else ba[i]

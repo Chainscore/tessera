@@ -31,9 +31,9 @@ class InvocationProtocol(Protocol):
     def table(self) -> Dict[int, InvocationInfo]: ...
 
     def dispatch(self, host_call: int, gas: Gas, registers: Registers, memory: Memory, x: Context) -> DispatchReturn:
+        print(f">> Host call: {host_call}")
         if host_call not in self.table():
             registers[7] = Register(HostStatus.WHAT.value)
             return ExecutionStatus.CONTINUE, gas - 10, registers, memory, x
         info = self.table()[host_call]
-        print(f">> Host call: {host_call}")
         return info[0].execute(host_call, gas=gas, registers=registers, memory=memory, context=x, args=info[1])

@@ -22,7 +22,7 @@ class PsiH:
         context: Any
     ) -> HostCallReturn:
         status, pc, remaining_gas, registers, memory = PVM.execute(blob, pc, gas, registers, memory)
-        print(f"PVM Exit {status}")
+        print(f"PVM Exit {status} {status.value}")
         if (
             status == ExecutionStatus.PANIC
             or status == ExecutionStatus.OUT_OF_GAS

@@ -87,7 +87,7 @@ class Sigma(Codable, JsonSerde):
     # Defined in section 13
     pi: Pi
 
-    # Accumulation queue for ready work-reports
+    # Accumulation ready work-reports
     # Defined in section 12
     nu: Nu
 

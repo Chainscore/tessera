@@ -4,7 +4,7 @@ from jam.execution.host_calls.invocations.functions.protocol import InvocationFu
 from jam.execution.pvm import register
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
-from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus
+from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus, PvmError
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.crypto import Hash
 from jam.types.state import delta
@@ -171,7 +171,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(12, gas_cost=10)
-    def eject(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
+    def eject(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext, block_timeslot:TimeSlot):
         [d,o]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)

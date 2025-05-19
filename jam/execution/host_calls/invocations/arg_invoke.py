@@ -21,7 +21,6 @@ class PsiM:
     ) -> ArgInvokeReturn:
         try:
             code, registers, memory = y_function(bytes(Bytes(blob)), arguments)
-            print(f"Registers: {registers}")
         except DecodeError:
             return Gas(0), PANIC, context
         return PsiM.R(

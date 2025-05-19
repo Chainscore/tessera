@@ -1,12 +1,19 @@
+from math import ceil
 from typing import Any, Callable, Dict
 from jam.execution.pvm.instructions.opcode import OpCode, OpReturn
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
-from jam.execution.pvm.status import CONTINUE
+from jam.execution.pvm.status import CONTINUE, PvmError, PAGE_FAULT
 from jam.execution.pvm.utils import PvmUtilities
 from jam.execution.pvm.instructions.instruction_table import InstructionTable
+from jam.types.base import U64
 from jam.types.protocol.core import Gas, Register
+from jam.utils.constants import PVM_MEMORY_PAGE_SIZE
 
+def ceil_pages(n: int) -> int:
+    return (n + PVM_MEMORY_PAGE_SIZE - 1) // PVM_MEMORY_PAGE_SIZE
+
+FAIL_SENTINEL = 1 << 63        # 0x8000_0000_0000_0000  (spec § VM Invocations)
 
 class InstructionsWArgs2Reg(InstructionTable):
     @property
@@ -37,9 +44,41 @@ class InstructionsWArgs2Reg(InstructionTable):
     def move_reg(self, registers: Registers, memory: Memory) -> OpReturn:
         registers[self.rd] = registers[self.ra]
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
-    
+
     def sbrk(self, registers: Registers, memory: Memory) -> OpReturn:
-        # TODO Remove this call
+        req = int(registers[self.ra])  # bytes requested
+        if req == 0:  # ─── QUERY ONLY ───
+            registers[self.rd] = Register(memory.heap_break)
+            return CONTINUE, self.counter + self.skip_index + 1, registers, memory
+
+        pages_needed = ceil_pages(req)
+        region_size = pages_needed * PVM_MEMORY_PAGE_SIZE
+        limit = 2 ** 32
+
+        cursor = ((memory.heap_break + PVM_MEMORY_PAGE_SIZE - 1)
+                  // PVM_MEMORY_PAGE_SIZE) * PVM_MEMORY_PAGE_SIZE
+
+        while cursor + region_size <= limit:
+            cand_pages = memory.get_pages(cursor, cursor + region_size)
+
+            if all(p not in memory.allowed_read_pages
+                   and p not in memory.allowed_write_pages for p in cand_pages):
+                memory.allowed_read_pages.extend(cand_pages)  # R + W
+                memory.allowed_write_pages.extend(cand_pages)
+                memory.heap_break = cursor + region_size
+
+                registers[self.rd] = Register(cursor)  # <- Register!
+                return CONTINUE, self.counter + self.skip_index + 1, registers, memory
+
+            # skip over the run of mapped pages
+            cursor_page = cursor // PVM_MEMORY_PAGE_SIZE
+            while (cursor_page in memory.allowed_read_pages
+                   or cursor_page in memory.allowed_write_pages):
+                cursor_page += 1
+            cursor = cursor_page * PVM_MEMORY_PAGE_SIZE
+
+        # out of address space
+        registers[self.rd] = Register(FAIL_SENTINEL)
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     @staticmethod

@@ -16,10 +16,12 @@ class InstructionsWArgs1Imm(InstructionTable):
 
     @property
     def vx(self) -> int:
+        start = self.counter + 1
+        end = start + self.lx
         return PvmUtilities.chi(
             IntegerCodec.decode_from(
                 self.lx,
-                self.program.zeta[self.counter + 1 : self.counter + self.skip_index + 1]
+                self.program.zeta[start:end]
             )[0],
             self.lx,
         )

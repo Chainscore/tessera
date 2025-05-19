@@ -1,10 +1,9 @@
-import copy
-import dataclasses
 from copy import deepcopy
+from typing import Tuple, List, Set
 
 from jam.execution.host_calls.invocations.accumulate import PsiA
+from jam.types.base import Bytes, Null
 from jam.types.block import Block
-from jam.types.base.null import Null
 from jam.accumulation.types import (
     PreimageDict,
     GasAccumulations,
@@ -14,19 +13,16 @@ from jam.accumulation.types import (
     OperandTuples,
     OperandTuple,
 )
+from jam.types.protocol.crypto import Hash, OpaqueHash
 
 from jam.types.state.sigma import Sigma
-from jam.types.state.delta import Delta
-from jam.types.state.phi import Phi
+from jam.types.state.delta import Delta, LookupTable, Timestamps
 from jam.types.state.tau import Tau
-from jam.types.state.iota import Iota
 from jam.types.state.chi import ChiA, ChiG, ChiM, ChiV
 from jam.types.state.nu import AllReadyWRs, ReadyWR
 from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
-# from jam.hostCall.transfer import PsiT
-
 from jam.types.protocol.merkle import OptionHash
-from jam.types.protocol.core import Gas, ServiceId
+from jam.types.protocol.core import Gas, ServiceId, TimeSlot
 from jam.types.work.report import (
     WorkDependencies,
     WorkReports,
@@ -35,7 +31,8 @@ from jam.types.work.report import (
 )
 from jam.utils.constants import EPOCH_LENGTH
 
-
+GasConsumed = List[Tuple[ServiceId, Gas]]
+BeefyMap = Set[Tuple[ServiceId, OpaqueHash]]
 
 class Accumulation:
     @staticmethod
@@ -56,7 +53,7 @@ class Accumulation:
         for wr in work_reports:
             if len(
                 wr.context.prerequisites
-            ) == 0 and wr.segment_root_lookup == SegmentRootLookup([]):
+            ) == 0 and len(wr.segment_root_lookup) == 0:
                 filtered_reports.append(wr)
 
         return filtered_reports
@@ -168,7 +165,7 @@ class Accumulation:
         partial_state: StateContext,
         services: ChiG,
         timeslot: Tau,
-    ) -> tuple[int, StateContext, DeferredTransfers, AccumulationOutput,GasAccumulations]:
+    ) -> tuple[int, StateContext, DeferredTransfers, BeefyMap, GasConsumed]:
         """
         Outer accumulation function ∆+ defined in Eq 12.16
         Sequential Execution Pattern
@@ -200,43 +197,41 @@ class Accumulation:
             index = index + 1
 
         if index == 0:
-            return 0, partial_state, DeferredTransfers([]), AccumulationOutput({}),GasAccumulations([])
+            return 0, partial_state, DeferredTransfers([]), set(), []
 
         work_reports_start = work_reports[:index+1]
-        [partial_state_star, deferred_transfers_star, accl_outputs_star,gas_accumulations_star] = (
+
+        partial_state, transfers, outputs, gas_consumed = (
             Accumulation.parallel_accumulation(
                 partial_state, work_reports_start, services, timeslot
             )
         )
 
         work_reports_end = work_reports[index:]
-        gas_star=0
-        for i in gas_accumulations_star:
-            gas_star+=i.accumulated_gas
-
+        gas_star = Gas(0)
+        for _, gas in gas_consumed:
+            gas_star += gas
         gas_diff = gas_limit - gas_star
 
-        [j, partial_state_dash, deferred_transfers, accl_outputs,gas_accumulations] = (
+        j, partial_state, r_transfers, r_outputs, r_gas_consumed = (
             Accumulation.seq_accumulation(
-                gas_diff, work_reports_end, partial_state_star, ChiG({}), timeslot
+                gas_diff, work_reports_end, partial_state, ChiG({}), timeslot
             )
         )
 
-        deferred_transfers_star.extend(deferred_transfers)
-        gas_accumulations_star.extend(gas_accumulations)
-        for i in accl_outputs:
-            if i not in accl_outputs_star:
-                accl_outputs_star[i]=accl_outputs[i]
+        transfers.extend(r_transfers)
+        gas_consumed.extend(r_gas_consumed)
+        outputs.update(r_outputs)
 
-        return index + j, partial_state_dash, deferred_transfers_star, accl_outputs_star,gas_accumulations_star
+        return index + j, partial_state, transfers, outputs, gas_consumed
 
     @staticmethod
     def parallel_accumulation(
-        initial_state: StateContext,
+        partial_state: StateContext,
         work_reports: WorkReports,
-        services: ChiG,
+        privileged_services: ChiG,
         timeslot: Tau,
-    ) -> tuple[StateContext, DeferredTransfers, AccumulationOutput,GasAccumulations]:
+    ) -> Tuple[StateContext, DeferredTransfers, BeefyMap, GasConsumed]:
         """
         Parallelized accumulation function ∆* defined in Eq 12.17
         Non-Sequential, Service-Aggregated Execution Pattern
@@ -244,9 +239,9 @@ class Accumulation:
         into Tuple of Total gas utilized in PVM, Posterior state-context, Resultant deferred-transfers and Accumulation-output pairings
 
         Args:
-            initial_state (StateContext): The state context before accumulation, which includes service accounts and other mutable components.
+            partial_state (StateContext): The state context before accumulation, which includes service accounts and other mutable components.
             work_reports (WorkReports): A collection of work reports that are ready to be accumulated.
-            services (ChiG): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
+            privileged_services (ChiG): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
             timeslot (Tau): Curr TimeSlot τ′
 
         Returns:
@@ -257,93 +252,44 @@ class Accumulation:
             AccumulationOutput: A mapping of service indices to their corresponding accumulation outputs.
         """
 
-        # s: list[ServiceId] = []
-        s: set[ServiceId] = set()  # set of wr_service_ids && previleged service_ids
+        # All service IDs to accumulate
+        # s in 12.17
+        services: Set[ServiceId] = {
+            result.service_id
+            for report in work_reports
+            for result in report.results
+        }
+        services.update(privileged_services.keys())
 
-        u: Gas = 0  # accumulated gas
-        accl_output_pair = AccumulationOutput(
-            {}
-        )  # accumulation-output pairings (b/B)
-        t_cap: DeferredTransfers = DeferredTransfers([])
-        state: StateContext = initial_state
+        # Accumulated gas by each service
+        # u in 12.17
+        gas_consumed: GasConsumed = []
 
-        # collect all service_ids from the work-reports
-        for wr in work_reports:
-            for result in wr.results:
-                s.add(result.service_id)
+        # Accumulation output hashes
+        # b in 12.17
+        outputs: BeefyMap = set()
 
-        # collect service_ids from previleged services
-        for service_id in services:
-            s.add(service_id)
+        # Deferred transfers
+        # t_telda in 12.17
+        transfers = DeferredTransfers([])
 
-        for i in s:
-            [updated_partial_state, df_list, accl_output, gas,preimages] = (
-                Accumulation.single_accumulation(
-                    state, work_reports, services, ServiceId(i), timeslot
-                )
+
+        collected_preimages: Set[Tuple[ServiceId, Bytes]] = set()
+
+        for service in services:
+            partial_state, _transfers, _output_hash, _gas_consumed, _preimages = Accumulation.single_accumulation(
+                partial_state, work_reports, privileged_services, service, timeslot
             )
-            accumulated_gas.append(i,gas)
-            if accl_output is not None:
-                accl_output_pair[i]=accl_output
+            gas_consumed.append((service,_gas_consumed))
+            # print("_output_hash", _output_hash.get_value(), _output_hash.get_value() is not None, _output_hash is not None, _output_hash != Null, _output_hash.get_value() != Null)
+            if _output_hash != Null:
+                outputs.add((service, _output_hash.get_value()))
+            transfers.extend(_transfers)
+            collected_preimages.update(_preimages)
 
-            for t in df_list:
-                t_cap.append(t)
+        Accumulation.preimage_integration(partial_state.service_accounts, collected_preimages, timeslot)
 
-            for service_id in updated_partial_state.service_accounts:
-                if service_id not in dict_keys :
-                    m.add(service_id)
-                    n[service_id] = updated_partial_state.service_accounts[service_id]
-                elif service_id == i:
-                    n[service_id] = updated_partial_state.service_accounts[service_id]
-
-            for service in preimages:
-                preimage_dict[service]=preimages[service]
-
-            state = updated_partial_state
-
-        # state vars
-        d=Delta(state.service_accounts)
-        d = {service: n[service] for service in n if service not in d}
-        for service in m:
-            if service in d:
-                del d[service]
-
-        d_dash=p_function(d,preimage_dict)
-        m=ChiM(state.privileges.chi_m)
-        a=ChiA(state.privileges.chi_a)
-        v=ChiV(state.privileges.chi_v)
-        z=ChiG(state.privileges.chi_g)
-
-
-        [state, df_list, accl_output, gas] = (
-            Accumulation.single_accumulation(
-                state, work_reports, services, ServiceId(m), timeslot
-            )
-        )
-        # x_dash = state.privileges
-
-        [state, df_list, accl_output, gas] = (
-            Accumulation.single_accumulation(
-                state, work_reports, services, ServiceId(v), timeslot
-            )
-        )
-        # i_dash = state.validator_keys
-
-        [state, df_list, accl_output, gas] = (
-            Accumulation.single_accumulation(
-                state, work_reports, services, ServiceId(a), timeslot
-            )
-        )
-        # q_dash = state.authorizer_keys
-
-
-
-        state.service_accounts = d_dash
-        # state.privileges.m = x_dash
-        # state.validator_keys = i_dash
-        # state.authorizer_keys = q_dash
-
-        return state, t_cap, accl_output_pair,accumulated_gas
+        return partial_state, transfers, outputs, gas_consumed
 
     @staticmethod
     def single_accumulation(
@@ -352,7 +298,7 @@ class Accumulation:
         services: ChiG,
         service_id: ServiceId,
         timeslot: Tau,
-    ) -> tuple[StateContext, DeferredTransfers, OptionHash, Gas,PreimageDict]:
+    ) -> tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]:
         """
         Single-Service accumulation function ∆1 defined in Eq 12.19
         Transforms Initial Partial State, Sequence of Work Reports, Dictionary of services (free, privileged accumulation), and Service index
@@ -402,36 +348,30 @@ class Accumulation:
                     g += j.accumulate_gas
         posterior_state, transfers, optional_hash, gas, preimage = PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=p).execute()
 
-        print("PsiA result:", posterior_state, transfers, optional_hash, gas, preimage)
-
-        return posterior_state, transfers, optional_hash, gas
+        return posterior_state, transfers, optional_hash, gas, preimage
 
     @staticmethod
-    def p_function(accounts:Delta,preimages:PreimageDict)->Delta:
-        for service_id in preimages:
-            if accounts[service_id] is not None:
-                if accounts[service_id].timestamps[LookupTable(Hash.blake2b(preimages[service_id]),len(preimages[service_id]))]==[]:
-                    accounts[service_id].timestamps[LookupTable(Hash.blake2b(preimages[service_id]),len(preimages[service_id]))]=[state.tau]
-                    accounts[service_id].lookup[Hash.blake2b(preimages[service_id])]==preimages[service_id]
+    def preimage_integration(accounts: Delta, preimages: Set[Tuple[ServiceId, Bytes]], timeslot: Tau) -> Delta:
+        """
+        Preimage integration function - transforms a dictionary of service states and a set of service/hash pairs
+        into a new dictionary of service states
+        Args:
+            timeslot: current timeslot
+            accounts: Delta
+            preimages: (ServiceId, Bytes)
 
-    @staticmethod
-    def psi_a(
-        partial_state: StateContext,
-        tau: Tau,
-        service_id: ServiceId,
-        g: Gas,
-        p: OperandTuples,
-    ) -> tuple[StateContext, DeferredTransfers, OptionHash, Gas]:
-        return partial_state, DeferredTransfers([]), OptionHash(Null), g
-
-    @staticmethod
-    def psi_t(
-        delta: Delta,
-        time: Tau,
-        service_id: ServiceId,
-        deferred_transfers: DeferredTransfers,
-    ) -> Delta:
-        return delta
+        Returns:
+            updated_accounts: Delta
+        """
+        for service_id, blobs in preimages:
+            service = accounts[service_id]
+            if service is None:
+                raise ValueError("[Accumulation] Unexpected: Received preimage for a service that does not exist")
+            key_hash = Hash.blake2b(blobs)
+            lookup = LookupTable(key_hash, len(blobs))
+            if len(service.timestamps[lookup]) == 0:
+                service.timestamps[lookup] = Timestamps([timeslot])
+                service.lookup[key_hash] = blobs
 
     @staticmethod
     def selection_fn(
@@ -456,10 +396,6 @@ class Accumulation:
                 service_transfers.append(i)
         return service_transfers
 
-    @staticmethod
-    def wr_si_specific(pre_state: Sigma, block: Block) -> WorkReports:
-        return WorkReports([])
-
     @classmethod
     def transition(cls, pre_state: Sigma, block: Block):
         """
@@ -482,8 +418,6 @@ class Accumulation:
             Update accumulation and ready queues, i.e., Xi, Nu state components
             Defined in eqn 12.25 - 12.27
 
-
-
         Source:
             https://graypaper.fluffylabs.dev/#/85129da/159902159902?v=0.6.3
 
@@ -499,7 +433,7 @@ class Accumulation:
         # Section 12.1: History & Queuing (Step 1 & 2)
         # ----------------------
 
-        new_state =pre_state
+        new_state = pre_state
 
         # Ready Queue
         nu = new_state.nu
@@ -523,7 +457,7 @@ class Accumulation:
         for wr in work_reports:
             if len(
                 wr.context.prerequisites
-            ) > 0 or wr.segment_root_lookup != SegmentRootLookup([]):
+            ) > 0 or len(wr.segment_root_lookup) == 0:
                 rq = cls.queue_creator_fn(wr)
                 queued_wr.append(rq)
 
@@ -572,14 +506,13 @@ class Accumulation:
             service_gas+=pre_state.chi.chi_g[i]
 
         gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT)+service_gas))
-        [work_accl_no, updated_state, deferred_transfers, commitment_map,gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, pre_state.chi.chi_g, block.header.slot)
+        [work_accl_no, updated_state, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, pre_state.chi.chi_g, block.header.slot)
 
         # Update Delta Dagger, Chi, Iota, Phi
         # new_state.delta = updated_state.service_accounts
         new_state.chi = updated_state.privileges
         new_state.iota = updated_state.validator_keys
         new_state.phi = updated_state.authorizer_keys
-
 
         # ----------------------
         # Section 12.3 Deferred Transfers & State Integration (Step 4)
@@ -622,8 +555,3 @@ class Accumulation:
         # ----------------------
 
         return new_state
-
-
-# print(Accumulation.seq_accumulation(gas_limit=Gas(100), work_reports=create_dummy_reports(), services=ChiG({ServiceId(1):Gas(10)}),  partial_state=create_dummy_state_context(), timeslot=Tau(2)))
-
-# print(Accumulation.transition(pre_state=create_dummy_state(), block=create_dummy_block()))
