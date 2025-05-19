@@ -47,21 +47,20 @@ class PVM:
                 opcode: U8 = program.zeta[program_counter]
                 table = InstTableMap.get_instructions_table(opcode)(counter=program_counter, program=program)
 
-                print(f">> Executing opcode {table.table()[opcode].name} ({opcode}) on {table.__class__.__name__}")
+                print(f"🤖 {int(program_counter)} | ⛽️ {remaining_gas} | {table.table()[opcode].name} ({opcode}) on {table.__class__.__name__}")
                 status, program_counter, registers, memory = table.execute(opcode, registers, memory)
                 remaining_gas -= int(table.table()[opcode].gas)
-                print([int(r) for r in registers])
-                print(f"Status: {status} | Gas: {remaining_gas} | PC: {program_counter}")
+                # print([int(r) for r in registers])
+                # print(f"Status: {status} | Gas: {remaining_gas} | PC: {program_counter}")
                 if remaining_gas < 0:
                     return OUT_OF_GAS, program_counter, remaining_gas, registers, memory
                 elif status == ExecutionStatus.HALT or status == ExecutionStatus.HOST:
                     return status, program_counter, remaining_gas, registers, memory
 
             except PvmError as e:
-                print("PVM ERR", e.code)
                 if e.code == PANIC:
                     return PANIC, program_counter, remaining_gas, registers, memory
-                elif e.code == PAGE_FAULT:
-                    return PAGE_FAULT(Register(e.args[1])), program_counter, remaining_gas, registers, memory
+                elif e.code == ExecutionStatus.PAGE_FAULT:
+                    return PAGE_FAULT(Register(e.code.value.register.get_value())), program_counter, remaining_gas, registers, memory
                 else:
                     raise e

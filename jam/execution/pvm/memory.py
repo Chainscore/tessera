@@ -67,6 +67,7 @@ class Memory:
         # If writing, the page must be allowed to be written.
         if for_write:
             if page not in self.allowed_write_pages:
+                print("Throwing", PAGE_FAULT(U64(addr)).value)
                 raise PvmError(PAGE_FAULT(U64(addr)))
         # Else (reading), the page must be allowed to be write / read
         else:
@@ -94,6 +95,7 @@ class Memory:
 
         data_bytes should be an iterable of integers (each 0-255).
         """
+        print(f"u{len(data_bytes) * 8}[{(address % self.ADDR_MOD).to_bytes(4).hex()}] = {bytes(data_bytes).hex()}")
         for offset, byte in enumerate(data_bytes):
             addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=True)
             self.data[U32(addr)] = Byte(byte)

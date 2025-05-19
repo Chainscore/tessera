@@ -7,6 +7,10 @@ from jam.utils.constants import PVM_INIT_DATA_SIZE, PVM_INIT_ZONE_SIZE, REGISTER
 @decodable_array(element_type=Register, length=REGISTER_COUNT)
 class Registers(Array):
 
+    def __setitem__(self, key, value):
+        print(f"r[{key}] = {int(value)}")
+        self.value[key] = value
+
     @classmethod
     def from_pc(cls, args) -> Self:
         result = cls([Register(0)] * 13)
