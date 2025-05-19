@@ -33,7 +33,7 @@ class GeneralFunctions(INVF):
 
     @staticmethod
     @INVF.register(1, gas_cost=10)
-    def lookup(gas: Gas, registers: Registers, memory: Memory, service_data: AccountData, service_index: ServiceId, accounts: Delta):
+    def lookup(gas: Gas, registers: Registers, memory: Memory, context: Optional, service_data: AccountData, service_index: ServiceId, accounts: Delta):
         a: None|AccountData = None
         if service_index <= registers[7] <= 2**64-1:
             a = service_data
@@ -61,7 +61,7 @@ class GeneralFunctions(INVF):
         else:
             registers[7] = Register(len(v))
             memory.write(o, memory.read(f, l))
-        return CONTINUE, gas, registers, memory
+        return CONTINUE, gas, registers, memory, context
 
 
     @staticmethod

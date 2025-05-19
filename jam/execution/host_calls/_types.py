@@ -95,8 +95,8 @@ class StateContext(Codable,JsonSerde):
 @decodable_dataclass
 @dataclass
 class AccumulationContext(Codable, JsonSerde):
-    x:AccuContextX
-    y:AccuContextX
+    x: AccuContextX
+    y: AccuContextX
 
 
 
