@@ -1,7 +1,7 @@
+from jam.types.base import decodable_vector, U32, Vector
 from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
 from math import floor
 from jam.utils.shuffle import shuffle
-from jam.types import  decodable_vector, U32, Vector
 from collections import deque
 
 
@@ -45,13 +45,13 @@ def guarantor_assignment(eta,  kappa, lambda_, block_slot, report_slot):
             validator_keys.append(i.ed25519)
 
     # <------------- Entropy for previous rotation in same epoc ------------------>
-    if report_slot != block_slot and floor((block_slot - ROTATION_PERIOD) / EPOCH_LENGTH) == floor(block_slot / EPOCH_LENGTH):
+    if report_slot != block_slot and floor((int(block_slot) - ROTATION_PERIOD) / EPOCH_LENGTH) == floor(int(block_slot) / EPOCH_LENGTH):
         epoch_entropy = eta[2]
         for i in kappa:
             validator_keys.append(i.ed25519)
 
     # <------------- Entropy for previous rotation but in last epoch ------------------>
-    if report_slot != block_slot and floor((block_slot - ROTATION_PERIOD) / EPOCH_LENGTH) != floor(block_slot / EPOCH_LENGTH):
+    if report_slot != block_slot and floor((int(block_slot) - ROTATION_PERIOD) / EPOCH_LENGTH) != floor(int(block_slot) / EPOCH_LENGTH):
         epoch_entropy = eta[3]
         for i in lambda_:
             validator_keys.append(i.ed25519)
@@ -75,7 +75,7 @@ def guarantor_assignment(eta,  kappa, lambda_, block_slot, report_slot):
 
     # rotation phase (number of rotation between cores)
     work_report_slot = report_slot
-    rotation_phase = floor((work_report_slot % EPOCH_LENGTH) / ROTATION_PERIOD)
+    rotation_phase = floor((int(work_report_slot) % EPOCH_LENGTH) / ROTATION_PERIOD)
     keys = list(mapping.keys())
     values = [mapping[k] for k in keys]
     values = deque(values)

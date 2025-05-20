@@ -1,13 +1,13 @@
+from jam.types.base import decodable_vector, U32, Vector, Bytes, Null
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
-from jam.types import Block, Null, Bytes
+from jam.types.block import Block
 import  dataclasses
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, SIGNING_CONTEXTS
 from jam.report.error import ReportingError, ReportingErrorCode
-from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, MAX_WORK_REPORT_SIZE, MIN_VALIDATOR_PER_REPORT
+from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, MAX_WORK_REPORT_SIZE
 from math import floor
-from jam.types import  decodable_vector, U32, Vector
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 from jam.report.guarantee_assignment import guarantor_assignment
@@ -30,7 +30,6 @@ class Reporting:
         Returns:
             Returns the updated Rho(workreport, timeslot)
         """
-        new_state: Sigma = dataclasses.replace(state)
 
         for x in block.extrinsic.guarantees:
 
@@ -52,7 +51,7 @@ class Reporting:
             # --------- no_enough_guatantee ------------
             # https://graypaper.fluffylabs.dev/#/85129da/147002149002?v=0.6.3
             credential_len = len(x.signatures)
-            if credential_len < MIN_VALIDATOR_PER_REPORT:
+            if credential_len < 2 * VALIDATOR_COUNT // 3:
                 raise ReportingError(
                     ReportingErrorCode.INSUFFICIENT_GUARANTEE,
                     "Work report doesn't has enough validator"
@@ -164,7 +163,7 @@ class Reporting:
             )
 
 
-        return new_state
+        return state
 
     @staticmethod
     def ensure_signature(state: Sigma, block: Block):
@@ -342,6 +341,10 @@ class Reporting:
         Description : This function check assign validator to the core is correct or not.
 
         """
+        if len(block.extrinsic.guarantees) == 0:
+            # Return if no gurantees to check
+            return
+
         report_slot = None
         for x in block.extrinsic.guarantees:
             report_slot = x.slot

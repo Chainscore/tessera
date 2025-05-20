@@ -92,7 +92,7 @@ class StateTrie:
 
     def merkelize(
         self,
-        state_dict: Dict[ByteArray32, Bytes],
+        state_dict: Dict[Bytes, Bytes],
         db: Optional[KVStore] = None
     ) -> Tuple[NodeHash, Dict[NodeHash, Node]]:
         """

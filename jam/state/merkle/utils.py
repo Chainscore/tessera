@@ -36,7 +36,7 @@ def encode_branch(left_hash: ByteArray32, right_hash: ByteArray32) -> ByteArray6
 
     return node
 
-def encode_leaf(key: ByteArray32, value: Bytes) -> ByteArray64:
+def encode_leaf(key: Bytes, value: Bytes) -> ByteArray64:
     """Encode a leaf node (L function in D.4)
 
     For a leaf, the second bit discriminates between embedded-value leaves and regular leaves.

@@ -1,5 +1,6 @@
 import json
 from typing import List
+
 from jam.storage.db.kv import KVStore
 from jam.types.base.null import Null
 from jam.types.protocol.validators import IPAddress, ValidatorMetadata, ValidatorName, ValidatorData, ValidatorsData
@@ -11,18 +12,14 @@ from jam.types.state.psi import Psi, PsiB, PsiG, PsiO, PsiW
 from jam.types.state.kappa import Kappa
 from jam.types.state.lambda_ import Lambda_
 from jam.types.state.rho import Rho, OptionalWorkReportState
-# from jam.types.state.rho import OptionalWorkReportState, Rho
 from jam.types.state.tau import Tau
 from jam.types.state.chi import Chi, ChiG
 from jam.types.state.iota import Iota
-# from jam.types.state.nu import AllReadyWRs, Nu
 from jam.types.state.xi import Xi
-from jam.types.state.delta import Delta
 from jam.types.state.beta import Beta
 from jam.types.state.phi import AuthorizationQueue, AuthorizerHash, Phi
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ, GammaS
 from jam.types.state.delta import Delta, Ai, Ai, At, AccountData, LookupTimestamps, LookupTable, Timestamps, PreImageLookup, AccountStorage
-
 from jam.types.state.sigma import Sigma
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, VALIDATOR_COUNT, MAX_AUTH_QUEUE_ITEMS, EPOCH_LENGTH
@@ -60,35 +57,25 @@ class GhostState(Sigma):
                 l_key.add(j)
             for j in self.delta[i].storage:
                 s_key.add(j)
-            a_i = 2 * len(list(l_key)) + len(list(s_key))
-            a_s, a_l = 0, 0
-            if l_key:
-                for key in l_key:
-                    # fetching the length from the LookupTimestamps
-                    a_l += 81 + int(LookupTimestamps.get_length(key))
-            if s_key:
-                for key in s_key:
-                    a_s += 32 + len(self.delta[i].storage[key])
-
             services[construct_state_key((255, i))] = Bytes(
                 self.delta[i].code_hash.encode()
                 + self.delta[i].balance.encode()
                 + self.delta[i].gas_limit.encode()
                 + self.delta[i].min_gas.encode()
-                + U64(a_l + a_s).encode()
-                + U32(a_i).encode()
+                + self.delta[i].num_o.encode()
+                + self.delta[i].num_i.encode()
             )
 
             for j in self.delta[i].storage:
                 service_storage[
                     construct_state_key(
-                        (i, ByteArray32(Bytes(U32(2**32 - 1).encode()) + j[0:28]))
+                        (i, Bytes(U32(2**32 - 1).encode()) + j[0:23])
                     )
                 ] = self.delta[i].storage[j]
             for j in self.delta[i].lookup:
                 service_preimages[
                     construct_state_key(
-                        (i, ByteArray32(Bytes(U32(2**32 - 2).encode()) + j[1:29]))
+                        (i, Bytes(U32(2**32 - 2).encode()) + j[1:24])
                     )
                 ] = Bytes(self.delta[i].lookup[j])
 
@@ -239,6 +226,7 @@ class GhostState(Sigma):
             bls=BlsPublic(bytes(144)),
             metadata=ValidatorMetadata(ValidatorName(""), IPAddress([U8(127), U8(0), U8(0), U8(1)]), U16(0))
         ) for _ in range(VALIDATOR_COUNT)]
+
         fallback = Safrole.arrange_fallback(ByteArray32(bytes(32)), peers)
 
         return GhostState(
@@ -256,9 +244,9 @@ class GhostState(Sigma):
             chi=Chi(chi_m=ServiceId(0), chi_a=ServiceId(0), chi_v=ServiceId(0), chi_g=ChiG({})),
             psi=Psi(good=PsiG([]), bad=PsiB([]), wonky=PsiW([]), offenders=PsiO([])),
             pi=Pi(
-                vals_current=AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]),
-                vals_last=AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]),
-                cores=AllCoreStats([CoreStat(gas_used=U32(0), imports=U32(0), extrinsic_count=U32(0), extrinsic_size=U32(0), exports=U32(0), bundle_size=U32(0), da_load=U32(0), popularity=U32(0)) for _ in range(CORE_COUNT)]),
+                vals_current=AllValidatorStats.empty(),
+                vals_last=AllValidatorStats.empty(),
+                cores=AllCoreStats.empty(),
                 services=AllServiceStats({})
             ),
             nu=Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)]),

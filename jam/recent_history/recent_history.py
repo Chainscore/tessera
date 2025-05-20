@@ -1,7 +1,7 @@
 from copy import deepcopy
-from jam.types.state.beta import BlockHistory, PackageDict
+from jam.types.state.beta import BlockHistory, PackageDict, Beta
 from jam.types.state.sigma import Sigma
-from jam.types import ByteArray32
+from jam.types.base.sequences import ByteArray32
 from jam.types.block import Block
 from jam.types.extrinsics import GuaranteesExtrinsic
 from jam.types.protocol.crypto import Hash
@@ -30,7 +30,7 @@ def package(packages: GuaranteesExtrinsic) -> PackageDict:
 class RecentHistory:
 
     @staticmethod
-    def transition(pre_state: Sigma, block: Block, accumulate_root: OpaqueHash) -> Sigma:
+    def transition(state: Sigma, block: Block, accumulate_root: OpaqueHash) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -65,7 +65,7 @@ class RecentHistory:
             https://graypaper.fluffylabs.dev/#/5f542d7/0faf010fb001
 
         Args:
-            pre_state: State before transition
+            state: State before transition
             block: Block
             accumulate_root: Calculated Merklization State Root
 
@@ -73,21 +73,18 @@ class RecentHistory:
             State after transition
         """
 
-        # Make a copy of the state
-        new_state: Sigma = deepcopy(pre_state)
-
         # Step 1
-        if len(new_state.beta):
-            new_state.beta[-1].state_root = block.header.parent_state_root
+        if len(state.beta):
+            state.beta[-1].state_root = block.header.parent_state_root
 
         # Length Check
-        if len(new_state.beta) > RECENT_HISTORY_SIZE:
+        if len(state.beta) > RECENT_HISTORY_SIZE:
             raise ValueError("Invalid beta length, must be equal to RECENT_HISTORY_SIZE")
 
         # Step 2
         last: MMR = MMR([])
-        if len(new_state.beta) > 0:
-            last = new_state.beta[-1].mmr
+        if len(state.beta) > 0:
+            last = state.beta[-1].mmr
 
         mmr_functions = MMRFunctions()
 
@@ -99,8 +96,8 @@ class RecentHistory:
         )
 
         # Step 3
-        new_state.beta.append(n)
-        new_state.beta = new_state.beta[-8:]
+        state.beta.append(n)
+        state.beta = Beta(state.beta[-8:])
 
-        # Return Updated State
-        return new_state
+        # Return State
+        return state
