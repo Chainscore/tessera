@@ -35,6 +35,8 @@ data/main
 data/d3l
 data/audit
 
+benchmarks/
+
 *.log
 .coverage
 htmlcov/

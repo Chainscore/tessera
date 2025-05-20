@@ -1,6 +1,5 @@
 import json
 from math import ceil
-from time import time
 from typing import Tuple
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -52,6 +51,7 @@ from jam.types.work.report import (
     SegmentRootLookup,
     WorkPackageBundle
 )
+from jam.utils.benchmark import benchmark
 
 from jam.utils.constants import BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE
 
@@ -180,12 +180,9 @@ class Processor:
 
         # ------------------------------------------ IS AUTH INVOCATION ------------------------------------------
         logger.info(f"Checking authorization..")
-        start_time = time()
         # Auth Output o & Gas g
-        o, g = PsiI(p, c).execute()
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"Auth check done in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("auth check done"):
+            o, g = PsiI(p, c).execute()
         # ------------------------------------------ -- ---- ---------- ------------------------------------------
 
         s_result = 0
@@ -208,11 +205,8 @@ class Processor:
 
             # ------------------------------------------ REFINE INVOCATION ------------------------------------------
             logger.info(f"Refining Work Item {j}..")
-            start_time = time()
-            r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
-            end_time = time()
-            total_time = end_time-start_time
-            logger.info(f"Refined Work Item {j} in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+            with benchmark(f"Refined Work Item {j}"):
+                r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
             # ------------------------------------------ ----------------- ------------------------------------------
 
             segment = Segment([Byte(0)] * 4104)
@@ -259,11 +253,8 @@ class Processor:
 
         # Availability Specification, s
         logger.info(f"Building availability specification..")
-        start_time = time()
-        specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"Specification built in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("specificaion built"):
+            specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
 
         logger.info(f"Compiling Report..")
         report = WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Gas(g))
@@ -306,55 +297,37 @@ class Processor:
 
         logger.info(f"Building bundle shards..")
 
-        start_time = time()
-        padded_wp_bundle = self.zero_padding(Bytes(wp_bundle), BASIC_ERASURE_SIZE)
-        end_time = time()
-        total_time = end_time-start_time
-        logger.info(f"bundle padded in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("padding bundle"):
+            padded_wp_bundle = self.zero_padding(Bytes(wp_bundle), BASIC_ERASURE_SIZE)
 
-        start_time = time()
-        bundle_shards = erasure_codec.encode(padded_wp_bundle)
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"bundle erasure coded in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("e coding bundle"):
+            bundle_shards = erasure_codec.encode(padded_wp_bundle)
 
         bs_hashes = BundleShardHashes([])
 
         logger.info(f"Storing bundle shards..")
-        start_time = time()
-        for si, bs in enumerate(bundle_shards):
-            # start_time_a = time()
-            bs_hash = Hash.blake2b(bs.encode())
-            # end_time_a = time()
-            # total_time = end_time_a - start_time_a
-            # logger.info(f"hashed {si} in {total_time} seconds")
 
-            bs_unit = BundleShardUnit(U16(si), bs)
+        with benchmark("storing bundle chunks"):
+            for si, bs in enumerate(bundle_shards):
+                bs_hash = Hash.blake2b(bs.encode())
 
-            # Store Bundle Shard
-            audits_da.put(bs_hash, bs_unit)
-            bs_hashes.append(bs_hash)
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"bundle chunks stored in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+                bs_unit = BundleShardUnit(U16(si), bs)
+
+                # Store Bundle Shard
+                audits_da.put(bs_hash, bs_unit)
+                bs_hashes.append(bs_hash)
 
 
         # Store Exported Segments
         seg_da = SegmentsDA(d3l)
 
         logger.info(f"Storing segments..")
-        start_time = time()
-        proofs = self.paged_proof(export_segments)
-        proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"proofs built in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("building proofs"):
+            proofs = self.paged_proof(export_segments)
+            proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
 
-        start_time = time()
-        seg_da.put(e, proved_segments)
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"proofs stored in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("storing proofs"):
+            seg_da.put(e, proved_segments)
 
         # Build Segment Shards
         s_shards_da = SegmentShardsDA(d3l)
@@ -365,43 +338,29 @@ class Processor:
 
         all_chunks = Vector([])
 
-        start_time = time()
-        for item in justified_segments:
-            seg_chunks = erasure_codec.encode(item)
-            all_chunks.append(seg_chunks)
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"segments erasure coded in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("e coding segments"):
+            for item in justified_segments:
+                seg_chunks = erasure_codec.encode(item)
+                all_chunks.append(seg_chunks)
 
-        start_time = time()
-        segments_shards = SegmentsShards(
-            [SegmentsShard(
-                [ByteArray12(all_chunks[j][i]) for j in range(len(all_chunks))]
-            ) for i in range(len(all_chunks[0]))])
-
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"segments shards Transpose in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("transposing s shards"):
+            segments_shards = SegmentsShards(
+                [SegmentsShard(
+                    [ByteArray12(all_chunks[j][i]) for j in range(len(all_chunks))]
+                ) for i in range(len(all_chunks[0]))])
 
         ss_roots = SegmentsShardRoots([])
 
         logger.info(f"Storing segment shards..")
-        start_time = time()
-        for si, ss in enumerate(segments_shards):
-            # start_time_a = time()
-            ss_root = self.merkle.wb_merkle_fn(ss)
-            # end_time_a = time()
-            # total_time = end_time_a - start_time_a
-            # logger.info(f"merklized {si} in {total_time} seconds")
+        with benchmark("storing s chunks"):
+            for si, ss in enumerate(segments_shards):
+                ss_root = self.merkle.wb_merkle_fn(ss)
 
-            ss_unit = SegmentsShardUnit(U16(si), ss)
+                ss_unit = SegmentsShardUnit(U16(si), ss)
 
-            # Store Segments Shard
-            s_shards_da.put(ss_root, ss_unit)
-            ss_roots.append(ss_root)
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"segment chunks stored in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+                # Store Segments Shard
+                s_shards_da.put(ss_root, ss_unit)
+                ss_roots.append(ss_root)
 
         # Build Complete Shard Key
         if len(ss_roots) != 1023 or len(bs_hashes) != 1023:
@@ -413,39 +372,28 @@ class Processor:
             shards_keys.append(shards_key.encode())
 
         # Erasure Root
-        start_time = time()
-        u = self.merkle.wb_merkle_fn(shards_keys)
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"Erasure Root calculated - {u} in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("calculated erasure root"):
+            u = self.merkle.wb_merkle_fn(shards_keys)
+        logger.info(f"Erasure Root calculated - {u}")
 
         # Store Erasure Root - Shards Mapping
         er_shards_da = ErasureShardsMap(d3l)
 
         logger.info("Storing shards mappings..")
-        start_time = time()
-        er_shards_da.put_batch(u, ss_roots, bs_hashes)
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"stored mappings in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("storing mappings"):
+            er_shards_da.put_batch(u, ss_roots, bs_hashes)
 
         logger.info(f"Compiling availability specification..")
-        start_time = time()
-        spec = WorkPackageSpec(hash=package_hash, length=U32(l), erasure_root=u, exports_root=e, exports_count=U16(n))
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"compiled spec in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("compiled spec"):
+            spec = WorkPackageSpec(hash=package_hash, length=U32(l), erasure_root=u, exports_root=e, exports_count=U16(n))
 
         return spec
 
     def process_bundle(self, core: CoreIndex, bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup) -> Tuple[WorkReport, WorkReportHash]:
         # Generate Report
         logger.info("Building Work Report..")
-        start_time = time()
-        report = self.build_report(bundle, core, sr_lookup)
-        end_time = time()
-        total_time = end_time - start_time
-        logger.info(f"Report compiled in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        with benchmark("Report compiled"):
+            report = self.build_report(bundle, core, sr_lookup)
 
         wr_hash = Hash.blake2b(report.encode())
         logger.info(f"Generated Work Report with hash {wr_hash}")
@@ -472,11 +420,13 @@ class Processor:
 
         # Build Segment Root Lookup Dictionary
         logger.info("Building Lookup Dictionary..")
-        lookup = bundler.build_lookup(package)
+        with benchmark("lookup built"):
+            lookup = bundler.build_lookup(package)
 
         # Build Work Package Bundle
         logger.info("Building Work Package Bundle..")
-        bundle = bundler.build_bundle(package)
+        with benchmark("bundle built"):
+            bundle = bundler.build_bundle(package)
 
         # Distribute Bundle to other Guarantors CE134
         CE134 = WorkPackageSharing()
@@ -487,7 +437,8 @@ class Processor:
         responses = CE134.transmit(node=self.node, data=data)
 
         # Build & Store Report
-        wr, wr_hash = self.process_bundle(core, bundle, lookup)
+        with benchmark("bundle processed"):
+            wr, wr_hash = self.process_bundle(core, bundle, lookup)
 
         # Self guarantee
         port = 30333
@@ -498,20 +449,21 @@ class Processor:
 
         # Build Guarantee
         logger.info(f"Building guarantees..")
-        payload = wr.core_index.encode() + wr.encode()
-        guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
+        with benchmark("guarantees signed"):
+            payload = wr.core_index.encode() + wr.encode()
+            guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
 
-        # Sign the Guarantee
-        sign = Ed25519Signature(ed25519_key.sign(guarantee))
+            # Sign the Guarantee
+            sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
-        og_guarantee = ValidatorSignature(validator_index=U16(0), signature=sign)
+            og_guarantee = ValidatorSignature(validator_index=U16(0), signature=sign)
 
-        # Check majority & Build guarantees:
-        guarantees = ValidatorSignatures([og_guarantee])
-        for response in responses:
-            if response.work_report_hash == wr_hash:
-                guarantee = ValidatorSignature(validator_index=U16(0), signature=response.ed25519_signature)
-                guarantees.append(guarantee)
+            # Check majority & Build guarantees:
+            guarantees = ValidatorSignatures([og_guarantee])
+            for response in responses:
+                if response.work_report_hash == wr_hash:
+                    guarantee = ValidatorSignature(validator_index=U16(0), signature=response.ed25519_signature)
+                    guarantees.append(guarantee)
 
 
         # Distribute Guaranteed WR to Validators CE135

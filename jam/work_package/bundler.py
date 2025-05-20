@@ -26,7 +26,7 @@ from jam.types.protocol.core import SegmentRoot
 from jam.types.protocol.crypto import OpaqueHash
 
 from jam.merklization.binary_merkle import BMRFunctions
-
+from jam.utils.benchmark import benchmark
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap, ErasureShardsMap
 from jam.work_package.stores.segments import SegmentsDA
@@ -210,18 +210,18 @@ class Bundler:
 
         for j, item in enumerate(p.items):
             # Fetch Imports
-            logger.info("Fetching imports..")
-            imports = self.fetch_imports(item)
+            with benchmark("Fetched imports"):
+                imports = self.fetch_imports(item)
             all_imp.append(imports)
 
             # Fetch Justifications
-            logger.info("Compiling justifications..")
-            justifications = self.fetch_justifications(item, j)
+            with benchmark("Compiling justifications"):
+                justifications = self.fetch_justifications(item, j)
             all_jfn.append(justifications)
 
             # Fetch Extrinsics
-            logger.info("Fetching extrinsics..")
-            extrinsics = self.fetch_extrinsics(item)
+            with benchmark("Fetching extrinsics"):
+                extrinsics = self.fetch_extrinsics(item)
             all_ext.append(extrinsics)
 
         bundle = WorkPackageBundle(p, all_ext, all_imp, all_jfn)

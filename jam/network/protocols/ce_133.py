@@ -11,6 +11,7 @@ from jam.types.base.sequences.vector import Vector
 from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
 from jam.types.work.package import WorkPackage
+from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
@@ -80,14 +81,13 @@ class WorkPackageSubmission(NetworkProtocol):
         logger.info("Processing Work Package")
         processor = Processor(node)
 
-        start_time = time()
-        wr, wr_hash = processor.process(data.package_data.work_package, data.package_data.core_index, data.extrinsics)
-        end_time = time()
-        total_time = end_time - start_time
+        with benchmark(f"Work Package processed"):
+            wr, wr_hash = processor.process(data.package_data.work_package, data.package_data.core_index, data.extrinsics)
+
+        write_benchmarks_to_txt("benchmarks/refinement.txt")
 
         logger.info(
-            f"📩 Processed work package : {data.package_data.work_package} into report {wr} "
-            f"in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)"
+            f"📩 Processed work package : {data.package_data.work_package} into report {wr} & hash {wr_hash} "
         )
 
         # Return acknowledgment to Builder
