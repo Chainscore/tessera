@@ -397,7 +397,7 @@ class Accumulation:
         return service_transfers
 
     @classmethod
-    def transition(cls, pre_state: Sigma, block: Block):
+    def transition(cls, state: Sigma, block: Block):
         """
         Transition the state's Delta, Xi, Nu, Chi, Iota, Phi components, calculate BEEFY Commitment Map.
         Includes 4 steps
@@ -433,15 +433,13 @@ class Accumulation:
         # Section 12.1: History & Queuing (Step 1 & 2)
         # ----------------------
 
-        new_state = pre_state
-
         # Ready Queue
-        nu = new_state.nu
+        nu = state.nu
 
         # Accumulated Queue
         xi_union = WorkDependencies([])
 
-        for ep in new_state.xi:
+        for ep in state.xi:
             xi_union.extend(ep)
 
         # Latest Work Reports to Process
@@ -498,28 +496,28 @@ class Accumulation:
         # Section 12.2 Execution (Step 3)
         # ----------------------
 
-        partial_state = StateContext(service_accounts=pre_state.delta, validator_keys=pre_state.iota, authorizer_keys=pre_state.phi, privileges=pre_state.chi)
+        partial_state = StateContext(service_accounts=state.delta, validator_keys=state.iota, authorizer_keys=state.phi, privileges=state.chi)
 
         # accumulated_gas accumulated from ChiG_services
         service_gas=0
-        for i in pre_state.chi.chi_g:
-            service_gas+=pre_state.chi.chi_g[i]
+        for i in state.chi.chi_g:
+            service_gas+=state.chi.chi_g[i]
 
         gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT)+service_gas))
-        [work_accl_no, updated_state, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, pre_state.chi.chi_g, block.header.slot)
+        [work_accl_no, updated_state, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, state.chi.chi_g, block.header.slot)
 
         # Update Delta Dagger, Chi, Iota, Phi
         # new_state.delta = updated_state.service_accounts
-        new_state.chi = updated_state.privileges
-        new_state.iota = updated_state.validator_keys
-        new_state.phi = updated_state.authorizer_keys
+        state.chi = updated_state.privileges
+        state.iota = updated_state.validator_keys
+        state.phi = updated_state.authorizer_keys
 
         # ----------------------
         # Section 12.3 Deferred Transfers & State Integration (Step 4)
         # ----------------------
 
         # Update Delta Double Dagger
-        specific_transfers = Accumulation.selection_fn(deferred_transfers,new_state.delta)
+        specific_transfers = Accumulation.selection_fn(deferred_transfers, state.delta)
 
         # for s in new_state.delta:
         #     specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
@@ -530,28 +528,28 @@ class Accumulation:
 
         # Update Accumulated History, Xi
         for i in range(EPOCH_LENGTH - 1):
-            new_state.xi[i] = new_state.xi[i + 1]
+            state.xi[i] = state.xi[i + 1]
 
-        new_state.xi[EPOCH_LENGTH - 1] = cls.mapping_fn(star_work_reports)
+        state.xi[EPOCH_LENGTH - 1] = cls.mapping_fn(star_work_reports)
 
-        timeslot_difference = block.header.slot - pre_state.tau
+        timeslot_difference = block.header.slot - state.tau
 
         # Update Ready Queue, Nu
         for i in range(EPOCH_LENGTH):
             ind = (m + EPOCH_LENGTH - i) % EPOCH_LENGTH
             if i == 0:
-                new_state.nu[ind] = cls.queue_edit_fn(
-                    queued_reports, new_state.xi[EPOCH_LENGTH - 1]
+                state.nu[ind] = cls.queue_edit_fn(
+                    queued_reports, state.xi[EPOCH_LENGTH - 1]
                 )
             elif 1 <= i < timeslot_difference:
-                new_state.nu[ind] = AllReadyWRs([])
+                state.nu[ind] = AllReadyWRs([])
             elif i >= timeslot_difference:
-                new_state.nu[ind] = cls.queue_edit_fn(
-                    new_state.nu[ind], new_state.xi[EPOCH_LENGTH - 1]
+                state.nu[ind] = cls.queue_edit_fn(
+                    state.nu[ind], state.xi[EPOCH_LENGTH - 1]
                 )
 
         # ----------------------
         # Section 12.4 Preimage Integration : In Different Module
         # ----------------------
 
-        return new_state
+        return state

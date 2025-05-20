@@ -34,8 +34,6 @@ class Assurances:
         Returns:
             The new state of the chain.
         """
-        # Make a copy of the state
-        new_state = dataclasses.replace(state)
 
         # Get the assurances from the extrinsic
         assurances = block.extrinsic.assurances
@@ -81,13 +79,14 @@ class Assurances:
         # Clear them
         super_majority = math.floor(2 * VALIDATOR_COUNT / 3)
         for i in range(len(state.rho)):
+            if state.rho[i].get_value() == None:
+                continue
             if core_assurances[i] > super_majority or (
-                block.header.slot
-                >= state.rho[i].get_value().timeout + UNAVAILABLE_WORK_EXPIRY
+                block.header.slot >= state.rho[i].get_value().timeout + UNAVAILABLE_WORK_EXPIRY
             ):
-                new_state.rho[i] = OptionalWorkReportState(Null)
+                state.rho[i] = OptionalWorkReportState(Null)
 
-        return new_state
+        return state
 
     @staticmethod
     def ensure_valid_signature(

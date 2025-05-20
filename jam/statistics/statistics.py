@@ -1,11 +1,9 @@
 import math
-from copy import deepcopy
 from typing import Dict, List
-
 from jam.types.state.pi import (
     AllServiceStats,
     CoreStat,
-    ServiceStat,
+    ServiceStat, AllValidatorStats, AllCoreStats,
 )
 from jam.types.base.integers.fixed import U32
 from jam.types.state.pi import ValidatorStat
@@ -16,54 +14,10 @@ from jam.types.work.report import WorkReport
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, SEGMENT_SIZE
 
 
-def create_empty_validator_stat():
-    """Returns a new ValidatorStat object with all values set to 0."""
-    return ValidatorStat(
-        blocks=0,
-        tickets=0,
-        pre_images=0,
-        pre_images_size=0,
-        guarantees=0,
-        assurances=0,
-    )
-
-
-def create_empty_core_stat():
-    """Returns a new CoreStat object with all values set to 0."""
-    return CoreStat(
-        gas_used=0,
-        imports=0,
-        extrinsic_count=0,
-        extrinsic_size=0,
-        exports=0,
-        bundle_size=0,
-        da_load=0,
-        popularity=0,
-    )
-
-
-def create_empty_service_stat():
-    """Returns a new CoreStat object with all values set to 0."""
-    return ServiceStat(
-        provided_count=0,
-        provided_size=0,
-        refinement_count=0,
-        refinement_gas_used=0,
-        imports=0,
-        exports=0,
-        extrinsic_size=0,
-        extrinsic_count=0,
-        accumulate_count=0,
-        accumulate_gas_used=0,
-        on_transfers_count=0,
-        on_transfers_gas_used=0,
-    )
-
-
 class Statistics:
     @staticmethod
     def transition(
-        pre_state: Sigma,
+        state: Sigma,
         block: Block,
         available_wrs: List[WorkReport],
         accumulation_stats: Dict[ServiceId, tuple[Gas, U32]],
@@ -73,30 +27,33 @@ class Statistics:
         Transition the state with Statistics logic.
 
         Args:
-            pre_state: State before transition
+            state: State before transition
             block: Block
+            available_wrs
+            accumulation_stats
+            deferred_transfer_stats
 
         Returns:
             State after transition
         """
-        new_state = deepcopy(pre_state)
 
-        e = pre_state.tau // EPOCH_LENGTH
+        e = state.tau // EPOCH_LENGTH
         e_dash = block.header.slot // EPOCH_LENGTH
 
-        is_new_epoch = e != e_dash
+        is_new_epoch = e_dash > e
 
         if is_new_epoch:
-            pi_last = deepcopy(new_state.pi.vals_current)
-            pi_curr = deepcopy(new_state.pi.vals_current)
+            state.pi.vals_last = state.pi.vals_current
+            state.pi.vals_current = AllValidatorStats.empty()
 
-            for i in range(len(pi_curr)):
-                pi_curr[i] = create_empty_validator_stat()
-        else:
-            pi_curr = deepcopy(new_state.pi.vals_current)
-            pi_last = deepcopy(new_state.pi.vals_last)
+        pi_curr = state.pi.vals_current
+        pi_last = state.pi.vals_last
 
         author_index = block.header.author_index
+
+        # Handle genesis block
+        if author_index == 2**16 - 1:
+            return state
 
         pi_curr[author_index].blocks += 1
         pi_curr[author_index].tickets += len(block.extrinsic.tickets)
@@ -115,17 +72,15 @@ class Statistics:
             validator_index = assurance.validator_index
             pi_curr[validator_index].assurances += 1
 
-        new_state.pi.vals_current = pi_curr
-        new_state.pi.vals_last = pi_last
+        state.pi.vals_current = pi_curr
+        state.pi.vals_last = pi_last
 
         incoming_wrs = []
 
         for report_guarantee in block.extrinsic.guarantees:
             incoming_wrs.append(report_guarantee.report)
 
-        pi_core = []
-        for i in range(CORE_COUNT):
-            pi_core.append(create_empty_core_stat())
+        pi_core = AllCoreStats.empty()
 
         for report in incoming_wrs:
             if report is not None:
@@ -152,7 +107,7 @@ class Statistics:
             for index, bit in enumerate(assurance.bitfield):
                 pi_core[index].popularity += 1 if bit else 0
 
-        new_state.pi.cores = pi_core
+        state.pi.cores = pi_core
 
         r = []
         for report in incoming_wrs:
@@ -177,7 +132,7 @@ class Statistics:
             for work_result in report.results:
                 if work_result.service_id in all_service_ids:
                     if work_result.service_id not in pi_service:
-                        pi_service[work_result.service_id] = create_empty_service_stat()
+                        pi_service[work_result.service_id] = ServiceStat.empty()
                     curr_service_stat = pi_service[work_result.service_id]
                     curr_service_stat.refinement_count += 1
                     curr_service_stat.refinement_gas_used += (
@@ -195,14 +150,14 @@ class Statistics:
         for preimage in block.extrinsic.preimages:
             if preimage.blob is not None:
                 if preimage.requester not in pi_service:
-                    pi_service[preimage.requester] = create_empty_service_stat()
+                    pi_service[preimage.requester] = ServiceStat.empty()
                 curr_service_stat = pi_service[preimage.requester]
                 curr_service_stat.provided_count += 1
                 curr_service_stat.provided_size += len(preimage.blob)
 
         for service_id in accumulation_stats.keys():
             if service_id not in pi_service:
-                pi_service[service_id] = create_empty_service_stat()
+                pi_service[service_id] = ServiceStat.empty()
             pi_service[service_id].accumulate_gas_used = accumulation_stats[service_id][
                 0
             ]
@@ -210,7 +165,7 @@ class Statistics:
 
         for service_id in deferred_transfer_stats.keys():
             if service_id not in pi_service:
-                pi_service[service_id] = create_empty_service_stat()
+                pi_service[service_id] = ServiceStat.empty()
             pi_service[service_id].on_transfers_count = deferred_transfer_stats[
                 service_id
             ][0]
@@ -218,6 +173,6 @@ class Statistics:
                 service_id
             ][1]
 
-        new_state.pi.services = pi_service
+        state.pi.services = pi_service
 
-        return new_state
+        return state

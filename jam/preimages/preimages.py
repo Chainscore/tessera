@@ -11,12 +11,12 @@ from jam.types.protocol.crypto import Hash
 
 class Preimages:
     @staticmethod
-    def transition(pre_state: Sigma, block: Block) -> Sigma:
+    def transition(state: Sigma, block: Block) -> Sigma:
         """
         Transition the state with Preimages logic.
 
         Args:
-            pre_state: State before transition
+            state: State before transition
             block: Block
 
         Returns:
@@ -24,12 +24,10 @@ class Preimages:
         """
         Preimages.ensure_sorted_unique(block.extrinsic.preimages)
 
-        new_state = dataclasses.replace(pre_state)
-
         # Go through each preimage in the block
         for preimage in block.extrinsic.preimages:
             # Find the account
-            account = new_state.delta[preimage.requester]
+            account = state.delta[preimage.requester]
             # If the preimage to add does not have lookup metadata, throw unneeded error
             hashed_blob = Hash.blake2b(preimage.blob)
             lookup_key = LookupTable(hashed_blob, len(preimage.blob))
@@ -44,14 +42,14 @@ class Preimages:
 
         for preimage in block.extrinsic.preimages:
             # Add the preimage to the account
-            account = new_state.delta[preimage.requester]
+            account = state.delta[preimage.requester]
             hashed_blob = Hash.blake2b(preimage.blob)
             lookup_key = LookupTable(hashed_blob, len(preimage.blob))
 
             account.lookup[hashed_blob] = preimage.blob
             account.timestamps[lookup_key].append(block.header.slot)
 
-        return new_state
+        return state
 
     @staticmethod
     def ensure_sorted_unique(preimages: PreimagesExtrinsic):

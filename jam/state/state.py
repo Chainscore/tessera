@@ -6,7 +6,8 @@ from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.state.merkle import StateTrie
 from jam.state.utils.key_constructor import construct_state_key
-from jam.types.base import Bytes
+from jam.types.base import Bytes, ByteArray32
+from jam.types.block import Block
 from jam.types.state.alpha import Alpha, AuthorizationPool
 from jam.types.state.eta import Eta
 from jam.types.state.nu import Nu
@@ -73,6 +74,52 @@ class State:
     def __init__(self, db, trie):
         self.DB = db
         self.TRIE = trie
+
+    @property
+    def root(self):
+        return self.TRIE.root_hash
+
+    def transition(self, block: Block):
+        """
+        Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
+
+        Args:
+            block: Incoming block
+        """
+        from jam.accumulation.accumulation import Accumulation
+        from jam.report.state import Reporting
+        from jam.authorization.authorization import Authorization
+        from jam.recent_history.recent_history import RecentHistory
+        from jam.consensus.safrole.safrole import Safrole
+        from jam.assurances.assurances import Assurances
+        from jam.disputes.disputes import Disputes
+        from jam.preimages.preimages import Preimages
+        from jam.statistics.statistics import Statistics
+
+        # TODO: Validate block headers
+        # Epoch markers - make sure eta0_1 are the same as current etas
+        # Tickets mark - make sure tickets are valid, present in gamma_a and outside in sequenced
+        # Offenders mark - make sure offenders are present in psi.offenders
+
+        # 2. Disputes
+        Disputes.transition(self, block)
+        # 3. Assurances
+        Assurances.transition(self, block)
+        # 4. Reporting
+        Reporting.transition(self, block)
+        # 5. Accumulation
+        Accumulation.transition(self, block)
+        # 6. Authorization
+        Authorization.transition(self, block)
+        # 7. Recent History
+        RecentHistory.transition(self, block, ByteArray32([0] * 32))
+        # 8. Preimages
+        Preimages.transition(self, block)
+        # 9. Statistics
+        Statistics.transition(self, block, [], {}, {})
+        # 1. Safrole
+        # Needs to be done after accumulation, as it requires Tau
+        Safrole.transition(self, block, Safrole.vrf_output(block.header.entropy_source))
 
 state = State(db=main_db, trie=StateTrie())
 

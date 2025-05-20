@@ -52,7 +52,7 @@ class Safrole:
     def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
         # TODO - Use Ring VRF class once it's implemented
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        return ByteArray32(vrf.proof_to_hash(BandersnatchPoint.string_to_point(bytes(signature)[:32]))[:32])
+        return ByteArray32(vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(bytes(signature)))[:32])
 
     @staticmethod
     def transition(state: Sigma, block: Block, entropy: ByteArray32) -> Sigma:
@@ -60,7 +60,7 @@ class Safrole:
         # 1. Timekeeping
         if block.header.slot > state.tau:
             state.tau = block.header.slot
-        else:
+        elif state.tau > 0:
             raise SafroleError(
                 SafroleErrorCode.BAD_SLOT,
                 f"Slot {block.header.slot} is less than current tau {state.tau}",
