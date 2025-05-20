@@ -167,11 +167,11 @@ class StorageView:
         self.TRIE = trie
 
     def __getitem__(self, key: ByteArray32):
-        data = self.DB.get(bytes(construct_state_key((self.id, ByteArray32(Bytes(U32(2**32 - 1).encode()) + key[0:28])))))
+        data = self.DB.get(bytes(construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23]))))
         return Bytes(data) if data else data
 
     def __setitem__(self, key: ByteArray32, value: Bytes):
-        k = construct_state_key((self.id, ByteArray32(Bytes(U32(2 ** 32 - 1).encode()) + key[0:28])))
+        k = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
         # TODO - check for gas before adding, throw error if insufficient. This is supposed to be handled in relevent invocation
         self.DB.put(
             bytes(k),
@@ -192,11 +192,11 @@ class PreImageView:
         self.TRIE = trie
 
     def __getitem__(self, key: ByteArray32):
-        data = self.DB.get(bytes(construct_state_key((self.id, ByteArray32(Bytes(U32(2**32 - 2).encode()) + key[1:29])))))
+        data = self.DB.get(bytes(construct_state_key((self.id, Bytes(U32(2**32 - 2).encode()) + key[1:24]))))
         return Bytes(data) if data else data
 
     def __setitem__(self, key: ByteArray32, value: Bytes):
-        k = construct_state_key((self.id, ByteArray32(Bytes(U32(2 ** 32 - 2).encode()) + key[1:29])))
+        k = construct_state_key((self.id, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24]))
         self.DB.put(
             bytes(k),
             bytes(value)
@@ -210,11 +210,11 @@ class TimestampsView:
         self.TRIE = trie
 
     def __getitem__(self, key: LookupTable):
-        data = self.DB.get(bytes(construct_state_key((self.id, ByteArray32(Bytes(U32(key.length).encode()) + key.hash[2:30])))))
+        data = self.DB.get(bytes(construct_state_key((self.id, Bytes(U32(key.length).encode()) + key.hash[2:25]))))
         return Timestamps.decode_from(data)[0] if data else data
 
     def __setitem__(self, key: LookupTable, value: Timestamps):
-        k = construct_state_key((self.id, ByteArray32(Bytes(U32(key.length).encode()) + key.hash[2:30])))
+        k = construct_state_key((self.id, Bytes(U32(key.length).encode()) + key.hash[2:25]))
         v = value.encode()
         self.DB.put(bytes(k), bytes(v))
         self.TRIE.update(k, Bytes(value))

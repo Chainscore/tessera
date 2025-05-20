@@ -33,7 +33,7 @@ class PsiH:
         elif status == ExecutionStatus.HOST:
             try:
                 status, remaining_gas, register, memory, context = dispatch_fn(
-                    int(status.register.get_value()), Gas(remaining_gas), registers, memory, context
+                    int(status.value.register.get_value()), Gas(remaining_gas), registers, memory, context
                 )
                 if remaining_gas < 0 or status == ExecutionStatus.OUT_OF_GAS:
                     return ExecutionStatus.OUT_OF_GAS, pc, remaining_gas, registers, memory, context

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from jam.execution.utils import decode_code_hash
+from jam.state.utils.key_constructor import construct_state_key
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.integers.fixed import U32, U64
 from jam.types.base.sequences.vector import Vector, decodable_vector
@@ -35,10 +36,6 @@ class LookupTable(Codable, JsonSerde):
     hash: ByteArray32
     length: BlobLength
 
-    def __hash__(self) -> int:
-        return int.from_bytes(bytes(Hash.sha256(bytes(self.hash) + bytes(self.length))))
-
-
 @decodable_dictionary(ByteArray32, Bytes, key_name="hash", value_name="blob")
 class PreImageLookup(Dictionary[ByteArray32, Bytes]):
     """Lookup dictionary"""
@@ -50,17 +47,9 @@ class Timestamps(Vector[U32]):
     """Lookup timestamps"""
     ...
 
-@decodable_dictionary(LookupTable, Timestamps)
-class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
+@decodable_dictionary(ByteArray32, Timestamps)
+class LookupTimestamps(Dictionary[ByteArray32, Timestamps]):
     """Lookup timestamps"""
-
-    @staticmethod
-    def get_key(hash: ByteArray32, length: BlobLength) -> ByteArray32:
-        return ByteArray32(Bytes(length.encode()) + Hash.blake2b(hash)[2:26] + Bytes(bytearray(4)))
-
-    @staticmethod
-    def get_length(hash: ByteArray32) -> BlobLength:
-        return BlobLength(int.from_bytes(bytes(Bytes(hash[0:4])), byteorder='little'))
     ...
 
 
