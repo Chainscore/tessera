@@ -1,4 +1,6 @@
 from copy import deepcopy
+from typing import Optional
+
 from jam.types.state.beta import BlockHistory, PackageDict, Beta
 from jam.types.state.sigma import Sigma
 from jam.types.base.sequences import ByteArray32
@@ -11,8 +13,6 @@ from jam.types.protocol.crypto import OpaqueHash
 from jam.utils.constants import RECENT_HISTORY_SIZE
 from jam.types.protocol.core import WorkPackageHash, SegmentRoot
 
-
-import dataclasses
 
 def package(packages: GuaranteesExtrinsic) -> PackageDict:
     """Transform Guarantees into Dictionary format"""
@@ -30,7 +30,7 @@ def package(packages: GuaranteesExtrinsic) -> PackageDict:
 class RecentHistory:
 
     @staticmethod
-    def transition(state: Sigma, block: Block, accumulate_root: OpaqueHash) -> Sigma:
+    def transition(state: Sigma, block: Block, accumulate_root: Optional[OpaqueHash]) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -72,32 +72,33 @@ class RecentHistory:
         Returns:
             State after transition
         """
-
+        beta = state.beta
         # Step 1
-        if len(state.beta):
-            state.beta[-1].state_root = block.header.parent_state_root
+        if len(beta):
+            beta[-1].state_root = block.header.parent_state_root
 
         # Length Check
-        if len(state.beta) > RECENT_HISTORY_SIZE:
+        if len(beta) > RECENT_HISTORY_SIZE:
             raise ValueError("Invalid beta length, must be equal to RECENT_HISTORY_SIZE")
 
         # Step 2
         last: MMR = MMR([])
-        if len(state.beta) > 0:
-            last = state.beta[-1].mmr
+        if len(beta) > 0:
+            last = deepcopy(beta[-1].mmr)
 
         mmr_functions = MMRFunctions()
+        last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
 
         n = BlockHistory(
-            block.header.parent,
-            mmr_functions.append_fn(last, accumulate_root, Hash.keccak256),
+            Hash.blake2b(block.header.encode()),
+            last,
             ByteArray32([0] * 32),
             package(block.extrinsic.guarantees)
         )
 
         # Step 3
-        state.beta.append(n)
-        state.beta = Beta(state.beta[-8:])
+        beta.append(n)
+        state.beta = Beta(beta[-8:])
 
         # Return State
         return state
