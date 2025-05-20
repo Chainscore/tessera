@@ -8,7 +8,7 @@ from jam.types.base import decodable_choice, Choice
 from jam.types.base.null import Nullable
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.state.chi import Chi
-from jam.types.state.delta import Delta, PreImageLookup
+from jam.types.state.delta import Delta, AccountPreimages
 
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.bytes.byte_array import ByteArray32

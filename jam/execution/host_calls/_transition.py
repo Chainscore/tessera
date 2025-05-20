@@ -7,7 +7,7 @@ from jam.types.base.sequences.bytes import ByteArray32, Byte, Bytes
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.state.delta import Timestamps
-from jam.types.state.delta import Delta, AccountData, AccountStorage, PreImageLookup, LookupTimestamps, LookupTable, BlobLength
+from jam.types.state.delta import Delta, AccountData, AccountStorage, AccountPreimages, AccountLookup, LookupTable, BlobLength
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.types.base.sequences.bytes.bytes import ByteVector32
 from jam.execution.pvm.register import Registers, Register
@@ -51,8 +51,8 @@ class HostTransition(Codable):
         if test_service is None:
             return AccountData(
                 storage=AccountStorage(),
-                lookup=PreImageLookup(),
-                timestamps=LookupTimestamps(),
+                lookup=AccountPreimages(),
+                timestamps=AccountLookup(),
                 code_hash=ServiceCodeHash(ByteArray32([Byte(0x00)] * 32)),
                 balance=Balance(U64(0)),
                 gas_limit=Gas(U64(0)),
@@ -75,15 +75,15 @@ class HostTransition(Codable):
         for key, value in p_map.items():
             storage[key] = value if value is not None else Bytes([])
 
-        # Convert l_map to LookupTimestamps
-        timestamps = LookupTimestamps()
+        # Convert l_map to AccountLookup
+        timestamps = AccountLookup()
         for key, value in l_map.items():
             lookup_table = LookupTable(hash=key, length=BlobLength(len(value.t) if value and value.t else 0))
             timestamps[lookup_table] = value.t if value and value.t else Timestamps([])
 
         return AccountData(
             storage=storage,
-            lookup=PreImageLookup(),  # Assuming default behavior, modify if needed
+            lookup=AccountPreimages(),  # Assuming default behavior, modify if needed
             timestamps=timestamps,
             code_hash=ServiceCodeHash(code_hash),
             balance=Balance(balance),

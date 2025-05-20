@@ -17,7 +17,7 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.decorators import with_json_metadata
 from jam.utils.json.serde import JsonSerde
 
-from jam.types.state.delta import Timestamps, AccountStorage, PreImageLookup
+from jam.types.state.delta import Timestamps, AccountStorage, AccountPreimages
 from jam.types.protocol.validators import ValidatorVector
 from jam.types.state.phi import PhiVector
 from jam.types.state.chi import Chi
@@ -49,7 +49,7 @@ class TestLookup(Dictionary[ByteVector32, TestTimeStamp]):
 @dataclass
 class TestService(Codable, JsonSerde):
     s_map: AccountStorage
-    p_map: PreImageLookup
+    p_map: AccountPreimages
     l_map: TestLookup
     code_hash: ByteVector32
     balance: Balance

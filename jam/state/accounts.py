@@ -6,6 +6,7 @@ from jam.state.merkle import StateTrie
 from jam.state.utils.key_constructor import construct_state_key
 from jam.types.base import Bytes, ByteArray32, U32
 from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot, BlobLength
+from jam.types.protocol.crypto import Hash
 from jam.types.state.delta import ServiceCodeHash, Ao, Ai, LookupTable, Timestamps
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
@@ -95,11 +96,11 @@ class Account:
         return StorageView(self.id, self.DB, self.TRIE)
 
     @property
-    def lookup(self):
+    def preimages(self):
         return PreImageView(self.id, self.DB, self.TRIE)
 
     @property
-    def timestamps(self):
+    def lookup(self):
         return TimestampsView(self.id, self.DB, self.TRIE)
 
     def m_c(self) -> (bytes, bytes):
@@ -136,6 +137,9 @@ class Account:
             return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[2] <= ts
         else:
             raise ValueError("Invalid Timestamp data")
+
+    def __repr__(self):
+        return f"Account(data={self.data})"
 
 
 class DeltaView:
@@ -187,7 +191,8 @@ class PreImageView:
         self.TRIE = trie
 
     def __getitem__(self, key: ByteArray32):
-        data = self.DB.get(bytes(construct_state_key((self.id, Bytes(U32(2**32 - 2).encode()) + key[1:24]))))
+        data = Bytes(U32(2**32 - 2).encode() + bytes(key)[1:24])
+        data = self.DB.get(bytes(construct_state_key((self.id, data))))
         return Bytes(data) if data else data
 
     def __setitem__(self, key: ByteArray32, value: Bytes):
@@ -205,7 +210,7 @@ class TimestampsView:
         self.TRIE = trie
 
     def __getitem__(self, key: LookupTable):
-        data = self.DB.get(bytes(construct_state_key((self.id, Bytes(U32(key.length).encode()) + key.hash[2:25]))))
+        data = self.DB.get(bytes(construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))))
         return Timestamps.decode_from(data)[0] if data else data
 
     def __setitem__(self, key: LookupTable, value: Timestamps):

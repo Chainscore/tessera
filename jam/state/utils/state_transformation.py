@@ -9,8 +9,8 @@
 #     AccountStorage,
 #     Delta,
 #     LookupTable,
-#     LookupTimestamps,
-#     PreImageLookup,
+#     AccountLookup,
+#     AccountPreimages,
 #     Timestamps,
 # )
 # from jam.types.state.eta import Eta
@@ -302,15 +302,15 @@
 #                     balance=i.data.service.balance,
 #                     gas_limit=i.data.service.min_item_gas,
 #                     min_gas=i.data.service.min_memo_gas,
-#                     lookup=PreImageLookup({}),
-#                     timestamps=LookupTimestamps({}),
+#                     lookup=AccountPreimages({}),
+#                     timestamps=AccountLookup({}),
 #                 )
 #                 for preimage in i.data.preimages:
 #                     state.delta[i.id].lookup[preimage.hash] = preimage.blob
 #                 for lookup in i.data.lookup_meta:
 #                     # setting the key(from the values of length and Hash.2b(Hash))
 #                     state.delta[i.id].timestamps[
-#                         LookupTimestamps.get_key(
+#                         AccountLookup.get_key(
 #                             lookup.key.hash, BlobLength(lookup.key.length)
 #                         )
 #                     ] = lookup.value
