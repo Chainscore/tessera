@@ -36,6 +36,7 @@ class LookupTable(Codable, JsonSerde):
     hash: ByteArray32
     length: BlobLength
 
+
 @decodable_dictionary(ByteArray32, Bytes, key_name="hash", value_name="blob")
 class PreImageLookup(Dictionary[ByteArray32, Bytes]):
     """Lookup dictionary"""
@@ -46,6 +47,7 @@ class PreImageLookup(Dictionary[ByteArray32, Bytes]):
 class Timestamps(Vector[U32]):
     """Lookup timestamps"""
     ...
+
 
 @decodable_dictionary(ByteArray32, Timestamps)
 class LookupTimestamps(Dictionary[ByteArray32, Timestamps]):

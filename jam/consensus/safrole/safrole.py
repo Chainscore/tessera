@@ -52,7 +52,7 @@ class Safrole:
     def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
         # TODO - Use Ring VRF class once it's implemented
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        return ByteArray32(vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(bytes(signature)))[:32])
+        return ByteArray32(vrf.ecvrf_proof_to_hash(bytes(signature))[:32])
 
     @staticmethod
     def transition(state: Sigma, block: Block, entropy: ByteArray32) -> Sigma:
