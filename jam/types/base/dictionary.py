@@ -128,9 +128,6 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
         """Convert to JSON representation."""
         return {k.to_json(): v.to_json() for k, v in self.items()}
 
-    def _key_process(self, key: Any):
-        return key
-
     @classmethod
     def from_json(cls: Type[Self], data: Sequence[Any]) -> Self:
         """Create instance from JSON representation."""

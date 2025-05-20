@@ -118,7 +118,7 @@ class State:
         # 9. Statistics
         Statistics.transition(self, block, [], {}, {})
         # 1. Safrole
-        # Needs to be done after accumulation, as it requires Tau
+        # Needs to be done after accumulation+statistics, as it requires Tau
         Safrole.transition(self, block, Safrole.vrf_output(block.header.entropy_source))
 
 state = State(db=main_db, trie=StateTrie())
