@@ -132,17 +132,17 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
     def from_json(cls: Type[Self], data: Sequence[Any]) -> Self:
         """Create instance from JSON representation."""
         if not isinstance(data, dict):
-            _value = {}
+            _value = cls({})
             for val in data:
-                _value[val[cls.key_name]] = val[cls.value_name]
+                _value[cls.key_type.from_json(val[cls.key_name])] = cls.value_type.from_json(val[cls.value_name])
+            return _value
         else:
-            _value = data
-        return cls(
-            {
-                cls.key_type.from_json(k): cls.value_type.from_json(v)
-                for k, v in _value.items()
-            }
-        )
+            return cls(
+                {
+                    cls.key_type.from_json(k): cls.value_type.from_json(v)
+                    for k, v in data.items()
+                }
+            )
 
 
 def decodable_dictionary(

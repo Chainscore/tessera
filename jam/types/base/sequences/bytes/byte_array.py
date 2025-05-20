@@ -25,6 +25,9 @@ class ByteArray(Array[Byte]):
     def __int__(self) -> int:
         return int.from_bytes(bytes(self))
 
+    def __hash__(self):
+        return int(self)
+
     def to_int(self, byteorder: Literal["big", "little"] = "big"):
         return int.from_bytes(self, byteorder)
 

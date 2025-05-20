@@ -1,7 +1,9 @@
-from typing import Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Dict, Type, Self, Sequence, Any
 
 from jam.execution.utils import decode_code_hash
+from jam.state.utils.key_constructor import construct_state_key
+from jam.types.base import Byte
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.integers.fixed import U32, U64
 from jam.types.base.sequences.vector import Vector, decodable_vector
@@ -9,56 +11,11 @@ from jam.types.base.sequences.bytes import ByteArray32, Bytes
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId, TimeSlot
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.codec.primitives.bytes import BytesCodec
-from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 from jam.utils.json import JsonSerde
 from jam.types.protocol.crypto import Hash
 
 ServiceCodeHash = ByteArray32
-
-@decodable_dictionary(ByteArray32, Bytes)
-class AccountStorage(Dictionary[ByteArray32, Bytes]):
-    """Storage dictionary"""
-
-    ...
-
-
-@decodable_dictionary(ByteArray32, Bytes)
-class PreImageLookup(Dictionary[ByteArray32, Bytes]):
-    """Lookup dictionary"""
-
-    ...
-
-
-@decodable_dataclass
-@dataclass
-class LookupTable(Codable, JsonSerde):
-    hash: ByteArray32
-    length: BlobLength
-
-    def __hash__(self) -> int:
-        return int.from_bytes(bytes(Hash.sha256(bytes(self.hash) + bytes(self.length))))
-
-@decodable_vector(element_type=U32, max_length=3)
-class Timestamps(Vector[U32]):
-    """Lookup timestamps"""
-    ...
-
-@decodable_dictionary(LookupTable, Timestamps)
-class LookupTimestamps(Dictionary[LookupTable, Timestamps]):
-    """Lookup timestamps"""
-
-    @staticmethod
-    def get_key(hash: ByteArray32, length: BlobLength) -> ByteArray32:
-        return ByteArray32(Bytes(length.encode()) + Hash.blake2b(hash)[2:26] + Bytes(bytearray(4)))
-
-    @staticmethod
-    def get_length(hash: ByteArray32) -> BlobLength:
-        return BlobLength(int.from_bytes(bytes(Bytes(hash[0:4])), byteorder='little'))
-    ...
-
-
-
+# TODO - : Confirm these types + usage
 """Number of items in the account storage"""
 Ai = U32
 
@@ -69,52 +26,65 @@ Ao = U64
 At = Balance
 
 
+@decodable_dictionary(ByteArray32, Bytes, key_name="key", value_name="value")
+class AccountStorage(Dictionary[ByteArray32, Bytes]):
+    """Storage dictionary"""
+    ...
+
+@decodable_dictionary(ByteArray32, Bytes, key_name="hash", value_name="blob")
+class AccountPreimages(Dictionary[ByteArray32, Bytes]):
+    """Preimage dictionary"""
+    ...
+
+@decodable_vector(element_type=U32, max_length=3)
+class Timestamps(Vector[U32]):
+    """Lookup timestamps"""
+    ...
+
+@decodable_dataclass
+@dataclass
+class LookupTable(Codable, JsonSerde):
+    hash: ByteArray32
+    length: BlobLength
+
+    def __hash__(self):
+        return int(Hash.blake2b(self.length.encode() + self.hash.encode()))
+
+
+@decodable_dictionary(LookupTable, Timestamps, key_name="key", value_name="value")
+class AccountLookup(Dictionary[LookupTable, Timestamps]):
+    """Lookup timestamps"""
+    ...
+
 @decodable_dataclass
 @dataclass
 class AccountData(Codable, JsonSerde):
-    # s
-    storage: AccountStorage
-    # p
-    lookup: PreImageLookup
-    # l
-    timestamps: LookupTimestamps
-    # c
-    code_hash: ServiceCodeHash
-    # b
-    balance: Balance
-    # g
+    code_hash: ServiceCodeHash # code_hash
+    balance: Balance # balance
     gas_limit: Gas # min_item_gas
-    # m
     min_gas: Gas # min_memo_gas
-
-    @property
-    def num_i(self):
-        return Ai(len(self.storage) + 2 * len(self.lookup))
-
-    @property
-    def num_o(self):
-        return Ao(sum([81 + lookup.length for lookup in self.timestamps]) + sum([32 + len(data) for data in self.storage]))
-
-    @property
-    def t(self):
-        return At(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o)
+    num_i: Ai
+    num_o: Ao
+    storage: AccountStorage
+    preimages: AccountPreimages
+    lookup: AccountLookup
 
     def m_c(self) -> (bytes, bytes):
-        return decode_code_hash(self.lookup[self.code_hash])
+        return decode_code_hash(self.preimages[self.code_hash])
 
     def historical_lookup(self, timeslot: TimeSlot, preimage_hash: ByteArray32):
         """
-            https://graypaper.fluffylabs.dev/#/cc517d7/11c70011e000?v=0.6.5
-            """
+        https://graypaper.fluffylabs.dev/#/cc517d7/11c70011e000?v=0.6.5
+        """
         if (
-                self.lookup[preimage_hash] is not None and
+                self.preimages[preimage_hash] is not None and
                 self.is_preimage_valid(
-                    self.timestamps[
+                    self.lookup[
                         LookupTable(hash=preimage_hash, length=BlobLength(len(self.lookup[preimage_hash])))],
                     timeslot
                 )
         ):
-            return self.lookup[preimage_hash]
+            return self.preimages[preimage_hash]
         else:
             return None
 
@@ -134,7 +104,8 @@ class AccountData(Codable, JsonSerde):
         else:
             raise ValueError("Invalid Timestamp data")
 
+
 @decodable_dictionary(ServiceId, AccountData, key_name="id", value_name="data")
-class Delta(Dictionary):
+class Delta(Dictionary[ServiceId, AccountData]):
     """Delta state"""
     ...

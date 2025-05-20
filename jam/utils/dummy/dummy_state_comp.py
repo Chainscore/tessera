@@ -10,8 +10,8 @@ from jam.types.state.delta import (
     AccountData,
     AccountStorage,
     Delta,
-    LookupTimestamps,
-    PreImageLookup,
+    AccountLookup,
+    AccountPreimages,
     ServiceCodeHash,
     Timestamps,
 )
@@ -121,10 +121,10 @@ def create_dummy_state_components() -> Dict[str, object]:
     storage = AccountStorage(
         {create_dummy_bytes32(): Bytes(create_dummy_bytes(32)) for _ in range(3)}
     )
-    lookup = PreImageLookup(
+    lookup = AccountPreimages(
         {create_dummy_bytes32(): Bytes(create_dummy_bytes(64)) for _ in range(2)}
     )
-    timestamps = LookupTimestamps(
+    timestamps = AccountLookup(
         {
             create_dummy_bytes32(): Timestamps([U32(i) for i in range(3)])
             for _ in range(2)

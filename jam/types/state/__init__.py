@@ -14,7 +14,7 @@
 # from jam.types.state.beta import Beta
 # from jam.types.state.phi import AuthorizationQueue, AuthorizerHash, Phi
 # from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ, GammaS
-# from jam.types.state.delta import Delta, Ai, Ai, At, AccountData, LookupTimestamps, LookupTable, Timestamps, PreImageLookup, AccountStorage
+# from jam.types.state.delta import Delta, Ai, Ai, At, AccountData, AccountLookup, LookupTable, Timestamps, AccountPreimages, AccountStorage
 #
 # __all__ = [
 #     "Alpha",
@@ -48,5 +48,5 @@
 #     "Phi",
 #     "Gamma", "GammaA", "GammaK", "GammaZ",
 #     "GammaS",
-#     "Delta", "Ai", "Ai", "At", "AccountData", "LookupTimestamps", "LookupTable", "Timestamps", "PreImageLookup", "AccountStorage"
+#     "Delta", "Ai", "Ai", "At", "AccountData", "AccountLookup", "LookupTable", "Timestamps", "AccountPreimages", "AccountStorage"
 # ]

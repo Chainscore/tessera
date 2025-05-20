@@ -15,11 +15,11 @@ def construct_state_key(
     2. (i, s) where i is U32 and s is ServiceId -> [i, n₀, 0, n₁, 0, n₂, 0, n₃, 0, 0, ...] where n = E₄(s)
     3. (s, h) where s is ServiceId and h is 27-byte array -> [n₀, h₀, n₁, h₁, n₂, h₂, n₃, h₃, h₄, h₅, ..., h₂₇] where n = E₄(s)
     """
-    sequence = Bytes([0] * 31)
+    sequence = [Byte(0)] * 31
 
     if isinstance(input, U8) or isinstance(input, int):
         # Case 1: Single U8 index
-        sequence[0] = Byte(U8(input).value)
+        sequence[0] = Byte(int(input))
 
     elif isinstance(input, tuple) and len(input) == 2:
         if isinstance(input[0], U8) and isinstance(input[1], ServiceId):
@@ -59,4 +59,4 @@ def construct_state_key(
     else:
         raise ValueError("Invalid input type")
 
-    return sequence
+    return Bytes(sequence)

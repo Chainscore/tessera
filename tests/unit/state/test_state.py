@@ -5,7 +5,7 @@ from jam.state.state import setup_state, state
 from jam.types import ByteArray32, ServiceId, U64, U32, Bytes
 from jam.types.protocol.core import Balance
 from jam.types.protocol.crypto import Hash
-from jam.types.state import Eta, Tau, LookupTimestamps, LookupTable, Timestamps
+from jam.types.state import Eta, Tau, AccountLookup, LookupTable, Timestamps
 from jam.utils.dummy.utils import create_dummy_bytes
 
 

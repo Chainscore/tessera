@@ -14,7 +14,7 @@ from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.state.state import state
 from jam.types.protocol.merkle import OptionHash
 from jam.types.state import eta
-from jam.types.state.delta import AccountData, PreImageLookup
+from jam.types.state.delta import AccountData, AccountPreimages
 from jam.execution.host_calls.invocations.functions.accumulate_fns import AccumulateFunctions, check
 from jam.execution.pvm.status import ExecutionStatus, PvmError
 from jam.utils.constants import MAX_SERVICE_CODE_SIZE
@@ -44,8 +44,8 @@ class PsiA(InvocationProtocol):
             10: (AccumulateFunctions, ()), # upgrade (Updates the service account)
             11: (AccumulateFunctions, ()), # transfer (Updates service deferred transfers & balance)
             12: (AccumulateFunctions, {"block_timeslot": self.timeslot}), # eject (Removal of service account)
-            13: (AccumulateFunctions, {}), # query (Updates registers[7,8] wrt lookupTimestamps)
-            14: (AccumulateFunctions, {}), # solicit (Updated the lookupTimestamps)
+            13: (AccumulateFunctions, {}), # query (Updates registers[7,8] wrt AccountLookup)
+            14: (AccumulateFunctions, {}), # solicit (Updated the AccountLookup)
             15: (AccumulateFunctions, {}), # forget (Updates lookupTimestamp & preimage)
             16: (AccumulateFunctions, {}), # yield_ (Updates context[x]_hash)
             18: (GeneralFunctions, {
