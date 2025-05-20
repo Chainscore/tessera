@@ -19,7 +19,7 @@ from jam.types.state.xi import Xi
 from jam.types.state.beta import Beta
 from jam.types.state.phi import AuthorizationQueue, AuthorizerHash, Phi
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ, GammaS
-from jam.types.state.delta import Delta, Ai, Ai, At, AccountData, LookupTimestamps, LookupTable, Timestamps, PreImageLookup, AccountStorage
+from jam.types.state.delta import Delta, Ai, Ai, At, AccountData, LookupTable, Timestamps, AccountLookup, AccountPreimages, AccountStorage
 from jam.types.state.sigma import Sigma
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, VALIDATOR_COUNT, MAX_AUTH_QUEUE_ITEMS, EPOCH_LENGTH, MAX_AUTH_POOL_ITEMS
@@ -53,7 +53,7 @@ class GhostState(Sigma):
         services, service_storage, service_preimages, service_lookup = {}, {}, {}, {}
         for i in self.delta:
             l_key, s_key = set(), set()
-            for j in self.delta[i].timestamps:
+            for j in self.delta[i].lookup:
                 l_key.add(j)
             for j in self.delta[i].storage:
                 s_key.add(j)
@@ -72,16 +72,16 @@ class GhostState(Sigma):
                         (i, Bytes(U32(2**32 - 1).encode()) + j[0:23])
                     )
                 ] = self.delta[i].storage[j]
-            for j in self.delta[i].lookup:
+            for j in self.delta[i].preimages:
                 service_preimages[
                     construct_state_key(
                         (i, Bytes(U32(2**32 - 2).encode()) + j[1:24])
                     )
-                ] = Bytes(self.delta[i].lookup[j])
+                ] = Bytes(self.delta[i].preimages[j])
 
-            for j in self.delta[i].timestamps:
-                service_lookup[construct_state_key((i, j))] = Bytes(
-                    self.delta[i].timestamps[j].encode()
+            for j in self.delta[i].lookup:
+                service_lookup[construct_state_key((i, Bytes(j.length.encode() + bytes(Hash.blake2b(j.hash))[2:25])))] = Bytes(
+                    self.delta[i].lookup[j].encode()
                 )
 
         return {
@@ -168,8 +168,8 @@ class GhostState(Sigma):
                 total_offset += offset
                 delta[service_id] = AccountData(
                     storage=AccountStorage({}),
-                    lookup=PreImageLookup({}),
-                    timestamps=LookupTimestamps({}),
+                    preimages=AccountPreimages({}),
+                    lookup=AccountLookup({}),
                     code_hash=ByteArray32(ac),
                     balance=Balance(ab),
                     gas_limit=Gas(ag),
@@ -219,7 +219,8 @@ class GhostState(Sigma):
     @staticmethod
     def genesis(genesis_path = "genesis.json") -> "GhostState":
         """Generate the genesis state"""
-        peers = ValidatorsData.from_json(json.load(open(genesis_path))["peers"])
+        gen = json.load(open(genesis_path))
+        peers = ValidatorsData.from_json(gen["peers"])
         empty_set = [ValidatorData(
             bandersnatch=BandersnatchPublic(bytes(32)),
             ed25519=Ed25519Public(bytes(32)),
@@ -230,22 +231,17 @@ class GhostState(Sigma):
         fallback = Safrole.arrange_fallback(ByteArray32(bytes(32)), peers)
 
         return GhostState(
-            alpha=Alpha([AuthorizationPool([AuthorizerHash("a261bb28853e83b3de61952b72fb8efd42a5778aa205d82c451768c154a3ac18") for _ in range(MAX_AUTH_POOL_ITEMS)]) for _ in range(CORE_COUNT)]),
+            alpha=Alpha.from_json(gen["state"]["auth_pool"]),
             beta=Beta([]),
             gamma=Gamma(a=GammaA([]), k=GammaK(peers.value), s=fallback, z=GammaZ(bytes(144))),
-            delta=Delta({}),
-            eta=Eta([
-                ByteArray32("2f0039e93a27221fcf657fb877a1d4f60307106113e885096cb44a461cd0afbf"),
-                ByteArray32("d195ba16bc9c84d7fd83a63ac6cf9d514258452642251fa067329f72054b9a60"),
-                ByteArray32("636ce61146e2b12b7e8b12dbce11976c9f125b5a4ceae6feb0f9be09aec0a743"),
-                ByteArray32("607033ff740f9bc953f1b1bd524a40b155f3ff0f1f35332f066b63cb82c9516c")
-            ]),
+            delta=Delta.from_json(gen["state"]["accounts"]),
+            eta=Eta.from_json(gen["state"]["entropy"]),
             iota=Iota(peers.value),
             kappa=Kappa(peers.value),
             lambda_=Lambda_(peers.value),
             rho=Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]),
             tau=Tau(0),
-            phi=Phi([AuthorizationQueue([AuthorizerHash("a261bb28853e83b3de61952b72fb8efd42a5778aa205d82c451768c154a3ac18") for _ in range(MAX_AUTH_QUEUE_ITEMS)]) for _ in range(CORE_COUNT)]),
+            phi=Phi.from_json(gen["state"]["auth_queue"]),
             chi=Chi(chi_m=ServiceId(0), chi_a=ServiceId(0), chi_v=ServiceId(0), chi_g=ChiG({})),
             psi=Psi(good=PsiG([]), bad=PsiB([]), wonky=PsiW([]), offenders=PsiO([])),
             pi=Pi(

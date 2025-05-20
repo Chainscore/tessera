@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import Dict
+from dataclasses import dataclass, field
+from typing import Dict, Type, Self, Sequence, Any
 
 from jam.execution.utils import decode_code_hash
 from jam.state.utils.key_constructor import construct_state_key
@@ -29,40 +29,12 @@ At = Balance
 @decodable_dictionary(ByteArray32, Bytes, key_name="key", value_name="value")
 class AccountStorage(Dictionary[ByteArray32, Bytes]):
     """Storage dictionary"""
-    sid: ServiceId
-
-    def __init__(self, initial: Dict,  service_id: ServiceId):
-        self.sid = service_id
-        super(Dictionary).__init__(initial)
-
-    def __getitem__(self, key: ByteArray32):
-        key = ByteArray32(construct_state_key((self.sid, Bytes(U32(2**32 - 1).encode()) + key[0:23])) + Byte(0))
-        return super(Dictionary).__getitem__(key)
-
-    def __setitem__(self, key: ByteArray32, value: Bytes):
-        key = ByteArray32(construct_state_key((self.sid, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23])) + Byte(0))
-        return super(Dictionary).__setitem__(key, value)
-
-
-
+    ...
 
 @decodable_dictionary(ByteArray32, Bytes, key_name="hash", value_name="blob")
 class AccountPreimages(Dictionary[ByteArray32, Bytes]):
-    """ dictionary"""
-    sid: ServiceId
-
-    def __init__(self, initial: Dict, service_id: ServiceId):
-        self.sid = service_id
-        super(Dictionary).__init__(initial)
-
-    def __getitem__(self, key: ByteArray32):
-        key = ByteArray32(construct_state_key((self.sid, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24])) + Byte(0))
-        return super(Dictionary).__getitem__(key)
-
-    def __setitem__(self, key: ByteArray32, value: Bytes):
-        key = ByteArray32(construct_state_key((self.sid, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24])) + Byte(0))
-        return super(Dictionary).__setitem__(key, value)
-
+    """Preimage dictionary"""
+    ...
 
 @decodable_vector(element_type=U32, max_length=3)
 class Timestamps(Vector[U32]):
@@ -75,37 +47,27 @@ class LookupTable(Codable, JsonSerde):
     hash: ByteArray32
     length: BlobLength
 
+    def __hash__(self):
+        return int(Hash.blake2b(self.length.encode() + self.hash.encode()))
 
-@decodable_dictionary(ByteArray32, Timestamps)
-class AccountLookup(Dictionary[ByteArray32, Timestamps]):
+
+@decodable_dictionary(LookupTable, Timestamps, key_name="key", value_name="value")
+class AccountLookup(Dictionary[LookupTable, Timestamps]):
     """Lookup timestamps"""
-    sid: ServiceId
-
-    def __init__(self, initial: Dict, service_id: ServiceId):
-        self.sid = service_id
-        super(Dictionary).__init__(initial)
-
-    def __getitem__(self, key: LookupTable):
-        key = ByteArray32(construct_state_key((self.sid, Bytes(key.length.encode()) + key[2:25])) + Byte(0))
-        return super(Dictionary).__getitem__(key)
-
-    def __setitem__(self, key: ByteArray32, value: Timestamps):
-        key = ByteArray32(construct_state_key((self.sid, Bytes(key._length.encode() + key[2:25]))) + Byte(0))
-        return super(Dictionary).__setitem__(key, value)
-
+    ...
 
 @decodable_dataclass
 @dataclass
 class AccountData(Codable, JsonSerde):
-    storage: AccountStorage  
-    preimages: AccountPreimages # preimages
-    lookup: AccountLookup
     code_hash: ServiceCodeHash # code_hash
     balance: Balance # balance
     gas_limit: Gas # min_item_gas
     min_gas: Gas # min_memo_gas
     num_i: Ai
     num_o: Ao
+    storage: AccountStorage
+    preimages: AccountPreimages
+    lookup: AccountLookup
 
     def m_c(self) -> (bytes, bytes):
         return decode_code_hash(self.preimages[self.code_hash])

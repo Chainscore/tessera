@@ -9,7 +9,7 @@ from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.crypto import Hash
 from jam.types.state import delta
 from jam.types.state.chi import Chi
-from jam.types.state.delta import AccountData, AccountStorage, LookupTable, LookupTimestamps, PreImageLookup, ServiceCodeHash
+from jam.types.state.delta import AccountData, AccountStorage, LookupTable, AccountLookup, AccountPreimages, ServiceCodeHash
 from jam.types.base.integers.fixed import U32, U64
 from jam.types.protocol.core import BlobLength, Gas, ServiceId, TimeSlot
 from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE, CORE_COUNT, MAX_AUTH_QUEUE_ITEMS, PREIMAGE_EVICTION_TIMESLOTS, TRANSFER_MEMO_SIZE, VALIDATOR_COUNT
@@ -105,7 +105,7 @@ class AccumulateFunctions(INVF):
         """
         a_t=BASIC_MINIMUM_BALANCE+ADDITIONAL_BALANCE_PER_ITEM*2+ADDITIONAL_BALANCE_PER_OCTET*(81+l)
         # AccountData Lookup type needs to be fixed before this func is called
-        a=AccountData(code_hash=ServiceCodeHash(c),storage=AccountStorage({}),timestamps=LookupTimestamps(LookupTable(c,l),[]),lookup=PreImageLookup(),balance=a_t,gas_limit=g,min_gas=m)
+        a=AccountData(code_hash=ServiceCodeHash(c),storage=AccountStorage({}),timestamps=AccountLookup(LookupTable(c,l),[]),lookup=AccountPreimages(),balance=a_t,gas_limit=g,min_gas=m)
         #TODO: Need to re-do it
         s=delta[context.x.s_index]
         """
