@@ -1,5 +1,3 @@
-from jam.storage.db.kv import KVStore
-
 class Settings:
     # Node settings
     NODE_NAME: str = "JAM-Node"
@@ -21,21 +19,24 @@ class Settings:
 
     @property
     def db(self):
-        return KVStore(self.DB_PATH)
+        from jam.config.data_stores import main_db
+        return main_db
 
     @property
     def d3l(self):
-        return KVStore(self.D3L_PATH)
+        from jam.config.data_stores import d3l_db
+        return d3l_db
 
     @property
     def audit(self):
-        return KVStore(self.AUDIT_DB_PATH)
+        from jam.config.data_stores import audits_db
+        return audits_db
 
 settings: Settings = Settings()
 
 def setup_setting(name: str, port: int,  db_path = "data", node_id = None):
+    from jam.config.data_stores import configure_db_paths
     global settings
-    s = Settings()
 
     node_path = f"{db_path}/{port}"
     settings.NODE_PATH = node_path
@@ -46,6 +47,6 @@ def setup_setting(name: str, port: int,  db_path = "data", node_id = None):
     settings.AUDIT_DB_PATH = f"{node_path}/audit"
     settings.D3L_PATH = f"{node_path}/d3l"
     settings.NODE_ID = node_id
-   # settings = s
 
-    print("settings updated to", settings)
+    # Reconfigure DBS
+    configure_db_paths()

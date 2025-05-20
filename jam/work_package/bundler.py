@@ -1,9 +1,7 @@
 from jam.config.logging import logger
 from jam.config.settings import settings
 
-from jam.storage.db.kv import KVStore
-
-from jam.types.base.integers.general import Int
+from jam.types.base.integers import U16
 from jam.types.base.sequences.vector import Vector
 
 from jam.types.work.item import WorkItem
@@ -18,6 +16,7 @@ from jam.types.work.manifest import (
     MultiJustifications,
     MultiExtrinsics,
 )
+from jam.types.work.refine_context import OpaqueHashes
 
 from jam.types.work.report import SegmentRootLookup, WorkPackageBundle
 
@@ -43,19 +42,24 @@ class Bundler:
         self.segments_lookup = Vector([])
 
     def build_lookup(self, p: WorkPackage) -> SegmentRootLookup:
-        d3l = KVStore(settings.D3L_PATH)
+        # Access DA
+        d3l = settings.d3l
 
         map_da = PackageSegmentMap(d3l)
         sr_lookup = SegmentRootLookup({})
 
         for item in p.items:
-            for (h, n) in item.import_segments:
-                s_root = map_da.get(h)
-                if s_root and len(sr_lookup) < 8:
-                    sr_lookup[h] = s_root
+            for spec in item.import_segments:
+                h = spec.tree_root
+                n = spec.index
+                try:
+                    s_root = map_da.get(h)
+                    if s_root and len(sr_lookup) < 8:
+                        sr_lookup[h] = s_root
+                except KeyError as e:
+                    logger.warn(f"Either h is not package hash or {e}")
 
-        self.sr_lookup = SegmentRootLookup
-        d3l.close()
+        self.sr_lookup = sr_lookup
         return sr_lookup
 
     def lookup_root(self, r: OpaqueHash) -> SegmentRoot:
@@ -70,7 +74,7 @@ class Bundler:
         Returns:
             r if r is already a segment root else Segment root from dictionary if r is a work package hash.
         """
-        if r in self.sr_lookup:
+        if self.sr_lookup.value is not None and r in self.sr_lookup.keys():
             return self.sr_lookup[r]
         else:
             return r
@@ -108,8 +112,10 @@ class Bundler:
             Import Segments (Vector[Segment])
         """
 
+        # Access DA
+        d3l = settings.d3l
+
         imports: Segments = Segments([])
-        d3l = KVStore(settings.D3L_PATH)
 
         seg_da = SegmentsDA(d3l)
         sr_er_da = SegmentErasureMap(d3l)
@@ -120,8 +126,12 @@ class Bundler:
 
         seg_dict = SegmentDict({})
 
-        for (h, n) in w.import_segments:
+        for spec in w.import_segments:
+            h = spec.tree_root
+            n = spec.index
+
             s_root = self.lookup_root(h)
+            logger.info(f"Fetching segments with root {s_root}")
 
             try:
                 # Fetch segments directly from db first
@@ -154,8 +164,6 @@ class Bundler:
                     # TODO: Fetch All Shards
 
         self.segments_lookup.append(seg_dict)
-        d3l.close()
-
         return imports
 
     def fetch_justifications(self, w: WorkItem, i: int) -> Justifications:
@@ -175,12 +183,19 @@ class Bundler:
         justifications: Justifications = Justifications([])
         seg_dict = self.segments_lookup[i]
 
-        for (r, n) in w.import_segments:
+        for spec in w.import_segments:
+            r = spec.tree_root
+            n = spec.index
+
             s_root = self.lookup_root(r)
+            logger.info(f"Compiling justification for root {s_root}")
+
+            if s_root not in seg_dict:
+                raise KeyError("Segments not found")
 
             segments = seg_dict[s_root]
             pages = self.merkle.merkle_path_fn(segments, 0, int(n))
-            justification = Justification(Int(len(pages)), pages)
+            justification = Justification(length=U16(len(pages)), justification=OpaqueHashes(pages))
 
             justifications.append(justification)
 
@@ -195,17 +210,21 @@ class Bundler:
 
         for j, item in enumerate(p.items):
             # Fetch Imports
+            logger.info("Fetching imports..")
             imports = self.fetch_imports(item)
             all_imp.append(imports)
 
             # Fetch Justifications
+            logger.info("Compiling justifications..")
             justifications = self.fetch_justifications(item, j)
             all_jfn.append(justifications)
 
             # Fetch Extrinsics
+            logger.info("Fetching extrinsics..")
             extrinsics = self.fetch_extrinsics(item)
             all_ext.append(extrinsics)
 
         bundle = WorkPackageBundle(p, all_ext, all_imp, all_jfn)
 
+        logger.info("Compiling bundle..")
         return bundle

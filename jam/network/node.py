@@ -42,6 +42,7 @@ class Node:
     is_initialized: bool = False
     is_builder: bool = False
     is_validator: bool = True
+
     from .quic.client import QuicClientProtocol
 
     peer_conn: Dict[Peer, Tuple[int, QuicClientProtocol]] = {}

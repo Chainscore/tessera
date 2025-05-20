@@ -78,7 +78,6 @@ class QuicServerProtocol(QuicConnectionProtocol):
                     # Map the request to its corresponding protocol function
                     from jam.network.protocol_map import ProtocolMap
 
-                    print("buf", buffer[1:])
                     protocol = ProtocolMap.get_protocol(prefix)()
                     protocol.server_intercept(self.node, buffer[1:], self, event.stream_id)
 

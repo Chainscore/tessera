@@ -136,7 +136,6 @@ def create_dummy_assurances(num = 3) -> list[AvailAssurance]:
 
 def create_dummy_disputes(num = 3) -> DisputesExtrinsic:
     """Create dummy disputes"""
-    print("debugging dummy ext", num)
     return DisputesExtrinsic(
         verdicts=Verdicts.from_json([
             {

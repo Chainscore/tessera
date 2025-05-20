@@ -1,5 +1,6 @@
 import json
 from math import ceil
+from time import time
 from typing import Tuple
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -10,17 +11,17 @@ from jam.config.settings import settings
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
 
-from jam.storage.db.kv import KVStore
+from jam.types.base import Null
 
 from jam.types.base.integers.general import Int
-from jam.types.base.integers.fixed import U8, U16, U64
+from jam.types.base.integers.fixed import U8, U16, U64, U32
 from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray12
 from jam.types.base.sequences.vector import Vector
 
 from jam.types.extrinsics import ValidatorSignature
 from jam.types.extrinsics.guarantees import ValidatorSignatures
 
-from jam.types.protocol.core import CoreIndex, Gas, TimeSlot
+from jam.types.protocol.core import CoreIndex, Gas, TimeSlot, ExportsRoot
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
 
 from jam.types.work.item import WorkItem
@@ -52,7 +53,7 @@ from jam.types.work.report import (
     WorkPackageBundle
 )
 
-from jam.utils.constants import BASIC_ERASURE_SIZE, SEGMENT_SIZE
+from jam.utils.constants import BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE
 
 
 
@@ -129,8 +130,6 @@ class Processor:
 
         return pages
 
-
-
     @staticmethod
     def item_to_digest(item: WorkItem, result: WorkExecResult, gas: Gas) -> WorkResult:
         """
@@ -145,7 +144,7 @@ class Processor:
         Returns:
             Work Digest
         """
-        extrinsic_size: U64 = 0
+        extrinsic_size: U64 = U64(0)
         for i in item.extrinsic:
             extrinsic_size = extrinsic_size + i.len
 
@@ -179,8 +178,17 @@ class Processor:
         # Work Package, p
         p = b.package
 
+        # ------------------------------------------ IS AUTH INVOCATION ------------------------------------------
+        logger.info(f"Checking authorization..")
+        start_time = time()
         # Auth Output o & Gas g
         o, g = PsiI(p, c).execute()
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"Auth check done in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+        # ------------------------------------------ -- ---- ---------- ------------------------------------------
+
+        s_result = 0
 
         def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
             """
@@ -190,6 +198,7 @@ class Processor:
             https://graypaper.fluffylabs.dev/#/cc517d7/1b3f011b8d01?v=0.6.5
             """
 
+            nonlocal s_result
             w = p.items[j]
 
             l = 0
@@ -197,26 +206,41 @@ class Processor:
             for i in range(k):
                 l += p.items[i].export_count
 
-            r, e, u = PsiR(int(c), p, o, b.import_segments, l)
+            # ------------------------------------------ REFINE INVOCATION ------------------------------------------
+            logger.info(f"Refining Work Item {j}..")
+            start_time = time()
+            r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
+            end_time = time()
+            total_time = end_time-start_time
+            logger.info(f"Refined Work Item {j} in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+            # ------------------------------------------ ----------------- ------------------------------------------
 
             segment = Segment([Byte(0)] * 4104)
             segment_length = w.export_count
-            zero_segment = Segments([segment for _ in range(segment_length)])
+            zero_segments = Segments([segment for _ in range(segment_length)])
 
-            if len(e) == w.export_count:
-                return r, u, e
-            elif not isinstance(r, Bytes):
-                return r, u, zero_segment
+            z = len(o) + s_result
+
+            if r.get_key() != "ok":
+                return r, u, zero_segments
+            elif z + len(r.get_value()) > MAX_WORK_REPORT_SIZE:
+                return WorkExecResult({"result_oversize": Null}), u, zero_segments
+            elif len(e) != w.export_count:
+                return WorkExecResult({"bad_exports": Null}), u, zero_segments
             else:
-                return WorkExecResult(bad_exports=None), u,zero_segment
+                s_result += len(r.get_value())
+                return r, u, e
+
 
         # Work Results, r
         r_list = WorkResults([])
 
+        # Exported Segments
         e_list = MultiSegments([])
 
         for _j in range(len(p.items)):
             _r, _u, _e = utils_i(_j)
+
 
             comp = self.item_to_digest(p.items[_j], _r, _u)
             r_list.append(comp)
@@ -231,17 +255,20 @@ class Processor:
         for segments in e_list:
             e_bar_cap.extend(segments)
 
+        logger.info(f"Exported {len(e_bar_cap)} Segments!")
+
         # Availability Specification, s
+        logger.info(f"Building availability specification..")
+        start_time = time()
         specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"Specification built in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
 
-        # Authorizer Hash, a
-        authorizer = p.code_hash + p.params
-        p_a = Hash.blake2b(bytes(authorizer))
+        logger.info(f"Compiling Report..")
+        report = WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Gas(g))
 
-        if not isinstance(o, Bytes):
-            return None
-        else:
-            return WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p_a, auth_output=o, segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=g)
+        return report
 
     def availability_specifier(self, package_hash: OpaqueHash, wp_bundle: bytes, export_segments: Segments) -> WorkPackageSpec:
         """
@@ -262,67 +289,119 @@ class Processor:
         l = len(wp_bundle)
 
         # Segment Root, e
-        e = self.merkle.cd_merkle_fn(export_segments)
+        e = ExportsRoot(self.merkle.cd_merkle_fn(export_segments))
+        logger.info(f"Exports Root calculated - {e}")
 
         # Segments Count, n
         n = len(export_segments)
 
         erasure_codec = ErasureCode()
 
-        d3l = KVStore(settings.D3L_PATH)
-        audits = KVStore(settings.AUDIT_DB_PATH)
+        # Access DA
+        d3l = settings.d3l
+        audits = settings.audit
 
         # Build Bundle Shards
         audits_da = AuditShardsDA(audits)
 
+        logger.info(f"Building bundle shards..")
+
+        start_time = time()
         padded_wp_bundle = self.zero_padding(Bytes(wp_bundle), BASIC_ERASURE_SIZE)
+        end_time = time()
+        total_time = end_time-start_time
+        logger.info(f"bundle padded in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+
+        start_time = time()
         bundle_shards = erasure_codec.encode(padded_wp_bundle)
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"bundle erasure coded in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
 
         bs_hashes = BundleShardHashes([])
 
+        logger.info(f"Storing bundle shards..")
+        start_time = time()
         for si, bs in enumerate(bundle_shards):
+            # start_time_a = time()
             bs_hash = Hash.blake2b(bs.encode())
+            # end_time_a = time()
+            # total_time = end_time_a - start_time_a
+            # logger.info(f"hashed {si} in {total_time} seconds")
 
             bs_unit = BundleShardUnit(U16(si), bs)
 
             # Store Bundle Shard
             audits_da.put(bs_hash, bs_unit)
             bs_hashes.append(bs_hash)
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"bundle chunks stored in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
 
 
         # Store Exported Segments
         seg_da = SegmentsDA(d3l)
 
+        logger.info(f"Storing segments..")
+        start_time = time()
         proofs = self.paged_proof(export_segments)
         proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"proofs built in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+
+        start_time = time()
         seg_da.put(e, proved_segments)
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"proofs stored in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
 
         # Build Segment Shards
         s_shards_da = SegmentShardsDA(d3l)
 
+        logger.info(f"Building segment shards..")
         justified_segments: Segments = export_segments
         justified_segments.extend(proofs)
 
         all_chunks = Vector([])
 
+        start_time = time()
         for item in justified_segments:
             seg_chunks = erasure_codec.encode(item)
             all_chunks.append(seg_chunks)
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"segments erasure coded in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+
+        start_time = time()
         segments_shards = SegmentsShards(
             [SegmentsShard(
                 [ByteArray12(all_chunks[j][i]) for j in range(len(all_chunks))]
             ) for i in range(len(all_chunks[0]))])
 
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"segments shards Transpose in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
+
         ss_roots = SegmentsShardRoots([])
+
+        logger.info(f"Storing segment shards..")
+        start_time = time()
         for si, ss in enumerate(segments_shards):
+            # start_time_a = time()
             ss_root = self.merkle.wb_merkle_fn(ss)
+            # end_time_a = time()
+            # total_time = end_time_a - start_time_a
+            # logger.info(f"merklized {si} in {total_time} seconds")
 
             ss_unit = SegmentsShardUnit(U16(si), ss)
 
             # Store Segments Shard
             s_shards_da.put(ss_root, ss_unit)
             ss_roots.append(ss_root)
-
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"segment chunks stored in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
 
         # Build Complete Shard Key
         if len(ss_roots) != 1023 or len(bs_hashes) != 1023:
@@ -334,34 +413,50 @@ class Processor:
             shards_keys.append(shards_key.encode())
 
         # Erasure Root
+        start_time = time()
         u = self.merkle.wb_merkle_fn(shards_keys)
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"Erasure Root calculated - {u} in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
 
         # Store Erasure Root - Shards Mapping
         er_shards_da = ErasureShardsMap(d3l)
 
+        logger.info("Storing shards mappings..")
+        start_time = time()
         er_shards_da.put_batch(u, ss_roots, bs_hashes)
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"stored mappings in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
 
-        spec = WorkPackageSpec(hash=package_hash, length=l, erasure_root=u, exports_root=e, exports_count=n)
+        logger.info(f"Compiling availability specification..")
+        start_time = time()
+        spec = WorkPackageSpec(hash=package_hash, length=U32(l), erasure_root=u, exports_root=e, exports_count=U16(n))
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"compiled spec in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
 
-        audits.close()
-        d3l.close()
         return spec
 
     def process_bundle(self, core: CoreIndex, bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup) -> Tuple[WorkReport, WorkReportHash]:
-        d3l = KVStore(settings.D3L_PATH)
-        reports_da = ReportsDA(d3l)
-
         # Generate Report
         logger.info("Building Work Report..")
-
+        start_time = time()
         report = self.build_report(bundle, core, sr_lookup)
-        wr_hash = Hash.blake2b(report.encode())
+        end_time = time()
+        total_time = end_time - start_time
+        logger.info(f"Report compiled in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)")
 
+        wr_hash = Hash.blake2b(report.encode())
         logger.info(f"Generated Work Report with hash {wr_hash}")
 
+        # Access DA
+        d3l = settings.d3l
+
         # Store Report
+        reports_da = ReportsDA(d3l)
         reports_da.put(wr_hash, report)
-        d3l.close()
+        logger.info(f"Stored Work Report with hash {wr_hash}")
 
         return report, wr_hash
 
@@ -402,6 +497,7 @@ class Processor:
         )
 
         # Build Guarantee
+        logger.info(f"Building guarantees..")
         payload = wr.core_index.encode() + wr.encode()
         guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
 
@@ -419,7 +515,7 @@ class Processor:
 
 
         # Distribute Guaranteed WR to Validators CE135
-        logger.info(f"Distributing Work Report to other  validators!")
+        logger.info(f"Distributing Work Report to other validators..")
         if len(guarantees) > 1:
             CE135 = WorkReportDistribution()
             data = CE135Data(report=wr, slot=TimeSlot(0), len=Int(len(guarantees)), signatures=guarantees)

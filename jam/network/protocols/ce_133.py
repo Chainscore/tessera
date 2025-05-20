@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from time import time
 from typing import cast
 
 from jam.config.logging import logger
@@ -79,10 +80,14 @@ class WorkPackageSubmission(NetworkProtocol):
         logger.info("Processing Work Package")
         processor = Processor(node)
 
+        start_time = time()
         wr, wr_hash = processor.process(data.package_data.work_package, data.package_data.core_index, data.extrinsics)
+        end_time = time()
+        total_time = end_time - start_time
 
         logger.info(
-            f"📩 Processed work package : {data.package_data.work_package} with CI {data.package_data.core_index}"
+            f"📩 Processed work package : {data.package_data.work_package} into report {wr} "
+            f"in {total_time} seconds. (~ 1/{6 // total_time}th of a slot)"
         )
 
         # Return acknowledgment to Builder

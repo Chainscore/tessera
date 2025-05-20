@@ -64,7 +64,7 @@ class MultiExtrinsics(Vector[Extrinsics]):
 @decodable_dataclass
 @dataclass
 class Justification(Codable, JsonSerde):
-    length: Int
+    length: U16
     justification: OpaqueHashes
 
 @decodable_vector(element_type=Justification)

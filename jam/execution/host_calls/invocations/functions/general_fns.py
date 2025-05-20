@@ -158,7 +158,7 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
 
         registers[7] = Register(len(v))
-        print(f"Writing {v[f:l]} to {memory_start}")
+        # print(f"Writing {v[f:l]} to {memory_start}")
         memory.write(memory_start, v[f:l])
         return CONTINUE, gas, registers, memory, context
 

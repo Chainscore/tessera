@@ -1,13 +1,11 @@
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.execution.host_calls._types import DeferredTransfer, AccumulationContext,service_dict,StateContext
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
-from jam.execution.pvm import register
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
-from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus
+from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus, PvmError
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.crypto import Hash
-from jam.types.state import delta
 from jam.types.state.chi import Chi
 from jam.types.state.delta import AccountData, AccountStorage, LookupTable, LookupTimestamps, PreImageLookup, ServiceCodeHash
 from jam.types.base.integers.fixed import U32, U64

@@ -53,4 +53,4 @@ class WorkPackage(Codable, JsonSerde):
 
     @property
     def a(self) -> OpaqueHash:
-        return Hash.blake2b(self.code_hash + self.params)
+        return Hash.blake2b(bytes(self.code_hash) + bytes(self.params))

@@ -1,16 +1,18 @@
+from typing import Tuple
+
 from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.functions.refine_fns import RefineFunctions, RefineContext, RefinementMap
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from jam.execution.pvm.status import OUT_OF_GAS, PANIC
 from jam.execution.utils import decode_code_hash
-from jam.state.state import state
 from jam.storage.item_extrinsics import ItemExtrinsics
-from jam.types.base import U16
-from jam.types.protocol.core import CoreIndex, ProgramCounter
+from jam.types.base import U16, Null, Bytes
+from jam.types.protocol.core import ProgramCounter, Gas
 from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.work.package import WorkPackage
 from jam.types.work.manifest import Segments
+from jam.types.work.report import WorkExecResult
 from jam.utils.constants import IS_AUTHORIZED_GAS
 
 
@@ -41,7 +43,9 @@ class PsiR(InvocationProtocol):
             }),
         }
 
-    def execute(self):
+    def execute(self) -> Tuple[WorkExecResult, Segments, Gas]:
+        from jam.state.state import state
+
         wi = self.work_package.items[self.item_index]
         _, pc = decode_code_hash(state.delta[wi.service].historical_lookup(self.work_package.context.lookup_anchor_slot, wi.code_hash))
         args = self.item_index.encode() + wi.service.encode() + wi.payload.encode() + bytes(Hash.blake2b(self.work_package.encode()))
@@ -53,6 +57,8 @@ class PsiR(InvocationProtocol):
             self.dispatch,
             RefineContext(m=RefinementMap({}), e=Segments([])),
         )
-        if r == PANIC or r == OUT_OF_GAS:
-            return r, Segments([]), u
-        return r, context.e, u
+        if r == PANIC:
+            return WorkExecResult({"panic": Null}), Segments([]), Gas(u)
+        elif r == OUT_OF_GAS:
+            return WorkExecResult({"out_of_gas": Null}), Segments([]), Gas(u)
+        return WorkExecResult({"ok": Bytes(r)}), Segments(context.e), Gas(u)
