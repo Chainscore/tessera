@@ -2,16 +2,14 @@ import math
 from typing import Dict, List
 from jam.types.state.pi import (
     AllServiceStats,
-    CoreStat,
     ServiceStat, AllValidatorStats, AllCoreStats,
 )
 from jam.types.base.integers.fixed import U32
-from jam.types.state.pi import ValidatorStat
 from jam.types.state.sigma import Sigma
 from jam.types.block import Block
 from jam.types.protocol.core import Gas, ServiceId
 from jam.types.work.report import WorkReport
-from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, SEGMENT_SIZE
+from jam.utils.constants import EPOCH_LENGTH, SEGMENT_SIZE
 
 
 class Statistics:
@@ -42,12 +40,14 @@ class Statistics:
 
         is_new_epoch = e_dash > e
 
-        if is_new_epoch:
-            state.pi.vals_last = state.pi.vals_current
-            state.pi.vals_current = AllValidatorStats.empty()
+        pi = state.pi
 
-        pi_curr = state.pi.vals_current
-        pi_last = state.pi.vals_last
+        if is_new_epoch:
+            pi.vals_last = pi.vals_current
+            pi.vals_current = AllValidatorStats.empty()
+
+        pi_curr = pi.vals_current
+        pi_last = pi.vals_last
 
         author_index = block.header.author_index
 
@@ -72,8 +72,8 @@ class Statistics:
             validator_index = assurance.validator_index
             pi_curr[validator_index].assurances += 1
 
-        state.pi.vals_current = pi_curr
-        state.pi.vals_last = pi_last
+        pi.vals_current = pi_curr
+        pi.vals_last = pi_last
 
         incoming_wrs = []
 
@@ -107,7 +107,7 @@ class Statistics:
             for index, bit in enumerate(assurance.bitfield):
                 pi_core[index].popularity += 1 if bit else 0
 
-        state.pi.cores = pi_core
+        pi.cores = pi_core
 
         r = []
         for report in incoming_wrs:
@@ -173,6 +173,8 @@ class Statistics:
                 service_id
             ][1]
 
-        state.pi.services = pi_service
+        pi.services = pi_service
+
+        state.pi = pi
 
         return state

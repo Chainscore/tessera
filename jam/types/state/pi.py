@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from jam.types.base import Vector, decodable_vector
+from jam.types.base import Vector, decodable_vector, Int
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.integers.fixed import U16, U32
 from jam.types.base.sequences.array import Array, decodable_array
@@ -29,18 +29,18 @@ class ValidatorStat(Codable, JsonSerde):
 @decodable_dataclass
 @dataclass
 class CoreStat(Codable, JsonSerde):
-    gas_used: U32
-    imports: U32
-    extrinsic_count: U32
-    extrinsic_size: U32
-    exports: U32
-    bundle_size: U32
-    da_load: U32
-    popularity: U32
+    da_load: Int
+    popularity: Int
+    imports: Int
+    exports: Int
+    extrinsic_size: Int
+    extrinsic_count: Int
+    bundle_size: Int
+    gas_used: Int
 
     @staticmethod
     def empty() -> "CoreStat":
-        return CoreStat(gas_used=U32(0), imports=U32(0), extrinsic_count=U32(0), extrinsic_size=U32(0), exports=U32(0), bundle_size=U32(0), da_load=U32(0), popularity=U32(0))
+        return CoreStat(gas_used=Int(0), imports=Int(0), extrinsic_count=Int(0), extrinsic_size=Int(0), exports=Int(0), bundle_size=Int(0), da_load=Int(0), popularity=Int(0))
 
 
 @decodable_dataclass
@@ -65,7 +65,7 @@ class ServiceStat(Codable, JsonSerde):
             provided_count=U16(0),
             provided_size=U32(0),
             refinement_count=U32(0),
-            refinement_gas_used=(Gas),
+            refinement_gas_used=Gas(0),
             imports=U32(0),
             exports=U32(0),
             extrinsic_size=U32(0),
@@ -86,8 +86,8 @@ class AllValidatorStats(Array[ValidatorStat]):
         return AllValidatorStats([ValidatorStat.empty() for _ in range(VALIDATOR_COUNT)])
 
 
-@decodable_vector(CoreStat)
-class AllCoreStats(Vector[CoreStat]):
+@decodable_array(CORE_COUNT, CoreStat)
+class AllCoreStats(Array[CoreStat]):
     """All core stats"""
 
     @staticmethod

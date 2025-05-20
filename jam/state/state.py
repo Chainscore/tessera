@@ -125,10 +125,8 @@ state = State(db=main_db, trie=StateTrie())
 
 def setup_state(ghost: GhostState, db: KVStore):
     data = ghost.transform()
-    for key, value in data.items():
-        db.put(bytes(key), bytes(value))
     trie = StateTrie()
-    trie.merkelize(data)
+    trie.merkelize(data, db)
 
     new_state = State(db, trie)
     global state
