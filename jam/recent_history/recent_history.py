@@ -85,9 +85,8 @@ class RecentHistory:
         last: MMR = MMR([])
         if len(beta) > 0:
             last = deepcopy(beta[-1].mmr)
-
-        mmr_functions = MMRFunctions()
-        last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
+            mmr_functions = MMRFunctions()
+            last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
 
         n = BlockHistory(
             Hash.blake2b(block.header.encode()),

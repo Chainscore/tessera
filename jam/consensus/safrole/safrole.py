@@ -51,6 +51,8 @@ class Safrole:
     @staticmethod
     def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
         # TODO - Use Ring VRF class once it's implemented
+        if int(signature) == 0:
+            return ByteArray32(signature[:32])
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
         return ByteArray32(vrf.ecvrf_proof_to_hash(bytes(signature))[:32])
 
@@ -141,9 +143,12 @@ class Safrole:
 
         # 2. Accumulate entropy
         # Use entropy coming from vrf output of Hv once we have valid seals generated
-        state.eta[0] = Hash.blake2b(
-            bytes(state.eta[0]) + bytes(entropy)
-        )
+        if int(entropy) > 0:
+            eta = state.eta
+            eta[0] = Hash.blake2b(
+                bytes(state.eta[0]) + bytes(entropy)
+            )
+            state.eta = eta
         return state
 
     @staticmethod

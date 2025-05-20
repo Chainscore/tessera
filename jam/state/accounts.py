@@ -180,11 +180,6 @@ class StorageView:
         self.TRIE.update(k, value)
         # TODO - update ai, ao
 
-    def __delitem__(self, key):
-        self.DB.delete(bytes(key))
-        #TODO: Implement trie update once trie can delete nodes
-        raise ValueError("Not yet implemented. Contact Prasad")
-
 class PreImageView:
     def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
         self.id = id
