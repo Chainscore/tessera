@@ -84,6 +84,17 @@ class WorkPackageSpec(Codable, JsonSerde):
     # n
     exports_count: U16
 
+    @staticmethod
+    def empty():
+        return WorkPackageSpec(
+            hash = WorkPackageHash([0] * 32),
+            length = U32(0),
+            erasure_root = ErasureRoot([0] * 32),
+            exports_root = ExportsRoot([0] * 32),
+            exports_count = U16(0)
+        )
+
+
 
 @decodable_dataclass
 @dataclass
@@ -138,6 +149,21 @@ class WorkReport(Codable, JsonSerde):
     # g
     auth_gas_used: Gas
 
+    @classmethod
+    def empty(cls, **overrides) -> "WorkReport":
+        defaults = {
+            "package_spec":          WorkPackageSpec.empty(),
+            "context":               RefineContext.empty(),
+            "core_index":            CoreIndex(0),
+            "authorizer_hash":       OpaqueHash(bytes([0] * 32)),
+            "auth_output":           Bytes(b""),
+            "segment_root_lookup":   SegmentRootLookup({}),
+            "results":               WorkResults([]),
+            "auth_gas_used":         Gas(0),
+        }
+        # merge in anything the caller wants to override:
+        defaults.update(overrides)
+        return cls(**defaults)
 
 @decodable_vector(element_type=WorkReportHash, allow_duplicates=False)
 class WorkDependencies(Vector[WorkReportHash]):
