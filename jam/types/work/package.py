@@ -30,6 +30,15 @@ class Authorizer(Codable, JsonSerde):
 class WorkItems(Vector[WorkItem]):
     ...
 
+
+@decodable_dataclass
+@dataclass
+class Authorizer(Codable, JsonSerde):
+    # u
+    code_hash: OpaqueHash
+    # p
+    params: Bytes
+
 @decodable_dataclass
 @dataclass
 class WorkPackage(Codable, JsonSerde):
@@ -38,10 +47,8 @@ class WorkPackage(Codable, JsonSerde):
     authorization: Bytes
     # h
     auth_code_host: ServiceId
-    # u
-    code_hash: OpaqueHash
-    # p
-    params: Bytes
+    # u, p
+    authorizer: Authorizer
     # x
     context: RefineContext
     # w
