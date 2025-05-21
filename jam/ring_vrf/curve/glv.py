@@ -211,3 +211,9 @@ class GLVSpecs:
         beta = A_inv @ np.array([k, 0])
         return float(beta[0]), float(beta[1])
 
+DisabledGLV = GLVSpecs(
+    is_enabled=False,
+    lambda_param=0,
+    constant_b=0,
+    constant_c=0
+)
