@@ -7,7 +7,7 @@ from jam.state.utils.key_constructor import construct_state_key
 from jam.types.base import Bytes, ByteArray32, U32
 from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot, BlobLength
 from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import ServiceCodeHash, Ao, Ai, LookupTable, Timestamps
+from jam.types.state.delta import AccountMetadata, ServiceCodeHash, Ao, Ai, LookupTable, Timestamps
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.codec.primitives.bytes import BytesCodec
@@ -15,15 +15,7 @@ from jam.utils.json import JsonSerde
 from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 
 
-@dataclass
-@decodable_dataclass
-class AccountMetadata(Codable, JsonSerde):
-    code_hash: ServiceCodeHash  # code_hash
-    balance: Balance  # balance
-    gas_limit: Gas  # min_item_gas
-    min_gas: Gas  # min_memo_gas
-    num_o: Ao
-    num_i: Ai
+
 
 
 class Account:
