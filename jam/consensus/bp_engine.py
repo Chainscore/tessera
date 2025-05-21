@@ -109,7 +109,7 @@ class BlockProducer:
         return Block(
             header=Header(
                 parent=Hash.blake2b(Block.load_parent(current_timeslot, self.db).header.encode()),
-                parent_state_root=state.generate_root(),
+                parent_state_root=state.TRIE.root_hash,
                 extrinsic_hash=self.hash_extrinsic(extrinsic),
                 slot=current_timeslot,
                 epoch_mark=Safrole.get_epoch_marker(state, current_timeslot),

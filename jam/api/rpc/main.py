@@ -1,15 +1,7 @@
-
 from quart import Quart, request, jsonify
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, Optional
 from pydantic import BaseModel
-from jam.consensus.grandpa.finality import Finality
-from jam.db.kv import KVStore
-from jam.state.state import State
-from jam.types.block import Block
-from jam.types.header import Header
-from jam.types.protocol.core import TimeSlot
-from jam.types import  U32
-from jam.storage.queue import StorageQueue
+from jam.config import data_stores
 from jam.api.rpc.helper_function import (
     best_block_handler,
     finalized_block_handler,
@@ -21,8 +13,6 @@ from jam.api.rpc.helper_function import (
     service_preimage_handler,
     service_request_handler,
     )
-from tests.unit.safrole import data
-    
 app = Quart(__name__) 
 # Following the etherum json rpc api structure
 """
@@ -94,7 +84,7 @@ async def rpc_handler():
         })
 
     try:
-        result = handler(req.params, req.id)
+        result = handler(req.params, req.id, data_stores.main_db)
         print(f"Handler result: {result}")
         return jsonify({
             "jsonrpc":"2.0",
