@@ -1,6 +1,8 @@
 """Work report types for the JAM protocol."""
 
 from dataclasses import dataclass
+
+from jam.types.base import Int
 from jam.types.base.null import Nullable
 from jam.types.base.integers import U8, U16, U32, U64
 from jam.types.base.choices.choice import Choice, decodable_choice
@@ -47,11 +49,11 @@ class ExecResults(Vector[WorkExecResult]):
 class RefineLoad(Codable, JsonSerde):
     """Refine load structure."""
 
-    gas_used: Gas
-    imports: U16
-    exports: U16
-    extrinsic_count: U8
-    extrinsic_size: U64
+    gas_used: Int # TODO: This is supposed to be Ng
+    imports: Int
+    exports: Int
+    extrinsic_count: Int
+    extrinsic_size: Int
 
 @decodable_dataclass
 @dataclass
@@ -67,6 +69,7 @@ class WorkResult(Codable, JsonSerde):
     accumulate_gas: Gas
     # d
     result: WorkExecResult
+    # x
     refine_load: RefineLoad
 
 @decodable_dataclass
@@ -137,7 +140,7 @@ class WorkReport(Codable, JsonSerde):
     # x
     context: RefineContext
     # c
-    core_index: CoreIndex
+    core_index: Int
     # a
     authorizer_hash: OpaqueHash
     # o
@@ -147,7 +150,7 @@ class WorkReport(Codable, JsonSerde):
     # r
     results: WorkResults
     # g
-    auth_gas_used: Gas
+    auth_gas_used: Int
 
     @classmethod
     def empty(cls, **overrides) -> "WorkReport":
