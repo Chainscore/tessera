@@ -58,12 +58,12 @@ class GhostState(Sigma):
             for j in self.delta[i].storage:
                 s_key.add(j)
             services[construct_state_key((255, i))] = Bytes(
-                self.delta[i].code_hash.encode()
-                + self.delta[i].balance.encode()
-                + self.delta[i].gas_limit.encode()
-                + self.delta[i].min_gas.encode()
-                + self.delta[i].num_o.encode()
-                + self.delta[i].num_i.encode()
+                self.delta[i].service.code_hash.encode()
+                + self.delta[i].service.balance.encode()
+                + self.delta[i].service.gas_limit.encode()
+                + self.delta[i].service.min_gas.encode()
+                + self.delta[i].service.num_o.encode()
+                + self.delta[i].service.num_i.encode()
             )
 
             for j in self.delta[i].storage:

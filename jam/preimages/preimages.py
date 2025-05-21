@@ -7,6 +7,7 @@ from jam.types.state.sigma import Sigma
 from jam.types.block import Block
 from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
 from jam.types.protocol.crypto import Hash
+from jam.types.protocol.core import BlobLength
 
 
 class Preimages:
@@ -30,24 +31,23 @@ class Preimages:
             account = state.delta[preimage.requester]
             # If the preimage to add does not have lookup metadata, throw unneeded error
             hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(hashed_blob, len(preimage.blob))
+            lookup_key = LookupTable(hashed_blob, BlobLength(len(preimage.blob)))
             if (
-                lookup_key not in account.timestamps
-                or len(account.timestamps[lookup_key]) != 0
+                lookup_key not in account.lookup
+                or len(account.lookup[lookup_key]) != 0
             ):
                 raise PreimageError(
-                    PreimageErrorEnum.PREIMAGE_UNNEEDED,
-                    "Preimage metadata does not exist",
+                    PreimageErrorEnum.PREIMAGE_UNNEEDED
                 )
 
         for preimage in block.extrinsic.preimages:
             # Add the preimage to the account
             account = state.delta[preimage.requester]
             hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(hashed_blob, len(preimage.blob))
+            lookup_key = LookupTable(hashed_blob, BlobLength(len(preimage.blob)))
 
-            account.lookup[hashed_blob] = preimage.blob
-            account.timestamps[lookup_key].append(block.header.slot)
+            account.preimages[hashed_blob] = preimage.blob
+            account.lookup[lookup_key].append(block.header.slot)
 
         return state
 

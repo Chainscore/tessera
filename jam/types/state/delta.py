@@ -13,6 +13,9 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.types.protocol.crypto import Hash
+from jam.utils.json.decorators import with_json_metadata
+
+
 
 ServiceCodeHash = ByteArray32
 # TODO - : Confirm these types + usage
@@ -25,6 +28,23 @@ Ao = U64
 """The minimum, or threshold, balance needed for any given service account"""
 At = Balance
 
+@with_json_metadata(
+    code_hash   = { "name": "code_hash" },
+    balance   = { "name": "balance"},
+    gas_limit = { "name": "min_item_gas"},
+    min_gas    = { "name": "min_memo_gas"},
+    num_o    = { "name": "bytes"},
+    num_i    = { "name": "items"},
+)
+@dataclass
+@decodable_dataclass
+class AccountMetadata(Codable, JsonSerde):
+    code_hash: ServiceCodeHash  # code_hash
+    balance: Balance  # balance
+    gas_limit: Gas  # min_item_gas
+    min_gas: Gas  # min_memo_gas
+    num_o: Ao
+    num_i: Ai
 
 @decodable_dictionary(ByteArray32, Bytes, key_name="key", value_name="value")
 class AccountStorage(Dictionary[ByteArray32, Bytes]):
@@ -56,15 +76,18 @@ class AccountLookup(Dictionary[LookupTable, Timestamps]):
     """Lookup timestamps"""
     ...
 
+
+@with_json_metadata(
+    # default in empty lists if JSON omits them
+    service   = { "name": "service",    "default": {} },
+    storage   = { "name": "storage",    "default": AccountStorage({}) },
+    preimages = { "name": "preimages",  "default": AccountPreimages({}) },
+    lookup    = { "name": "lookup",     "default": AccountLookup({}) },
+)
 @decodable_dataclass
 @dataclass
 class AccountData(Codable, JsonSerde):
-    code_hash: ServiceCodeHash # code_hash
-    balance: Balance # balance
-    gas_limit: Gas # min_item_gas
-    min_gas: Gas # min_memo_gas
-    num_i: Ai
-    num_o: Ao
+    service:AccountMetadata
     storage: AccountStorage
     preimages: AccountPreimages
     lookup: AccountLookup
