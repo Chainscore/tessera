@@ -72,6 +72,8 @@ class Safrole:
         new_epoch = int(block.header.slot) // EPOCH_LENGTH
         epoch_jump = new_epoch - old_epoch
 
+        gamma = state.gamma
+
         # 3. Ticket Accumulation
         ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
         # Process the tickets before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
@@ -79,16 +81,16 @@ class Safrole:
             # Validate extrinsics
             Safrole.ensure_valid_ticket_extrinsics(block)
             # Accumulate them in gamma.a
-            state.gamma.a += [
+            gamma.a += [
                 TicketBody(
                     attempt=ticket.attempt, id=Safrole.vrf_output(ticket.signature)
                 )
                 for ticket in block.extrinsic.tickets
             ]
-            state.gamma.a.sort(key=lambda x: x.id)
-            state.gamma.a = GammaA(state.gamma.a[:EPOCH_LENGTH])
+            gamma.a.sort(key=lambda x: x.id)
+            gamma.a = GammaA(gamma.a[:EPOCH_LENGTH])
             # Check for duplicates
-            if len(state.gamma.a) != len(list(set(state.gamma.a))):
+            if len(gamma.a) != len(list(set(gamma.a))):
                 raise SafroleError(SafroleErrorCode.DUPLICATE_TICKET, "Duplicate tickets are not allowed")
         # We never expect tickets after TICKET_SUBMISSION_END
         if not ticket_submission_active:
@@ -99,7 +101,7 @@ class Safrole:
         if new_epoch > old_epoch:
             # 4.1. Rotate validators
             state.lambda_ = Lambda_(state.kappa.value)
-            state.kappa = Kappa(state.gamma.k)
+            state.kappa = Kappa(gamma.k)
             filtered_validators=[]
             for k in state.iota:
                 if k.ed25519 in state.psi.offenders:
@@ -109,7 +111,7 @@ class Safrole:
                     # Not an offender, keep the original validator data
                     filtered_validators.append(k)
             
-            state.gamma.k = GammaK(filtered_validators)
+            gamma.k = GammaK(filtered_validators)
 
             # 4.2 . Shift entropy
             state.eta = Eta(
@@ -122,24 +124,24 @@ class Safrole:
             # If we have sufficient tickets accumulated,
             # And we are jumping only one epoch,
             # And we are not jumping before TICKET_SUBMISSION_END
-            if len(state.gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
+            if len(gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
                 # If we have sufficient tickets accumulated,
                 # use outside-in sequencer and place the ticket in gamma.s
-                state.gamma.s = GammaS(GammaSTickets(Safrole.outside_in(state.gamma.a.value)))
+                gamma.s = GammaS(GammaSTickets(Safrole.outside_in(gamma.a.value)))
             # Else use the fallback mechanism
             else:
                 # Else fallback: use bandersnatch keys
-                state.gamma.s = Safrole.arrange_fallback(
+                gamma.s = Safrole.arrange_fallback(
                     state.eta[2], state.kappa
                 )
 
             # 4. 4. Update ring root
-            state.gamma.z = GammaZ(Safrole.compute_ring_root(
+            gamma.z = GammaZ(Safrole.compute_ring_root(
                 [k.bandersnatch for k in state.kappa]
             ).hex())
 
             # 4.5. Empty the ticket acc for upcoming epoch
-            state.gamma.a = GammaA([])
+            gamma.a = GammaA([])
 
         # 2. Accumulate entropy
         # Use entropy coming from vrf output of Hv once we have valid seals generated
@@ -149,6 +151,8 @@ class Safrole:
                 bytes(state.eta[0]) + bytes(entropy)
             )
             state.eta = eta
+
+        state.gamma = gamma
         return state
 
     @staticmethod
