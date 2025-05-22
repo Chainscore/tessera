@@ -1,3 +1,6 @@
+from jam.ring_vrf.ring_proof.constants import SIZE
+
+
 def is_power_of_two(n):
     # is n==2**x
     return n and (n & (n - 1)) == 0
@@ -36,7 +39,7 @@ def poly_interpolate_fft(a, omega, p): # funcs like inverse_fft from evals to po
     n = len(a)
     N= next_power_of_two(n)
     omega_2048=49307615728544765012166121802278658070711169839041683575071795236746050763237
-    if N>512:
+    if N>SIZE:
         omega = pow(omega_2048, (2048 // N), p)
 
     omega_inv = modinv(omega, p)

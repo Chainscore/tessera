@@ -1,4 +1,6 @@
 from py_ecc.optimized_bls12_381 import normalize as nm
+
+from jam.ring_vrf.ring_proof.constants import SIZE
 from jam.ring_vrf.ring_proof.pcs.kzg import KZG
 from jam.ring_vrf.ring_proof.polynomial.ops import poly_division_general
 kzg=KZG.default()
@@ -24,7 +26,7 @@ class QuotientPoly:
 
 
     def quotient_poly(self, C_agg):
-        qnt_poly=poly_division_general(C_agg,self.poly_vector_xn_minus_1(512))
+        qnt_poly=poly_division_general(C_agg,self.poly_vector_xn_minus_1(SIZE))
         # print("q_p:", qnt_poly)
         C_qp=self.quotient_poly_commitment(qnt_poly)
         # C_qp_nm=nm(C_qp)

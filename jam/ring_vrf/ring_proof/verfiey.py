@@ -75,7 +75,8 @@ class Verify:
         L_0_zeta = poly_evaluate(L_0_x, zeta, S_PRIME) % curve_order
         L_N_4_x = lagrange_basis_polynomial(self.D, SIZE - 4)
         L_N_4_zeta = poly_evaluate(L_N_4_x, zeta, S_PRIME) % curve_order
-        sp = sw.from_twisted_edwards(self.sp)
+        # sp = sw.from_twisted_edwards(self.sp)
+        sp= self.sp
         sx, sy = sp
         MOD = curve_order
 

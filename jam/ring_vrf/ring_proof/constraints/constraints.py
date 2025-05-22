@@ -1,5 +1,5 @@
 from __future__ import annotations
-from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
+# from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
 from jam.ring_vrf.ring_proof.constants import SeedPoint
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Sequence, Any
@@ -166,7 +166,8 @@ class RingConstraintBuilder:
     def _c5(self) -> List[List[int]]:
         if "c5x" in self._cache:
             return [self._cache["c5x"], self._cache["c6x"]]
-        seed_x, seed_y = sw.from_twisted_edwards(SeedPoint)
+        # seed_x, seed_y = sw.from_twisted_edwards(SeedPoint)
+        seed_x, seed_y= SeedPoint
 
         # print("seed_here",(seed_x, seed_y))
 

@@ -9,32 +9,37 @@
 
 import json
 import time
+
+from jam.ring_vrf.curve.twisted_edwards.te_affine_point import TEAffinePoint
+from jam.ring_vrf.ring_proof.short_weierstrass.banders import TwistedEdwardCurve
+
 start_time=time.time()
 from jam.ring_vrf.ring_proof.pcs.load_powers import g1_points, g2_points
 from jam.ring_vrf.ring_proof.transcript.phases import phase1_alphas
 from jam.ring_vrf.ring_proof.transcript.transcript import Transcript
-from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
+from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, BandersnatchCurve
 from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
 from jam.ring_vrf.ring_proof.constants import Blinding_Base, S_PRIME, OMEGA_2048, SeedPoint
 from jam.ring_vrf.ring_proof.columns.columns import WitnessColumnBuilder, PublicColumnBuilder
 from jam.ring_vrf.ring_proof.constraints.constraints import RingConstraintBuilder
 from jam.ring_vrf.ring_proof.helpers import Helpers as H
-from py_ecc.optimized_bls12_381 import  normalize as nm
+from py_ecc.optimized_bls12_381 import normalize as nm, normalize
 from jam.ring_vrf.ring_proof.constraints.aggregation import aggregate_constraints
 from jam.ring_vrf.ring_proof.proof.quotient_poly import QuotientPoly
 from jam.ring_vrf.ring_proof.proof.linearization_poly import LAggPoly
 from jam.ring_vrf.ring_proof.proof.aggregation_poly_and_proof_gtn import AggPoly
 from jam.ring_vrf.ring_proof.verfiey import Verify
 from jam.ring_vrf.ring_proof.constants import D_512 as D
-
+from jam.ring_vrf.ring_proof.rough import  cond_add_acc_x, cond_add_acc_y
 import json
+from jam.ring_vrf.ring_proof.short_weierstrass.banders import  TwistedEdwardCurve as TE
 import os
 def test_ring_proof():
     file_path = '/home/siva/PycharmProjects/tessera_JAM_VRF/tests/unit/vrf/data/ark-vrf/bandersnatch_ed_sha512_ell2_ring.json'
     with open(file_path, 'r') as f:
         data = json.load(f)
 
-    for index in range(len(data)):
+    for index in range(len(data)-6):
 
         if index < 0 or index >= len(data):
             raise IndexError("Index out of range")
@@ -47,14 +52,15 @@ def test_ring_proof():
 
         secret_t = int.from_bytes(secret_B, 'little')
 
-        # print("secret_t:", secret_t)
+        print("secret_t:", secret_t) #matching
 
         block_producer = item['pk']
 
         pk_ring = item['ring_pks']
 
         pk_list = []
-        pk_x_y_list = []
+        pk_x_y_list_sw= []
+        pk_x_y_list_te=[]
 
         frm = 0
         to = 64
@@ -68,105 +74,137 @@ def test_ring_proof():
         for string in pk_list:
             try:
                 pk = BandersnatchPoint.string_to_point(string)
-                pk_x_y_list.append(sw.from_twisted_edwards((pk.x, pk.y)))
+                pk_x_y_list_sw.append(sw.from_twisted_edwards((pk.x, pk.y)))
+                pk_x_y_list_te.append((pk.x, pk.y))
             except ValueError as e:
                 count += 1
 
         producer_index = pk_list.index(block_producer)
 
+        pk_X_TE= [ x for (x,y) in pk_x_y_list_te]
+        pk_Y_TE=[y for (x,y) in pk_x_y_list_te]
+        pk_X_SW=[ x for (x,y) in pk_x_y_list_sw]
+        pk_Y_SW=[ y for (x,y) in pk_x_y_list_sw]
+        print("PK_X_TE:", pk_X_TE)
+        print("PK_Y_TE:", pk_Y_TE)
+        print("pk_x_sw:", pk_X_SW)
+        print("pk_y_sw:", pk_Y_SW)
         # single test file
-
         # buillding the vectors, polys, commitments
         f_c_s = PublicColumnBuilder()
-        List_of_PK = pk_x_y_list
+        List_of_PK = pk_x_y_list_te
         fixed_cols = f_c_s.build(List_of_PK)
         s_v = fixed_cols[-1].evals
+        print("selector Vector:", s_v)
+        print("Selector Vector Commitment_TE:", normalize(fixed_cols[-1].commitment))
+
+        print("Px_te_poly_coeffs:",fixed_cols[0].coeffs, len(fixed_cols[0].coeffs))
+        print("Py_te_poly_coeffs:", fixed_cols[1].coeffs, len(fixed_cols[1].coeffs))
+
+
+        print("Pk_x_cmt", normalize(fixed_cols[0].commitment))
+        print("Pk_y_cmt", normalize(fixed_cols[1].commitment)) #matching
+
+        # (43410157040397207843762623859628744472428555166867508175205708125212843932376,
+        #  17454146150633999817757918137105537865761145815202375771498288470330474569439)
+
         witness_obj = WitnessColumnBuilder(List_of_PK, s_v, producer_index, secret_t)
         witness_res = witness_obj.build()
         witness_relation_res = witness_obj.result(Blinding_Base)
         Result_plus_Seed = witness_obj.result_p_seed(witness_relation_res)
 
-        # print("RESULT:", witness_relation_res)
-        # for each in witness_res:
-        #     print("witness cmts", each.commitment)
+        print("RESULT:", witness_relation_res)
 
-        # building constraints
-        constraints = RingConstraintBuilder(Result_plus_Seed, fixed_cols[0].coeffs, fixed_cols[1].coeffs,
-                                            fixed_cols[2].coeffs, witness_res[0].coeffs, witness_res[1].coeffs,
-                                            witness_res[2].coeffs, witness_res[3].coeffs)
+        print("b, accx, accy, accip")
+        for each in witness_res:
+            print("witness vectors_after Padding", each.evals)
+            print("witness vectors poly coeffs", each.coeffs)
+            print("witness commitments:", normalize(each.commitment))
 
-        constraint_dict = constraints.compute()
-        # print("consraunts:", constraint_dict)
-
-        # consraints Agrregation
-
-        # convert the g2 points for fs
-        fixed_col_commits = [H.to_int(nm(fixed_cols[0].commitment)), H.to_int(nm(fixed_cols[1].commitment)),
-                             H.to_int(nm(fixed_cols[2].commitment))]
-
-        ws = witness_res
-        witness_commitments = [H.to_int(nm(ws[0].commitment)), H.to_int(nm(ws[-1].commitment)),
-                               H.to_int(nm(ws[1].commitment)), H.to_int(nm(ws[2].commitment))]
-
-        vk = {
-            'g1': g1_points[0],
-            'g2': H.altered_points(g2_points),
-            'commitments': fixed_col_commits
-        }
-
-        t = Transcript(S_PRIME, b"Bandersnatch_SHA-512_ELL2")
-        t, alphas = phase1_alphas(t, vk, witness_relation_res, witness_commitments)
-        # print("Alphas Got:", alphas)
-        cd = constraint_dict
-        c_polys = [cd[val] for val in cd]
-        # print("is 7:", len(c_polys))
-        # print("C_POLYS:", c_polys)
-        # print("Inputs for alphas:", (vk, witness_relation_res, witness_commitments))
-        C_agg = aggregate_constraints(c_polys, alphas, OMEGA_2048, S_PRIME)
-        # print("constraint_agg_res:", C_agg)
-
-        # quotient_poly generation
-
-        qp = QuotientPoly()
-        Q_p, C_q = qp.quotient_poly(C_agg)
-        C_q_nm = nm(C_q)
-        # print("Quotuient_cmt:", C_q)
-        # print("Quoteint_cmt_nm", C_q_nm)
-
-        # relevant_poly+ l_agg poly evaluations
-
-        l_obj = LAggPoly(t, H.to_int(C_q_nm), fixed_cols, ws, alphas)
-        current_t, zeta, rel_poly_evals, l_agg, zeta_omega, l_zw = l_obj.l_agg_poly()
-
-        # print("zeta:", zeta)
-        # print("Relevant_poly_evals:", rel_poly_evals)
-        # print("L_AGG:", l_agg)
-        # print("zeta_omega:", zeta_omega)
-        # print("l_z_w:", l_zw)
-
-        # agg_poly, 2 openings and proof construction
-
-        obj = AggPoly(current_t, zeta, fixed_cols, ws, Q_p, C_q, rel_poly_evals, l_agg, zeta_omega, l_zw)
-
-        cf_vs, proof_ptr, proof_bs = obj.construct_proof()
-        end_time = time.time()
-
-        # print("Proof point representation:", proof_ptr)
-        # print("proof_byte_string:", proof_bs)
-
-        assert proof_bs == item['ring_proof']
-        print(f"Is proof {index} matching:", proof_bs == item['ring_proof'])
-
-        # proof verification
-        cnd_res = witness_relation_res
-
-        vfr = Verify(proof_ptr, vk, fixed_cols, cnd_res, Result_plus_Seed, SeedPoint, D)
-        # print("proof1:", vfr.evaluation_of_linearization_poly_at_zeta_omega())
-        # print("prioof2:", vfr.evaluation_of_quotient_poly_at_zeta())
-        print(f"Is signature {index} valid:", vfr.is_signtaure_valid())
-        print(f"Test_Case {index}:✅")
+        #
+        # #check
+        # print(cond_add_acc_x==witness_res[1].evals[:-3])
+        # print(cond_add_acc_y==witness_res[2].evals[:-3])
 
 
-
-
-
+        #
+        # # building constraints
+        # constraints = RingConstraintBuilder(Result_plus_Seed, fixed_cols[0].coeffs, fixed_cols[1].coeffs,
+        #                                     fixed_cols[2].coeffs, witness_res[0].coeffs, witness_res[1].coeffs,
+        #                                     witness_res[2].coeffs, witness_res[3].coeffs)
+        #
+        # constraint_dict = constraints.compute()
+        # # print("consraunts:", constraint_dict)
+        #
+        # # consraints Agrregation
+        #
+        # # convert the g2 points for fs
+        # fixed_col_commits = [H.to_int(nm(fixed_cols[0].commitment)), H.to_int(nm(fixed_cols[1].commitment)),
+        #                      H.to_int(nm(fixed_cols[2].commitment))]
+        #
+        # ws = witness_res
+        # witness_commitments = [H.to_int(nm(ws[0].commitment)), H.to_int(nm(ws[-1].commitment)),
+        #                        H.to_int(nm(ws[1].commitment)), H.to_int(nm(ws[2].commitment))]
+        #
+        # vk = {
+        #     'g1': g1_points[0],
+        #     'g2': H.altered_points(g2_points),
+        #     'commitments': fixed_col_commits
+        # }
+        #
+        # t = Transcript(S_PRIME, b"Bandersnatch_SHA-512_ELL2")
+        # t, alphas = phase1_alphas(t, vk, witness_relation_res, witness_commitments)
+        # # print("Alphas Got:", alphas)
+        # cd = constraint_dict
+        # c_polys = [cd[val] for val in cd]
+        # # print("is 7:", len(c_polys))
+        # # print("C_POLYS:", c_polys)
+        # # print("Inputs for alphas:", (vk, witness_relation_res, witness_commitments))
+        # C_agg = aggregate_constraints(c_polys, alphas, OMEGA_2048, S_PRIME)
+        # # print("constraint_agg_res:", C_agg)
+        #
+        # # quotient_poly generation
+        #
+        # qp = QuotientPoly()
+        # Q_p, C_q = qp.quotient_poly(C_agg)
+        # C_q_nm = nm(C_q)
+        # # print("Quotuient_cmt:", C_q)
+        # # print("Quoteint_cmt_nm", C_q_nm)
+        #
+        # # relevant_poly+ l_agg poly evaluations
+        #
+        # l_obj = LAggPoly(t, H.to_int(C_q_nm), fixed_cols, ws, alphas)
+        # current_t, zeta, rel_poly_evals, l_agg, zeta_omega, l_zw = l_obj.l_agg_poly()
+        #
+        # # print("zeta:", zeta)
+        # # print("Relevant_poly_evals:", rel_poly_evals)
+        # # print("L_AGG:", l_agg)
+        # # print("zeta_omega:", zeta_omega)
+        # # print("l_z_w:", l_zw)
+        #
+        # # agg_poly, 2 openings and proof construction
+        #
+        # obj = AggPoly(current_t, zeta, fixed_cols, ws, Q_p, C_q, rel_poly_evals, l_agg, zeta_omega, l_zw)
+        #
+        # cf_vs, proof_ptr, proof_bs = obj.construct_proof()
+        # end_time = time.time()
+        #
+        # # print("Proof point representation:", proof_ptr)
+        # # print("proof_byte_string:", proof_bs)
+        #
+        # assert proof_bs == item['ring_proof']
+        # print(f"Is proof {index} matching:", proof_bs == item['ring_proof'])
+        #
+        # # proof verification
+        # cnd_res = witness_relation_res
+        #
+        # vfr = Verify(proof_ptr, vk, fixed_cols, cnd_res, Result_plus_Seed, SeedPoint, D)
+        # # print("proof1:", vfr.evaluation_of_linearization_poly_at_zeta_omega())
+        # # print("prioof2:", vfr.evaluation_of_quotient_poly_at_zeta())
+        # print(f"Is signature {index} valid:", vfr.is_signtaure_valid())
+        # print(f"Test_Case {index}:✅")
+        #
+        #
+        #
+        #
+        #

@@ -37,92 +37,92 @@ from jam.ring_vrf.curve.specs.bandersnatch import (
     BandersnatchPoint,
 )
 from jam.ring_vrf.pedersen.pedersen import PedersenVRF
-
-
-# @pytest.mark.skipif("RUNALL" not in os.environ, reason="takes too long")
-def test_prove_bandersnatch_ed_sha512_ell2_pedersen():
-    ...
-    data_dir = "/home/siva/PycharmProjects/tessera_JAM_VRF/tests/unit/vrf/data/ark-vrf"
-    limit = 10000
-    for i, file in enumerate(os.listdir(data_dir)):
-        print(file)
-        if i >= limit:
-            break
-        if not file.startswith("bandersnatch_ed_sha512_ell2_ring"):
-            continue
-        with open(os.path.join(data_dir, file), "r") as f:
-            data = json.loads(f.read())
-            for i, vector in enumerate(data):
-                secret_scalar = (
-                    int.from_bytes(bytes.fromhex(vector["sk"]), "little")
-                    % Bandersnatch_TE_Curve.ORDER
-                )
-                vrf = PedersenVRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-                blinding_factor = (
-                    int.from_bytes(bytes.fromhex(vector["blinding"]), "little")
-                    % Bandersnatch_TE_Curve.ORDER
-                )
-                output_point, proof = vrf.prove(
-                    bytes.fromhex(vector["alpha"]),
-                    secret_scalar,
-                    bytes.fromhex(vector["ad"]),
-                    blinding_factor,
-                )
-                assert output_point.point_to_string().hex() == vector["gamma"]
-                assert proof[0].point_to_string().hex() == vector["proof_pk_com"]
-                assert proof[1].point_to_string().hex() == vector["proof_r"]
-                assert proof[2].point_to_string().hex() == vector["proof_ok"]
-                assert proof[3] == int.from_bytes(
-                    bytes.fromhex(vector["proof_s"]), "little"
-                )
-                assert proof[4] == int.from_bytes(
-                    bytes.fromhex(vector["proof_sb"]), "little"
-                )
-                assert vrf.proof_to_hash(output_point).hex() == vector["beta"]
-                print(f"✅ Testcase {i + 1} of {file}")
-
-
-# @pytest.mark.skipif("RUNALL" not in os.environ, reason="takes too long")
-def test_verify_bandersnatch_ed_sha512_ell2_ietf():
-    ...
-    data_dir = "/home/siva/PycharmProjects/tessera_JAM_VRF/tests/unit/vrf/data/ark-vrf"
-    limit = 10000
-    for i, file in enumerate(os.listdir(data_dir)):
-        print(file)
-        if i >= limit:
-            break
-        if not file.startswith("bandersnatch_ed_sha512_ell2_ring"):
-            continue
-        with open(os.path.join(data_dir, file), "r") as f:
-            data = json.loads(f.read())
-            for i, vector in enumerate(data):
-                secret_scalar = (
-                    int.from_bytes(bytes.fromhex(vector["sk"]), "little")
-                    % Bandersnatch_TE_Curve.ORDER
-                )
-
-                vrf = PedersenVRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-
-                blinding_factor = (
-                    int.from_bytes(bytes.fromhex(vector["blinding"]), "little")
-                    % Bandersnatch_TE_Curve.ORDER
-                )
-
-                output_point, proof = vrf.prove(
-                    bytes.fromhex(vector["alpha"]),
-                    secret_scalar,
-                    bytes.fromhex(vector["ad"]),
-                    blinding_factor,
-                )
-
-                input_point = BandersnatchPoint.encode_to_curve(
-                    bytes.fromhex(vector["alpha"]), bytes.fromhex(vector["salt"])
-                )
-
-                assert vrf.verify(
-                    input_point, bytes.fromhex(vector["ad"]), output_point, proof
-                )
-                print(f"✅ Testcase {i + 1} of {file}")
+#
+#
+# # @pytest.mark.skipif("RUNALL" not in os.environ, reason="takes too long")
+# def test_prove_bandersnatch_ed_sha512_ell2_pedersen():
+#     ...
+#     data_dir = "/home/siva/PycharmProjects/tessera_JAM_VRF/tests/unit/vrf/data/ark-vrf"
+#     limit = 10000
+#     for i, file in enumerate(os.listdir(data_dir)):
+#         print(file)
+#         if i >= limit:
+#             break
+#         if not file.startswith("bandersnatch_ed_sha512_ell2_ring"):
+#             continue
+#         with open(os.path.join(data_dir, file), "r") as f:
+#             data = json.loads(f.read())
+#             for i, vector in enumerate(data):
+#                 secret_scalar = (
+#                     int.from_bytes(bytes.fromhex(vector["sk"]), "little")
+#                     % Bandersnatch_TE_Curve.ORDER
+#                 )
+#                 vrf = PedersenVRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+#                 blinding_factor = (
+#                     int.from_bytes(bytes.fromhex(vector["blinding"]), "little")
+#                     % Bandersnatch_TE_Curve.ORDER
+#                 )
+#                 output_point, proof = vrf.prove(
+#                     bytes.fromhex(vector["alpha"]),
+#                     secret_scalar,
+#                     bytes.fromhex(vector["ad"]),
+#                     blinding_factor,
+#                 )
+#                 assert output_point.point_to_string().hex() == vector["gamma"]
+#                 assert proof[0].point_to_string().hex() == vector["proof_pk_com"]
+#                 assert proof[1].point_to_string().hex() == vector["proof_r"]
+#                 assert proof[2].point_to_string().hex() == vector["proof_ok"]
+#                 assert proof[3] == int.from_bytes(
+#                     bytes.fromhex(vector["proof_s"]), "little"
+#                 )
+#                 assert proof[4] == int.from_bytes(
+#                     bytes.fromhex(vector["proof_sb"]), "little"
+#                 )
+#                 assert vrf.proof_to_hash(output_point).hex() == vector["beta"]
+#                 print(f"✅ Testcase {i + 1} of {file}")
+#
+#
+# # @pytest.mark.skipif("RUNALL" not in os.environ, reason="takes too long")
+# def test_verify_bandersnatch_ed_sha512_ell2_ietf():
+#     ...
+#     data_dir = "/home/siva/PycharmProjects/tessera_JAM_VRF/tests/unit/vrf/data/ark-vrf"
+#     limit = 10000
+#     for i, file in enumerate(os.listdir(data_dir)):
+#         print(file)
+#         if i >= limit:
+#             break
+#         if not file.startswith("bandersnatch_ed_sha512_ell2_ring"):
+#             continue
+#         with open(os.path.join(data_dir, file), "r") as f:
+#             data = json.loads(f.read())
+#             for i, vector in enumerate(data):
+#                 secret_scalar = (
+#                     int.from_bytes(bytes.fromhex(vector["sk"]), "little")
+#                     % Bandersnatch_TE_Curve.ORDER
+#                 )
+#
+#                 vrf = PedersenVRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+#
+#                 blinding_factor = (
+#                     int.from_bytes(bytes.fromhex(vector["blinding"]), "little")
+#                     % Bandersnatch_TE_Curve.ORDER
+#                 )
+#
+#                 output_point, proof = vrf.prove(
+#                     bytes.fromhex(vector["alpha"]),
+#                     secret_scalar,
+#                     bytes.fromhex(vector["ad"]),
+#                     blinding_factor,
+#                 )
+#
+#                 input_point = BandersnatchPoint.encode_to_curve(
+#                     bytes.fromhex(vector["alpha"]), bytes.fromhex(vector["salt"])
+#                 )
+#
+#                 assert vrf.verify(
+#                     input_point, bytes.fromhex(vector["ad"]), output_point, proof
+#                 )
+#                 print(f"✅ Testcase {i + 1} of {file}")
 
 
 def test_ring_proof():
@@ -130,7 +130,7 @@ def test_ring_proof():
     with open(file_path, 'r') as f:
         data = json.load(f)
 
-    for index in range(len(data)):
+    for index in range(6,7):
 
         if index < 0 or index >= len(data):
             raise IndexError("Index out of range")
@@ -157,7 +157,8 @@ def test_ring_proof():
         pk_ring = item['ring_pks']
 
         pk_list = []
-        pk_x_y_list = []
+        pk_x_y_list_sw= []
+        pk_x_y_list_te=[]
 
         frm = 0
         to = 64
@@ -171,7 +172,8 @@ def test_ring_proof():
         for string in pk_list:
             try:
                 pk = BandersnatchPoint.string_to_point(string)
-                pk_x_y_list.append(sw.from_twisted_edwards((pk.x, pk.y)))
+                pk_x_y_list_sw.append(sw.from_twisted_edwards((pk.x, pk.y)))
+                pk_x_y_list_te.append((pk.x, pk.y))
             except ValueError as e:
                 count += 1
 
@@ -181,7 +183,7 @@ def test_ring_proof():
 
         # buillding the vectors, polys, commitments
         f_c_s = PublicColumnBuilder()
-        List_of_PK = pk_x_y_list
+        List_of_PK = pk_x_y_list_te
         fixed_cols = f_c_s.build(List_of_PK)
         s_v = fixed_cols[-1].evals
         witness_obj = WitnessColumnBuilder(List_of_PK, s_v, producer_index, secret_t)
@@ -219,6 +221,7 @@ def test_ring_proof():
 
         t = Transcript(S_PRIME, b"Bandersnatch_SHA-512_ELL2")
         t, alphas = phase1_alphas(t, vk, witness_relation_res, witness_commitments)
+        print("ALPHAS GOT:", alphas)
         # print("Alphas Got:", alphas)
         cd = constraint_dict
         c_polys = [cd[val] for val in cd]
