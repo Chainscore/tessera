@@ -6,8 +6,6 @@ from jam.types.base import Bytes, Null, Int
 from jam.types.block import Block
 from jam.accumulation.types import (
     PreimageDict,
-    GasAccumulations,
-    AccumulationOutput,
     DeferredTransfers,
     StateContext,
     OperandTuples,

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, List, Set
+from typing import Tuple, List, Set, Optional
 from jam.types.base import Int
 from jam.types.state.phi import Phi
 from jam.utils.codec.codable import Codable

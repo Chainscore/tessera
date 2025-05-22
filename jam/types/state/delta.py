@@ -45,7 +45,6 @@ class AccountMetadata(Codable, JsonSerde):
     num_o: Ao
     num_i: Ai
 
-
 @decodable_dictionary(ByteArray32, Bytes, key_name="key", value_name="value")
 class AccountStorage(Dictionary[ByteArray32, Bytes]):
     """Storage dictionary"""
@@ -112,7 +111,7 @@ class AccountLookup(Dictionary[LookupTable, Timestamps]):
 
 @with_json_metadata(
     # default in empty lists if JSON omits them
-    service   = { "name": "service",    "default": {} },
+    service   = { "name": "service",    "default": AccountMetadata(code_hash=ByteArray32([0] * 32), balance=Balance(0), gas_limit=Gas(0), min_gas=Gas(0), num_i=Ai(0), num_o=Ao(0)) },
     storage   = { "name": "storage",    "default": AccountStorage({}) },
     preimages = { "name": "preimages",  "default": AccountPreimages({}) },
     lookup    = { "name": "lookup",     "default": AccountLookup({}) },
