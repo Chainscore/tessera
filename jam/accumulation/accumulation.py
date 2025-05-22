@@ -1,7 +1,6 @@
 from copy import deepcopy
 from typing import Tuple, List, Set
 
-from jam.execution.host_calls._types import BeefyMap, GasConsumed
 from jam.execution.host_calls.invocations.accumulate import PsiA
 from jam.types.base import Bytes, Null, Int
 from jam.types.block import Block
@@ -13,6 +12,8 @@ from jam.accumulation.types import (
     StateContext,
     OperandTuples,
     OperandTuple,
+    BeefyMap,
+    GasConsumed
 )
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.state.pi import ServiceStat, AllServiceStats
@@ -535,20 +536,33 @@ class Accumulation:
         state.iota = updated_state.validator_keys
         state.phi = updated_state.authorizer_keys
 
+
+        # TODO: Remove or implement
+        # This is likely to be merged with Accumulation, also it doesn't have any test vectors - so skipping it for now
         # ----------------------
         # Section 12.3 Deferred Transfers & State Integration (Step 4)
         # ----------------------
 
         # Update Delta Double Dagger
-        specific_transfers = Accumulation.selection_fn(deferred_transfers, state.delta)
-        print("specific_transfers", specific_transfers)
+        # specific_transfers = Accumulation.selection_fn(deferred_transfers, state.delta)
 
         # for s in new_state.delta:
-        #     specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
+            # specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
             # delta_double_dagger
             # new_state.delta[s] = Accumulation.psi_t(new_state.delta, block.header.slot, s, specific_transfers)
             # TODO uncomment
             # new_state.delta[s] = PsiT(d=new_state.delta, t=block.header.slot, s=s, bold_t=specific_transfers).process()
+        #
+        # for service_id in specific_transfers.keys():
+        #     if service_id not in pi_service:
+        #         pi_service[service_id] = ServiceStat.empty()
+        #     pi_service[service_id].on_transfers_count = specific_transfers[
+        #         service_id
+        #     ][0]
+        #     pi_service[service_id].on_transfers_gas_used = specific_transfers[
+        #         service_id
+        #     ][1]
+
 
         # Update Accumulated History, Xi
         xi = state.xi
@@ -581,9 +595,4 @@ class Accumulation:
         # in Accumulate test vectors so I had added this
         state.tau = block.header.slot
 
-        # ----------------------
-        # Section 12.4 Preimage Integration : In Different Module
-        # ----------------------
-
-        print("commitment_map", commitment_map)
-        return state
+        return state, commitment_map

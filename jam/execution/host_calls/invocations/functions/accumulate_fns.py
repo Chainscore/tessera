@@ -1,5 +1,5 @@
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.execution.host_calls._types import DeferredTransfer, AccumulationContext, StateContext
+from jam.accumulation.types import DeferredTransfer, AccumulationContext, StateContext
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers

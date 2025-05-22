@@ -163,7 +163,7 @@ class Reporting:
             )
 
 
-        return state
+        return state, newly_avail_wrs
 
     @staticmethod
     def ensure_signature(state: Sigma, block: Block):
