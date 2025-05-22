@@ -115,12 +115,7 @@ class Statistics:
             if preimage.blob is not None:
                 p.append(preimage.requester)
 
-        all_service_ids = (
-            set(accumulation_stats.keys())
-            | set(deferred_transfer_stats.keys())
-            | set(r)
-            | set(p)
-        )
+        all_service_ids = (set(r) | set(p))
 
         pi_service = pi.services
 
