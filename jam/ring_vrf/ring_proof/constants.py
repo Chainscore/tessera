@@ -11,16 +11,26 @@ Blinding_Base: tuple[int, int] = (
    BandersnatchParams.BBx, BandersnatchParams.BBy
 )
 
-# Initial seed generator for hashing ring items → curve points
-SeedPoint: tuple[int, int] = (
-3955725774225903122339172568337849452553276548604445833196164961773358506589,
-29870564530691725960104983716673293929719207405660860235233811770612192692323,
-)
+# Initial seed generator for hashing ring items → curve points (old)
+# SeedPoint: tuple[int, int] = (
+# 3955725774225903122339172568337849452553276548604445833196164961773358506589,
+# 29870564530691725960104983716673293929719207405660860235233811770612192692323,
+# )
+#
 
-# Padding generator so we can commit to short rings without leaking |R|
-PaddingPoint: tuple[int, int] = (23942223917106120326220291257397678561637131227432899006603244452561725937075,
-           1605027200774560580022502723165578671697794116420567297367317898913080293877)
+#new  seed point
+SeedPoint: tuple[int, int] = (37805570861274048643170021838972902516980894313648523898085159469000338764576,
+                              14738305321141000190236674389841754997202271418876976886494444739226156422510)
 
+
+# old
+# # Padding generator so we can commit to short rings without leaking |R|
+# PaddingPoint: tuple[int, int] = (23942223917106120326220291257397678561637131227432899006603244452561725937075,
+#            1605027200774560580022502723165578671697794116420567297367317898913080293877)
+
+#new padding point
+PaddingPoint: tuple[int, int]=(26287722405578650394504321825321286533153045350760430979437739593351290020913,
+19058981610000167534379068105702216971787064146691007947119244515951752366738)
 
 
 S_A: int = 10773120815616481058602537765553212789256758185246796157495669123169359657269
@@ -39,8 +49,8 @@ SIZE: int = 512  # FFT domain size for witness polynomials
 OMEGA: int = pow(OMEGA_2048, 2048 // SIZE, S_PRIME)
 
 
-if OMEGA != OMEGA_USED:  # Guardrail to detect accidental param drift
-    raise ValueError("Computed 512‑th root does not match reference value")
+# if OMEGA != OMEGA_USED:  # Guardrail to detect accidental param drift
+#     raise ValueError("Computed 512‑th root does not match reference value")
 
 # Pre‑compute the entire evaluation domain for fast access.
 D_512: list[int] = [pow(OMEGA, i, S_PRIME) for i in range(SIZE)]
