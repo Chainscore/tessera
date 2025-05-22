@@ -1,6 +1,7 @@
 from typing import Type
 
 from jam.config.data_stores import main_db
+from jam.merklization import BMRFunctions
 from jam.storage.db.kv import KVStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
@@ -8,6 +9,7 @@ from jam.state.merkle import StateTrie
 from jam.state.utils.key_constructor import construct_state_key
 from jam.types.base import Bytes, ByteArray32
 from jam.types.block import Block
+from jam.types.protocol.crypto import Hash
 from jam.types.state.alpha import Alpha, AuthorizationPool
 from jam.types.state.eta import Eta
 from jam.types.state.nu import Nu
@@ -101,24 +103,23 @@ class State:
         # Tickets mark - make sure tickets are valid, present in gamma_a and outside in sequenced
         # Offenders mark - make sure offenders are present in psi.offenders
 
-        # 2. Disputes
+        # Disputes
         Disputes.transition(self, block)
-        # 3. Assurances
-        Assurances.transition(self, block)
-        # 4. Reporting
+        # Assurances
+        _, newly_avail_wrs = Assurances.transition(self, block)
+        # Reporting
         Reporting.transition(self, block)
-        # 5. Accumulation
-        _, beefy_map, acc_stats, _ = Accumulation.transition(self, block)
-        # 6. Authorization
+        # Accumulation
+        _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
+        # Authorization
         Authorization.transition(self, block)
-        # 7. Recent History  TODO: Calculate the accumulate root(r) from the commitment result from Accumulation.transition function()
-        RecentHistory.transition(self, block, ByteArray32([0] * 32))
-        # 8. Preimages
+        # Recent History
+        RecentHistory.transition(self, block, BMRFunctions.wb_merkle_fn(sorted([Bytes(key.encode() + bytes(val)) for key, val in commitment_map.items()]), Hash.keccak256))
+        # Preimages
         Preimages.transition(self, block)
-        # 9. Statistics
-        Statistics.transition(self, block, [], {}, {})
-        # 1. Safrole
-        # Needs to be done after accumulation+statistics, as it requires Tau
+        # Statistics
+        Statistics.transition(self, block, newly_avail_wrs)
+        # Safrole
         Safrole.transition(self, block, Safrole.vrf_output(block.header.entropy_source))
 
 state = State(db=main_db, trie=StateTrie())
