@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from jam.types.base import decodable_dictionary, Dictionary
+from jam.types.base import decodable_dictionary, Dictionary, Int
 from jam.types.state.phi import Phi
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -16,13 +16,13 @@ from jam.types.state.iota import Iota
 @decodable_dataclass
 @dataclass
 class OperandTuple(Codable, JsonSerde):
-    d: WorkExecResult
-    g: Gas
-    y: OpaqueHash
-    o: Bytes
-    e: ExportsRoot
     h: WorkPackageHash
-    a: Bytes
+    e: ExportsRoot
+    a: OpaqueHash
+    o: Bytes
+    y: OpaqueHash
+    g: Int
+    d: WorkExecResult
 
 
 @decodable_vector(OperandTuple)
