@@ -34,6 +34,7 @@ class Statistics:
         Returns:
             State after transition
         """
+        print("accumulation_stats in", accumulation_stats)
 
         e = state.tau // EPOCH_LENGTH
         e_dash = block.header.slot // EPOCH_LENGTH
@@ -52,15 +53,13 @@ class Statistics:
         author_index = block.header.author_index
 
         # Handle genesis block
-        if author_index == 2**16 - 1:
-            return state
+        if author_index != 2**16 - 1:
+            pi_curr[author_index].blocks += 1
+            pi_curr[author_index].tickets += len(block.extrinsic.tickets)
+            pi_curr[author_index].pre_images += len(block.extrinsic.preimages)
 
-        pi_curr[author_index].blocks += 1
-        pi_curr[author_index].tickets += len(block.extrinsic.tickets)
-        pi_curr[author_index].pre_images += len(block.extrinsic.preimages)
-
-        for preimage in block.extrinsic.preimages:
-            pi_curr[author_index].pre_images_size += len(preimage.blob)
+            for preimage in block.extrinsic.preimages:
+                pi_curr[author_index].pre_images_size += len(preimage.blob)
 
         for guarantee in block.extrinsic.guarantees:
             signatures = guarantee.signatures
@@ -126,7 +125,7 @@ class Statistics:
             | set(p)
         )
 
-        pi_service = AllServiceStats({})
+        pi_service = pi.services
 
         for report in incoming_wrs:
             for work_result in report.results:

@@ -5,7 +5,7 @@ from jam.execution.host_calls.invocations.protocol import Context, DispatchNorma
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
 from jam.execution.pvm.status import ExecutionStatus, PANIC, HostStatus, CONTINUE, PvmError
-from jam.types.base import U64, U32, U16, Bytes
+from jam.types.base import U64, U32, U16, Bytes, Int
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.state.delta import AccountData
 from jam.state.state import state
@@ -33,7 +33,15 @@ class GeneralFunctions(INVF):
 
     @staticmethod
     @INVF.register(1, gas_cost=10)
-    def lookup(gas: Gas, registers: Registers, memory: Memory, context: Optional, service_data: AccountData, service_index: ServiceId, accounts: Delta):
+    def lookup(
+            gas: Gas,
+            registers: Registers,
+            memory: Memory,
+            context: Optional[Any],
+            service_data: AccountData,
+            service_index: ServiceId,
+            accounts: Delta
+    ):
         a: None|AccountData = None
         if service_index <= registers[7] <= 2**64-1:
             a = service_data
@@ -70,7 +78,7 @@ class GeneralFunctions(INVF):
             gas: Gas,
             registers: Registers,
             memory: Memory,
-            context: Any,
+            context: Optional[Any],
             package: WorkPackage,
             entropy: OpaqueHash,
             trace: Bytes,
@@ -165,7 +173,15 @@ class GeneralFunctions(INVF):
 
     @staticmethod
     @INVF.register(host_call=2, gas_cost=10)
-    def read(gas: Gas, registers: Registers, memory: Memory, service_data: AccountData, service_index: ServiceId, accounts: Delta):
+    def read(
+            gas: Gas,
+            registers: Registers,
+            memory: Memory,
+            context: Optional[Any],
+            service_data: AccountData,
+            service_index: ServiceId,
+            accounts: Delta
+    ):
         s_star = ServiceId(registers[7])
         if s_star == 2**64 - 1:
             s_star = service_index
@@ -198,37 +214,53 @@ class GeneralFunctions(INVF):
         else:
             registers[7] = Register(len(v))
             memory.write(o, memory.read(f, l))
-        return CONTINUE, gas, registers, memory
+        return CONTINUE, gas, registers, memory, context
 
 
     @staticmethod
     @INVF.register(host_call=3, gas_cost=10)
-    def write(gas: Gas, registers: Registers, memory: Memory, service_data: AccountData, service_index: ServiceId):
+    def write(
+            gas: Gas,
+            registers: Registers,
+            memory: Memory,
+            context: Optional[Any],
+            service_data: AccountData,
+            service_index: ServiceId
+    ):
         # Get key,value start,end
         [ko, kz, vo, vz] = registers[7: 7+4]
-        if not memory.is_accessible(ko, kz - ko):
+        ko, kz, vo, vz = int(ko), int(kz), int(vo), int(vz)
+        if not memory.is_accessible(ko, kz):
             raise PvmError(PANIC)
-        k = Hash.blake2b(service_index.encode() + memory.read(ko, kz - ko))
 
-        if not memory.is_accessible(vo, vz - vo):
+        k = Hash.blake2b(service_index.encode() + memory.read(ko, kz))
+
+        if not memory.is_accessible(vo, vz):
             raise PvmError(PANIC)
         a = service_data.storage
         if vz == 0:
             del a[k]
         else:
             try:
-                a[k] = memory.read(vo, vz - vo)
+                a[k] = Bytes(memory.read(vo, vz))
             except PvmError:
                 # TODO - Handle ONLY storage full
                 registers[7] = HostStatus.FULL
                 return CONTINUE, gas, registers, memory, service_data
 
-        return CONTINUE, gas, registers, memory
+        return CONTINUE, gas, registers, memory, context
 
 
     @staticmethod
     @INVF.register(host_call=4, gas_cost=10)
-    def info(gas: Gas, registers: Registers, memory: Memory, service_index: ServiceId, accounts: Delta):
+    def info(
+            gas: Gas,
+            registers: Registers,
+            memory: Memory,
+            context: Optional[Any],
+            service_index: ServiceId,
+            accounts: Delta
+    ):
         t = accounts[registers[7]]
         if registers[7] == 2**64 - 1:
             t = accounts[service_index]
@@ -244,4 +276,4 @@ class GeneralFunctions(INVF):
         else:
             registers[7] = HostStatus.NONE
 
-        return CONTINUE, gas, registers, memory
+        return CONTINUE, gas, registers, memory, context

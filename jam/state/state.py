@@ -108,7 +108,7 @@ class State:
         # 4. Reporting
         Reporting.transition(self, block)
         # 5. Accumulation
-        Accumulation.transition(self, block)
+        _, beefy_map, acc_stats, _ = Accumulation.transition(self, block)
         # 6. Authorization
         Authorization.transition(self, block)
         # 7. Recent History

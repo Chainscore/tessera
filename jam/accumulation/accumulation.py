@@ -1,8 +1,9 @@
 from copy import deepcopy
 from typing import Tuple, List, Set
 
+from jam.execution.host_calls._types import BeefyMap, GasConsumed
 from jam.execution.host_calls.invocations.accumulate import PsiA
-from jam.types.base import Bytes, Null
+from jam.types.base import Bytes, Null, Int
 from jam.types.block import Block
 from jam.accumulation.types import (
     PreimageDict,
@@ -14,6 +15,7 @@ from jam.accumulation.types import (
     OperandTuple,
 )
 from jam.types.protocol.crypto import Hash, OpaqueHash
+from jam.types.state.pi import ServiceStat, AllServiceStats
 
 from jam.types.state.sigma import Sigma
 from jam.types.state.delta import Delta, LookupTable, Timestamps
@@ -31,8 +33,6 @@ from jam.types.work.report import (
 )
 from jam.utils.constants import EPOCH_LENGTH
 
-GasConsumed = List[Tuple[ServiceId, Gas]]
-BeefyMap = Set[Tuple[ServiceId, OpaqueHash]]
 
 class Accumulation:
     @staticmethod
@@ -73,8 +73,8 @@ class Accumulation:
 
         dependencies = deepcopy(work_report.context.prerequisites)
         for segment_item in work_report.segment_root_lookup:
-            if segment_item.work_package_hash not in dependencies:
-                dependencies.append(segment_item.work_package_hash)
+            if segment_item not in dependencies:
+                dependencies.append(segment_item)
 
         ready_wr = ReadyWR(report=work_report, dependencies=dependencies)
 
@@ -156,7 +156,7 @@ class Accumulation:
         for wr in work_reports:
             pacakge_hashes.append(wr.package_spec.hash)
 
-        return pacakge_hashes
+        return WorkDependencies(sorted(pacakge_hashes))
 
     @staticmethod
     def seq_accumulation(
@@ -281,7 +281,6 @@ class Accumulation:
                 partial_state, work_reports, privileged_services, service, timeslot
             )
             gas_consumed.append((service,_gas_consumed))
-            # print("_output_hash", _output_hash.get_value(), _output_hash.get_value() is not None, _output_hash is not None, _output_hash != Null, _output_hash.get_value() != Null)
             if _output_hash != Null:
                 outputs.add((service, _output_hash.get_value()))
             transfers.extend(_transfers)
@@ -328,12 +327,12 @@ class Accumulation:
                     p.append(
                         OperandTuple(
                             d=j.result,
-                            g=j.accumulate_gas,
+                            g=Int(j.accumulate_gas),
                             y=j.payload_hash,
                             o=i.auth_output,
                             e=i.package_spec.exports_root,
                             h=i.package_spec.hash,
-                            a=i.auth_output
+                            a=i.authorizer_hash
                         )
                     )
 
@@ -346,12 +345,17 @@ class Accumulation:
             for j in i.results:
                 if j.service_id == service_id:
                     g += j.accumulate_gas
+
         posterior_state, transfers, optional_hash, gas, preimage = PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=p).execute()
 
         return posterior_state, transfers, optional_hash, gas, preimage
 
     @staticmethod
-    def preimage_integration(accounts: Delta, preimages: Set[Tuple[ServiceId, Bytes]], timeslot: Tau) -> Delta:
+    def preimage_integration(
+            accounts: Delta,
+            preimages: Set[Tuple[ServiceId, Bytes]],
+            timeslot: Tau
+    ) -> Delta:
         """
         Preimage integration function - transforms a dictionary of service states and a set of service/hash pairs
         into a new dictionary of service states
@@ -375,7 +379,8 @@ class Accumulation:
 
     @staticmethod
     def selection_fn(
-        deferred_transfers: DeferredTransfers, delta: Delta
+        deferred_transfers: DeferredTransfers,
+        delta: Delta
     ) -> DeferredTransfers:
         """
         Selection function R defined in Eq 12.23
@@ -397,7 +402,7 @@ class Accumulation:
         return service_transfers
 
     @classmethod
-    def transition(cls, state: Sigma, block: Block):
+    def transition(cls, state: Sigma, block: Block, newly_avail_wrs: WorkReports):
         """
         Transition the state's Delta, Xi, Nu, Chi, Iota, Phi components, calculate BEEFY Commitment Map.
         Includes 4 steps
@@ -422,8 +427,9 @@ class Accumulation:
             https://graypaper.fluffylabs.dev/#/85129da/159902159902?v=0.6.3
 
         Args:
-            pre_state: State before transition
-            block: Block
+            state: State
+            block: Block to import
+            newly_avail_wrs: WRs that became newly available (from Reporting STF)
 
         Returns:
             State after transition
@@ -443,9 +449,7 @@ class Accumulation:
             xi_union.extend(ep)
 
         # Latest Work Reports to Process
-        work_reports = WorkReports([])
-        for rg in block.extrinsic.guarantees:
-            work_reports.append(rg.report)
+        work_reports = WorkReports(newly_avail_wrs.value)
 
         # Reports to be processed Immediately, Eq 12.4
         immediate_reports = cls.filter_wr_fn(work_reports)
@@ -455,7 +459,7 @@ class Accumulation:
         for wr in work_reports:
             if len(
                 wr.context.prerequisites
-            ) > 0 or len(wr.segment_root_lookup) == 0:
+            ) > 0 or len(wr.segment_root_lookup) > 0:
                 rq = cls.queue_creator_fn(wr)
                 queued_wr.append(rq)
 
@@ -504,10 +508,29 @@ class Accumulation:
             service_gas+=state.chi.chi_g[i]
 
         gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT)+service_gas))
-        [work_accl_no, updated_state, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, state.chi.chi_g, block.header.slot)
+        [num_accumulated, updated_state, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, state.chi.chi_g, block.header.slot)
+
+        accumulation_stats = {}
+        for ga in gas_accumulations:
+            accumulation_stats[ga[0]] = [ga[1], 0]
+        for i in range(num_accumulated):
+            for wr in star_work_reports[i].results:
+                accumulation_stats[wr.service_id][1] += 1
+
+        # Update Statistics
+        pi = state.pi
+        pi_service = AllServiceStats({})
+        for service_id in accumulation_stats.keys():
+            if service_id not in pi_service:
+                pi_service[service_id] = ServiceStat.empty()
+            pi_service[service_id].accumulate_gas_used = accumulation_stats[service_id][
+                0
+            ]
+            pi_service[service_id].accumulate_count = accumulation_stats[service_id][1]
+        pi.services = pi_service
+        state.pi = pi
 
         # Update Delta Dagger, Chi, Iota, Phi
-        # new_state.delta = updated_state.service_accounts
         state.chi = updated_state.privileges
         state.iota = updated_state.validator_keys
         state.phi = updated_state.authorizer_keys
@@ -518,6 +541,7 @@ class Accumulation:
 
         # Update Delta Double Dagger
         specific_transfers = Accumulation.selection_fn(deferred_transfers, state.delta)
+        print("specific_transfers", specific_transfers)
 
         # for s in new_state.delta:
         #     specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
@@ -527,29 +551,39 @@ class Accumulation:
             # new_state.delta[s] = PsiT(d=new_state.delta, t=block.header.slot, s=s, bold_t=specific_transfers).process()
 
         # Update Accumulated History, Xi
+        xi = state.xi
         for i in range(EPOCH_LENGTH - 1):
-            state.xi[i] = state.xi[i + 1]
+            xi[i] = xi[i + 1]
 
-        state.xi[EPOCH_LENGTH - 1] = cls.mapping_fn(star_work_reports)
+        xi[EPOCH_LENGTH - 1] = cls.mapping_fn(star_work_reports)
 
         timeslot_difference = block.header.slot - state.tau
 
         # Update Ready Queue, Nu
+        nu = state.nu
         for i in range(EPOCH_LENGTH):
             ind = (m + EPOCH_LENGTH - i) % EPOCH_LENGTH
             if i == 0:
-                state.nu[ind] = cls.queue_edit_fn(
-                    queued_reports, state.xi[EPOCH_LENGTH - 1]
+                nu[ind] = cls.queue_edit_fn(
+                    queued_reports, xi[EPOCH_LENGTH - 1]
                 )
             elif 1 <= i < timeslot_difference:
-                state.nu[ind] = AllReadyWRs([])
+                nu[ind] = AllReadyWRs([])
             elif i >= timeslot_difference:
-                state.nu[ind] = cls.queue_edit_fn(
-                    state.nu[ind], state.xi[EPOCH_LENGTH - 1]
+                nu[ind] = cls.queue_edit_fn(
+                    nu[ind], xi[EPOCH_LENGTH - 1]
                 )
+        state.xi = xi
+        state.nu = nu
+
+        # TODO: Remove this redundancy
+        # We are aleady doing this in Safrol STF, but this is expected to be updated
+        # in Accumulate test vectors so I had added this
+        state.tau = block.header.slot
 
         # ----------------------
         # Section 12.4 Preimage Integration : In Different Module
         # ----------------------
 
+        print("commitment_map", commitment_map)
         return state

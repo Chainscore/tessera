@@ -74,6 +74,7 @@ class InstructionsWArgs1Reg1Imm1Offset(InstructionTable):
         def branch_u_imm_impl(
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
+            print(f"Branch to {self.vy} if r[{self.ra}]({PvmUtilities.z(registers[self.ra], 8) if signed else registers[self.ra]}) {op} {self.vx}")
             status, counter = self.program.branch(
                 self.counter, 
                 self.vy, 
