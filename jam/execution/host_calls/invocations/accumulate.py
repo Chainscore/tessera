@@ -1,21 +1,17 @@
 
-from typing import Optional, Tuple
-from jam.execution.host_calls._types import  DeferredTransfers, OperandTuples, AccuContextX,StateContext, AccumulationContext, PreimageDict
+from typing import Tuple
+from jam.accumulation.types import  DeferredTransfers, OperandTuples, AccuContextX,StateContext, AccumulationContext, PreimageDict
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol, DispatchReturn, Context
-from jam.execution.pvm.memory import Memory
-from jam.execution.pvm.register import Registers
 from jam.types.base import Int
 from jam.types.base.integers.fixed import U32
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.core import Gas, ProgramCounter, ServiceId, TimeSlot, Register
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.state.state import state
 from jam.types.protocol.merkle import OptionHash
-from jam.types.state.delta import AccountData
 from jam.execution.host_calls.invocations.functions.accumulate_fns import AccumulateFunctions, check
-from jam.execution.pvm.status import ExecutionStatus, HostStatus
+from jam.execution.pvm.status import ExecutionStatus
 from jam.utils.constants import MAX_SERVICE_CODE_SIZE
 
 
