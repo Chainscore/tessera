@@ -85,3 +85,18 @@ class Helpers:
         res= [(b, a) for pair in g2_points for point in pair for a, b in [point]]
         return res
 
+    @staticmethod
+    def to_scalar_int(string)->int:
+        if isinstance(string, bytes):
+            return int.from_bytes(string, 'little')
+        byts = bytes.fromhex(string)
+        return int.from_bytes(byts, 'little')
+
+
+
+secret='01371ac62e04d1faaadbebaa686aaf122143e2cda23aacbaa4796d206779a501'
+print(int.from_bytes(bytes.fromhex(secret), 'little'))
+
+
+# l=[(1 << i) for i in range(100)]
+# print(l)
