@@ -50,8 +50,10 @@ class InstructionsWArgs2Reg1Offset(InstructionTable):
         def branch_impl(
                 self, registers: Registers, memory: Memory
         ) -> OpReturn:
+
             a = PvmUtilities.z(registers[self.ra], 8) if signed else registers[self.ra]
             b = PvmUtilities.z(registers[self.rb], 8) if signed else registers[self.rb]
+            print(f"Branch to {self.vx} if r[{self.ra}]({a}) {op} r[{self.rb}]({b})")
             status, counter = self.program.branch(
                 self.counter, 
                 ProgramCounter(self.vx), 

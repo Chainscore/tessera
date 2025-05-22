@@ -1,9 +1,9 @@
 from jam.types.base.enum import Enum
 
 class Accessibility(Enum):
-    null:"Non-Accessible"
-    write:"Writable"
-    read:"Readable"
+    NULL = "Non-Accessible"
+    WRITE = "Writable"
+    READ = "Readable"
 
 class Status(Enum):
     PANIC = "panic"

@@ -101,6 +101,7 @@ class Program(Codable, JsonSerde):
             self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1] not in self.basic_blocks
         ):
             raise PvmError(PANIC)
+        print(f"🦘 Jump Dynamic {self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1]} | a={a}")
         return CONTINUE, self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1]
     
     def encode_size(self) -> int:
