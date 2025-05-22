@@ -114,7 +114,7 @@ class State:
         # Authorization
         Authorization.transition(self, block)
         # Recent History
-        RecentHistory.transition(self, block, BMRFunctions.wb_merkle_fn(sorted([Bytes(key.encode() + bytes(val)) for key, val in commitment_map.items()]), Hash.keccak256))
+        RecentHistory.transition(self, block, BMRFunctions().wb_merkle_fn(sorted([Bytes(key.encode() + bytes(val)) for key, val in commitment_map]), Hash.keccak256))
         # Preimages
         Preimages.transition(self, block)
         # Statistics
