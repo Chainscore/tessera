@@ -6,8 +6,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from jam.assurances.errors import AssurancesError, AssurancesErrorCode
-from jam.state.components.rho import OptionalWorkReportState
-from jam.state.state import State
+from jam.types.state.rho import OptionalWorkReportState
+from jam.types.state.sigma import Sigma
 from jam.types.base.null import Null
 from jam.types.block import Block
 from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField
@@ -23,10 +23,17 @@ class Assurances:
     """State transition function for the processing of Assurances."""
 
     @staticmethod
-    def transition(state: State, block: Block) -> State:
-        """Process the assurances extrinsic."""
-        # Make a copy of the state
-        new_state = dataclasses.replace(state)
+    def transition(state: Sigma, block: Block) -> Sigma:
+        """
+        Process the assurances extrinsic.
+        
+        Args:
+            state: The current state of the chain.
+            block: The block to process.
+
+        Returns:
+            The new state of the chain.
+        """
 
         # Get the assurances from the extrinsic
         assurances = block.extrinsic.assurances
@@ -72,13 +79,14 @@ class Assurances:
         # Clear them
         super_majority = math.floor(2 * VALIDATOR_COUNT / 3)
         for i in range(len(state.rho)):
+            if state.rho[i].get_value() == None:
+                continue
             if core_assurances[i] > super_majority or (
-                block.header.slot
-                >= state.rho[i].get_value().timeout + UNAVAILABLE_WORK_EXPIRY
+                block.header.slot >= state.rho[i].get_value().timeout + UNAVAILABLE_WORK_EXPIRY
             ):
-                new_state.rho[i] = OptionalWorkReportState(Null)
+                state.rho[i] = OptionalWorkReportState(Null)
 
-        return new_state
+        return state
 
     @staticmethod
     def ensure_valid_signature(

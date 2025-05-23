@@ -1,16 +1,18 @@
-from jam.state.state import State
-from jam.state.components.beta import BlockHistory, PackageDict
-from jam.types import ByteArray32
+from copy import deepcopy
+from typing import Optional
+
+from jam.types.state.beta import BlockHistory, PackageDict, Beta
+from jam.types.state.sigma import Sigma
+from jam.types.base.sequences import ByteArray32
 from jam.types.block import Block
 from jam.types.extrinsics import GuaranteesExtrinsic
 from jam.types.protocol.crypto import Hash
-from jam.merklization import MMRFunctions, MMR
+from jam.merklization import MMRFunctions
+from jam.types.protocol.merkle import MMR
 from jam.types.protocol.crypto import OpaqueHash
 from jam.utils.constants import RECENT_HISTORY_SIZE
 from jam.types.protocol.core import WorkPackageHash, SegmentRoot
 
-
-import dataclasses
 
 def package(packages: GuaranteesExtrinsic) -> PackageDict:
     """Transform Guarantees into Dictionary format"""
@@ -28,7 +30,7 @@ def package(packages: GuaranteesExtrinsic) -> PackageDict:
 class RecentHistory:
 
     @staticmethod
-    def transition(pre_state: State, block: Block, accumulate_root: OpaqueHash) -> State:
+    def transition(state: Sigma, block: Block, accumulate_root: Optional[OpaqueHash]) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -63,42 +65,39 @@ class RecentHistory:
             https://graypaper.fluffylabs.dev/#/5f542d7/0faf010fb001
 
         Args:
-            pre_state: State before transition
+            state: State before transition
             block: Block
             accumulate_root: Calculated Merklization State Root
 
         Returns:
             State after transition
         """
-
-        # Make a copy of the state
-        new_state: State = dataclasses.replace(pre_state)
-
+        beta = state.beta
         # Step 1
-        if len(new_state.beta):
-            new_state.beta[-1].state_root = block.header.parent_state_root
+        if len(beta):
+            beta[-1].state_root = block.header.parent_state_root
 
         # Length Check
-        if len(new_state.beta) > RECENT_HISTORY_SIZE:
+        if len(beta) > RECENT_HISTORY_SIZE:
             raise ValueError("Invalid beta length, must be equal to RECENT_HISTORY_SIZE")
 
         # Step 2
         last: MMR = MMR([])
-        if len(new_state.beta) > 0:
-            last = new_state.beta[-1].mmr
-
-        mmr_functions = MMRFunctions()
+        if len(beta) > 0:
+            last = deepcopy(beta[-1].mmr)
+            mmr_functions = MMRFunctions()
+            last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
 
         n = BlockHistory(
-            block.header.parent,
-            mmr_functions.append_fn(last, accumulate_root, Hash.keccak256),
+            Hash.blake2b(block.header.encode()),
+            last,
             ByteArray32([0] * 32),
             package(block.extrinsic.guarantees)
         )
 
         # Step 3
-        new_state.beta.append(n)
-        new_state.beta = new_state.beta[-8:]
+        beta.append(n)
+        state.beta = Beta(beta[-8:])
 
-        # Return Updated State
-        return new_state
+        # Return State
+        return state

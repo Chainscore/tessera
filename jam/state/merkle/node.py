@@ -1,81 +1,26 @@
-from typing import Optional
-from jam.types.base.bit import Bit
-from jam.types.protocol.crypto import Hash
-from jam.types.base.sequences.bytes import ByteArray32, ByteArray64, Bytes
-from jam.types.base import Byte
+from dataclasses import dataclass
+from typing import List, Optional
+from jam.state.merkle.utils import NodeHash, NodeType
+from jam.types.base.sequences.bytes import ByteArray64
+from jam.utils.byte_utils import ByteUtils
 
-
+@dataclass
 class Node:
-    """Node encoding for Merkle trees as defined in D.2.1
+    encoded: ByteArray64                # The full 64-byte encoded value from your encoding routines.
+    bit_index: Optional[int] = None     # For branch nodes, store the bit index used for splitting.
+    left: Optional[NodeHash] = None     # For branch nodes, pointer to left child.
+    right: Optional[NodeHash] = None    # For branch nodes, pointer to right child.
 
-    Nodes are fixed in size at 512 bit (64 bytes). Each node is either a branch or a leaf.
-    The first bit discriminates between these two types.
-    """
-
-    NODE_SIZE = 64  # 512 bits
-    ZERO_HASH = ByteArray32([0] * 32)  # H₀
-
-    def __init__(self, hash_function: Optional[Hash] = None):
-        """Initialize node encoder with optional hash function"""
-        self.hash_function = hash_function or Hash.blake2b
-
-    def encode_branch(
-        self, left_hash: ByteArray32, right_hash: ByteArray32
-    ) -> ByteArray64:
-        """Encode a branch node (B function in D.3)
-
-        For a branch, we:
-        1. Clear the first bit of left_hash (AND with 0xfe)
-        2. Concatenate with full right_hash
-        """
-        # Clear first bit of left hash (AND with 0xfe)
-        modified_left = ByteArray32(left_hash)
-        modified_left[0][0] = Bit(0)
-
-        # Combine the modified left and right hashes
-        node = ByteArray64([0] * 64)
-        node[0:32] = modified_left
-        node[32:64] = right_hash
-
-        return node
-
-    def encode_leaf(self, key: ByteArray32, value: Bytes) -> ByteArray64:
-        """Encode a leaf node (L function in D.4)
-
-        For a leaf, the second bit discriminates between embedded-value leaves and regular leaves.
-        For embedded values (|v| ≤ 32):
-            - 6 bits store the embedded value size
-            - First 31 bytes store key
-            - Last 32 bytes store the value (zero-padded)
-        For regular leaves:
-            - 6 bits are zeroed
-            - First 31 bytes store key
-            - Last 32 bytes store hash of value
-        """
-        # First bit is 1 for leaf nodes
-        node = ByteArray64([0] * 64)  # 512 bits total, first bit set
-        # Set first 31 bytes of key to 1:32
-        node[0][0] = Bit(1)
-        node[1:32] = key[:31]
-
-        if len(value) <= 32:
-            # Embedded value leaf
-
-            # 6-bit - size of value
-            encoded_size: Byte = Byte(len(value))
-            node[0][2:8] = encoded_size[2:8]
-
-            # Store key and value
-            node[1:32] = key[:31]  # First 31 bytes for key
-            node[32 : 32 + len(value)] = value  # Value bytes
-            # Rest is already zeroed
-        else:
-            # Regular leaf - second bit is 1
-            node[0][1] = Bit(1)
-
-            node[1:32] = key[:31]  # First 31 bytes for key
-            node[32:] = self.hash_function(
-                bytes(value)
-            )  # Hash of value in last 32 bytes
-
-        return node
+    @property
+    def type(self) -> NodeType:
+        first_byte = ByteUtils.bytes_to_bitarray(bytes(self.encoded[0]))
+        if first_byte==[1,1,0,0,0,0,0,0]:
+            return NodeType.LEAF_NORMAL
+        elif first_byte[0]==1 and first_byte[1]==0:
+            return NodeType.LEAF_EMBEDDED
+        elif first_byte[0]==0:
+            return NodeType.BRANCH
+        
+    @property
+    def key_bits_248(self) -> List[int|bool]:
+        return ByteUtils.bytes_to_bitarray(bytes(self.encoded)[1:32])

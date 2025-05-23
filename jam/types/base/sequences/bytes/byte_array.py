@@ -2,7 +2,7 @@ from typing import Any, Callable, Sequence, Type, Literal
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.utils.byte_utils import Bytable, ByteUtils
-
+from copy import deepcopy
 
 class ByteArray(Array[Byte]):
     """Array of bytes"""
@@ -13,7 +13,8 @@ class ByteArray(Array[Byte]):
             and len(value) > 0
             and isinstance(value[0], Byte)
         ):
-            super().__init__(value)
+            # Create a deepcopy instead of mutatable reference
+            super().__init__(deepcopy(value))
         else:
             byt = [Byte(b) for b in ByteUtils.to_bytes(value)]
             super().__init__(byt)
@@ -23,6 +24,9 @@ class ByteArray(Array[Byte]):
 
     def __int__(self) -> int:
         return int.from_bytes(bytes(self))
+
+    def __hash__(self):
+        return int(self)
 
     def to_int(self, byteorder: Literal["big", "little"] = "big"):
         return int.from_bytes(self, byteorder)

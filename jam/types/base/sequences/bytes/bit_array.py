@@ -50,14 +50,17 @@ class BitArray(Array):
         super().__init__([Bit(bit) for bit in data], codec=codec)
 
     def __bytes__(self) -> bytes:
-        return ByteUtils.bitarray_to_bytes([bool(bit) for bit in self.value])
+        return ByteUtils.bitarray_to_bytes([bool(bit) for bit in self.value], self._bit_order)
 
     def __int__(self) -> int:
-        return ByteUtils.bitarray_to_int([bool(bit) for bit in self.value])
+        return ByteUtils.bitarray_to_int([bool(bit) for bit in self.value], self._bit_order)
 
     @classmethod
     def from_json(cls, data: Any) -> "BitArray":
         return cls(data)
+
+    def to_json(self) -> str:
+        return f"0x{bytes(self).hex()}"
 
 
 def decodable_bit_array(

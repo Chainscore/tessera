@@ -1,31 +1,16 @@
 from dataclasses import dataclass
 
-from jam.types import OpaqueHash
+from jam.storage.db.kv import KVStore
+from jam.types.extrinsics.extrinsic import Extrinsic
 from jam.types.header import Header
-from jam.types.work.refine_context import OpaqueHashes
 from jam.utils.codec.codable import Codable
-from jam.types.extrinsics import (
-    TicketsExtrinsic,
-    PreimagesExtrinsic,
-    GuaranteesExtrinsic,
-    AssurancesExtrinsic,
-    DisputesExtrinsic,
-)
+
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.serde import JsonSerde
-
-
-@decodable_dataclass
-@dataclass
-class Extrinsic(Codable, JsonSerde):
-    """Extrinsic structure."""
-
-    tickets: TicketsExtrinsic
-    preimages: PreimagesExtrinsic
-    guarantees: GuaranteesExtrinsic
-    assurances: AssurancesExtrinsic
-    disputes: DisputesExtrinsic
-
+from jam.types.protocol.crypto import Hash
+from jam.utils.dummy.dummy_extrinsics import create_dummy_extrinsics
+from jam.utils.dummy.dummy_header import create_dummy_header
+from jam.types.protocol.core import TimeSlot
 
 @decodable_dataclass
 @dataclass
@@ -34,3 +19,58 @@ class Block(Codable, JsonSerde):
 
     header: Header
     extrinsic: Extrinsic
+
+    @staticmethod
+    def from_random(seed: int = 0, n_et = 3, n_ep = 3, n_ea = 3, n_eg = 3, n_ed = 3) -> "Block":
+        """
+        Create a random block
+        """
+        return Block(header=create_dummy_header(), extrinsic=create_dummy_extrinsics(n_et, n_ep, n_ea, n_eg, n_ed))
+    
+    @staticmethod
+    def genesis(path = "genesis.json") -> "Block":
+        return Block(header=Header.genesis(path), extrinsic=Extrinsic.empty())
+
+    @staticmethod
+    def load_parent(slot: TimeSlot, db: KVStore) -> "Block":
+        """
+        Get the parent block
+        """
+        while True:
+            slot -= 1
+            if slot < 0:
+                raise ValueError("Parent does of exist of genesis block")
+            try:
+                return Block.load(slot, db)
+            except ValueError:
+                continue
+
+    @staticmethod
+    def load(slot: TimeSlot, db: KVStore) -> "Block":
+        """
+        Load the block for the given slot from DB
+        """
+        if slot == 0:
+            # Return genesis block
+            return Block.genesis()
+        
+        data = db.get(Block.storage_key(slot))
+        if data is None:
+            raise ValueError("No block found for slot: ", slot)
+        block, _ = Block.decode_from(data)
+        return block
+        
+    def save(self, db: KVStore):
+        """
+        Save the block to DB
+        """
+        db.put(Block.storage_key(self.header.slot), self.encode())
+        # Achieve finality immediately
+        db.put(bytes(Hash.blake2b(b"finality")), self.header.slot.encode())
+
+    @staticmethod
+    def storage_key(slot: TimeSlot) -> bytes:
+        """
+        Get the storage key for the block
+        """
+        return bytes(Hash.blake2b("Block_".encode() + slot.encode()))

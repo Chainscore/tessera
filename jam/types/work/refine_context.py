@@ -9,7 +9,7 @@ from jam.types.protocol.core import TimeSlot
 from jam.utils.json.serde import JsonSerde
 
 
-@decodable_vector(OpaqueHash)
+@decodable_vector(OpaqueHash, allow_duplicates=False)
 class OpaqueHashes(Vector[OpaqueHash]):
     ...
 
@@ -25,3 +25,14 @@ class RefineContext(Codable, JsonSerde):
     lookup_anchor: HeaderHash
     lookup_anchor_slot: TimeSlot
     prerequisites: OpaqueHashes
+
+    @staticmethod
+    def empty() -> "RefineContext":
+        return RefineContext(
+            anchor = HeaderHash([0]*32),
+            state_root = StateRoot([0]*32),
+            beefy_root = BeefyRoot([0]*32),
+            lookup_anchor = HeaderHash([0]*32),
+            lookup_anchor_slot = TimeSlot(0),
+            prerequisites = OpaqueHashes([]),
+        )
