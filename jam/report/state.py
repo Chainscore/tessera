@@ -163,7 +163,6 @@ class Reporting:
         # Context anchor block must be present in Beta
         for report in all_reports:
             context = report.context
-            print([(recent_block.header_hash == context.anchor, recent_block.state_root == context.state_root, context.beefy_root == MMRFunctions().super_peak(recent_block.mmr)) for recent_block in state.beta])
             if not any(recent_block.header_hash == context.anchor and recent_block.state_root == context.state_root and context.beefy_root == MMRFunctions().super_peak(recent_block.mmr) for recent_block in state.beta):
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
@@ -179,7 +178,7 @@ class Reporting:
             # --------------- dependency_missing -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
             # Eq 11.39
-            all_prerequisites = report.segment_root_lookup.keys().extend(context.prerequisites)
+            all_prerequisites = [*report.segment_root_lookup.keys(), *context.prerequisites]
             for prereq in all_prerequisites:
                 if prereq not in wp_hash_set and prereq not in beta_wp_hashes:
                     raise ReportingError(
@@ -265,7 +264,12 @@ class Reporting:
                     public_key = state.lambda_[y.validator_index].ed25519
                 signature = y.signature
                 try:
-                    Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(bytes(signature),SIGNING_CONTEXTS['guarantee'] + bytes(Hash.blake2b(x.report.encode())))
+                    Ed25519PublicKey.from_public_bytes(
+                        bytes(public_key)
+                    ).verify(
+                        bytes(signature),
+                        SIGNING_CONTEXTS['guarantee'] + bytes(Hash.blake2b(x.report.encode()))
+                    )
                 except InvalidSignature:
                     raise ReportingError(
                         ReportingErrorCode.BAD_SIGNATURE,

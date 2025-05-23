@@ -6,7 +6,7 @@ from jam.types.base.sequences import ByteArray32
 from jam.types.protocol.core import OpaqueHash
 
 from typing import Callable, TypeVar, Optional
-from jam.types.base import Vector
+from jam.types.base import Vector, Option
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.merkle import MMR, OptionHash
 
@@ -125,7 +125,8 @@ class MMRFunctions:
 
         return mmr.encode()
 
-    def super_peak(self, mmr: MMR) -> OpaqueHash:
+
+    def super_peak(self, mmr: MMR, flag=True) -> OpaqueHash:
         """
         MMR Super Peak Function Implementation as defined in Equation E.10
 
@@ -135,27 +136,27 @@ class MMRFunctions:
 
         Args:
             mmr: MMR Peaks
+            flag: Boolean
         Returns:
             Encoded Root
         """
+        h = []
 
-        if len(mmr) == 0:
+        if flag:
+            for peak in mmr:
+                if peak != OptionHash(Null):
+                    h.append(peak)
+        else:
+            h = mmr
+
+        print(h)
+
+        if len(h) == 0:
             return self._ZERO_HASH
 
-        elif len(mmr) == 1:
-            if mmr[0] == OptionHash(Null):
-                return self._ZERO_HASH
-            else:
-                return mmr[0]
-                # return OpaqueHash(mmr[0].get_value())
+        elif len(h) == 1:
+            return h[0].get_value()
 
         else:
-            mmr_dash = mmr[:-1]
-
-            val = self.super_peak(mmr_dash)
-
-            if val != OptionHash(Null) and mmr[-1] != OptionHash(Null):
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(val.get_value()) + bytes(mmr[-1].get_value()))
-
-            elif val != OptionHash(Null) and mmr[-1] == OptionHash(Null):
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(val.get_value()))
+            val = self.super_peak(MMR(h[:-1]), False)
+            return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(h[-1].get_value()))
