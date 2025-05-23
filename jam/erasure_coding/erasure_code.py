@@ -8,20 +8,9 @@ from jam.chainspec import chain_config
 class ErasureCode:
 
     def __init__(self):
-        self.total_chunks = chain_config.num_validators
-        shards_mapping = {
-            6: {'original_shards': 2, 'recovery_shards': 4},
-            12: {'original_shards': 4, 'recovery_shards': 8},
-            18: {'original_shards': 6, 'recovery_shards': 12},
-            36: {'original_shards': 12, 'recovery_shards': 24},
-            108: {'original_shards': 36, 'recovery_shards': 72},
-            342: {'original_shards': 114, 'recovery_shards': 228},
-            684: {'original_shards': 228, 'recovery_shards': 456},
-            1023: {'original_shards': 342, 'recovery_shards': 681},
-        }
-        self.original_shards = shards_mapping[self.total_chunks]['original_shards']
-        self.recovery_shards = shards_mapping[self.total_chunks]['recovery_shards']
-        self.c = int(self.total_chunks/3)
+        self.total_shards = chain_config.num_validators
+        self.original_shards = chain_config.erasure_coding_original_shards
+        self.recovery_shards = chain_config.erasure_coding_recovery_shards
 
     @staticmethod
     def unzip(data: Bytes, n: int, k: int) -> Vector[Bytes]:
