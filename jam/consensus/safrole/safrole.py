@@ -26,6 +26,17 @@ from jam.types.protocol.validators import ValidatorData
 from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
 from copy import deepcopy
 
+
+# for ring root
+from jam.ring_vrf.ring_proof.columns.columns import PublicColumnBuilder as PC
+from jam.ring_vrf.ring_proof.helpers import Helpers as H
+from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
+
+# for sign verification
+from jam.ring_vrf.ring_proof.verfiey import Verify
+from jam.ring_vrf.ring_proof.constants import SeedPoint
+from jam.ring_vrf.ring_proof.constants import D_512 as D, OMEGA_2048 as omega
+
 class Safrole:
     @staticmethod
     def generate_ticket() -> TicketEnvelope:
@@ -37,16 +48,45 @@ class Safrole:
     @staticmethod
     def verify_vrf(message, proof) -> bool:
         # TODO: Implement VRF verification after VRF module is added
+        #
+        # proof_ptr = [H.bls_g1_decompress(proof[:48]), H.bls_g1_decompress(proof[48 * 1: 48 * 2]),H.bls_g1_decompress(proof[48 * 2: 48 * 3]), H.bls_g1_decompress(proof[48 * 3:48 * 4]),H.to_scalar_int(proof[48 * 4 + (0 * 32): 48 * 4 + (1 * 32)]),H.to_scalar_int(proof[48 * 4 + (1 * 32): 48 * 4 + (2 * 32)]),H.to_scalar_int(proof[48 * 4 + (2 * 32): 48 * 4 + (3 * 32)]),H.to_scalar_int(proof[48 * 4 + (3 * 32): 48 * 4 + (4 * 32)]),H.to_scalar_int(proof[48 * 4 + (4 * 32): 48 * 4 + (5 * 32)]),H.to_scalar_int(proof[48 * 4 + (5 * 32): 48 * 4 + (6 * 32)]),H.to_scalar_int(proof[48 * 4 + (6 * 32): 48 * 4 + (7 * 32)]),H.bls_g1_decompress(proof[48 * 4 + (7 * 32):48 * 4 + (7 * 32) + 48]),H.to_scalar_int(proof[48 * 4 + (7 * 32) + 48:48 * 4 + (7 * 32) + 48 + 32]),H.bls_g1_decompress(proof[48 * 4 + (7 * 32) + 48 + 32:-98]), H.bls_g1_decompress(proof[-98:])]
+        # rltn_to_proove=sw.decompress(message) #relation to proove
+        # res_plus_seeed= sw.add(sw.from_twisted_edwards(SeedPoint), rltn_to_proove)
+        #
+        # ring_root = "0x85f9095f4abd040839d793d89ab5ff25c61e50c844ab6765e2c0b22373b5a8f6fbe5fc0cd61fdde580b3d44fe1be127197e33b91960b10d2c6fc75aec03f36e16c2a8204961097dbc2c5ba7655543385399cc9ef08bf2e520ccf3b0a7569d88492e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf" #example
+        # C_px, C_py, C_s= H.bls_g1_decompress(ring_root[:98]) , H. bls_g1_decompress(ring_root[98:-98]) , H.bls_g1_decompress(ring_root[-98:])
+        # fixed_cols_cmts=[C_px, C_py, C_s]
+        #
+        # verifier_key= {
+        # 'g1':g1_points[0],
+        # 'g2':H.altered_points(g2_points),
+        #     'commitments':fixed_cols_cmts
+        # }
+        #
+        # valid = Verify(proof_ptr, verifier_key, fixed_cols_cmts,rltn_to_proove, res_plus_seeed,SeedPoint,D)
+        # # print("is any one:",valid.is_signtaure_valid())
+        # print('am i called')
+        # # return valid.is_signtaure_valid()
+
         return True
 
     @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> bytes:
-        # TODO - Implementation of KZG_commitment(⟦HB⟧) once the module is added
-        sorted_keys = sorted(keys)
-        data = b""
-        for key in sorted_keys:
-            data = data + bytes(key)
-        return data[:144]
+        # # TODO - Implementation of KZG_commitment(⟦HB⟧) once the module is added
+
+        keys_as_bs_points = []
+        for key in keys:
+            point = BandersnatchPoint.string_to_point(bytes(key))  # or take key[2:] by skipping '0x'
+            keys_as_bs_points.append((point.x, point.y))
+
+        ring_root = PC()  # ring_root builder
+        fxd_cols = ring_root.build(keys_as_bs_points)
+        fxd_col_cs = bytearray.fromhex(H.bls_g1_compress(fxd_cols[0].commitment)) + bytearray.fromhex(
+            H.bls_g1_compress(fxd_cols[1].commitment)) + bytearray.fromhex(H.bls_g1_compress(fxd_cols[2].commitment))
+        # print("fixed_col_cs", len(fxd_col_cs), type(fxd_col_cs),fxd_col_cs)
+
+        return fxd_col_cs
+
 
     @staticmethod
     def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
@@ -67,7 +107,7 @@ class Safrole:
                 SafroleErrorCode.BAD_SLOT,
                 f"Slot {block.header.slot} is less than current tau {state.tau}",
             )
-        
+
         old_epoch = int(pre_tau) // EPOCH_LENGTH
         new_epoch = int(block.header.slot) // EPOCH_LENGTH
         epoch_jump = new_epoch - old_epoch
@@ -110,7 +150,7 @@ class Safrole:
                 else:
                     # Not an offender, keep the original validator data
                     filtered_validators.append(k)
-            
+
             gamma.k = GammaK(filtered_validators)
 
             # 4.2 . Shift entropy
@@ -135,10 +175,13 @@ class Safrole:
                     state.eta[2], state.kappa
                 )
 
-            # 4. 4. Update ring root
-            gamma.z = GammaZ(Safrole.compute_ring_root(
-                [k.bandersnatch for k in state.kappa]
-            ).hex())
+                # 4. 4. Update ring root
+                # gamma.z = GammaZ(Safrole.compute_ring_root(
+                #     [k.bandersnatch for k in state.kappa]
+                # ).hex())
+
+                # using gamma k
+                gamma.z = GammaZ(Safrole.compute_ring_root([k.bandersnatch for k in state.gamma.k]))
 
             # 4.5. Empty the ticket acc for upcoming epoch
             gamma.a = GammaA([])
