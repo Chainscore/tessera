@@ -113,15 +113,9 @@ class State:
         _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
         # Authorization
         Authorization.transition(self, block)
-<<<<<<< HEAD
-        # 7. Recent History  TODO: Calculate the accumulate root(r) from the commitment result from Accumulation.transition function()
-        RecentHistory.transition(self, block, ByteArray32([0] * 32))
-        # 8. Preimages
-=======
         # Recent History
         RecentHistory.transition(self, block, BMRFunctions().wb_merkle_fn(sorted([Bytes(key.encode() + bytes(val)) for key, val in commitment_map]), Hash.keccak256))
         # Preimages
->>>>>>> fix/pvm-accumulate-tv
         Preimages.transition(self, block)
         # Statistics
         Statistics.transition(self, block, newly_avail_wrs)
