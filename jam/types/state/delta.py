@@ -114,7 +114,7 @@ class AccountLookup(Dictionary[LookupTable, Timestamps]):
     service   = { "name": "service",    "default": AccountMetadata(code_hash=ByteArray32([0] * 32), balance=Balance(0), gas_limit=Gas(0), min_gas=Gas(0), num_i=Ai(0), num_o=Ao(0)) },
     storage   = { "name": "storage",    "default": AccountStorage({}) },
     preimages = { "name": "preimages",  "default": AccountPreimages({}) },
-    lookup    = { "name": "lookup",     "default": AccountLookup({}) },
+    lookup    = { "name": "lookup_meta",     "default": AccountLookup({}) },
 )
 @decodable_dataclass
 @dataclass
