@@ -30,7 +30,7 @@ def package(packages: GuaranteesExtrinsic) -> PackageDict:
 class RecentHistory:
 
     @staticmethod
-    def transition(state: Sigma, block: Block, accumulate_root: Optional[OpaqueHash]) -> Sigma:
+    def transition(state: Sigma, block: Block, accumulate_root = ByteArray32([0] * 32)) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -86,7 +86,7 @@ class RecentHistory:
         if len(beta) > 0:
             last = deepcopy(beta[-1].mmr)
 
-        if accumulate_root:
+        if accumulate_root != ByteArray32([0] * 32):
             mmr_functions = MMRFunctions()
             last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
 
