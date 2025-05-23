@@ -35,9 +35,14 @@ class WorkExecResult(Choice):
     ok: Bytes
     out_of_gas: Nullable
     panic: Nullable
-    bad_code: Nullable
-    code_oversize: Nullable
+    # circle dot
     bad_exports: Nullable
+    # circle minus
+    result_oversize: Nullable
+    # BAD
+    bad_code: Nullable
+    # BIG
+    code_oversize: Nullable
 
 
 @decodable_vector(element_type=WorkExecResult)
