@@ -1,4 +1,7 @@
+from typing import Dict, List
+
 from jam.types.base import decodable_vector, U32, Vector
+from jam.types.protocol.core import CoreIndex
 from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
 from math import floor
 from jam.utils.shuffle import shuffle
@@ -9,7 +12,7 @@ from collections import deque
 @decodable_vector(element_type=U32)
 class U32Vector(Vector): ...
 
-def guarantor_assignment(eta,  kappa, lambda_, block_slot, report_slot):
+def guarantor_assignment(eta,  kappa, lambda_, block_slot, report_slot) -> Dict[CoreIndex, List]:
 
     """
     Description:

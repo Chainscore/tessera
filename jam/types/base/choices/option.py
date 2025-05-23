@@ -30,6 +30,9 @@ class Option(Choice):
     def get_value(self) -> Codable | Nullable:
         return list(self.value.values())[0]
 
+    def is_some(self) -> bool:
+        return self.value.keys()[0] == "some"
+
     @classmethod
     def from_json(cls, data: Any) -> "Option":
         """Create from JSON representation."""

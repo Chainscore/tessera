@@ -1,9 +1,14 @@
+from typing import Dict, Set
+
+from jam.merklization import MMRFunctions
 from jam.types.base import decodable_vector, U32, Vector, Bytes, Null
+from jam.types.protocol.core import CoreIndex
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
 from jam.types.block import Block
 import  dataclasses
 from jam.types.protocol.crypto import Hash
+from jam.types.work.report import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, SIGNING_CONTEXTS
 from jam.report.error import ReportingError, ReportingErrorCode
 from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, MAX_WORK_REPORT_SIZE
@@ -31,26 +36,43 @@ class Reporting:
             Returns the updated Rho(workreport, timeslot)
         """
 
-        for x in block.extrinsic.guarantees:
+        # small w
+        all_reports = []
+        wp_hash_set = set()
+
+        for guarantee in block.extrinsic.guarantees:
+            report = guarantee.report
+            # -------- too_many_dependencies ---------
+            # https://graypaper.fluffylabs.dev/#/85129da/13ab0013b600?v=0.6.3
+            segment_root = len(report.segment_root_lookup)
+            prerequisite = len(report.context.prerequisites)
+            if (segment_root + prerequisite) > MAX_DEPENDENCIES:
+                raise ReportingError(
+                    ReportingErrorCode.TOO_MANY_DEPENDENCIES,
+                    "Work report has many dependencies(segment_lookup + prerequisite)"
+                )
+
+            Reporting.verify_report_output(report)
 
             #  ------- bad_core_index -----------------
-            if x.report.core_index >= CORE_COUNT:
+            if report.core_index >= CORE_COUNT:
                 raise ReportingError(
                     ReportingErrorCode.BAD_CORE_INDEX,
                     "Core index value is more then core range(CORE_COUNT)"
                 )
 
             # -------- core_engaged -------------
-            if x.report.core_index < CORE_COUNT:
-                if state.rho[x.report.core_index] != Null:
-                    raise ReportingError(
-                        ReportingErrorCode.CORE_ENGAGED,
-                        "The core index mentioned in report should be available in rho"
-                    )
+            # Ensure Rho is empty for this report
+            # 11.29
+            if state.rho[report.core_index] != Null:
+                raise ReportingError(
+                    ReportingErrorCode.CORE_ENGAGED,
+                    "The core index mentioned in report should be available in rho"
+                )
 
             # --------- no_enough_guatantee ------------
             # https://graypaper.fluffylabs.dev/#/85129da/147002149002?v=0.6.3
-            credential_len = len(x.signatures)
+            credential_len = len(guarantee.signatures)
             if credential_len < 2 * VALIDATOR_COUNT // 3:
                 raise ReportingError(
                     ReportingErrorCode.INSUFFICIENT_GUARANTEE,
@@ -66,6 +88,7 @@ class Reporting:
                     )
 
             # --------- not_sorted_guarantee ---------
+            # 11.25
             # https://graypaper.fluffylabs.dev/#/85129da/14b80214df02?v=0.6.3
             for j in range(len(x.signatures)-1):
                 if x.signatures[j].validator_index >= x.signatures[j+1].validator_index:
@@ -76,25 +99,13 @@ class Reporting:
 
             # --------- not-authorized -----------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ea0015f700?v=0.6.3
-            report_auth_hash = x.report.authorizer_hash
-            core_index = x.report.core_index
-            auth_pool = state.alpha
-            if core_index < CORE_COUNT:
-                if report_auth_hash not in auth_pool[core_index]:
-                    raise ReportingError(
-                        ReportingErrorCode.CORE_UNAUTHORIZED,
-                        "Work Report's authorizer_hash not exist in AuthorizationPool"
-                    )
-
-            # -------- too_many_dependencies ---------
-            # https://graypaper.fluffylabs.dev/#/85129da/13ab0013b600?v=0.6.3
-            segment_root = len(x.report.segment_root_lookup)
-            prerequisite = len(x.report.context.prerequisites)
-            if (segment_root + prerequisite) > MAX_DEPENDENCIES:
+            # Ensure authorizer hash is present in core's Authorizer Pool
+            if report.authorizer_hash not in state.alpha[int(report.core_index)]:
                 raise ReportingError(
-                    ReportingErrorCode.TOO_MANY_DEPENDENCIES,
-                    "Work report has many dependencies(segment_lookup + prerequisite)"
+                    ReportingErrorCode.CORE_UNAUTHORIZED,
+                    "Work Report's authorizer_hash not exist in AuthorizationPool"
                 )
+
 
             # ---------- future_report_slot -----------------
             if x.slot > block.header.slot:
@@ -111,7 +122,13 @@ class Reporting:
                         "Guarantee work report slot not in recent slots (block history)"
                     )
 
+            # --------------- duplicated_package_in_recent_history ----------------------------
+            # https://graypaper.fluffylabs.dev/#/85129da/157a0115c901?v=0.6.3
+            wp_hash_set.add(report.package_spec.hash)
+            all_reports.append(report)
+
         #------------- out_of_order_guarantee ---------------------
+        # 11.23
         # https://graypaper.fluffylabs.dev/#/85129da/146802146902?v=0.6.3
         guarantee_length = len(block.extrinsic.guarantees)
         if guarantee_length > 1:
@@ -123,18 +140,23 @@ class Reporting:
                         "Core index for each guarantee is not in unique"
                     )
 
-        # --------------- duplicated_package_in_recent_history ----------------------------
-        # https://graypaper.fluffylabs.dev/#/85129da/157a0115c901?v=0.6.3
-        hashes = []
-        for x in block.extrinsic.guarantees:
-            hashes.append(x.report.package_spec.hash)
 
-        for i in state.beta:
-            if any(key in hashes for key in i.packages.keys()):
+        # Context anchor block must be present in Beta
+        for report in all_reports:
+            context = report.context
+            if not any(recent_block.header_hash == context.anchor and recent_block.state_root == context.state_root and context.beefy_root == MMRFunctions().super_peak(recent_block.mmr) for recent_block in state.beta):
                 raise ReportingError(
-                    ReportingErrorCode.DUPLICATE_PACKAGE,
-                    "Work package is already executed in recent-block's history"
+                    ReportingErrorCode.ANCHOR_NOT_RECENT,
+                    "Anchor not found in beta"
                 )
+
+
+        # for i in state.beta:
+        #     if any(key in hashes for key in i.packages.keys()):
+        #         raise ReportingError(
+        #             ReportingErrorCode.DUPLICATE_PACKAGE,
+        #             "Work package is already executed in recent-block's history"
+        #         )
 
         #--------------------------duplicated_package_in_reports----------------------------
         # https://graypaper.fluffylabs.dev/#/85129da/151e01152501?v=0.6.3
@@ -147,10 +169,18 @@ class Reporting:
                             "Duplicate package spec hash in other report of same guarantee"
                         )
 
-        Reporting.verify_report_output(block)
+
+        # 11.32
+        if len(wp_hash_set) != len(all_reports):
+            raise ReportingError(
+                ReportingErrorCode.DUPLICATE_PACKAGE,
+                f"Duplicate Work Package detected"
+            )
+
         Reporting.ensure_valid_refinement_context(state, block)
         Reporting.ensure_valid_report_result(state,block)
-        Reporting.wrong_assignment(state, block)
+        # Check core assignments
+        Reporting.ensure_correct_assignments(state, block)
         Reporting.ensure_signature(state, block)
 
 
@@ -189,18 +219,18 @@ class Reporting:
                     )
 
     @staticmethod
-    def verify_report_output(block: Block):
+    def verify_report_output(report: WorkReport):
         """
         Description: ensure that work report (authorizer output + sum of report output ) size always should be <= 48*(2**10)
 
         Source: https://graypaper.fluffylabs.dev/#/85129da/141d00144500?v=0.6.3
-        """
-        work_report_output = Bytes(0)
 
-        for x in block.extrinsic.guarantees:
-            work_report_output = work_report_output + x.report.auth_output
-            for y in x.report.results:
-                work_report_output = work_report_output + y.result.get_value()
+        """
+        work_report_output = report.auth_output
+        for result in report.results:
+            # TODO - Test this with non-OK results
+            if result.result.is_some():
+                work_report_output = work_report_output + len(result.result.get_value())
 
         if len(work_report_output) > MAX_WORK_REPORT_SIZE:
             raise ReportingError(
@@ -235,32 +265,32 @@ class Reporting:
         for report in block.extrinsic.guarantees:
             hashes.append(report.report.package_spec.hash)
 
-        header_hashes = []
-
-        for x in state.beta:
-            header_hashes.append(x.header_hash)
+        # header_hashes = []
+        #
+        # for x in state.beta:
+        #     header_hashes.append(x.header_hash)
 
         for y in block.extrinsic.guarantees:
             context = y.report.context
-            # --------------- anchor_not_recent -------------------
-            # https://graypaper.fluffylabs.dev/#/85129da/152801152b01?v=0.6.3
-            # Eq 11.33
-            if context.anchor not in header_hashes:
-                raise ReportingError(
-                    ReportingErrorCode.ANCHOR_NOT_RECENT,
-                    "Anchor hash should match with header hash of any block in recent history"
-                )
-                
-            # --------------- bad_state_root -------------------
-            if not any(item.state_root == context.state_root for item in state.beta):
-                raise ReportingError(
-                    ReportingErrorCode.BAD_STATE_ROOT,
-                    "State_root should match with any block state_root in recent history"
-                )
-                
+            # # --------------- anchor_not_recent -------------------
+            # # https://graypaper.fluffylabs.dev/#/85129da/152801152b01?v=0.6.3
+            # # Eq 11.33
+            # if context.anchor not in header_hashes:
+            #     raise ReportingError(
+            #         ReportingErrorCode.ANCHOR_NOT_RECENT,
+            #         "Anchor hash should match with header hash of any block in recent history"
+            #     )
+            #
+            # # --------------- bad_state_root -------------------
+            # if not any(item.state_root == context.state_root for item in state.beta):
+            #     raise ReportingError(
+            #         ReportingErrorCode.BAD_STATE_ROOT,
+            #         "State_root should match with any block state_root in recent history"
+            #     )
+            #
             # --------------- dependency_missing -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
-            # Eq 11.39
+            # Eq 11.38
             if context.prerequisites != Null or y.report.segment_root_lookup != Null: # changed from is not None to != Null
                  for x in context.prerequisites:
                     if x not in hashes and x not in work_package_hashes:
@@ -270,6 +300,7 @@ class Reporting:
                         )
                         
             # --------------- segment_root_lookup_invalid -------------------
+            # 11.39
             # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
             if  y.report.segment_root_lookup != Null:
                 for x in y.report.segment_root_lookup:
@@ -308,7 +339,7 @@ class Reporting:
                 # --------------- bad_code_hash -------------------
                 # https://graypaper.fluffylabs.dev/#/85129da/153302153502?v=0.6.3
                 # Eq 11.42
-                if y.code_hash != state.delta[y.service_id].code_hash:
+                if y.code_hash != state.delta[y.service_id].service.code_hash:
                     raise ReportingError(
                         ReportingErrorCode.BAD_CODE_HASH,
                         "Result code_hash should match with state's delta code_hash"
@@ -317,7 +348,7 @@ class Reporting:
                 # --------------- service_item_gas_too_low -------------------
                 # https://graypaper.fluffylabs.dev/#/85129da/15f80015fa00?v=0.6.3
                 # Eq 11.30
-                if y.accumulate_gas < state.delta[y.service_id].min_gas:
+                if y.accumulate_gas < state.delta[y.service_id].service.min_gas:
                     raise ReportingError(
                         ReportingErrorCode.SERVICE_ITEM_GAS_TOO_LOW,
                         "For every report its accumulate gas should be greater than the delta's min_gas"
@@ -328,7 +359,6 @@ class Reporting:
             # --------------- work_report_gas_too_high -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15fa0015fd00?v=0.6.3
             # Eq 11.30
-            print(total_accumulate_gas, ACCUMULATION_GAS)
             if total_accumulate_gas > ACCUMULATION_GAS:
                 raise ReportingError(
                     ReportingErrorCode.WORK_REPORT_GAS_TOO_HIGH,
@@ -336,7 +366,7 @@ class Reporting:
                 )
 
     @staticmethod
-    def wrong_assignment(state: Sigma, block: Block):
+    def ensure_correct_assignments(state: Sigma, block: Block):
         """
         Description : This function check assign validator to the core is correct or not.
 
@@ -349,23 +379,21 @@ class Reporting:
         for x in block.extrinsic.guarantees:
             report_slot = x.slot
 
-        mapping = guarantor_assignment(state.eta, state.kappa, state.lambda_,block.header.slot, report_slot )
+        guarantors_assigned = guarantor_assignment(state.eta, state.kappa, state.lambda_, block.header.slot, report_slot )
 
         # array of assign validator for each core
-        guarantee_validator_index = {}
-
+        current_assigned: Dict[CoreIndex, Set] = {}
         for x in block.extrinsic.guarantees:
             key = x.report.core_index
             value = set()
             for y in x.signatures:
                 value.add(y.validator_index)
+            current_assigned[key] = value
 
-            guarantee_validator_index[key] = value
-
-        guarantee_validator_index = {k: guarantee_validator_index[k] for k in (guarantee_validator_index.keys())}
-        for key in guarantee_validator_index:
-            if len(guarantee_validator_index[key]) == 3:
-                if guarantee_validator_index[key] != mapping.get(key):
+        # Iterate through current gurantee assignments, match them against ideal gurantor assigned
+        for core, vals in current_assigned.items():
+            for validator in vals:
+                if validator not in guarantors_assigned[core]:
                     raise ReportingError(
                         ReportingErrorCode.WRONG_ASSIGNMENT,
                         "Assign wrong validator to the core"
