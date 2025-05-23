@@ -37,7 +37,8 @@ class Preimages:
                 or len(account.lookup[lookup_key]) != 0
             ):
                 raise PreimageError(
-                    PreimageErrorEnum.PREIMAGE_UNNEEDED
+                    PreimageErrorEnum.PREIMAGE_UNNEEDED,
+                    "Preimage metadata does not exist",
                 )
 
         for preimage in block.extrinsic.preimages:

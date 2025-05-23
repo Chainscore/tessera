@@ -61,6 +61,10 @@ class Timestamps(Vector[U32]):
     """Lookup timestamps"""
     ...
 
+# @with_json_metadata(
+#     code_hash   = { "name": "code_hash" },
+#     balance   = { "name": "balance"}
+# )
 @decodable_dataclass
 @dataclass
 class LookupTable(Codable, JsonSerde):
@@ -82,7 +86,7 @@ class AccountLookup(Dictionary[LookupTable, Timestamps]):
     service   = { "name": "service",    "default": {} },
     storage   = { "name": "storage",    "default": AccountStorage({}) },
     preimages = { "name": "preimages",  "default": AccountPreimages({}) },
-    lookup    = { "name": "lookup",     "default": AccountLookup({}) },
+    lookup    = { "name": "lookup_meta",     "default": AccountLookup({}) },
 )
 @decodable_dataclass
 @dataclass
