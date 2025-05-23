@@ -31,7 +31,7 @@ class Option(Choice):
         return list(self.value.values())[0]
 
     def is_some(self) -> bool:
-        return self.value.keys()[0] == "some"
+        return "some" in self.value
 
     @classmethod
     def from_json(cls, data: Any) -> "Option":

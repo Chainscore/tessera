@@ -1,4 +1,4 @@
-from typing import Dict, Set
+from typing import Dict, Set, List
 
 from jam.merklization import MMRFunctions
 from jam.types.base import decodable_vector, U32, Vector, Bytes, Null
@@ -7,9 +7,9 @@ from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
 from jam.types.block import Block
 import  dataclasses
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.work.report import WorkReport
-from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, SIGNING_CONTEXTS
+from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, SIGNING_CONTEXTS, LOOKUP_ANCHOR_MAX_AGE
 from jam.report.error import ReportingError, ReportingErrorCode
 from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, MAX_WORK_REPORT_SIZE
 from math import floor
@@ -24,13 +24,14 @@ class U32Vector(Vector): ...
 class Reporting:
 
     @staticmethod
-    def transition(state: Sigma, block:Block) -> Sigma:
+    def transition(state: Sigma, block:Block, known_packages: List[OpaqueHash]) -> Sigma:
         """
         Description:
             This function takes two arguments: state, block. This transition function check all the boundary cases for work_report and update the state Rho.
         Args:
             state: This is the state on which transition happen or another state to get previous and curr data (like validators)
             block: This is the recent block added on-chain and to get all information(like header, slot, extrinsic)
+            known_packages: Packages from known queue (Nu), accumulation history (Xi)
 
         Returns:
             Returns the updated Rho(workreport, timeslot)
@@ -73,14 +74,14 @@ class Reporting:
             # --------- no_enough_guatantee ------------
             # https://graypaper.fluffylabs.dev/#/85129da/147002149002?v=0.6.3
             credential_len = len(guarantee.signatures)
-            if credential_len < 2 * VALIDATOR_COUNT // 3:
+            if credential_len < 2:
                 raise ReportingError(
                     ReportingErrorCode.INSUFFICIENT_GUARANTEE,
                     "Work report doesn't has enough validator"
                 )
 
             # -------- bad_validator_index ------------
-            for y in x.signatures:
+            for y in guarantee.signatures:
                 if y.validator_index >= VALIDATOR_COUNT:
                     raise ReportingError(
                         ReportingErrorCode.BAD_VALIDATOR_INDEX,
@@ -90,8 +91,8 @@ class Reporting:
             # --------- not_sorted_guarantee ---------
             # 11.25
             # https://graypaper.fluffylabs.dev/#/85129da/14b80214df02?v=0.6.3
-            for j in range(len(x.signatures)-1):
-                if x.signatures[j].validator_index >= x.signatures[j+1].validator_index:
+            for j in range(len(guarantee.signatures)-1):
+                if guarantee.signatures[j].validator_index >= guarantee.signatures[j+1].validator_index:
                     raise ReportingError (
                         ReportingErrorCode.NOT_SORTED_OR_UNIQUE_GUARANTORS,
                         "Signature's validator index order is not sorted"
@@ -108,15 +109,15 @@ class Reporting:
 
 
             # ---------- future_report_slot -----------------
-            if x.slot > block.header.slot:
+            if guarantee.slot > block.header.slot:
                 raise ReportingError(
                     ReportingErrorCode.FUTURE_REPORT_SLOT,
                     "Report's slot more then block's slot"
                 )
 
             # -------- report_epoch_before_last ------------
-            if x.slot != block.header.slot :
-                if block.header.slot - x.slot > 7:
+            if guarantee.slot != block.header.slot :
+                if block.header.slot - guarantee.slot > 7:
                     raise ReportingError(
                         ReportingErrorCode.REPORT_EPOCH_BEFORE_LAST,
                         "Guarantee work report slot not in recent slots (block history)"
@@ -141,14 +142,68 @@ class Reporting:
                     )
 
 
+        recent_exports_roots = {}
+        beta_wp_hashes = []
+
+        for x in state.beta:
+            for key in x.packages:
+                beta_wp_hashes.append(key)
+                recent_exports_roots.update(x.packages)
+
+        recent_exports_roots.update({report.package_spec.hash: report.package_spec.exports_root for report in all_reports})
+
+        rho_package_hashes = [pending_wr.get_value().context.package_spec.hash if pending_wr.is_some() else None for pending_wr in state.rho]
+        for p in wp_hash_set:
+            # Ensure this WP is not previously executed - checking Beta, Nu, Rho, Xi
+            # 11.38
+            if p in beta_wp_hashes or p in known_packages or p in rho_package_hashes:
+                raise ReportingError(ReportingErrorCode.DUPLICATE_PACKAGE)
+
+
         # Context anchor block must be present in Beta
         for report in all_reports:
             context = report.context
+            print([(recent_block.header_hash == context.anchor, recent_block.state_root == context.state_root, context.beefy_root == MMRFunctions().super_peak(recent_block.mmr)) for recent_block in state.beta])
             if not any(recent_block.header_hash == context.anchor and recent_block.state_root == context.state_root and context.beefy_root == MMRFunctions().super_peak(recent_block.mmr) for recent_block in state.beta):
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
                     "Anchor not found in beta"
                 )
+
+            if int(context.lookup_anchor_slot) < int(block.header.slot) - LOOKUP_ANCHOR_MAX_AGE:
+                raise ReportingError(
+                    ReportingErrorCode.ANCHOR_NOT_RECENT,
+                    "Lookup anchor older than max age"
+                )
+
+            # --------------- dependency_missing -------------------
+            # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
+            # Eq 11.39
+            all_prerequisites = report.segment_root_lookup.keys().extend(context.prerequisites)
+            for prereq in all_prerequisites:
+                if prereq not in wp_hash_set and prereq not in beta_wp_hashes:
+                    raise ReportingError(
+                        ReportingErrorCode.DEPENDENCY_MISSING,
+                        "prerequisite's hash should match the package_specification's hash of any of the reports"
+                    )
+
+            # --------------- segment_root_lookup_invalid -------------------
+            # # 11.40
+            # # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
+            # for prereq in all_prerequisites:
+            #     if prereq not wp_se and x.work_package_hash not in work_package_hashes or (
+            #             x.segment_tree_root != y.report.package_spec.exports_root and x.segment_tree_root not in exports_root):
+            #         raise ReportingError(
+            #             ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID,
+            #             "Work-packages mentioned in the segment-root lookup, be either in the extrinsic or in our recent history."
+            #         )
+
+            for lookup, exports_root in report.segment_root_lookup.items():
+                if not (lookup in recent_exports_roots and recent_exports_roots[lookup] == exports_root):
+                    raise ReportingError(
+                        ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID,
+                        "Work-packages mentioned in the segment-root lookup, be either in the extrinsic or in our recent history."
+                    )
 
 
         # for i in state.beta:
@@ -192,7 +247,6 @@ class Reporting:
                 )
             )
 
-
         return state
 
     @staticmethod
@@ -226,13 +280,13 @@ class Reporting:
         Source: https://graypaper.fluffylabs.dev/#/85129da/141d00144500?v=0.6.3
 
         """
-        work_report_output = report.auth_output
+        work_report_output = len(report.auth_output)
         for result in report.results:
             # TODO - Test this with non-OK results
-            if result.result.is_some():
-                work_report_output = work_report_output + len(result.result.get_value())
+            if result.result.get_key() == "ok":
+                work_report_output += len(result.result.get_value())
 
-        if len(work_report_output) > MAX_WORK_REPORT_SIZE:
+        if work_report_output > MAX_WORK_REPORT_SIZE:
             raise ReportingError(
                 ReportingErrorCode.WORK_REPORT_TOO_BIG,
                 "Length of sum of result and auth_output should be less than 48 * 2**10 "
@@ -253,17 +307,6 @@ class Reporting:
 
 
         """
-        exports_root = []
-        work_package_hashes = []
-
-        for x in state.beta:
-            for key in x.packages:
-                work_package_hashes.append(key)
-                exports_root.append(x.packages[key])
-
-        hashes = []
-        for report in block.extrinsic.guarantees:
-            hashes.append(report.report.package_spec.hash)
 
         # header_hashes = []
         #
@@ -288,27 +331,9 @@ class Reporting:
             #         "State_root should match with any block state_root in recent history"
             #     )
             #
-            # --------------- dependency_missing -------------------
-            # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
-            # Eq 11.38
-            if context.prerequisites != Null or y.report.segment_root_lookup != Null: # changed from is not None to != Null
-                 for x in context.prerequisites:
-                    if x not in hashes and x not in work_package_hashes:
-                        raise ReportingError(
-                            ReportingErrorCode.DEPENDENCY_MISSING,
-                            "prerequisite's hash should match the package_specification's hash of any of the reports"
-                        )
-                        
-            # --------------- segment_root_lookup_invalid -------------------
-            # 11.39
-            # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
-            if  y.report.segment_root_lookup != Null:
-                for x in y.report.segment_root_lookup:
-                    if x.work_package_hash not in hashes and x.work_package_hash not in work_package_hashes or (x.segment_tree_root != y.report.package_spec.exports_root and x.segment_tree_root not in exports_root):
-                        raise ReportingError(
-                            ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID,
-                            "Work-packages mentioned in the segment-root lookup, be either in the extrinsic or in our recent history."
-                        )
+
+
+
 
     @staticmethod
     def ensure_valid_report_result(state: Sigma, block: Block):

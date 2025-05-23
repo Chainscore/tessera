@@ -152,10 +152,10 @@ class MMRFunctions:
         else:
             mmr_dash = mmr[:-1]
 
-            val = (self.super_peak(mmr_dash))
+            val = self.super_peak(mmr_dash)
 
             if val != OptionHash(Null) and mmr[-1] != OptionHash(Null):
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(mmr[-1].get_value()))
+                return Hash.keccak256(self._PEAK_PREFIX + bytes(val.get_value()) + bytes(mmr[-1].get_value()))
 
             elif val != OptionHash(Null) and mmr[-1] == OptionHash(Null):
                 return Hash.keccak256(self._PEAK_PREFIX + bytes(val.get_value()))
