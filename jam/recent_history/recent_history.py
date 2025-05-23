@@ -98,6 +98,8 @@ class RecentHistory:
             package(block.extrinsic.guarantees)
         )
 
+        # TODO: Genesis Unclear
+
         # Step 3
         new_state.beta.append(n)
         new_state.beta = new_state.beta[-8:]

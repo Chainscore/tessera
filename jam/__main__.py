@@ -1,4 +1,5 @@
 import asyncio
+import threading
 import json
 
 from jam.config.logging import setup_logging, logger
@@ -164,6 +165,15 @@ async def main(
                 LookupTable(hash=wi_code_hash, length=BlobLength(len(wi_service_code)))] = Timestamps([state.tau])
 
             block_producer = BlockProducer(tsr_node, main_db)
+
+            # Create a loop and run it in a daemon thread
+            def start_loop():
+                loop = asyncio.new_event_loop()
+                print("loop here", loop)
+                asyncio.set_event_loop(loop)
+                loop.run_forever()
+
+            threading.Thread(target=start_loop, daemon=True).start()
 
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(tsr_node.initialize())

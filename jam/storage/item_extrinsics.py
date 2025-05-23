@@ -6,7 +6,8 @@ from jam.types.base.integers import U32
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.crypto import Hash
-from jam.types.work.item import ExtrinsicSpecs, ExtrinsicSpec
+from jam.types.work.item import ExtrinsicSpecs, ExtrinsicSpec, WorkItem
+from jam.types.work.manifest import Extrinsics, Extrinsic, MultiExtrinsics
 from jam.types.work.package import WorkPackage
 
 
@@ -14,6 +15,45 @@ class ItemExtrinsics:
     """Place to store and get extrinsics that are received along with Work Package"""
     DB = main_db
 
+    @classmethod
+    def process_item(cls, item: WorkItem, data: Extrinsic) -> Extrinsics:
+        ext = Extrinsics([])
+        to_store = {}
+
+        offset = 0
+        for extrinsic in item.extrinsic:
+            if offset + extrinsic.len > len(data):
+                raise ValueError("Invalid WP: Extrinsic data mismatch")
+            value = data[offset: offset + extrinsic.len]
+            if Hash.blake2b(value) != extrinsic.hash:
+                raise ValueError("Invalid WP: Extrinsic data mismatch")
+            offset += int(extrinsic.len)
+            to_store[extrinsic.hash] = value
+            ext.append(value)
+        if offset != len(data):
+            raise ValueError("Invalid WP: Extrinsic data mismatch")
+
+        for key, value in to_store.items():
+            cls.DB.put(key.encode(), value.encode())
+
+        return ext
+
+    @classmethod
+    def process_package(cls, package: WorkPackage, data: Extrinsics) -> MultiExtrinsics:
+        exts = MultiExtrinsics([])
+        for i, item in enumerate(package.items):
+            item_x_encoded = data[i]
+            ext = cls.process_item(item, item_x_encoded)
+            exts.append(ext)
+
+        return exts
+
+    @classmethod
+    def store_processed(cls, data: MultiExtrinsics):
+        for item in data:
+            for ext in item:
+                key = Hash.blake2b(ext.encode())
+                cls.DB.put(key.encode(), ext.encode())
 
     @classmethod
     def store(cls, package: WorkPackage, data: List[Bytes]):

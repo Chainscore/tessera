@@ -6,7 +6,7 @@ from jam.__main__ import main
 clients = [
     ("Alice", 30333),
     ("Bob", 30334),
-    ("Charlie", 30335),
+    ("Carol", 30335),
     ("Dave", 30336),
     ("Eve", 30337),
     ("Frank", 30338),

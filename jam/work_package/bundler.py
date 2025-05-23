@@ -1,8 +1,11 @@
 from jam.config.logging import logger
 from jam.config.settings import settings
+from jam.storage.item_extrinsics import ItemExtrinsics
+from jam.types.base import Bytes
 
 from jam.types.base.integers import U16
 from jam.types.base.sequences.vector import Vector
+from jam.types.extrinsics.extrinsic import Extrinsic
 
 from jam.types.work.item import WorkItem
 from jam.types.work.package import  WorkPackage
@@ -80,7 +83,7 @@ class Bundler:
             return r
 
     @staticmethod
-    def fetch_extrinsics(w: WorkItem) -> Extrinsics:
+    def fetch_extrinsics(w: WorkItem, data: Extrinsic) -> Extrinsics:
         """
         Function X defined in Eqn 14.14
         Takes Work Item & retrieves its required extrinsic data
@@ -89,15 +92,15 @@ class Bundler:
             https://graypaper.fluffylabs.dev/#/68eaa1f/1bcb011bd501?v=0.6.4
         Args:
            w: WorkItem
+           data: bytes
         Returns:
            Extrinsic data (Vector[Bytes])
         """
-        data: Extrinsics = Extrinsics([])
+        ext_da = ItemExtrinsics()
+        ext: Extrinsics = ext_da.process_item(w, data)
 
-        # TODO: Fetch extrinsic from db / some pre-sent data whose hash and length are present in w.extrinsic
-        # Extrinsic Store Ready (Integration Remaining)
+        return ext
 
-        return data
 
     def fetch_imports(self, w: WorkItem) -> Segments:
         """
@@ -201,7 +204,7 @@ class Bundler:
 
         return justifications
 
-    def build_bundle(self, p: WorkPackage) -> WorkPackageBundle:
+    def build_bundle(self, p: WorkPackage, x: Extrinsics) -> WorkPackageBundle:
         """Function to build Work Package Bundle"""
 
         all_imp = MultiSegments([])
@@ -220,9 +223,10 @@ class Bundler:
             all_jfn.append(justifications)
 
             # Fetch Extrinsics
-            with benchmark("Fetching extrinsics"):
-                extrinsics = self.fetch_extrinsics(item)
-            all_ext.append(extrinsics)
+            with benchmark("Processing extrinsics"):
+                if len(x) > j:
+                    extrinsics = self.fetch_extrinsics(item, x[j])
+                    all_ext.append(extrinsics)
 
         bundle = WorkPackageBundle(p, all_ext, all_imp, all_jfn)
 

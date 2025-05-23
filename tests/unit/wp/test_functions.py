@@ -2,10 +2,12 @@ from math import ceil
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jam.merklization import BMRFunctions
+from jam.merklization import BMRFunctions, MMRFunctions
+from jam.types.base import Null
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.bytes.bytes import Bytes, Byte
 from jam.types.protocol.crypto import Ed25519Signature
+from jam.types.protocol.merkle import MMR, OptionHash
 from jam.types.work.report import WorkReport
 from jam.types.base.sequences.vector import Vector
 
@@ -82,7 +84,7 @@ def test_merkle():
 
     assert root == root_2
 
-def sign_check():
+def test_sign():
     r = WorkReport.from_json({
                     "package_spec": {
                         "hash": "0x63c03371b9dad9f1c60473ec0326c970984e9c90c0b5ed90eba6ada471ba4d86",
@@ -92,7 +94,7 @@ def sign_check():
                         "exports_count": 3
                     },
                     "context": {
-                        "anchor": "0x6900f39559232990f5e2c1353ee2316b063604a07bdf14322dbc0188f76b4d3f",
+                        "anchor": "0x39cb518983b02695034b3b92cb31a7334e1a2ec3ef7dbfa32c68e4e8444363f1",
                         "state_root": "0xd8c577816b629241676502d0461e4eae42a375461314d64484f35f4228da23d6",
                         "beefy_root": "0xf5df0c11416d43c55b43e096572d450b7780ed0fd7b540f26c8ded8e0d41e183",
                         "lookup_anchor": "0x16bda47e5a68daf53c39ddee8af4ecaced7e87f3f0ac9da5a6f4f9e41350d319",
@@ -125,22 +127,61 @@ def sign_check():
                 })
     c = r.core_index
     # print("ff", r)
-    # data = c.encode() + r.encode()
-    data = r.encode()
+    data = c.encode() + r.encode()
+    # data = r.encode()
+    print("hex", data.hex())
     hash_val = Hash.blake2b(data)
     g = b"jam_guarantee"
 
-    seed = bytes.fromhex("0100000001000000010000000100000001000000010000000100000001000000")
+    seed = bytes.fromhex("0500000005000000050000000500000005000000050000000500000005000000")
     private_key = Ed25519PrivateKey.from_private_bytes(seed)
-    op = Ed25519Signature("0xa63e201f64dc34afd0612079f140e3b6e1fc93cec3386acf17d09f863a558eadaf703cd32a30d1d52726915f12c61fddfe78f00d86c3d7470acdfa58bf1a4b09")
+    op = Ed25519Signature("939c76652641416f92ac95b886de5ab23477c41b799942d004e314ccc28e34d01c2bf266659133ae9fc0aa373ea781495b2045b646a8807ac078e885cfc2f103")
     signature = private_key.sign(g + hash_val.encode())
     # print("S", signature)
     pk = private_key.public_key()
 
     print("H", signature.hex())
     # pk.verify(bytes(op),g+hash_val.encode())
-    # assert op == Ed25519Signature(signature)
+    assert op == Ed25519Signature(signature)
 
+def test_beefy():
+    fn = MMRFunctions()
+    root = OpaqueHash("0xf5df0c11416d43c55b43e096572d450b7780ed0fd7b540f26c8ded8e0d41e183")
+    # mmr = MMR(Vector([OptionHash(OpaqueHash("0x9803365d6327b01a4f40285d669f22104e9abc9962e0e8a59fc76e848039fa7f")), OptionHash(OpaqueHash("0x6629377e978ca0a8993aeb7313bce8ed2859b8c4274716a8e4960d9ef61e2d26")), OptionHash(OpaqueHash("cd17112b3055a1129cf3216edb6bf5506df9701829d694ceafa4a15a242ec763"))]))
+    # new_root = fn.super_peak(mmr)
+    # beefy = Hash.keccak256(mmr.encode())
+    # print("check 1", new_root, new_root == root, beefy, beefy == root)
+    # mmr = MMR(Vector([OptionHash(Null), OptionHash(Null), OptionHash(Null), OptionHash(OpaqueHash("0xd7cc7a7751048dbe8d0232b5d0273acd874e56c19e41a2e09b590ca00e59908d"))]))
+    # new_root = fn.super_peak(mmr)
+    # beefy = Hash.keccak256(mmr.encode())
+    # print("check 2", new_root, new_root == root, beefy, beefy == root)
+    # mmr = MMR(Vector([OptionHash(OpaqueHash("0xdbec20b48047e4efbe1accfcf35cdec640de6d676f3152590a7d47df8043c9fe")), OptionHash(Null), OptionHash(Null), OptionHash(OpaqueHash("0xd7cc7a7751048dbe8d0232b5d0273acd874e56c19e41a2e09b590ca00e59908d"))]))
+    # new_root = fn.super_peak(mmr)
+    # beefy = Hash.keccak256(mmr.encode())
+    # print("check 3", new_root, new_root == root, beefy, beefy == root)
+    # mmr = MMR(Vector([OptionHash(Null), OptionHash(OpaqueHash("0x937e03794adb6b889d9a060802f92adf879bc2032980d13a2dee2dc3cae32888")), OptionHash(Null), OptionHash(OpaqueHash("0xd7cc7a7751048dbe8d0232b5d0273acd874e56c19e41a2e09b590ca00e59908d"))]))
+    # new_root = fn.super_peak(mmr)
+    # beefy = Hash.keccak256(mmr.encode())
+    # print("check 4", new_root, new_root == root, beefy, beefy == root)
+    # mmr = MMR(Vector([OptionHash(OpaqueHash("0x7f7c99311ad62e91b08412ce30b370088a10429a38369ad433217e8bccbfff31")), OptionHash(OpaqueHash("0x937e03794adb6b889d9a060802f92adf879bc2032980d13a2dee2dc3cae32888")), OptionHash(Null), OptionHash(OpaqueHash("0xd7cc7a7751048dbe8d0232b5d0273acd874e56c19e41a2e09b590ca00e59908d"))]))
+    # new_root = fn.super_peak(mmr)
+    # beefy = Hash.keccak256(mmr.encode())
+    # print("check 5", new_root, new_root == root, beefy, beefy == root)
+    # mmr = MMR(Vector([OptionHash(Null), OptionHash(Null), OptionHash(OpaqueHash("0x7f64e54f8be039cea06582eb38e7f36f924c1f59a0f3043b4df6f140cccd6ddf")), OptionHash(OpaqueHash("0xd7cc7a7751048dbe8d0232b5d0273acd874e56c19e41a2e09b590ca00e59908d"))]))
+    # new_root = fn.super_peak(mmr)
+    # beefy = Hash.keccak256(mmr.encode())
+    # print("check 6", new_root, new_root == root, beefy, beefy == root)
+    mmr = MMR(Vector([OptionHash(OpaqueHash("0x4c31a1024d553c6f5eb90a26f9c53507d6d58b7be1197c0f86054b084353de5f")), OptionHash(Null), OptionHash(OpaqueHash("0x7f64e54f8be039cea06582eb38e7f36f924c1f59a0f3043b4df6f140cccd6ddf")), OptionHash(OpaqueHash("0xd7cc7a7751048dbe8d0232b5d0273acd874e56c19e41a2e09b590ca00e59908d"))]))
+    new_root = fn.super_peak(mmr)
+    beefy = Hash.keccak256(fn.encode_mmr(mmr))
+    print("mmr", mmr)
+    print("check 7", new_root, new_root == root, beefy, beefy == root)
+    # mmr = MMR(Vector([OptionHash(Null), OptionHash(OpaqueHash("0x62dccd9f84828c1094b24271da81161386276b8804ce42c0b97e87c21b9c7f8b")), OptionHash(OpaqueHash("0x7f64e54f8be039cea06582eb38e7f36f924c1f59a0f3043b4df6f140cccd6ddf")), OptionHash(OpaqueHash("0xd7cc7a7751048dbe8d0232b5d0273acd874e56c19e41a2e09b590ca00e59908d"))]))
+    # new_root = fn.super_peak(mmr)
+    # beefy = Hash.keccak256(mmr.encode())
+    # print("check 8", new_root, new_root == root, beefy, beefy == root)
+
+    assert root == new_root
 
 def verify_merkle_proof(leaves: Vector[OpaqueHash], trace: Vector[OpaqueHash],  index: int):
     bmr = BMRFunctions()

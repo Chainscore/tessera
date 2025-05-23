@@ -1,4 +1,6 @@
 import json
+import asyncio
+import threading
 from math import ceil
 from typing import Tuple
 
@@ -426,7 +428,7 @@ class Processor:
         # Build Work Package Bundle
         logger.info("Building Work Package Bundle..")
         with benchmark("bundle built"):
-            bundle = bundler.build_bundle(package)
+            bundle = bundler.build_bundle(package, extrinsics)
 
         # Distribute Bundle to other Guarantors CE134
         CE134 = WorkPackageSharing()
@@ -434,7 +436,32 @@ class Processor:
         core_segment = CoreSegment(core_index=core, segment_root_map=lookup, length=Int(len(lookup)))
         data = CE134Data(work_package_bundle=bundle, core_segment=core_segment)
 
-        responses = CE134.transmit(node=self.node, data=data)
+        # loop = asyncio.get_event_loop()
+        # print("loop", loop)
+        # loop = asyncio.get_running_loop()
+        loop = asyncio.new_event_loop()
+        # #
+        def start_loop():
+            asyncio.set_event_loop(loop)
+            loop.run_forever()
+
+        # loop = asyncio.get_running_loop()
+        # print("loop here man", loop)
+
+        thread = threading.Thread(target=start_loop, daemon=True)
+        thread.start()
+
+        # future = asyncio.run_coroutine_threadsafe(
+        #     CE134.transmit(node=self.node, data=data),
+        #     loop
+        # )
+
+        # transmit_future = asyncio.ensure_future(CE134.transmit(node=self.node, data=data))
+        # loop = self.node.connections[0]._loop
+        # loop = asyncio.get_running_loop()
+        transmit_future = asyncio.run_coroutine_threadsafe(CE134.transmit(node=self.node, data=data), loop)
+        # transmit_future
+        # responses = await CE134.transmit(node=self.node, data=data)
 
         # Build & Store Report
         with benchmark("bundle processed"):
@@ -460,18 +487,36 @@ class Processor:
 
             # Check majority & Build guarantees:
             guarantees = ValidatorSignatures([og_guarantee])
-            for response in responses:
-                if response.work_report_hash == wr_hash:
-                    guarantee = ValidatorSignature(validator_index=U16(0), signature=response.ed25519_signature)
-                    guarantees.append(guarantee)
 
+            try:
+                responses = transmit_future.result(timeout=1)
+                print("Responses are", responses)
+            except asyncio.TimeoutError:
+                logger.error("Timeout waiting for async transmit result")
+                responses = []
+            except Exception as e:
+                logger.error(f"Error waiting for async transmit result: {e}")
+                responses = []
+            # try:
+            #     # future = run_coroutine_threadsafe(transmit_task, loop)
+            #
+            #     # for response in responses:
+            #     #     print("response is", response)
+            #     #     if response.work_report_hash == wr_hash:
+            #     #         guarantee = ValidatorSignature(validator_index=U16(0), signature=response.ed25519_signature)
+            #     #         guarantees.append(guarantee)
+            #
+            #     # # Distribute Guaranteed WR to Validators CE135
+            #     # logger.info(f"Distributing Work Report to other validators..")
+            #     # if len(guarantees) > 1:
+            #     #     CE135 = WorkReportDistribution()
+            #     #     data = CE135Data(report=wr, slot=TimeSlot(0), len=Int(len(guarantees)),
+            #     #                      signatures=guarantees)
+            #
+            #         # responses = CE135.transmit(node=self.node, data=data)
+            # except Exception as e:
+            #     logger.error(f"Error during CE134 transmit: {e}")
+            #     responses = []
 
-        # Distribute Guaranteed WR to Validators CE135
-        logger.info(f"Distributing Work Report to other validators..")
-        if len(guarantees) > 1:
-            CE135 = WorkReportDistribution()
-            data = CE135Data(report=wr, slot=TimeSlot(0), len=Int(len(guarantees)), signatures=guarantees)
-
-            responses = CE135.transmit(node=self.node, data=data)
 
         return wr, wr_hash

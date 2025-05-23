@@ -1,8 +1,10 @@
+import asyncio
 from typing import Dict
 
 from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted
 from jam.config.logging import logging as logger
+from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -54,13 +56,28 @@ class QuicServerProtocol(QuicConnectionProtocol):
         elif isinstance(event, StreamDataReceived):
             from jam.network.protocols.base import PrefixType
 
+            # san = cert.extensions.get_extension_for_oid(
+            #     ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+            # ).value
+
+
+            # logger.info(f"data from {self._quic._peer_cid} && {self._quic.tls.certificate}")
+            #             # logger.info(f"p key {self._quic.tls.certificate.public_key()} || {self._quic._peer_token}")
+            #             #
+            #             # public_key = self._quic.tls.certificate.public_key()
+            #             # public_key_pem = public_key.public_bytes(
+            #             #     encoding=Encoding.PEM,
+            #             #     format=PublicFormat.SubjectPublicKeyInfo
+            #             # )
+            #             # print("##### key", public_key_pem)
+            # peers = self.node.peers
+
             logger.info(f"📩 Received data of size {len(event.data)} bytes on stream {event.stream_id}")
 
             if event.stream_id not in self.stream_buffer:
                 self.stream_buffer[event.stream_id] = bytes(0)
 
             self.stream_buffer[event.stream_id] += event.data
-
 
             if event.end_stream:
                 try:

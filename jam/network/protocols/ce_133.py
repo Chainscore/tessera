@@ -54,7 +54,7 @@ class WorkPackageSubmission(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE133
 
-    def transmit(self, node: Node, data: CE133Data):
+    async def transmit(self, node: Node, data: CE133Data):
         """Transmit Work Package from Builder (client) to Guarantor (server)"""
 
         stream_a = self._prefix.encode() + data.package_data.encode()
@@ -64,15 +64,21 @@ class WorkPackageSubmission(NetworkProtocol):
         # TODO: Use Particular Validators' Connections
 
         responses = Vector([])
-        for client in node.connections:
-            stream_id = client.stream_and_keep_open(message=stream_a)
-            data = client.stream_and_close(message=stream_b, stream_id=stream_id)
-            responses.append(data)
+        for peer in node.peer_conn:
+            if peer.port == 30333:
+                logger.info("sending package to 30333")
+                client = node.peer_conn[peer][1]
+                stream_id = client.stream_and_keep_open(message=stream_a)
+                data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
+                responses.append(data)
 
         return responses
 
     def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Work Package on Guarantor (server)"""
+        from concurrent.futures import ThreadPoolExecutor
+
+        executor = ThreadPoolExecutor()
 
         logger.info("Received Work Package")
         data, offset = CE133Data.decode_from(buffer)

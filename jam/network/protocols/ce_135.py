@@ -57,7 +57,7 @@ class WorkReportDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE135
 
-    def transmit(self, node: Node, data: CE135Data):
+    async def transmit(self, node: Node, data: CE135Data):
         """Transmit Work Report from Guarantor (client) to Validator (server)"""
 
         message = self._prefix.encode() + data.encode()
@@ -67,7 +67,7 @@ class WorkReportDistribution(NetworkProtocol):
 
         responses = Vector([])
         for client in node.connections:
-            data = client.stream_and_close(message=message)
+            data = await client.stream_and_close(message=message)
             responses.append(data)
 
         return responses

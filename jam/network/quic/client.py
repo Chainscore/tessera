@@ -16,10 +16,10 @@ class QuicClientProtocol(QuicConnectionProtocol):
         super().__init__(*args, **kwargs)
         self._close_pending = False
         self.stream_buffer = {}
-        self.waiter = None
+        self.waiter = {}
         self.node = node
 
-    def stream_and_close(self, message: bytes, stream_id: Optional[int] = None):
+    async def stream_and_close(self, message: bytes, stream_id: Optional[int] = None):
         if self._close_pending:
             raise ConnectionError("Connection is closing")
 
@@ -30,9 +30,9 @@ class QuicClientProtocol(QuicConnectionProtocol):
         self._quic.send_stream_data(stream_id, message, end_stream=True)
 
         waiter = self._loop.create_future()
-        self.waiter = waiter
+        self.waiter[stream_id] = waiter
         self.transmit()
-        return asyncio.shield(waiter)
+        return await asyncio.shield(waiter)
 
     def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
         if self._close_pending:
@@ -57,7 +57,7 @@ class QuicClientProtocol(QuicConnectionProtocol):
             self._close_pending = True
 
         elif isinstance(event, StreamDataReceived):
-            if self.waiter is not None:
+            if self.waiter[event.stream_id] is not None:
                 from jam.network.protocols.base import PrefixType
 
                 logger.info(f"📩 Received data of size {len(event.data)} bytes on stream {event.stream_id}")
@@ -87,8 +87,8 @@ class QuicClientProtocol(QuicConnectionProtocol):
                         data = protocol.client_intercept(self.node ,buffer[1:], event.stream_id)
 
                         # Wait for acknowledgment
-                        waiter = self.waiter
-                        self.waiter = None
+                        waiter = self.waiter[event.stream_id]
+                        self.waiter[event.stream_id] = None
                         waiter.set_result(data)
 
                         # Clear buffer
@@ -96,8 +96,8 @@ class QuicClientProtocol(QuicConnectionProtocol):
 
                     except Exception as e:
 
-                        waiter = self.waiter
-                        self.waiter = None
+                        waiter = self.waiter[event.stream_id]
+                        self.waiter[event.stream_id] = None
                         waiter.set_result("failed to retrieve data")
 
                         # Clear buffer

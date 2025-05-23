@@ -125,7 +125,7 @@ class MMRFunctions:
 
         return mmr.encode()
 
-    def super_peak(self, mmr: MMR) -> OpaqueHash:
+    def super_peak(self, mmr: MMR, flag = True) -> OpaqueHash:
         """
         MMR Super Peak Function Implementation as defined in Equation E.10
 
@@ -135,27 +135,27 @@ class MMRFunctions:
 
         Args:
             mmr: MMR Peaks
+            flag: Boolean
         Returns:
             Encoded Root
         """
+        h = MMR([])
 
-        if len(mmr) == 0:
+        if flag:
+            for peak in mmr:
+                if peak != OptionHash(Null):
+                    h.append(peak)
+        else:
+            h = mmr
+
+        if len(h) == 0:
             return self._ZERO_HASH
 
-        elif len(mmr) == 1:
-            if mmr[0] == OptionHash(Null):
-                return self._ZERO_HASH
-            else:
-                return mmr[0]
-                # return OpaqueHash(mmr[0].get_value())
+        elif len(h) == 1:
+            return h[0]
 
         else:
-            mmr_dash = mmr[:-1]
+            h_dash = MMR(h[:-1])
+            val = (self.super_peak(h_dash, False))
 
-            val = (self.super_peak(mmr_dash))
-
-            if val != OptionHash(Null) and mmr[-1] != OptionHash(Null):
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(mmr[-1].get_value()))
-
-            elif val != OptionHash(Null) and mmr[-1] == OptionHash(Null):
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(val.get_value()))
+            return Hash.keccak256(self._PEAK_PREFIX + val.encode() + h[-1].encode())

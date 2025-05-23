@@ -124,11 +124,12 @@ async def wp_producer(node: Node, db: KVStore):
 
             wc = WorkPackageCore(wp, CoreIndex(1))
 
-            data = CE133Data(package_data=wc, extrinsics=Extrinsics([Extrinsic(b"hello")]))
+            data = CE133Data(package_data=wc, extrinsics=Extrinsics([]))
             logger.info(f"⛏️ ({node.name}) Producing Work Package { wp}")
             # TODO: Implement package transmission
 
-            C133.transmit(node, data)
+            responses = await C133.transmit(node, data)
+            print("Response", responses)
         else:
             logger.info(f"⛏️ ({node.name}) skipping Node")
 

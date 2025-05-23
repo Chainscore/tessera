@@ -7,12 +7,14 @@ from jam.config.logging import logger
 
 from jam.network.quic import QuicServerProtocol
 from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.storage.item_extrinsics import ItemExtrinsics
 
 from jam.types.base.sequences.vector import Vector
 from jam.types.base.integers import Int
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
 from jam.types.work.report import WorkPackageBundle, SegmentRootLookup
+from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
@@ -67,7 +69,7 @@ class WorkPackageSharing(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE134
 
-    def transmit(self, node: Node, data: CE134Data):
+    async def transmit(self, node: Node, data: CE134Data):
         """Request Work Report from Node (server)"""
 
         logger.info(f"Transmitting Work-Package-Bundle to {len(node.connections)} Guarantors")
@@ -77,10 +79,13 @@ class WorkPackageSharing(NetworkProtocol):
         stream_b = data.work_package_bundle.encode()
 
         responses = Vector([])
-        for client in node.connections:
-            stream_id = client.stream_and_keep_open(message=stream_a)
-            data = client.stream_and_close(message=stream_b, stream_id=stream_id)
-            responses.append(data)
+        for peer in node.peer_conn:
+            if peer.port == 30335:
+                logger.info("sending bundle to 30335")
+                client = node.peer_conn[peer][1]
+                stream_id = client.stream_and_keep_open(message=stream_a)
+                data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
+                responses.append(data)
 
         return responses
 
@@ -97,32 +102,47 @@ class WorkPackageSharing(NetworkProtocol):
         validator = Validator()
         validator.validate_wp(bundle.package)
 
-        logger.info("Building Work Report")
-        # Generating report from work package bundle
-        processor = Processor(node)
-        report, report_hash = processor.process_bundle(core=data.core_segment.core_index, bundle=bundle,
-                                     sr_lookup=data.core_segment.segment_root_map)
+        logger.info("Storing Extrinsics..")
+        extrinsics = bundle.extrinsics
+        ext_da = ItemExtrinsics()
+        with benchmark(f"Extrinsics stored"):
+            ext_da.store_processed(extrinsics)
 
-        # TODO: Establish some connection with node so as to access keys.
-        port = 30333
+        logger.info("Building Work Report..")
+        # Generating report from work package bundle
+
+        with benchmark(f"Work bundle processed"):
+            processor = Processor(node)
+            report, report_hash = processor.process_bundle(core=data.core_segment.core_index, bundle=bundle,
+                                         sr_lookup=data.core_segment.segment_root_map)
+
+        port = node.port
         my_keys = json.load(open("seeds/keys.json"))[str(port)]
         ed25519_key = Ed25519PrivateKey.from_private_bytes(
             bytes.fromhex(my_keys["ed25519_private"][2:])
         )
 
         # Build Guarantee
-        payload =  report.core_index.encode() + report.encode()
-        guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
+        logger.info("Building Guarantee..")
+        with benchmark(f"Guarantee built"):
+            payload =  report.core_index.encode() + report.encode()
+            guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
 
         # Sign the Guarantee
-        sign = Ed25519Signature(ed25519_key.sign(guarantee))
+        logger.info("Signing Guarantee..")
+        with benchmark(f"Guarantee signed"):
+            sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
         # Build Credential
         cred = Credential(work_report_hash=report_hash, ed25519_signature=sign)
 
         # Return Credential to OG Guarantor
-        ack = self._prefix.encode() + cred.encode()
-        server.stream_and_close(stream_id, ack)
+        logger.info("Sharing Guarantee..")
+        with benchmark(f"Guarantee shared"):
+            ack = self._prefix.encode() + cred.encode()
+            server.stream_and_close(stream_id, ack)
+
+        write_benchmarks_to_txt("benchmarks/guarantee.txt")
 
         logger.info("Report's Credential sent back to OG Guarantor")
 
