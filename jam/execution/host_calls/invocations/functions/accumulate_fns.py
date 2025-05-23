@@ -1,13 +1,11 @@
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.execution.host_calls._types import DeferredTransfer, AccumulationContext,service_dict,StateContext
+from jam.accumulation.types import DeferredTransfer, AccumulationContext, StateContext
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
-from jam.execution.pvm import register
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.register import Registers
 from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus, PvmError
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.crypto import Hash
-from jam.types.state import delta
 from jam.types.state.chi import Chi
 from jam.types.state.delta import AccountData, AccountStorage, LookupTable, AccountLookup, AccountPreimages, ServiceCodeHash
 from jam.types.base.integers.fixed import U32, U64
@@ -15,11 +13,11 @@ from jam.types.protocol.core import BlobLength, Gas, ServiceId, TimeSlot
 from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE, CORE_COUNT, MAX_AUTH_QUEUE_ITEMS, PREIMAGE_EVICTION_TIMESLOTS, TRANSFER_MEMO_SIZE, VALIDATOR_COUNT
 
 
-def check(u:StateContext,i:ServiceId):
+def check(u:StateContext, i:ServiceId):
     if u.service_accounts.get(i) is None:
         return i
     else:
-        return check(u,(i-2**8)%(2**32-2**9)+2**8)
+        return check(u, (i-2**8+1) % (2**32-2**9) + 2**8)
 
 class AccumulateFunctions(INVF):
 
@@ -33,7 +31,7 @@ class AccumulateFunctions(INVF):
         buf: bytes = memory.read(o, 12 * n)
 
         # build a dict mapping each 4-byte U32 → its 8-byte U64
-        g_dict: service_dict = {}
+        g_dict = {}
         for i in range(0, len(buf), 12):
             chunk = buf[i : i + 12]
             s = U32.decode_from(chunk[:4])             # first  4 bytes

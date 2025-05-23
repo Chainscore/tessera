@@ -15,73 +15,51 @@ from jam.utils.json import JsonSerde
 from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 
 
+def make_account_prop(field):
+    def getter(self):
+        data = self.DB.get(construct_state_key((255, self.id)))
+        if data is None:
+            return None
+        meta = AccountMetadata.decode_from(data)
+        return getattr(meta, field)
+    def setter(self, value):
+        data = self.DB.get(construct_state_key((255, self.id)))
+        if data is None:
+            return
+        meta = AccountMetadata.decode_from(data)
+        setattr(meta, field, value)
+        k, v = construct_state_key((255, self.id)), meta.encode()  # Adjust encode as needed
+        self.DB.put(bytes(k), v)
+        self.TRIE.update(k, Bytes(v))
+    return property(getter, setter)
 
 
-
-class Account:
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie, data: AccountMetadata):
+class AccountDataView:
+    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie
-        self.data = data
 
-    @property
-    def code_hash(self):    return self.data.code_hash
-    @code_hash.setter
-    def code_hash(self, value):
-        self.data.code_hash = value
-        k, v = construct_state_key((255, self.id)), self.data.encode()
-        self.DB.put(bytes(k), v)
-        self.TRIE.update(k, Bytes(v))
+    code_hash = make_account_prop('code_hash')
+    balance = make_account_prop('balance')
+    gas_limit = make_account_prop('gas_limit')  # min_item_gas
+    min_gas = make_account_prop('min_gas')  # min_memo_gas
+    num_o = make_account_prop('num_o')
+    num_i = make_account_prop('num_i')
 
-    @property
-    def balance(self):      return self.data.balance
-    @balance.setter
-    def balance(self, value):
-        self.data.balance = value
-        k, v = construct_state_key((255, self.id)), self.data.encode()
-        self.DB.put(bytes(k), v)
-        self.TRIE.update(k, Bytes(v))
+class Account:
 
-    @property
-    def gas_limit(self):    return self.data.gas_limit
-    @gas_limit.setter
-    def gas_limit(self, value):
-        self.data.gas_limit = value
-        k, v = construct_state_key((255, self.id)), self.data.encode()
-        self.DB.put(bytes(k), v)
-        self.TRIE.update(k, Bytes(v))
+    service: AccountDataView
 
-    @property
-    def min_gas(self):    return self.data.min_gas
-    @min_gas.setter
-    def min_gas(self, value):
-        self.data.min_gas = value
-        k, v = construct_state_key((255, self.id)), self.data.encode()
-        self.DB.put(bytes(k), v)
-        self.TRIE.update(k, Bytes(v))
-
-    @property
-    def num_o(self):    return self.data.num_o
-    @num_o.setter
-    def num_o(self, value):
-        self.data.num_o = value
-        k, v = construct_state_key((255, self.id)), self.data.encode()
-        self.DB.put(bytes(k), v)
-        self.TRIE.update(k, Bytes(v))
-
-    @property
-    def num_i(self):    return self.data.num_i
-    @num_i.setter
-    def num_i(self, value):
-        self.data.num_i = value
-        k, v = construct_state_key((255, self.id)), self.data.encode()
-        self.DB.put(bytes(k), v)
-        self.TRIE.update(k, Bytes(v))
+    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+        self.id = id
+        self.DB = db
+        self.TRIE = trie
+        self.service = AccountDataView(id, db, trie)
 
     @property
     def t(self):
-        return Balance(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o)
+        return Balance(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.service.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.service.num_o)
 
     @property
     def storage(self):
@@ -96,21 +74,21 @@ class Account:
         return TimestampsView(self.id, self.DB, self.TRIE)
 
     def m_c(self) -> (bytes, bytes):
-        return decode_code_hash(self.lookup[self.code_hash])
+        return decode_code_hash(self.lookup[self.service.code_hash])
 
     def historical_lookup(self, timeslot: TimeSlot, preimage_hash: ByteArray32):
         """
             https://graypaper.fluffylabs.dev/#/cc517d7/11c70011e000?v=0.6.5
             """
         if (
-                self.lookup[preimage_hash] is not None and
+                self.preimages[preimage_hash] is not None and
                 self.is_preimage_valid(
-                    self.timestamps[
-                        LookupTable(hash=preimage_hash, length=BlobLength(len(self.lookup[preimage_hash])))],
+                    self.lookup[
+                        LookupTable(hash=preimage_hash, length=BlobLength(len(self.preimages[preimage_hash])))],
                     timeslot
                 )
         ):
-            return self.lookup[preimage_hash]
+            return self.preimages[preimage_hash]
         else:
             return None
 
@@ -131,7 +109,7 @@ class Account:
             raise ValueError("Invalid Timestamp data")
 
     def __repr__(self):
-        return f"Account(data={self.data})"
+        return f"Account(id={self.id})"
 
 
 class DeltaView:
@@ -145,7 +123,6 @@ class DeltaView:
             id=key,
             db=self.DB,
             trie=self.TRIE,
-            data=AccountMetadata.decode_from(data)[0]
         )  if data else data
 
     def __setitem__(self, key: ServiceId, value: AccountMetadata):

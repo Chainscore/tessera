@@ -18,8 +18,6 @@ class Statistics:
         state: Sigma,
         block: Block,
         available_wrs: List[WorkReport],
-        accumulation_stats: Dict[ServiceId, tuple[Gas, U32]],
-        deferred_transfer_stats: Dict[ServiceId, tuple[U32, Gas]],
     ) -> Sigma:
         """
         Transition the state with Statistics logic.
@@ -52,15 +50,13 @@ class Statistics:
         author_index = block.header.author_index
 
         # Handle genesis block
-        if author_index == 2**16 - 1:
-            return state
+        if author_index != 2**16 - 1:
+            pi_curr[author_index].blocks += 1
+            pi_curr[author_index].tickets += len(block.extrinsic.tickets)
+            pi_curr[author_index].pre_images += len(block.extrinsic.preimages)
 
-        pi_curr[author_index].blocks += 1
-        pi_curr[author_index].tickets += len(block.extrinsic.tickets)
-        pi_curr[author_index].pre_images += len(block.extrinsic.preimages)
-
-        for preimage in block.extrinsic.preimages:
-            pi_curr[author_index].pre_images_size += len(preimage.blob)
+            for preimage in block.extrinsic.preimages:
+                pi_curr[author_index].pre_images_size += len(preimage.blob)
 
         for guarantee in block.extrinsic.guarantees:
             signatures = guarantee.signatures
@@ -119,14 +115,9 @@ class Statistics:
             if preimage.blob is not None:
                 p.append(preimage.requester)
 
-        all_service_ids = (
-            set(accumulation_stats.keys())
-            | set(deferred_transfer_stats.keys())
-            | set(r)
-            | set(p)
-        )
+        all_service_ids = (set(r) | set(p))
 
-        pi_service = AllServiceStats({})
+        pi_service = pi.services
 
         for report in incoming_wrs:
             for work_result in report.results:
@@ -154,24 +145,6 @@ class Statistics:
                 curr_service_stat = pi_service[preimage.requester]
                 curr_service_stat.provided_count += 1
                 curr_service_stat.provided_size += len(preimage.blob)
-
-        for service_id in accumulation_stats.keys():
-            if service_id not in pi_service:
-                pi_service[service_id] = ServiceStat.empty()
-            pi_service[service_id].accumulate_gas_used = accumulation_stats[service_id][
-                0
-            ]
-            pi_service[service_id].accumulate_count = accumulation_stats[service_id][1]
-
-        for service_id in deferred_transfer_stats.keys():
-            if service_id not in pi_service:
-                pi_service[service_id] = ServiceStat.empty()
-            pi_service[service_id].on_transfers_count = deferred_transfer_stats[
-                service_id
-            ][0]
-            pi_service[service_id].on_transfers_gas_used = deferred_transfer_stats[
-                service_id
-            ][1]
 
         pi.services = pi_service
 

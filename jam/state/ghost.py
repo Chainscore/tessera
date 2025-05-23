@@ -254,6 +254,8 @@ class GhostState(Sigma):
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
 
+
+
     def save(self, db: KVStore):
         data = self.transform()
         for key, value in data.items():

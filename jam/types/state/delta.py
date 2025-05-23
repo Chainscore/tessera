@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Type, Self, Sequence, Any
+from typing import Dict, Type, Self, Sequence, Any, Union, Tuple
 
 from jam.execution.utils import decode_code_hash
 from jam.state.utils.key_constructor import construct_state_key
@@ -14,7 +14,6 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.types.protocol.crypto import Hash
 from jam.utils.json.decorators import with_json_metadata
-
 
 
 ServiceCodeHash = ByteArray32
@@ -49,7 +48,25 @@ class AccountMetadata(Codable, JsonSerde):
 @decodable_dictionary(ByteArray32, Bytes, key_name="key", value_name="value")
 class AccountStorage(Dictionary[ByteArray32, Bytes]):
     """Storage dictionary"""
-    ...
+    _meta: AccountMetadata
+
+    def __setitem__(self, key, value):
+        if hasattr(self, "_meta"):
+            is_new = key not in self.value
+            if is_new:
+                self._meta.num_i = self._meta.num_i + 1
+                self._meta.num_o = self._meta.num_o + len(value) + 32
+            else:
+                self._meta.num_o = self._meta.num_o + len(value) - len(self.value[key])
+        self.value[key] = value
+
+    def __delitem__(self, key):
+        exists = key in self.value
+        if exists:
+            self._meta.num_i = self._meta.num_i - 1
+            self._meta.num_o = self._meta.num_o - len(self.value[key]) - 32
+        del self.value[key]
+
 
 @decodable_dictionary(ByteArray32, Bytes, key_name="hash", value_name="blob")
 class AccountPreimages(Dictionary[ByteArray32, Bytes]):
@@ -78,12 +95,27 @@ class LookupTable(Codable, JsonSerde):
 @decodable_dictionary(LookupTable, Timestamps, key_name="key", value_name="value")
 class AccountLookup(Dictionary[LookupTable, Timestamps]):
     """Lookup timestamps"""
-    ...
+    _meta: AccountMetadata
+
+    def __setitem__(self, key: LookupTable, value):
+        if hasattr(self, "_meta"):
+            is_new = key not in self.value
+            if is_new:
+                self._meta.num_i = self._meta.num_i + 2
+                self._meta.num_o = self._meta.num_o + key.length + 81
+        self.value[key] = value
+
+    def __delitem__(self, key: LookupTable):
+        exists = key in self.value
+        if exists:
+            self._meta.num_i = self._meta.num_i - 1
+            self._meta.num_o = self._meta.num_o - key.length - 81
+        del self.value[key]
 
 
 @with_json_metadata(
     # default in empty lists if JSON omits them
-    service   = { "name": "service",    "default": {} },
+    service   = { "name": "service",    "default": AccountMetadata(code_hash=ByteArray32([0] * 32), balance=Balance(0), gas_limit=Gas(0), min_gas=Gas(0), num_i=Ai(0), num_o=Ao(0)) },
     storage   = { "name": "storage",    "default": AccountStorage({}) },
     preimages = { "name": "preimages",  "default": AccountPreimages({}) },
     lookup    = { "name": "lookup_meta",     "default": AccountLookup({}) },
@@ -91,13 +123,19 @@ class AccountLookup(Dictionary[LookupTable, Timestamps]):
 @decodable_dataclass
 @dataclass
 class AccountData(Codable, JsonSerde):
-    service:AccountMetadata
+    service: AccountMetadata
     storage: AccountStorage
     preimages: AccountPreimages
     lookup: AccountLookup
 
-    def m_c(self) -> (bytes, bytes):
-        return decode_code_hash(self.preimages[self.code_hash])
+    def __post_init__(self):
+        self.storage._meta = self.service
+        self.lookup._meta = self.service
+
+    def m_c(self) -> Union[Tuple[bytes, bytes], None]:
+        img = self.preimages.get(self.service.code_hash)
+        if img: return decode_code_hash(img)
+        else: return None
 
     def historical_lookup(self, timeslot: TimeSlot, preimage_hash: ByteArray32):
         """

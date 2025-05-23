@@ -159,7 +159,7 @@ class RefineFunctions(INVF):
         if n in context.m:
             u = context.m[n].memory
             u.zero_memory_range(p*PVM_MEMORY_PAGE_SIZE,c*PVM_MEMORY_PAGE_SIZE)
-            u.alter_accessibility(p,c,Accessibility.write)
+            u.alter_accessibility(p,c,Accessibility.WRITE)
         else:
             registers[7] = HostStatus.WHO
             return CONTINUE, gas, registers, memory, context
@@ -179,7 +179,7 @@ class RefineFunctions(INVF):
         if n in context.m:
             u=context.m[n].memory
             u.zero_memory_range(p*PVM_MEMORY_PAGE_SIZE,c*PVM_MEMORY_PAGE_SIZE)
-            u.alter_accessibility(p,c,Accessibility.null)
+            u.alter_accessibility(p,c,Accessibility.NULL)
         else:
             registers[7]=HostStatus.WHO
             return CONTINUE, gas, registers, memory, context

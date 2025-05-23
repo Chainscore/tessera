@@ -28,7 +28,7 @@ def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
 class RecentHistory:
     # NOTE: FOR GENESIS BLOCK THE LOGIC IS UNCLEAR
     @staticmethod
-    def transition(state: Sigma, block: Block, accumulate_root: Optional[OpaqueHash],header_hash:Optional[HeaderHash]=None) -> Sigma:
+    def transition(state: Sigma, block: Block, accumulate_root = ByteArray32([0] * 32)) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -82,8 +82,10 @@ class RecentHistory:
         last: MMR = MMR([])
         if len(beta) > 0:
             last = deepcopy(beta[-1].mmr)
-        mmr_functions = MMRFunctions()
-        last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
+
+        if accumulate_root != ByteArray32([0] * 32):
+            mmr_functions = MMRFunctions()
+            last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
 
         n = BlockHistory(
             Hash.blake2b(block.header.encode()) if header_hash is None else header_hash,
