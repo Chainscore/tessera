@@ -136,14 +136,14 @@ class JsonCodec:
             # Skip None values if specified in metadata
             if value is None and meta_skip_if_none:
                 continue
-            
+
             # Use custom field name if specified
             json_name = meta_json_name
             try:
                 result[json_name] = to_json(value)
             except Exception as e:
                 raise JsonFieldError(field_name, field_type, str(e))
-            
+
         return result
 
     @staticmethod
@@ -220,7 +220,7 @@ def from_json(data: Any, target_type: Type[T]) -> T:
         return target_type.from_json(data)
     else:
         return JsonCodec.from_json(data, target_type)
-    
+
 def to_json(obj: Any) -> Any:
     """Convert object to JSON-compatible value."""
     if hasattr(obj, "to_json"):

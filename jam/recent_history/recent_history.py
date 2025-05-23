@@ -1,36 +1,34 @@
 from copy import deepcopy
 from typing import Optional
 
-from jam.types.state.beta import BlockHistory, PackageDict, Beta
+from jam.types.state.beta import BlockHistory, Beta
 from jam.types.state.sigma import Sigma
 from jam.types.base.sequences import ByteArray32
 from jam.types.block import Block
 from jam.types.extrinsics import GuaranteesExtrinsic
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.merklization import MMRFunctions
 from jam.types.protocol.merkle import MMR
 from jam.types.protocol.crypto import OpaqueHash
+from jam.types.work.report import SegmentRootLookup
 from jam.utils.constants import RECENT_HISTORY_SIZE
 from jam.types.protocol.core import WorkPackageHash, SegmentRoot
 
 
-def package(packages: GuaranteesExtrinsic) -> PackageDict:
+def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
     """Transform Guarantees into Dictionary format"""
-    package_dict:PackageDict[WorkPackageHash, SegmentRoot] = PackageDict()
+    package_dict:SegmentRootLookup = SegmentRootLookup({})
 
     for p in packages:
         a= p.report.segment_root_lookup
         for c in a:
-            b = c.work_package_hash
-            d = c.segment_tree_root
-            package_dict[b]=d
-
+            package_dict[c]=a[c]
     return package_dict
 
 class RecentHistory:
-
+    # NOTE: FOR GENESIS BLOCK THE LOGIC IS UNCLEAR
     @staticmethod
-    def transition(state: Sigma, block: Block, accumulate_root: Optional[OpaqueHash]) -> Sigma:
+    def transition(state: Sigma, block: Block, accumulate_root: Optional[OpaqueHash],header_hash:Optional[HeaderHash]=None) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -80,24 +78,22 @@ class RecentHistory:
         # Length Check
         if len(beta) > RECENT_HISTORY_SIZE:
             raise ValueError("Invalid beta length, must be equal to RECENT_HISTORY_SIZE")
-
         # Step 2
         last: MMR = MMR([])
         if len(beta) > 0:
             last = deepcopy(beta[-1].mmr)
-            mmr_functions = MMRFunctions()
-            last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
+        mmr_functions = MMRFunctions()
+        last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
 
         n = BlockHistory(
-            Hash.blake2b(block.header.encode()),
+            Hash.blake2b(block.header.encode()) if header_hash is None else header_hash,
             last,
             ByteArray32([0] * 32),
             package(block.extrinsic.guarantees)
         )
-
         # Step 3
         beta.append(n)
-        state.beta = Beta(beta[-8:])
 
+        state.beta = Beta(beta[-8:])
         # Return State
         return state
