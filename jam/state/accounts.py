@@ -167,4 +167,4 @@ class TimestampsView:
         k = construct_state_key((self.id, ByteArray32(Bytes(U32(key.length).encode()) + key.hash[2:30])))
         v = value.encode()
         self.DB.put(bytes(k), bytes(v))
-        self.TRIE.update(k, Bytes(value))
+        self.TRIE.update(k, Bytes(v))

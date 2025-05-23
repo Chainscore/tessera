@@ -1,4 +1,4 @@
-from numpy import block
+from codecs import lookup
 from quart import jsonify
 from jam.consensus.grandpa.finality import Finality
 from jam.state.merkle.merkle import StateTrie
@@ -6,9 +6,12 @@ from jam.state.state import state
 from jam.types.block import Block
 from jam.types.header import Header
 from jam.types import  U32
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
+from jam.types.base.sequences.bytes import ByteArray32, Bytes
 from jam.state.accounts import  StorageView, PreImageView, TimestampsView
+from jam.types.protocol.core import BlobLength, ServiceId
+from jam.types.protocol.crypto import Hash
 from jam.types.state.delta import LookupTable
+from jam.state.accounts import Account
 
 def best_block_handler(params, request_id, db):
 
@@ -34,7 +37,7 @@ def parent_block_handler(params, request_id, db):
     #fetch the latest updated state and load block using its time slot
     from jam.state.state import state as updated_state
     block = Block.load(updated_state.tau, db)
-    print("blupdated_stateock", updated_state.tau)
+
     if len(params) != 1:
             return jsonify({
                 "jsonrpc":"2.0",
@@ -47,23 +50,12 @@ def parent_block_handler(params, request_id, db):
             )   
     
     if len(params):
-            ## condition if the time slot is of genesis block
-        if block.header.slot == U32(0):
-            return jsonify({
-                    "jsonrpc":"2.0",
-                    "id":request_id,
-                    "error":{
-                    "code": -32602,
-                    "message": "No parent block available for genesis block"},
-                }
-                )
-
+         
             ## using state trie function
             ## TODO: Make a rocksdb search function that will fetch block with needed hash. As of now returning current state
-        if bytes(params["Hash"]):
+        if (params["Hash"]):
                 # Return the parent block
                 parent_block = block.load_parent(block.header.slot, db)
-                print("parent_block api",parent_block)
                 return [ Header.__hash__(parent_block.header), int(parent_block.header.slot) ]
 
 def state_root_handler(params, request_id, db):
@@ -79,7 +71,7 @@ def state_root_handler(params, request_id, db):
             )
 
     header_hash = params.get("Hash")
-    if header_hash is None or len(header_hash) != 32:
+    if header_hash is None :
         return jsonify({
                 "jsonrpc":"2.0",
                 "id":request_id,
@@ -91,10 +83,8 @@ def state_root_handler(params, request_id, db):
             )
     
     # TODO: Make a rocksmain_db search function that will fetch block with needed hash. As of now returning current state
-    if bytes(params["Hash"]):
-        return [
-            StateTrie.root_hash
-        ]
+    if params["Hash"]:
+        return [bytes(state.TRIE.root_hash).hex()]
     else:
         return jsonify({
             "jsonrpc":"2.0",
@@ -103,7 +93,7 @@ def state_root_handler(params, request_id, db):
         })
 
 def statistics_handler(params, request_id, db):
-    if len(params) != 1:
+    if not params :
         return jsonify({
                 "jsonrpc":"2.0",
                 "id":request_id,
@@ -114,8 +104,11 @@ def statistics_handler(params, request_id, db):
             }
             )
 
+    #fetch the latest updated state 
+    from jam.state.state import state as updated_state
+
     header_hash = params.get("Hash")
-    if header_hash is None or len(header_hash) != 32:
+    if header_hash is None:
         return jsonify({
                 "jsonrpc":"2.0",
                 "id": request_id,
@@ -125,13 +118,12 @@ def statistics_handler(params, request_id, db):
                 },
             }
             )
-
         ## TODO: Make a rocksmain_db search function that will fetch block with needed hash. 
         # As of now returning current state
 
-    if bytes(params["Hash"]):
-        return [state.pi]
-            
+    if params["Hash"]:
+        return [str(updated_state.pi)]
+
     else:
         return jsonify({
             "jsonrpc": "2.0",
@@ -140,7 +132,8 @@ def statistics_handler(params, request_id, db):
             })
 
 def service_data_handler(params, request_id, db):
-    if len(params) != 2:
+    
+    if not params != 2:
         return jsonify({
                 "jsonrpc":"2.0",
                 "id": request_id,
@@ -153,7 +146,7 @@ def service_data_handler(params, request_id, db):
 
     header_hash = params.get("Hash")
     service_id = params.get("ServiceId")
-        
+    
     if service_id is None:
             return jsonify({
                 "jsonrpc":"2.0",
@@ -165,7 +158,7 @@ def service_data_handler(params, request_id, db):
                 }
             )
 
-    if header_hash is None or len(header_hash) != 32:
+    if header_hash is None :
             return jsonify({
                 "jsonrpc" : "2.0",
                 "id" : request_id,
@@ -178,10 +171,10 @@ def service_data_handler(params, request_id, db):
 
         #TODO: Using DeltaView to get the service data
         # DeltaView from accounts.py used in State.py
+    from jam.state.state import state as updated_state
 
-        
-    if params["serviceId"]:
-        return [state.delta[service_id]]              
+    if params["ServiceId"]:
+        return [str(updated_state.delta[ServiceId(service_id)].data)]              
                     
     else:
         return jsonify({
@@ -191,7 +184,7 @@ def service_data_handler(params, request_id, db):
         })
     
 def service_value_handler(params, request_id, db):
-    if len(params) or not(params) != 3:
+    if  len(params) != 3:
         return jsonify({
             "jsonrpc":"2.0",
             "id":request_id,
@@ -204,8 +197,8 @@ def service_value_handler(params, request_id, db):
     header_hash = params.get("Hash")
     service_id = params.get("ServiceId")
     blob = params.get("Blob")
-        
-    if header_hash is None or len(header_hash) != 32:
+    
+    if header_hash is None :
         return jsonify({
             "jsonrpc" : "2.0",
             "id" : request_id,
@@ -236,15 +229,12 @@ def service_value_handler(params, request_id, db):
                 },
                 }
             )
-    blob_bytes = bytes(blob)
-    blob_key = ByteArray32(blob_bytes)
-   
-    def service_storage()-> StorageView:
-        return StorageView(service_id, db, StateTrie())
-
-    if bytes(params["Hash"]) and params["serviceId"] and params["Blob"] :
+    from jam.state.state import state as updated_state
+    account = updated_state.delta[ServiceId(service_id)]
+    storage_data = bytes(account.storage[ByteArray32(blob)])
+    if  params["Blob"] :
                 ##TODO: resolve this correctly
-        return [service_storage()[ByteArray32(blob_key)]]
+        return [str(storage_data)]
             
     else:
         return jsonify({
@@ -254,7 +244,7 @@ def service_value_handler(params, request_id, db):
         })
 
 def service_preimage_handler(params, request_id, db):
-    if params is None or len(params) != 2:
+    if params is None :
         return jsonify({
             "jsonrpc" :"2.0",
             "id" : request_id,
@@ -269,7 +259,7 @@ def service_preimage_handler(params, request_id, db):
     blob = params.get("Blob")
 
         
-    if header_hash is None or len(header_hash) != 32:
+    if header_hash is None :
         return jsonify({
              "jsonrpc" :"2.0",
              "id": request_id,
@@ -301,20 +291,12 @@ def service_preimage_handler(params, request_id, db):
             }
                 
             )
-    blob_bytes = bytes(blob)
-    blob_key = ByteArray32(blob_bytes)
-   
-    def service_preimage()-> PreImageView:
-        return PreImageView(service_id, db, StateTrie())
-        
+    from jam.state.state import state as updated_state
+    account = updated_state.delta[ServiceId(service_id)]
+    preimage_data = bytes(account.lookup[ByteArray32(blob)])    
         #TODO: check if service id is in the state 
-    if bytes(params["Hash"]) and params["serviceId"] :
-            return jsonify({
-                "jsonrpc": "2.0", 
-                "id" : request_id,
-                "result": [service_preimage()[blob_key]]
-            }
-            )
+    if params["ServiceId"]  and params["Blob"]:
+            return [str(preimage_data)]
     else:
             return jsonify({
                 "jsonrpc" : "2.0",
@@ -336,12 +318,13 @@ def service_request_handler(params, request_id, db):
             
         )
 
+
     header_hash = params.get("Hash")
     service_id = params.get("ServiceId")
-    hash = params.get("Hash")
+    hash = params.get("hash")
     preimage_len = params.get("u32")
 
-    if header_hash is None or len(header_hash) != 32:
+    if header_hash is None:
         return jsonify({
             "jsonrpc":"2.0",
             "id":request_id,
@@ -384,13 +367,17 @@ def service_request_handler(params, request_id, db):
             },
             }
         )
+    # NOTE: TimestampsView in accounts.py to be updated for this to work
+    from jam.state.state import state as updated_state
+    account = updated_state.delta[ServiceId(service_id)]
+    hash_bytes = Bytes(hash)
+    hask_key = ByteArray32(hash_bytes)
+    lookup_table = LookupTable(hask_key, preimage_len)
+    preimage_data = account.timestamps[lookup_table]
 
-    def service_lookup() -> TimestampsView:
-        return TimestampsView(service_id, db, StateTrie())
-
-    # TODO: check if service id is in the state
-    if params["Hash"] and params["u32"]:
-        return [service_lookup()[LookupTable(hash, preimage_len)]]
+        #TODO: check if service id is in the state 
+    if params["ServiceId"] and params["hash"] and params["u32"]:
+            return [str(preimage_data)]
     else:
         return jsonify({
             "jsonrpc":"2.0",

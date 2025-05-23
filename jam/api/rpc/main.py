@@ -85,14 +85,12 @@ async def rpc_handler():
 
     try:
         result = handler(req.params, req.id, data_stores.main_db)
-        print(f"Handler result: {result}")
         return jsonify({
             "jsonrpc":"2.0",
             "id":req.id,
             "result":result
         } )
     except Exception as e:
-        print(f"Error in handler: {e}")
         return jsonify({
             "jsonrpc":"2.0",
             "id":req.id,
