@@ -130,7 +130,7 @@ class Reporting:
             hashes.append(x.report.package_spec.hash)
 
         for i in state.beta:
-            if any(key in hashes for key in i.packages.keys()):
+            if any(key in hashes for key in i.reported.keys()):
                 raise ReportingError(
                     ReportingErrorCode.DUPLICATE_PACKAGE,
                     "Work package is already executed in recent-block's history"
@@ -227,9 +227,9 @@ class Reporting:
         work_package_hashes = []
 
         for x in state.beta:
-            for key in x.packages:
+            for key in x.reported:
                 work_package_hashes.append(key)
-                exports_root.append(x.packages[key])
+                exports_root.append(x.reported[key])
 
         hashes = []
         for report in block.extrinsic.guarantees:
@@ -250,14 +250,14 @@ class Reporting:
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
                     "Anchor hash should match with header hash of any block in recent history"
                 )
-                
+
             # --------------- bad_state_root -------------------
             if not any(item.state_root == context.state_root for item in state.beta):
                 raise ReportingError(
                     ReportingErrorCode.BAD_STATE_ROOT,
                     "State_root should match with any block state_root in recent history"
                 )
-                
+
             # --------------- dependency_missing -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
             # Eq 11.39
@@ -268,7 +268,7 @@ class Reporting:
                             ReportingErrorCode.DEPENDENCY_MISSING,
                             "prerequisite's hash should match the package_specification's hash of any of the reports"
                         )
-                        
+
             # --------------- segment_root_lookup_invalid -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
             if  y.report.segment_root_lookup != Null:
@@ -304,7 +304,7 @@ class Reporting:
                         ReportingErrorCode.BAD_SERVICE_ID,
                         "Service_id of each report should match with id of delta"
                     )
-                    
+
                 # --------------- bad_code_hash -------------------
                 # https://graypaper.fluffylabs.dev/#/85129da/153302153502?v=0.6.3
                 # Eq 11.42
@@ -313,7 +313,7 @@ class Reporting:
                         ReportingErrorCode.BAD_CODE_HASH,
                         "Result code_hash should match with state's delta code_hash"
                     )
-                    
+
                 # --------------- service_item_gas_too_low -------------------
                 # https://graypaper.fluffylabs.dev/#/85129da/15f80015fa00?v=0.6.3
                 # Eq 11.30
@@ -324,7 +324,7 @@ class Reporting:
                     )
 
                 total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
-               
+
             # --------------- work_report_gas_too_high -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15fa0015fd00?v=0.6.3
             # Eq 11.30

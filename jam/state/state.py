@@ -111,7 +111,7 @@ class State:
         Accumulation.transition(self, block)
         # 6. Authorization
         Authorization.transition(self, block)
-        # 7. Recent History
+        # 7. Recent History  TODO: Calculate the accumulate root(r) from the commitment result from Accumulation.transition function()
         RecentHistory.transition(self, block, ByteArray32([0] * 32))
         # 8. Preimages
         Preimages.transition(self, block)
