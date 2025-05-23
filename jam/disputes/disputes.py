@@ -65,7 +65,7 @@ class Disputes:
         disputes = block.extrinsic.disputes
 
         # epoch Index
-        current_epoch = block.header.slot // EPOCH_LENGTH
+        current_epoch = state.tau // EPOCH_LENGTH
 
         # 2. Valid age
         valid_ages = (
@@ -250,7 +250,7 @@ class Disputes:
             if i not in state.psi.offenders:
                 state.psi.offenders.append(i)
         return state
-    
+
     @staticmethod
     def get_offenders_mark(disputes: DisputesExtrinsic) -> OffendersMark:
         """

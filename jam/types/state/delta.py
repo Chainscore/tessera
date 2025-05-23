@@ -45,6 +45,17 @@ class AccountMetadata(Codable, JsonSerde):
     num_o: Ao
     num_i: Ai
 
+    @staticmethod
+    def empty() -> "AccountMetadata":
+        return AccountMetadata(
+            code_hash=ByteArray32([0] * 32),
+            balance=Balance(0),
+            gas_limit=Gas(0),
+            min_gas=Gas(0),
+            num_i=Ai(0),
+            num_o=Ao(0)
+        )
+
 @decodable_dictionary(ByteArray32, Bytes, key_name="key", value_name="value")
 class AccountStorage(Dictionary[ByteArray32, Bytes]):
     """Storage dictionary"""
@@ -78,10 +89,7 @@ class Timestamps(Vector[U32]):
     """Lookup timestamps"""
     ...
 
-# @with_json_metadata(
-#     code_hash   = { "name": "code_hash" },
-#     balance   = { "name": "balance"}
-# )
+
 @decodable_dataclass
 @dataclass
 class LookupTable(Codable, JsonSerde):
@@ -90,6 +98,9 @@ class LookupTable(Codable, JsonSerde):
 
     def __hash__(self):
         return int(Hash.blake2b(self.length.encode() + self.hash.encode()))
+
+    def to_json(self):
+        return str(Hash.blake2b(self.length.encode() + self.hash.encode()))
 
 
 @decodable_dictionary(LookupTable, Timestamps, key_name="key", value_name="value")
@@ -115,7 +126,7 @@ class AccountLookup(Dictionary[LookupTable, Timestamps]):
 
 @with_json_metadata(
     # default in empty lists if JSON omits them
-    service   = { "name": "service",    "default": AccountMetadata(code_hash=ByteArray32([0] * 32), balance=Balance(0), gas_limit=Gas(0), min_gas=Gas(0), num_i=Ai(0), num_o=Ao(0)) },
+    service   = { "name": "service",    "default": AccountMetadata.empty() },
     storage   = { "name": "storage",    "default": AccountStorage({}) },
     preimages = { "name": "preimages",  "default": AccountPreimages({}) },
     lookup    = { "name": "lookup_meta",     "default": AccountLookup({}) },
