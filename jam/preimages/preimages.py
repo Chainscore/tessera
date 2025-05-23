@@ -8,6 +8,7 @@ from jam.types.block import Block
 from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import BlobLength
+from jam.types.state.pi import ServiceStat
 
 
 class Preimages:
@@ -49,7 +50,12 @@ class Preimages:
 
             account.preimages[hashed_blob] = preimage.blob
             account.lookup[lookup_key].append(block.header.slot)
-
+            if preimage.blob is not None:
+                if preimage.requester not in state.pi.services:
+                    state.pi.services[preimage.requester] = ServiceStat.empty()
+                curr_service_stat = state.pi.services[preimage.requester]
+                curr_service_stat.provided_count += 1
+                curr_service_stat.provided_size += len(preimage.blob)
         return state
 
     @staticmethod
