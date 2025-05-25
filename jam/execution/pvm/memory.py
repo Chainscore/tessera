@@ -73,7 +73,7 @@ class Memory:
         for offset in range(length):
             addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=False)
             # Return stored byte or 0 if the address has not been written.
-            bytes_out.append(self.data.get(addr, 1))
+            bytes_out.append(self.data.get(addr, 0))
 
         # print(f"u{length*8}[{Bytes(address)}] ({Bytes(bytes_out)})")
         return bytes(bytes_out)
@@ -134,13 +134,13 @@ class Memory:
 
         read_start = PVM_INIT_ZONE_SIZE
         read_pages = cls.get_pages(read_start, read_start + cls.total_page_size(len(read)))
-        print(f"READ -> {int(read_start).to_bytes(4).hex()} -> {int(read_pages[-1] * PVM_MEMORY_PAGE_SIZE).to_bytes(4).hex()}")
+        print(f"READ \t\t | Start: {int(read_start).to_bytes(4).hex()} \t | End {int(read_pages[-1] * PVM_MEMORY_PAGE_SIZE).to_bytes(4).hex()}")
         for i, byt in enumerate(read):
             memory[read_start+i] = int(byt)
 
         write_start = 2*PVM_INIT_ZONE_SIZE + cls.total_zone_size(len(read))
         write_pages = cls.get_pages(write_start, write_start + cls.total_page_size(len(write)) + (z * PVM_MEMORY_PAGE_SIZE))
-        print("WRITE START:", int(write_start).to_bytes(4).hex(), int((write_pages[-1] + 1) * PVM_MEMORY_PAGE_SIZE).to_bytes(4).hex())
+        print(f"WRITE \t\t | Start: {int(write_start).to_bytes(4).hex()} \t | End {int((write_pages[-1] + 1) * PVM_MEMORY_PAGE_SIZE).to_bytes(4).hex()}")
         for i, byt in enumerate(write):
             memory[write_start+i] = int(byt)
 
@@ -155,7 +155,7 @@ class Memory:
 
         arg_start = 2**32 - PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE
         read_pages.extend(cls.get_pages(arg_start, 2**32 - PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE + cls.total_page_size(len(args))))
-        print("ARG START:", int(arg_start).to_bytes(4).hex())
+        print(f"ARG \t\t | START: {int(arg_start).to_bytes(4).hex()}")
         for i, byt in enumerate(args):
             memory[arg_start+i] = int(byt)
 

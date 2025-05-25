@@ -171,11 +171,11 @@ class InstructionsWArgs2Reg1Imm(InstructionTable):
     @staticmethod
     def rot_imm(bitsize: int, alt = False) -> Callable[[Any, list, Memory], OpReturn]:
         def rot_imm_impl(self, registers: list, memory: Memory) -> OpReturn:
-            a = int(registers[self.rb] if not alt else self.vx) % 2**(bitsize)
-            b = int(self.vx if not alt else registers[self.rb]) % 2**(bitsize)
+            a_val = int(registers[self.rb] if not alt else self.vx) % 2**(bitsize)
+            b_val = int(self.vx if not alt else registers[self.rb]) % 2**(bitsize)
 
-            a_bits = b(a, bitsize // 8)
-            x = b_inv([a_bits[(i+b) % bitsize] for i in range(bitsize)])
+            a_bits = b(a_val, bitsize // 8)
+            x = b_inv([a_bits[(i+b_val) % bitsize] for i in range(bitsize)])
 
             if bitsize < 64:
                 x = chi(x, bitsize//8)
@@ -207,7 +207,6 @@ class InstructionsWArgs2Reg1Imm(InstructionTable):
         def store_ind_impl(
                 self, registers: list, memory: Memory
         ) -> OpReturn:
-            print("registers[self.rb] + self.vx", registers[self.rb], self.vx)
             memory.write(
                 registers[self.rb] + self.vx,
                 int(registers[self.ra] % 2**bitsize).to_bytes(bitsize // 8, "little")
@@ -220,13 +219,13 @@ class InstructionsWArgs2Reg1Imm(InstructionTable):
         def load_ind_impl(
                 self, registers: list, memory: Memory
         ) -> OpReturn:
-            print("registers[self.rb] + self.vx", registers[self.rb], self.vx)
             value = int.from_bytes(
                 memory.read(registers[self.rb] + self.vx, bitsize // 8),
                 "little"
             )
             if signed:
                 value = z_inv(z(value, bitsize // 8), 8)
+
             registers[self.ra] = value
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return load_ind_impl

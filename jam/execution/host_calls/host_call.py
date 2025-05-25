@@ -32,14 +32,14 @@ class PsiH:
         elif status == ExecutionStatus.HOST:
             try:
                 status, remaining_gas, register, memory, context = dispatch_fn(
-                    int(status.value.register.get_value()), remaining_gas, registers, memory, context
+                    int(status.value.register), remaining_gas, registers, memory, context
                 )
                 print("Dispatch result", status)
                 if remaining_gas < 0:
                     status = ExecutionStatus.OUT_OF_GAS
 
                 if status == CONTINUE:
-                    return PsiH.execute(blob, pc, Gas(remaining_gas), registers, memory, dispatch_fn, context)
+                    return PsiH.execute(blob, pc, remaining_gas, registers, memory, dispatch_fn, context)
                 return status, pc, remaining_gas, registers, memory, context
             except PvmError as e:
                 print("Pvm error", e)

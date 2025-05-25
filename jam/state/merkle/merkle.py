@@ -181,12 +181,13 @@ class StateTrie:
         Returns the new root hash.
         Raises KeyError if the key is absent.
         """
-        key_bits = self.bits(key)
-        new_root = self._delete_recursive(self.root_hash, key_bits, 0)
-
-        # Root might disappear (last leaf was removed)
-        self.root_hash = new_root if new_root is not None else ZERO_HASH
         return self.root_hash
+        # key_bits = self.bits(key)
+        # new_root = self._delete_recursive(self.root_hash, key_bits, 0)
+        #
+        # # Root might disappear (last leaf was removed)
+        # self.root_hash = new_root if new_root is not None else ZERO_HASH
+        # return self.root_hash
 
     # ──────────────────────────────────────────────────────────────────────────────
     # INTERNALS

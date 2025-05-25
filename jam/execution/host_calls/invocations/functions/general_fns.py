@@ -181,6 +181,7 @@ class GeneralFunctions(INVF):
             service_index: ServiceId,
             accounts: Delta
     ):
+        print(registers)
         if registers[7] == 2**64 - 1:
             s_star = service_index
         else:
@@ -191,10 +192,9 @@ class GeneralFunctions(INVF):
             a = service_data
         elif s_star in state.delta:
             a = accounts[s_star]
-        ko, kz, o = registers[8], registers[9], registers[10]
+        ko, kz, o = registers[8:8+3]
 
         if not memory.is_accessible(ko, kz):
-            print(f"Memory(k) {ko}-{kz} not accessible")
             raise PvmError(PANIC)
 
         v: None|Bytes = None
@@ -202,20 +202,18 @@ class GeneralFunctions(INVF):
 
         if a is not None:
             # Directly get data, returns None if not found
-            print("key")
             v = a.storage[k]
 
-        if v is None:
+        if v is None or len(v) == 0:
             registers[7] = HostStatus.NONE.value
         else:
             f = min(int(registers[11]), len(v))
             l = min(int(registers[12]), len(v) - f)
 
             if not memory.is_accessible(o, l, for_write=True):
-                print(f"Memory(o) {o}-{l} not accessible")
                 raise PvmError(PANIC)
             registers[7] = Register(len(v))
-            memory.write(o, memory.read(f, l))
+            memory.write(o, v[f:l])
         return CONTINUE, gas, registers, memory, context
 
 

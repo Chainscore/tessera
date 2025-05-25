@@ -283,7 +283,6 @@ class Reporting:
 
         pi = state.pi
         pi.cores = pi_core
-        print("pi_service", pi_service)
         pi.services = pi_service
         state.pi = pi
         state.rho = rho
