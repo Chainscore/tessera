@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Protocol, TypeVar, Generic, Final, ClassVar, Union
+from typing import Protocol, Self, TypeVar, Generic, Final, ClassVar, Union
 
 C = TypeVar('C', bound='CurveProtocol')
 
@@ -89,7 +89,7 @@ class Point(Generic[C]):
         p = self.curve.PRIME_FIELD
         p_half = (p - 1) // 2
         x, y = self.x, self.y
-        y_bytes = bytearray(y.to_bytes(32, "little"))  # Encode y in little-endian
+        y_bytes = bytearray(int(y).to_bytes(32, "little"))  # Encode y in little-endian
         x_sign_bit = 1 if x >= p_half else 0  # Sign is set if x >= p/2
         y_bytes[-1] |= (x_sign_bit << 7)
         return bytes(y_bytes)
@@ -122,7 +122,32 @@ class Point(Generic[C]):
         # Check if extracted LSB of x matches the stored bit
         if (x < p_half) == x_parity:
             x = cls.curve.PRIME_FIELD - x  # Flip x if the bit doesn't match
-        return cls(x, y)
+        return cls(x % cls.curve.PRIME_FIELD, y % cls.curve.PRIME_FIELD)
+    
+    def to_bytes(self) -> bytes:
+        """
+        Convert point to compressed byte representation.
+        
+        Returns:
+            bytes: Compressed point representation
+        """
+        return self.point_to_string()
+    
+    @classmethod
+    def from_bytes(cls, data: bytes) -> Self:
+        """
+        Create point from compressed byte representation.
+        
+        Args:
+            data: Compressed point bytes
+            
+        Returns:
+            BandersnatchPoint: Decoded point
+            
+        Raises:
+            ValueError: If data is invalid
+        """
+        return cls.string_to_point(data)
     
     @classmethod
     def _x_recover(cls, y: int) -> int:

@@ -58,10 +58,7 @@ class IETF_VRF(VRF):
             Tuple[BandersnatchPoint, Tuple[int, int]]: (output_point, (c, s))
         """
         # Create generator point
-        generator = self.point_type(
-            self.curve.GENERATOR_X,
-            self.curve.GENERATOR_Y
-        )
+        generator = self.point_type.generator_point()
         
         # Encode input to curve point
         input_point = self.point_type.encode_to_curve(alpha, salt)
@@ -110,10 +107,7 @@ class IETF_VRF(VRF):
         c, s = proof
         
         # Create generator point
-        generator = self.point_type(
-            self.curve.GENERATOR_X,
-            self.curve.GENERATOR_Y
-        )
+        generator = self.point_type.generator_point()
         
         # Compute proof points
         U = generator * s - public_key * c
