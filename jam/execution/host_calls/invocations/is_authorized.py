@@ -26,7 +26,8 @@ class PsiI(InvocationProtocol):
                     "o": None,
                     "t": None
                     }
-                 )
+                 ),
+            100: (GeneralFunctions, {}),  # log
         }
 
     def execute(self):

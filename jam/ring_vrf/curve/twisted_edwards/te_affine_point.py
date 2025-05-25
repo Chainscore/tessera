@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TypeVar, Self
+from typing import TypeVar
 
 from ..point import Point, PointProtocol
 from .te_curve import TECurve
@@ -45,7 +45,7 @@ class TEAffinePoint(Point[C]):
 
         return lhs == rhs
 
-    def __add__(self, other: PointProtocol[C]) -> Self:
+    def __add__(self, other: PointProtocol[C]) -> "Self":
         """
         Add two points using Twisted Edwards addition formulas.
 

@@ -54,7 +54,7 @@ class ExecResults(Vector[WorkExecResult]):
 class RefineLoad(Codable, JsonSerde):
     """Refine load structure."""
 
-    gas_used: Int # TODO: This is supposed to be Ng
+    gas_used: Int
     imports: Int
     exports: Int
     extrinsic_count: Int

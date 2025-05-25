@@ -1,9 +1,9 @@
 from typing import Any, Optional, List
 
+from jam.config.logging import logger
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.host_calls.invocations.protocol import Context, DispatchNormalReturn
 from jam.execution.pvm.memory import Memory
-from jam.execution.pvm.register import Registers
 from jam.execution.pvm.status import ExecutionStatus, PANIC, HostStatus, CONTINUE, PvmError
 from jam.types.base import U64, U32, U16, Bytes, Int
 from jam.types.protocol.crypto import Hash, OpaqueHash
@@ -26,7 +26,7 @@ class GeneralFunctions(INVF):
 
     @staticmethod
     @INVF.register(0, gas_cost=10)
-    def gas(gas: Gas, registers: Registers, memory: Memory, context: Context) -> DispatchNormalReturn:
+    def gas(gas: Gas, registers: list, memory: Memory, context: Context) -> DispatchNormalReturn:
         registers[7] = gas
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
@@ -35,7 +35,7 @@ class GeneralFunctions(INVF):
     @INVF.register(1, gas_cost=10)
     def lookup(
             gas: Gas,
-            registers: Registers,
+            registers: list,
             memory: Memory,
             context: Optional[Any],
             service_data: AccountData,
@@ -76,7 +76,7 @@ class GeneralFunctions(INVF):
     @INVF.register(host_call=18, gas_cost=10)
     def fetch(
             gas: Gas,
-            registers: Registers,
+            registers: list,
             memory: Memory,
             context: Optional[Any],
             package: WorkPackage,
@@ -166,7 +166,6 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
 
         registers[7] = Register(len(v))
-        print(f"Writing {v[f:l]} to {memory_start}")
         memory.write(memory_start, v[f:l])
         return CONTINUE, gas, registers, memory, context
 
@@ -175,16 +174,17 @@ class GeneralFunctions(INVF):
     @INVF.register(host_call=2, gas_cost=10)
     def read(
             gas: Gas,
-            registers: Registers,
+            registers: list,
             memory: Memory,
             context: Optional[Any],
             service_data: AccountData,
             service_index: ServiceId,
             accounts: Delta
     ):
-        s_star = ServiceId(registers[7])
-        if s_star == 2**64 - 1:
+        if registers[7] == 2**64 - 1:
             s_star = service_index
+        else:
+            s_star = ServiceId(registers[7])
 
         a: None|AccountData = None
         if s_star == service_index:
@@ -193,25 +193,27 @@ class GeneralFunctions(INVF):
             a = accounts[s_star]
         ko, kz, o = registers[8], registers[9], registers[10]
 
-        if not memory.is_accessible(ko, kz - ko):
+        if not memory.is_accessible(ko, kz):
+            print(f"Memory(k) {ko}-{kz} not accessible")
             raise PvmError(PANIC)
 
         v: None|Bytes = None
-        k = Hash.blake2b(s_star.encode() + memory.read(ko, kz - ko))
+        k = Hash.blake2b(s_star.encode() + memory.read(ko, kz))
 
         if a is not None:
             # Directly get data, returns None if not found
-            v = a.storage.get(k)
-
-        f = min(int(registers[11]), len(v))
-        l = min(int(registers[12]), len(v) - f)
-
-        if not memory.is_accessible(o, l):
-            raise PvmError(PANIC)
+            print("key")
+            v = a.storage[k]
 
         if v is None:
-            registers[7] = HostStatus.NONE
+            registers[7] = HostStatus.NONE.value
         else:
+            f = min(int(registers[11]), len(v))
+            l = min(int(registers[12]), len(v) - f)
+
+            if not memory.is_accessible(o, l, for_write=True):
+                print(f"Memory(o) {o}-{l} not accessible")
+                raise PvmError(PANIC)
             registers[7] = Register(len(v))
             memory.write(o, memory.read(f, l))
         return CONTINUE, gas, registers, memory, context
@@ -221,7 +223,7 @@ class GeneralFunctions(INVF):
     @INVF.register(host_call=3, gas_cost=10)
     def write(
             gas: Gas,
-            registers: Registers,
+            registers: list,
             memory: Memory,
             context: Optional[Any],
             service_data: AccountData,
@@ -229,18 +231,20 @@ class GeneralFunctions(INVF):
     ):
         # Get key,value start,end
         [ko, kz, vo, vz] = registers[7: 7+4]
-        ko, kz, vo, vz = int(ko), int(kz), int(vo), int(vz)
         if not memory.is_accessible(ko, kz):
+            print(f"Memory(k) from {ko} to {kz} is not readable")
             raise PvmError(PANIC)
 
         k = Hash.blake2b(service_index.encode() + memory.read(ko, kz))
+        print("Storage key", k)
 
-        if not memory.is_accessible(vo, vz):
-            raise PvmError(PANIC)
         a = service_data.storage
         if vz == 0:
-            del a[k]
+            a.__delitem__(k)
         else:
+            if not memory.is_accessible(vo, vz):
+                print(f"Memory(v) from {vo} to {vz} is not readable")
+                raise PvmError(PANIC)
             try:
                 a[k] = Bytes(memory.read(vo, vz))
             except PvmError:
@@ -255,25 +259,44 @@ class GeneralFunctions(INVF):
     @INVF.register(host_call=4, gas_cost=10)
     def info(
             gas: Gas,
-            registers: Registers,
+            registers: list,
             memory: Memory,
             context: Optional[Any],
             service_index: ServiceId,
             accounts: Delta
     ):
-        t = accounts[registers[7]]
         if registers[7] == 2**64 - 1:
             t = accounts[service_index]
+        else:
+            t = accounts[ServiceId(registers[7])]
 
         o = registers[8]
+
         if t is not None:
-            m = t.code_hash.encode() + t.balance.encode() + Balance(t.t).encode() + t.gas_limit.encode() + t.min_gas.encode() + t.num_o.encode() + t.num_i.encode()
+            m = bytes(t.service.code_hash) + Int(t.service.balance).encode() + Int(t.service.t).encode() + Int(t.service.gas_limit).encode() + Int(t.service.min_gas).encode() + Int(t.service.num_o).encode() + Int(t.service.num_i).encode()
+
             if memory.is_accessible(o, len(m), True):
-                registers[7] = HostStatus.OK
+                registers[7] = HostStatus.OK.value
+                print("Writing info", m.hex(), "at", o)
                 memory.write(o, m)
             else:
                 raise PvmError(PANIC)
         else:
-            registers[7] = HostStatus.NONE
+            registers[7] = HostStatus.NONE.value
+
+        return CONTINUE, gas, registers, memory, context
+
+    @staticmethod
+    @INVF.register(host_call=100, gas_cost=0)
+    def log(
+            gas: Gas,
+            registers: list,
+            memory: Memory,
+            context: Optional[Any],
+    ):
+        start = int(registers[10])
+        length = int(registers[11])
+        if memory.is_accessible(start, length):
+            logger.info(memory.read(start, length))
 
         return CONTINUE, gas, registers, memory, context

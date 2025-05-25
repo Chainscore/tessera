@@ -14,19 +14,20 @@ from jam.utils.codec.primitives.bytes import BytesCodec
 from jam.utils.json import JsonSerde
 from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 
+from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 
 def make_account_prop(field):
     def getter(self):
-        data = self.DB.get(construct_state_key((255, self.id)))
+        data = self.DB.get(bytes(construct_state_key((255, self.id))))
         if data is None:
             return None
-        meta = AccountMetadata.decode_from(data)
+        meta = AccountMetadata.decode_from(data)[0]
         return getattr(meta, field)
     def setter(self, value):
-        data = self.DB.get(construct_state_key((255, self.id)))
+        data = self.DB.get(bytes(construct_state_key((255, self.id))))
         if data is None:
             return
-        meta = AccountMetadata.decode_from(data)
+        meta = AccountMetadata.decode_from(data)[0]
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()  # Adjust encode as needed
         self.DB.put(bytes(k), v)
@@ -46,6 +47,13 @@ class AccountDataView:
     min_gas = make_account_prop('min_gas')  # min_memo_gas
     num_o = make_account_prop('num_o')
     num_i = make_account_prop('num_i')
+
+    @property
+    def t(self):
+        return Balance(
+            BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
+        )
+
 
 class Account:
 
@@ -74,7 +82,7 @@ class Account:
         return TimestampsView(self.id, self.DB, self.TRIE)
 
     def m_c(self) -> (bytes, bytes):
-        return decode_code_hash(self.lookup[self.service.code_hash])
+        return decode_code_hash(self.preimages[self.service.code_hash])
 
     def historical_lookup(self, timeslot: TimeSlot, preimage_hash: ByteArray32):
         """
@@ -84,7 +92,8 @@ class Account:
                 self.preimages[preimage_hash] is not None and
                 self.is_preimage_valid(
                     self.lookup[
-                        LookupTable(hash=preimage_hash, length=BlobLength(len(self.preimages[preimage_hash])))],
+                        LookupTable(hash=preimage_hash, length=BlobLength(len(self.preimages[preimage_hash])))
+                    ],
                     timeslot
                 )
         ):
@@ -131,7 +140,7 @@ class DeltaView:
         self.TRIE.update(k, Bytes(v))
 
     def __contains__(self, key: ServiceId):
-        return self.DB.get(bytes(construct_state_key(255, key))) is not None
+        return self.DB.get(bytes(construct_state_key((255, key)))) is not None
 
 class StorageView:
     def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
@@ -144,14 +153,32 @@ class StorageView:
         return Bytes(data) if data else data
 
     def __setitem__(self, key: ByteArray32, value: Bytes):
-        k = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
         # TODO - check for gas before adding, throw error if insufficient. This is supposed to be handled in relevent invocation
+        key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
+        curr_data = self.DB.get(bytes(key))
+        meta_view = AccountDataView(self.id, self.DB, self.TRIE)
+        if curr_data is None:
+            meta_view.num_i = meta_view.num_i + 1
+            meta_view.num_o = meta_view.num_o + len(value) + 32
+        else:
+            meta_view.num_o =meta_view.num_o + len(value) - len(curr_data)
+
         self.DB.put(
-            bytes(k),
+            bytes(key),
             bytes(value)
         )
-        self.TRIE.update(k, value)
-        # TODO - update ai, ao
+        self.TRIE.update(key, value)
+
+    def __delitem__(self, key: ByteArray32):
+        curr_value = self[key]
+        print(f"Deleting {curr_value} at {key}")
+        if curr_value:
+            meta_view = AccountDataView(self.id, self.DB, self.TRIE)
+            meta_view.num_i = meta_view.num_i - 1
+            meta_view.num_o = meta_view.num_o - len(curr_value) - 32
+        storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
+        self.DB.delete(bytes(storage_key))
+        self.TRIE.delete(storage_key)
 
 class PreImageView:
     def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
@@ -185,5 +212,21 @@ class TimestampsView:
     def __setitem__(self, key: LookupTable, value: Timestamps):
         k = construct_state_key((self.id, Bytes(U32(key.length).encode()) + key.hash[2:25]))
         v = value.encode()
+
+        curr_data = self.DB.get(bytes(k))
+        meta_view = AccountDataView(self.id, self.DB, self.TRIE)
+        if curr_data is None:
+            meta_view.num_i = meta_view.num_i + 2
+            meta_view.num_o = meta_view.num_o + key.length + 81
+
         self.DB.put(bytes(k), bytes(v))
-        self.TRIE.update(k, Bytes(value))
+        self.TRIE.update(k, Bytes(v))
+
+    def __delitem__(self, key: LookupTable):
+        curr_value = self[key]
+        if curr_value:
+            meta_view = AccountDataView(self.id, self.DB, self.TRIE)
+            meta_view.num_i = meta_view.num_i - 1
+            meta_view.num_o = meta_view.num_o - len(curr_value) - 32
+            self.DB.delete(bytes(key))
+            # TODO: Handle delete record from Trie

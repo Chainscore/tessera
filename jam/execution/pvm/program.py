@@ -5,8 +5,6 @@ from jam.execution.pvm.status import PvmError
 from jam.execution.pvm.instructions.table_map import InstTableMap
 from jam.execution.pvm.status import CONTINUE, HALT, PANIC, ExecutionStatus
 from jam.execution.pvm.zeta import Zeta
-from jam.types.base.integers.fixed import U8, U32
-from jam.types.protocol.core import ProgramCounter
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
 from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
@@ -26,17 +24,17 @@ class Program(Codable, JsonSerde):
 
     """
 
-    z: U8
+    z: int
     jump_table: List
-    instruction_set: List
+    instruction_set: List[int]
     offset_bitmask: List
     basic_blocks: List
 
     def __init__(
         self,
-        z: U8,
+        z: int,
         jump_table: List[int],
-        instruction_set: List[U8],
+        instruction_set: List[int],
         offset_bitmask: List[bool],
     ):
         self.z = z
@@ -47,7 +45,7 @@ class Program(Codable, JsonSerde):
         for n in range(len(self.instruction_set)):
             if (
                     self.offset_bitmask[n] and
-                    self.instruction_set[n].value in InstTableMap.terminating_blocks()
+                    self.instruction_set[n] in InstTableMap.terminating_blocks()
             ):
                 basic_blocks.append(n + 1 + self.skip(n))
         self.basic_blocks = basic_blocks
@@ -75,23 +73,21 @@ class Program(Codable, JsonSerde):
 
     def branch(
         self,
-        counter: ProgramCounter, 
-        branch: ProgramCounter, 
+        counter: int,
+        branch: int,
         condition: bool
-    ) -> Tuple[ExecutionStatus, ProgramCounter]:
-        print(f"🦘 Jump {int(branch)} if {condition}")
+    ) -> Tuple[ExecutionStatus, int]:
         if not condition:
             return CONTINUE, counter
         elif branch not in self.basic_blocks:
-            print(f"Branching to {branch}, but its not a basic block")
             raise PvmError(PANIC)
         return CONTINUE, branch
 
     def djump(
         self, 
-        counter: ProgramCounter, 
+        counter: int,
         a: int
-    ) -> Tuple[ExecutionStatus, ProgramCounter]:
+    ) -> Tuple[ExecutionStatus, int]:
         if a == 2**32 - 2**16:
             return HALT, counter
         elif (
@@ -101,9 +97,8 @@ class Program(Codable, JsonSerde):
             self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1] not in self.basic_blocks
         ):
             raise PvmError(PANIC)
-        print(f"🦘 Jump Dynamic {self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1]} | a={a}")
         return CONTINUE, self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1]
-    
+
     def encode_size(self) -> int:
         """Encode the size of the program.
 
@@ -112,10 +107,10 @@ class Program(Codable, JsonSerde):
         """
         total_size = 0
         total_size += GeneralCodec().encode_size(len(self.jump_table))
-        total_size += self.z.encode_size()
+        total_size += 1
         total_size += GeneralCodec().encode_size(len(self.instruction_set))
         for jump in self.jump_table:
-            total_size += IntegerCodec(self.z.value).encode_size(jump)
+            total_size += IntegerCodec(self.z).encode_size(jump)
         for instruction in self.instruction_set:
             total_size += instruction.encode_size()
         total_size += BitSequenceCodec(len(self.instruction_set)).encode_size(
@@ -135,14 +130,14 @@ class Program(Codable, JsonSerde):
         current_offset = offset
         size = GeneralCodec().encode_into(len(self.jump_table), buffer, current_offset)
         current_offset += size
-        size = self.z.encode_into(buffer, current_offset)
+        size = IntegerCodec(1).encode_into(self.z, buffer, current_offset)
         current_offset += size
         size = GeneralCodec().encode_into(
             len(self.instruction_set), buffer, current_offset
         )
         current_offset += size
         for jump in self.jump_table:
-            size = IntegerCodec(self.z.value).encode_into(jump, buffer, current_offset)
+            size = IntegerCodec(self.z).encode_into(jump, buffer, current_offset)
             current_offset += size
         for instruction in self.instruction_set:
             size = instruction.encode_into(buffer, current_offset)
@@ -175,7 +170,7 @@ class Program(Codable, JsonSerde):
         bytes_read += size
         current_offset += size
 
-        z, size = U8.decode_from(buffer, current_offset)
+        z, size = IntegerCodec.decode_from(1, buffer, current_offset)
         bytes_read += size
         current_offset += size
 
@@ -185,14 +180,14 @@ class Program(Codable, JsonSerde):
 
         j: List = []
         for _ in range(j_len):
-            val, size = IntegerCodec.decode_from(z.value, buffer, current_offset)
+            val, size = IntegerCodec.decode_from(z, buffer, current_offset)
             bytes_read += size
             current_offset += size
             j.append(val)
 
         c: List = []
         for _ in range(c_len):
-            val, size = U8.decode_from(buffer, current_offset)
+            val, size = IntegerCodec.decode_from(1, buffer, current_offset)
             bytes_read += size
             current_offset += size
             c.append(val)

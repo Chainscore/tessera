@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from jam.types.base import String
 from jam.types.base.choices.option import Option, decodable_option
@@ -10,56 +11,50 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.error import JamError
 
-@decodable_option(Register)
-class OptionalRegister(Option):
-    ...
-
-@decodable_dataclass
 @dataclass
 class ExecValue(Codable):
-    name: String
-    code: U8
-    register: OptionalRegister
+    name: str
+    code: int
+    register: Optional[int]
 
 
 @decodable_enum
 class ExecutionStatus(Enum):
-    HALT         = ExecValue(String("halt"), U8(0), OptionalRegister(Null))
-    PANIC        = ExecValue(String("panic"), U8(1), OptionalRegister(Null))
-    PAGE_FAULT   = ExecValue(String("page-fault"), U8(2), OptionalRegister(Null))
-    HOST         = ExecValue(String("host"), U8(3), OptionalRegister(Null))
-    OUT_OF_GAS   = ExecValue(String("out-of-gas"), U8(4), OptionalRegister(Null))
-    CONTINUE     = ExecValue(String("continue"), U8(5), OptionalRegister(Null))
+    HALT         = ExecValue("halt", 0 , None)
+    PANIC        = ExecValue("panic", 1, None)
+    PAGE_FAULT   = ExecValue("page-fault", 2, None)
+    HOST         = ExecValue("host", 3, None)
+    OUT_OF_GAS   = ExecValue("out-of-gas", 4, None)
+    CONTINUE     = ExecValue("continue", 5, None)
 
 @decodable_enum
 class HostStatus(Enum):
-    NONE    = U64(2**64 - 1)
-    WHAT    = U64(2**64 - 2)
-    OOB     = U64(2**64 - 3)
-    WHO     = U64(2**64 - 4)
-    FULL    = U64(2**64 - 5)
-    CORE    = U64(2**64 - 6)
-    CASH    = U64(2**64 - 7)
-    LOW     = U64(2**64 - 8)
-    HUH     = U64(2**64 - 9)
-    OK      = U64(0)
+    NONE    = 2**64 - 1
+    WHAT    = 2**64 - 2
+    OOB     = 2**64 - 3
+    WHO     = 2**64 - 4
+    FULL    = 2**64 - 5
+    CORE    = 2**64 - 6
+    CASH    = 2**64 - 7
+    LOW     = 2**64 - 8
+    HUH     = 2**64 - 9
+    OK      = 0
 
 
 # Constructured statuses to use directly
 # Panic
 PANIC = ExecutionStatus.PANIC
 # Page fault with a register value
-def PAGE_FAULT(register: Register) -> ExecutionStatus:
+def PAGE_FAULT(register: int) -> ExecutionStatus:
     result = ExecutionStatus.PAGE_FAULT
-    result.value.register = OptionalRegister(register)
-    print(result.value, OptionalRegister(register), register)
+    result.value.register = register
     return result
 # Halt
 HALT = ExecutionStatus.HALT
 # Host call with a register value
-def HOST(register: Register) -> ExecutionStatus:
+def HOST(register: int) -> ExecutionStatus:
     result = ExecutionStatus.HOST
-    result.value.register = OptionalRegister(register)
+    result.value.register = register
     return result
 # Out of gas
 OUT_OF_GAS = ExecutionStatus.OUT_OF_GAS

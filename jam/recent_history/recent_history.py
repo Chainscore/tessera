@@ -19,11 +19,8 @@ def package(packages: GuaranteesExtrinsic) -> PackageDict:
     package_dict:PackageDict[WorkPackageHash, SegmentRoot] = PackageDict()
 
     for p in packages:
-        a= p.report.segment_root_lookup
-        for c in a:
-            b = c.work_package_hash
-            d = c.segment_tree_root
-            package_dict[b]=d
+        spec = p.report.package_spec
+        package_dict[spec.hash] = spec.exports_root
 
     return package_dict
 
@@ -86,9 +83,8 @@ class RecentHistory:
         if len(beta) > 0:
             last = deepcopy(beta[-1].mmr)
 
-        if accumulate_root != ByteArray32([0] * 32):
-            mmr_functions = MMRFunctions()
-            last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
+        mmr_functions = MMRFunctions()
+        last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
 
         n = BlockHistory(
             Hash.blake2b(block.header.encode()),
@@ -99,6 +95,7 @@ class RecentHistory:
 
         # Step 3
         beta.append(n)
+
         state.beta = Beta(beta[-8:])
 
         # Return State

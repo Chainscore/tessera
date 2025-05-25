@@ -174,6 +174,83 @@ class StateTrie:
             )
             
             return new_parent_hash
+
+    def delete(self, key: ByteArray32) -> NodeHash:
+        """
+        Remove the leaf identified by `key`.
+        Returns the new root hash.
+        Raises KeyError if the key is absent.
+        """
+        key_bits = self.bits(key)
+        new_root = self._delete_recursive(self.root_hash, key_bits, 0)
+
+        # Root might disappear (last leaf was removed)
+        self.root_hash = new_root if new_root is not None else ZERO_HASH
+        return self.root_hash
+
+    # ──────────────────────────────────────────────────────────────────────────────
+    # INTERNALS
+    # ──────────────────────────────────────────────────────────────────────────────
+    def _delete_recursive(
+            self,
+            node_hash: ByteArray32,
+            key_bits: List[int],
+            bit_index: int
+    ) -> Optional[ByteArray32]:
+        """
+        Depth-first delete.
+        Returns:
+            • new hash of this subtree, or
+            • None  → subtree became empty
+        """
+        if node_hash == ZERO_HASH:
+            raise KeyError("key not found (hit empty slot)")
+
+        node = self.nodes[node_hash]
+
+        # ────────── LEAF ──────────
+        if node.type is not NodeType.BRANCH:
+            # if node.key_bits_248 != key_bits[:248]:
+            #     raise KeyError("key not found (different leaf)")
+            # nuke the leaf
+            self.nodes.pop(node_hash, None)
+            return None  # nothing left below
+
+        # ────────── BRANCH ──────────
+        # Pick the side to descend
+        bit = key_bits[bit_index]
+        child_attr = "left" if bit == 0 else "right"
+        child_hash = getattr(node, child_attr)
+
+        # Recurse
+        new_child_hash = self._delete_recursive(child_hash, key_bits, bit_index + 1)
+
+        # Child subtree vanished ⇒ plug a ZERO_HASH in that slot
+        setattr(node, child_attr, ZERO_HASH if new_child_hash is None else new_child_hash)
+
+        # Fast-path collapses
+        if node.left == ZERO_HASH and node.right == ZERO_HASH:
+            # whole branch is dead
+            self.nodes.pop(node_hash, None)
+            return None
+        if node.left == ZERO_HASH or node.right == ZERO_HASH:
+            # unary branch – bubble the sole survivor up
+            survivor = node.right if node.left == ZERO_HASH else node.left
+            self.nodes.pop(node_hash, None)
+            return survivor
+
+        # Still a valid binary branch – re-encode & re-hash
+        new_encoded = encode_branch(node.left, node.right)
+        new_hash = NodeHash(Hash.blake2b(bytes(new_encoded)))
+
+        # update store (persistent snapshot semantics: keep old node)
+        self.nodes[new_hash] = Node(
+            encoded=new_encoded,
+            bit_index=bit_index,
+            left=node.left,
+            right=node.right
+        )
+        return new_hash
     
     def __repr__(self):
         return f"StateTrie(root={self.root_hash}, nodes={self.nodes})"

@@ -9,7 +9,7 @@ from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.null import Null
 from jam.types.header import OptionalEpochMark, OptionalTicketsMark, TicketsMark
 from jam.types.state.gamma import GammaS, GammaSTickets
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
+from jam.types.base.sequences.bytes.byte_array import ByteArray32, ByteArray144
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.block import Block
 from jam.utils.constants import (
@@ -18,13 +18,14 @@ from jam.utils.constants import (
     TICKET_ENTRIES_PER_VALIDATOR,
     MAX_TICKETS_PER_EXTRINSIC
 )
-from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingVrfSignature, BandersnatchVrfSignature, Hash, Entropy
+from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingVrfSignature, BandersnatchVrfSignature, Hash, \
+    Entropy, BandersnatchRingRoot
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData
 from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
-from copy import deepcopy
+
 
 class Safrole:
     @staticmethod
@@ -40,13 +41,9 @@ class Safrole:
         return True
 
     @staticmethod
-    def compute_ring_root(keys: List[BandersnatchPublic]) -> bytes:
+    def compute_ring_root(keys: List[BandersnatchPublic]) -> BandersnatchRingRoot:
         # TODO - Implementation of KZG_commitment(⟦HB⟧) once the module is added
-        sorted_keys = sorted(keys)
-        data = b""
-        for key in sorted_keys:
-            data = data + bytes(key)
-        return data[:144]
+        return BandersnatchRingRoot("0x85f9095f4abd040839d793d89ab5ff25c61e50c844ab6765e2c0b22373b5a8f6fbe5fc0cd61fdde580b3d44fe1be127197e33b91960b10d2c6fc75aec03f36e16c2a8204961097dbc2c5ba7655543385399cc9ef08bf2e520ccf3b0a7569d88492e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf")
 
     @staticmethod
     def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
@@ -246,7 +243,13 @@ class Safrole:
         Returns the outside-in sequenced list of values
         https://graypaper.fluffylabs.dev/#/68eaa1f/0ea8020ebb02?v=0.6.4
         """
-        return values[::2] + values[1::2][::-1]
+        zlipped = []
+        step = 0
+        while len(zlipped) < len(values):
+            zlipped.append(values[step])
+            zlipped.append(values[len(values) - 1 - step])
+            step += 1
+        return zlipped
 
     @staticmethod
     def get_tickets_marker(state: Sigma, slot: U64) -> OptionalTicketsMark:

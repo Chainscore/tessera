@@ -1,9 +1,6 @@
-from dataclasses import dataclass, field
-from typing import Dict, Type, Self, Sequence, Any, Union, Tuple
-
+from dataclasses import dataclass
+from typing import Union, Tuple
 from jam.execution.utils import decode_code_hash
-from jam.state.utils.key_constructor import construct_state_key
-from jam.types.base import Byte
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.integers.fixed import U32, U64
 from jam.types.base.sequences.vector import Vector, decodable_vector
@@ -14,6 +11,7 @@ from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.types.protocol.crypto import Hash
 from jam.utils.json.decorators import with_json_metadata
+from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 
 
 ServiceCodeHash = ByteArray32
@@ -28,8 +26,6 @@ Ao = U64
 At = Balance
 
 @with_json_metadata(
-    code_hash   = { "name": "code_hash" },
-    balance   = { "name": "balance"},
     gas_limit = { "name": "min_item_gas"},
     min_gas    = { "name": "min_memo_gas"},
     num_o    = { "name": "bytes"},
@@ -44,6 +40,10 @@ class AccountMetadata(Codable, JsonSerde):
     min_gas: Gas  # min_memo_gas
     num_o: Ao
     num_i: Ai
+
+    @property
+    def t(self):
+        return Balance(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o)
 
 @decodable_dictionary(ByteArray32, Bytes, key_name="key", value_name="value")
 class AccountStorage(Dictionary[ByteArray32, Bytes]):

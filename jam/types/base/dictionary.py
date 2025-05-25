@@ -2,7 +2,6 @@ from typing import (
     Generic,
     Mapping,
     Optional,
-    Self,
     Tuple,
     Type,
     TypeVar,
@@ -129,7 +128,7 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
         return {k.to_json(): v.to_json() for k, v in self.items()}
 
     @classmethod
-    def from_json(cls: Type[Self], data: Sequence[Any]) -> Self:
+    def from_json(cls: Type["Self"], data: Sequence[Any]) -> "Self":
         """Create instance from JSON representation."""
         if not isinstance(data, dict):
             _value = cls({})

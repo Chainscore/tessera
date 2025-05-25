@@ -1,5 +1,7 @@
 import math
 from typing import Dict, List
+
+from jam.types.base import Int
 from jam.types.state.pi import (
     AllServiceStats,
     ServiceStat, AllValidatorStats, AllCoreStats,
@@ -26,8 +28,6 @@ class Statistics:
             state: State before transition
             block: Block
             available_wrs
-            accumulation_stats
-            deferred_transfer_stats
 
         Returns:
             State after transition
@@ -71,30 +71,12 @@ class Statistics:
         pi.vals_current = pi_curr
         pi.vals_last = pi_last
 
-        incoming_wrs = []
-
-        for report_guarantee in block.extrinsic.guarantees:
-            incoming_wrs.append(report_guarantee.report)
-
-        pi_core = AllCoreStats.empty()
-
-        for report in incoming_wrs:
-            if report is not None:
-                core_index = report.core_index
-                core_stat = pi_core[core_index]
-                for result in report.results:
-                    core_stat.imports += result.refine_load.imports
-                    core_stat.exports += result.refine_load.exports
-                    core_stat.gas_used += result.refine_load.gas_used
-                    core_stat.extrinsic_count += result.refine_load.extrinsic_count
-                    core_stat.extrinsic_size += result.refine_load.extrinsic_size
-                core_stat.bundle_size = report.package_spec.length
+        pi_core = pi.cores
 
         for report in available_wrs:
             if report is not None:
                 core_index = report.core_index
-                core_stat = pi_core[core_index]
-                core_stat.da_load = report.package_spec.length + (
+                pi_core[int(core_index)].da_load = Int(report.package_spec.length) + Int(
                     SEGMENT_SIZE
                     * math.ceil(report.package_spec.exports_count * 65 / 64)
                 )
@@ -105,39 +87,12 @@ class Statistics:
 
         pi.cores = pi_core
 
-        r = []
-        for report in incoming_wrs:
-            for result in report.results:
-                r.append(result.service_id)
-
         p = []
         for preimage in block.extrinsic.preimages:
             if preimage.blob is not None:
                 p.append(preimage.requester)
 
-        all_service_ids = (set(r) | set(p))
-
         pi_service = pi.services
-
-        for report in incoming_wrs:
-            for work_result in report.results:
-                if work_result.service_id in all_service_ids:
-                    if work_result.service_id not in pi_service:
-                        pi_service[work_result.service_id] = ServiceStat.empty()
-                    curr_service_stat = pi_service[work_result.service_id]
-                    curr_service_stat.refinement_count += 1
-                    curr_service_stat.refinement_gas_used += (
-                        work_result.refine_load.gas_used
-                    )
-                    curr_service_stat.imports += work_result.refine_load.imports
-                    curr_service_stat.exports += work_result.refine_load.exports
-                    curr_service_stat.extrinsic_count += (
-                        work_result.refine_load.extrinsic_count
-                    )
-                    curr_service_stat.extrinsic_size += (
-                        work_result.refine_load.extrinsic_size
-                    )
-
         for preimage in block.extrinsic.preimages:
             if preimage.blob is not None:
                 if preimage.requester not in pi_service:

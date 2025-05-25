@@ -1,8 +1,9 @@
 from typing import Dict, Set, List
 
 from jam.merklization import MMRFunctions
-from jam.types.base import decodable_vector, U32, Vector, Bytes, Null
+from jam.types.base import decodable_vector, U32, Vector, Bytes, Null, Int
 from jam.types.protocol.core import CoreIndex
+from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
 from jam.types.block import Block
@@ -152,18 +153,36 @@ class Reporting:
 
         recent_exports_roots.update({report.package_spec.hash: report.package_spec.exports_root for report in all_reports})
 
-        rho_package_hashes = [pending_wr.get_value().context.package_spec.hash if pending_wr.is_some() else None for pending_wr in state.rho]
+        rho_package_hashes = [pending_wr.get_value().report.package_spec.hash if pending_wr.is_some() else None for pending_wr in state.rho]
         for p in wp_hash_set:
             # Ensure this WP is not previously executed - checking Beta, Nu, Rho, Xi
             # 11.38
             if p in beta_wp_hashes or p in known_packages or p in rho_package_hashes:
                 raise ReportingError(ReportingErrorCode.DUPLICATE_PACKAGE)
 
+        Reporting.ensure_valid_report_result(state,block)
+        # Check core assignments
+        Reporting.ensure_correct_assignments(state, block)
+        Reporting.ensure_signature(state, block)
 
         # Context anchor block must be present in Beta
         for report in all_reports:
             context = report.context
-            if not any(recent_block.header_hash == context.anchor and recent_block.state_root == context.state_root and context.beefy_root == MMRFunctions().super_peak(recent_block.mmr) for recent_block in state.beta):
+
+            found_anchor = False
+            for recent_block in state.beta:
+                if recent_block.header_hash == context.anchor:
+                    if context.beefy_root != MMRFunctions().super_peak(recent_block.mmr):
+                        raise ReportingError(
+                            ReportingErrorCode.BAD_BEEFY_MMR_ROOT
+                        )
+                    if recent_block.state_root != context.state_root:
+                        raise ReportingError(
+                            ReportingErrorCode.BAD_STATE_ROOT,
+                            f""
+                        )
+                    found_anchor = True
+            if not found_anchor:
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
                     "Anchor not found in beta"
@@ -175,34 +194,28 @@ class Reporting:
                     "Lookup anchor older than max age"
                 )
 
+            # --------------- segment_root_lookup_invalid -------------------
+            # 11.40
+            # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
+            for lookup, exports_root in report.segment_root_lookup.items():
+                if lookup not in recent_exports_roots or recent_exports_roots[lookup] != exports_root:
+                    raise ReportingError(
+                        ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID,
+                        "Work-packages mentioned in the segment-root lookup, be either in the extrinsic or in our recent history."
+                    )
+
             # --------------- dependency_missing -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
             # Eq 11.39
             all_prerequisites = [*report.segment_root_lookup.keys(), *context.prerequisites]
             for prereq in all_prerequisites:
-                if prereq not in wp_hash_set and prereq not in beta_wp_hashes:
+                if prereq not in wp_hash_set and prereq not in beta_wp_hashes and prereq not in known_packages:
                     raise ReportingError(
                         ReportingErrorCode.DEPENDENCY_MISSING,
                         "prerequisite's hash should match the package_specification's hash of any of the reports"
                     )
 
-            # --------------- segment_root_lookup_invalid -------------------
-            # # 11.40
-            # # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
-            # for prereq in all_prerequisites:
-            #     if prereq not wp_se and x.work_package_hash not in work_package_hashes or (
-            #             x.segment_tree_root != y.report.package_spec.exports_root and x.segment_tree_root not in exports_root):
-            #         raise ReportingError(
-            #             ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID,
-            #             "Work-packages mentioned in the segment-root lookup, be either in the extrinsic or in our recent history."
-            #         )
 
-            for lookup, exports_root in report.segment_root_lookup.items():
-                if not (lookup in recent_exports_roots and recent_exports_roots[lookup] == exports_root):
-                    raise ReportingError(
-                        ReportingErrorCode.SEGMENT_ROOT_LOOKUP_INVALID,
-                        "Work-packages mentioned in the segment-root lookup, be either in the extrinsic or in our recent history."
-                    )
 
 
         # for i in state.beta:
@@ -231,20 +244,49 @@ class Reporting:
                 f"Duplicate Work Package detected"
             )
 
-        Reporting.ensure_valid_refinement_context(state, block)
-        Reporting.ensure_valid_report_result(state,block)
-        # Check core assignments
-        Reporting.ensure_correct_assignments(state, block)
-        Reporting.ensure_signature(state, block)
+        pi_core = AllCoreStats.empty()
+        pi_service = AllServiceStats({})
 
+        rho = state.rho
 
-        for x in block.extrinsic.guarantees:
-            state.rho[x.report.core_index] = OptionalWorkReportState(
+        for report in all_reports:
+            rho[report.core_index] = OptionalWorkReportState(
                 WorkReportState(
-                    report=block.extrinsic.guarantees[x.report.core_index].report,
+                    report=report,
                     timeout=block.header.slot
                 )
             )
+            core_index = report.core_index
+            for result in report.results:
+                pi_core[core_index].imports += Int(result.refine_load.imports)
+                pi_core[core_index].exports += Int(result.refine_load.exports)
+                pi_core[core_index].gas_used += Int(result.refine_load.gas_used)
+                pi_core[core_index].extrinsic_count += Int(result.refine_load.extrinsic_count)
+                pi_core[core_index].extrinsic_size += Int(result.refine_load.extrinsic_size)
+            pi_core[core_index].bundle_size = Int(report.package_spec.length)
+
+            for work_result in report.results:
+                if work_result.service_id not in pi_service:
+                    pi_service[work_result.service_id] = ServiceStat.empty()
+                pi_service[work_result.service_id].refinement_count += 1
+                pi_service[work_result.service_id].refinement_gas_used += Int(
+                    work_result.refine_load.gas_used
+                )
+                pi_service[work_result.service_id].imports += Int(work_result.refine_load.imports)
+                pi_service[work_result.service_id].exports += Int(work_result.refine_load.exports)
+                pi_service[work_result.service_id].extrinsic_count += Int(
+                    work_result.refine_load.extrinsic_count
+                )
+                pi_service[work_result.service_id].extrinsic_size += Int(
+                    work_result.refine_load.extrinsic_size
+                )
+
+        pi = state.pi
+        pi.cores = pi_core
+        print("pi_service", pi_service)
+        pi.services = pi_service
+        state.pi = pi
+        state.rho = rho
 
         return state
 
@@ -263,6 +305,8 @@ class Reporting:
                 elif x.slot != block.header.slot and floor((block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH) != floor(block.header.slot / EPOCH_LENGTH):
                     public_key = state.lambda_[y.validator_index].ed25519
                 signature = y.signature
+
+                # TODO: Uncomment this
                 try:
                     Ed25519PublicKey.from_public_bytes(
                         bytes(public_key)
@@ -295,49 +339,6 @@ class Reporting:
                 ReportingErrorCode.WORK_REPORT_TOO_BIG,
                 "Length of sum of result and auth_output should be less than 48 * 2**10 "
             )
-
-    @staticmethod
-    def ensure_valid_refinement_context(state: Sigma, block: Block):
-
-        """
-        Description: This function takes two arguments and checks for all the testcases related to refinement contex section of each report.
-
-        Args:
-            state: This is the state on which transition happen or another state to get previous and curr data (like validators)
-            block: This is the recent block (modified according to the input provided in the testcases) to be added on-chain and to get all information(like header, slot, extrinsic)
-
-        Returns:
-            Returns error according to specific testcases.
-
-
-        """
-
-        # header_hashes = []
-        #
-        # for x in state.beta:
-        #     header_hashes.append(x.header_hash)
-
-        for y in block.extrinsic.guarantees:
-            context = y.report.context
-            # # --------------- anchor_not_recent -------------------
-            # # https://graypaper.fluffylabs.dev/#/85129da/152801152b01?v=0.6.3
-            # # Eq 11.33
-            # if context.anchor not in header_hashes:
-            #     raise ReportingError(
-            #         ReportingErrorCode.ANCHOR_NOT_RECENT,
-            #         "Anchor hash should match with header hash of any block in recent history"
-            #     )
-            #
-            # # --------------- bad_state_root -------------------
-            # if not any(item.state_root == context.state_root for item in state.beta):
-            #     raise ReportingError(
-            #         ReportingErrorCode.BAD_STATE_ROOT,
-            #         "State_root should match with any block state_root in recent history"
-            #     )
-            #
-
-
-
 
     @staticmethod
     def ensure_valid_report_result(state: Sigma, block: Block):
@@ -408,7 +409,7 @@ class Reporting:
         for x in block.extrinsic.guarantees:
             report_slot = x.slot
 
-        guarantors_assigned = guarantor_assignment(state.eta, state.kappa, state.lambda_, block.header.slot, report_slot )
+        guarantors_assigned = guarantor_assignment(state.eta, state.kappa, state.lambda_, block.header.slot, report_slot)
 
         # array of assign validator for each core
         current_assigned: Dict[CoreIndex, Set] = {}

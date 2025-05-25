@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final, Self
+from typing import Final
 
 from ..glv import GLVSpecs
 from ..twisted_edwards.te_curve import TECurve
@@ -92,7 +92,7 @@ class BandersnatchPoint(TEAffinePoint):
         super().__init__(x, y, self.curve)
     
     @classmethod
-    def generator_point(cls) -> Self:
+    def generator_point(cls) -> "Self":
         """
         Get the generator point of the curve.
         
@@ -114,7 +114,7 @@ class BandersnatchPoint(TEAffinePoint):
         return self.point_to_string()
     
     @classmethod
-    def from_bytes(cls, data: bytes) -> Self:
+    def from_bytes(cls, data: bytes) -> "Self":
         """
         Create point from compressed byte representation.
         

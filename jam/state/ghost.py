@@ -221,13 +221,6 @@ class GhostState(Sigma):
         """Generate the genesis state"""
         gen = json.load(open(genesis_path))
         peers = ValidatorsData.from_json(gen["peers"])
-        empty_set = [ValidatorData(
-            bandersnatch=BandersnatchPublic(bytes(32)),
-            ed25519=Ed25519Public(bytes(32)),
-            bls=BlsPublic(bytes(144)),
-            metadata=ValidatorMetadata(ValidatorName(""), IPAddress([U8(0), U8(0), U8(0), U8(0)]), U16(0))
-        ) for _ in range(VALIDATOR_COUNT)]
-
         fallback = Safrole.arrange_fallback(ByteArray32(bytes(32)), peers)
 
         return GhostState(
@@ -268,7 +261,6 @@ class GhostState(Sigma):
 
         for i in range(1, 16):
             state_key = construct_state_key(i)
-            # print(type(state_key))
             data[state_key] = Bytes(db.get(bytes(state_key)))
         for key in keys:
             if int.from_bytes(
