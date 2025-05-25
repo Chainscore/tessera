@@ -12,7 +12,7 @@ from collections import deque
 @decodable_vector(element_type=U32)
 class U32Vector(Vector): ...
 
-def guarantor_assignment(eta,  kappa, lambda_, gamma_k, block_slot, report_slot) -> Dict[CoreIndex, List]:
+def guarantor_assignment(eta,  kappa, lambda_, gamma_k, block_slot, report_slot, tau) -> Dict[CoreIndex, List]:
 
     """
     Description:
@@ -22,25 +22,27 @@ def guarantor_assignment(eta,  kappa, lambda_, gamma_k, block_slot, report_slot)
         eta: define as entropy
         kappa:  help to get current validator data
         lambda_: help to get the previous validator data
+        gamma_k: gamma.k
         block_slot: through this we get the current block's slot
         report_slot: slot assigned to the work report
+        tau: state timeslot
 
     Return:
         It's return the dict that is mapping between core and validator
+
     """
-    print("guarantor_assignment")
-    # ------- validator order ---------
+    # ------- Validator order ---------
     array_validator: U32Vector = U32Vector([])
     for i in range(VALIDATOR_COUNT):
         array_validator.append(U32(i))
 
-    # ------- validator assignment to the cores -------
+    # ------- Validator assignment to the cores -------
     validator_assign: U32Vector = U32Vector([])
     for i in range(VALIDATOR_COUNT):
         val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
         validator_assign.append(U32(val_core))
 
-    epoch_change = (int(report_slot) // EPOCH_LENGTH) < (int(block_slot) // EPOCH_LENGTH)
+    epoch_change = (int(tau) // EPOCH_LENGTH) < (int(block_slot) // EPOCH_LENGTH)
     eta2_post = eta[1] if epoch_change else eta[2]
     eta3_post = eta[2] if epoch_change else eta[3]
 
@@ -67,7 +69,7 @@ def guarantor_assignment(eta,  kappa, lambda_, gamma_k, block_slot, report_slot)
         for i in lambda_post:
             validator_keys.append(i.ed25519)
 
-    # ------- shuffle validator with respect to the given entropy -------
+    # ------- Shuffle validator with respect to the given entropy -------
     core_assign = shuffle(epoch_entropy.encode().hex(), validator_assign)
 
     # an empty dictionary to store the mapping between core and validator

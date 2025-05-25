@@ -408,7 +408,7 @@ class Reporting:
         for x in block.extrinsic.guarantees:
             report_slot = x.slot
 
-        guarantors_assigned = guarantor_assignment(state.eta, state.kappa, state.lambda_, state.gamma.k, block.header.slot, report_slot)
+        guarantors_assigned = guarantor_assignment(state.eta, state.kappa, state.lambda_, state.gamma.k, block.header.slot, report_slot, state.tau)
 
         # array of assign validator for each core
         current_assigned: Dict[CoreIndex, Set] = {}
