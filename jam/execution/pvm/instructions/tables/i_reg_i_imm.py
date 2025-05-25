@@ -67,7 +67,6 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
         def load_u_impl(
                 self, registers: list, memory: Memory
         ) -> OpReturn:
-            print("Memory to load:", memory.read(self.vx, bitsize // 8).hex())
             registers[self.ra] = int.from_bytes(memory.read(self.vx, bitsize // 8), "little")
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
         return load_u_impl

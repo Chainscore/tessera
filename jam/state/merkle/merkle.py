@@ -177,81 +177,98 @@ class StateTrie:
 
     def delete(self, key: ByteArray32) -> NodeHash:
         """
-        Remove the leaf identified by `key`.
-        Returns the new root hash.
-        Raises KeyError if the key is absent.
+        Remove the leaf with `key` from the trie.
+        • If the key is absent, the trie is left unchanged and the current
+          root hash is returned.
+        • After deletion, redundant unary branches are collapsed.
+        • All orphaned nodes are purged from `self.nodes`.
+        Returns the new root hash – or ZERO_HASH if the trie becomes empty.
         """
-        return self.root_hash
-        # key_bits = self.bits(key)
-        # new_root = self._delete_recursive(self.root_hash, key_bits, 0)
-        #
-        # # Root might disappear (last leaf was removed)
-        # self.root_hash = new_root if new_root is not None else ZERO_HASH
-        # return self.root_hash
+        if self.root_hash == ZERO_HASH:
+            return ZERO_HASH  # empty trie – nothing to do
 
-    # ──────────────────────────────────────────────────────────────────────────────
-    # INTERNALS
-    # ──────────────────────────────────────────────────────────────────────────────
+        key_bits = self.bits(key)
+        new_root, removed = self._delete_recursive(
+            self.root_hash,
+            key_bits,
+            bit_index=0
+        )
+
+        # If nothing was removed we keep the existing root hash.
+        self.root_hash = new_root if removed else self.root_hash
+        return self.root_hash
+
     def _delete_recursive(
             self,
-            node_hash: ByteArray32,
+            subtree_hash: ByteArray32,
             key_bits: List[int],
             bit_index: int
-    ) -> Optional[ByteArray32]:
+    ) -> Tuple[NodeHash, bool]:
         """
-        Depth-first delete.
-        Returns:
-            • new hash of this subtree, or
-            • None  → subtree became empty
+        Returns (new_subtree_hash, removed_flag).
+        removed_flag == True  ⇒  one or more nodes were deleted below this point.
         """
-        if node_hash == ZERO_HASH:
-            raise KeyError("key not found (hit empty slot)")
+        node = self.nodes.get(subtree_hash)
+        if node is None:  # dead end – key absent
+            return subtree_hash, False
 
-        node = self.nodes[node_hash]
-
-        # ────────── LEAF ──────────
+        # LEAF
         if node.type is not NodeType.BRANCH:
-            # if node.key_bits_248 != key_bits[:248]:
-            #     raise KeyError("key not found (different leaf)")
-            # nuke the leaf
-            self.nodes.pop(node_hash, None)
-            return None  # nothing left below
+            if node.key_bits_248 == key_bits[:248]:  # found the leaf to delete
+                self.nodes.pop(subtree_hash, None)
+                return ZERO_HASH, True  # bubble-up “emptiness”
+            return subtree_hash, False  # different key – leave untouched
 
-        # ────────── BRANCH ──────────
-        # Pick the side to descend
-        bit = key_bits[bit_index]
-        child_attr = "left" if bit == 0 else "right"
-        child_hash = getattr(node, child_attr)
+        # BRANCH
+        go_right = key_bits[bit_index] == 1
 
-        # Recurse
-        new_child_hash = self._delete_recursive(child_hash, key_bits, bit_index + 1)
+        # Recurse into the selected child
+        if go_right:
+            new_right_hash, removed = self._delete_recursive(
+                node.right, key_bits, bit_index + 1
+            )
+            new_left_hash = node.left
+        else:
+            new_left_hash, removed = self._delete_recursive(
+                node.left, key_bits, bit_index + 1
+            )
+            new_right_hash = node.right
 
-        # Child subtree vanished ⇒ plug a ZERO_HASH in that slot
-        setattr(node, child_attr, ZERO_HASH if new_child_hash is None else new_child_hash)
+        # No change below – fast-path out
+        if not removed:
+            return subtree_hash, False
 
-        # Fast-path collapses
-        if node.left == ZERO_HASH and node.right == ZERO_HASH:
-            # whole branch is dead
-            self.nodes.pop(node_hash, None)
-            return None
-        if node.left == ZERO_HASH or node.right == ZERO_HASH:
-            # unary branch – bubble the sole survivor up
-            survivor = node.right if node.left == ZERO_HASH else node.left
-            self.nodes.pop(node_hash, None)
-            return survivor
+        # Child changed ⇒ we definitely need to rewrite *this* branch
+        # Clean up the old branch copy
+        self.nodes.pop(subtree_hash, None)
 
-        # Still a valid binary branch – re-encode & re-hash
-        new_encoded = encode_branch(node.left, node.right)
-        new_hash = NodeHash(Hash.blake2b(bytes(new_encoded)))
+        # Case 1: both children gone  → delete this branch too
+        if new_left_hash == ZERO_HASH and new_right_hash == ZERO_HASH:
+            return ZERO_HASH, True
 
-        # update store (persistent snapshot semantics: keep old node)
-        self.nodes[new_hash] = Node(
+        # Case 2: one child gone, other is a leaf  → collapse
+        if new_left_hash == ZERO_HASH and self._is_leaf(new_right_hash):
+            return new_right_hash, True
+        if new_right_hash == ZERO_HASH and self._is_leaf(new_left_hash):
+            return new_left_hash, True
+
+        # Case 3: normal two-child branch – re-encode / re-hash
+        new_encoded = encode_branch(new_left_hash, new_right_hash)
+        new_branch_hash = NodeHash(Hash.blake2b(bytes(new_encoded)))
+        self.nodes[new_branch_hash] = Node(
             encoded=new_encoded,
             bit_index=bit_index,
-            left=node.left,
-            right=node.right
+            left=new_left_hash,
+            right=new_right_hash,
         )
-        return new_hash
-    
+        return new_branch_hash, True
+
+    # Helper: tiny inline leaf check to avoid an extra Node lookup
+    def _is_leaf(self, h: ByteArray32) -> bool:
+        if h == ZERO_HASH:
+            return False
+        n = self.nodes.get(h)
+        return n is not None and n.type is not NodeType.BRANCH
+
     def __repr__(self):
         return f"StateTrie(root={self.root_hash}, nodes={self.nodes})"

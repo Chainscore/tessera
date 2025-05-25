@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict
 
 from jam.execution.pvm.instructions.opcode import OpReturn
 from jam.execution.pvm.instructions.opcode import OpCode
