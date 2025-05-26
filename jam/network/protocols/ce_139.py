@@ -36,7 +36,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
     def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         request = self.parse_request(buffer)
         logger.info("Handling CE139 shard request")
-        d3l = KVStore(settings.D3L_PATH)
+        d3l = settings.d3l
         er_shards_db = ErasureShardsMap(d3l)
         ss_da = SegmentShardsDA(d3l)
 
