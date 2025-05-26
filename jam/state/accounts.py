@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from jam.execution.utils import decode_code_hash
 from jam.storage.db.kv import KVStore
 from jam.state.merkle import StateTrie
@@ -7,12 +5,7 @@ from jam.state.utils.key_constructor import construct_state_key
 from jam.types.base import Bytes, ByteArray32, U32
 from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot, BlobLength
 from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import AccountMetadata, ServiceCodeHash, Ao, Ai, LookupTable, Timestamps
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
-from jam.utils.codec.primitives.bytes import BytesCodec
-from jam.utils.json import JsonSerde
-from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
+from jam.types.state.delta import AccountMetadata, LookupTable, Timestamps
 
 from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 
@@ -113,7 +106,7 @@ class Account:
         elif len(lookup_ts) == 2:
             return lookup_ts[0] <= current_ts < lookup_ts[1]
         elif len(lookup_ts) == 3:
-            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[2] <= ts
+            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[2] <= current_ts
         else:
             raise ValueError("Invalid Timestamp data")
 
@@ -171,7 +164,6 @@ class StorageView:
 
     def __delitem__(self, key: ByteArray32):
         curr_value = self[key]
-        print(f"Deleting {curr_value} at {key}")
         if curr_value:
             meta_view = AccountDataView(self.id, self.DB, self.TRIE)
             meta_view.num_i = meta_view.num_i - 1
@@ -199,6 +191,11 @@ class PreImageView:
         )
         self.TRIE.update(k, value)
 
+    def __delitem__(self, key: ByteArray32):
+        storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
+        self.DB.delete(bytes(storage_key))
+        self.TRIE.delete(storage_key)
+
 class TimestampsView:
     def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
         self.id = id
@@ -206,27 +203,29 @@ class TimestampsView:
         self.TRIE = trie
 
     def __getitem__(self, key: LookupTable):
-        data = self.DB.get(bytes(construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))))
+        storage_key = construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))
+        data = self.DB.get(bytes(storage_key))
         return Timestamps.decode_from(data)[0] if data else data
 
     def __setitem__(self, key: LookupTable, value: Timestamps):
-        k = construct_state_key((self.id, Bytes(U32(key.length).encode()) + key.hash[2:25]))
+        storage_key = construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))
         v = value.encode()
 
-        curr_data = self.DB.get(bytes(k))
+        curr_data = self.DB.get(bytes(storage_key))
         meta_view = AccountDataView(self.id, self.DB, self.TRIE)
         if curr_data is None:
             meta_view.num_i = meta_view.num_i + 2
             meta_view.num_o = meta_view.num_o + key.length + 81
 
-        self.DB.put(bytes(k), bytes(v))
-        self.TRIE.update(k, Bytes(v))
+        self.DB.put(bytes(storage_key), bytes(v))
+        self.TRIE.update(storage_key, Bytes(v))
 
     def __delitem__(self, key: LookupTable):
         curr_value = self[key]
+        storage_key = construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))
         if curr_value:
             meta_view = AccountDataView(self.id, self.DB, self.TRIE)
             meta_view.num_i = meta_view.num_i - 1
             meta_view.num_o = meta_view.num_o - len(curr_value) - 32
-            self.DB.delete(bytes(key))
-            # TODO: Handle delete record from Trie
+            self.DB.delete(bytes(storage_key))
+            self.TRIE.delete(storage_key)

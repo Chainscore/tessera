@@ -111,21 +111,18 @@ class State:
             queue_el.report.context.prerequisites
             for epoch_queue in self.nu
             for queue_el in epoch_queue
-        ]
-        known_packages.extend([
+        ].extend([
             wps
             for deps in self.xi
             for wps in deps
         ])
+        # Reporting
         Reporting.transition(self, block, known_packages=known_packages)
         # Assurances
         _, newly_avail_wrs = Assurances.transition(self, block)
-        # Reporting
 
         # Accumulation
-        print("newly_avail_wrs", newly_avail_wrs)
         _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
-        print("commitment_map", commitment_map)
         # Authorization
         Authorization.transition(self, block)
         # Recent History

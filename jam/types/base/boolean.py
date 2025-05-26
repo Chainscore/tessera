@@ -55,7 +55,6 @@ class Boolean(Codable, JsonSerde):
 
     def __bytes__(self) -> bytes:
         """Bytes representation."""
-        print(f"Converting {self.value} to bytes = {bytes([1 if self.value else 0])}")
         return bytes([1 if self.value else 0])
 
     @staticmethod

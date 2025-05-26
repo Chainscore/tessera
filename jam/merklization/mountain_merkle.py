@@ -149,8 +149,6 @@ class MMRFunctions:
         else:
             h = mmr
 
-        print(h)
-
         if len(h) == 0:
             return self._ZERO_HASH
 
