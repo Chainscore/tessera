@@ -12,7 +12,7 @@ from jam.types.state.delta import Ao, Ai, LookupTable, Timestamps
 from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs
 from jam.utils.codec.primitives import BooleanCodec
 from jam.utils.codec.primitives.bytes import BytesCodec
-from tests.dummy.dummy_package import create_dummy_package
+from jam.utils.dummy.dummy_package import create_dummy_package
 
 
 def test_basic_wp_building():
