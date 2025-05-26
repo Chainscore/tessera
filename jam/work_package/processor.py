@@ -77,11 +77,12 @@ class Processor:
 
     node: Node
     merkle: BMRFunctions
+    # transmit_task: Opt
 
     def __init__(self, node: Node):
         self.merkle = BMRFunctions()
         self.node = node
-
+        self.transmit_task = None
 
     @staticmethod
     def zero_padding(value: Bytes, n: Int):
@@ -411,8 +412,7 @@ class Processor:
         return report, wr_hash
 
     def process(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
-        from jam.network.protocols.ce_134 import WorkPackageSharing, CE134Data, CoreSegment
-        from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
+        from jam.network.protocols.ce_134 import CoreSegment, WorkPackageSharing, CE134Data
 
         logger.info("Validating Work Package..")
         validator = Validator()
@@ -436,87 +436,68 @@ class Processor:
         core_segment = CoreSegment(core_index=core, segment_root_map=lookup, length=Int(len(lookup)))
         data = CE134Data(work_package_bundle=bundle, core_segment=core_segment)
 
-        # loop = asyncio.get_event_loop()
-        # print("loop", loop)
-        # loop = asyncio.get_running_loop()
-        loop = asyncio.new_event_loop()
-        # #
-        def start_loop():
-            asyncio.set_event_loop(loop)
-            loop.run_forever()
+        loop = asyncio.get_running_loop()
+        loop.set_task_factory(asyncio.eager_task_factory)
 
-        # loop = asyncio.get_running_loop()
-        # print("loop here man", loop)
-
-        thread = threading.Thread(target=start_loop, daemon=True)
-        thread.start()
-
-        # future = asyncio.run_coroutine_threadsafe(
-        #     CE134.transmit(node=self.node, data=data),
-        #     loop
-        # )
-
-        # transmit_future = asyncio.ensure_future(CE134.transmit(node=self.node, data=data))
-        # loop = self.node.connections[0]._loop
-        # loop = asyncio.get_running_loop()
-        transmit_future = asyncio.run_coroutine_threadsafe(CE134.transmit(node=self.node, data=data), loop)
-        # transmit_future
-        # responses = await CE134.transmit(node=self.node, data=data)
+        # Distribute Bundle, parallely
+        self.transmit_task = loop.create_task(CE134.transmit(node=self.node, data=data))
 
         # Build & Store Report
         with benchmark("bundle processed"):
             wr, wr_hash = self.process_bundle(core, bundle, lookup)
 
-        # Self guarantee
-        port = 30333
+
+        # Build Guarantee
+        logger.info(f"Building guarantees..")
+        with benchmark("guarantees signed"):
+            try:
+                # Wait for guarantees and process them
+                asyncio.create_task(self.process_guarantees(wr, wr_hash))
+            except asyncio.TimeoutError:
+                logger.error("Timeout waiting for async transmit result")
+            except Exception as e:
+                logger.error(f"Error waiting for async transmit result: {e}")
+
+        return wr, wr_hash
+
+    async def process_guarantees(self, wr: WorkReport, wr_hash: WorkReportHash):
+        """
+        Utility Async function for receiving guarantees and processing it.
+        """
+        from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
+
+        port = self.node.port
         my_keys = json.load(open("seeds/keys.json"))[str(port)]
         ed25519_key = Ed25519PrivateKey.from_private_bytes(
             bytes.fromhex(my_keys["ed25519_private"][2:])
         )
 
-        # Build Guarantee
-        logger.info(f"Building guarantees..")
-        with benchmark("guarantees signed"):
-            payload = wr.core_index.encode() + wr.encode()
-            guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
+        payload = wr.core_index.encode() + wr.encode()
+        guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
 
-            # Sign the Guarantee
-            sign = Ed25519Signature(ed25519_key.sign(guarantee))
+        # Sign the Guarantee
+        sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
-            og_guarantee = ValidatorSignature(validator_index=U16(0), signature=sign)
+        og_guarantee = ValidatorSignature(validator_index=U16(0), signature=sign)
 
-            # Check majority & Build guarantees:
-            guarantees = ValidatorSignatures([og_guarantee])
+        # Check majority & Build guarantees:
+        guarantees = ValidatorSignatures([og_guarantee])
 
-            try:
-                responses = transmit_future.result(timeout=1)
-                print("Responses are", responses)
-            except asyncio.TimeoutError:
-                logger.error("Timeout waiting for async transmit result")
-                responses = []
-            except Exception as e:
-                logger.error(f"Error waiting for async transmit result: {e}")
-                responses = []
-            # try:
-            #     # future = run_coroutine_threadsafe(transmit_task, loop)
-            #
-            #     # for response in responses:
-            #     #     print("response is", response)
-            #     #     if response.work_report_hash == wr_hash:
-            #     #         guarantee = ValidatorSignature(validator_index=U16(0), signature=response.ed25519_signature)
-            #     #         guarantees.append(guarantee)
-            #
-            #     # # Distribute Guaranteed WR to Validators CE135
-            #     # logger.info(f"Distributing Work Report to other validators..")
-            #     # if len(guarantees) > 1:
-            #     #     CE135 = WorkReportDistribution()
-            #     #     data = CE135Data(report=wr, slot=TimeSlot(0), len=Int(len(guarantees)),
-            #     #                      signatures=guarantees)
-            #
-            #         # responses = CE135.transmit(node=self.node, data=data)
-            # except Exception as e:
-            #     logger.error(f"Error during CE134 transmit: {e}")
-            #     responses = []
+        # Working fix
+        responses = await self.transmit_task
+        logger.info("✅ Received responses: %s", responses)
 
+        for response in responses:
+            if response.work_report_hash == wr_hash:
+                guarantee = ValidatorSignature(validator_index=U16(0), signature=response.ed25519_signature)
+                guarantees.append(guarantee)
 
-        return wr, wr_hash
+        # Distribute Guaranteed WR to Validators CE135
+        logger.info(f"Distributing Work Report to other validators..")
+        if len(guarantees) > 1:
+            CE135 = WorkReportDistribution()
+            data = CE135Data(report=wr, slot=TimeSlot(0), len=Int(len(guarantees)),
+                             signatures=guarantees)
+
+            acks = await CE135.transmit(node=self.node, data=data)
+            print("received acks", acks)

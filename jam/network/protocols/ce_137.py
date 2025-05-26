@@ -127,7 +127,3 @@ class ShardDistributionProtocol(NetworkProtocol):
         # #TODO: Discard the data
 
         logger.info("Received bundle shard and segment shard")
-        if data:
-            return data.bundle_shard, data.segment_shard, data.justification
-        else:
-            return None

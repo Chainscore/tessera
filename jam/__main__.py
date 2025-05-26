@@ -166,14 +166,14 @@ async def main(
 
             block_producer = BlockProducer(tsr_node, main_db)
 
-            # Create a loop and run it in a daemon thread
-            def start_loop():
-                loop = asyncio.new_event_loop()
-                print("loop here", loop)
-                asyncio.set_event_loop(loop)
-                loop.run_forever()
-
-            threading.Thread(target=start_loop, daemon=True).start()
+            # # Create a loop and run it in a daemon thread
+            # def start_loop():
+            #     loop = asyncio.new_event_loop()
+            #     print("loop here", loop)
+            #     asyncio.set_event_loop(loop)
+            #     loop.run_forever()
+            #
+            # threading.Thread(target=start_loop, daemon=True).start()
 
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(tsr_node.initialize())

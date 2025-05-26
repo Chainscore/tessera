@@ -50,9 +50,9 @@ class RefineLoad(Codable, JsonSerde):
 
     gas_used: Gas
     imports: U16
-    exports: U16
     extrinsic_count: U8
     extrinsic_size: U64
+    exports: U16
 
 @decodable_dataclass
 @dataclass
