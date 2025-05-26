@@ -7,7 +7,7 @@ from jam.types.base.integers import Int
 from jam.types.base.sequences.bytes.byte_array import ByteArray12
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.work.manifest import SegmentIndex
-from jam.types.work.shard import ShardIndex
+from jam.types.work.shard import ShardIndex, SegmentShard
 
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
@@ -42,8 +42,8 @@ class ShardWithJustification(Codable, JsonSerde):
     shards: ByteArray12
     justifications: Justifications
 
-@decodable_vector(ByteArray12)
-class Response(Vector[ByteArray12]):
+@decodable_vector(SegmentShard)
+class Response(Vector[SegmentShard]):
     ...
 
 
