@@ -2,8 +2,8 @@ import math
 from typing import Tuple
 from jam.types.base.sequences.bytes.bytes import Bytes
 import reed_solomon_leopard
-from jam.types import Vector
-from jam.chainspec import chain_config
+from jam.types.base import Vector
+from jam.config.chainspec import chain_config
 
 class ErasureCode:
 
