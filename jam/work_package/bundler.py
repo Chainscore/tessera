@@ -1,3 +1,5 @@
+from typing import Tuple, cast
+
 from jam.config.logging import logger
 from jam.config.settings import settings
 from jam.storage.item_extrinsics import ItemExtrinsics
@@ -17,7 +19,7 @@ from jam.types.work.manifest import (
     Extrinsics,
     SegmentDict,
     MultiJustifications,
-    MultiExtrinsics,
+    MultiExtrinsics, ByteArray4104
 )
 from jam.types.work.refine_context import OpaqueHashes
 
@@ -33,16 +35,30 @@ from jam.utils.benchmark import benchmark
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap, ErasureShardsMap
 from jam.work_package.stores.segments import SegmentsDA
+from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
+from jam.types.work.shard import SegmentsShard
+
+from jam.erasure_coding.erasure_code import ErasureCode
+
+from jam.types.base.integers.fixed import U16
+from jam.types.base.integers.general import Int
+
+
+from jam.network.protocols.ce_139 import SegmentShardRequest
+from jam.network.protocols.ce_139_base import CE139Data, ShardRequest, SegmentIndexes, Response
+from jam.network.node import Node
 
 class Bundler:
     merkle: BMRFunctions
     sr_lookup: SegmentRootLookup
     segments_lookup: Vector[SegmentDict]
+    node: Node
 
-    def __init__(self):
+    def __init__(self, node: Node):
         self.merkle = BMRFunctions()
         self.sr_lookup = SegmentRootLookup({})
         self.segments_lookup = Vector([])
+        self.node = node
 
     def build_lookup(self, p: WorkPackage) -> SegmentRootLookup:
         # Access DA
@@ -125,9 +141,16 @@ class Bundler:
         er_shards_da = ErasureShardsMap(d3l)
 
         # TODO: Use shards DA for reconstruction of segments
-        # shards_da = SegmentShardsDA(d3l)
+        shards_da = SegmentShardsDA(d3l)
 
         seg_dict = SegmentDict({})
+
+        erasure_code = ErasureCode()
+
+        seg_dict = SegmentDict({})
+        temp_shards = [SegmentsShard]
+        temp_hash = w.import_segments[0].tree_root
+        shard_indexes = []
 
         for spec in w.import_segments:
             h = spec.tree_root
@@ -153,18 +176,59 @@ class Bundler:
                     e_root = sr_er_da.get(s_root)
                     shard_roots = er_shards_da.get_ss_roots(e_root)
 
+                    decodable_data: Vector[Tuple[Bytes, int]] = Vector([])
+                    for i, root in enumerate(shard_roots):
+                        shard_indexes.append(int(root.shard_index))
+                        try:
+                            if h == temp_hash:
+                                # Use previously cached shards
+                                seg_shards = temp_shards[i]
+                            else:
+                                # Fetch and cache new shard
+                                seg_shards = shards_da.get(root.segment_shard_root)
+                                temp_shards.append(seg_shards)
+
+                            # temp.append(seg_shards[n])
+                            decodable_data.append((seg_shards[n], int(root.shard_index)))
+                        except (IndexError, KeyError) as err:
+                            logger.warn(f"Shard access error: {err}")
+                            continue
+
                     if len(shard_roots) > 342:
                         # TODO: Reconstruct Shards
-                        ...
+                        try:
+                            decoded_data = erasure_code.decode(decodable_data)
+                            imports.append(ByteArray4104(decoded_data))
+                        except Exception as err:
+                            logger.error(f"Erasure decoding failed for {h}: {err}")
                     else:
                         # TODO: Fetch Missing Shards
-                        ...
+                        all_indices = set(range(1023))
+                        available_indices = set(shard_indexes)
+                        missing_indices = all_indices - available_indices
+                        ce_139 = SegmentShardRequest()
+                        temp_req = CE139Data()
+                        for idx in missing_indices:
+                            req: ShardRequest = ShardRequest(erasure_root=e_root, shard_Index=U16(idx), length=Int(1),
+                                                             seg_indexes=SegmentIndexes(U16(n)))
+                            temp_req.append(req)
+                        try:
+                            ...
+                            responses = ce_139.transmit(self.node, data=temp_req)
+                            for res in responses:
+                                ...
+                        except Exception as e:
+                            logger.warn(f"Failed to fetch index {idx}: {e}")
+                        # c = [(bytes.fromhex(str(s)), i) for i, s in enumerate(temp)]
+                        # decoded_data = erasure_code.decode(c)
+                        # imports.append(ByteArray4104(decoded_data))
 
                 except KeyError as e2:
                     logger.warn(f"Warning! {e2}")
                     logger.warn("Fetching all segment shards from assurers!")
 
                     # TODO: Fetch All Shards
+            temp_hash = h
 
         self.segments_lookup.append(seg_dict)
         return imports
