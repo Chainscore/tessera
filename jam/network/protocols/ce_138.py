@@ -2,6 +2,8 @@ from typing import cast, Tuple
 
 from dataclasses import dataclass
 from jam.config.logging import logger
+from jam.config.settings import settings
+from jam.storage.db.kv import KVStore
 from jam.network.quic.server import QuicServerProtocol
 
 from jam.types.base.sequences.bytes import Bytes
@@ -17,6 +19,10 @@ from jam.utils.codec.decorators import decodable_dataclass
 
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.merklization import BMRFunctions
+
+from jam.work_package.stores.mappings import ErasureShardsMap
+from jam.work_package.stores.audits import AuditShardsDA
+from jam.work_package.stores.segments import SegmentShardsDA
 
 
 @decodable_dataclass
@@ -79,21 +85,21 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         logger.info("Processing")
         # TODO: Process received erasure code & shard index
-        bundle_shard = BundleShard('3b8987132d58aea08ec55247fd64436c3a553e3ab42260c6a31bf27931ee2cba868d4c59b626fb1d365fa5cb0edd5f1e2d72b7d6d7998ad0995314ad9eee86c3')
 
-        # TODO: Get segment shards received from CE-137 to generate segment shard root for justification
-        segment_shard = SegmentsShard([
-            Segment('8a84add96a80d1566e789df3'),
-            Segment('1162d08611b468d38af07ca5'),
-            Segment('3810e996013e0c0a8abe11de'),
-            Segment('68b95e1999bc5864308a7c68'),
-            Segment('fc12fb3db7a24b0b52fb57f6'),
-        ])
+        d3l = KVStore(settings.D3L_PATH)
+        audits = KVStore(settings.AUDIT_DB_PATH)
 
-        bundle_shard_hash = Hash.blake2b(bytes(bundle_shard))
+        bs_da = ErasureShardsMap(d3l)
+        audits_da = AuditShardsDA(audits)
+        ss_da = SegmentShardsDA(d3l)
+
+        bundle_shard_hash = bs_da.get_bs_hash(data.erasure_root, data.shard_index).bundle_shard_hash
+
+        bundle_shard = audits_da.get(bs_hash=bundle_shard_hash)[0]
+
+        segment_shard_root = bs_da.get_ss_root(data.erasure_root, data.shard_index)
 
         bmr = BMRFunctions()
-        segment_shard_root = bmr.wb_merkle_fn(Vector([Bytes(segment_shard)]))
 
         s = Vector([ bundle_shard_hash, segment_shard_root])
 
