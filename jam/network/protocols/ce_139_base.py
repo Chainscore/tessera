@@ -32,29 +32,29 @@ class ShardRequest(Codable, JsonSerde):
 
 
 @decodable_vector(Bytes)
-class Justifications(Vector[Bytes]):
+class Justification(Vector[Bytes]):
     ...
 
-
-@decodable_dataclass
-@dataclass
-class ShardWithJustification(Codable, JsonSerde):
-    shards: ByteArray12
-    justifications: Justifications
+@decodable_vector(Justification)
+class Justifications(Vector[Justification]):
+    ...
 
 @decodable_vector(SegmentShard)
 class Response(Vector[SegmentShard]):
     ...
 
 
+@decodable_dataclass
+@dataclass
+class ShardsWithJustifications(Codable, JsonSerde):
+    shards: Response
+    justifications: Justifications
+
+
 @decodable_vector(ShardRequest)
 class CE139Data(Vector[ShardRequest]):
     ...
 
-
-@decodable_vector(ShardWithJustification)
-class JustifiedResponse(Vector[ShardWithJustification]):
-    ...
 
 
 class SegmentShardRequestBase(NetworkProtocol):
