@@ -32,6 +32,8 @@ class JamConfig:
     tickets_per_validator: int
     max_tickets_per_extrinsic: int
     rotation_period: Optional[int]
+    erasure_coding_original_shards: int
+    erasure_coding_recovery_shards: int
 
     @classmethod
     def tiny(cls) -> "JamConfig":
@@ -48,6 +50,8 @@ class JamConfig:
             tickets_per_validator=3,
             max_tickets_per_extrinsic=3,
             rotation_period=4,
+            erasure_coding_original_shards=2,
+            erasure_coding_recovery_shards=4,
         )
 
     @classmethod
@@ -65,6 +69,8 @@ class JamConfig:
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
             rotation_period=None,  # TODO
+            erasure_coding_original_shards=8,
+            erasure_coding_recovery_shards=16,
         )
 
     @classmethod
@@ -82,6 +88,8 @@ class JamConfig:
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
             rotation_period=None,  # TODO
+            erasure_coding_original_shards=16,
+            erasure_coding_recovery_shards=32,
         )
 
     @classmethod
@@ -99,6 +107,8 @@ class JamConfig:
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
             rotation_period=None,  # TODO
+            erasure_coding_original_shards=32,
+            erasure_coding_recovery_shards=64,
         )
 
     @classmethod
@@ -116,6 +126,8 @@ class JamConfig:
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
             rotation_period=None,  # TODO
+            erasure_coding_original_shards=64,
+            erasure_coding_recovery_shards=128,
         )
 
     @classmethod
@@ -133,6 +145,8 @@ class JamConfig:
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
             rotation_period=None,  # TODO
+            erasure_coding_original_shards=128,
+            erasure_coding_recovery_shards=256,
         )
 
     @classmethod
@@ -150,6 +164,8 @@ class JamConfig:
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
             rotation_period=None,  # TODO
+            erasure_coding_original_shards=205,
+            erasure_coding_recovery_shards=371,
         )
 
     @classmethod
@@ -167,6 +183,8 @@ class JamConfig:
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
             rotation_period=10,
+            erasure_coding_original_shards=342,
+            erasure_coding_recovery_shards=681,
         )
 
     @classmethod
