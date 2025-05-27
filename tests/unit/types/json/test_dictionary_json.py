@@ -89,7 +89,7 @@ def test_dictionary_json_invalid_input():
     with pytest.raises(ValueError):
         StringIntDict.from_json(None)  # None instead of dict
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         StringIntDict.from_json("not a dict")  # String instead of dict
 
     # Test with invalid value types
