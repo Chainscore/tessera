@@ -21,7 +21,7 @@ from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.merklization import BMRFunctions
 
 from jam.work_package.stores.mappings import ErasureShardsMap
-from jam.work_package.stores.audits import AuditShardsDA
+from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
 
@@ -86,12 +86,13 @@ class AuditShardRequestProtocol(NetworkProtocol):
         logger.info("Processing")
         # TODO: Process received erasure code & shard index
 
-        d3l = KVStore(settings.D3L_PATH)
-        audits = KVStore(settings.AUDIT_DB_PATH)
+        d3l = settings.d3l
+        audit = settings.audit
 
         bs_da = ErasureShardsMap(d3l)
-        audits_da = AuditShardsDA(audits)
+        audits_da = AuditShardsDA(audit)
         ss_da = SegmentShardsDA(d3l)
+        justification_da = JustificationsDA(audit)
 
         bundle_shard_hash = bs_da.get_bs_hash(data.erasure_root, data.shard_index).bundle_shard_hash
 
@@ -99,11 +100,9 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         segment_shard_root = bs_da.get_ss_root(data.erasure_root, data.shard_index)
 
-        bmr = BMRFunctions()
+        justification_ce137 = justification_da.get(data.erasure_root)
 
-        s = Vector([ bundle_shard_hash, segment_shard_root])
-
-        justification = bmr.trace_fn(values=s, index=int(data.shard_index))
+        justification = justification_ce137 + segment_shard_root
 
         stream_a = self._prefix.encode() + bundle_shard.encode()
         stream_b = justification.encode()

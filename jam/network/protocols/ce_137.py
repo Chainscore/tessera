@@ -7,6 +7,7 @@ from jam.merklization import BMRFunctions
 from jam.storage.db.kv import KVStore
 from jam.network.quic.server import QuicServerProtocol
 from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.types.base import ByteArray64, Byte, Bytes
 
 from jam.types.base.sequences.vector import Vector
 from jam.types.protocol.core import ErasureRoot
@@ -18,7 +19,7 @@ from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 
 from jam.work_package.stores.mappings import ErasureShardsMap
-from jam.work_package.stores.audits import AuditShardsDA
+from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
 
@@ -84,11 +85,12 @@ class ShardDistributionProtocol(NetworkProtocol):
         logger.info("Processing")
         # TODO: Process received erasure root & shard index
 
-        d3l = KVStore(settings.D3L_PATH)
-        audits = KVStore(settings.AUDIT_DB_PATH)
+        d3l = settings.d3l
+        audit = settings.audit
 
         bs_da = ErasureShardsMap(d3l)
-        audits_da = AuditShardsDA(audits)
+        audits_da = AuditShardsDA(audit)
+        justification_da = JustificationsDA(audit)
         ss_da = SegmentShardsDA(d3l)
 
         bundle_shard_hash = bs_da.get_bs_hash(data.erasure_root, data.shard_index).bundle_shard_hash
@@ -99,10 +101,17 @@ class ShardDistributionProtocol(NetworkProtocol):
 
         segments_shard = ss_da.get(segment_shard_root)[0]
 
-        s = Vector([ bundle_shard_hash, segment_shard_root])
+        shards = bs_da.get(data.erasure_root)
+        s = Vector([])
+        for shard in shards:
+            pair = ByteArray64(shard.bundle_shard_hash + shard.segment_shard_root)
+            print(pair)
+            s.append(pair)
 
         bmr = BMRFunctions()
         justification = bmr.trace_fn(values=s, index=int(data.shard_index))
+
+        justification_da.put(data.erasure_root, justification)
 
         stream_a = self._prefix.encode() + bundle_shard.encode()
         stream_b = segments_shard.encode()
