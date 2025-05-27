@@ -74,11 +74,11 @@ class Memory:
         """
         bytes_out = []
         for offset in range(length):
+            print("read")
             addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=False)
             # Return stored byte or 0 if the address has not been written.
             bytes_out.append(self.data.get(addr, Byte(0)))
-
-        print(f"u{length*8}[{Bytes(address)}] ({Bytes(bytes_out)})")
+        print(f"u{length*8}[{int(address).to_bytes(4).hex()}] ({Bytes(bytes_out)})")
         return bytes(Bytes(bytes_out))
 
     def write(self, address: int, data_bytes: bytes|Sequence[int]):
@@ -94,7 +94,7 @@ class Memory:
 
     def is_accessible(self, address: int|FixedInt, length: int, for_write = False) -> bool:
         address = int(address)
-        pages = self.get_pages(address, address+length)
+        pages = self.get_pages(address, length)
         for page in pages:
             if for_write and page not in self.allowed_write_pages:
                 return False
@@ -132,13 +132,14 @@ class Memory:
         memory = {}
 
         read_start = PVM_INIT_ZONE_SIZE
-        read_pages = cls.get_pages(read_start, read_start + cls.total_page_size(len(read)))
+        read_pages = cls.get_pages(read_start, cls.total_page_size(len(read)))
+        print(read_pages)
         print(f"READ -> {int(read_start).to_bytes(4).hex()} -> {int(read_pages[-1] * PVM_MEMORY_PAGE_SIZE).to_bytes(4).hex()}")
         for i, byt in enumerate(read):
             memory[U32(read_start+i)] = Byte(byt)
 
         write_start = 2*PVM_INIT_ZONE_SIZE + cls.total_zone_size(len(read))
-        write_pages = cls.get_pages(write_start, write_start + cls.total_page_size(len(write)) + (z * PVM_MEMORY_PAGE_SIZE))
+        write_pages = cls.get_pages(write_start, cls.total_page_size(len(write)) + (z * PVM_MEMORY_PAGE_SIZE))
         print("WRITE START:", int(write_start).to_bytes(4).hex(), int((write_pages[-1] + 1) * PVM_MEMORY_PAGE_SIZE).to_bytes(4).hex())
         for i, byt in enumerate(write):
             memory[U32(write_start+i)] = Byte(byt)
@@ -149,12 +150,12 @@ class Memory:
         write_pages.extend(
             cls.get_pages(
                 2**32 - 2*PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE - cls.total_page_size(s),
-                2**32 - 2*PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE
+                cls.total_page_size(s)
             )
         )
 
         arg_start = 2**32 - PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE
-        read_pages.extend(cls.get_pages(arg_start, 2**32 - PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE + cls.total_page_size(len(args))))
+        read_pages.extend(cls.get_pages(arg_start, cls.total_page_size(len(args))))
         print("ARG START:", int(arg_start).to_bytes(4).hex(), args.hex())
         for i, byt in enumerate(args):
             memory[U32(arg_start+i)] = Byte(byt)
@@ -183,14 +184,15 @@ class Memory:
         return PVM_INIT_ZONE_SIZE*ceil(blob_len/PVM_INIT_ZONE_SIZE)
 
     @staticmethod
-    def get_pages(start_index: int, end_index: int) -> List[int]:
+    def get_pages(start_index: int, length: int) -> List[int]:
         """
         Gives a list of page numbers that contains a specific indexed location in memory
         """
         start = floor(start_index/PVM_MEMORY_PAGE_SIZE)
-        end_index = max(end_index, 1)
+        length = max(length, 1)
+        end_index = start_index + length
         end = ceil(end_index/PVM_MEMORY_PAGE_SIZE)
-        return [i for i in range(start, end)]
+        return [i for i in range(start, end+1)]
 
     def zero_memory_range(self, start_address: int, offset: int):
         """
@@ -213,7 +215,7 @@ class Memory:
             start_address (int): The starting address to change its accebility type.
             end_address (int): The ending address to alter the same.
         """
-        pages = self.get_pages(start_address, start_address+length)
+        pages = self.get_pages(start_address, length)
         for pg in pages:
             if access_type == Accessibility.WRITE:
                 self.allowed_write_pages.append(pg)

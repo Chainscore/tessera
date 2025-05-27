@@ -176,7 +176,7 @@ class AccountData(Codable, JsonSerde):
         elif len(lookup_ts) == 2:
             return lookup_ts[0] <= current_ts < lookup_ts[1]
         elif len(lookup_ts) == 3:
-            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[2] <= ts
+            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[2] <= current_ts
         else:
             raise ValueError("Invalid Timestamp data")
 
