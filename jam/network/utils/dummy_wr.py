@@ -4,10 +4,10 @@ from time import time
 
 from jam.state.state import State
 from jam.utils.constants import EPOCH_LENGTH
-from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
+from tests.dummy.dummy_extrinsics import create_dummy_work_report
 from jam.network.node import Node
 from jam.config.logging import logger
-from jam.storage.db.kv import KVStore
+from jam.db.kv import KVStore
 from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
 from jam.types.protocol.core import TimeSlot
 

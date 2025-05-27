@@ -1,6 +1,6 @@
 import pytest
 from jam.consensus.bp_engine import BlockProducer
-from jam.storage.db.kv import KVStore
+from jam.db.kv import KVStore
 from jam.network.node import Node
 from jam.state.ghost import GhostState as State
 from jam.types.block import Block

@@ -1,4 +1,4 @@
-from jam.types.base import decodable_vector, U32, Vector, Bytes
+from jam.types import Bytes, decodable_vector, U32, Vector
 from jam.types.protocol.crypto import Hash
 from jam.utils.codec.primitives.integers import encode, decode
 

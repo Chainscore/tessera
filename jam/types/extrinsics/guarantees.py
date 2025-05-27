@@ -4,7 +4,7 @@ from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
 from jam.types.protocol.crypto import Ed25519Signature
 from jam.types.protocol.core import ValidatorIndex, TimeSlot
-from jam.types.work.report import WorkReport
+from jam.types.work import WorkReport
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.serde import JsonSerde

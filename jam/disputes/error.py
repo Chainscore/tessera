@@ -23,5 +23,3 @@ class DisputesErrorCode(Enum):
     NOT_ENOUGH_CULPRITS = "not_enough_culprits"  # Not enough culprits
     FAULT_VERDICT_WRONG = "fault_verdict_wrong"  # Fault verdict is wrong
     BAD_VOTE_SPLIT = "bad_vote_split"  # Bad vote split
-    BAD_GUARANTOR_KEY = "bad_guarantor_key"
-    BAD_AUDITOR_KEY= "bad_auditor_key"

@@ -1,13 +1,13 @@
-from jam.types.base import decodable_vector, U32, Vector, Bytes, Null
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
-from jam.types.block import Block
+from jam.types import Block, Null, Bytes
 import  dataclasses
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, SIGNING_CONTEXTS
 from jam.report.error import ReportingError, ReportingErrorCode
-from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, MAX_WORK_REPORT_SIZE
+from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, MAX_WORK_REPORT_SIZE, MIN_VALIDATOR_PER_REPORT
 from math import floor
+from jam.types import  decodable_vector, U32, Vector
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 from jam.report.guarantee_assignment import guarantor_assignment
@@ -30,6 +30,7 @@ class Reporting:
         Returns:
             Returns the updated Rho(workreport, timeslot)
         """
+        new_state: Sigma = dataclasses.replace(state)
 
         for x in block.extrinsic.guarantees:
 
@@ -51,7 +52,7 @@ class Reporting:
             # --------- no_enough_guatantee ------------
             # https://graypaper.fluffylabs.dev/#/85129da/147002149002?v=0.6.3
             credential_len = len(x.signatures)
-            if credential_len < 2 * VALIDATOR_COUNT // 3:
+            if credential_len < MIN_VALIDATOR_PER_REPORT:
                 raise ReportingError(
                     ReportingErrorCode.INSUFFICIENT_GUARANTEE,
                     "Work report doesn't has enough validator"
@@ -130,7 +131,7 @@ class Reporting:
             hashes.append(x.report.package_spec.hash)
 
         for i in state.beta:
-            if any(key in hashes for key in i.reported.keys()):
+            if any(key in hashes for key in i.packages.keys()):
                 raise ReportingError(
                     ReportingErrorCode.DUPLICATE_PACKAGE,
                     "Work package is already executed in recent-block's history"
@@ -163,7 +164,7 @@ class Reporting:
             )
 
 
-        return state
+        return new_state
 
     @staticmethod
     def ensure_signature(state: Sigma, block: Block):
@@ -227,9 +228,9 @@ class Reporting:
         work_package_hashes = []
 
         for x in state.beta:
-            for key in x.reported:
+            for key in x.packages:
                 work_package_hashes.append(key)
-                exports_root.append(x.reported[key])
+                exports_root.append(x.packages[key])
 
         hashes = []
         for report in block.extrinsic.guarantees:
@@ -250,14 +251,14 @@ class Reporting:
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
                     "Anchor hash should match with header hash of any block in recent history"
                 )
-
+                
             # --------------- bad_state_root -------------------
             if not any(item.state_root == context.state_root for item in state.beta):
                 raise ReportingError(
                     ReportingErrorCode.BAD_STATE_ROOT,
                     "State_root should match with any block state_root in recent history"
                 )
-
+                
             # --------------- dependency_missing -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
             # Eq 11.39
@@ -268,7 +269,7 @@ class Reporting:
                             ReportingErrorCode.DEPENDENCY_MISSING,
                             "prerequisite's hash should match the package_specification's hash of any of the reports"
                         )
-
+                        
             # --------------- segment_root_lookup_invalid -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
             if  y.report.segment_root_lookup != Null:
@@ -304,7 +305,7 @@ class Reporting:
                         ReportingErrorCode.BAD_SERVICE_ID,
                         "Service_id of each report should match with id of delta"
                     )
-
+                    
                 # --------------- bad_code_hash -------------------
                 # https://graypaper.fluffylabs.dev/#/85129da/153302153502?v=0.6.3
                 # Eq 11.42
@@ -313,7 +314,7 @@ class Reporting:
                         ReportingErrorCode.BAD_CODE_HASH,
                         "Result code_hash should match with state's delta code_hash"
                     )
-
+                    
                 # --------------- service_item_gas_too_low -------------------
                 # https://graypaper.fluffylabs.dev/#/85129da/15f80015fa00?v=0.6.3
                 # Eq 11.30
@@ -324,7 +325,7 @@ class Reporting:
                     )
 
                 total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
-
+               
             # --------------- work_report_gas_too_high -------------------
             # https://graypaper.fluffylabs.dev/#/85129da/15fa0015fd00?v=0.6.3
             # Eq 11.30
@@ -341,10 +342,6 @@ class Reporting:
         Description : This function check assign validator to the core is correct or not.
 
         """
-        if len(block.extrinsic.guarantees) == 0:
-            # Return if no gurantees to check
-            return
-
         report_slot = None
         for x in block.extrinsic.guarantees:
             report_slot = x.slot

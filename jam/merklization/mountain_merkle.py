@@ -1,14 +1,11 @@
 from copy import deepcopy
-
-from jam.types.base.null import Null
-from jam.types.base.integers import Int
-from jam.types.base.sequences import ByteArray32
-from jam.types.protocol.core import OpaqueHash
+from jam.types import ByteArray32, OpaqueHash, Int, Null
 
 from typing import Callable, TypeVar, Optional
 from jam.types.base import Vector
 from jam.types.protocol.crypto import Hash
-from jam.types.protocol.merkle import MMR, OptionHash
+from jam.types.protocol.merkle import MMR
+
 
 T = TypeVar("T")
 

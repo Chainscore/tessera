@@ -1,4 +1,4 @@
-from enum import Enum as OGEnum, EnumMeta
+from enum import Enum as OGEnum
 from typing import Tuple, Type, Union, Any, TypeVar, cast
 from jam.types.base.integers.fixed import U8
 from jam.utils.codec.codable import Codable
@@ -8,7 +8,7 @@ from jam.utils.json.serde import JsonDeserializationError
 T = TypeVar("T", bound="Enum")
 
 
-class Enum(Codable, JsonSerde, OGEnum, metaclass=EnumMeta):
+class Enum(Codable, JsonSerde, OGEnum):
     """Decodable Enum type - Extending the built-in Enum type to add encoding and decoding methods
 
     How to use it:
@@ -98,10 +98,6 @@ class Enum(Codable, JsonSerde, OGEnum, metaclass=EnumMeta):
         Returns:
             The enum's value for JSON serialization
         """
-        return self._value_
-
-    @property
-    def value(self):
         return self._value_
 
 def decodable_enum(cls: Type[Enum]) -> Type[Enum]:

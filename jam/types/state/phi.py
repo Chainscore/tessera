@@ -1,4 +1,4 @@
-from jam.types.base.sequences import Array
+from jam.types import Array
 from jam.types.base.sequences.array import decodable_array
 
 from jam.types.base.sequences.vector import Vector, decodable_vector
