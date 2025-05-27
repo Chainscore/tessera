@@ -17,16 +17,16 @@ from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_IT
 
 def make_account_prop(field):
     def getter(self):
-        data = self.DB.get(construct_state_key((255, self.id)))
+        data = self.DB.get(bytes(construct_state_key((255, self.id))))
         if data is None:
             return None
-        meta = AccountMetadata.decode_from(data)
+        meta = AccountMetadata.decode_from(data)[0]
         return getattr(meta, field)
     def setter(self, value):
-        data = self.DB.get(construct_state_key((255, self.id)))
+        data = self.DB.get(bytes(construct_state_key((255, self.id))))
         if data is None:
             return
-        meta = AccountMetadata.decode_from(data)
+        meta = AccountMetadata.decode_from(data)[0]
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()  # Adjust encode as needed
         self.DB.put(bytes(k), v)
@@ -238,3 +238,6 @@ class TimestampsView:
         if curr_data is None:
             meta_view.num_i = meta_view.num_i + 2
             meta_view.num_o = meta_view.num_o + key.length + 81
+
+        self.DB.put(bytes(storage_key), v)
+        self.TRIE.update(storage_key, Bytes(v))

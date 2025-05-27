@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from jam.accumulation.types import DeferredTransfers
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.bytes.bytes import ByteVector32, Bytes, Byte
@@ -22,7 +23,6 @@ from jam.types.protocol.validators import ValidatorVector
 from jam.types.state.phi import PhiVector
 from jam.types.state.chi import Chi
 from jam.execution.pvm.memory import Memory
-from jam.hostCall.types import DeferredTransfers
 
 
 @decodable_dictionary(String, Register)

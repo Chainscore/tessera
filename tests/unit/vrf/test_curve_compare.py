@@ -20,7 +20,7 @@ from jam.ring_vrf.curve.specs.ed25519 import Ed25519_TE_Curve, Ed25519Point
 from jam.ring_vrf.curve.specs.jubjub import JubJub_TE_Curve, JubJubPoint
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.ring_vrf.pedersen.pedersen import PedersenVRF
-from tests.fixtures.utils import create_dummy_bytes
+from jam.utils.dummy.utils import create_dummy_bytes
 
 # Test data paths
 TEST_DATA_DIR = Path("tests/unit/vrf/data")

@@ -169,12 +169,7 @@ class Safrole:
                     state.eta[2], state.kappa
                 )
 
-                # 4. 4. Update ring root
-                # gamma.z = GammaZ(Safrole.compute_ring_root(
-                #     [k.bandersnatch for k in state.kappa]
-                # ).hex())
-
-                # using gamma k
+                # 4. 4. Update ring root using gamma k
                 gamma.z = GammaZ(Safrole.compute_ring_root([k.bandersnatch for k in state.gamma.k]))
 
             # 4.5. Empty the ticket acc for upcoming epoch

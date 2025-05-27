@@ -5,29 +5,29 @@ import numpy as np
 from sympy import symbols
 
 from numpy.polynomial.polynomial import Polynomial
-from jam.ring_vrf.ring_proof.constants import D, S_PRIME
-from jam.ring_vrf.ring_proof.polynomial_interpolation import polynomial_interpolation
+# from jam.ring_vrf.ring_proof.constants import D, S_PRIME
+# from jam.ring_vrf.ring_proof.polynomial_interpolation import polynomial_interpolation
 # from scipy.interpolate import lagrange
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 # from jam.ring_vrf.ring_proof.preprocessing import s_vector
 
 # random.seed(10)
 
-def selector_vector(size=512):
-    """
-    input: ring of public key's
-    output: selecting vector having 0/1
-    """
-    s_vector = []
-    N_K=255
-
-    for i in range(size):
-        if i<N_K:
-            s_vector.append(1)
-        else:
-            s_vector.append(0)
-
-    return s_vector
+# def selector_vector(size=512):
+#     """
+#     input: ring of public key's
+#     output: selecting vector having 0/1
+#     """
+#     s_vector = []
+#     N_K=255
+#
+#     for i in range(size):
+#         if i<N_K:
+#             s_vector.append(1)
+#         else:
+#             s_vector.append(0)
+#
+#     return s_vector
 
 # def test_scipy_interpolation_timing():
 #     """Test the performance of scipy's interpolation function."""
