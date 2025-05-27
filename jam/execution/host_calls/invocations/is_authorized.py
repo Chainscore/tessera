@@ -1,7 +1,6 @@
 from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
-from jam.state.state import state
 from jam.types.protocol.core import CoreIndex, ProgramCounter
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.work.package import WorkPackage
@@ -30,6 +29,8 @@ class PsiI(InvocationProtocol):
         }
 
     def execute(self):
+        from jam.state.state import state
+
         _, pc = self.work_package.m_c(state.delta)
         u, r, _ = PsiM.execute(
             blob=pc,

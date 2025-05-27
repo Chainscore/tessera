@@ -55,7 +55,7 @@ class WorkPackage(Codable, JsonSerde):
     items: WorkItems
 
     def m_c(self, delta: Delta) -> (bytes, bytes):
-        service_data = delta[self.auth_code_host].historical_lookup(self.context.lookup_anchor_slot, self.code_hash)
+        service_data = delta[self.auth_code_host].historical_lookup(self.context.lookup_anchor_slot, self.authorizer.code_hash)
         return decode_code_hash(service_data)
 
     @property
