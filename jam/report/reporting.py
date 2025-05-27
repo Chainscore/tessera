@@ -42,10 +42,11 @@ class Reporting:
         all_reports = []
         wp_hash_set = set()
 
+        # First we loop through all guarantees to check their validity
         for guarantee in block.extrinsic.guarantees:
             report = guarantee.report
-            # -------- too_many_dependencies ---------
-            # https://graypaper.fluffylabs.dev/#/85129da/13ab0013b600?v=0.6.3
+            # -------- Too Many Dependencies ---------
+            # As defined in - https://graypaper.fluffylabs.dev/#/85129da/13ab0013b600?v=0.6.3
             segment_root = len(report.segment_root_lookup)
             prerequisite = len(report.context.prerequisites)
             if (segment_root + prerequisite) > MAX_DEPENDENCIES:
@@ -56,14 +57,14 @@ class Reporting:
 
             Reporting.verify_report_output(report)
 
-            #  ------- bad_core_index -----------------
+            #  ------- Valid Core Index -----------------
             if report.core_index >= CORE_COUNT:
                 raise ReportingError(
                     ReportingErrorCode.BAD_CORE_INDEX,
                     "Core index value is more then core range(CORE_COUNT)"
                 )
 
-            # -------- core_engaged -------------
+            # -------- Check if the core already has pending report -------------
             # Ensure Rho is empty for this report
             # 11.29
             if state.rho[report.core_index] != Null:
@@ -72,7 +73,7 @@ class Reporting:
                     "The core index mentioned in report should be available in rho"
                 )
 
-            # --------- no_enough_guatantee ------------
+            # --------- If the guarantee has enough signatures ------------
             # https://graypaper.fluffylabs.dev/#/85129da/147002149002?v=0.6.3
             credential_len = len(guarantee.signatures)
             if credential_len < 2:
@@ -81,7 +82,7 @@ class Reporting:
                     "Work report doesn't has enough validator"
                 )
 
-            # -------- bad_validator_index ------------
+            # -------- If the validator index is valid ------------
             for y in guarantee.signatures:
                 if y.validator_index >= VALIDATOR_COUNT:
                     raise ReportingError(
@@ -89,7 +90,7 @@ class Reporting:
                         "Validator index(signature) is out of range"
                     )
 
-            # --------- not_sorted_guarantee ---------
+            # --------- Guarantees must be sorted ---------
             # 11.25
             # https://graypaper.fluffylabs.dev/#/85129da/14b80214df02?v=0.6.3
             for j in range(len(guarantee.signatures)-1):
@@ -141,7 +142,6 @@ class Reporting:
                         ReportingErrorCode.OUT_OF_ORDER_GUARANTEE,
                         "Core index for each guarantee is not in unique"
                     )
-
 
         recent_exports_roots = {}
         beta_wp_hashes = []
@@ -305,7 +305,6 @@ class Reporting:
                     public_key = state.lambda_[y.validator_index].ed25519
                 signature = y.signature
 
-                # TODO: Uncomment this
                 try:
                     Ed25519PublicKey.from_public_bytes(
                         bytes(public_key)

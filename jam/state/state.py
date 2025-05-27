@@ -84,7 +84,7 @@ class State:
             block: Incoming block
         """
         from jam.accumulation.accumulation import Accumulation
-        from jam.report.state import Reporting
+        from jam.report.reporting import Reporting
         from jam.authorization.authorization import Authorization
         from jam.recent_history.recent_history import RecentHistory
         from jam.consensus.safrole.safrole import Safrole
