@@ -297,7 +297,7 @@ class Accumulation:
         services: ChiG,
         service_id: ServiceId,
         timeslot: Tau,
-    ) -> tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]:
+    ) -> Tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]:
         """
         Single-Service accumulation function ∆1 defined in Eq 12.19
         Transforms Initial Partial State, Sequence of Work Reports, Dictionary of services (free, privileged accumulation), and Service index
