@@ -2,9 +2,9 @@ import asyncio
 from time import time
 
 from jam.config.logging import logger
-from jam.utils.dummy.utils import create_dummy_bytes32
+from tests.dummy.utils import create_dummy_bytes32
 from jam.network.node import Node
-from jam.storage.db.kv import KVStore
+from jam.db.kv import KVStore
 from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data
 
 async def work_report_request_producer(node: Node, db: KVStore):

@@ -10,7 +10,6 @@ from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
 from jam.types.protocol.crypto import ByteArray32
 from jam.types.extrinsics.tickets import TicketBody, TicketId, TicketAttempt, TicketEnvelope
-from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys, generate_ticket
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END, MAX_TICKETS_PER_EXTRINSIC
 
@@ -53,7 +52,7 @@ def test_ticket_accumulation():
         )
         
         # Apply the transition
-        new_state = Safrole.transition(initial_state, new_block, ByteArray32(create_dummy_bytes(32)))
+        new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
         
         # Check that the new ticket was accumulated
         assert len(new_state.gamma.a) == 2
@@ -96,7 +95,7 @@ def test_ticket_submission_outside_period():
     
     # Verify that the transition raises the expected error
     with pytest.raises(SafroleError) as excinfo:
-        Safrole.transition(initial_state, new_block, ByteArray32(create_dummy_bytes(32)))
+        Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
     
     assert excinfo.value.code == SafroleErrorCode.UNEXPECTED_TICKET
 
@@ -198,7 +197,7 @@ def test_ticket_sorting():
         )
         
         # Apply the transition
-        new_state = Safrole.transition(initial_state, new_block, ByteArray32(create_dummy_bytes(32)))
+        new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
         
         # Check that tickets were accumulated
         assert len(new_state.gamma.a) == 3

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from jam.storage.db.kv import KVStore
+from jam.db.kv import KVStore
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types.protocol.crypto import Hash
 from jam.types.work.package import WorkPackage
@@ -11,9 +11,8 @@ from jam.types.base.sequences.bytes.bytes import Bytes
 def test_ext_encode(db_path):
     """Test encoiding extrinsic data."""
     db = KVStore(db_path)
-    ie = ItemExtrinsics(db)
     test_data = [b'12345']
-    ext_data, specs = ie.encode(test_data)
+    ext_data, specs = ItemExtrinsics.encode(test_data)
 
     mock_item = MagicMock()
     mock_item.extrinsic = specs
@@ -21,7 +20,7 @@ def test_ext_encode(db_path):
     mock_package = MagicMock(spec=WorkPackage)
     mock_package.items = [mock_item]
 
-    ie.store(mock_package, [ext_data])
+    ItemExtrinsics.store(mock_package, [ext_data], db)
 
 
 def test_store_extrinsics(db_path):
@@ -40,8 +39,7 @@ def test_store_extrinsics(db_path):
     mock_package = MagicMock(spec=WorkPackage)
     mock_package.items = [mock_item]
 
-    ie = ItemExtrinsics(db)
-    ie.store(mock_package, [test_data])
+    ItemExtrinsics.store(mock_package, [test_data], db)
 
     db_data = db.get(bytes(mock_extrinsic.hash))
     assert db_data is not None
@@ -67,11 +65,9 @@ def test_store_invalid_hash(db_path):
     mock_package = MagicMock(spec=WorkPackage)
     mock_package.items = [mock_item]
 
-    ie = ItemExtrinsics(db)
-
     # Should raise ValueError due to hash mismatch
     with pytest.raises(ValueError, match="Invalid WP: Extrinsic data mismatch"):
-        ie.store(mock_package, [test_data])
+        ItemExtrinsics.store(mock_package, [test_data], db)
 
     # Verify nothing was stored
     assert db.get(bytes(mock_extrinsic.hash)) is None
@@ -90,7 +86,7 @@ def test_get_extrinsic(db_path):
     db.put(hash_bytes, test_data)
 
     # Use the get method to retrieve it - make sure we're using the same hash format
-    result = ItemExtrinsics(db).get(extrinsic_hash=hash_bytes)
+    result = ItemExtrinsics.get(extrinsic_hash=hash_bytes, db=db)
 
     # Verify the data matches
     assert result == test_data
@@ -125,10 +121,8 @@ def test_multiple_extrinsics(db_path):
     mock_package = MagicMock(spec=WorkPackage)
     mock_package.items = [mock_item]
 
-    ie = ItemExtrinsics(db)
-
     # Store extrinsics - pass byte string directly instead of Bytes object
-    ie.store(mock_package, combined_data)
+    ItemExtrinsics.store(mock_package, combined_data, db)
 
     # Verify both extrinsics were stored correctly
     assert db.get(bytes(mock_extrinsic1.hash)) == test_data1

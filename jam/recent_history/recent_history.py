@@ -1,34 +1,36 @@
 from copy import deepcopy
-from typing import Optional
-
-from jam.types.state.beta import BlockHistory, Beta
+from jam.types.state.beta import BlockHistory, PackageDict
 from jam.types.state.sigma import Sigma
-from jam.types.base.sequences import ByteArray32
+from jam.types import ByteArray32
 from jam.types.block import Block
 from jam.types.extrinsics import GuaranteesExtrinsic
-from jam.types.protocol.crypto import Hash, HeaderHash
+from jam.types.protocol.crypto import Hash
 from jam.merklization import MMRFunctions
 from jam.types.protocol.merkle import MMR
 from jam.types.protocol.crypto import OpaqueHash
-from jam.types.work.report import SegmentRootLookup
 from jam.utils.constants import RECENT_HISTORY_SIZE
 from jam.types.protocol.core import WorkPackageHash, SegmentRoot
 
 
-def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
+import dataclasses
+
+def package(packages: GuaranteesExtrinsic) -> PackageDict:
     """Transform Guarantees into Dictionary format"""
-    package_dict:SegmentRootLookup = SegmentRootLookup({})
+    package_dict:PackageDict[WorkPackageHash, SegmentRoot] = PackageDict()
 
     for p in packages:
         a= p.report.segment_root_lookup
         for c in a:
-            package_dict[c]=a[c]
+            b = c.work_package_hash
+            d = c.segment_tree_root
+            package_dict[b]=d
+
     return package_dict
 
 class RecentHistory:
 
     @staticmethod
-    def transition(state: Sigma, block: Block, accumulate_root = ByteArray32([0] * 32),header_hash=None) -> Sigma:
+    def transition(pre_state: Sigma, block: Block, accumulate_root: OpaqueHash) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -63,41 +65,42 @@ class RecentHistory:
             https://graypaper.fluffylabs.dev/#/5f542d7/0faf010fb001
 
         Args:
-            state: State before transition
+            pre_state: State before transition
             block: Block
             accumulate_root: Calculated Merklization State Root
 
         Returns:
             State after transition
         """
-        beta = state.beta
+
+        # Make a copy of the state
+        new_state: Sigma = deepcopy(pre_state)
+
         # Step 1
-        if len(beta):
-            beta[-1].state_root = block.header.parent_state_root
+        if len(new_state.beta):
+            new_state.beta[-1].state_root = block.header.parent_state_root
 
         # Length Check
-        if len(beta) > RECENT_HISTORY_SIZE:
+        if len(new_state.beta) > RECENT_HISTORY_SIZE:
             raise ValueError("Invalid beta length, must be equal to RECENT_HISTORY_SIZE")
 
         # Step 2
         last: MMR = MMR([])
-        if len(beta) > 0:
-            last = deepcopy(beta[-1].mmr)
+        if len(new_state.beta) > 0:
+            last = new_state.beta[-1].mmr
 
-        if accumulate_root != ByteArray32([0] * 32):
-            mmr_functions = MMRFunctions()
-            last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
+        mmr_functions = MMRFunctions()
 
         n = BlockHistory(
-            Hash.blake2b(block.header.encode()) if header_hash is None else header_hash,
-            last,
+            block.header.parent,
+            mmr_functions.append_fn(last, accumulate_root, Hash.keccak256),
             ByteArray32([0] * 32),
             package(block.extrinsic.guarantees)
         )
 
         # Step 3
-        beta.append(n)
-        state.beta = Beta(beta[-8:])
+        new_state.beta.append(n)
+        new_state.beta = new_state.beta[-8:]
 
-        # Return State
-        return state
+        # Return Updated State
+        return new_state

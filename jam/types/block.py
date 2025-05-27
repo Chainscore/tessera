@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from jam.storage.db.kv import KVStore
+from jam.db.kv import KVStore
 from jam.types.extrinsics.extrinsic import Extrinsic
 from jam.types.header import Header
 from jam.utils.codec.codable import Codable
@@ -8,8 +8,8 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.json.serde import JsonSerde
 from jam.types.protocol.crypto import Hash
-from jam.utils.dummy.dummy_extrinsics import create_dummy_extrinsics
-from jam.utils.dummy.dummy_header import create_dummy_header
+from tests.dummy.dummy_extrinsics import create_dummy_extrinsics
+from tests.dummy.dummy_header import create_dummy_header
 from jam.types.protocol.core import TimeSlot
 
 @decodable_dataclass

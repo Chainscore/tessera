@@ -1,28 +1,34 @@
 import json
 from typing import List
-
-from jam.storage.db.kv import KVStore
-from jam.types.base.null import Null
+from jam.db.kv import KVStore
+from jam.types import Null
 from jam.types.protocol.validators import IPAddress, ValidatorMetadata, ValidatorName, ValidatorData, ValidatorsData
-from jam.types.state.alpha import Alpha, AuthorizationPool
-from jam.types.state.eta import Eta
-from jam.types.state.nu import AllReadyWRs, Nu
-from jam.types.state.pi import AllValidatorStats, Pi, ValidatorStat, AllServiceStats, AllCoreStats, CoreStat
-from jam.types.state.psi import Psi, PsiB, PsiG, PsiO, PsiW
-from jam.types.state.kappa import Kappa
-from jam.types.state.lambda_ import Lambda_
-from jam.types.state.rho import Rho, OptionalWorkReportState
-from jam.types.state.tau import Tau
-from jam.types.state.chi import Chi, ChiG
-from jam.types.state.iota import Iota
-from jam.types.state.xi import Xi
-from jam.types.state.beta import Beta
-from jam.types.state.phi import AuthorizationQueue, AuthorizerHash, Phi
-from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ, GammaS
-from jam.types.state.delta import Delta, Ai, Ai, At, AccountData, LookupTable, Timestamps, AccountLookup, AccountPreimages, AccountStorage
+from jam.types.state import (
+    Alpha, AuthorizationPool,
+    AuthorizationQueue, AuthorizerHash, Phi,
+    Beta,
+    Eta,
+    AllValidatorStats, Pi, ValidatorStat, AllServiceStats, AllCoreStats, CoreStat,
+    Psi, PsiB, PsiG, PsiO, PsiW,
+    Kappa,
+    Lambda_,
+    OptionalWorkReportState, Rho,
+    Tau,
+    Chi, ChiG,
+    Iota,
+    AllReadyWRs, Nu,
+    Xi,
+    Gamma, GammaA, GammaK, GammaZ,
+    AccountData,
+    AccountStorage,
+    Delta,
+    LookupTimestamps,
+    PreImageLookup,
+    Timestamps,
+)
 from jam.types.state.sigma import Sigma
 from jam.types.work.report import WorkDependencies
-from jam.utils.constants import CORE_COUNT, VALIDATOR_COUNT, MAX_AUTH_QUEUE_ITEMS, EPOCH_LENGTH, MAX_AUTH_POOL_ITEMS
+from jam.utils.constants import CORE_COUNT, VALIDATOR_COUNT, MAX_AUTH_QUEUE_ITEMS, EPOCH_LENGTH
 from jam.state.utils.key_constructor import construct_state_key
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
@@ -41,7 +47,7 @@ class GhostState(Sigma):
 
     @staticmethod
     def from_random(seed = 0) -> "GhostState":
-        from jam.utils.dummy.dummy_state_comp import create_dummy_state_components
+        from tests.dummy.dummy_state_comp import create_dummy_state_components
         return GhostState(**create_dummy_state_components())
 
     def transform(self) -> dict:
@@ -53,35 +59,45 @@ class GhostState(Sigma):
         services, service_storage, service_preimages, service_lookup = {}, {}, {}, {}
         for i in self.delta:
             l_key, s_key = set(), set()
-            for j in self.delta[i].lookup:
+            for j in self.delta[i].timestamps:
                 l_key.add(j)
             for j in self.delta[i].storage:
                 s_key.add(j)
+            a_i = 2 * len(list(l_key)) + len(list(s_key))
+            a_s, a_l = 0, 0
+            if l_key:
+                for key in l_key:
+                    # fetching the length from the LookupTimestamps
+                    a_l += 81 + int(LookupTimestamps.get_length(key))
+            if s_key:
+                for key in s_key:
+                    a_s += 32 + len(self.delta[i].storage[key])
+
             services[construct_state_key((255, i))] = Bytes(
-                self.delta[i].service.code_hash.encode()
-                + self.delta[i].service.balance.encode()
-                + self.delta[i].service.gas_limit.encode()
-                + self.delta[i].service.min_gas.encode()
-                + self.delta[i].service.num_o.encode()
-                + self.delta[i].service.num_i.encode()
+                self.delta[i].code_hash.encode()
+                + self.delta[i].balance.encode()
+                + self.delta[i].gas_limit.encode()
+                + self.delta[i].min_gas.encode()
+                + U64(a_l + a_s).encode()
+                + U32(a_i).encode()
             )
 
             for j in self.delta[i].storage:
                 service_storage[
                     construct_state_key(
-                        (i, Bytes(U32(2**32 - 1).encode()) + j[0:23])
+                        (i, ByteArray32(Bytes(U32(2**32 - 1).encode()) + j[0:28]))
                     )
                 ] = self.delta[i].storage[j]
-            for j in self.delta[i].preimages:
+            for j in self.delta[i].lookup:
                 service_preimages[
                     construct_state_key(
-                        (i, Bytes(U32(2**32 - 2).encode()) + j[1:24])
+                        (i, ByteArray32(Bytes(U32(2**32 - 2).encode()) + j[1:29]))
                     )
-                ] = Bytes(self.delta[i].preimages[j])
+                ] = Bytes(self.delta[i].lookup[j])
 
-            for j in self.delta[i].lookup:
-                service_lookup[construct_state_key((i, Bytes(j.length.encode() + bytes(Hash.blake2b(j.hash))[2:25])))] = Bytes(
-                    self.delta[i].lookup[j].encode()
+            for j in self.delta[i].timestamps:
+                service_lookup[construct_state_key((i, j))] = Bytes(
+                    self.delta[i].timestamps[j].encode()
                 )
 
         return {
@@ -168,8 +184,8 @@ class GhostState(Sigma):
                 total_offset += offset
                 delta[service_id] = AccountData(
                     storage=AccountStorage({}),
-                    preimages=AccountPreimages({}),
-                    lookup=AccountLookup({}),
+                    lookup=PreImageLookup({}),
+                    timestamps=LookupTimestamps({}),
                     code_hash=ByteArray32(ac),
                     balance=Balance(ab),
                     gas_limit=Gas(ag),
@@ -219,42 +235,38 @@ class GhostState(Sigma):
     @staticmethod
     def genesis(genesis_path = "genesis.json") -> "GhostState":
         """Generate the genesis state"""
-        gen = json.load(open(genesis_path))
-        peers = ValidatorsData.from_json(gen["peers"])
+        peers = ValidatorsData.from_json(json.load(open(genesis_path))["peers"])
         empty_set = [ValidatorData(
             bandersnatch=BandersnatchPublic(bytes(32)),
             ed25519=Ed25519Public(bytes(32)),
             bls=BlsPublic(bytes(144)),
-            metadata=ValidatorMetadata(ValidatorName(""), IPAddress([U8(0), U8(0), U8(0), U8(0)]), U16(0))
+            metadata=ValidatorMetadata(ValidatorName(""), IPAddress([U8(127), U8(0), U8(0), U8(1)]), U16(0))
         ) for _ in range(VALIDATOR_COUNT)]
-
         fallback = Safrole.arrange_fallback(ByteArray32(bytes(32)), peers)
 
         return GhostState(
-            alpha=Alpha.from_json(gen["state"]["auth_pool"]),
+            alpha=Alpha([AuthorizationPool([]) for _ in range(CORE_COUNT)]),
             beta=Beta([]),
             gamma=Gamma(a=GammaA([]), k=GammaK(peers.value), s=fallback, z=GammaZ(bytes(144))),
-            delta=Delta.from_json(gen["state"]["accounts"]),
-            eta=Eta.from_json(gen["state"]["entropy"]),
-            iota=Iota(peers.value),
+            delta=Delta({}),
+            eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+            iota=Iota(empty_set),
             kappa=Kappa(peers.value),
-            lambda_=Lambda_(peers.value),
+            lambda_=Lambda_(empty_set),
             rho=Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]),
             tau=Tau(0),
-            phi=Phi.from_json(gen["state"]["auth_queue"]),
+            phi=Phi([AuthorizationQueue([AuthorizerHash(bytes(32)) for _ in range(MAX_AUTH_QUEUE_ITEMS)]) for _ in range(CORE_COUNT)]),
             chi=Chi(chi_m=ServiceId(0), chi_a=ServiceId(0), chi_v=ServiceId(0), chi_g=ChiG({})),
             psi=Psi(good=PsiG([]), bad=PsiB([]), wonky=PsiW([]), offenders=PsiO([])),
             pi=Pi(
-                vals_current=AllValidatorStats.empty(),
-                vals_last=AllValidatorStats.empty(),
-                cores=AllCoreStats.empty(),
+                vals_current=AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]),
+                vals_last=AllValidatorStats([ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0)) for _ in range(VALIDATOR_COUNT)]),
+                cores=AllCoreStats([CoreStat(gas_used=U32(0), imports=U32(0), extrinsic_count=U32(0), extrinsic_size=U32(0), exports=U32(0), bundle_size=U32(0), da_load=U32(0), popularity=U32(0)) for _ in range(CORE_COUNT)]),
                 services=AllServiceStats({})
             ),
             nu=Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)]),
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
-
-
 
     def save(self, db: KVStore):
         data = self.transform()

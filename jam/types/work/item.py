@@ -43,19 +43,12 @@ class ExtrinsicSpecs(Vector[ExtrinsicSpec]):
 @dataclass
 class WorkItem(Codable, JsonSerde):
     """Work item structure."""
-    # s
+
     service: ServiceId
-    # h
     code_hash: OpaqueHash
-    # y
     payload: Bytes
-    # g
     refine_gas_limit: Gas
-    # a
     accumulate_gas_limit: Gas
-    # i
     import_segments: ImportSpecs
-    # x
     extrinsic: ExtrinsicSpecs
-    # e
     export_count: U16

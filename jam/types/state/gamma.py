@@ -11,7 +11,6 @@ from jam.types.protocol.validators import ValidatorData
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
-from jam.utils.json import JsonSerde, with_json_metadata
 
 
 @decodable_array(length=VALIDATOR_COUNT, element_type=ValidatorData)
@@ -53,15 +52,9 @@ class GammaS(Choice):
     keys: GammaSFallback
 
 
-@with_json_metadata(
-    k={"name": "gamma_k"},
-    z={"name": "gamma_z"},
-    s={"name": "gamma_s"},
-    a={"name": "gamma_a"},
-)
 @decodable_dataclass
 @dataclass
-class Gamma(Codable, JsonSerde):
+class Gamma(Codable):
     """Gamma state"""
 
     k: GammaK

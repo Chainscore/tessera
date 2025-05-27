@@ -12,7 +12,6 @@ from jam.types.base.null import Null
 from jam.types.block import Block
 from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, Hash, OpaqueHash
-from jam.types.work.report import WorkReport, WorkReports
 from jam.utils.constants import (
     SIGNING_CONTEXTS,
     UNAVAILABLE_WORK_EXPIRY,
@@ -24,10 +23,10 @@ class Assurances:
     """State transition function for the processing of Assurances."""
 
     @staticmethod
-    def transition(state: Sigma, block: Block) -> (Sigma, List):
+    def transition(state: Sigma, block: Block) -> Sigma:
         """
         Process the assurances extrinsic.
-
+        
         Args:
             state: The current state of the chain.
             block: The block to process.
@@ -35,6 +34,8 @@ class Assurances:
         Returns:
             The new state of the chain.
         """
+        # Make a copy of the state
+        new_state = dataclasses.replace(state)
 
         # Get the assurances from the extrinsic
         assurances = block.extrinsic.assurances
@@ -75,22 +76,18 @@ class Assurances:
         Assurances.ensure_assurances_order(assurances)
         Assurances.ensure_assurances_unique(assurances)
 
-        # If we have supermajority - add them to newly available WRs list
-        newly_avail_reports = WorkReports([])
+        # If we have supermajority
         # Or if we have any stale pending WRs
         # Clear them
         super_majority = math.floor(2 * VALIDATOR_COUNT / 3)
         for i in range(len(state.rho)):
-            if state.rho[i] == None:
-                continue
-            else:
-                if core_assurances[i] > super_majority:
-                    newly_avail_reports.append(state.rho[i].get_value().report)
-                    state.rho[i] = OptionalWorkReportState(Null)
-                if core_assurances[i] > super_majority or block.header.slot >= state.rho[i].get_value().timeout + UNAVAILABLE_WORK_EXPIRY:
-                    state.rho[i] = OptionalWorkReportState(Null)
+            if core_assurances[i] > super_majority or (
+                block.header.slot
+                >= state.rho[i].get_value().timeout + UNAVAILABLE_WORK_EXPIRY
+            ):
+                new_state.rho[i] = OptionalWorkReportState(Null)
 
-        return state, newly_avail_reports
+        return new_state
 
     @staticmethod
     def ensure_valid_signature(

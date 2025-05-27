@@ -1,7 +1,7 @@
 import argparse
-from .config.chainspec import JamConfig, chain_config
+from .chainspec import JamConfig, chain_config
 import asyncio
-# from jam.__main__ import main
+from jam.__main__ import main
 
 __all__ = ["JamConfig", "chain_config"]
 
@@ -21,4 +21,4 @@ def run_jam():
 
     args = parser.parse_args()
 
-    # asyncio.run(main(args.name, args.genesis, args.db, args.port, args.start_genesis, args.theme, args.builder, args.validator))
+    asyncio.run(main(args.name, args.genesis, args.db, args.port, args.start_genesis, args.theme, args.builder, args.validator))

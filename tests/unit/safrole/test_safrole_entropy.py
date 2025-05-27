@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.state.eta import Eta
 from jam.types.base.integers.fixed import U32
@@ -36,7 +34,7 @@ def test_entropy_accumulation():
     new_block = create_block(slot=U32(6), tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, block_entropy)
+    new_state = Safrole.transition(initial_state, new_block, block_entropy)
     
     # Check that the entropy was accumulated η'₀ = H(η₀ || VRF_output(H_v))
     expected_new_entropy = Hash.blake2b(bytes(initial_state.eta[0]) + bytes(block_entropy))
@@ -79,7 +77,7 @@ def test_entropy_rotation_at_epoch_boundary():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, entropy)
+    new_state = Safrole.transition(initial_state, new_block, entropy)
     
     # Calculate expected new η₀ value
     expected_new_eta0 = Hash.blake2b(bytes(initial_state.eta[0]) + bytes(entropy))

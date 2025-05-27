@@ -49,6 +49,7 @@ class JsonSerde:
     def from_json(cls: Type[T], data: Any) -> T:
         """Create from JSON-compatible value."""
         from .codec import JsonCodec
+        # print("data->", data)
 
         return JsonCodec.from_json(data, cls)
 
