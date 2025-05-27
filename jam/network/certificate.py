@@ -7,6 +7,7 @@ import os
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
+from jam.types.protocol.crypto import Hash
 
 ASN1_PREFIX = bytes.fromhex("302e020100300506032b657004220420")
 ZERO_SEED = b"\x00" * 32
@@ -36,16 +37,17 @@ def generate_keys(port: int):
     if my_keys is None:
         raise ValueError(f"No keys found for this port {port}. Please add them to the seeds/keys.json file.")
 
-    
     seed = bytes.fromhex(my_keys["seed"][2:] if my_keys["seed"].startswith("0x") else my_keys["seed"])
     if len(seed) != 32:
         raise ValueError("Seed must be exactly 32 bytes long.")
 
-    # Create the private key from seed and 
+    # Create the private key from seed and
     # Store private key in /seeds/{port}/key.pem
     # And public key in /seeds/{port}/pub_key.pem
     # Private_key_base = ASN1_PREFIX + seed
-    private_key = Ed25519PrivateKey.from_private_bytes(seed)
+    ed25519_secret = Hash.blake2b(bytes("jam_val_key_ed25519", 'utf-8') + seed)
+    private_key = Ed25519PrivateKey.from_private_bytes(bytes(ed25519_secret))
+
     private_key_pem = private_key.private_bytes(
         encoding=Encoding.PEM,
         format=PrivateFormat.PKCS8,
@@ -64,7 +66,6 @@ def generate_keys(port: int):
         encoding=Encoding.PEM,
         format=PublicFormat.SubjectPublicKeyInfo
     )
-
 
     # If seeds/{port}/pub_key.pem doesn't exist, create it
     with open(f"seeds/{port}/pub_key.pem", "wb") as f:
