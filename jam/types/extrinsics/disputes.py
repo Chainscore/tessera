@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.storage.queue import StorageQueue
 from jam.types.base.boolean import Boolean
 from jam.types.base.integers.fixed import U32
@@ -9,7 +9,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, WorkReportHash
 from jam.types.protocol.core import ValidatorIndex
-from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
+from jam.utils.constants import VALIDATOR_COUNT
 from jam.utils.json.serde import JsonSerde
 
 
@@ -44,7 +44,7 @@ class Fault(Codable, JsonSerde):
     signature: Ed25519Signature
 
 
-@decodable_array(length=VALIDATORS_SUPER_MAJORITY, element_type=Judgement)
+@decodable_array(length=(1 + VALIDATOR_COUNT * 2 // 3), element_type=Judgement)
 class JudgementVotes(Array[Judgement]):
     ...
 

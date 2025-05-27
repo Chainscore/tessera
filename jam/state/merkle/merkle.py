@@ -3,7 +3,7 @@ from jam.state.merkle.node import Node
 from jam.state.merkle.utils import ZERO_HASH, NodeHash, NodeType, encode_branch, encode_leaf
 from jam.types.base.sequences.bytes import ByteArray32, ByteArray64, Bytes
 from jam.types.protocol.crypto import Hash
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 
 class StateTrie:
     """
@@ -52,19 +52,17 @@ class StateTrie:
 
         # Empty subtree => return ZERO_HASH and a 64-byte zero encoding
         if not leaves:
-            return (ZERO_HASH, ByteArray64([0] * 64))
+            return ZERO_HASH, ByteArray64([0] * 64)
 
         # Single-item subtree => leaf
         if len(leaves) == 1:
             encoded_leaf = leaves[0]
             node_hash = NodeHash(Hash.blake2b(bytes(encoded_leaf)))
-            # Transient store for quick lookup
-            # Persistent DBNode for path updates later
             self.nodes[node_hash] = Node(
                 encoded=encoded_leaf,
                 bit_index=bit_index
             )
-            return (node_hash, encoded_leaf)
+            return node_hash, encoded_leaf
 
         # Partition items by current bit
         left_items, right_items = [], []
@@ -88,11 +86,11 @@ class StateTrie:
             left=left_hash,
             right=right_hash
         )
-        return (node_hash, encoded_branch)
+        return node_hash, encoded_branch
 
     def merkelize(
         self,
-        state_dict: Dict[ByteArray32, Bytes],
+        state_dict: Dict[Bytes, Bytes],
         db: Optional[KVStore] = None
     ) -> Tuple[NodeHash, Dict[NodeHash, Node]]:
         """

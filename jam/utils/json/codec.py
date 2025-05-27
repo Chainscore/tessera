@@ -110,7 +110,7 @@ class JsonCodec:
         return {
             field.name: {
                 "type": field.type,
-                "metadata": getattr(field, "metadata", {}),
+                "_metadata": getattr(field, "_metadata", {}),
                 "default": field.default or None,
                 "default_factory": field.default_factory,
             }
@@ -121,39 +121,45 @@ class JsonCodec:
     def _dataclass_to_json(obj: Any) -> Dict[str, Any]:
         """Convert dataclass instance to JSON dict"""
         result = {}
-        field_info = getattr(obj, "metadata", {})
+        field_info = getattr(obj, "_metadata", {})
 
         for field in fields(obj):
             field_name = field.name
             field_type = field.type
-            
-            meta_json_name = field_info.get(field_name, {}).get("json_name", field_name)
-            meta_skip_if_none = field_info.get(field_name, {}).get("skip_if_none", False)
-            meta_default = field_info.get(field_name, {}).get("default", None)
+            meta = field_info.get(field_name, {})
+
+            meta_json_name = meta.get("json_name", field_name)
+            meta_skip_if_none = meta.get("skip_if_none", False)
+            meta_default = meta.get("default", None)
 
             value = getattr(obj, field_name)
             # Skip None values if specified in metadata
             if value is None and meta_skip_if_none:
                 continue
-            
+
             # Use custom field name if specified
             json_name = meta_json_name
             try:
                 result[json_name] = to_json(value)
             except Exception as e:
                 raise JsonFieldError(field_name, field_type, str(e))
-            
+
         return result
 
     @staticmethod
     def _dataclass_from_json(data: Dict[str, Any], cls: Type[T]) -> T:
         """Convert JSON dict to dataclass instance."""
-        if not isinstance(data, dict):
-            raise JsonDeserializationError(
-                f"Expected dict for {cls.__name__}, got {type(data)}"
-            )
 
-        field_info = getattr(cls, "metadata", {})
+        if not isinstance(data, dict):
+            if isinstance(data, str) and data.startswith("0x"):
+                data = bytes.fromhex(data[2:])
+                return cls.decode_from(data)[0]
+            else:
+                raise JsonDeserializationError(
+                    f"Expected dict for {cls.__name__}, got {type(data)}"
+                )
+
+        field_info = getattr(cls, "_metadata", {})
         field_values = {}
 
         # Loop through all fields in the dataclass to fill data for each field
@@ -214,7 +220,7 @@ def from_json(data: Any, target_type: Type[T]) -> T:
         return target_type.from_json(data)
     else:
         return JsonCodec.from_json(data, target_type)
-    
+
 def to_json(obj: Any) -> Any:
     """Convert object to JSON-compatible value."""
     if hasattr(obj, "to_json"):

@@ -1,4 +1,5 @@
 from typing import Any, Generic, List, Optional, Sequence, Type, TypeVar, Union
+from jam.types.base.integers.fixed import FixedInt
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.codec import Codec
 from jam.utils.json import JsonSerde
@@ -36,7 +37,7 @@ class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
         """Get number of elements."""
         return len(self.value)
 
-    def __getitem__(self, index: Union[int, slice]) -> Union[T, Sequence[T]]:
+    def __getitem__(self, index: Union[int, slice, FixedInt]) -> Union[T, Sequence[T]]:
         """Get item at index."""
         item = self.value[index]
         # Special case for Option

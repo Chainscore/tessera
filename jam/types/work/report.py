@@ -2,14 +2,13 @@
 
 from dataclasses import dataclass
 
-from jam.types.base import Vector
+from jam.types.base import Int
 from jam.types.base.null import Nullable
 from jam.types.base.integers import U8, U16, U32, U64
 from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.base.sequences.vector import Vector, decodable_vector
-
 from jam.types.work.package import WorkPackage
 from jam.types.work.refine_context import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
@@ -23,7 +22,6 @@ from jam.types.protocol.core import (
     WorkPackageHash,
 )
 from jam.types.work.segment import MultiSegments
-
 from jam.utils.json.serde import JsonSerde
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -51,34 +49,54 @@ class ExecResults(Vector[WorkExecResult]):
 class RefineLoad(Codable, JsonSerde):
     """Refine load structure."""
 
-    gas_used: Gas
-    imports: U16
-    exports: U16
-    extrinsic_count: U8
-    extrinsic_size: U64
+    gas_used: Int # TODO: This is supposed to be Ng
+    imports: Int
+    exports: Int
+    extrinsic_count: Int
+    extrinsic_size: Int
 
 @decodable_dataclass
 @dataclass
 class WorkResult(Codable, JsonSerde):
     """Work result structure."""
-
+    # s
     service_id: ServiceId
+    # h
     code_hash: OpaqueHash
+    # y
     payload_hash: OpaqueHash
+    # g
     accumulate_gas: Gas
+    # d
     result: WorkExecResult
+    # x
     refine_load: RefineLoad
 
 @decodable_dataclass
 @dataclass
 class WorkPackageSpec(Codable, JsonSerde):
     """Work package specification structure."""
-
+    # h
     hash: WorkPackageHash
+    # l
     length: U32
+    # u
     erasure_root: ErasureRoot
+    # e
     exports_root: ExportsRoot
+    # n
     exports_count: U16
+
+    @staticmethod
+    def empty():
+        return WorkPackageSpec(
+            hash = WorkPackageHash([0] * 32),
+            length = U32(0),
+            erasure_root = ErasureRoot([0] * 32),
+            exports_root = ExportsRoot([0] * 32),
+            exports_count = U16(0)
+        )
+
 
 
 @decodable_dataclass
@@ -105,7 +123,7 @@ class WorkPackageBundle(Codable, JsonSerde):
 # class SegmentRootLookup(Vector[SegmentRootLookupItem]):
 #     ...
 
-@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
+@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot,key_name="work_package_hash", value_name="segment_tree_root")
 class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
     ...
@@ -117,16 +135,38 @@ class WorkResults(Vector[WorkResult]): ...
 @dataclass
 class WorkReport(Codable, JsonSerde):
     """Work report structure."""
-
+    # s
     package_spec: WorkPackageSpec
+    # x
     context: RefineContext
-    core_index: CoreIndex
+    # c
+    core_index: Int
+    # a
     authorizer_hash: OpaqueHash
+    # o
     auth_output: Bytes
+    # l
     segment_root_lookup: SegmentRootLookup
+    # r
     results: WorkResults
-    auth_gas_used: Gas
+    # g
+    auth_gas_used: Int
 
+    @classmethod
+    def empty(cls, **overrides) -> "WorkReport":
+        defaults = {
+            "package_spec":          WorkPackageSpec.empty(),
+            "context":               RefineContext.empty(),
+            "core_index":            CoreIndex(0),
+            "authorizer_hash":       OpaqueHash(bytes([0] * 32)),
+            "auth_output":           Bytes(b""),
+            "segment_root_lookup":   SegmentRootLookup({}),
+            "results":               WorkResults([]),
+            "auth_gas_used":         Gas(0),
+        }
+        # merge in anything the caller wants to override:
+        defaults.update(overrides)
+        return cls(**defaults)
 
 @decodable_vector(element_type=WorkReportHash, allow_duplicates=False)
 class WorkDependencies(Vector[WorkReportHash]):
@@ -140,5 +180,3 @@ class WorkReports(Vector[WorkReport]):
     """Vector of Work Reports"""
 
     ...
-
-

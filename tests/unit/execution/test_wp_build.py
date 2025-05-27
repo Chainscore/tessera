@@ -1,0 +1,75 @@
+from jam.config.data_stores import main_db
+from jam.execution.host_calls.invocations.is_authorized import PsiI
+from jam.execution.host_calls.invocations.refine import PsiR
+from jam.execution.pvm.code import Code
+from jam.execution.pvm.status import ExecutionStatus
+from jam.state.accounts import AccountMetadata
+from jam.state.ghost import GhostState
+from jam.state.state import setup_state
+from jam.storage.db.kv import KVStore
+from jam.types.base import Bytes, U16
+from jam.types.protocol.core import Balance, Gas, CoreIndex, BlobLength, ServiceId
+from jam.types.protocol.crypto import Hash
+from jam.types.state.delta import Ao, Ai, LookupTable, Timestamps
+from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs
+from jam.utils.codec.primitives.bytes import BytesCodec
+from jam.utils.dummy.dummy_package import create_dummy_package
+
+
+def test_basic_wp_building(db_path):
+	state = setup_state(GhostState.genesis(), main_db)
+
+	package = create_dummy_package()
+
+	# Checks core_index == 1
+	pc = bytes([0,0,22,124,121,81,25,1,7,40,2,0,149,17,255,70,1,1,100,23,51,8,1,50,0,69,147,18])
+
+	# Checks core_index == 1
+	# pc = bytes([0,0,21,124,121,81,9,6,40,2,0,149,17,255,70,1,1,100,23,51,8,1,50,0,165,73,9])
+
+	code = Code(code=pc, read=b"", r_write=b"", z=0, s=100)
+	bytecode = code.encode()
+	service_code = BytesCodec().encode(value=b"") + bytecode
+	code_hash = Hash.blake2b(service_code)
+
+	state.delta[package.auth_code_host].service = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000), gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0), num_o=Ao(0))
+	state.delta[package.auth_code_host].preimages[code_hash] = Bytes(service_code)
+	state.delta[package.auth_code_host].lookup[LookupTable(hash=code_hash, length=BlobLength(len(service_code)))] = Timestamps([state.tau])
+	package.authorizer.code_hash = code_hash
+	package.authorization = Bytes(int(1).to_bytes(1))
+
+	print("\nPackage", package)
+	print("-------------------")
+	print("Authorizing Package...")
+	auth_trace, u = PsiI(p=package, c=CoreIndex(1)).execute()
+	print(f"Authorization Complete >> Output: {auth_trace} | Gas consumed: {u}")
+	print("\n-------------------")
+
+	print("Creating Work Item #1")
+	wi_pc = bytes(
+			[0,0,90,51,12,149,27,0,112,254,124,117,6,40,2,200,199,3,149,51,7,200,203,4,130,57,123,73,149,204,8,172,92,240,100,194,40,2,200,203,7,51,8,20,9,255,255,255,255,255,0,0,0,51,10,5,51,11,51,12,10,18,86,23,255,9,200,114,2,40,6,51,7,40,2,149,23,0,112,254,100,40,10,19,149,23,0,112,254,51,8,50,0,133,148,164,146,74,1,164,138,84,161,66,1]
+	)
+	wi_code = Code(code=wi_pc, read=b"", r_write=b"", z=0, s=(1024*100))
+	wi_bytecode = wi_code.encode()
+	wi_service_code = BytesCodec().encode(value=b"") + wi_bytecode
+	wi_code_hash = Hash.blake2b(wi_service_code)
+	wi_service = ServiceId(1)
+
+	state.delta[wi_service].service = AccountMetadata(code_hash=wi_code_hash, balance=Balance(1_000_000), gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0), num_o=Ao(0))
+	state.delta[wi_service].preimages[wi_code_hash] = Bytes(wi_service_code)
+	state.delta[wi_service].lookup[LookupTable(hash=wi_code_hash, length=BlobLength(len(wi_service_code)))] = Timestamps([state.tau])
+	wi = WorkItem(
+			service=wi_service,
+			code_hash=wi_code_hash,
+			payload=Bytes(b"bobaboba"),
+			refine_gas_limit=Gas(1_000),
+			accumulate_gas_limit=Gas(1_000),
+			import_segments=ImportSpecs([]),
+			extrinsic=ExtrinsicSpecs([]),
+			export_count=U16(1)
+	)
+	package.items.append(wi)
+	print("Items:", package.items)
+	r, e, u = PsiR(0, p=package, auth_trace=auth_trace, i_segments=[[bytes.fromhex("626f6261626f6261676d676d676d676d676d")]], e_offset=0).execute()
+	print(f"🎉 Work Item executed | Status: {r} | Gas consumed {u} | Exported Segments {e}")
+	assert r != ExecutionStatus.PANIC

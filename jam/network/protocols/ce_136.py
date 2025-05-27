@@ -11,7 +11,7 @@ from jam.utils.codec.decorators import decodable_dataclass
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 
 from jam.types.protocol.crypto import WorkReportHash, Hash
-from tests.dummy.dummy_extrinsics import create_dummy_work_report
+from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
 
 
 @decodable_dataclass

@@ -80,7 +80,7 @@ class WorkPackageSharing(NetworkProtocol):
 
         logger.info("Building Work Report")
         # TODO: Process received Work Package Bundle, Build Report & Return Credential if validated
-        from tests.dummy.dummy_package import create_dummy_credential
+        from jam.utils.dummy.dummy_package import create_dummy_credential
         credential = create_dummy_credential()
         # Process goes here
 

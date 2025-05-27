@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from jam.types.base import Vector, decodable_vector, Int
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.integers.fixed import U16, U32
 from jam.types.base.sequences.array import Array, decodable_array
@@ -20,18 +21,26 @@ class ValidatorStat(Codable, JsonSerde):
     guarantees: U32
     assurances: U32
 
+    @staticmethod
+    def empty() -> "ValidatorStat":
+        return ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0))
+
 
 @decodable_dataclass
 @dataclass
 class CoreStat(Codable, JsonSerde):
-    gas_used: U32
-    imports: U32
-    extrinsic_count: U32
-    extrinsic_size: U32
-    exports: U32
-    bundle_size: U32
-    da_load: U32
-    popularity: U32
+    da_load: Int
+    popularity: Int
+    imports: Int
+    exports: Int
+    extrinsic_size: Int
+    extrinsic_count: Int
+    bundle_size: Int
+    gas_used: Int
+
+    @staticmethod
+    def empty() -> "CoreStat":
+        return CoreStat(gas_used=Int(0), imports=Int(0), extrinsic_count=Int(0), extrinsic_size=Int(0), exports=Int(0), bundle_size=Int(0), da_load=Int(0), popularity=Int(0))
 
 
 @decodable_dataclass
@@ -50,22 +59,43 @@ class ServiceStat(Codable, JsonSerde):
     on_transfers_count: U32
     on_transfers_gas_used: Gas
 
+    @staticmethod
+    def empty() -> "ServiceStat":
+        return ServiceStat(
+            provided_count=U16(0),
+            provided_size=U32(0),
+            refinement_count=U32(0),
+            refinement_gas_used=Gas(0),
+            imports=U32(0),
+            exports=U32(0),
+            extrinsic_size=U32(0),
+            extrinsic_count=U32(0),
+            accumulate_count=U32(0),
+            accumulate_gas_used=Gas(0),
+            on_transfers_count=U32(0),
+            on_transfers_gas_used=Gas(0),
+        )
+
 
 @decodable_array(VALIDATOR_COUNT, ValidatorStat)
 class AllValidatorStats(Array[ValidatorStat]):
     """All validator stats"""
 
-    ...
+    @staticmethod
+    def empty() -> "AllValidatorStats":
+        return AllValidatorStats([ValidatorStat.empty() for _ in range(VALIDATOR_COUNT)])
 
 
 @decodable_array(CORE_COUNT, CoreStat)
 class AllCoreStats(Array[CoreStat]):
     """All core stats"""
 
-    ...
+    @staticmethod
+    def empty():
+        return AllCoreStats([CoreStat.empty() for _ in range(CORE_COUNT)])
 
 
-@decodable_dictionary(ServiceId, ServiceStat)
+@decodable_dictionary(ServiceId, ServiceStat ,key_name="id", value_name="record")
 class AllServiceStats(Dictionary[ServiceId, ServiceStat]):
     """All service stats"""
 

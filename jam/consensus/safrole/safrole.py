@@ -1,14 +1,14 @@
 from typing import List
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
+from jam.types.extrinsics import TicketEnvelope, TicketBody, TicketsExtrinsic
 from jam.types.state.eta import Eta
 from jam.types.state.kappa import Kappa
 from jam.types.state.lambda_ import Lambda_
 from jam.types.state.sigma import Sigma
-from jam.types.base.integers.fixed import U64
+from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.null import Null
 from jam.types.header import OptionalEpochMark, OptionalTicketsMark, TicketsMark
 from jam.types.state.gamma import GammaS, GammaSTickets
-from jam.types import TicketBody, U32, TicketsExtrinsic, TicketEnvelope
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.block import Block
@@ -21,7 +21,7 @@ from jam.utils.constants import (
 from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingVrfSignature, BandersnatchVrfSignature, Hash, Entropy
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
-from jam.types.state.gamma import GammaK, GammaSFallback, GammaA
+from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData
 from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
 from copy import deepcopy
@@ -51,25 +51,28 @@ class Safrole:
     @staticmethod
     def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
         # TODO - Use Ring VRF class once it's implemented
+        if int(signature) == 0:
+            return ByteArray32(signature[:32])
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        return ByteArray32(vrf.proof_to_hash(BandersnatchPoint.string_to_point(bytes(signature)[:32]))[:32])
+        return ByteArray32(vrf.ecvrf_proof_to_hash(bytes(signature))[:32])
 
     @staticmethod
-    def transition(pre_state: Sigma, block: Block, entropy: ByteArray32) -> Sigma:
-        new_state = deepcopy(pre_state)
-
+    def transition(state: Sigma, block: Block, entropy: ByteArray32) -> Sigma:
+        pre_tau = state.tau
         # 1. Timekeeping
-        if block.header.slot > new_state.tau:
-            new_state.tau = block.header.slot
-        else:
+        if block.header.slot > state.tau:
+            state.tau = block.header.slot
+        elif state.tau > 0:
             raise SafroleError(
                 SafroleErrorCode.BAD_SLOT,
-                f"Slot {block.header.slot} is less than current tau {new_state.tau}",
+                f"Slot {block.header.slot} is less than current tau {state.tau}",
             )
         
-        old_epoch = int(pre_state.tau) // EPOCH_LENGTH
+        old_epoch = int(pre_tau) // EPOCH_LENGTH
         new_epoch = int(block.header.slot) // EPOCH_LENGTH
         epoch_jump = new_epoch - old_epoch
+
+        gamma = state.gamma
 
         # 3. Ticket Accumulation
         ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
@@ -78,16 +81,16 @@ class Safrole:
             # Validate extrinsics
             Safrole.ensure_valid_ticket_extrinsics(block)
             # Accumulate them in gamma.a
-            new_state.gamma.a += [
+            gamma.a += [
                 TicketBody(
                     attempt=ticket.attempt, id=Safrole.vrf_output(ticket.signature)
                 )
                 for ticket in block.extrinsic.tickets
             ]
-            new_state.gamma.a.sort(key=lambda x: x.id)
-            new_state.gamma.a = new_state.gamma.a[:EPOCH_LENGTH]
+            gamma.a.sort(key=lambda x: x.id)
+            gamma.a = GammaA(gamma.a[:EPOCH_LENGTH])
             # Check for duplicates
-            if len(new_state.gamma.a) != len(list(set(new_state.gamma.a))):
+            if len(gamma.a) != len(list(set(gamma.a))):
                 raise SafroleError(SafroleErrorCode.DUPLICATE_TICKET, "Duplicate tickets are not allowed")
         # We never expect tickets after TICKET_SUBMISSION_END
         if not ticket_submission_active:
@@ -97,57 +100,60 @@ class Safrole:
         # 4. Epoch transition
         if new_epoch > old_epoch:
             # 4.1. Rotate validators
-            new_state.lambda_ = Lambda_(pre_state.kappa.value)
-            new_kappa = Kappa(pre_state.gamma.k)
-            new_state.kappa = new_kappa
+            state.lambda_ = Lambda_(state.kappa.value)
+            state.kappa = Kappa(gamma.k)
             filtered_validators=[]
-            for k in pre_state.iota:
-                if k.ed25519 in pre_state.psi.offenders:
+            for k in state.iota:
+                if k.ed25519 in state.psi.offenders:
                     # Offender found, replace with default ValidatorData
                     filtered_validators.append(ValidatorData(bandersnatch=ByteArray32(bytes(32)), ed25519=ByteArray32(bytes(32)), bls=k.bls, metadata=k.metadata))
                 else:
                     # Not an offender, keep the original validator data
                     filtered_validators.append(k)
             
-            new_state.gamma.k = GammaK(filtered_validators)
+            gamma.k = GammaK(filtered_validators)
 
             # 4.2 . Shift entropy
-            new_state.eta = Eta(
-                [new_state.eta[0], new_state.eta[0], new_state.eta[1], new_state.eta[2]]
+            state.eta = Eta(
+                [state.eta[0], state.eta[0], state.eta[1], state.eta[2]]
             )
 
             # 4.3. Update seal keys for this coming epoch
             # Check if we are jumping before accumulating tickets
-            valid_jump = pre_state.tau % EPOCH_LENGTH > TICKET_SUBMISSION_END
+            valid_jump = pre_tau % EPOCH_LENGTH > TICKET_SUBMISSION_END
             # If we have sufficient tickets accumulated,
             # And we are jumping only one epoch,
             # And we are not jumping before TICKET_SUBMISSION_END
-            if len(new_state.gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
+            if len(gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
                 # If we have sufficient tickets accumulated,
                 # use outside-in sequencer and place the ticket in gamma.s
-                new_state.gamma.s = GammaS(GammaSTickets(Safrole.outside_in(new_state.gamma.a.value)))
+                gamma.s = GammaS(GammaSTickets(Safrole.outside_in(gamma.a.value)))
             # Else use the fallback mechanism
             else:
                 # Else fallback: use bandersnatch keys
-                new_state.gamma.s = Safrole.arrange_fallback(
-                    new_state.eta[2], new_state.kappa
+                gamma.s = Safrole.arrange_fallback(
+                    state.eta[2], state.kappa
                 )
 
             # 4. 4. Update ring root
-            new_state.gamma.z = Safrole.compute_ring_root(
-                [k.bandersnatch for k in new_state.kappa]
-            ).hex()
+            gamma.z = GammaZ(Safrole.compute_ring_root(
+                [k.bandersnatch for k in state.kappa]
+            ).hex())
 
             # 4.5. Empty the ticket acc for upcoming epoch
-            new_state.gamma.a = GammaA([])
+            gamma.a = GammaA([])
 
         # 2. Accumulate entropy
-        if block.header.epoch_mark:
-            # TODO: Use actual entropy coming from vrf output of Hv once we have valid seals generated
-            new_state.eta[0] = Hash.blake2b(
-                bytes(new_state.eta[0]) + bytes(entropy)
+        # Use entropy coming from vrf output of Hv once we have valid seals generated
+        if int(entropy) > 0:
+            eta = state.eta
+            eta[0] = Hash.blake2b(
+                bytes(state.eta[0]) + bytes(entropy)
             )
-        return new_state
+            state.eta = eta
+
+        state.gamma = gamma
+        return state
 
     @staticmethod
     def ensure_valid_ticket_extrinsics(block: Block):
@@ -207,7 +213,7 @@ class Safrole:
         Entry index should be a natural number less than N
         https://graypaper.fluffylabs.dev/#/5b732de/0f22000f2400
         """
-        if ticket.attempt >= TICKET_ENTRIES_PER_VALIDATOR:
+        if 0 <= ticket.attempt > TICKET_ENTRIES_PER_VALIDATOR:
             raise SafroleError(
                 SafroleErrorCode.BAD_TICKET_ATTEMPT,
                 f"Ticket attempt {ticket.attempt} is invalid",
