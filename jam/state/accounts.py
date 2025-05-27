@@ -7,7 +7,7 @@ from jam.state.utils.key_constructor import construct_state_key
 from jam.types.base import Bytes, ByteArray32, U32
 from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot, BlobLength
 from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import AccountMetadata, ServiceCodeHash, Ao, Ai, LookupTable, Timestamps
+from jam.types.state.delta import AccountMetadata, ServiceCodeHash, Ao, Ai, LookupTable, Timestamps, AccountData
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.codec.primitives.bytes import BytesCodec
@@ -139,11 +139,22 @@ class DeltaView:
             trie=self.TRIE,
         )
 
-	# TODO: Set account with delta
+    def __setitem__(self, key: ServiceId, value: AccountData):
+        account = Account(
+            id=key,
+            db=self.DB,
+            trie=self.TRIE,
+        )
+        account.service = value.service
+        for k,v in value.preimages:
+            account.preimages[k] = v
+        for k, v in value.storage:
+            account.storage[k] = v
+        for k, v in value.lookup:
+            account.lookup[k] = v
 
     def __contains__(self, key: ServiceId):
         return self.DB.get(bytes(construct_state_key((255, key)))) is not None
-        )
 
 class StorageView:
     def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
