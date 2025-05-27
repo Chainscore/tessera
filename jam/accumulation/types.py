@@ -52,6 +52,7 @@ class DeferredTransfers(Vector[DeferredTransfer]):
     ...
 
 
+@decodable_dataclass
 @dataclass
 class StateContext(Codable,JsonSerde):
     # d
@@ -72,6 +73,7 @@ class DeferredTransfers(Vector[DeferredTransfer]):
 PreimageDict = Set[Tuple[ServiceId, Bytes]]
 
 
+@decodable_dataclass
 @dataclass
 class AccuContextX(Codable, JsonSerde):
     #s

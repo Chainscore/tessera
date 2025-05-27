@@ -164,7 +164,7 @@ class Accumulation:
         partial_state: StateContext,
         services: ChiG,
         timeslot: Tau,
-    ) -> tuple[int, StateContext, DeferredTransfers, BeefyMap, GasConsumed]:
+    ) -> Tuple[int, StateContext, DeferredTransfers, BeefyMap, GasConsumed]:
         """
         Outer accumulation function ∆+ defined in Eq 12.16
         Sequential Execution Pattern
@@ -179,11 +179,12 @@ class Accumulation:
             timeslot (Tau): Curr TimeSlot τ′
 
         Returns:
-            A tuple (int, StateContext, DeferredTransfer, AccumulationOutput) where:
+            A tuple (int, StateContext, DeferredTransfers, BeefyMap, GasConsumed) where:
             Integer: Number of work results successfully accumulated.
             StateContext: The updated state context after applying accumulation.
             DeferredTransfer: A list of transfers that are deferred.
-            AccumulationOutput: A mapping of service indices to their corresponding accumulation outputs.
+            BeefyMap: A mapping of service indices to their corresponding accumulation outputs.
+            GasConsumed: Gas consumed by accumulation of each service along iwth their service id
         """
 
         index = 0
@@ -296,7 +297,7 @@ class Accumulation:
         services: ChiG,
         service_id: ServiceId,
         timeslot: Tau,
-    ) -> tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]:
+    ) -> Tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]:
         """
         Single-Service accumulation function ∆1 defined in Eq 12.19
         Transforms Initial Partial State, Sequence of Work Reports, Dictionary of services (free, privileged accumulation), and Service index
@@ -320,9 +321,13 @@ class Accumulation:
         g = 0
         p = OperandTuples([])
 
+        if service_id in services:
+            g = services[service_id]
+
         for i in work_reports:
             for j in i.results:
                 if j.service_id == service_id:
+                    g += j.accumulate_gas
                     p.append(
                         OperandTuple(
                             d=j.result,
@@ -334,16 +339,6 @@ class Accumulation:
                             a=i.authorizer_hash
                         )
                     )
-
-        for i in services:
-            if i == service_id:
-                g = services[i]
-                break
-
-        for i in work_reports:
-            for j in i.results:
-                if j.service_id == service_id:
-                    g += j.accumulate_gas
 
         posterior_state, transfers, optional_hash, gas, preimage = PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=p).execute()
         return posterior_state, transfers, optional_hash, gas, preimage

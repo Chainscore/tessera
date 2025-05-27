@@ -130,6 +130,8 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
     @classmethod
     def from_json(cls: Type["Self"], data: Sequence[Any]) -> "Self":
         """Create instance from JSON representation."""
+        if data is None:
+            raise ValueError(f"Expected value, got {data}")
         if not isinstance(data, dict):
             _value = cls({})
             for val in data:

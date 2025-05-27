@@ -8,7 +8,6 @@ from jam.execution.pvm.status import ExecutionStatus, PANIC, HostStatus, CONTINU
 from jam.types.base import U64, U32, U16, Bytes, Int
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.state.delta import AccountData
-from jam.state.state import state
 from jam.types.protocol.core import Gas, ServiceId, Register, Balance
 from jam.types.state.delta import Delta
 from jam.types.work.item import WorkItem
@@ -45,7 +44,7 @@ class GeneralFunctions(INVF):
         a: None|AccountData = None
         if service_index <= registers[7] <= 2**64-1:
             a = service_data
-        elif registers[7] in state.delta:
+        elif registers[7] in accounts:
             a = accounts[registers[7]]
         h, o = registers[8], registers[9]
 
@@ -158,11 +157,12 @@ class GeneralFunctions(INVF):
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
-        memory_start = registers[7]
+        memory_start = int(registers[7])
         f = min(int(registers[8]), len(v))
         l = min(int(registers[9]), len(v) - f)
 
         if not memory.is_accessible(memory_start, l, for_write=True):
+            print("Memory not accessible", memory_start, l)
             raise PvmError(PANIC)
 
         registers[7] = Register(len(v))
@@ -190,7 +190,7 @@ class GeneralFunctions(INVF):
         a: None|AccountData = None
         if s_star == service_index:
             a = service_data
-        elif s_star in state.delta:
+        elif s_star in accounts:
             a = accounts[s_star]
         ko, kz, o = registers[8:8+3]
 

@@ -14,9 +14,10 @@ class ItemExtrinsics:
     """Place to store and get extrinsics that are received along with Work Package"""
     DB = main_db
 
+    def __init__(self, db: KVStore):
+        self.DB = db
 
-    @classmethod
-    def store(cls, package: WorkPackage, data: List[Bytes]):
+    def store(self, package: WorkPackage, data: List[Bytes]):
         """
         Stores the extrinsic data, decoded as per work items and extrinsic lengths we get from WP
 
@@ -45,11 +46,11 @@ class ItemExtrinsics:
         
         # Storing data
         for key, value in to_store.items():
-            cls.DB.put(bytes(key), bytes(value))
+            self.DB.put(bytes(key), bytes(value))
 
 
-    @classmethod
-    def encode(cls, wi_data: List[Bytes]) -> (Bytes, ExtrinsicSpecs):
+    @staticmethod
+    def encode(wi_data: List[Bytes]) -> (Bytes, ExtrinsicSpecs):
         """
         Encode a bundle of work item extrinsics to extrinsic bytes and ExtrinsicSpecs
         Args:
@@ -66,8 +67,7 @@ class ItemExtrinsics:
         return wi, extr_specs
 
 
-    @classmethod
-    def get(cls, extrinsic_hash: ByteArray32) -> bytes:
+    def get(self, extrinsic_hash: ByteArray32) -> bytes:
         """Gets the relevent extrinsic, assuming we already know its hash (as its stored in WI)
 
         Args:
@@ -77,16 +77,15 @@ class ItemExtrinsics:
         Returns:
             Bytes
         """
-        return cls.DB.get(bytes(extrinsic_hash))
+        return self.DB.get(bytes(extrinsic_hash))
 
 
-    @classmethod
-    def get_all(cls, wp: WorkPackage) -> List[List[bytes]]:
+    def get_all(self, wp: WorkPackage) -> List[List[bytes]]:
         result = []
         for item in wp.items:
             item_extr = []
             for extrinsics in item.extrinsic:
-                ext = cls.get(extrinsics.hash)
+                ext = self.get(extrinsics.hash)
                 if len(ext) != extrinsics.len:
                     raise ValueError("Critical: Invalid extrinsic!")
                 item_extr.append(ext)

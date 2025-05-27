@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pytest
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 from jam.consensus.safrole.safrole import Safrole
@@ -10,6 +12,7 @@ from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
 from jam.types.protocol.crypto import ByteArray32, Ed25519Public, BandersnatchPublic
 from jam.types.extrinsics.tickets import TicketBody, TicketId, TicketAttempt
+from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END
 
@@ -43,7 +46,7 @@ def test_safrole_timekeeping():
     new_block = create_block(slot=U32(6), tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
     
     # Check that the timeslot was updated
     assert new_state.tau == U32(6)
@@ -71,7 +74,7 @@ def test_safrole_entropy_accumulation():
     new_block = create_block(slot=U32(6), tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
     # Check that the entropy was accumulated (η'₀ = H(η₀ || VRF_output(H_v)))
     assert new_state.eta[0] != initial_state.eta[0], "Entropy should be updated"
     # Other entropy slots should remain unchanged
@@ -114,7 +117,7 @@ def test_safrole_ticket_accumulation():
     
     try:
         # Apply the transition
-        new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
+        new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
         
         # Check that the new ticket was accumulated
         assert len(new_state.gamma.a) == 2
@@ -149,7 +152,7 @@ def test_safrole_ticket_submission_outside_period():
     
     # Verify that the transition raises the expected error
     with pytest.raises(SafroleError) as excinfo:
-        Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
+        Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
     
     assert excinfo.value.code == SafroleErrorCode.UNEXPECTED_TICKET
 
@@ -179,7 +182,7 @@ def test_safrole_epoch_transition():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
     
     # Verify epoch transition effects
     
@@ -196,8 +199,9 @@ def test_safrole_epoch_transition():
     # 3. Check ticket accumulator reset
     assert len(new_state.gamma.a) == 0
     
-    # 4. Ring root should be updated
-    assert new_state.gamma.z != initial_state.gamma.z
+    # 4. Ring root should be not be updated since the validator set is same
+    # TODO - write a test with chanegd val set
+    assert new_state.gamma.z == initial_state.gamma.z
 
 
 def test_safrole_fallback_mode():
@@ -225,7 +229,7 @@ def test_safrole_fallback_mode():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
     
     # Check that we're using fallback seal keys (GammaSFallback)
     assert isinstance(new_state.gamma.s.get_value(), GammaSFallback)
@@ -262,7 +266,7 @@ def test_safrole_offender_filtering():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
     
     # Check that the offender was replaced with a null key in gamma_k
     filtered_validators = new_state.gamma.k

@@ -1,22 +1,23 @@
 from copy import deepcopy
 from typing import Optional
 
-from jam.types.state.beta import BlockHistory, PackageDict, Beta
+from jam.types.state.beta import BlockHistory, Beta
 from jam.types.state.sigma import Sigma
 from jam.types.base.sequences import ByteArray32
 from jam.types.block import Block
 from jam.types.extrinsics import GuaranteesExtrinsic
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.merklization import MMRFunctions
 from jam.types.protocol.merkle import MMR
 from jam.types.protocol.crypto import OpaqueHash
+from jam.types.work.report import SegmentRootLookup
 from jam.utils.constants import RECENT_HISTORY_SIZE
 from jam.types.protocol.core import WorkPackageHash, SegmentRoot
 
 
-def package(packages: GuaranteesExtrinsic) -> PackageDict:
+def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
     """Transform Guarantees into Dictionary format"""
-    package_dict:PackageDict[WorkPackageHash, SegmentRoot] = PackageDict()
+    package_dict = SegmentRootLookup({})
 
     for p in packages:
         spec = p.report.package_spec
@@ -27,7 +28,7 @@ def package(packages: GuaranteesExtrinsic) -> PackageDict:
 class RecentHistory:
 
     @staticmethod
-    def transition(state: Sigma, block: Block, accumulate_root = ByteArray32([0] * 32)) -> Sigma:
+    def transition(state: Sigma, block: Block, accumulate_root = ByteArray32([0] * 32), header_hash=None) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -87,7 +88,7 @@ class RecentHistory:
         last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
 
         n = BlockHistory(
-            Hash.blake2b(block.header.encode()),
+            Hash.blake2b(block.header.encode()) if header_hash is None else header_hash,
             last,
             ByteArray32([0] * 32),
             package(block.extrinsic.guarantees)

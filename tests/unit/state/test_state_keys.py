@@ -1,6 +1,6 @@
 import pytest
 from jam.state.utils.key_constructor import construct_state_key
-from jam.types.base import Byte
+from jam.types.base import Byte, Bytes
 from jam.types.base.integers.fixed import U8
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.protocol.core import ServiceId
@@ -13,15 +13,15 @@ def test_single_u8_index():
 
     for index in test_cases:
         result = construct_state_key(index)
-        assert isinstance(result, ByteArray32)
-        assert len(result) == 32
+        assert isinstance(result, Bytes)
+        assert len(result) == 31
         assert int(result[0]) == index.value
         # Verify rest is zeros
         assert all(int(b) == 0 for b in result[1:])
 
 
 def test_u32_service_id_pair():
-    """Test case 2: (U32, ServiceId) -> [i, n₀, 0, n₁, 0, n₂, 0, n₃, 0, 0, ...]"""
+    """Test case 2: (31, ServiceId) -> [i, n₀, 0, n₁, 0, n₂, 0, n₃, 0, 0, ...]"""
     # Create test service IDs
     service_id1 = ServiceId(1)  # Assuming ServiceId takes an integer
     service_id2 = ServiceId(255)
@@ -35,8 +35,8 @@ def test_u32_service_id_pair():
 
     for index, service_id in test_cases:
         result = construct_state_key((index, service_id))
-        assert isinstance(result, ByteArray32)
-        assert len(result) == 32
+        assert isinstance(result, Bytes)
+        assert len(result) == 31
 
         # # Verify index bytes
         index_bytes = index.encode()
@@ -46,20 +46,20 @@ def test_u32_service_id_pair():
         service_id_encoded = service_id.encode()
         for i, byte in enumerate(service_id_encoded):
             pos = 1 + i * 2  # Skip index bytes and account for zero padding
-            if pos < 32:
+            if pos < 31:
                 assert result[pos] == Byte(byte)
-                if pos + 1 < 32:
+                if pos + 1 < 31:
                     assert result[pos + 1] == Byte(0)  # Verify zero padding
 
 
 def test_service_id_hash_pair():
     """Test case 3: (ServiceId, ByteArray32) -> [n₀, h₀, n₁, h₁, n₂, h₂, n₃, h₃, h₄, h₅, ..., h₂₇]"""
     service_id = ServiceId(1)
-    hash_bytes = ByteArray32([i % 256 for i in range(32)])  # Test pattern
+    hash_bytes = Bytes([i % 256 for i in range(32)])  # Test pattern
 
     result = construct_state_key((service_id, hash_bytes))
-    assert isinstance(result, ByteArray32)
-    assert len(result) == 32
+    assert isinstance(result, Bytes)
+    assert len(result) == 31
 
     service_id_encoded = service_id.encode()
 
@@ -69,7 +69,7 @@ def test_service_id_hash_pair():
         assert result[i * 2 + 1] == hash_bytes[i]
 
     # Check remaining hash bytes
-    assert result[8:] == hash_bytes[4:-4]
+    assert result[8:] == hash_bytes[4:-5]
 
 
 def test_invalid_inputs():
@@ -87,11 +87,11 @@ def test_invalid_inputs():
 def test_boundary_conditions():
     """Test boundary conditions and edge cases"""
     # Test with minimum values
-    assert len(construct_state_key(U8(0))) == 32
-    assert len(construct_state_key((U8(0), ServiceId(0)))) == 32
-    assert len(construct_state_key((ServiceId(0), ByteArray32([0] * 32)))) == 32
+    assert len(construct_state_key(U8(0))) == 31
+    assert len(construct_state_key((U8(0), ServiceId(0)))) == 31
+    assert len(construct_state_key((ServiceId(0), Bytes([0] * 32)))) == 31
 
     # Test with maximum values
-    assert len(construct_state_key(U8(255))) == 32
-    assert len(construct_state_key((U8(0xFF), ServiceId(255)))) == 32
-    assert len(construct_state_key((ServiceId(255), ByteArray32([255] * 32)))) == 32
+    assert len(construct_state_key(U8(255))) == 31
+    assert len(construct_state_key((U8(0xFF), ServiceId(255)))) == 31
+    assert len(construct_state_key((ServiceId(255), Bytes([255] * 32)))) == 31

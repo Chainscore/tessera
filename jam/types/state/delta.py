@@ -1,5 +1,6 @@
-from dataclasses import dataclass
-from typing import Union, Tuple
+from dataclasses import dataclass, field
+from typing import Dict, Type, Self, Sequence, Any, Union, Tuple
+
 from jam.execution.utils import decode_code_hash
 from jam.types.base.dictionary import Dictionary, decodable_dictionary
 from jam.types.base.integers.fixed import U32, U64
@@ -45,6 +46,17 @@ class AccountMetadata(Codable, JsonSerde):
     def t(self):
         return Balance(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o)
 
+    @staticmethod
+    def empty() -> "AccountMetadata":
+        return AccountMetadata(
+            code_hash=ByteArray32([0] * 32),
+            balance=Balance(0),
+            gas_limit=Gas(0),
+            min_gas=Gas(0),
+            num_i=Ai(0),
+            num_o=Ao(0)
+        )
+
 @decodable_dictionary(ByteArray32, Bytes, key_name="key", value_name="value")
 class AccountStorage(Dictionary[ByteArray32, Bytes]):
     """Storage dictionary"""
@@ -87,6 +99,9 @@ class LookupTable(Codable, JsonSerde):
     def __hash__(self):
         return int(Hash.blake2b(self.length.encode() + self.hash.encode()))
 
+    def to_json(self):
+        return str(Hash.blake2b(self.length.encode() + self.hash.encode()))
+
 
 @decodable_dictionary(LookupTable, Timestamps, key_name="key", value_name="value")
 class AccountLookup(Dictionary[LookupTable, Timestamps]):
@@ -111,7 +126,7 @@ class AccountLookup(Dictionary[LookupTable, Timestamps]):
 
 @with_json_metadata(
     # default in empty lists if JSON omits them
-    service   = { "name": "service",    "default": AccountMetadata(code_hash=ByteArray32([0] * 32), balance=Balance(0), gas_limit=Gas(0), min_gas=Gas(0), num_i=Ai(0), num_o=Ao(0)) },
+    service   = { "name": "service",    "default": AccountMetadata.empty() },
     storage   = { "name": "storage",    "default": AccountStorage({}) },
     preimages = { "name": "preimages",  "default": AccountPreimages({}) },
     lookup    = { "name": "lookup_meta",     "default": AccountLookup({}) },
@@ -161,7 +176,7 @@ class AccountData(Codable, JsonSerde):
         elif len(lookup_ts) == 2:
             return lookup_ts[0] <= current_ts < lookup_ts[1]
         elif len(lookup_ts) == 3:
-            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[2] <= ts
+            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[2] <= current_ts
         else:
             raise ValueError("Invalid Timestamp data")
 

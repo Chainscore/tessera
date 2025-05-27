@@ -65,7 +65,7 @@ class Disputes:
         disputes = block.extrinsic.disputes
 
         # epoch Index
-        current_epoch = block.header.slot // EPOCH_LENGTH
+        current_epoch = state.tau // EPOCH_LENGTH
 
         # 2. Valid age
         valid_ages = (
@@ -88,6 +88,11 @@ class Disputes:
                 fault.key, message_bytes, fault.target, fault.signature
             ):
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
+            if fault.key not in [v.ed25519
+                for v in (*state.lambda_, *state.kappa)]:
+                raise DisputesError(DisputesErrorCode.BAD_AUDITOR_KEY)
+
+
         # Verifying culprit signatures
         for culprit in disputes.culprits:
             message_bytes = b"jam_guarantee"
@@ -95,6 +100,10 @@ class Disputes:
                 culprit.key, message_bytes, culprit.target, culprit.signature
             ):
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
+            if culprit.key not in [validator.ed25519
+                for validator in (*state.lambda_, *state.kappa)]:
+                raise DisputesError(DisputesErrorCode.BAD_GUARANTOR_KEY)
+
 
         # Verifying verdicts are sorted by target
         for verdict in disputes.verdicts:
@@ -250,7 +259,7 @@ class Disputes:
             if i not in state.psi.offenders:
                 state.psi.offenders.append(i)
         return state
-    
+
     @staticmethod
     def get_offenders_mark(disputes: DisputesExtrinsic) -> OffendersMark:
         """
