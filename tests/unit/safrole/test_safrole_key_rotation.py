@@ -1,4 +1,6 @@
+from copy import deepcopy
 from jam.consensus.safrole.safrole import Safrole
+from jam.types.base import ByteArray144
 from jam.types.state.eta import Eta
 from jam.types.base.integers.fixed import U32
 from jam.types.state.kappa import Kappa
@@ -7,6 +9,7 @@ from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
 from jam.types.protocol.crypto import ByteArray32, Ed25519Public
+from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
 from jam.utils.constants import EPOCH_LENGTH
 
@@ -36,7 +39,7 @@ def test_key_rotation_at_epoch_boundary():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
     
     # Verify key rotation
     # λ' = κ (lambda becomes previous kappa)
@@ -51,7 +54,7 @@ def test_key_rotation_at_epoch_boundary():
         assert new_state.gamma.k[i] == initial_state.iota[i]
     
     # Verify that the ring root is updated
-    new_ring_root = Safrole.compute_ring_root([keys.bandersnatch for keys in new_state.gamma.k]).hex()
+    new_ring_root = ByteArray144(Safrole.compute_ring_root([keys.bandersnatch for keys in new_state.gamma.k]))
     assert new_state.gamma.z == new_ring_root
 
 
@@ -83,7 +86,7 @@ def test_offender_filtering():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
     
     # Check that the offender was replaced with a null key in gamma_k
     filtered_validators = new_state.gamma.k
@@ -123,7 +126,7 @@ def test_all_validators_are_offenders():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(initial_state, new_block, ByteArray32(bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
     
     # Verify all validators in gamma_k are replaced with null keys
     for validator in new_state.gamma.k:

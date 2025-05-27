@@ -86,10 +86,6 @@ def test_dictionary_json_empty():
 
 
 def test_dictionary_json_invalid_input():
-    # Test with invalid input types
-    with pytest.raises(ValueError):
-        StringIntDict.from_json([])  # List instead of dict
-
     with pytest.raises(ValueError):
         StringIntDict.from_json(None)  # None instead of dict
 

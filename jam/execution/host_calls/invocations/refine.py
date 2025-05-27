@@ -4,8 +4,6 @@ from jam.execution.host_calls.invocations.functions.refine_fns import RefineFunc
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from jam.execution.pvm.status import OUT_OF_GAS, PANIC
 from jam.execution.utils import decode_code_hash
-from jam.state.state import state
-from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types.base import U16
 from jam.types.protocol.core import CoreIndex, ProgramCounter
 from jam.types.protocol.crypto import OpaqueHash, Hash
@@ -27,6 +25,10 @@ class PsiR(InvocationProtocol):
         return self.work_package.items[self.item_index]
 
     def table(self):
+        from jam.state.state import state
+        from jam.storage.item_extrinsics import ItemExtrinsics
+        from jam.config.data_stores import main_db
+
         return {
             0: (GeneralFunctions, ()),
             17: (RefineFunctions, {
@@ -40,7 +42,7 @@ class PsiR(InvocationProtocol):
                          "trace": self.auth_trace,
                          "item_index": self.item_index,
                          "import_segments": self.i_segments,
-                         "extrinsics": ItemExtrinsics.get_all(self.work_package),
+                         "extrinsics": ItemExtrinsics(main_db).get_all(self.work_package),
                          "o": None,
                          "t": None
                      }
@@ -58,6 +60,8 @@ class PsiR(InvocationProtocol):
         }
 
     def execute(self):
+        from jam.state.state import state
+
         _, pc = decode_code_hash(state.delta[self.wi.service].historical_lookup(self.work_package.context.lookup_anchor_slot, self.wi.code_hash))
         args = self.item_index.encode() + self.wi.service.encode() + self.wi.payload.encode() + bytes(Hash.blake2b(self.work_package.encode()))
         u, r, context = PsiM.execute(
