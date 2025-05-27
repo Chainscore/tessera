@@ -27,7 +27,7 @@ class Assurances:
     def transition(state: Sigma, block: Block) -> (Sigma, List):
         """
         Process the assurances extrinsic.
-        
+
         Args:
             state: The current state of the chain.
             block: The block to process.
@@ -81,7 +81,6 @@ class Assurances:
         # Clear them
         super_majority = math.floor(2 * VALIDATOR_COUNT / 3)
         for i in range(len(state.rho)):
-            print(i, state.rho[i] is None, state.rho[i] is Null, state.rho[i], type(state.rho[i]))
             if state.rho[i] == None:
                 continue
             else:
