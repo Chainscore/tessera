@@ -1,4 +1,4 @@
-from jam.types import U32, Bytes, Int, Vector
+from jam.types.base import Bytes, U32, Int, Vector
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import WorkReportHash
 
@@ -23,8 +23,10 @@ def create_dummy_package() -> WorkPackage:
     return WorkPackage(
         authorization=Bytes(create_dummy_bytes(12)),
         auth_code_host=U32(42),
-        code_hash=OpaqueHash(create_dummy_bytes32()),
-        params=Bytes(create_dummy_bytes(10)),
+        authorizer=Authorizer(
+            code_hash=OpaqueHash(create_dummy_bytes32()),
+            params=Bytes(create_dummy_bytes(10)),
+        ),
         context=create_dummy_work_context(),
         items=WorkItems([])
     )

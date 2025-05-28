@@ -2,7 +2,6 @@ from typing import (
     Generic,
     Mapping,
     Optional,
-    Self,
     Tuple,
     Type,
     TypeVar,
@@ -45,6 +44,8 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
 
     key_type: Type[K]
     value_type: Type[V]
+    key_name: str
+    value_name: str
 
     def __init__(self, initial: Optional[Mapping[K, V]] = None):
         """
@@ -63,6 +64,7 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
 
         super().__init__(codec=DictionaryCodec())
         self.value: Dict[K, V] = {}
+
         if initial is not None:
             self.value.update(initial)
 
@@ -93,10 +95,6 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
         items = [f"{k!r}: {v!r}" for k, v in self.value.items()]
         return f"Dictionary({{{', '.join(items)}}})"
 
-    def __setitem__(self, key: K, value: V) -> None:
-        """Set value for key."""
-        self.value[key] = value
-
     def get(self, key: K, default: Optional[V] = None) -> Optional[V]:
         """
         Get value for key, returning default if key not found.
@@ -122,29 +120,41 @@ class Dictionary(Generic[K, V], Codable, Mapping[K, V], JsonSerde):
         """Get view of values."""
         return self.value.values()
 
+    def __delitem__(self, key):
+        del self.value[key]
+
     def to_json(self) -> Dict[Any, Any]:
         """Convert to JSON representation."""
         return {k.to_json(): v.to_json() for k, v in self.items()}
 
     @classmethod
-    def from_json(cls: Type[Self], data: Dict[Any, Any] | Sequence[Any]) -> Self:
+    def from_json(cls: Type["Self"], data: Sequence[Any]) -> "Self":
         """Create instance from JSON representation."""
+        if data is None:
+            raise ValueError(f"Expected value, got {data}")
         if not isinstance(data, dict):
-            raise ValueError("Dictionary: JSON representation must be a dictionary")
-        return cls(
-            {
-                cls.key_type.from_json(k): cls.value_type.from_json(v)
-                for k, v in data.items()
-            }
-        )
+            _value = cls({})
+            for val in data:
+                _value[cls.key_type.from_json(val[cls.key_name])] = cls.value_type.from_json(val[cls.value_name])
+            return _value
+        else:
+            return cls(
+                {
+                    cls.key_type.from_json(k): cls.value_type.from_json(v)
+                    for k, v in data.items()
+                }
+            )
 
 
 def decodable_dictionary(
-    key_type: Type[K], value_type: Type[V]
+    key_type: Type[K], value_type: Type[V], key_name = "key", value_name = "value"
 ) -> Type[Dictionary[K, V]]:
     def decorator(cls: Type[Dictionary[K, V]]) -> Type[Dictionary[K, V]]:
         cls.key_type = key_type
         cls.value_type = value_type
+
+        cls.key_name = key_name
+        cls.value_name = value_name
 
         @staticmethod
         def decode_from(

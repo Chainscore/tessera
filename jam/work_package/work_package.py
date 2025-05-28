@@ -27,10 +27,9 @@ from jam.utils.constants import (
     MAX_IMPORT_ITEM,
     EXTRINSIC_COUNT,
     BASIC_ERASURE_SIZE,
-    MAX_WORK_PACKAGE_SIZE,
     SEGMENT_SIZE,
     REFINE_GAS,
-    ACCUMULATION_GAS
+    ACCUMULATION_GAS, MAX_ENCODED_WORK_PACKAGE_SIZE
 )
 
 from jam.types.protocol.core import SegmentRoot, CoreIndex, Gas
@@ -40,8 +39,8 @@ from jam.erasure_coding.erasure_code import ErasureCode
 from jam.merklization.binary_merkle import BMRFunctions
 
 
-from jam.hostCall.Refine import PsiR
-from jam.hostCall.invocation import PsiI
+# from jam.execution.host_calls.invocations.refine import PsiR
+from jam.execution.host_calls.invocations.is_authorized import PsiI
 
 from jam.utils.dummy.utils import create_dummy_bytes32
 
@@ -98,7 +97,7 @@ class WorkPackageProcessing:
             item_count = len(x.payload) + len(x.import_segments) * SEGMENT_SIZE + extrinsic_len
 
         package_size = auth_token + parameterization + item_count
-        if package_size > MAX_WORK_PACKAGE_SIZE:
+        if package_size > MAX_ENCODED_WORK_PACKAGE_SIZE:
             raise WorkPackageError(
                 WorkPackagesErrorCode.BAD_WORK_PACKAGE_SIZE,
                 "count of extrinsic more than are more than actual value"
@@ -288,7 +287,7 @@ class WorkPackageProcessing:
             # r, e, u = PsiR(int(c), p, o, self.fetch_imports(w), l)
 
             # TODO: Fix later on receiving more clarity
-            r, e, u = PsiR(int(c), p, o, self.segments, l)
+            # r, e, u = PsiR(int(c), p, o, self.segments, l)
 
             segment = Segment([Byte(0)] * 4104)
             segment_length = w.export_count
@@ -387,7 +386,7 @@ class WorkPackageProcessing:
                           accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)
 
     @staticmethod
-    def zero_padding(value: Bytes, n : Int):
+    def zero_padding(value: Bytes, n: Int):
         """
         Zero Padding function P defined in Eqn 14.17
         Ensures that the length of individual byte array becomes a multiple of a given integer n.
@@ -400,12 +399,12 @@ class WorkPackageProcessing:
         Returns:
             New list containing padded byte arrays. Each element's length is now a multiple of n, padded with zeroes at the end.
         """
-        hash_length = len(value)
-        first_index = ((abs(hash_length) + n - 1) // n) + 1
-        if hash_length // n != 0:
-            padding_zero = n - first_index
-            for i in range(padding_zero):
-                value.append(Byte(0))
+
+        length = len(value)
+        padding = n - (((length + n - 1) % n) + 1)
+
+        for i in range(padding):
+            value.append(Byte(0))
 
         return value
 

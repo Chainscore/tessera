@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass

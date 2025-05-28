@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.types.extrinsics.extrinsic import Extrinsic
 from jam.types.header import Header
 from jam.utils.codec.codable import Codable

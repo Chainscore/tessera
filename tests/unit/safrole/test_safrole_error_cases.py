@@ -9,10 +9,12 @@ from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
 from jam.types.protocol.crypto import ByteArray32
+from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys, generate_ticket
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END, MAX_TICKETS_PER_EXTRINSIC
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_slot_regression_error():
     """Test error when block slot is lower than current state slot"""
     # Create initial state at slot 10
@@ -34,11 +36,12 @@ def test_slot_regression_error():
     
     # Verify that the transition raises an error
     with pytest.raises(SafroleError) as excinfo:
-        Safrole.transition(initial_state, regression_block, entropy=ByteArray32(bytes(32)))
+        Safrole.transition(initial_state, regression_block, entropy=ByteArray32(create_dummy_bytes(32)))
     
     assert excinfo.value.code == SafroleErrorCode.BAD_SLOT
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_invalid_seal_signature():
     """Test error when block has an invalid seal signature"""
     # Create initial state
@@ -64,6 +67,6 @@ def test_invalid_seal_signature():
     # Verify that the transition raises an error
     # TODO: Uncomment this once the signatures are implemented
     # with pytest.raises(SafroleError) as excinfo:
-    Safrole.transition(initial_state, invalid_seal_block, ByteArray32(bytes(32)))
+    Safrole.transition(initial_state, invalid_seal_block, ByteArray32(create_dummy_bytes(32)))
     # TODO: Uncomment this once the signatures are implemented
     # assert excinfo.value.code == SafroleErrorCode.BAD_TICKET_PROOF

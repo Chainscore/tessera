@@ -1,18 +1,19 @@
 from typing import Dict
 
+from jam.types.extrinsics import TicketBody
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
 from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
-from jam.types.state.beta import Beta, BlockHistory, PackageDict
+from jam.types.state.beta import Beta, BlockHistory
 from jam.types.state.chi import Chi, ChiG
 from jam.types.state.delta import (
     AccountData,
     AccountStorage,
     Delta,
-    LookupTimestamps,
-    PreImageLookup,
+    AccountLookup,
+    AccountPreimages,
     ServiceCodeHash,
-    Timestamps,
+    Timestamps, AccountMetadata, Ao, Ai,
 )
 from jam.types.state.eta import Eta
 from jam.types.state.iota import Iota
@@ -25,8 +26,6 @@ from jam.types.state.rho import OptionalWorkReportState, Rho
 from jam.types.state.tau import Tau
 from jam.types.state.nu import AllReadyWRs, Nu
 from jam.types.state.xi import Xi
-
-from jam.types import TicketBody, Array, Vector
 
 from jam.state.state import State
 from jam.types.base import Bytes
@@ -45,7 +44,7 @@ from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
 )
-from jam.types.work.report import WorkDependencies
+from jam.types.work.report import WorkDependencies, SegmentRootLookup
 from jam.types.protocol.core import (
     SegmentRoot,
     WorkPackageHash,
@@ -77,7 +76,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["alpha"] = Alpha([auth_pool for _ in range(CORE_COUNT)])
 
     # Beta - Vector of block history
-    package_dict = PackageDict(
+    package_dict = SegmentRootLookup(
         {
             WorkPackageHash(create_dummy_bytes32()): SegmentRoot(create_dummy_bytes32())
             for _ in range(3)  # Few dummy packages
@@ -87,7 +86,7 @@ def create_dummy_state_components() -> Dict[str, object]:
         header_hash=HeaderHash(create_dummy_bytes32()),
         mmr=MMR([]),
         state_root=StateRoot(create_dummy_bytes32()),
-        packages=package_dict,
+        reported=package_dict,
     )
     components["beta"] = Beta([block for _ in range(3)])
 
@@ -122,10 +121,10 @@ def create_dummy_state_components() -> Dict[str, object]:
     storage = AccountStorage(
         {create_dummy_bytes32(): Bytes(create_dummy_bytes(32)) for _ in range(3)}
     )
-    lookup = PreImageLookup(
+    lookup = AccountPreimages(
         {create_dummy_bytes32(): Bytes(create_dummy_bytes(64)) for _ in range(2)}
     )
-    timestamps = LookupTimestamps(
+    timestamps = AccountLookup(
         {
             create_dummy_bytes32(): Timestamps([U32(i) for i in range(3)])
             for _ in range(2)
@@ -133,12 +132,16 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     account = AccountData(
         storage=storage,
-        lookup=lookup,
-        timestamps=timestamps,
-        code_hash=ServiceCodeHash(create_dummy_bytes32()),
-        balance=Balance(1000),
-        gas_limit=Gas(5000),
-        min_gas=Gas(100),
+        preimages=lookup,
+        lookup=timestamps,
+        service=AccountMetadata(
+            code_hash=ServiceCodeHash(create_dummy_bytes32()),
+            balance=Balance(1000),
+            gas_limit=Gas(5000),
+            min_gas=Gas(100),
+            num_o=Ao(0),
+            num_i=Ai(0)
+        )
     )
     components["delta"] = Delta({ServiceId(i): account for i in range(3)})
 

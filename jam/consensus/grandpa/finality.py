@@ -1,4 +1,4 @@
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.types.block import Block
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import Hash

@@ -1,0 +1,59 @@
+from typing import List, Type
+
+from jam.execution.pvm.status import PvmError, PANIC
+from jam.execution.pvm.instructions.tables.i_imm import InstructionsWArgs1Imm
+from jam.execution.pvm.instructions.tables.i_reg_i_ewimm import InstructionsWArgs1Imm1EwImm
+from jam.execution.pvm.instructions.tables.wo_args import InstructionsWoArgs
+from jam.execution.pvm.instructions.tables.i_offset import WArgsOneOffset
+from jam.execution.pvm.instructions.tables.i_reg_i_imm import InstructionsWArgs1Reg1Imm
+from jam.execution.pvm.instructions.tables.i_reg_ii_imm import InstructionsWArgs1Reg2Imm
+from jam.execution.pvm.instructions.tables.i_reg_i_imm_i_offset import InstructionsWArgs1Reg1Imm1Offset
+from jam.execution.pvm.instructions.tables.ii_imm import InstructionsWArgs2Imm
+from jam.execution.pvm.instructions.tables.ii_reg import InstructionsWArgs2Reg
+from jam.execution.pvm.instructions.tables.ii_reg_i_imm import InstructionsWArgs2Reg1Imm
+from jam.execution.pvm.instructions.tables.ii_reg_i_offset import InstructionsWArgs2Reg1Offset
+from jam.execution.pvm.instructions.tables.ii_reg_ii_imm import InstructionsWArgs2Reg2Imm
+from jam.execution.pvm.instructions.tables.iii_reg import InstructionsWArgs3Reg
+
+from jam.types.base.integers.fixed import U8
+from jam.execution.pvm.instructions.instruction_table import InstructionTable
+
+class InstTableMap:
+    # Mapping of opcodes to instruction tables
+    # Key denotes the last opcode of the corresponding table
+    ALL_INSTRUCTION_TABLES = {
+        10: InstructionsWoArgs,
+        20: InstructionsWArgs1Imm,
+        30: InstructionsWArgs1Imm1EwImm,
+        40: InstructionsWArgs2Imm,
+        50: WArgsOneOffset,
+        70: InstructionsWArgs1Reg1Imm,
+        80: InstructionsWArgs1Reg2Imm,
+        100: InstructionsWArgs1Reg1Imm1Offset,
+        120: InstructionsWArgs2Reg,
+        170: InstructionsWArgs2Reg1Imm,
+        180: InstructionsWArgs2Reg1Offset,
+        190: InstructionsWArgs2Reg2Imm,
+        240: InstructionsWArgs3Reg,
+    }
+
+    @classmethod
+    def get_instructions_table(cls, opcode: U8) -> Type[InstructionTable]:
+        """Opcode could be any integer, but it must be a valid opcode."""
+        for key, value in cls.ALL_INSTRUCTION_TABLES.items():
+            if opcode < key:
+                return value
+        raise PvmError(PANIC)
+
+    @classmethod
+    def terminating_blocks(cls) -> List[int]:
+        """
+        The terminating blocks are the blocks that will cause the execution to halt.
+        To find out, iterate over the instruction tables and check if the opcode.is_terminating is True.
+        """
+        terminating_blocks = []
+        for instruction_table in cls.ALL_INSTRUCTION_TABLES.values():
+            for opc_id, opcode in instruction_table.table().items():
+                if opcode.is_terminating:
+                    terminating_blocks.append(opc_id)
+        return terminating_blocks
