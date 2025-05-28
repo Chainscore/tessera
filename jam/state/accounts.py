@@ -8,10 +8,6 @@ from jam.types.base import Bytes, ByteArray32, U32
 from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot, BlobLength
 from jam.types.protocol.crypto import Hash
 from jam.types.state.delta import AccountMetadata, ServiceCodeHash, Ao, Ai, LookupTable, Timestamps, AccountData
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
-from jam.utils.codec.primitives.bytes import BytesCodec
-from jam.utils.json import JsonSerde
 from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 
 
