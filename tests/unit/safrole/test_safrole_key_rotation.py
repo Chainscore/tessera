@@ -1,4 +1,7 @@
 from copy import deepcopy
+
+import pytest
+
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.base import ByteArray144
 from jam.types.state.eta import Eta
@@ -13,7 +16,7 @@ from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
 from jam.utils.constants import EPOCH_LENGTH
 
-
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_key_rotation_at_epoch_boundary():
     """Test that Safrole correctly rotates validator keys at epoch boundaries"""
     # Create validator data

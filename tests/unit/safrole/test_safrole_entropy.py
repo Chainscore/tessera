@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+import pytest
+
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.state.eta import Eta
 from jam.types.base.integers.fixed import U32
@@ -27,7 +29,7 @@ def test_entropy_accumulation():
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
         gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])),
-        gamma_z=GammaZ(Safrole.compute_ring_root([keys.bandersnatch for keys in create_validator_data_from_keys()])),
+        gamma_z=GammaZ([0] * 144),
         offenders=PsiO([])
     )
     
@@ -46,7 +48,6 @@ def test_entropy_accumulation():
     assert new_state.eta[1] == initial_state.eta[1]
     assert new_state.eta[2] == initial_state.eta[2]
     assert new_state.eta[3] == initial_state.eta[3]
-
 
 def test_entropy_rotation_at_epoch_boundary():
     """Test that Safrole correctly rotates entropy values at epoch boundaries"""

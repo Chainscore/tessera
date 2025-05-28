@@ -94,9 +94,3 @@ class Helpers:
 
 
 
-secret='01371ac62e04d1faaadbebaa686aaf122143e2cda23aacbaa4796d206779a501'
-print(int.from_bytes(bytes.fromhex(secret), 'little'))
-
-
-# l=[(1 << i) for i in range(100)]
-# print(l)
