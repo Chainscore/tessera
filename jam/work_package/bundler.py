@@ -1,11 +1,11 @@
-from typing import Tuple, cast
+from typing import Tuple, Dict
 
+from jam import JamConfig
 from jam.config.logging import logger
 from jam.config.settings import settings
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types.base import Bytes
 
-from jam.types.base.integers import U16
 from jam.types.base.sequences.vector import Vector
 from jam.types.extrinsics.extrinsic import Extrinsic
 
@@ -19,13 +19,11 @@ from jam.types.work.manifest import (
     Extrinsics,
     SegmentDict,
     MultiJustifications,
-    MultiExtrinsics, ByteArray4104
+    MultiExtrinsics, ByteArray4104, Segment, SegmentIndex
 )
 from jam.types.work.refine_context import OpaqueHashes
 
 from jam.types.work.report import SegmentRootLookup, WorkPackageBundle
-
-
 
 from jam.types.protocol.core import SegmentRoot
 from jam.types.protocol.crypto import OpaqueHash
@@ -34,19 +32,17 @@ from jam.merklization.binary_merkle import BMRFunctions
 from jam.utils.benchmark import benchmark
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap, ErasureShardsMap
-from jam.work_package.stores.segments import SegmentsDA
 from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
-from jam.types.work.shard import SegmentsShard
+from jam.types.work.shard import ShardIndex, SegmentsShards, SegmentsShard
 
 from jam.erasure_coding.erasure_code import ErasureCode
 
 from jam.types.base.integers.fixed import U16
 from jam.types.base.integers.general import Int
 
-
+from jam.network.node import Node
 from jam.network.protocols.ce_139 import SegmentShardRequest
 from jam.network.protocols.ce_139_base import CE139Data, ShardRequest, SegmentIndexes, Response
-from jam.network.node import Node
 
 class Bundler:
     merkle: BMRFunctions
@@ -139,18 +135,24 @@ class Bundler:
         seg_da = SegmentsDA(d3l)
         sr_er_da = SegmentErasureMap(d3l)
         er_shards_da = ErasureShardsMap(d3l)
-
-        # TODO: Use shards DA for reconstruction of segments
         shards_da = SegmentShardsDA(d3l)
-
-        seg_dict = SegmentDict({})
 
         erasure_code = ErasureCode()
 
         seg_dict = SegmentDict({})
-        temp_shards = [SegmentsShard]
-        temp_hash = w.import_segments[0].tree_root
-        shard_indexes = []
+        shards_dict: Dict[SegmentRoot, Vector[Tuple[ShardIndex, SegmentsShard]]] = {}
+
+        import_map = {}
+        for spec in w.import_segments:
+            h = spec.tree_root
+            n = spec.index
+
+            if h in import_map:
+                import_map[h].append(n)
+            else:
+                import_map[h] = [n]
+
+        shard_indices = []
 
         for spec in w.import_segments:
             h = spec.tree_root
@@ -160,10 +162,12 @@ class Bundler:
             logger.info(f"Fetching segments with root {s_root}")
 
             try:
-                # Fetch segments directly from db first
+                # Check for Segments in cache first
                 if s_root in seg_dict:
                     segments = seg_dict[s_root]
                     imports.append(segments[n])
+
+                # If cache miss, check in DB, and cache it
                 else:
                     segments, _ = seg_da.get(s_root)
                     seg_dict[s_root] = segments
@@ -173,55 +177,65 @@ class Bundler:
                 logger.warn(f"Warning! {e}")
                 logger.warn("Looking for segment shards in DA!")
                 try:
-                    e_root = sr_er_da.get(s_root)
-                    shard_roots = er_shards_da.get_ss_roots(e_root)
+                    decodable_shards: Vector[Tuple[Bytes, int]] = Vector([])
+                    available_indices = set[ShardIndex]()
 
-                    decodable_data: Vector[Tuple[Bytes, int]] = Vector([])
-                    for i, root in enumerate(shard_roots):
-                        shard_indexes.append(int(root.shard_index))
+                    # Check for root in cache first
+                    if s_root in shards_dict:
+                        shards = shards_dict[s_root]
+
+                        for i, (shard_index, seg_shards) in enumerate(shards):
+                            if len(seg_shards) > n:
+                                decodable_shards.append((seg_shards[n], int(shard_index)))
+                                available_indices.add(shard_index)
+
+                    else:
+                        e_root = sr_er_da.get(s_root)
+                        shard_roots = er_shards_da.get_ss_roots(e_root)
+
+                        for i, root in enumerate(shard_roots):
+                            try:
+                                seg_shards, shard_index = shards_da.get(root.segment_shard_root)
+
+                                # Cache SegmentsShard
+                                shards_dict[s_root].append((shard_index, seg_shards))
+
+                                # Collect Specific Chunks
+                                if len(seg_shards) > n:
+                                    decodable_shards.append((seg_shards[n], int(shard_index)))
+
+                            except (IndexError, KeyError) as err:
+                                logger.warn(f"Shard access error: {err}")
+                                continue
+
+                    if len(decodable_shards) > JamConfig.erasure_coding_original_shards:
                         try:
-                            if h == temp_hash:
-                                # Use previously cached shards
-                                seg_shards = temp_shards[i]
-                            else:
-                                # Fetch and cache new shard
-                                seg_shards = shards_da.get(root.segment_shard_root)
-                                temp_shards.append(seg_shards)
-
-                            # temp.append(seg_shards[n])
-                            decodable_data.append((seg_shards[n], int(root.shard_index)))
-                        except (IndexError, KeyError) as err:
-                            logger.warn(f"Shard access error: {err}")
-                            continue
-
-                    if len(shard_roots) > 342:
-                        # TODO: Reconstruct Shards
-                        try:
-                            decoded_data = erasure_code.decode(decodable_data)
-                            imports.append(ByteArray4104(decoded_data))
+                            # Reconstructing Segment
+                            decoded_segment = erasure_code.decode(decodable_shards)
+                            segment = Segment(decoded_segment)
+                            imports.append(segment)
                         except Exception as err:
                             logger.error(f"Erasure decoding failed for {h}: {err}")
                     else:
-                        # TODO: Fetch Missing Shards
-                        all_indices = set(range(1023))
-                        available_indices = set(shard_indexes)
-                        missing_indices = all_indices - available_indices
+                        # Fetch Missing Shards
                         ce_139 = SegmentShardRequest()
-                        temp_req = CE139Data()
-                        for idx in missing_indices:
-                            req: ShardRequest = ShardRequest(erasure_root=e_root, shard_Index=U16(idx), length=Int(1),
-                                                             seg_indexes=SegmentIndexes(U16(n)))
-                            temp_req.append(req)
-                        try:
-                            ...
-                            responses = ce_139.transmit(self.node, data=temp_req)
-                            for res in responses:
-                                ...
-                        except Exception as e:
-                            logger.warn(f"Failed to fetch index {idx}: {e}")
-                        # c = [(bytes.fromhex(str(s)), i) for i, s in enumerate(temp)]
-                        # decoded_data = erasure_code.decode(c)
-                        # imports.append(ByteArray4104(decoded_data))
+
+                        requests = CE139Data([])
+                        for i in range(1023):
+                            if ShardIndex(i) not in available_indices:
+                                req: ShardRequest = ShardRequest(erasure_root=e_root, shard_Index=ShardIndex(i), length=Int(1),
+                                                                 seg_indexes=SegmentIndexes(SegmentIndex(n)))
+                                requests.append(req)
+
+                                try:
+                                    ...
+                                    responses = ce_139.transmit(self.node, data=requests)
+                                    for res in responses:
+                                        ...
+
+
+                                except Exception as e:
+                                    logger.warn(f"Failed to fetch for index {i}: {e}")
 
                 except KeyError as e2:
                     logger.warn(f"Warning! {e2}")

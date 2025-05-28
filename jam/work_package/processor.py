@@ -418,7 +418,7 @@ class Processor:
         validator = Validator()
         validator.validate_wp(package)
 
-        bundler = Bundler()
+        bundler = Bundler(self.node)
 
         # Build Segment Root Lookup Dictionary
         logger.info("Building Lookup Dictionary..")

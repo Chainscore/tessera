@@ -32,7 +32,7 @@ class JamConfig:
     tickets_per_validator: int
     max_tickets_per_extrinsic: int
     rotation_period: Optional[int]
-    erasure_coding_original_shards: int
+    erasure_coding_original_shards: int  # RECOVERY THRESHOLD
     erasure_coding_recovery_shards: int
 
     @classmethod

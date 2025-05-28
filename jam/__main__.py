@@ -1,5 +1,4 @@
 import asyncio
-import threading
 import json
 
 from jam.config.logging import setup_logging, logger
@@ -20,7 +19,7 @@ from jam.types.protocol.core import Balance, Gas, BlobLength, ServiceId
 from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
 from jam.state.state import setup_state
 from jam.types.base.integers.fixed import U16, U8
-from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Hash
+from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Hash, Ed25519Public
 from jam.types.block import Block
 from jam.types.header import Header
 from jam.types.protocol.validators import (
@@ -66,11 +65,20 @@ async def main(
         peerlist = genesis["peers"]
         peers = [
             Peer(
-                port=pr["metadata"]["port"],
-                host=".".join([str(val) for val in pr["metadata"]["host"]]),
-                san=pr["id"],
+                id=pr["id"],
+                data=ValidatorData(
+                    bandersnatch=BandersnatchPublic(pr["bandersnatch"]),
+                    ed25519=Ed25519Public(pr["ed25519"]),
+                    bls=BlsPublic(pr["bls"]),
+                    metadata=ValidatorMetadata(
+                        name=ValidatorName(pr["metadata"]["name"]),
+                        host=IPAddress([U8(val) for val in pr["metadata"]["host"]]),
+                        port=U16(pr["metadata"]["port"]),
+                    )
+                )
             )
             for pr in peerlist
+            if int(pr["metadata"]["port"]) != port
         ]
 
         # Load validator data from seeds

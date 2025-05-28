@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
+from jam.config.settings import settings
 from jam.network.quic import QuicServerProtocol
 from jam.types.base.integers import Int
 from jam.types.base.sequences.bytes.byte_array import ByteArray12
@@ -14,8 +15,9 @@ from jam.utils.codec.decorators import decodable_dataclass
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.utils.json import JsonSerde
 
-from jam.types.protocol.core import ErasureRoot
+from jam.types.protocol.core import ErasureRoot, ValidatorIndex
 from jam.types.base.sequences.vector import decodable_vector, Vector
+from jam.work_package.stores.mappings import ErasureAssurerMap
 
 
 @decodable_vector(SegmentIndex)
@@ -56,7 +58,6 @@ class CE139Data(Vector[ShardRequest]):
     ...
 
 
-
 class SegmentShardRequestBase(NetworkProtocol):
 
     from jam.network.node import Node
@@ -69,7 +70,17 @@ class SegmentShardRequestBase(NetworkProtocol):
         logger.info(f"Sending segment shard request with prefix {self._prefix}")
         stream = self._prefix.encode() + data.encode()
 
+        d3l = settings.d3l
+
+        er_ar_da = ErasureAssurerMap(d3l)
+
         responses = Vector([])
+        for req in data:
+            wr_hash, assurers = er_ar_da.get(req.erasure_root)
+            res = []
+            for assurer in assurers:
+
+
         for client in node.connections:
             data = client.stream_and_close(message=stream)
             responses.append(data)
@@ -87,3 +98,4 @@ class SegmentShardRequestBase(NetworkProtocol):
 
     def client_intercept(self, node: Node, buffer: bytes, stream_id: int):
         ...
+
