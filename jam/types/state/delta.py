@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import Dict, Type, Self, Sequence, Any, Union, Tuple
+from dataclasses import dataclass
+from typing import Union, Tuple
 
 from jam.execution.utils import decode_code_hash
 from jam.types.base.dictionary import Dictionary, decodable_dictionary

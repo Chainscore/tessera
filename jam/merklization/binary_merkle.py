@@ -1,6 +1,5 @@
 from math import log2, ceil
 from typing import Optional, Callable
-from copy import deepcopy
 
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.vector import Vector

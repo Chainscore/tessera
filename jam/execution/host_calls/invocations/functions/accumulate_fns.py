@@ -1,9 +1,9 @@
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.bytes.bytes import Bytes
 from jam.accumulation.types import DeferredTransfer, AccumulationContext, StateContext
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus, PvmError
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
+from jam.types.base.bytes.byte_array import ByteArray32
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.protocol.merkle import OptionHash
 from jam.types.state.chi import Chi

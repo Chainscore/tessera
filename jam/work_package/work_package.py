@@ -8,7 +8,7 @@ from jam.types.base.integers.general import Int
 from jam.types.base.integers.fixed import U8, U16, U64
 
 
-from jam.types.work.item import WorkItem, ExtrinsicSpec
+from jam.types.work.item import WorkItem
 from jam.types.work.package import  WorkPackage
 from jam.types.work.segment import Segments, Segment, MultiSegments
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError

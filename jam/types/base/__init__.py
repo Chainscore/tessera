@@ -5,9 +5,7 @@ from jam.types.base.integers import (
     U64,
     U128,
     U256,
-    U512,
     Int,
-    decodable_int,
 )
 from jam.types.base.string import String
 from jam.types.base.null import Null, Nullable
@@ -17,19 +15,19 @@ from jam.types.base.bit import Bit
 from jam.types.base.choices import Choice, Option, decodable_choice, decodable_option
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.types.base.sequences.bytes.bit_array import BitArray, decodable_bit_array, Byte
-from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.base.sequences.bytes.byte_array import (
-    ByteArray8,
-    ByteArray16,
-    ByteArray32,
-    ByteArray64,
-    ByteArray96,
-    ByteArray128,
-    ByteArray144,
-    ByteArray256,
-    ByteArray784,
-)
+from jam.types.base.bytes.bytes import Bytes
+# from jam.types.base.sequences.bytes import BitArray, decodable_bit_array, Byte
+# from jam.types.base.bytes.byte_array import (
+#     ByteArray8,
+#     ByteArray16,
+#     ByteArray32,
+#     ByteArray64,
+#     ByteArray96,
+#     ByteArray128,
+#     ByteArray144,
+#     ByteArray256,
+#     ByteArray784,
+# )
 
 __all__ = [
     # Integer types
@@ -40,7 +38,6 @@ __all__ = [
     "U64",
     "U128",
     "U256",
-    "U512",
     # Choice and Null types
     "Choice",
     "Option",
@@ -70,7 +67,6 @@ __all__ = [
     "Byte",
     "Bytes",
     # Decodable types
-    "decodable_int",
     "decodable_array",
     "decodable_bit_array",
     "decodable_vector",

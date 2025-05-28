@@ -8,7 +8,7 @@ from jam.execution.pvm.types import Accessibility
 from jam.types.base import decodable_dictionary, Dictionary
 from jam.types.base.integers.fixed import U64
 from jam.types.base.integers.general import Int
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.bytes.bytes import Bytes
 from jam.types.protocol.core import Gas, Register, ProgramCounter
 from jam.execution.pvm.memory import Memory
 from jam.types.protocol.core import ServiceId,TimeSlot

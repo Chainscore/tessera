@@ -2,8 +2,6 @@ from math import ceil, floor
 from typing import Dict, List, Self, Sequence
 from jam.execution.pvm.types import Accessibility
 from jam.execution.pvm.status import PvmError, PAGE_FAULT
-from jam.types.base.integers.fixed import U32
-from jam.types.base.sequences.bytes.bit_array import Byte
 from jam.utils.constants import PVM_INIT_DATA_SIZE, PVM_MEMORY_PAGE_SIZE, PVM_INIT_ZONE_SIZE
 
 

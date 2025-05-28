@@ -1,11 +1,9 @@
 from enum import Enum
-from typing import Literal
 from jam.types.base.bit import Bit
-from jam.types.base.sequences.bytes.bit_array import Byte
-from jam.types.base.sequences.bytes.byte_array import ByteArray32, ByteArray64
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.sequences.bytes import Byte
+from jam.types.base.bytes.byte_array import ByteArray32, ByteArray64
+from jam.types.base.bytes.bytes import Bytes
 from jam.types.protocol.crypto import Hash
-from jam.utils.byte_utils import ByteUtils
 
 ZERO_HASH = ByteArray32([Byte(0)] * 32)
 NodeHash = ByteArray32

@@ -28,7 +28,8 @@ class Codable(Generic[T]):
             codec: Optional codec to use for encoding/decoding
             enc_sequence: Optional function that returns sequence of fields to encode
         """
-        self.codec = codec
+        if isinstance(codec, Codec):
+            self.codec = codec
 
     def encode_size(self) -> int:
         """Calculate number of bytes needed to encode."""
@@ -52,9 +53,9 @@ class Codable(Generic[T]):
             )
         raise NotImplementedError("No supported encoding method found")
 
-    @staticmethod
+    @classmethod
     def decode_from(
-        buffer: Union[bytes, bytearray, memoryview], offset: int = 0
+        cls, buffer: Union[bytes, bytearray, memoryview], offset: int = 0
     ) -> Tuple[Any, int]:
         """
         Decode from buffer. Must be implemented by subclasses or added via decorator.
@@ -68,6 +69,5 @@ class Codable(Generic[T]):
                 - The decoded value
                 - Number of bytes read
         """
-        raise NotImplementedError(
-            "decode_from must be implemented by subclasses or added via decorator"
-        )
+        value, size = cls.codec.decode_from(buffer, offset)
+        return cls(value), size

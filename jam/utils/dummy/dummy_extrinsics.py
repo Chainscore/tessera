@@ -1,12 +1,11 @@
 from random import randint
 
-from jam.types.base.integers import U64
 from jam.types.extrinsics.extrinsic import Extrinsic
 from jam.types.extrinsics.tickets import TicketEnvelope, TicketsExtrinsic
 from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
 from jam.types.extrinsics.guarantees import ReportGuarantee, ValidatorSignature, ValidatorSignatures, GuaranteesExtrinsic
 from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField, AssurancesExtrinsic
-from jam.types.extrinsics.disputes import Verdict, Verdicts, Culprits, Faults, Judgement, DisputesExtrinsic
+from jam.types.extrinsics.disputes import Verdicts, Culprits, Faults, DisputesExtrinsic
 from jam.types.protocol.core import ServiceId, TimeSlot, ValidatorIndex, Gas
 from jam.types.base.integers.fixed import U32, U16, U8, U64
 from jam.types.work.report import WorkReport
@@ -21,7 +20,7 @@ from jam.types.work.report import (
 from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_int
 from jam.types.work.refine_context import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, Ed25519Signature, BandersnatchRingVrfSignature
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.bytes.bytes import Bytes
 from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
 
 

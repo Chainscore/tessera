@@ -4,10 +4,10 @@ from dataclasses import dataclass
 
 from jam.types.base import Int
 from jam.types.base.null import Nullable
-from jam.types.base.integers import U8, U16, U32, U64
+from jam.types.base.integers import U16, U32
 from jam.types.base.choices.choice import Choice, decodable_choice
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.bytes.bytes import Bytes
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.work.package import WorkPackage
 from jam.types.work.refine_context import RefineContext
