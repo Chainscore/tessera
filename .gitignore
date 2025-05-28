@@ -41,9 +41,6 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-db/
-!jam/db
-!tests/unit/db
 
 # Environment
 .env
