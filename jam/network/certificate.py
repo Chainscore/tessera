@@ -7,6 +7,8 @@ import os
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
+
+from jam.types.base.integers.fixed import U256
 from jam.types.protocol.crypto import Hash
 
 ASN1_PREFIX = bytes.fromhex("302e020100300506032b657004220420")
@@ -14,6 +16,26 @@ ZERO_SEED = b"\x00" * 32
 
 def base32_encode(data):
     return base64.b32encode(data).decode("utf-8").lower().replace("=", "")
+
+
+def generate_san(pubkey: bytes) -> str:
+    """
+    Compute the alternative name N(k) for a 32-byte Ed25519 public key,
+    following the SNP specification.
+
+    N(k) = "e" + B(E32⁻¹(k), 52)
+    """
+    if len(pubkey) != 32:
+        raise ValueError("Public key must be exactly 32 bytes")
+
+    def b(n: U256, l: int) -> str:
+        if l == 0:
+            return ""
+        return alphabet[n % 32] + b(n // 32, l - 1)
+
+    alphabet = "abcdefghijklmnopqrstuvwxyz234567"
+    n, _ = U256.decode_from(pubkey)
+    return "e" + b(n, 52)
 
 def generate_keys(port: int):
     """
@@ -76,7 +98,7 @@ def generate_keys(port: int):
     public_key_der = base64.b64decode(public_key_pem.split(b"\n")[1])
     decoded_public_key = public_key_der[-32:]
 
-    san = "e" + base32_encode(decoded_public_key)
+    san = generate_san(decoded_public_key)
 
     valid_from = datetime.now(timezone.utc)
     valid_to = valid_from + timedelta(days=365)

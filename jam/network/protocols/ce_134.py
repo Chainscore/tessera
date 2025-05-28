@@ -80,7 +80,7 @@ class WorkPackageSharing(NetworkProtocol):
 
         responses = Vector([])
         for peer in node.peer_conn:
-            if peer.port == 30335:
+            if int(peer.data.metadata.port) == 30335:
                 logger.info("sending bundle to 30335")
                 client = node.peer_conn[peer][1]
                 stream_id = client.stream_and_keep_open(message=stream_a)

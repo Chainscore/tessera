@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from time import time
 from typing import cast
 
 from jam.config.logging import logger
@@ -65,7 +64,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
         responses = Vector([])
         for peer in node.peer_conn:
-            if peer.port == 30333:
+            if peer.data.metadata.port == 30333:
                 logger.info("sending package to 30333")
                 client = node.peer_conn[peer][1]
                 stream_id = client.stream_and_keep_open(message=stream_a)
@@ -76,10 +75,6 @@ class WorkPackageSubmission(NetworkProtocol):
 
     def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Work Package on Guarantor (server)"""
-        from concurrent.futures import ThreadPoolExecutor
-
-        executor = ThreadPoolExecutor()
-
         logger.info("Received Work Package")
         data, offset = CE133Data.decode_from(buffer)
         data = cast(CE133Data, data)

@@ -81,6 +81,8 @@ async def main(
             if int(pr["metadata"]["port"]) != port
         ]
 
+        # print("peers", peers)
+
         # Load validator data from seeds
         my_keys = json.load(open("seeds/keys.json"))[str(port)]
         ed25519_public = Ed25519PrivateKey.from_private_bytes(

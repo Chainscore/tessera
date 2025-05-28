@@ -10,9 +10,19 @@ class Peer:
     id: str
     data: ValidatorData
 
+    @property
+    def get_validator_index(self):
+        from jam.state.state import state
+
+        for i,val in enumerate(state.kappa):
+            if val.bandersnatch == self.data.bandersnatch:
+                return i
+
+        raise ValueError("No validator found with matching bandersnatch key.")
+
     def __init__(self, id: str, data: ValidatorData):
         self.id = id
         self.data = data
 
     def __repr__(self):
-        return f"Peer(host={self.data.metadata.host}, port={self.data.metadata.port}, name={self.data.metadata.name})"
+        return f"Peer(host={self.data.metadata.host}, port={self.data.metadata.port}, name={self.data.metadata.name}, data={self.data})"

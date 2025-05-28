@@ -68,7 +68,7 @@ class WorkReportDistribution(NetworkProtocol):
 
         responses = Vector([])
         for peer in node.peer_conn:
-            if peer.port == 30336:
+            if int(peer.data.metadata.port) == 30336:
                 logger.info("sending report to 30336")
                 client = node.peer_conn[peer][1]
                 data = await client.stream_and_close(message=message)

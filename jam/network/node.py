@@ -127,15 +127,15 @@ class Node:
 
         try:
             # Skip self
-            if peer.data.metadata.host == self.host and peer.data.metadata.port == self.port:
+            if str(peer.data.metadata.host) == self.host and int(peer.data.metadata.port) == self.port:
                 logger.info(f"⚠️ ({self.name}) Skipping self ({self.host}:{self.port})")
                 return
             
-            logger.info(f"🔹 ({self.name}) Creating new connection to {peer.data.metadata.host}:{peer.data.metadata.port} via QUIC...")
+            logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer.data.metadata.host)}:{int(peer.data.metadata.port)} via QUIC...")
 
             async with connect(
-                    peer.data.metadata.host,
-                    peer.data.metadata.port,
+                    str(peer.data.metadata.host),
+                    int(peer.data.metadata.port),
                     configuration=self.configuration(),
                     create_protocol=lambda *args, **kwargs: QuicClientProtocol(*args, node=self, **kwargs),
                     session_ticket_handler=session_ticket_store.add,
@@ -145,7 +145,7 @@ class Node:
                 self.connections.append(client)
                 client = cast(QuicClientProtocol, client)
 
-                logger.info(f"🤝 ({self.name}) Connection to {peer.data.metadata.host}:{peer.data.metadata.port} established ✅")
+                logger.info(f"🤝 ({self.name}) Connection to {str(peer.data.metadata.host)}:{int(peer.data.metadata.port)} established ✅")
 
                 stream_id = client._quic.get_next_available_stream_id()
                 client.stream_and_keep_open(stream_id=stream_id,message=json.dumps({
@@ -158,6 +158,8 @@ class Node:
                 # await client.stream_and_keep_open(stream_id=stream_id, message=final.encode())
 
                 self.peer_conn[peer] = stream_id, client
+                print("conn peer id", client._quic._peer_cid)
+                print("conn host id", client._quic.host_cid)
 
 
                 self.is_initialized = True
@@ -166,7 +168,7 @@ class Node:
                 await asyncio.Future()
 
         except asyncio.CancelledError:
-            logger.info(f"🔴 ({self.name}) Connection with {peer.data.metadata.host}:{peer.data.metadata.port} cancelled")
+            logger.info(f"🔴 ({self.name}) Connection with {str(peer.data.metadata.host)}:{int(peer.data.metadata.port)} cancelled")
         except Exception as e:
             logger.warning(f"⚠️ ({self.name}) Failed to connect to {peer}: {e}")
 

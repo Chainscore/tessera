@@ -2,7 +2,8 @@ import asyncio
 from typing import Dict, Optional
 
 from aioquic.asyncio import QuicConnectionProtocol
-from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted
+from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted, \
+    ConnectionIdIssued, ConnectionIdRetired
 from jam.config.logging import logging as logger
 
 genesis_hash = "476243ad"
@@ -17,6 +18,7 @@ class QuicClientProtocol(QuicConnectionProtocol):
         self._close_pending = False
         self.stream_buffer = {}
         self.waiter = {}
+        self.connection_id = 0
         self.node = node
 
     async def stream_and_close(self, message: bytes, stream_id: Optional[int] = None):
@@ -52,11 +54,24 @@ class QuicClientProtocol(QuicConnectionProtocol):
         if isinstance(event, HandshakeCompleted):
             logger.info("🔗 Handshake completed (client connected to server)")
 
+        elif isinstance(event, ConnectionIdIssued):
+            logger.warning(f"🔗 Connection Id issued: {event.connection_id}")
+            self.connection_id = event.connection_id
+            print("new conn id", event.connection_id.hex())
+
+        elif isinstance(event, ConnectionIdRetired):
+            logger.warning(f"🔗 Connection Id retired: new - {event.connection_id}")
+            print("retired id", event.connection_id.hex())
+
+
         elif isinstance(event, ConnectionTerminated):
             logger.warning(f"❌ Client Connection terminated: {event.error_code}")
             self._close_pending = True
 
         elif isinstance(event, StreamDataReceived):
+            print("client peer id", self._quic._peer_cid)
+            print("client host id", self._quic.host_cid)
+
             if self.waiter[event.stream_id] is not None:
                 from jam.network.protocols.base import PrefixType
 

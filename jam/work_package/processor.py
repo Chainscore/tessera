@@ -6,6 +6,7 @@ from typing import Tuple
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from jam.config.chainspec import chain_config
 from jam.config.logging import logger
 from jam.config.settings import settings
 
@@ -41,7 +42,7 @@ from jam.types.work.shard import (
     SegmentsShard,
     SegmentsShardRoots,
     SegmentsShardUnit,
-    ShardKey
+    ShardKey, BundleShard, ShardIndex, SegmentShard
 )
 from jam.types.work.report import (
     WorkResult,
@@ -256,7 +257,7 @@ class Processor:
 
         # Availability Specification, s
         logger.info(f"Building availability specification..")
-        with benchmark("specificaion built"):
+        with benchmark("specification built"):
             specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
 
         logger.info(f"Compiling Report..")
@@ -304,7 +305,7 @@ class Processor:
             padded_wp_bundle = self.zero_padding(Bytes(wp_bundle), BASIC_ERASURE_SIZE)
 
         with benchmark("e coding bundle"):
-            bundle_shards = erasure_codec.encode(padded_wp_bundle)
+            bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
 
         bs_hashes = BundleShardHashes([])
 
@@ -312,9 +313,9 @@ class Processor:
 
         with benchmark("storing bundle chunks"):
             for si, bs in enumerate(bundle_shards):
-                bs_hash = Hash.blake2b(bs.encode())
+                bs_hash = Hash.blake2b(BundleShard(bs).encode())
 
-                bs_unit = BundleShardUnit(U16(si), bs)
+                bs_unit = BundleShardUnit(ShardIndex(si), BundleShard(bs))
 
                 # Store Bundle Shard
                 audits_da.put(bs_hash, bs_unit)
@@ -343,13 +344,13 @@ class Processor:
 
         with benchmark("e coding segments"):
             for item in justified_segments:
-                seg_chunks = erasure_codec.encode(item)
+                seg_chunks = erasure_codec.encode(item.encode())
                 all_chunks.append(seg_chunks)
 
         with benchmark("transposing s shards"):
             segments_shards = SegmentsShards(
                 [SegmentsShard(
-                    [ByteArray12(all_chunks[j][i]) for j in range(len(all_chunks))]
+                    [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
                 ) for i in range(len(all_chunks[0]))])
 
         ss_roots = SegmentsShardRoots([])
@@ -366,11 +367,11 @@ class Processor:
                 ss_roots.append(ss_root)
 
         # Build Complete Shard Key
-        if len(ss_roots) != 1023 or len(bs_hashes) != 1023:
-            raise ValueError("Length of both batches should be 1023")
+        if len(ss_roots) != chain_config.num_validators or len(bs_hashes) != chain_config.num_validators:
+            raise ValueError(f"Length of both batches should be {chain_config.num_validators}")
 
         shards_keys = Vector([])
-        for i in range(1023):
+        for i in range(chain_config.num_validators):
             shards_key = ShardKey(bs_hashes[i], ss_roots[i])
             shards_keys.append(shards_key.encode())
 

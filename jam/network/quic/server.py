@@ -2,7 +2,8 @@ import asyncio
 from typing import Dict
 
 from aioquic.asyncio import QuicConnectionProtocol
-from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted
+from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted, \
+    ConnectionIdIssued, ConnectionIdRetired
 from jam.config.logging import logging as logger
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
 
@@ -50,12 +51,26 @@ class QuicServerProtocol(QuicConnectionProtocol):
 
             logger.info("🔗 Handshake completed.")
 
+        elif isinstance(event, ConnectionIdIssued):
+            logger.warning(f"🔗 Connection Id issued: {event.connection_id}")
+            self.connection_id = event.connection_id
+            print("new conn id", event.connection_id.hex())
+
+        elif isinstance(event, ConnectionIdRetired):
+            logger.warning(f"🔗 Connection Id retired: new - {event.connection_id}")
+            print("retired id", event.connection_id.hex())
+
         elif isinstance(event, ConnectionTerminated):
             logger.warning(f"❌ Server Connection terminated: {event.error_code}")
 
         elif isinstance(event, StreamDataReceived):
             from jam.network.protocols.base import PrefixType
 
+            # h_cid = self._quic.host_cid
+            # p_cid = self._quic._peer_cid
+
+            print("server peer id", self._quic._peer_cid)
+            print("server host id", self._quic.host_cid)
             # san = cert.extensions.get_extension_for_oid(
             #     ExtensionOID.SUBJECT_ALTERNATIVE_NAME
             # ).value

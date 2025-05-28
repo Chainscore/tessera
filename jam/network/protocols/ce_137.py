@@ -98,8 +98,9 @@ class ShardDistributionProtocol(NetworkProtocol):
         bundle_shard = audits_da.get(bs_hash=bundle_shard_hash)[0]
 
         segment_shard_root = bs_da.get_ss_root(data.erasure_root, data.shard_index)
-
+        print("seg shard root", segment_shard_root)
         segments_shard = ss_da.get(segment_shard_root)[0]
+        print("seg shards", segments_shard)
 
         shards = bs_da.get(data.erasure_root)
         s = Vector([])

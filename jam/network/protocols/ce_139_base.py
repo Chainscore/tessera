@@ -78,7 +78,7 @@ class SegmentShardRequestBase(NetworkProtocol):
         for req in data:
             wr_hash, assurers = er_ar_da.get(req.erasure_root)
             res = []
-            for assurer in assurers:
+            # for assurer in assurers:
 
 
         for client in node.connections:
