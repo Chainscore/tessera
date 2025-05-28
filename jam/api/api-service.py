@@ -1,7 +1,7 @@
 import json
 from enum import Enum
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional, Union, Literal
@@ -14,7 +14,7 @@ from jam.types import Boolean
 from jam.types.base.sequences.bytes import ByteArray32
 from jam.preimages.preimages import Preimages
 from jam.consensus.safrole.safrole import Safrole
-from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
+from jam.consensus.safrole.errors import SafroleError
 from jam.recent_history.recent_history import RecentHistory
 from jam.utils.shuffle import shuffle
 from jam.state.utils.state_transformation import GeneralState

@@ -1,4 +1,3 @@
-import dataclasses
 from dataclasses import dataclass
 
 from cryptography.exceptions import InvalidSignature

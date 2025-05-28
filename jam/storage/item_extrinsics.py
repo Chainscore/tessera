@@ -1,10 +1,10 @@
-from typing import List, Tuple
+from typing import List
 
 from jam.config.data_stores import main_db
 from jam.storage.db.kv import KVStore
 from jam.types.base.integers import U32
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.bytes.byte_array import ByteArray32
+from jam.types.base.bytes.bytes import Bytes
 from jam.types.protocol.crypto import Hash
 from jam.types.work.item import ExtrinsicSpecs, ExtrinsicSpec
 from jam.types.work.package import WorkPackage

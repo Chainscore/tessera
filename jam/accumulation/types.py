@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, List, Set, Optional
+from typing import Tuple, List, Set
 from jam.types.base import Int
 from jam.types.protocol.merkle import OptionHash
 from jam.types.state.phi import Phi
@@ -10,7 +10,7 @@ from jam.utils.json import JsonSerde
 from jam.types.work.report import WorkPackageHash, WorkExecResult
 from jam.types.state.chi import Chi
 from jam.types.protocol.core import ServiceId, Gas, OpaqueHash, Balance, ExportsRoot
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.bytes.bytes import Bytes
 from jam.types.state.delta import Delta
 from jam.types.state.iota import Iota
 

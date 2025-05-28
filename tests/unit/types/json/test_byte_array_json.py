@@ -1,5 +1,5 @@
 import pytest
-from jam.types.base.sequences.bytes.byte_array import (
+from jam.types.base.bytes.byte_array import (
     ByteArray8,
     ByteArray16,
     ByteArray32,
@@ -10,7 +10,6 @@ from jam.types.base.sequences.bytes.byte_array import (
     ByteArray256,
     ByteArray784,
 )
-from jam.utils.json.serde import JsonDeserializationError
 
 
 def test_byte_array_json_serialization_hex():

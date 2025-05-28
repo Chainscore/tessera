@@ -3,11 +3,11 @@ from typing import List
 
 from jam.storage.db.kv import KVStore
 from jam.types.base.null import Null
-from jam.types.protocol.validators import IPAddress, ValidatorMetadata, ValidatorName, ValidatorData, ValidatorsData
-from jam.types.state.alpha import Alpha, AuthorizationPool
+from jam.types.protocol.validators import ValidatorsData
+from jam.types.state.alpha import Alpha
 from jam.types.state.eta import Eta
 from jam.types.state.nu import AllReadyWRs, Nu
-from jam.types.state.pi import AllValidatorStats, Pi, ValidatorStat, AllServiceStats, AllCoreStats, CoreStat
+from jam.types.state.pi import AllValidatorStats, Pi, AllServiceStats, AllCoreStats
 from jam.types.state.psi import Psi, PsiB, PsiG, PsiO, PsiW
 from jam.types.state.kappa import Kappa
 from jam.types.state.lambda_ import Lambda_
@@ -17,17 +17,17 @@ from jam.types.state.chi import Chi, ChiG
 from jam.types.state.iota import Iota
 from jam.types.state.xi import Xi
 from jam.types.state.beta import Beta
-from jam.types.state.phi import AuthorizationQueue, AuthorizerHash, Phi
-from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ, GammaS
-from jam.types.state.delta import Delta, Ai, Ai, At, AccountData, LookupTable, Timestamps, AccountLookup, AccountPreimages, AccountStorage
+from jam.types.state.phi import Phi
+from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ
+from jam.types.state.delta import Delta, AccountData, Timestamps, AccountLookup, AccountPreimages, AccountStorage
 from jam.types.state.sigma import Sigma
 from jam.types.work.report import WorkDependencies
-from jam.utils.constants import CORE_COUNT, VALIDATOR_COUNT, MAX_AUTH_QUEUE_ITEMS, EPOCH_LENGTH, MAX_AUTH_POOL_ITEMS
+from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH
 from jam.state.utils.key_constructor import construct_state_key
 from jam.types.base.sequences.bytes import ByteArray32
-from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.base.integers.fixed import U64, U32, U8, U16
-from jam.types.protocol.crypto import OpaqueHash, Hash, BlsPublic, Ed25519Public, BandersnatchPublic
+from jam.types.base.bytes.bytes import Bytes
+from jam.types.base.integers.fixed import U32
+from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.state.merkle import StateTrie
 from jam.consensus.safrole.safrole import Safrole

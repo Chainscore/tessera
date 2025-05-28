@@ -1,10 +1,7 @@
-import pytest
-
 from jam.state.merkle.merkle import StateTrie as StateMerkle
 from jam.state.merkle.utils import ZERO_HASH
 from jam.state.utils.key_constructor import construct_state_key
 from jam.types.base.sequences.bytes import Bytes, ByteArray32
-from jam.types.protocol.crypto import Hash
 
 
 def test_empty_merkelize():

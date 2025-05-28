@@ -1,5 +1,5 @@
 from jam.types.base.sequences.vector import decodable_vector, Vector
-from jam.types.base.sequences.bytes.byte_array import decodable_bytearray, ByteArray
+from jam.types.base.bytes.byte_array import decodable_bytearray, ByteArray
 
 from jam.utils.constants import SEGMENT_SIZE
 

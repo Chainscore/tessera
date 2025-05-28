@@ -1,7 +1,7 @@
 """Work item types for the JAM protocol."""
 from dataclasses import dataclass
 from jam.types.base.integers import U16, U32
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.bytes.bytes import Bytes
 from jam.types.base import Vector
 from jam.types.base.sequences.vector import decodable_vector
 from jam.utils.codec.codable import Codable

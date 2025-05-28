@@ -1,7 +1,7 @@
 from jam.state.merkle.merkle import StateTrie
 from jam.state.merkle.utils import ZERO_HASH
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.bytes.byte_array import ByteArray32
+from jam.types.base.bytes.bytes import Bytes
 from jam.utils.byte_utils import ByteUtils
 from jam.utils.dummy.utils import create_dummy_bytes
 

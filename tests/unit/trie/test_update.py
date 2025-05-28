@@ -1,8 +1,8 @@
 from copy import deepcopy
 
 from jam.state.merkle.merkle import StateTrie
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.bytes.byte_array import ByteArray32
+from jam.types.base.bytes.bytes import Bytes
 
 
 def test_trie_update():

@@ -9,8 +9,8 @@ from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.null import Null
 from jam.types.header import OptionalEpochMark, OptionalTicketsMark, TicketsMark
 from jam.types.state.gamma import GammaS, GammaSTickets
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.types.base.bytes.byte_array import ByteArray32
+from jam.types.base.bytes.bytes import Bytes
 from jam.types.block import Block
 from jam.utils.constants import (
     EPOCH_LENGTH,
@@ -24,18 +24,13 @@ from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatc
 from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData
 from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
-from copy import deepcopy
-
 
 # for ring root
 from jam.ring_vrf.ring_proof.columns.columns import PublicColumnBuilder as PC
 from jam.ring_vrf.ring_proof.helpers import Helpers as H
-from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
+
 
 # for sign verification
-from jam.ring_vrf.ring_proof.verfiey import Verify
-from jam.ring_vrf.ring_proof.constants import SeedPoint
-from jam.ring_vrf.ring_proof.constants import D_512 as D, OMEGA_2048 as omega
 
 class Safrole:
     @staticmethod

@@ -1,6 +1,6 @@
 import random
 
-from jam.types.base.sequences.bytes.byte_array import ByteArray32, ByteArray64
+from jam.types.base.bytes.byte_array import ByteArray32, ByteArray64
 
 def create_dummy_bytes32(seed: int = 0) -> ByteArray32:
     """Create dummy 32 byte value"""

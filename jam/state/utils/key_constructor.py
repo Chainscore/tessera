@@ -1,7 +1,6 @@
 from typing import Tuple, Union
 from jam.types.base import Byte, Bytes
 from jam.types.base.integers.fixed import U8, U32
-from jam.types.base.sequences.bytes import ByteArray32
 from jam.types.protocol.core import ServiceId
 
 
