@@ -1,12 +1,12 @@
 import argparse
 from .config.chainspec import JamConfig, chain_config
 import asyncio
-# from jam.__main__ import main
 
 __all__ = ["JamConfig", "chain_config"]
 
 def run_jam():
     """Entry point for the node."""
+    from jam.__main__ import main
 
     # Args parse
     parser = argparse.ArgumentParser(description="JAM node")
@@ -20,5 +20,4 @@ def run_jam():
     parser.add_argument("--validator", action="store_true", help="Flag for validators")
 
     args = parser.parse_args()
-
-    # asyncio.run(main(args.name, args.genesis, args.db, args.port, args.start_genesis, args.theme, args.builder, args.validator))
+    asyncio.run(main(args.name, args.genesis, args.db, args.port, args.start_genesis, args.theme, args.builder, args.validator))

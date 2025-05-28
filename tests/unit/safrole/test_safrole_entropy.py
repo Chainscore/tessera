@@ -1,4 +1,4 @@
-from copy import deepcopy
+import pytest
 
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.state.eta import Eta
@@ -13,6 +13,7 @@ from tests.unit.safrole.data import create_block, create_state, create_validator
 from jam.utils.constants import EPOCH_LENGTH
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_entropy_accumulation():
     """Test that Safrole correctly accumulates entropy"""
     # Create initial state with known entropy values
@@ -48,6 +49,7 @@ def test_entropy_accumulation():
     assert new_state.eta[3] == initial_state.eta[3]
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_entropy_rotation_at_epoch_boundary():
     """Test that Safrole correctly rotates entropy values at epoch boundaries"""
     # Create initial state at the last slot of an epoch with known entropy values

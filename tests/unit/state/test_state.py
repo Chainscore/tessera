@@ -1,5 +1,6 @@
+from jam.config.data_stores import main_db
 from jam.state.ghost import GhostState
-from jam.state.state import setup_state, state
+from jam.state.state import setup_state, set_state
 from jam.storage.db.kv import KVStore
 from jam.types.base import ByteArray32, U64, U32, Bytes
 from jam.types.protocol.core import Balance, ServiceId
@@ -8,10 +9,10 @@ from jam.types.state.delta import AccountData, LookupTable, Timestamps, AccountM
 from jam.types.state.tau import Tau
 from jam.utils.dummy.utils import create_dummy_bytes
 
+state = setup_state(GhostState.genesis(), main_db)
 
 def test_state_sync(db_path):
     db = KVStore(db_path)
-    assert state.TRIE.root_hash == ByteArray32([0] * 32)
     setup_state(GhostState.genesis(), db)
     from jam.state.state import state as updated_state
     assert updated_state.TRIE.root_hash != ByteArray32([0] * 32)

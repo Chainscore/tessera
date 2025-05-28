@@ -10,7 +10,6 @@ from jam.types.base.integers.fixed import U64
 from jam.types.base.integers.general import Int
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.core import Gas, Register, ProgramCounter
-from jam.execution.pvm.register import Registers
 from jam.execution.pvm.memory import Memory
 from jam.types.protocol.core import ServiceId,TimeSlot
 from jam.types.state.delta import Delta
@@ -44,7 +43,7 @@ class RefineFunctions(INVF):
 
     @staticmethod
     @INVF.register(17, gas_cost=10)
-    def historical_lookup(gas: Gas, registers: Registers, memory: Memory, context: RefineContext, service_id: ServiceId, delta: Delta, timeslot: TimeSlot):
+    def historical_lookup(gas: int, registers: list, memory: Memory, context: RefineContext, service_id: ServiceId, delta: Delta, timeslot: TimeSlot):
 
         a = None
         if delta[service_id] is not None and registers[7]==2**64-1:
@@ -74,12 +73,11 @@ class RefineFunctions(INVF):
 
     @staticmethod
     @INVF.register(19, gas_cost=10)
-    def export(gas:Gas, registers:Registers, memory:Memory, context:RefineContext, export_segment_offset:int):
+    def export(gas: Gas, registers: list, memory: Memory, context: RefineContext, export_segment_offset:int):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
         if memory.is_accessible(address=p, length=z, for_write=True):
             x = WorkPackageProcessing.zero_padding(value=Bytes(memory.read(address=p,length=z)), n=Int(SEGMENT_SIZE))
-            print(x)
         else:
             raise PvmError(PANIC)
         if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:
@@ -92,7 +90,7 @@ class RefineFunctions(INVF):
 
     @staticmethod
     @INVF.register(20, gas_cost=10)
-    def machine(gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
+    def machine(gas:Gas,registers:list,memory:Memory,context:RefineContext):
         [p_o,p_z,i] = registers[7:10]
         if memory.is_accessible(p_o,p_z):
             p=memory.read(p_o,p_z)
@@ -118,7 +116,7 @@ class RefineFunctions(INVF):
 
     @staticmethod
     @INVF.register(21, gas_cost=10)
-    def peek(gas:Gas, registers:Registers, memory:Memory, context:RefineContext):
+    def peek(gas:Gas, registers:list, memory:Memory, context:RefineContext):
         [n,o,s,z] = registers[7:11]
         if not memory.is_accessible(o,z,True):
             raise PvmError(PANIC)
@@ -136,7 +134,7 @@ class RefineFunctions(INVF):
 
     @staticmethod
     @INVF.register(22, gas_cost=10)
-    def poke(gas:Gas, registers:Registers, memory:Memory, context:RefineContext):
+    def poke(gas:Gas, registers:list, memory:Memory, context:RefineContext):
         [n,o,s,z] = registers[7:11]
 
         if not memory.is_accessible(s,z):
@@ -155,7 +153,7 @@ class RefineFunctions(INVF):
 
     @staticmethod
     @INVF.register(23, gas_cost=10)
-    def zero(gas:Gas, registers:Registers, memory:Memory, context:RefineContext):
+    def zero(gas:Gas, registers:list, memory:Memory, context:RefineContext):
         [n,p,c] = registers[7:10]
         if n in context.m:
             u = context.m[n].memory
@@ -175,7 +173,7 @@ class RefineFunctions(INVF):
 
     @staticmethod
     @INVF.register(24, gas_cost=10)
-    def void(gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
+    def void(gas:Gas,registers: list, memory:Memory, context:RefineContext):
         [n,p,c]=registers[7:10]
         if n in context.m:
             u=context.m[n].memory
@@ -195,7 +193,7 @@ class RefineFunctions(INVF):
 
     @staticmethod
     @INVF.register(25, gas_cost=10)
-    def invoke(gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
+    def invoke(gas:Gas,registers:list,memory:Memory,context:RefineContext):
         [n,o]=registers[7,8]
         if not memory.is_accessible(o,112,True):
             raise PvmError(PANIC)
@@ -237,7 +235,7 @@ class RefineFunctions(INVF):
 
     @staticmethod
     @INVF.register(26, gas_cost=10)
-    def expunge(gas:Gas,registers:Registers,memory:Memory,context:RefineContext):
+    def expunge(gas:Gas,registers:list,memory:Memory,context:RefineContext):
         n=registers[7]
         if n not in context.m:
             return(HostStatus.WHO,context.m)

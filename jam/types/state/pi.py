@@ -23,7 +23,7 @@ class ValidatorStat(Codable, JsonSerde):
 
     @staticmethod
     def empty() -> "ValidatorStat":
-        return ValidatorStat(blocks=U32(0), tickets=U32(0), pre_images=U32(0), pre_images_size=U32(0), guarantees=U32(0), assurances=U32(0))
+        return ValidatorStat.from_json({"blocks": 0, "tickets": 0, "pre_images": 0, "pre_images_size": 0, "guarantees": 0, "assurances": 0})
 
 
 @decodable_dataclass
@@ -46,35 +46,35 @@ class CoreStat(Codable, JsonSerde):
 @decodable_dataclass
 @dataclass
 class ServiceStat(Codable, JsonSerde):
-    provided_count: U16
-    provided_size: U32
-    refinement_count: U32
-    refinement_gas_used: Gas
-    imports: U32
-    exports: U32
-    extrinsic_size: U32
-    extrinsic_count: U32
-    accumulate_count: U32
-    accumulate_gas_used: Gas
-    on_transfers_count: U32
-    on_transfers_gas_used: Gas
+    provided_count: Int
+    provided_size: Int
+    refinement_count: Int
+    refinement_gas_used: Int
+    imports: Int
+    exports: Int
+    extrinsic_size: Int
+    extrinsic_count: Int
+    accumulate_count: Int
+    accumulate_gas_used: Int
+    on_transfers_count: Int
+    on_transfers_gas_used: Int
 
     @staticmethod
     def empty() -> "ServiceStat":
-        return ServiceStat(
-            provided_count=U16(0),
-            provided_size=U32(0),
-            refinement_count=U32(0),
-            refinement_gas_used=Gas(0),
-            imports=U32(0),
-            exports=U32(0),
-            extrinsic_size=U32(0),
-            extrinsic_count=U32(0),
-            accumulate_count=U32(0),
-            accumulate_gas_used=Gas(0),
-            on_transfers_count=U32(0),
-            on_transfers_gas_used=Gas(0),
-        )
+        return ServiceStat.from_json({
+            "provided_count": 0,
+            "provided_size": 0,
+            "refinement_count": 0,
+            "refinement_gas_used": 0,
+            "imports": 0,
+            "exports": 0,
+            "extrinsic_size": 0,
+            "extrinsic_count": 0,
+            "accumulate_count": 0,
+            "accumulate_gas_used": 0,
+            "on_transfers_count": 0,
+            "on_transfers_gas_used": 0,
+        })
 
 
 @decodable_array(VALIDATOR_COUNT, ValidatorStat)

@@ -35,9 +35,14 @@ class WorkExecResult(Choice):
     ok: Bytes
     out_of_gas: Nullable
     panic: Nullable
-    bad_code: Nullable
-    code_oversize: Nullable
+    # circle dot
     bad_exports: Nullable
+    # circle minus
+    result_oversize: Nullable
+    # BAD
+    bad_code: Nullable
+    # BIG
+    code_oversize: Nullable
 
 
 @decodable_vector(element_type=WorkExecResult)
@@ -49,7 +54,7 @@ class ExecResults(Vector[WorkExecResult]):
 class RefineLoad(Codable, JsonSerde):
     """Refine load structure."""
 
-    gas_used: Int # TODO: This is supposed to be Ng
+    gas_used: Int
     imports: Int
     exports: Int
     extrinsic_count: Int

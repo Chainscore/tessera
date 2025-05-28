@@ -1,6 +1,5 @@
 from typing import Type
 
-from jam.config.data_stores import main_db
 from jam.merklization import BMRFunctions
 from jam.storage.db.kv import KVStore
 from jam.state.accounts import DeltaView
@@ -13,7 +12,6 @@ from jam.types.protocol.crypto import Hash
 from jam.types.state.alpha import Alpha
 from jam.types.state.eta import Eta
 from jam.types.state.nu import Nu
-from jam.types.state.phi import Phi
 from jam.types.state.pi import Pi
 from jam.types.state.psi import Psi
 from jam.types.state.kappa import Kappa
@@ -24,6 +22,7 @@ from jam.types.state.chi import Chi
 from jam.types.state.iota import Iota
 from jam.types.state.xi import Xi
 from jam.types.state.beta import Beta
+from jam.types.state.phi import Phi
 from jam.types.state.gamma import Gamma
 from jam.utils.codec import Codable
 
@@ -69,7 +68,7 @@ class State:
     def delta(self) -> "DeltaView":
         return DeltaView(self.DB, self.TRIE)
 
-    def __init__(self, db, trie):
+    def __init__(self, db = None, trie = None):
         self.DB = db
         self.TRIE = trie
 
@@ -85,7 +84,7 @@ class State:
             block: Incoming block
         """
         from jam.accumulation.accumulation import Accumulation
-        from jam.report.state import Reporting
+        from jam.report.reporting import Reporting
         from jam.authorization.authorization import Authorization
         from jam.recent_history.recent_history import RecentHistory
         from jam.consensus.safrole.safrole import Safrole
@@ -99,18 +98,35 @@ class State:
         # Tickets mark - make sure tickets are valid, present in gamma_a and outside in sequenced
         # Offenders mark - make sure offenders are present in psi.offenders
 
+        beta = self.beta
+        # Step 1
+        if len(beta):
+            beta[-1].state_root = block.header.parent_state_root
+        self.beta = beta
+
         # Disputes
         Disputes.transition(self, block)
+        # Work package hashes form Nu and Xi
+        known_packages = [
+            queue_el.report.context.prerequisites
+            for epoch_queue in self.nu
+            for queue_el in epoch_queue
+        ].extend([
+            wps
+            for deps in self.xi
+            for wps in deps
+        ])
+        # Reporting
+        Reporting.transition(self, block, known_packages=known_packages)
         # Assurances
         _, newly_avail_wrs = Assurances.transition(self, block)
-        # Reporting
-        Reporting.transition(self, block)
+
         # Accumulation
         _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
         # Authorization
         Authorization.transition(self, block)
         # Recent History
-        RecentHistory.transition(self, block, BMRFunctions().wb_merkle_fn(sorted([Bytes(key.encode() + bytes(val)) for key, val in commitment_map]), Hash.keccak256))
+        RecentHistory.transition(self, block, BMRFunctions().wb_merkle_fn(sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]), Hash.keccak256))
         # Preimages
         Preimages.transition(self, block)
         # Statistics
@@ -118,7 +134,12 @@ class State:
         # Safrole
         Safrole.transition(self, block, Safrole.vrf_output(block.header.entropy_source))
 
-state = State(db=main_db, trie=StateTrie())
+state = State()
+
+def set_state(new_state: State):
+    global state
+    state = new_state
+    return state
 
 def setup_state(ghost: GhostState, db: KVStore):
     data = ghost.transform()

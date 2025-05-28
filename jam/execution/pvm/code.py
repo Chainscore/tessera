@@ -2,9 +2,7 @@ from dataclasses import dataclass
 from typing import Self
 
 from jam.execution.pvm.memory import Memory
-from jam.execution.pvm.pvm import PVM
-from jam.execution.pvm.register import Registers
-from jam.types.protocol.core import Gas, ProgramCounter
+from jam.execution.pvm.register import from_pc
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.primitives.integers import IntegerCodec
 
@@ -73,6 +71,6 @@ class Code(Codable):
 
         return offset - start
 
-def y_function(bytecode: bytes, args: bytes) -> (bytes, Registers, Memory):
+def y_function(bytecode: bytes, args: bytes) -> (bytes, list, Memory):
     code = Code.decode_from(bytecode)
-    return code.code, Registers.from_pc(args), Memory.from_pc(code.read, code.r_write, args, code.z, code.s)
+    return code.code, from_pc(args), Memory.from_pc(code.read, code.r_write, args, code.z, code.s)

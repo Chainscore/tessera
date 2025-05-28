@@ -1,14 +1,12 @@
-
 from typing import Tuple
 from jam.accumulation.types import  DeferredTransfers, OperandTuples, AccuContextX,StateContext, AccumulationContext, PreimageDict
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol, DispatchReturn, Context
-from jam.types.base import Int
+from jam.types.base import Int, Null
 from jam.types.base.integers.fixed import U32
 from jam.types.protocol.core import Gas, ProgramCounter, ServiceId, TimeSlot, Register
 from jam.types.protocol.crypto import Hash, OpaqueHash
-from jam.state.state import state
 from jam.types.protocol.merkle import OptionHash
 from jam.execution.host_calls.invocations.functions.accumulate_fns import AccumulateFunctions, check
 from jam.execution.pvm.status import ExecutionStatus
@@ -26,6 +24,8 @@ class PsiA(InvocationProtocol):
         self.context = AccumulationContext(x=self.initializer_fn(s, u), y=self.initializer_fn(s, u))
 
     def table(self):
+        from jam.state.state import state
+
         xs = self.context.x.s_index
         delta = self.context.x.partial_state.service_accounts
         return {
@@ -57,7 +57,7 @@ class PsiA(InvocationProtocol):
                 "t": None
             }),
             27: (AccumulateFunctions, {}),                                                                 # provide (Updates preimage)
-
+            100: (GeneralFunctions, {}),  # log
         }
 
     def execute(self):
@@ -66,7 +66,7 @@ class PsiA(InvocationProtocol):
             return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
 
         else:
-            gas, status, context=PsiM.execute(
+            gas, status, context = PsiM.execute(
                 meta_n_code[1],
                 ProgramCounter(5),
                 self.gas,
@@ -87,6 +87,8 @@ class PsiA(InvocationProtocol):
         Returns:
             Mutator context
         """
+        from jam.state.state import state
+
         value = (U32.decode_from(bytes(Hash.blake2b(Int(s).encode() + state.eta[0].encode() + Int(state.tau).encode())))[0] % (2**32 - 2**9)) + 2**8
         i = check(state_context, value)
         context = AccuContextX(
@@ -94,7 +96,7 @@ class PsiA(InvocationProtocol):
             partial_state=state_context,
             i_index=i,
             deferred_transfers=DeferredTransfers([]),
-            hash=None,
+            hash=OptionHash(Null),
             preimage=set([]),
         )
         return context
@@ -106,7 +108,7 @@ class PsiA(InvocationProtocol):
             context: AccumulationContext
     ) -> Tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]:
         """
-        Selects X / Y depending if HALT or PvmError
+        Selects X / Y depending if HALT or PvmErrorc
         Args:
             status: Execution status
             gas: Consumed Gas
@@ -115,9 +117,14 @@ class PsiA(InvocationProtocol):
         Returns:
             StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict
         """
+        ctx = context.x
+        commitment = ctx.hash
+
         if status == ExecutionStatus.PANIC or status == ExecutionStatus.OUT_OF_GAS:
-            return context.y.partial_state, context.y.deferred_transfers, OptionHash(context.y.hash), gas,context.y.preimage
-        elif isinstance(status, bytes):
-            return context.x.partial_state, context.x.deferred_transfers, OptionHash(OpaqueHash(status + bytes(32 - len(status)))), gas,context.x.preimage
+            ctx = context.y
+            commitment = context.y.hash
         else:
-            return context.x.partial_state, context.x.deferred_transfers, OptionHash(context.x.hash), gas,context.x.preimage
+            if isinstance(status, bytes) and len(status) == 32:
+                commitment = OptionHash(OpaqueHash(status))
+
+        return ctx.partial_state, ctx.deferred_transfers, commitment, gas, ctx.preimage

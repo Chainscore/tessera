@@ -17,18 +17,18 @@ from jam.types.protocol.core import WorkPackageHash, SegmentRoot
 
 def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
     """Transform Guarantees into Dictionary format"""
-    package_dict:SegmentRootLookup = SegmentRootLookup({})
+    package_dict = SegmentRootLookup({})
 
     for p in packages:
-        a= p.report.segment_root_lookup
-        for c in a:
-            package_dict[c]=a[c]
+        spec = p.report.package_spec
+        package_dict[spec.hash] = spec.exports_root
+
     return package_dict
 
 class RecentHistory:
-    # NOTE: FOR GENESIS BLOCK THE LOGIC IS UNCLEAR
+
     @staticmethod
-    def transition(state: Sigma, block: Block, accumulate_root: Optional[OpaqueHash],header_hash:Optional[HeaderHash]=None) -> Sigma:
+    def transition(state: Sigma, block: Block, accumulate_root = ByteArray32([0] * 32), header_hash=None) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -78,10 +78,12 @@ class RecentHistory:
         # Length Check
         if len(beta) > RECENT_HISTORY_SIZE:
             raise ValueError("Invalid beta length, must be equal to RECENT_HISTORY_SIZE")
+
         # Step 2
         last: MMR = MMR([])
         if len(beta) > 0:
             last = deepcopy(beta[-1].mmr)
+
         mmr_functions = MMRFunctions()
         last = mmr_functions.append_fn(last, accumulate_root, Hash.keccak256)
 
@@ -91,9 +93,11 @@ class RecentHistory:
             ByteArray32([0] * 32),
             package(block.extrinsic.guarantees)
         )
+
         # Step 3
         beta.append(n)
 
         state.beta = Beta(beta[-8:])
+
         # Return State
         return state

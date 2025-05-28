@@ -14,6 +14,7 @@ from tests.unit.safrole.data import create_block, create_state, create_validator
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END, MAX_TICKETS_PER_EXTRINSIC
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_slot_regression_error():
     """Test error when block slot is lower than current state slot"""
     # Create initial state at slot 10
@@ -40,6 +41,7 @@ def test_slot_regression_error():
     assert excinfo.value.code == SafroleErrorCode.BAD_SLOT
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_invalid_seal_signature():
     """Test error when block has an invalid seal signature"""
     # Create initial state

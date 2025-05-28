@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Tuple, List, Set, Optional
 from jam.types.base import Int
+from jam.types.protocol.merkle import OptionHash
 from jam.types.state.phi import Phi
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
@@ -84,7 +85,7 @@ class AccuContextX(Codable, JsonSerde):
     #t
     deferred_transfers: DeferredTransfers
     #y
-    hash: Optional[Bytes]
+    hash: OptionHash
     #p
     preimage: PreimageDict
 

@@ -31,6 +31,9 @@ class ByteArray(Array[Byte]):
     def to_int(self, byteorder: Literal["big", "little"] = "big"):
         return int.from_bytes(self, byteorder)
 
+    def hex(self):
+        return bytes(self).hex()
+
     @classmethod
     def from_json(cls, data: Any) -> "ByteArray":
         return cls(ByteUtils.to_bytes(data))

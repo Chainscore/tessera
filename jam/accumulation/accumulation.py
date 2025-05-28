@@ -2,7 +2,7 @@ from copy import deepcopy
 from typing import Tuple, List, Set
 
 from jam.execution.host_calls.invocations.accumulate import PsiA
-from jam.types.base import Bytes, Null, Int
+from jam.types.base import Bytes, Null, Int, U32, U64
 from jam.types.block import Block
 from jam.accumulation.types import (
     PreimageDict,
@@ -13,8 +13,8 @@ from jam.accumulation.types import (
     BeefyMap,
     GasConsumed
 )
-from jam.types.protocol.crypto import Hash, OpaqueHash
-from jam.types.state.pi import ServiceStat, AllServiceStats
+from jam.types.protocol.crypto import Hash
+from jam.types.state.pi import ServiceStat
 
 from jam.types.state.sigma import Sigma
 from jam.types.state.delta import Delta, LookupTable, Timestamps
@@ -281,7 +281,7 @@ class Accumulation:
                 partial_state, work_reports, privileged_services, service, timeslot
             )
             gas_consumed.append((service,_gas_consumed))
-            if _output_hash != Null:
+            if _output_hash.get_value() != Null:
                 outputs.add((service, _output_hash.get_value()))
             transfers.extend(_transfers)
             collected_preimages.update(_preimages)
@@ -341,7 +341,6 @@ class Accumulation:
                     )
 
         posterior_state, transfers, optional_hash, gas, preimage = PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=p).execute()
-
         return posterior_state, transfers, optional_hash, gas, preimage
 
     @staticmethod
@@ -513,14 +512,12 @@ class Accumulation:
 
         # Update Statistics
         pi = state.pi
-        pi_service = AllServiceStats({})
+        pi_service = pi.services
         for service_id in accumulation_stats.keys():
             if service_id not in pi_service:
                 pi_service[service_id] = ServiceStat.empty()
-            pi_service[service_id].accumulate_gas_used = accumulation_stats[service_id][
-                0
-            ]
-            pi_service[service_id].accumulate_count = accumulation_stats[service_id][1]
+            pi_service[service_id].accumulate_gas_used = Int(accumulation_stats[service_id][0])
+            pi_service[service_id].accumulate_count = Int(accumulation_stats[service_id][1])
         pi.services = pi_service
         state.pi = pi
 
@@ -586,6 +583,6 @@ class Accumulation:
         # TODO: Remove this redundancy
         # We are aleady doing this in Safrol STF, but this is expected to be updated
         # in Accumulate test vectors so I had added this
-        state.tau = block.header.slot
+        # state.tau = block.header.slot
 
         return state, commitment_map

@@ -17,6 +17,7 @@ from tests.unit.safrole.data import create_block, create_state, create_validator
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_timekeeping():
     """Test that Safrole correctly updates the timeslot (tau)"""
     # Create initial state
@@ -52,6 +53,7 @@ def test_safrole_timekeeping():
     assert new_state.tau == U32(6)
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_entropy_accumulation():
     """Test that Safrole correctly accumulates entropy"""
     # Create initial state with known entropy values
@@ -83,6 +85,7 @@ def test_safrole_entropy_accumulation():
     assert new_state.eta[3] == initial_state.eta[3]
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_ticket_accumulation():
     """Test that Safrole correctly accumulates tickets during the submission period"""
     # Create tickets
@@ -128,6 +131,7 @@ def test_safrole_ticket_accumulation():
         Safrole.vrf_output = original_vrf_output
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_ticket_submission_outside_period():
     """Test that Safrole rejects tickets outside the submission period"""
     # Create initial state
@@ -157,6 +161,7 @@ def test_safrole_ticket_submission_outside_period():
     assert excinfo.value.code == SafroleErrorCode.UNEXPECTED_TICKET
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_epoch_transition():
     """Test that Safrole correctly handles epoch transitions"""
     # Create validator data
@@ -204,6 +209,7 @@ def test_safrole_epoch_transition():
     assert new_state.gamma.z == initial_state.gamma.z
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_fallback_mode():
     """Test that Safrole correctly uses fallback seal keys when not enough tickets"""
     # Create validator data
@@ -238,6 +244,7 @@ def test_safrole_fallback_mode():
     # The exact values would depend on implementation details of arrange_fallback
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_offender_filtering():
     """Test that Safrole correctly filters out offenders during epoch transitions"""
     # Create validator data

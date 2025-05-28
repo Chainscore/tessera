@@ -1,8 +1,6 @@
-from typing import Callable, Dict, Protocol
+from typing import Dict, Protocol
 from jam.execution.pvm.memory import Memory
-from jam.execution.pvm.register import Registers
 from jam.execution.pvm.status import ExecutionStatus
-from jam.types.protocol.core import Gas, Register
 
 
 class InvocationFunctions(Protocol):
@@ -19,7 +17,8 @@ class InvocationFunctions(Protocol):
         return decorator
     
     @classmethod
-    def execute(cls, host_call: int, gas: Gas, registers: Registers, memory: Memory, context, args):
+    def execute(cls, host_call: int, gas: int, registers: list, memory: Memory, context, args):
+        print("Host call >>", host_call)
         call = cls.HANDLERS[host_call]
         if gas < call['gas']:
             return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context

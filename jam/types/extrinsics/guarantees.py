@@ -1,6 +1,6 @@
 """Guarantee-related extrinsic types for the JAM protocol."""
 from dataclasses import dataclass
-from jam.types.base import Vector
+from jam.types.base import Vector, Int
 from jam.types.base.sequences.vector import decodable_vector
 from jam.types.protocol.crypto import Ed25519Signature
 from jam.types.protocol.core import ValidatorIndex, TimeSlot

@@ -57,6 +57,7 @@ class PsiR(InvocationProtocol):
             24: (RefineFunctions, {}),
             25: (RefineFunctions, {}),
             26: (RefineFunctions, {}),
+            100: (GeneralFunctions, {}),  # log
         }
 
     def execute(self):
