@@ -18,6 +18,7 @@ class InvocationFunctions(Protocol):
     
     @classmethod
     def execute(cls, host_call: int, gas: int, registers: list, memory: Memory, context, args):
+        print("Host call >>", host_call)
         call = cls.HANDLERS[host_call]
         if gas < call['gas']:
             return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context

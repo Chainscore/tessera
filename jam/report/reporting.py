@@ -147,9 +147,9 @@ class Reporting:
         beta_wp_hashes = []
 
         for x in state.beta:
-            for key in x.packages:
-                beta_wp_hashes.append(key)
-                recent_exports_roots.update(x.packages)
+            for wp_hash in x.reported:
+                beta_wp_hashes.append(wp_hash)
+            recent_exports_roots.update(x.reported)
 
         recent_exports_roots.update({report.package_spec.hash: report.package_spec.exports_root for report in all_reports})
 

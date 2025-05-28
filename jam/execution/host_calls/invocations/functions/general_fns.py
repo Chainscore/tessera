@@ -230,18 +230,15 @@ class GeneralFunctions(INVF):
         # Get key,value start,end
         [ko, kz, vo, vz] = registers[7: 7+4]
         if not memory.is_accessible(ko, kz):
-            print(f"Memory(k) from {ko} to {kz} is not readable")
             raise PvmError(PANIC)
 
         k = Hash.blake2b(service_index.encode() + memory.read(ko, kz))
-        print("Storage key", k)
 
         a = service_data.storage
         if vz == 0:
             a.__delitem__(k)
         else:
             if not memory.is_accessible(vo, vz):
-                print(f"Memory(v) from {vo} to {vz} is not readable")
                 raise PvmError(PANIC)
             try:
                 a[k] = Bytes(memory.read(vo, vz))
@@ -275,7 +272,6 @@ class GeneralFunctions(INVF):
 
             if memory.is_accessible(o, len(m), True):
                 registers[7] = HostStatus.OK.value
-                print("Writing info", m.hex(), "at", o)
                 memory.write(o, m)
             else:
                 raise PvmError(PANIC)

@@ -132,7 +132,6 @@ class Safrole:
                 raise SafroleError(SafroleErrorCode.UNEXPECTED_TICKET, "Tickets are not allowed after TICKET_SUBMISSION_END")
 
         # 4. Epoch transition
-        print("epoch move", new_epoch > old_epoch)
         if new_epoch > old_epoch:
             # 4.1. Rotate validators
             state.lambda_ = Lambda_(state.kappa.value)

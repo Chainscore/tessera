@@ -33,7 +33,6 @@ class PsiH:
                 status, remaining_gas, register, memory, context = dispatch_fn(
                     int(status.value.register), remaining_gas, registers, memory, context
                 )
-                print("Dispatch result", status)
                 if remaining_gas < 0:
                     status = ExecutionStatus.OUT_OF_GAS
 
@@ -41,7 +40,6 @@ class PsiH:
                     return PsiH.execute(blob, pc, remaining_gas, registers, memory, dispatch_fn, context)
                 return status, pc, remaining_gas, registers, memory, context
             except PvmError as e:
-                print("Pvm error", e)
                 return e.code, pc, remaining_gas, registers, memory, context
         else:
             raise PvmError(ExecutionStatus.PANIC, f"Invalid execution status {status}")

@@ -17,10 +17,6 @@ from jam.ring_vrf.ring_proof.constants import (
 _mont_a =29978822694968839326280996386011761570173833766074948509196803838190355340952
 _mont_b = 25465760566081946422412445027709227188579564747101592991722834452325077642517
 
-print("Mont_A:", _mont_a)
-print("Mont_B:", _mont_b)
-
-
 class ShortWeierstrassCurve:
     """Encapsulates the Bandersnatch curve in short‑Weierstrass form."""
 

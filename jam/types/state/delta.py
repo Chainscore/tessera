@@ -57,6 +57,7 @@ class AccountMetadata(Codable, JsonSerde):
             num_o=Ao(0)
         )
 
+
 @decodable_dictionary(ByteArray32, Bytes, key_name="key", value_name="value")
 class AccountStorage(Dictionary[ByteArray32, Bytes]):
     """Storage dictionary"""

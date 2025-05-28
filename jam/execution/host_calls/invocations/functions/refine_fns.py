@@ -78,7 +78,6 @@ class RefineFunctions(INVF):
         z = min(registers[8], SEGMENT_SIZE)
         if memory.is_accessible(address=p, length=z, for_write=True):
             x = WorkPackageProcessing.zero_padding(value=Bytes(memory.read(address=p,length=z)), n=Int(SEGMENT_SIZE))
-            print(x)
         else:
             raise PvmError(PANIC)
         if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:
