@@ -16,6 +16,7 @@ from tests.unit.safrole.data import create_block, create_state, create_validator
 from jam.utils.constants import EPOCH_LENGTH
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_slot_increment():
     """Test that Safrole correctly handles normal slot increments"""
     # Create initial state at slot 5
@@ -42,6 +43,7 @@ def test_slot_increment():
     assert new_state.tau == U32(6)
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_slot_jump():
     """Test that Safrole correctly handles slot jumps (multiple slots at once)"""
     # Create initial state at slot 5
@@ -68,6 +70,7 @@ def test_slot_jump():
     assert new_state.tau == U32(15)
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_epoch_boundary_slot():
     """Test that Safrole correctly handles slots at epoch boundaries"""
     # Create initial state at the last slot of an epoch

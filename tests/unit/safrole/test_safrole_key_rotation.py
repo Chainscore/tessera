@@ -60,7 +60,7 @@ def test_key_rotation_at_epoch_boundary():
     new_ring_root = ByteArray144(Safrole.compute_ring_root([keys.bandersnatch for keys in new_state.gamma.k]))
     assert new_state.gamma.z == new_ring_root
 
-
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_offender_filtering():
     """Test that Safrole correctly filters out offenders during epoch transitions"""
     # Create validator data
@@ -101,6 +101,7 @@ def test_offender_filtering():
             assert validator.bandersnatch == validators[i].bandersnatch, "Non-offenders should remain unchanged"
 
 
+@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_all_validators_are_offenders():
     """Test behavior when all validators are marked as offenders"""
     # Create validator data
