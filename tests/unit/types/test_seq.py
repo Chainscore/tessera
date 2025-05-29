@@ -2,7 +2,7 @@ import pytest
 
 from jam.types.base.integers import Int
 from jam.types.base.integers.fixed import U32
-from jam.types.base.sequences.base import Vector, TypedArray, TypedVector, Array
+from jam.types.base.sequences.base import Seq, Vector, TypedArray, TypedVector, Array, TypedBoundedVector
 
 
 def test_list_init():
@@ -23,7 +23,7 @@ def test_list_typecheck():
 	b.append(U32(100))
 
 def test_array_init():
-	class Arr10(Array[U32, 10]): ...
+	class Arr10(TypedArray[U32, 10]): ...
 
 	a = Arr10([U32(1000)] * 10)
 	assert len(a) == 10
@@ -41,11 +41,14 @@ def test_typed_array_init():
 		TypedArray[U32, 10]([10] * 10)
 
 def test_cls_flow():
-	class IntVec(Vector[Int]): ...
+	class IntVec(TypedVector[Int]): ...
 	a = IntVec([])
 
-	class U32Vec(Vector[U32]): ...
-	b = U32Vec([])
+	class U32Vec(TypedVector[U32]): ...
+	b = U32Vec([U32(10)] * 10)
+
+	class BytesVec(TypedVector[bytes]): ...
+	c = BytesVec([bytes(1)] * 10)
 
 	with pytest.raises(TypeError):
 		b.append(100)
@@ -53,15 +56,18 @@ def test_cls_flow():
 	with pytest.raises(TypeError):
 		a.append(U32(100))
 
+	with pytest.raises(TypeError):
+		a.append(U32(100))
+
 def test_codec():
-	a = Vector[U32, 10]([U32(1)] * 10)
+	a = TypedArray[U32, 10]([U32(1)] * 10)
 	assert a.encode_size() == 4*10
 	assert len(a.encode()) == 4*10
 
-	b = Vector[U32, 20]([U32(1)] * 20)
+	b = TypedArray[U32, 20]([U32(1)] * 20)
 
 	assert b._min_length == 20
 	assert a._min_length == 10
 
 def test_repr_vector():
-	assert Vector[U32, 0, 10]([]).__class__.__name__ == "Vector[U32,max=10]"
+	assert TypedBoundedVector[U32, 0, 10]([]).__class__.__name__ == "TypedBoundedVector[U32,max=10]"

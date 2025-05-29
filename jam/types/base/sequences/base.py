@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar, Type, Optional, ClassVar, Union, Tuple, overload, Any
+from typing import TypeVar, Type, Optional, ClassVar, Union, Tuple, Any, Generic, Sequence, overload
 
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite import ArrayCodec, VectorCodec
@@ -6,16 +6,26 @@ from jam.utils.json import JsonSerde
 
 T = TypeVar("T")
 
-class Vector(list, Codable, JsonSerde):
+class Seq(list, Codable, JsonSerde, Generic[T]):
     """
-    Runtime‐only: provides _validate_value that can be extended,
-    override append/insert/extend/__setitem__, JSON, repr, etc.
-    """
-    _element_type: ClassVar[Optional[Type]]
-    _min_length: ClassVar[int] = 0
-    _max_length: ClassVar[int] = 2**64
+    Sequence Type
 
-    def __class_getitem__(cls, params: Union[Type, int, Tuple[Type, int], Tuple[int, int], Tuple[Type, int, int]]):
+    Usage:
+        >>> # Create a reusable type
+        >>> class Eta(Seq[bytes, 4]): ...
+        >>>
+        >>> # (or) Disposable
+        >>> val_indexes = Seq[int, 1023]([0] * 1028)
+        >>>
+        >>> # Supports codec [both variable and fixed length] given that the element type must support codec
+        >>> Seq[U16, 1023]([0] * 1028).encode()
+    """
+    _element_type: ClassVar[Type[T]]
+    _min_length: ClassVar[int] = 0
+    _max_length: ClassVar[int] = 2 ** 64
+    codec: ClassVar[Any] = VectorCodec()
+
+    def __class_getitem__(cls, params):
         # To overwrite previous cls values
         min_l, max_l, codec, elem_t = 0, 2**64, None, None
 
@@ -44,7 +54,9 @@ class Vector(list, Codable, JsonSerde):
         else:
             if min_l: parts.append(f"min={min_l}")
             if max_l != 2 ** 64: parts.append(f"max={max_l}")
+
         name = f"{cls.__name__}[{','.join(parts)}]"
+
         return type(name, (cls,), {
             "_element_type": elem_t,
             "_min_length": min_l,
@@ -85,16 +97,30 @@ class Vector(list, Codable, JsonSerde):
         super().extend(seq)
         self._validate_self()
 
-    def __setitem__(self, i, v):
+    def __setitem__(self, i, v: T):
         self._validate(v)
         super().__setitem__(i, v)
 
     def __repr__(self):
         return f"{self.__class__.__name__}({list(self)})"
 
+# All params supported-
+# Union[Type, int, Tuple[Type, int], Tuple[int, int], Tuple[Type, int, int]]
 
-class Array(Vector): ...
-class TypedArray(Vector): ...
-class TypedVector(Vector): ...
-class BoundedVector(Vector): ...
-class TypedBoundedVector(Vector): ...
+class Vector(Seq):
+    def __class_getitem__(cls, params: None): return super().__class_getitem__(params)
+
+class Array(Seq):
+    def __class_getitem__(cls, params: int): return super().__class_getitem__(params)
+
+class TypedArray(Seq):
+    def __class_getitem__(cls, params: Tuple[Type, int]): return super().__class_getitem__(params)
+
+class TypedVector(Seq):
+    def __class_getitem__(cls, params: Type): return super().__class_getitem__(params)
+
+class BoundedVector(Seq):
+    def __class_getitem__(cls, params: Tuple[int, int]): return super().__class_getitem__(params)
+
+class TypedBoundedVector(Seq):
+    def __class_getitem__(cls, params: Tuple[Type, int, int]): return super().__class_getitem__(params)
