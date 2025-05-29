@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from jam.types import decodable_option, Option
-from jam.types.base.choices import Choice
+from jam.types.base.composite import Choice
 from jam.types.base.integers.fixed import U32
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.work.report import WorkReport

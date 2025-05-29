@@ -1,327 +1,100 @@
-from typing import Any, Generic, List, Optional, Sequence, Type, TypeVar, Union
-from jam.types.base.integers.fixed import FixedInt
+from typing import Generic, TypeVar, Type, Optional, ClassVar, Union, Tuple, overload, Any
+
 from jam.utils.codec.codable import Codable
-from jam.utils.codec.codec import Codec
+from jam.utils.codec.composite import ArrayCodec, VectorCodec
 from jam.utils.json import JsonSerde
-from jam.utils.json.serde import JsonDeserializationError
 
-T = TypeVar("T", bound=Codable)
+T = TypeVar("T")
 
-
-class BaseSequence(Codable[Sequence[T]], Sequence[T], JsonSerde, Generic[T]):
+class Vector(list, Codable, JsonSerde):
     """
-    Base class for sequence types.
-
-    Provides common functionality for sequence types that support codec operations.
-    All elements must be instances of the same Codable type.
+    Runtime‐only: provides _validate_value that can be extended,
+    override append/insert/extend/__setitem__, JSON, repr, etc.
     """
+    _element_type: ClassVar[Optional[Type]]
+    _min_length: ClassVar[int] = 0
+    _max_length: ClassVar[int] = 2**64
 
-    _element_type: Optional[Type[T]] = None
-    value: List[T]
+    def __class_getitem__(cls, params: Union[Type, int, Tuple[Type, int], Tuple[int, int], Tuple[Type, int, int]]):
+        # To overwrite previous cls values
+        min_l, max_l, codec, elem_t = 0, 2**64, None, None
 
-    def __init__(self, initial: Sequence[T] = [], codec: Optional[Codec] = None):
-        """
-        Initialize sequence.
-
-        Args:
-            initial: Initial values
-            codec: Optional codec
-        """
-        # Make sure initial values are all of the same type
-        for value in initial:
-            self._validate_value(value)
-        self.value = initial
-        super().__init__(codec=codec)
-
-    def __len__(self) -> int:
-        """Get number of elements."""
-        return len(self.value)
-
-    def __getitem__(self, index: Union[int, slice, FixedInt]) -> Union[T, Sequence[T]]:
-        """Get item at index."""
-        item = self.value[index]
-        # Special case for Option
-        # if isinstance(item, Option):
-        #     return item.__get__()
-        # Return the item as is
-        return item
-
-    def __iter__(self):
-        """Iterate over elements."""
-        return iter([self.__getitem__(i) for i in range(len(self))])
-
-    def __repr__(self) -> str:
-        """Get string representation."""
-        return f"{self.__class__.__name__}([{', '.join(f'{value!r}' for value in self.value)}])"
-
-    def _validate_value(self, value: T) -> None:
-        """
-        Validate that a value is of the correct type.
-
-        Args:
-            value: Value to validate
-
-        Raises:
-            TypeError: If value is not of the correct type
-        """
-        if self._element_type is None:
-            self._element_type = type(value)
-
-        elif not str(type(value)) == str(self._element_type):
-            raise TypeError(
-                f"Value {value} must be instance of {self._element_type}. Debug: {str(type(value)) == str(self._element_type)}"
-            )
-
-    def __eq__(self, other: object) -> bool:
-        """Compare for equality."""
-        if isinstance(other, BaseSequence):
-            if len(self) == 0 and len(other) == 0:
-                return True
-            return (
-                self._element_type == other._element_type and self.value == other.value
-            )
-        if isinstance(other, list) or isinstance(other, tuple):
-            return all(x == y for x, y in zip(self.value, other))
-        return False
-
-    def __gt__(self, other: object) -> bool:
-        """Compare for greater than."""
-        if isinstance(other, BaseSequence):
-            return self.value > other.value
-        return False
-
-    def __lt__(self, other: object) -> bool:
-        """Compare for less than."""
-        if isinstance(other, BaseSequence):
-            return self.value < other.value
-        return False
-
-    def __ge__(self, other: object) -> bool:
-        """Compare for greater than or equal to."""
-        return self > other or self == other
-
-    def __le__(self, other: object) -> bool:
-        """Compare for less than or equal to."""
-        if isinstance(other, BaseSequence):
-            return self < other or self == other
-        return False
-
-    @property
-    def element_type(self) -> Optional[Type[T]]:
-        """Get the type of elements in this sequence."""
-        return self._element_type
-
-    def __setitem__(self, index: int, value: T) -> None:
-        """Set item at index."""
-        if not isinstance(index, int):
-            index = int(index)
-
-        if not 0 <= index < len(self.value):
-            raise IndexError(f"Index {index} out of range")
-
-        self._validate_value(value)
-        self.value[index] = value
-
-    def append(self, value: T) -> None:
-        """
-        Append value to end of vector.
-
-        Args:
-            value: Value to append. Must be instance of the same type as other elements.
-
-        Raises:
-            TypeError: If value is not of the correct type
-        """
-        self._validate_value(value)
-        self.value.append(value)
-
-    def pop(self, index: int = -1) -> T:
-        """
-        Remove and return item at index.
-
-        Args:
-            index: Index of item to remove
-
-        Returns:
-            Removed item
-
-        Raises:
-            IndexError: If index out of range
-        """
-        return self.value.pop(index)
-
-    def insert(self, index: int, value: T) -> None:
-        """
-        Insert value at index.
-
-        Args:
-            index: Index to insert at
-            value: Value to insert. Must be instance of the same type as other elements.
-
-        Raises:
-            TypeError: If value is not of the correct type
-        """
-        self._validate_value(value)
-        self.value.insert(index, value)
-
-    def remove(self, value: T) -> None:
-        """
-        Remove first occurrence of value.
-
-        Args:
-            value: Value to remove
-
-        Raises:
-            ValueError: If value not found
-        """
-        self.value.remove(value)
-
-    def clear(self) -> None:
-        """Clear all elements."""
-        self.value.clear()
-        self._element_type = None
-
-    def count(self, value: T) -> int:
-        """
-        Return number of occurrences of value.
-
-        Args:
-            value: Value to count
-
-        Returns:
-            Number of occurrences
-        """
-        return self.value.count(value)
-
-    def index(self, value: T, start: int = 0, stop: Optional[int] = None) -> int:
-        """
-        Return first index of value.
-
-        Args:
-            value: Value to find
-            start: Start index for search
-            stop: Stop index for search
-
-        Returns:
-            Index of value
-
-        Raises:
-            ValueError: If value not found
-        """
-        if stop is None:
-            stop = len(self)
-        return self.value.index(value, start, stop)
-
-    def reverse(self) -> "BaseSequence[T]":
-        """Reverse the vector in place."""
-        self.value.reverse()
-        return self
-
-    def extend(self, values: Sequence[T]) -> None:
-        """
-        Extend vector with values.
-
-        Args:
-            values: Values to add. Must all be instances of the same type as existing elements.
-
-        Raises:
-            TypeError: If values are not all of the correct type
-        """
-        for value in values:
-            self.append(value)
-
-    def __bytes__(self) -> bytes:
-        # Combine bytes of all values in the vector
-        return b"".join(bytes(value) for value in self.value)
-
-    def __add__(
-        self, other: Union["BaseSequence[T]", Sequence[T]]
-    ) -> "BaseSequence[T]":
-        """Add two sequences together, returning a new sequence."""
-        if isinstance(other, BaseSequence):
-            other_values = other.value
+        if isinstance(params, int) or isinstance(params, (type, TypeVar)):
+            if isinstance(params, (type, TypeVar)): elem_t = params
+            elif isinstance(params, int): max_l, min_l = params, params
+            else: raise TypeError(f"Invalid param to define {__class__.__name__}: {params}")
+        elif len(params) == 2:
+            if isinstance(params[0], type) and isinstance(params[1], int): elem_t, min_l, max_l = params[0], params[1], params[1]
+            elif isinstance(params[0], int) and isinstance(params[1], int): min_l, max_l = params[0], params[1]
+            else: raise TypeError(f"Invalid param to define {cls.__class__.__name__}: {params}")
+        elif len(params) == 3 and isinstance(params[0], (type, TypeVar)) and isinstance(params[1], int) and isinstance(params[2], int): elem_t, min_l, max_l = params
         else:
-            other_values = other
-        new_sequence = self.__class__(self.value.copy())
-        new_sequence.extend(other_values)
-        return new_sequence
+            raise TypeError(f"Invalid param to define {cls.__class__.__name__}: {params}")
 
-    def __iadd__(
-        self, other: Union["BaseSequence[T]", Sequence[T]]
-    ) -> "BaseSequence[T]":
-        """In-place addition of sequences."""
-        if isinstance(other, BaseSequence):
-            self.extend(other.value)
+        if (min_l == max_l) and max_l > 0:
+            codec = ArrayCodec(max_l)
         else:
-            self.extend(other)
-        return self
+            codec = VectorCodec()
 
-    def __mul__(self, n: int) -> "BaseSequence[T]":
-        """Multiply sequence by an integer, returning a new sequence."""
-        if not isinstance(n, int):
-            raise TypeError("Can only multiply sequence by an integer")
-        new_sequence = self.__class__(self.value * n, codec=self.codec)
-        return new_sequence
+        # build a nice name
+        parts = []
+        if elem_t:    parts.append(elem_t.__name__)
+        if min_l == max_l:
+            parts.append(f"N={min_l}")
+        else:
+            if min_l: parts.append(f"min={min_l}")
+            if max_l != 2 ** 64: parts.append(f"max={max_l}")
+        name = f"{cls.__name__}[{','.join(parts)}]"
+        return type(name, (cls,), {
+            "_element_type": elem_t,
+            "_min_length": min_l,
+            "_max_length": max_l,
+            "codec": codec,
+        })
 
-    def __imul__(self, n: int) -> "BaseSequence[T]":
-        """In-place multiplication of sequence."""
-        if not isinstance(n, int):
-            raise TypeError("Can only multiply sequence by an integer")
-        self.value *= n
-        return self
+    def _validate(self, value):
+        """For TypeChecks - added to fns that alter elements"""
+        if getattr(self, "_element_type", None) is not None:
+            if not isinstance(value, self._element_type):
+                raise TypeError(f"{value!r} is not an instance of {self._element_type!r}")
 
-    def __contains__(self, item: T) -> bool:
-        """Check if item is in sequence."""
-        return item in self.value
+    def _validate_self(self):
+        """For Resultant Self check - added to fns that alter size"""
+        if  len(self) < self._min_length:
+            raise ValueError(f"Vector: Expected sequence size to be >= {self._min_length}, resultant size {len(self)}")
+        elif len(self) > self._max_length:
+            raise ValueError(f"Vector: Expected sequence size to be <= {self._max_length}, resultant size {len(self)}")
 
-    def copy(self) -> "BaseSequence[T]":
-        """Return a shallow copy of the sequence."""
-        return self.__class__(self.value.copy(), codec=self.codec)
+    def __init__(self, initial: list[T]):
+        super().__init__()
+        self.extend(initial)
 
-    def sort(self, *, key=None, reverse=False) -> None:
-        """
-        Sort the sequence in place.
+    def append(self, v: T):
+        self._validate(v)
+        super().append(v)
+        self._validate_self()
 
-        Args:
-            key: Function of one argument that is used to extract a comparison key
-            reverse: If True, sort in descending order
-        """
-        self.value.sort(key=key, reverse=reverse)
+    def insert(self, i, v: T):
+        self._validate(v)
+        super().insert(i, v)
+        self._validate_self()
 
-    def __reversed__(self):
-        """Return a reverse iterator over the sequence."""
-        return reversed(self.value)
+    def extend(self, seq: list[T]):
+        for val in seq:
+            self._validate(val)
+        super().extend(seq)
+        self._validate_self()
 
-    def __delitem__(self, index: Union[int, slice]) -> None:
-        """Delete item at index."""
-        del self.value[index]
+    def __setitem__(self, i, v):
+        self._validate(v)
+        super().__setitem__(i, v)
 
-    def __rmul__(self, n: int) -> "BaseSequence[T]":
-        """Right multiplication (n * sequence)."""
-        return self.__mul__(n)
+    def __repr__(self):
+        return f"{self.__class__.__name__}({list(self)})"
 
-    def __hash__(self) -> None:
-        """Sequences are mutable, so they should not be hashable."""
-        from hashlib import blake2b
 
-        return int.from_bytes(blake2b(bytes(self)).digest())
-
-    def startswith(self, prefix: Sequence[T]) -> bool:
-        """Check if sequence starts with prefix."""
-        return self.value[: len(prefix)] == prefix
-
-    def endswith(self, suffix: Sequence[T]) -> bool:
-        """Check if sequence ends with suffix."""
-        return self.value[-len(suffix) :] == suffix
-
-    @classmethod
-    def from_json(cls, data: Any) -> "BaseSequence[T]":
-        """Deserialize from JSON."""
-        if not isinstance(data, list):
-            raise JsonDeserializationError(
-                f"Expected list for {cls.__name__}, got {type(data)}"
-            )
-        return cls([cls._element_type.from_json(item) for item in data])
-
-    def to_json(self) -> list:
-        return [i.to_json() for i in self]
+class Array(Vector): ...
+class TypedArray(Vector): ...
+class TypedVector(Vector): ...
+class BoundedVector(Vector): ...
+class TypedBoundedVector(Vector): ...

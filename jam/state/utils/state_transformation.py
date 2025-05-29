@@ -28,7 +28,7 @@
 # from jam.types.state.xi import Xi
 # from jam.state.state import State
 # from jam.types.base import Bytes
-# from jam.types.base.choices.option import Option, decodable_option
+# from jam.types.base.composite.option import Option, decodable_option
 #
 # from jam.types.base.integers.fixed import U32
 # from jam.types.base.sequences.vector import Vector, decodable_vector

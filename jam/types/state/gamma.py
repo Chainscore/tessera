@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from jam.types.base.choices.choice import Choice, decodable_choice
+from jam.types.base.composite.choice import Choice, decodable_choice
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.extrinsics.tickets import TicketBody

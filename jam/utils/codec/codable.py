@@ -34,9 +34,7 @@ class Codable(Generic[T]):
     def encode_size(self) -> int:
         """Calculate number of bytes needed to encode."""
         if self.codec is not None:
-            return self.codec.encode_size(
-                self.value if hasattr(self, "value") else self
-            )
+            return self.codec.encode_size(self)
         raise NotImplementedError("No supported encoding method found")
 
     def encode(self) -> bytes:
@@ -48,9 +46,7 @@ class Codable(Generic[T]):
     def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
         """Encode into provided buffer."""
         if self.codec is not None:
-            return self.codec.encode_into(
-                self.value if hasattr(self, "value") else self, buffer, offset
-            )
+            return self.codec.encode_into(self, buffer, offset)
         raise NotImplementedError("No supported encoding method found")
 
     @classmethod

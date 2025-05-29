@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from jam.types.base import Int
 from jam.types.base.null import Nullable
 from jam.types.base.integers import U16, U32
-from jam.types.base.choices.choice import Choice, decodable_choice
+from jam.types.base.composite.choice import Choice, decodable_choice
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
 from jam.types.base.bytes.bytes import Bytes
 from jam.types.base.sequences.vector import Vector, decodable_vector

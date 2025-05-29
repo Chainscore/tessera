@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from jam.types.base import String
-from jam.types.base.choices.option import Option, decodable_option
+from jam.types.base.composite.option import Option, decodable_option
 from jam.types.base.enum import Enum, decodable_enum
 from jam.types.base.integers.fixed import U64, U8
 from jam.types.base.null import Null

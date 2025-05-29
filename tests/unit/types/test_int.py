@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from jam.types.base import U8, Int, U16
+from jam.types.base.integers import U8, Int, U16
 
 
 def test_int_type():

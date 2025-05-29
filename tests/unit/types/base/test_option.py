@@ -3,9 +3,9 @@
 import pytest
 from typing import TypeVar, cast
 
-from jam.types.base.choices import Option
+from jam.types.base.composite import Option
 from jam.types.base.boolean import Boolean
-from jam.types.base.choices.option import decodable_option
+from jam.types.base.composite.option import decodable_option
 from jam.types.base.integers import Int
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.errors import DecodeError
