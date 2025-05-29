@@ -1,94 +1,86 @@
-from typing import Any, Dict, Tuple, Type, Union
+from typing import ClassVar, Type, Generic, TypeVar, Optional as _Opt, Union, Tuple, Any
 
-from jam.types.base.composite.choice import Choice
-from jam.types.base.null import Null, Nullable
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.choices import ChoiceCodec
+from jam.types.base.integers import Int
+from jam.utils.codec import Codable
+from jam.utils.json import JsonSerde
 
+T = TypeVar("T", bound=Codable)
 
-class Option(Choice):
+class Option(Codable, JsonSerde, Generic[T]):
     """
-    An option is a choice that can be either None or a value.
+    Option[T] wraps either no value (None) or a T.
     """
+    _opt_type:  ClassVar[Type[T]]
 
-    def __init_subclass__(cls, **kwargs):
-        ...
+    def __class_getitem__(cls, opt_t):
+        if not isinstance(opt_t, type):
+            raise TypeError("Option[...] only accepts a single type")
+        name = f"Option[{opt_t.__name__}]"
+        # build subclass: inherits all the Codable/JsonSerde logic
+        return type(name,
+                    (Option,),
+                    {"_opt_type": opt_t})
 
-    def __init__(self, initial: Codable = Null):
-        super().__init__(Option.option_to_choice(initial))
+    def __init__(self, value: _Opt[T] = None):
+        # None is always allowed
+        self._value = value
+        if value:
+            # enforce the chosen subtype
+            if not isinstance(value, self._opt_type):
+                raise TypeError(f"{value!r} is not a {self._opt_type.__name__}")
+            self._value   = value
 
-    @staticmethod
-    def option_to_choice(value: Codable | Nullable) -> Dict[str, Codable]:
-        if value is None or isinstance(value, Nullable):
-            return {"none": Null}
-        else:
-            return {"some": value}
+    def unwrap(self) -> T:
+        return self._value
 
-    def __set__(self, value: Codable | Nullable):
-        super().__set__(Option.option_to_choice(value))
+    @property
+    def is_none(self):
+        return self._value == None
 
-    def get_value(self) -> Codable | Nullable:
-        return list(self.value.values())[0]
+    @property
+    def is_some(self):
+        return self._value != None
 
-    def is_some(self) -> bool:
-        return "some" in self.value
-
-    @classmethod
-    def from_json(cls, data: Any) -> "Option":
-        """Create from JSON representation."""
-        if data is None:
-            return cls(Nullable())
-
-        value = cls.__choices__["some"].from_json(data)
-        return cls(value)
-
-    def to_json(self) -> Any:
-        """Convert to JSON representation."""
-        if isinstance(self.value, Nullable) or self.value is None:
-            return None
-        return self.get_value().to_json()
-
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, Option):
-            return self.value == other.value
-        return self.get_value() == other
+    # Boolean context: treat None as False
+    def __bool__(self) -> bool:
+        return self._value is not None
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.get_value()})"
+        return f"{self.__class__.__name__}({self._value!r})"
 
+    def __eq__(self, other):
+        if isinstance(other, Option):
+            return other._value == self._value
+        return other == self._value
 
-def decodable_option(optional_type: Type[Codable]) -> Type[Option]:
-    """Decodable choice"""
+    def to_json(self):
+        return self._value.to_json() if self._value else None
 
-    def decorator(cls: Type[Option]) -> Type[Option]:
-        cls.__choices__ = {"none": Nullable, "some": optional_type}
+    @classmethod
+    def from_json(cls, data):
+        if data is None:
+            return cls(None)
+        return cls(cls._opt_type.from_json(data))
 
-        @staticmethod
-        def decode_from(
-            buffer: Union[bytes, bytearray, memoryview], offset: int = 0
-        ) -> Tuple[Option, int]:
-            """
-            Decode option from buffer.
+    def encode_size(self) -> int:
+        inner_sz = 0 if self.is_none else self._value.encode_size()
+        # Since we just have 2 choices, even using Int.encode shall give 1 byte
+        return 1 + inner_sz
 
-            Args:
-                optional_type: Type of the optional value
-                buffer: Source buffer
-                offset: Starting offset
+    def encode_into(self, buf: bytearray, offset: int = 0) -> int:
+        # tag: 0 = None, 1 = Some
+        buf[offset:offset+Int(1).encode_size()] = Int(1).encode() if self.is_some else bytes(1)
+        if self.is_some:
+            return 1 + self._value.encode_into(buf, offset+1)
+        return 1
 
-            Returns:
-                Tuple of (decoded value, bytes read)
+    @classmethod
+    def decode_from(
+        cls, buffer: Union[bytes, bytearray, memoryview], offset: int = 0
+    ) -> Tuple[Any, int]:
+        tag, tag_size = Int.decode_from(buffer, offset)
+        value, val_size = None, 0
+        if tag:
+            value, val_size = cls._opt_type.decode_from(buffer, offset+tag_size)
 
-            Raises:
-                DecodeError: If buffer is invalid or too short
-                ValueError: If types list is empty
-            """
-            if len(cls.__choices__) == 0:
-                raise ValueError("Choice must have at least one type")
-
-            value, size = ChoiceCodec.decode_from(cls.__choices__, buffer, offset)
-            return cls(list(value.values())[0]), size
-
-        cls.decode_from = decode_from
-        return cls
-
-    return decorator
+        return cls(value), tag_size+val_size

@@ -67,3 +67,8 @@ class Codable(Generic[T]):
         """
         value, size = cls.codec.decode_from(buffer, offset)
         return cls(value), size
+
+    @classmethod
+    def decode(cls, data: Union[bytes, bytearray, memoryview]):
+        value, _ = cls.decode_from(data, 0)
+        return value
