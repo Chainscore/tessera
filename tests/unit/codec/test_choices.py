@@ -3,7 +3,7 @@
 import pytest
 from typing import Type, List, TypeVar
 
-from jam.types.base.choices import Choice, decodable_choice
+from jam.types.base.composite import Choice, decodable_choice
 from jam.utils.codec.codable import Codable
 from jam.utils.codec import EncodeError, DecodeError
 from jam.types.base.boolean import Boolean
@@ -57,7 +57,7 @@ class TestChoiceCodec:
         assert size == len(encoded)
 
     def test_nested_choices(self):
-        """Test encoding/decoding of nested choices."""
+        """Test encoding/decoding of nested composite."""
 
         @decodable_choice
         class TestChoice(Choice):
@@ -86,7 +86,7 @@ class TestChoiceCodec:
             B: U8
 
         # Create invalid encoding with out-of-bounds tag
-        invalid_buffer = bytearray([2])  # Tag 2 is invalid for 2 choices
+        invalid_buffer = bytearray([2])  # Tag 2 is invalid for 2 composite
 
         with pytest.raises(DecodeError) as exc_info:
             TestChoice.decode_from(invalid_buffer)
@@ -181,7 +181,7 @@ class TestChoiceCodec:
         ids=str,
     )
     def test_encode_size(self, value: Codable, expected_size: int):
-        """Test that encode_size returns correct sizes for different choices."""
+        """Test that encode_size returns correct sizes for different composite."""
 
         @decodable_choice
         class TestChoice(Choice):

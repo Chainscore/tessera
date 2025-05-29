@@ -1,5 +1,5 @@
 import pytest
-from jam.types.base.choices.option import Option, decodable_option
+from jam.types.base.composite.option import Option, decodable_option
 from jam.types.base.string import String
 from jam.types.base.integers.fixed import I64
 from jam.types.base.boolean import Boolean

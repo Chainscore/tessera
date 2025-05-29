@@ -1,6 +1,6 @@
 from typing import Any, Dict, Tuple, Type, Union
 
-from jam.types.base.choices.choice import Choice
+from jam.types.base.composite.choice import Choice
 from jam.types.base.null import Null, Nullable
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.composite.choices import ChoiceCodec

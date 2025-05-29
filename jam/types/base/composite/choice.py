@@ -46,10 +46,10 @@ class Choice(Codable[T], JsonSerde, Generic[T]):
         >>> class OutputType(Choice): ...
     """
 
-    # All choices
-    __choices__: Dict[str, Type[Codable[T]]] = {}
+    # All composite
+    __choices__: Dict[str, Type[T]] = {}
     # Selected choice
-    value: Dict[str, Codable[T]]
+    value: Dict[str, T]
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -155,7 +155,7 @@ class Choice(Codable[T], JsonSerde, Generic[T]):
     def from_json(cls, data: Any) -> "Choice[T]":
         """Create from JSON representation."""
         last_error = None
-        # Go through all the choices and try to decode the data
+        # Go through all the composite and try to decode the data
         choice_key = list(data.keys())[0]
         if choice_key in list(cls.__choices__.keys()):
             indexOfChoice = list(cls.__choices__.keys()).index(choice_key)

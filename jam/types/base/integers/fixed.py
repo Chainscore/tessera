@@ -5,7 +5,7 @@ from jam.utils.codec.primitives.integers import IntegerCodec
 from jam.utils.json import JsonSerde
 
 
-class FixedInt(BaseInteger, Codable, JsonSerde):
+class FixedInt(Codable, JsonSerde, BaseInteger):
     """Fixed-width integer type."""
 
     byte_size: int = 0  # override in subclasses
@@ -29,7 +29,7 @@ class FixedInt(BaseInteger, Codable, JsonSerde):
         return self.byte_size
 
     def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
-        buffer[offset:self.byte_size] = self.to_bytes(self.byte_size)
+        buffer[offset:offset+self.byte_size] = self.to_bytes(self.byte_size, "little")
         return self.byte_size
 
     @classmethod

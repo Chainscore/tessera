@@ -24,16 +24,16 @@ class ChoiceCodec(Codec[T], Generic[T]):
 
     The tag is encoded as a general integer, followed by the encoded value
     of the selected type. The tag value corresponds to the index of the
-    type in the choices list.
+    type in the composite list.
 
     Args:
         choices: A list of types that are allowed for this choice. Their index
                 will be used as the tag.
         tag_codec: A codec for the tag. Defaults to GeneralCodec() [Best for most cases].
-                Alternatively we can use FixedInt(U8) for a fixed size tag if choices > 128.
+                Alternatively we can use FixedInt(U8) for a fixed size tag if composite > 128.
 
     Raises:
-        ValueError: If choices list is empty
+        ValueError: If composite list is empty
     """
 
     _choices: Dict[str, Type[Codable[T]]]
@@ -52,7 +52,7 @@ class ChoiceCodec(Codec[T], Generic[T]):
                     will be used as the tag.
 
         Raises:
-            ValueError: If choices list is empty
+            ValueError: If composite list is empty
         """
         if len(choices) == 0:
             raise ValueError("Choices list cannot be empty")
@@ -70,7 +70,7 @@ class ChoiceCodec(Codec[T], Generic[T]):
             Number of bytes needed for encoding
 
         Raises:
-            EncodeError: If value type is not in choices list
+            EncodeError: If value type is not in composite list
         """
         value_key = list(_value.keys())[0]
         value = _value[value_key]
@@ -84,7 +84,7 @@ class ChoiceCodec(Codec[T], Generic[T]):
         try:
             tag = list(self._choices.keys()).index(value_key)
         except ValueError:
-            raise EncodeError(0, 0, f"Value type {type(value)} not in choices list")
+            raise EncodeError(0, 0, f"Value type {type(value)} not in composite list")
 
         return self._tag_codec.encode_size(tag) + value.encode_size()
 
@@ -103,7 +103,7 @@ class ChoiceCodec(Codec[T], Generic[T]):
             Number of bytes written
 
         Raises:
-            EncodeError: If value type is not in choices list or buffer is too small
+            EncodeError: If value type is not in composite list or buffer is too small
         """
         value_key = list(_value.keys())[0]
         value = _value[value_key]
@@ -140,7 +140,7 @@ class ChoiceCodec(Codec[T], Generic[T]):
 
         Raises:
             DecodeError: If buffer is invalid/too short or tag is invalid
-            ValueError: If choices list is empty
+            ValueError: If composite list is empty
         """
         if len(choices) == 0:
             raise ValueError("Choices list cannot be empty")
