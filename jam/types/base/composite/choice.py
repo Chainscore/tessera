@@ -1,203 +1,83 @@
-from typing import (
-    Dict,
-    Type,
-    Union,
-    Optional,
-    Tuple,
-    TypeVar,
-    Generic,
-    Any,
-    get_type_hints,
-)
+from typing import ClassVar, Type, Generic, TypeVar, Optional as _Opt, Union, Tuple, Any
+
+from jam.types.base.integers import Int
 from jam.utils.codec import Codable
-from jam.utils.codec.composite.choices import ChoiceCodec
 from jam.utils.json import JsonSerde
 
 T = TypeVar("T")
 
+class Choice(Codable, JsonSerde, Generic[T]):
+    """"""
+    _opt_types: ClassVar[Tuple[Type]]
+    _value: T
 
-class Choice(Codable[T], JsonSerde, Generic[T]):
-    """
-    A choice is a value that can be one of several possible types.
+    def __class_getitem__(cls, opt_t: Tuple[Type] | Type):
+        if not isinstance(opt_t, Tuple):
+            opt_t = opt_t,
+        name = f"Choice[{'/'.join([op.__class__.__name__ for op in opt_t])}]"
+        return type(name,
+                    (Choice,),
+                    {"_opt_types": opt_t})
 
-    A Choice represents a tagged union type that can hold a value of one of several
-    possible Codable types. The actual type is determined by a tag byte during
-    encoding/decoding.
+    def __init__(self, value: _Opt[T] = None):
+        # None is always allowed
+        super().__init__()
+        self._value = value
+        if value is not None:
+            # enforce the chosen subtype
+            if not isinstance(value, self._opt_types):
+                raise TypeError(f"{value!r} is not a {self._opt_types}")
+            self._value   = value
 
-    To use a choice, you need to define all possible types:
-        >>> @decodable_choice([U8, U16])
-        >>> class MyChoice(Choice): ...
-        >>> my_choice: MyChoice = MyChoice(U8(1))
-        >>> assert my_choice.type == U8
-        >>> assert my_choice.value == U8(1)
 
-    To use a optional choice, we'd pair it with Nullable:
-        >>> @decodable_choice([U8, Nullable])
-        >>> class OptionalU8(Choice): ...
-        >>> my_choice: OptionalU8 = OptionalU8(U8(1))
-        >>> assert my_choice.type == U8
-        >>> assert my_choice.value == U8(1)
-        >>> my_choice: OptionalU8 = OptionalU8(Null)
-        >>> assert my_choice.type == Nullable
-        >>> assert my_choice.value is None
+    def unwrap(self) -> T:
+        return self._value
 
-    To use this as an enum:
-        >>> @decodable_choice([String, String, String])
-        >>> class OutputType(Choice): ...
-    """
+    @property
+    def is_none(self):
+        return not self._value
 
-    # All composite
-    __choices__: Dict[str, Type[T]] = {}
-    # Selected choice
-    value: Dict[str, T]
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-
-        if len(cls.__choices__) != 0:
-            cls.__choices__ = {}
-
-        # Collect the annotations declared in this subclass.
-        # (This will include all annotated names that are defined in the class body.)
-        all_annotations = get_type_hints(cls)
-        # Remove 'value', 'codec', 'type', '__choices__'
-        for k, v in all_annotations.items():
-            if k not in ["value", "codec", "type", "__choices__"]:
-                cls.__choices__[k] = v
-
-    def __init__(self, initial: Dict[str, Codable[T]] | Codable[T]):
-        """
-        Initialize Choice.
-
-        Args:
-            initial: Mapping of initial choice name and its value. Should have only one key.
-        Raises:
-            ValueError: If types list is empty
-        """
-        self.__set_internal__(initial)
-        super().__init__(codec=ChoiceCodec(self.__choices__))
-
-    def __set__(self, value: Dict[str, Codable[T]] | Codable[T]) -> None:
-        self.__set_internal__(value)
-
-    def __set_internal__(self, value: Dict[str, Codable[T]] | Codable[T]) -> None:
-        """
-        Set the choice value.
-
-        Args:
-            value: Value to set. Must be instance of one of the allowed types.
-
-        Raises:
-            ValueError: If value type is not in allowed types list
-        """
-        if not isinstance(value, dict):
-            # Find first matching key with value's choice
-            for key, choice_type in self.__choices__.items():
-                if isinstance(value, choice_type):
-                    value = {key: value}
-                    break
-            else:
-                raise ValueError(
-                    f"Value type {type(value)} is not in allowed types: {self.__choices__.keys()}"
-                )
-
-        if len(value) != 1:
-            raise ValueError(f"Choice must have exactly one key, found {len(value)}")
-
-        # Ensure the choice key+value are valid and supported
-        choice_key = list(value.keys())[0]
-        if choice_key not in self.__choices__.keys():
-            raise ValueError(
-                f"Value type {choice_key} is not in allowed types: {self.__choices__.keys()}"
-            )
-        choice_type = self.__choices__[choice_key]
-        if not str(type(value[choice_key])) == str(choice_type):
-            raise ValueError(
-                f"Value type {type(value[choice_key])} is not in allowed types: {choice_type}"
-            )
-
-        # Set them
-        self.value = value
-
-    def __get__(self) -> Optional[Codable[T]]:
-        """
-        Get the current value.
-
-        Returns:
-            Current value or None if not set
-        """
-        return self.value
-
-    def get_key(self) -> str:
-        """Returns the selected choice key"""
-        return list(self.value.keys())[0]
-    
-    def get_value(self):
-        """Returns the selected choice value"""
-        return self.value[list(self.value.keys())[0]]
-
-    def __eq__(self, other: object) -> bool:
-        """Compare for equality."""
-        if isinstance(other, Choice):
-            return self.value == other.value
-        else:
-            return self.value == other
-
-    def __bool__(self) -> bool:
-        """Check if the choice has a value."""
-        return self.value is not None
+    @property
+    def is_some(self):
+        return not not self._value
 
     def __repr__(self) -> str:
-        """Get string representation."""
-        return f"{self.__class__.__name__}({self.value!r})"
-    
+        return f"{self.__class__.__name__}({self._value!r})"
+
+    def __eq__(self, other):
+        if isinstance(other, Choice):
+            return other._value == self._value
+        return other == self._value
+
+    # TODO: JSON Serde
+    # def to_json(self):
+    #     return self._value.to_json() if self._value else None
+
+    # @classmethod
+    # def from_json(cls, data):
+    #     if data is None:
+    #         return cls(None)
+    #     return cls(cls._opt_type.from_json(data))
+
+    def encode_size(self) -> int:
+        inner_sz = 0 if self.is_none else self._value.encode_size()
+        # Since we just have 2 choices, even using Int.encode shall give 1 byte
+        return Int(len(self._opt_types)).encode_size() + inner_sz
+
+    def encode_into(self, buf: bytearray, offset: int = 0) -> int:
+        # tag: 0 = None, 1 = Some
+        buf[offset:offset+Int(1).encode_size()] = Int(self._opt_types.index(type(self._value))).encode()
+        if self.is_some:
+            return 1 + self._value.encode_into(buf, offset+1)
+        return 1
+
     @classmethod
-    def from_json(cls, data: Any) -> "Choice[T]":
-        """Create from JSON representation."""
-        last_error = None
-        # Go through all the composite and try to decode the data
-        choice_key = list(data.keys())[0]
-        if choice_key in list(cls.__choices__.keys()):
-            indexOfChoice = list(cls.__choices__.keys()).index(choice_key)
-            choice_type = list(cls.__choices__.values())[indexOfChoice]
-            return cls({choice_key: choice_type.from_json(data[choice_key])})
-
-        raise ValueError(
-            f"No valid choice type found for {data} in {cls.__name__}: {last_error}"
-        )
-
-    def to_json(self) -> Any:
-        return {list(self.value.keys())[0] : self.get_value().to_json()}
-
-
-def decodable_choice(cls: Type[Choice]) -> Type[Choice]:
-    if len(cls.__choices__) == 0:
-        raise ValueError("Choice must have at least one type")
-
-    @staticmethod
     def decode_from(
-        buffer: Union[bytes, bytearray, memoryview], offset: int = 0
-    ) -> Tuple[Choice, int]:
-        """
-        Decode choice from buffer.
+        cls, buffer: Union[bytes, bytearray, memoryview], offset: int = 0
+    ) -> Tuple[Any, int]:
+        tag, tag_size = Int.decode_from(buffer, offset)
+        value, val_size = None, 0
+        if tag:
+            value, val_size = cls._opt_types[tag].decode_from(buffer, offset+tag_size)
 
-        Args:
-            types: List of possible types for this choice
-            buffer: Source buffer
-            offset: Starting offset
-
-        Returns:
-            Tuple of (decoded value, bytes read)
-
-        Raises:
-            DecodeError: If buffer is invalid or too short
-            ValueError: If types list is empty
-        """
-        if len(cls.__choices__) == 0:
-            raise ValueError("Choice must have at least one type")
-
-        value, size = ChoiceCodec.decode_from(cls.__choices__, buffer, offset)
-        return cls(value), size
-
-    cls.decode_from = decode_from
-    return cls
+        return cls(value), tag_size+val_size
