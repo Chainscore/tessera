@@ -1,6 +1,8 @@
+import pytest
 
+from jam.types.base.composite.choice import Choice
 from jam.types.base.composite.option import Option
-from jam.types.base.integers import U32
+from jam.types.base.integers import U32, U8, U16
 
 
 def test_option():
@@ -31,3 +33,32 @@ def test_opt_codec():
 
 	dec_n = n.decode(enc_n)
 	assert dec_n == n
+
+def test_opt_type():
+	a = Option[U32](U32(10))
+	with pytest.raises(TypeError):
+		a.set(U8(10))
+
+	with pytest.raises(TypeError):
+		# Not possible to show warning here 🥲
+		Option[U8](True)
+
+	b = Option[U8](U8(100))
+	b.set(U8(10))
+	with pytest.raises(TypeError):
+		b.set(False)
+
+def test_choice_init():
+	# Shows warning if invalid (non Type) choice added
+	Choice[U8, bool](U8(10))
+	# Should pass - valid choice and valid value
+	a = Choice[U8, bool](U8(10))
+	with pytest.raises(TypeError):
+		# Should fail
+		b = Choice[U8, bool](U16(10))
+
+	a.set(U8(100))
+
+	with pytest.raises(TypeError):
+		# Should show warning as this is not a supported type by choice
+		a.set(U16(100))
