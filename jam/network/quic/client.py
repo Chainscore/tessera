@@ -4,6 +4,8 @@ from typing import Dict, Optional
 from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted, \
     ConnectionIdIssued, ConnectionIdRetired
+from cryptography.x509 import Certificate
+
 from jam.config.logging import logging as logger
 
 genesis_hash = "476243ad"
@@ -52,16 +54,36 @@ class QuicClientProtocol(QuicConnectionProtocol):
 
     def quic_event_received(self, event: QuicEvent) -> None:
         if isinstance(event, HandshakeCompleted):
+            # peer_cert = self._quic.tls._peer_certificate
+            #
+            # if isinstance(peer_cert, Certificate):
+            #     pk = peer_cert.public_key()
+            #     print("pk", pk)
+            #     peer = self.node.get_peer_from_pub(pk)
+            #     if peer:
+            #         print("found peer", peer)
+            #
+            # if not peer_cert:
+            #     print("❌ No peer certificate received")
+            #     self._quic.close(error_code=0x10, reason_phrase="No cert")
+            #     return
+            #
+            # print("peer certificate", peer_cert)
+            # print("client peer id", self._quic._peer_cid.cid.hex())
+            # print("client host id", self._quic.host_cid.hex())
+
             logger.info("🔗 Handshake completed (client connected to server)")
 
         elif isinstance(event, ConnectionIdIssued):
-            logger.warning(f"🔗 Connection Id issued: {event.connection_id}")
-            self.connection_id = event.connection_id
-            print("new conn id", event.connection_id.hex())
+            ...
+            # logger.warning(f"🔗 Connection Id issued: {event.connection_id}")
+            # self.connection_id = event.connection_id
+            # print("new conn id", event.connection_id.hex())
 
         elif isinstance(event, ConnectionIdRetired):
-            logger.warning(f"🔗 Connection Id retired: new - {event.connection_id}")
-            print("retired id", event.connection_id.hex())
+            ...
+            # logger.warning(f"🔗 Connection Id retired: new - {event.connection_id}")
+            # print("retired id", event.connection_id.hex())
 
 
         elif isinstance(event, ConnectionTerminated):
@@ -69,8 +91,8 @@ class QuicClientProtocol(QuicConnectionProtocol):
             self._close_pending = True
 
         elif isinstance(event, StreamDataReceived):
-            print("client peer id", self._quic._peer_cid)
-            print("client host id", self._quic.host_cid)
+            # print("client peer id", self._quic._peer_cid.cid.hex())
+            # print("client host id", self._quic.host_cid.hex())
 
             if self.waiter[event.stream_id] is not None:
                 from jam.network.protocols.base import PrefixType

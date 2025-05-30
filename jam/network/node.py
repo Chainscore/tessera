@@ -6,12 +6,15 @@ from typing import Dict, cast, Tuple
 from aioquic.asyncio import serve, connect
 from aioquic.asyncio.server import QuicServer
 from aioquic.quic.configuration import QuicConfiguration
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
 from jam.types.protocol.validators import ValidatorData
 from .certificate import generate_keys
 from .peer import Peer
 
 from .sessions import SessionTicketStore
 from jam.config.logging import logger
+from ..types.protocol.crypto import Ed25519Public
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -59,11 +62,18 @@ class Node:
         self.is_validator = is_validator
         self.connections = []
         self.peer_conn = {}
+        # self.peer
 
         if is_validator and is_builder:
             raise ValueError("Node can't be validator and builder at same time!")
 
         self.dns = generate_keys(port)
+
+    def get_peer_from_pub(self, key: Ed25519PublicKey) -> Peer | None:
+        for peer in self.peers:
+            print("key received", key)
+            if peer.data.ed25519 == key:
+                return peer
 
     def configuration(self, is_client: bool = True) -> QuicConfiguration:
         """
@@ -158,8 +168,8 @@ class Node:
                 # await client.stream_and_keep_open(stream_id=stream_id, message=final.encode())
 
                 self.peer_conn[peer] = stream_id, client
-                print("conn peer id", client._quic._peer_cid)
-                print("conn host id", client._quic.host_cid)
+                # print("conn peer id", client._quic._peer_cid)
+                # print("conn host id", client._quic.host_cid)
 
 
                 self.is_initialized = True
