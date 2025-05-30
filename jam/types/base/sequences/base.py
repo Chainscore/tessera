@@ -26,6 +26,7 @@ class Seq(list, Codable, JsonSerde, Generic[T]):
     codec: ClassVar[Any] = VectorCodec()
 
     def __class_getitem__(cls, params):
+        print("im in seq")
         # To overwrite previous cls values
         min_l, max_l, codec, elem_t = 0, 2**64, None, None
 
@@ -41,8 +42,9 @@ class Seq(list, Codable, JsonSerde, Generic[T]):
         else:
             raise TypeError(f"Invalid param to define {cls.__class__.__name__}: {params}")
 
+
         if (min_l == max_l) and max_l > 0:
-            codec = ArrayCodec(max_l)
+            codec = ArrayCodec[max_l]()
         else:
             codec = VectorCodec()
 

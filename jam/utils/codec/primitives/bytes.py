@@ -31,32 +31,32 @@ class BytesCodec(Codec):
 
 class FixedBytesCodec(Codec):
     """Codec for fixed-length byte sequences."""
+    length: int = 0
 
-    def __init__(self, size: int):
-        """Initialize with fixed size."""
-        self.size = size
+    def __class_getitem__(cls, _len: int):
+        return type(cls.__class__.__name__, (cls,), {"length": _len})
 
     def encode_size(self, value: bytes) -> int:
         """Calculate encoded size of a byte sequence."""
-        if len(value) != self.size:
-            raise ValueError(f"Expected {self.size} bytes, got {len(value)}")
-        return self.size
+        if len(value) != self.length:
+            raise ValueError(f"Expected {self.length} bytes, got {len(value)}")
+        return self.length
 
     def encode_into(self, value: bytes, buffer: bytearray, offset: int = 0) -> int:
         """Encode a byte sequence into a buffer."""
-        if len(value) != self.size:
-            raise ValueError(f"Expected {self.size} bytes, got {len(value)}")
-        buffer[offset : offset + self.size] = value
-        return self.size
+        if len(value) != self.length:
+            raise ValueError(f"Expected {self.length} bytes, got {len(value)}")
+        buffer[offset : offset + self.length] = value
+        return self.length
 
-    @staticmethod
+    @classmethod
     def decode_from(
-        buffer: Union[bytes, bytearray, memoryview], offset: int = 0, size: int = 0
+        cls, buffer: Union[bytes, bytearray, memoryview], offset: int = 0
     ) -> Tuple[bytes, int]:
         """Decode a byte sequence from a buffer."""
-        if len(buffer) - offset < size:
+        if len(buffer) - offset < cls.length:
             raise ValueError(
-                f"Buffer too small. Expected {size} bytes, got {len(buffer) - offset}"
+                f"Buffer too small. Expected {cls.length} bytes, got {len(buffer) - offset}"
             )
-        data = buffer[offset : offset + size]
-        return bytes(data), size
+        data = buffer[offset : offset + cls.length]
+        return bytes(data), cls.length
