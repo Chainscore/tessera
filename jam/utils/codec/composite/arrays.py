@@ -14,7 +14,7 @@ from jam.utils.codec.utils import check_buffer_size
 from jam.utils.codec.codable import Codable
 
 
-class ArrayCodec(Codec[Sequence[Codable]]):
+class ArrayCodec(Codec):
     """
     Codec for fixed-length arrays/sequences.
 
@@ -23,17 +23,10 @@ class ArrayCodec(Codec[Sequence[Codable]]):
     """
 
     MAX_SIZE = 4104
-    length: int
+    length: int = 0
 
-    def __init__(self, length: int):
-        if length > self.MAX_SIZE:
-            raise ValueError(
-                f"Array length {length} exceeds maximum allowed size {self.MAX_SIZE}"
-            )
-        if length < 0:
-            raise ValueError(f"Array length cannot be negative: {length}")
-
-        self.length = length
+    def __class_getitem__(cls, _len: int):
+        return type(cls.__class__.__name__, (cls,), {"length": _len})
 
     def encode_size(self, value: Sequence[Codable]) -> int:
         if len(value) != self.length:
@@ -72,9 +65,9 @@ class ArrayCodec(Codec[Sequence[Codable]]):
 
         return current_offset - offset
 
-    @staticmethod
+    @classmethod
     def decode_from(
-        length: int,
+        cls,
         codable_class: type[Codable],
         buffer: Union[bytes, bytearray, memoryview],
         offset: int = 0,
@@ -84,7 +77,7 @@ class ArrayCodec(Codec[Sequence[Codable]]):
         bytes_read = 0
 
         try:
-            for _ in range(length):
+            for _ in range(cls.length):
                 item, size = codable_class.decode_from(buffer, current_offset)
                 result.append(item)
                 current_offset += size

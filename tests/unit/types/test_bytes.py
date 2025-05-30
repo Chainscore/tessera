@@ -1,6 +1,5 @@
-from jam.types.base import Bytes
+from jam.types.base.bytes import Bytes
 from jam.types.base.bytes.bits import Bits
-from jam.types.base.bytes.byte_array import ByteArray32
 
 
 def test_bytes_init():
@@ -21,14 +20,21 @@ def test_var_bytes_enc():
 	assert a == Bytes.decode_from(enc)[0]
 
 def test_ba32_enc():
-	a = ByteArray32(bytes(32))
+	a = Bytes[32](bytes(32))
 	enc = a.encode()
-	assert a == ByteArray32.decode_from(enc)[0]
+	assert a == Bytes[32].decode_from(enc)[0]
 
-# def test_bitarr_init():
-# 	a = Bits([1, 0, 1, 0])
-# 	assert a
-#
-# def test_bitarr_enc():
-# 	a = Bits([1, 0, 1, 0])
-# 	assert a.encode()[0] == 4
+def test_bitarr_init():
+	a = Bits([1, 0, 1, 0])
+	assert len(a) == 4
+
+def test_bitarr_enc():
+	a = Bits[4]([1, 0, 1, 0])
+	assert a.encode().hex() == "a0"
+
+	b = Bits[4, "lsb"]([1, 0, 1, 0])
+	assert b.encode().hex() == "05"
+
+	b = Bits["lsb"]([1, 0, 1, 0])
+	assert b.encode().hex() == "0405"
+	assert b.encode()[0] == 4

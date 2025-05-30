@@ -23,20 +23,23 @@ class BitSequenceCodec(Codec[Sequence[bool]]):
         - Pass bit length to decode_from
     """
 
-    bit_length: int | None = None
-    bit_order: Literal["msb", "lsb"] = "msb"
+    _length: int | None = None
+    _order: Literal["msb", "lsb"] = "msb"
 
-    def __init__(
-        self, bit_length: int | None = None, bit_order: Literal["msb", "lsb"] = "msb"
-    ):
-        self.bit_length = bit_length
-        self.bit_order = bit_order
+    def __class_getitem__(cls, params):
+        _len, _bo = None, "msb"
+        if isinstance(params, tuple):
+            _len, _bo = params
+        else:
+            if isinstance(params, int): _len = params
+            else: _bo = params
+        return type(cls.__class__.__name__, (cls,), {"_length": _len, "_order": _bo})
 
     def encode_size(self, value: Sequence[bool]) -> int:
         # Calculate the number of bytes needed
         bit_enc = 0
-        if self.bit_length is None:
-            bit_enc = GeneralCodec().encode_size(self.bit_length)
+        if self._length is None:
+            bit_enc = GeneralCodec().encode_size(len(value))
 
         return bit_enc + ((len(value) + 7) // 8)
 
@@ -50,16 +53,16 @@ class BitSequenceCodec(Codec[Sequence[bool]]):
         for i in range(0, total_size):
             buffer[offset + i] = 0
 
-        if self.bit_length is None:
+        if self._length is None:
             # Encode the bit length first
             offset += GeneralCodec().encode_into(len(value), buffer, offset)
         else:
             # Ensure bit length is size of value
-            if len(value) != self.bit_length:
+            if len(value) != self._length:
                 raise EncodeError(0, 0, "Bit sequence length mismatch")
 
         if not all(
-            isinstance(bit.value, (bool, int)) and bit.value in (0, 1, True, False)
+            isinstance(bit, (bool, int)) and bit in (0, 1, True, False)
             for bit in value
         ):
             raise EncodeError(
@@ -69,17 +72,16 @@ class BitSequenceCodec(Codec[Sequence[bool]]):
             )
 
         buffer[offset : offset + total_size] = ByteUtils.bitarray_to_bytes(
-            value, bitorder=self.bit_order
+            value, bitorder=self._order
         )
 
         return total_size
 
-    @staticmethod
+    @classmethod
     def decode_from(
+        cls,
         buffer: Union[bytes, bytearray, memoryview],
         offset: int = 0,
-        bit_length: int | None = None,
-        bit_order: Literal["msb", "lsb"] = "msb",
     ) -> Tuple[Sequence[bool], int]:
         """
         Decode bit sequence from buffer.
@@ -95,19 +97,19 @@ class BitSequenceCodec(Codec[Sequence[bool]]):
         Raises:
             DecodeError: If buffer too small or bit_length not specified
         """
-        if bit_length is None:
+        if cls._length is None:
             # Assume first byte is the bit length
             bit_length, size = GeneralCodec.decode_from(buffer, offset)
             offset += size
 
-        if bit_length == 0:
+        if cls._length == 0:
             return [], 0
 
         # Calculate required bytes
-        byte_count = (bit_length + 7) // 8
+        byte_count = (cls._length + 7) // 8
         ensure_size(buffer, byte_count, offset)
 
         result = ByteUtils.bytes_to_bitarray(
-            buffer[offset : offset + byte_count], bitorder=bit_order
+            buffer[offset : offset + byte_count], bitorder=cls._order
         )
-        return [bool(bit) for i, bit in enumerate(result) if i < bit_length], byte_count
+        return [bool(bit) for i, bit in enumerate(result) if i < cls._length], byte_count
