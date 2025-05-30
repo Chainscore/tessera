@@ -1,36 +1,35 @@
-from typing import ClassVar, Type, Generic, TypeVar, Optional as _Opt, Union, Tuple, Any
+from typing import ClassVar, Type, Generic, TypeVar, Optional as _Opt, Union, Tuple, Any, TypeVarTuple, Unpack
 
 from jam.types.base.integers import Int
 from jam.utils.codec import Codable
 from jam.utils.json import JsonSerde
 
-T = TypeVar("T")
+Ts = TypeVarTuple("Ts")
 
-class Choice(Codable, JsonSerde, Generic[T]):
+class Choice(Codable, JsonSerde, Generic[*Ts]):
     """"""
-    _opt_types: ClassVar[Tuple[Type]]
-    _value: T
+    _opt_types: ClassVar[Ts]
+    _value: Any
 
-    def __class_getitem__(cls, opt_t: Tuple[Type] | Type):
+    def __class_getitem__(cls, *opt_t: Unpack[Ts]):
         if not isinstance(opt_t, Tuple):
             opt_t = opt_t,
-        name = f"Choice[{'/'.join([op.__class__.__name__ for op in opt_t])}]"
+        name = f"Choice[{'/'.join(op.__class__.__name__ for op in opt_t)}]"
         return type(name,
                     (Choice,),
                     {"_opt_types": opt_t})
 
-    def __init__(self, value: _Opt[T] = None):
+    def __init__(self, value: Union[Unpack[Ts]]) -> None:
         # None is always allowed
         super().__init__()
         self._value = value
         if value is not None:
-            # enforce the chosen subtype
+            # Enforce the chosen subtype
             if not isinstance(value, self._opt_types):
                 raise TypeError(f"{value!r} is not a {self._opt_types}")
             self._value   = value
 
-
-    def unwrap(self) -> T:
+    def unwrap(self) -> Unpack[Ts]:
         return self._value
 
     @property
@@ -48,6 +47,11 @@ class Choice(Codable, JsonSerde, Generic[T]):
         if isinstance(other, Choice):
             return other._value == self._value
         return other == self._value
+
+    def set(self, value: Union[Unpack[Ts]]):
+        if not isinstance(value, self._opt_types):
+            raise TypeError(f"{value!r} not in {self._opt_types}")
+        self._value = value
 
     # TODO: JSON Serde
     # def to_json(self):
