@@ -215,9 +215,6 @@ class Reporting:
                         "prerequisite's hash should match the package_specification's hash of any of the reports"
                     )
 
-
-
-
         # for i in state.beta:
         #     if any(key in hashes for key in i.packages.keys()):
         #         raise ReportingError(
@@ -361,7 +358,7 @@ class Reporting:
                 if y.service_id not in state.delta:
                     raise ReportingError(
                         ReportingErrorCode.BAD_SERVICE_ID,
-                        "Service_id of each report should match with id of delta"
+                        f"Service ID {y.service_id} not found in state accounts"
                     )
                     
                 # --------------- bad_code_hash -------------------
@@ -424,5 +421,5 @@ class Reporting:
                 if validator not in guarantors_assigned[core]:
                     raise ReportingError(
                         ReportingErrorCode.WRONG_ASSIGNMENT,
-                        "Assign wrong validator to the core"
+                        f"Assign wrong validator to the core. Assignments: {guarantors_assigned}, Reported: {current_assigned}"
                     )

@@ -51,8 +51,10 @@ def construct_state_key(
             service_id = input[1]
             service_id_encoded = service_id.encode()
             sequence[0] = Byte(input[0])
+            skipper = 1
             for i, s_byte in enumerate(service_id_encoded):
-                sequence[i + 1] = Byte(s_byte)
+                sequence[i + skipper] = Byte(s_byte)
+                skipper += 1
 
         else:
             raise ValueError("Invalid tuple input types")

@@ -53,12 +53,16 @@ class ExecResults(Vector[WorkExecResult]):
 @dataclass
 class RefineLoad(Codable, JsonSerde):
     """Refine load structure."""
-
+    # u
     gas_used: Int
+    # i
     imports: Int
-    exports: Int
+    # x
     extrinsic_count: Int
+    # z
     extrinsic_size: Int
+    # e
+    exports: Int
 
 @decodable_dataclass
 @dataclass
@@ -114,20 +118,6 @@ class WorkPackageBundle(Codable, JsonSerde):
     import_segments: Vector[MultiSegments]
     justifications: Vector[Vector[Vector[OpaqueHash]]]
 
-# Deprecated Type
-# @decodable_dataclass
-# @dataclass
-# class SegmentRootLookupItem(Codable, JsonSerde):
-#     """Segment root lookup item structure."""
-#
-#     work_package_hash: WorkPackageHash
-#     segment_tree_root: OpaqueHash
-#
-#
-# @decodable_vector(SegmentRootLookupItem)
-# class SegmentRootLookup(Vector[SegmentRootLookupItem]):
-#     ...
-
 @decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot,key_name="work_package_hash", value_name="segment_tree_root")
 class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
     """contains all unique work-package hashes and segment root"""
@@ -140,9 +130,9 @@ class WorkResults(Vector[WorkResult]): ...
 @dataclass
 class WorkReport(Codable, JsonSerde):
     """Work report structure."""
-    # s
+    # S
     package_spec: WorkPackageSpec
-    # x
+    # X
     context: RefineContext
     # c
     core_index: Int
@@ -162,12 +152,12 @@ class WorkReport(Codable, JsonSerde):
         defaults = {
             "package_spec":          WorkPackageSpec.empty(),
             "context":               RefineContext.empty(),
-            "core_index":            CoreIndex(0),
+            "core_index":            Int(0),
             "authorizer_hash":       OpaqueHash(bytes([0] * 32)),
             "auth_output":           Bytes(b""),
             "segment_root_lookup":   SegmentRootLookup({}),
             "results":               WorkResults([]),
-            "auth_gas_used":         Gas(0),
+            "auth_gas_used":         Int(0),
         }
         # merge in anything the caller wants to override:
         defaults.update(overrides)

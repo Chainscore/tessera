@@ -2,6 +2,7 @@ import asyncio
 import json
 from jam.config.logging import setup_logging, logger
 from jam.config.chainspec import chain_config
+from jam.state.ghost import GhostState
 from jam.storage.db.kv import KVStore
 from jam.network.peer import Peer
 from jam.network.node import Node
@@ -104,7 +105,7 @@ async def main(
             block.save(db)
 
             # Set genesis state
-            setup_state(Sigma.genesis(), db)
+            setup_state(GhostState.genesis(), db)
 
             block_producer = BlockProducer(tsr_node, db)
 

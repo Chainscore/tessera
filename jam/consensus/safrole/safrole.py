@@ -25,6 +25,7 @@ from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData
 from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
 from copy import deepcopy
+import py_ark_vrf as vrf
 
 
 # for ring root
@@ -71,17 +72,18 @@ class Safrole:
 
     @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> bytes:
-        keys_as_bs_points = []
-        for key in keys:
-            point = BandersnatchPoint.string_to_point(bytes(key))  # or take key[2:] by skipping '0x'
-            keys_as_bs_points.append((point.x, point.y))
-
-        ring_root = PC()  # ring_root builder
-        fxd_cols = ring_root.build(keys_as_bs_points)
-        fxd_col_cs = bytearray.fromhex(H.bls_g1_compress(fxd_cols[0].commitment)) + bytearray.fromhex(
-            H.bls_g1_compress(fxd_cols[1].commitment)) + bytearray.fromhex(H.bls_g1_compress(fxd_cols[2].commitment))
-
-        return fxd_col_cs
+        # keys_as_bs_points = []
+        # for key in keys:
+        #     point = BandersnatchPoint.string_to_point(bytes(key))  # or take key[2:] by skipping '0x'
+        #     keys_as_bs_points.append((point.x, point.y))
+        #
+        # ring_root = PC()  # ring_root builder
+        # fxd_cols = ring_root.build(keys_as_bs_points)
+        # fxd_col_cs = bytearray.fromhex(H.bls_g1_compress(fxd_cols[0].commitment)) + bytearray.fromhex(
+        #     H.bls_g1_compress(fxd_cols[1].commitment)) + bytearray.fromhex(H.bls_g1_compress(fxd_cols[2].commitment))
+        #
+        # print(fxd_col_cs.hex())
+        return vrf.PublicKey.get_ring_commitment_bytes([bytes(k) for k in keys])
 
     @staticmethod
     def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
