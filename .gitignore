@@ -54,6 +54,7 @@ ENV/
 azure_logs/
 
 mydb/
+db/
 
 # Ignore all folders in /seeds, but not the keys.json
 /seeds/*
