@@ -6,6 +6,7 @@ from tsrkit_types.bytes import Bytes
 from jam.config.logging import setup_logging, logger
 from jam.config.chainspec import chain_config
 from rockstore import RockStore
+from jam.state.ghost import GhostState
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.utils.dummy_wpb import wp_producer
@@ -106,7 +107,7 @@ async def main(
             block.save(db)
 
             # Set genesis state
-            setup_state(Sigma.genesis(), db)
+            setup_state(GhostState.genesis(), db)
 
             block_producer = BlockProducer(tsr_node, db)
 

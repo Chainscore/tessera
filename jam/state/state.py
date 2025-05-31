@@ -96,7 +96,8 @@ class State:
             queue_el.report.context.prerequisites
             for epoch_queue in self.nu
             for queue_el in epoch_queue
-        ].extend([
+        ]
+        known_packages.extend([
             wps
             for deps in self.xi
             for wps in deps
