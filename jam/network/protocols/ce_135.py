@@ -111,7 +111,8 @@ class WorkReportDistribution(NetworkProtocol):
         report = data.report
 
         # TODO: Change 342 to Recovery Threshold based on Network Spec
-        shard_index = ShardIndex((report.core_index * 342 + validator_index) % constants.VALIDATOR_COUNT)
+        from jam.config.chainspec import chain_config
+        shard_index = ShardIndex((report.core_index * chain_config.erasure_coding_original_shards + validator_index) % constants.VALIDATOR_COUNT)
 
         from jam.network.protocols.ce_137 import ShardDistributionProtocol, CE137TransmitData
         CE137 = ShardDistributionProtocol()
@@ -129,16 +130,19 @@ class WorkReportDistribution(NetworkProtocol):
             ss_da = SegmentShardsDA(d3l)
             er_shard_map = ErasureShardsMap(d3l)
 
-            bs_hash = Hash.blake2b(shard.bundle_shard)
+            bs_hash = Hash.blake2b(shard[0])
 
-            bs_u = BundleShardUnit(shard_index=shard_index, shard=shard.bundle_shard)
+            bs_u = BundleShardUnit(shard_index=shard_index, shard=shard[0])
             bs_da.put(bs_hash, bs_u)
 
-            ss_root = bmr.wb_merkle_fn(shard.segment_shard)
-            ss_u = SegmentsShardUnit(shard_index=shard_index, shard=shard.segment_shard)
+            ss_root = bmr.wb_merkle_fn(shard[1])
+
+            ss_u = SegmentsShardUnit(shard_index=shard_index, shard=shard[1])
+
             ss_da.put(ss_root, ss_u)
 
-            er_shard_map.put(er_root, bs_hash, ss_root, shard_index)
+            # er_shard_map.put(er_root, bs_hash, ss_root, shard_index)
+            er_shard_map.put(root=er_root, ss_root=ss_root, bs_hash=bs_hash, shard_index=shard_index)
 
             # Distribute Assurance
             from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
