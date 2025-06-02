@@ -2,11 +2,14 @@ from typing import cast, Tuple
 
 from dataclasses import dataclass
 from jam.config.logging import logger
-from jam.types import Vector
-from jam.network.quic.server import QuicServerProtocol
-
+from jam.config.settings import settings
 from jam.merklization import BMRFunctions
-from jam.types.protocol.crypto import Hash
+from jam.storage.db.kv import KVStore
+from jam.network.quic.server import QuicServerProtocol
+from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.types.base import ByteArray64, Byte, Bytes
+
+from jam.types.base.sequences.vector import Vector
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
 from jam.types.work.shard import BundleShard, SegmentsShard, SegmentShard, ShardIndex
@@ -15,8 +18,10 @@ from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 
-from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types.base.sequences.bytes.byte_array import ByteArray
+from jam.work_package.stores.mappings import ErasureShardsMap
+from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
+from jam.work_package.stores.segments import SegmentShardsDA
+
 
 @decodable_dataclass
 @dataclass
@@ -28,7 +33,7 @@ class CE137TransmitData(Codable, JsonSerde):
 @dataclass
 class CE137InterceptData(Codable, JsonSerde):
     bundle_shard: BundleShard
-    segment_shard: SegmentsShard
+    segments_shard: SegmentsShard
     justification: Justification
 
 
@@ -70,7 +75,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             if data is not None:
                 return data
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
 
         logger.info("Received Shard index & erasure root")
@@ -80,33 +85,44 @@ class ShardDistributionProtocol(NetworkProtocol):
         logger.info("Processing")
         # TODO: Process received erasure root & shard index
 
-        bundle_shard = BundleShard('3b8987132d58aea08ec55247fd64436c3a553e3ab42260c6a31bf27931ee2cba868d4c59b626fb1d365fa5cb0edd5f1e2d72b7d6d7998ad0995314ad9eee86c3')
+        d3l = settings.d3l
+        audit = settings.audit
 
-        segment_shard_root = ByteArray('3b8987132d58aea08ec55247fd64436c3a553e3ab42260c6a31bf27931ee2cba868d4c59b626fb1d365fa5cb0edd5f1e2d72b7d6d7998ad0995314ad9eee86c3')
+        bs_da = ErasureShardsMap(d3l)
+        audits_da = AuditShardsDA(audit)
+        justification_da = JustificationsDA(audit)
+        ss_da = SegmentShardsDA(d3l)
 
-        segment_shard = SegmentsShard([
-                         SegmentShard('8a84add96a80d1566e789df3'),
-                         SegmentShard('1162d08611b468d38af07ca5'),
-                         SegmentShard('3810e996013e0c0a8abe11de'),
-                         SegmentShard('68b95e1999bc5864308a7c68'),
-                         SegmentShard('fc12fb3db7a24b0b52fb57f6'),
-                        ])
+        bundle_shard_hash = bs_da.get_bs_hash(data.erasure_root, data.shard_index).bundle_shard_hash
 
-        bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
-        s = Vector([ bundle_shard_hash, segment_shard_root])
+        bundle_shard = audits_da.get(bs_hash=bundle_shard_hash)[0]
+
+        segment_shard_root = bs_da.get_ss_root(data.erasure_root, data.shard_index)
+        print("seg shard root", segment_shard_root)
+        segments_shard = ss_da.get(segment_shard_root)[0]
+        print("seg shards", segments_shard)
+
+        shards = bs_da.get(data.erasure_root)
+        s = Vector([])
+        for shard in shards:
+            pair = ByteArray64(shard.bundle_shard_hash + shard.segment_shard_root)
+            print(pair)
+            s.append(pair)
 
         bmr = BMRFunctions()
         justification = bmr.trace_fn(values=s, index=int(data.shard_index))
 
+        justification_da.put(data.erasure_root, justification)
+
         stream_a = self._prefix.encode() + bundle_shard.encode()
-        stream_b = segment_shard.encode()
+        stream_b = segments_shard.encode()
         stream_c = justification.encode()
 
         server.stream_and_keep_open(stream_id, stream_a)
         server.stream_and_keep_open(stream_id, stream_b)
         server.stream_and_close(stream_id, stream_c)
 
-    def client_intercept(self, buffer: bytes, stream_id: int) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
         """Intercept Bundle Shard, [Segment Shard] and Justification"""
 
         logger.info("Data received on Assurer Node")
@@ -126,8 +142,8 @@ class ShardDistributionProtocol(NetworkProtocol):
         # else:
         # #TODO: Discard the data
 
-        logger.info("Received bundle shard and segment shard")
+        logger.info("Received bundle shard and segments shard")
         if data:
-            return data.bundle_shard, data.segment_shard, data.justification
+            return data.bundle_shard, data.segments_shard, data.justification
         else:
             return None

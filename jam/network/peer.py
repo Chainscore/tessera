@@ -1,20 +1,28 @@
+from jam.types.protocol.validators import ValidatorData
 
 class Peer:
     """
     Represents a peer in the network
     Args:
-        host (str): Hostname of the peer
-        port (int): Port number of the peer
-        san (str): Subject Alternative Name of the peer
+        id (str): Subject Alternative Name of the peer
+        data (ValidatorData): Validator Data
     """
-    host: str
-    port: int
-    san: str
+    id: str
+    data: ValidatorData
 
-    def __init__(self, host: str, port: int, san: str):
-        self.host = host
-        self.port = port
-        self.san = san
+    @property
+    def get_validator_index(self):
+        from jam.state.state import state
+
+        for i,val in enumerate(state.kappa):
+            if val.bandersnatch == self.data.bandersnatch:
+                return i
+
+        raise ValueError("No validator found with matching bandersnatch key.")
+
+    def __init__(self, id: str, data: ValidatorData):
+        self.id = id
+        self.data = data
 
     def __repr__(self):
-        return f"Peer(host={self.host}, port={self.port}, san={self.san})"
+        return f"Peer(host={self.data.metadata.host}, port={self.data.metadata.port}, name={self.data.metadata.name}, data={self.data})"

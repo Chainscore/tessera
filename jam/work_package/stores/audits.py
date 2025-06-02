@@ -1,12 +1,41 @@
 from typing import Tuple
 
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
+from jam.types.protocol.core import ErasureRoot
+from jam.types.work.refine_context import OpaqueHashes
 from jam.types.work.shard import BundleShardHash, BundleShardUnit, BundleShard, ShardIndex
 
 from jam.work_package.store import DA
 
 class JustificationsDA(DA):
-    ...
+    """
+        Justifications DA Stores all the justifications received via CE137
+
+        Key: Erasure Root
+        Value: Vector of hashes
+        """
+
+    def __init__(self, db: KVStore):
+        self.prefix = bytes("JS", 'utf-8')
+        self.db = db
+
+    def put(self, er_root: ErasureRoot, data: OpaqueHashes) -> None:
+        key = self.prefix + er_root.encode()
+        self.db.put(key, data.encode())
+
+    def get(self, er_root: ErasureRoot) -> OpaqueHashes:
+        key = self.prefix + er_root.encode()
+        data = self.db.get(key)
+
+        if data is None:
+            raise KeyError("CE137 Justification not found in Audit DA")
+
+        record, _ = OpaqueHashes.decode_from(data)
+        return record
+
+    def delete(self, er_root: ErasureRoot) -> None:
+        key = self.prefix + er_root.encode()
+        self.db.delete(key)
 
 
 class AuditShardsDA(DA):

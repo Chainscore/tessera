@@ -1,14 +1,14 @@
 from typing import List
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
-from jam.state.components.eta import Eta
-from jam.state.components.kappa import Kappa
-from jam.state.components.lambda_ import Lambda_
-from jam.state.components.sigma import Sigma
-from jam.types.base.integers.fixed import U64
+from jam.types.extrinsics import TicketEnvelope, TicketBody, TicketsExtrinsic
+from jam.types.state.eta import Eta
+from jam.types.state.kappa import Kappa
+from jam.types.state.lambda_ import Lambda_
+from jam.types.state.sigma import Sigma
+from jam.types.base.integers.fixed import U64, U32
 from jam.types.base.null import Null
 from jam.types.header import OptionalEpochMark, OptionalTicketsMark, TicketsMark
-from .gamma import GammaS, GammaSTickets
-from jam.types import TicketBody, U32, TicketsExtrinsic, TicketEnvelope
+from jam.types.state.gamma import GammaS, GammaSTickets
 from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.block import Block
@@ -21,7 +21,7 @@ from jam.utils.constants import (
 from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingVrfSignature, BandersnatchVrfSignature, Hash, Entropy
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
-from jam.consensus.safrole.gamma import GammaK, GammaSFallback, GammaA
+from jam.types.state.gamma import GammaK, GammaSFallback, GammaA
 from jam.types.protocol.validators import ValidatorData
 from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
 from copy import deepcopy

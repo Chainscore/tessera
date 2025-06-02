@@ -6,6 +6,7 @@ from jam.network.quic.server import QuicServerProtocol
 
 from jam.types.block import Block
 from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.types.header import Header
 
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
@@ -13,7 +14,6 @@ from jam.utils.json import JsonSerde
 
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
-from jam.types import Header
 
 @decodable_dataclass
 @dataclass
@@ -61,7 +61,7 @@ class BlockAnnouncement(NetworkProtocol):
             stream_id, client = node.peer_conn[conn]
             client.stream_and_keep_open(stream_id=stream_id, message=message)
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercepting & Process new blocks from peers."""
 
         data, offset = Announcement.decode_from(buffer)
@@ -73,7 +73,7 @@ class BlockAnnouncement(NetworkProtocol):
         # TODO: Process new block
         # Process goes here
 
-    def client_intercept(self, buffer: bytes, stream_id: int):
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int):
         ...
 
 

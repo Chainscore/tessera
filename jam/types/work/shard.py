@@ -12,7 +12,7 @@ from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 
 ShardIndex = U16
-SegmentShard = ByteArray12
+SegmentShard = Bytes
 SegmentsShardRoot = OpaqueHash
 BundleShard = Bytes
 BundleShardHash = OpaqueHash

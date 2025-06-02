@@ -60,7 +60,6 @@ def decodable_vector(
         ) -> Tuple["Vector[T]", int]:
             if not issubclass(element_type, Codable):
                 raise TypeError("Vector element type must be Codable")
-            print(element_type)
             value, size = VectorCodec.decode_from(
                 element_type, buffer, offset, max_length
             )

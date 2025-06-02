@@ -1,23 +1,25 @@
 import asyncio
 import json
-import os
 
 from jam.config.logging import setup_logging, logger
-from jam.chainspec import chain_config
-from jam.config.settings import settings
-from jam.db.kv import KVStore
+from jam.config.chainspec import chain_config
+from jam.config.settings import settings, setup_setting
+from jam.execution.pvm.code import Code
 
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.utils.dummy_wpb import wp_producer
-from jam.network.utils.dummy_segment_shard import segment_shard_request
-from jam.network.utils.dummy_assurance import assurance_distribution
 
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
-from jam.state.state import State
+from jam.state.accounts import AccountMetadata
+from jam.state.ghost import GhostState
+from jam.types.base import Bytes
+from jam.types.protocol.core import Balance, Gas, BlobLength, ServiceId
+from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
+from jam.state.state import setup_state
 from jam.types.base.integers.fixed import U16, U8
-from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic
+from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Hash, Ed25519Public
 from jam.types.block import Block
 from jam.types.header import Header
 from jam.types.protocol.validators import (
@@ -28,6 +30,8 @@ from jam.types.protocol.validators import (
     ValidatorsData,
 )
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+from jam.utils.codec.primitives.bytes import BytesCodec
 
 
 async def main(
@@ -42,23 +46,42 @@ async def main(
     # Setup logging
     setup_logging(theme=theme, node_name=name)
 
+    # Setup Settings
+    setup_setting(name, port)
+
+    # Get DB
+    main_db = settings.db
+
     logger.info(
         f"Starting {name} node",
         spec=chain_config.name,
         listen_port=port,
+        main_db=main_db.path
     )
+
     try:
         # Initialize components
         genesis = json.load(open(genesis_path))
         peerlist = genesis["peers"]
         peers = [
             Peer(
-                port=pr["metadata"]["port"],
-                host=".".join([str(val) for val in pr["metadata"]["host"]]),
-                san=pr["id"],
+                id=pr["id"],
+                data=ValidatorData(
+                    bandersnatch=BandersnatchPublic(pr["bandersnatch"]),
+                    ed25519=Ed25519Public(pr["ed25519"]),
+                    bls=BlsPublic(pr["bls"]),
+                    metadata=ValidatorMetadata(
+                        name=ValidatorName(pr["metadata"]["name"]),
+                        host=IPAddress([U8(val) for val in pr["metadata"]["host"]]),
+                        port=U16(pr["metadata"]["port"]),
+                    )
+                )
             )
             for pr in peerlist
+            if int(pr["metadata"]["port"]) != port
         ]
+
+        # print("peers", peers)
 
         # Load validator data from seeds
         my_keys = json.load(open("seeds/keys.json"))[str(port)]
@@ -98,17 +121,6 @@ async def main(
             is_validator=is_validator,
         )
 
-        settings.NODE_NAME = name
-        settings.LISTEN_PORT = port
-        settings.NODE_PATH = f"db/{port}"
-        settings.DB_PATH = f"{settings.NODE_PATH}/node"
-        settings.D3L_PATH = f"{settings.NODE_PATH}/d3l"
-
-        os.makedirs(settings.DB_PATH, exist_ok=True)
-        os.makedirs(settings.D3L_PATH, exist_ok=True)
-
-        logger.info(f"Node Running on port: {settings.LISTEN_PORT}. Dbs: {settings.DB_PATH} {settings.D3L_PATH}")
-        db = KVStore(settings.DB_PATH)
 
         if start_genesis:
             # Start from genesis
@@ -116,21 +128,71 @@ async def main(
 
             block = Block.from_random(0)
             block.header = Header.from_json(genesis["header"])
-            block.save(db)
+            block.save(main_db)
 
-            state = State.genesis()
-            state.save(db)
+            # Set genesis state
+            state = setup_state(GhostState.genesis(), main_db)
 
-            block_producer = BlockProducer(tsr_node, db)
+            pc = bytes(
+                [0, 0, 22, 124, 121, 81, 25, 1, 7, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1, 50, 0, 69, 147,
+                 18])
+
+            c0_authorized_code = [0, 0, 21, 124, 121, 81, 9, 6, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1, 50,
+                                  0,
+                                  165, 73, 9]
+
+            code = Code(code=pc, read=b"", r_write=b"", z=0, s=100)
+            bytecode = code.encode()
+            service_code = BytesCodec().encode(value=b"") + bytecode
+            code_hash = Hash.blake2b(service_code)
+
+            state.delta[ServiceId(42)] = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000),
+                                                                  gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
+                                                                  num_o=Ao(0))
+            state.delta[ServiceId(42)].lookup[code_hash] = Bytes(service_code)
+            state.delta[ServiceId(42)].timestamps[
+                LookupTable(hash=code_hash, length=BlobLength(len(service_code)))] = Timestamps([state.tau])
+
+            wi_pc = bytes(
+                [0, 0, 90, 51, 12, 149, 27, 0, 112, 254, 124, 117, 6, 40, 2, 200, 199, 3, 149, 51, 7, 200, 203, 4, 130,
+                 57, 123, 73, 149, 204, 8, 172, 92, 240, 100, 194, 40, 2, 200, 203, 7, 51, 8, 20, 9, 255, 255, 255, 255,
+                 255, 0, 0, 0, 51, 10, 5, 51, 11, 51, 12, 10, 18, 86, 23, 255, 9, 200, 114, 2, 40, 6, 51, 7, 40, 2, 149,
+                 23, 0, 112, 254, 100, 40, 10, 19, 149, 23, 0, 112, 254, 51, 8, 50, 0, 133, 148, 164, 146, 74, 1, 164,
+                 138, 84, 161, 66, 1]
+            )
+
+            wi_code = Code(code=wi_pc, read=b"", r_write=b"", z=0, s=(1024 * 100))
+            wi_bytecode = wi_code.encode()
+            wi_service_code = BytesCodec().encode(value=b"") + wi_bytecode
+            wi_code_hash = Hash.blake2b(wi_service_code)
+            wi_service = ServiceId(1)
+
+            state.delta[wi_service] = AccountMetadata(code_hash=wi_code_hash, balance=Balance(1_000_000),
+                                                      gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
+                                                      num_o=Ao(0))
+            state.delta[wi_service].lookup[wi_code_hash] = Bytes(wi_service_code)
+            state.delta[wi_service].timestamps[
+                LookupTable(hash=wi_code_hash, length=BlobLength(len(wi_service_code)))] = Timestamps([state.tau])
+
+            block_producer = BlockProducer(tsr_node, main_db)
+
+            # # Create a loop and run it in a daemon thread
+            # def start_loop():
+            #     loop = asyncio.new_event_loop()
+            #     print("loop here", loop)
+            #     asyncio.set_event_loop(loop)
+            #     loop.run_forever()
+            #
+            # threading.Thread(target=start_loop, daemon=True).start()
 
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(tsr_node.initialize())
                 if tsr_node.is_builder:
-                    tg.create_task(wp_producer(tsr_node, db))
+                    tg.create_task(wp_producer(tsr_node, main_db))
                 else:
                     # tg.create_task(segment_shard_request(tsr_node, db))
-                    tg.create_task(assurance_distribution(tsr_node, db))
-                    # tg.create_task(block_producer.run())
+                    # tg.create_task(assurance_distribution(tsr_node, db))
+                    tg.create_task(block_producer.run())
 
 
         else:
@@ -140,5 +202,8 @@ async def main(
     except KeyboardInterrupt:
         logger.info(f"👋 ({name}) Shutting down JAM node 🔐")
     except Exception as e:
+        from jam.config.data_stores import shutdown
+
+        shutdown()
         logger.exception(f"💥 ({name}) Fatal error", error=str(e)[:100])
         raise

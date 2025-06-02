@@ -1,7 +1,6 @@
-from jam.types import U32, Bytes, Int, Vector
-from jam.types.extrinsics.assurances import AvailBitField
+from jam.types.base import Bytes, U32, Int, Vector
 from jam.types.protocol.core import CoreIndex
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Public
+from jam.types.protocol.crypto import WorkReportHash
 
 from jam.types.work.package import WorkItems, OpaqueHash, WorkPackage, Authorizer
 from jam.types.work.report import SegmentRootLookup, WorkPackageBundle
@@ -10,7 +9,7 @@ from jam.network.protocols.ce_134 import CoreSegment, Credential
 
 from tests.dummy.dummy_extrinsics import create_dummy_work_context
 from tests.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_bytes64
-from jam.types.extrinsics.assurances import Assurance
+
 
 def create_dummy_authorizer() -> Authorizer:
     return Authorizer(

@@ -3,7 +3,7 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
-from jam.types import Vector
+from jam.types.base import Vector
 from jam.types.work.report import WorkReport
 
 from jam.utils.json import JsonSerde
@@ -11,7 +11,7 @@ from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 
-from jam.types.protocol.crypto import WorkReportHash, Hash
+from jam.types.protocol.crypto import WorkReportHash
 from tests.dummy.dummy_extrinsics import create_dummy_work_report
 
 
@@ -42,7 +42,7 @@ class WorkReportRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE136
 
-    async def transmit(self, node: Node, data: CE136Data):
+    def transmit(self, node: Node, data: CE136Data):
         """Request Work Report from Node (server)"""
 
         message = self._prefix.encode() + data.encode()
@@ -52,14 +52,13 @@ class WorkReportRequest(NetworkProtocol):
 
         responses = Vector([])
         for client in node.connections:
-            data = await client.stream_and_close(message=message)
+            data = client.stream_and_close(message=message)
             responses.append(data)
 
         return responses
 
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
         """Intercept & Fetch requested Work Report on Node (server)"""
-
         logger.info("Received Work Report Request")
         data, offset = CE136Data.decode_from(buffer)
         data = cast(CE136Data, data)
@@ -77,7 +76,7 @@ class WorkReportRequest(NetworkProtocol):
 
         logger.info("Requested report sent back to Node")
 
-    def client_intercept(self, buffer: bytes, stream_id: int) -> WorkReport:
+    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> WorkReport:
         """Intercept Requested Work Report"""
 
         logger.info(f"Requested Report received on Node (client) via stream {stream_id}")

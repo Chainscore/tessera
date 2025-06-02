@@ -1,5 +1,5 @@
 import argparse
-from .chainspec import JamConfig, chain_config
+from .config.chainspec import JamConfig, chain_config
 import asyncio
 from jam.__main__ import main
 

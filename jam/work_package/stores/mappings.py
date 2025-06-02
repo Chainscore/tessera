@@ -1,15 +1,27 @@
 from typing import Tuple
 
-from jam.db.kv import KVStore
-from jam.types import Null
+from jam.config.chainspec import chain_config
+from jam.storage.db.kv import KVStore
 
+from jam.types.base.null import Null
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import WorkPackageHash, ExportsRoot, ErasureRoot, WorkReportHash
 from jam.types.work.report import WorkReport
 from jam.types.work.manifest import Assurers, ReportAssurers
-from jam.types.work.shard import BundleShardHash, SegmentsShardRoot, ShardIndex, \
-    ShardKeyUnit, ShardKeyUnits, SegmentsShardRoots, SSKeysUnits, SSKeysUnit, \
-    BSKeysUnits, BSKeysUnit, BundleShardHashes
+from jam.types.work.shard import (
+    ShardIndex,
+    ShardKeyUnit,
+    ShardKeyUnits,
+    BSKeysUnit,
+    BSKeysUnits,
+    SSKeysUnit,
+    SSKeysUnits,
+    BundleShardHash,
+    SegmentsShardRoot,
+    BundleShardHashes,
+    SegmentsShardRoots
+)
+
 from jam.work_package.store import DA
 
 
@@ -137,8 +149,8 @@ class ErasureShardsMap(DA):
             self.db.put(key, shard_keys.encode())
 
     def put_batch(self, root: ErasureRoot, ss_roots: SegmentsShardRoots, bs_hashes: BundleShardHashes) -> None:
-        if len(ss_roots) != 1023 or len(bs_hashes) != 1023:
-            raise ValueError("Length of both batches should be 1023")
+        if len(ss_roots) != chain_config.num_validators or len(bs_hashes) != chain_config.num_validators:
+            raise ValueError(f"Length of both batches should be {chain_config.num_validators}")
 
         key = self.prefix + root.encode()
         data = self.db.get(key)
@@ -147,7 +159,7 @@ class ErasureShardsMap(DA):
             self.delete(root)
 
         shard_keys = ShardKeyUnits([])
-        for i in range(1023):
+        for i in range(chain_config.num_validators):
             shard_key = ShardKeyUnit(ShardIndex(i), bs_hashes[i], ss_roots[i])
             shard_keys.append(shard_key)
 

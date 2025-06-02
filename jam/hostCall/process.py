@@ -7,19 +7,19 @@ from jam.types.work.manifest import Segments, Segment, MultiSegments
 from jam.utils.codec.primitives.integers import IntegerCodec
 from jam.types.base.integers.fixed import U32, U64, U256
 from jam.services import historicalLookup
-from jam.pvm.opcode_mapping import InstructionMapper
-from jam.pvm.extract import Execution
-from jam.pvm.program import Program
+from jam.execution.pvm.opcode_mapping import InstructionMapper
+from jam.execution.pvm.extract import Execution
+from jam.execution.pvm.program import Program
 from jam.types.base.dictionary import DictionaryCodec
 import copy
-from jam.pvm.register import Registers
-from jam.pvm.pvm_memory import PageMemory
+from jam.execution.pvm.register import Registers
+from jam.execution.pvm.pvm_memory import PageMemory
 from jam.types.protocol.core import Balance, Gas, ServiceId
-from jam.state.components.delta import AccountData, Delta
+from jam.types.state.delta import AccountData, Delta
 from jam.hostCall.types import XContent, RefineMap
 from jam.types.work.package import WorkPackage
 from typing import Optional
-from jam.pvm.extract import Status
+from jam.execution.pvm.extract import Status
 
 
 class HostCall:

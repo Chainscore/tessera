@@ -1,4 +1,4 @@
-from jam.state.state import State
+from jam.state.ghost import GhostState as State
 
 def test_random_state():
     state_a = State.from_random()

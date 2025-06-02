@@ -1,6 +1,6 @@
 from copy import deepcopy
-from jam.state.components.beta import BlockHistory, PackageDict
-from jam.state.components.sigma import Sigma
+from jam.types.state.beta import BlockHistory, PackageDict
+from jam.types.state.sigma import Sigma
 from jam.types import ByteArray32
 from jam.types.block import Block
 from jam.types.extrinsics import GuaranteesExtrinsic
@@ -97,6 +97,8 @@ class RecentHistory:
             ByteArray32([0] * 32),
             package(block.extrinsic.guarantees)
         )
+
+        # TODO: Genesis Unclear
 
         # Step 3
         new_state.beta.append(n)

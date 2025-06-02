@@ -1,24 +1,30 @@
 from dataclasses import dataclass
-from jam.state.components.phi import Phi
+
+from jam.types.base import decodable_dictionary, Dictionary
+from jam.types.state.phi import Phi
 from jam.utils.codec.codable import Codable
 from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.utils.json import JsonSerde
 from jam.types.work.report import WorkPackageHash, WorkExecResult
-from jam.state.components.chi import Chi
-from jam.types.protocol.core import ServiceId,Gas,OpaqueHash,Balance
+from jam.types.state.chi import Chi
+from jam.types.protocol.core import ServiceId, Gas, OpaqueHash, Balance, ExportsRoot
 from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.state.components.delta import Delta
-from jam.state.components.iota import Iota
+from jam.types.state.delta import Delta
+from jam.types.state.iota import Iota
 
 @decodable_dataclass
 @dataclass
 class OperandTuple(Codable, JsonSerde):
-    o: WorkExecResult
-    l: OpaqueHash
+    d: WorkExecResult
+    g: Gas
+    y: OpaqueHash
+    o: Bytes
+    e: ExportsRoot
+    h: WorkPackageHash
     a: Bytes
-    k: WorkPackageHash
-    
+
+
 @decodable_vector(OperandTuple)
 class OperandTuples(Vector[OperandTuple]):
     ...
@@ -38,16 +44,34 @@ class DeferredTransfers(Vector[DeferredTransfer]):
 
 @dataclass
 class StateContext(Codable,JsonSerde):
+    # d
     service_accounts: Delta
+    # i
     validator_keys: Iota
+    # q
     authorizer_keys: Phi
+    # x
     privileges: Chi
 
-@dataclass
-class AcclOutput(Codable,JsonSerde):
-    service_id: ServiceId
-    hash: OpaqueHash
+# @dataclass
+# class AcclOutput(Codable,JsonSerde):
+#     service_id: ServiceId
+#     hash: OpaqueHash
 
-@decodable_vector(AcclOutput)  # It should be a set
-class AccCommitmentMap(Vector[AcclOutput]):
+@decodable_dictionary(ServiceId,bytes)
+class AccumulationOutput(Dictionary[ServiceId,bytes]): #U
+    ...
+
+@decodable_dataclass
+@dataclass
+class GasAccumulated(Codable, JsonSerde):
+    service_id: ServiceId
+    accumulated_gas: Gas
+
+@decodable_vector(GasAccumulated)
+class GasAccumulations(Vector[GasAccumulated]):
+    ...
+
+@decodable_dictionary(ServiceId,Bytes)
+class PreimageDict(Dictionary[ServiceId,Bytes]):
     ...

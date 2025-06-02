@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from jam.db.kv import KVStore
+from jam.storage.db.kv import KVStore
 from jam.types.extrinsics.extrinsic import Extrinsic
 from jam.types.header import Header
 from jam.utils.codec.codable import Codable
@@ -21,7 +21,7 @@ class Block(Codable, JsonSerde):
     extrinsic: Extrinsic
 
     @staticmethod
-    def from_random(seed: int = 0, n_et = 3, n_ep = 3, n_ea = 3, n_eg = 3, n_ed = 3) -> "Block":
+    def from_random(seed: int = 0, n_et = 3, n_ep = 3, n_ea = 3, n_eg = 3, n_ed = 2) -> "Block":
         """
         Create a random block
         """

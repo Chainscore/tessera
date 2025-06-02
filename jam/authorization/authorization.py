@@ -1,6 +1,6 @@
 import dataclasses
 
-from jam.state.components.sigma import Sigma
+from jam.types.state.sigma import Sigma
 from jam.types.block import Block
 from jam.utils.constants import CORE_COUNT
 

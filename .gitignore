@@ -31,7 +31,12 @@ poetry.lock
 .DS_Store
 
 # Project specific
-data/db/
+data/main
+data/d3l
+data/audit
+
+benchmarks/
+
 *.log
 .coverage
 htmlcov/
@@ -39,6 +44,7 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 db/
+data/
 !jam/db
 !tests/unit/db
 

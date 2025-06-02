@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from jam.types import decodable_vector, Vector
+from jam.types.base.sequences.vector import decodable_vector, Vector
 from jam.types.base.integers.fixed import U16, U8
 from jam.types.base.sequences.array import Array, decodable_array
 from jam.types.base.sequences.bytes.byte_array import ByteArray, decodable_bytearray
@@ -12,7 +12,10 @@ from jam.utils.constants import VALIDATOR_COUNT
 from jam.utils.json.serde import JsonSerde
 
 @decodable_array(length=4, element_type=U8)
-class IPAddress(Array): ...
+class IPAddress(Array):
+
+    def __str__(self):
+        return ".".join(str(int(octet)) for octet in self.value)
 
 @decodable_bytearray(122)
 class ValidatorName(ByteArray):
