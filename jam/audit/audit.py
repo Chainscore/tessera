@@ -1,9 +1,11 @@
 from dataclasses import dataclass
-from typing import Set
+from typing import List, Set, Tuple
 
+from jam.types.protocol.core import CoreIndex
 from rich.diagnose import report
 from sympy import floor
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.types import WorkExecResult, Null, ByteArray32, TimeSlot, Int
 from jam.types.work.report import WorkReport
@@ -17,9 +19,8 @@ from jam.types.protocol.crypto import Hash
 from jam.assurances.assurances import Assurances
 from jam.types.block import Block
 
+
 @dataclass
-
-
 class AuditingAndJudgement:
 
     def __init__(self):
@@ -27,7 +28,7 @@ class AuditingAndJudgement:
         self.assurance = Assurances.transition(state=Sigma, block=Block)
 
 
-    def report_to_be_audit(self, state: Sigma):
+    def report_to_be_audit(self, state: Sigma)->List[WorkReport]:
         """
         Function Q define in Eq. 17.1 and 17.2
         This function define the sequence of work_report which required to audit(Q)
@@ -77,8 +78,8 @@ class AuditingAndJudgement:
 
         return random_quantity
 
-
-    def non_empty_item(self, header: Header, state: Sigma):
+    # Verifiable Random Selection Function (within 10 cores) a_n
+    def vrs_func(self, header: Header, state: Sigma) -> List[Tuple[CoreIndex, WorkReport]]:
 
         """
         This function give the non-empty-item to audit through a verifiable random selection of ten cores:
@@ -103,16 +104,13 @@ class AuditingAndJudgement:
         shuffle_report = shuffle(entropy, core_report)
 
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-        variable_random_selection = set()
-        for item in shuffle_report:
-            if item is not Null:
-                variable_random_selection.add(item)
+        vrs_list = [(c, w) for (c, w) in shuffle_report if w is not Null]
 
-        return variable_random_selection
+        return vrs_list
 
     # Generate Tranche Index
     @staticmethod
-    def current_tranches( header : Header, state: Sigma) -> int:
+    def generate_tranche_index( header : Header, state: Sigma) -> int:
         """
         Eq. 17.8
 
@@ -125,7 +123,7 @@ class AuditingAndJudgement:
         tranches =  (CURRENT_TIME() - (SLOT_PERIOD * int(header.slot))) // AUDIT_PERIOD
         return tranches
 
-    def validator_statement(self, header: Header, report: WorkReport, state: Sigma):
+    def validator_statement(self, header: Header, state: Sigma):
         """
         Eq. 17.9, 17.10, 17.11
 
@@ -133,7 +131,11 @@ class AuditingAndJudgement:
         #17.11
         singing_context = bytes(SIGNING_CONTEXTS["jam_announce"])
         #17.10
-        tranches_value = self.current_tranches(header, state) #n
-
+        tranches_index = self.generate_tranche_index(header, state) #n
+        # private_key = Ed25519PrivateKey.from_private_bytes(key)
+        # signature = private_key.sign(message)
+        # print("Signature (hex):", signature.hex())
+        # DOUBT: we will loop thru cores and get the encoded msg && will be having set of announcements
+        vrs_list=self.vrs_func(header,state)
         encode_core_work = (bytes(report.core_index.encode()) + bytes(Hash.blake2b(report.encode())))
-        statements = singing_context + bytes(self.current_tranches(header, state)) + encode_core_work + bytes(Hash.blake2b(header.encode())) #S
+        statements = singing_context + bytes(tranches_index) + encode_core_work + bytes(Hash.blake2b(header.encode())) #S
