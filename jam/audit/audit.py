@@ -8,7 +8,7 @@ from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.types import WorkExecResult, Null, ByteArray32, TimeSlot, Int
 from jam.types.work.report import WorkReport
 from jam.state.components.sigma import Sigma
-from jam.utils.constants import CORE_COUNT, SLOT_PERIOD, AUDIT_PERIOD
+from jam.utils.constants import CORE_COUNT, CURRENT_TIME, SLOT_PERIOD, AUDIT_PERIOD
 from jam.ring_vrf.vrf import VRF
 from jam.types.header import Header
 from jam.utils.constants import SIGNING_CONTEXTS
@@ -53,7 +53,7 @@ class AuditingAndJudgement:
         return pre_auditing_report
 
     @staticmethod
-    def verifiable_random_quality(entropy: Header):
+    def verifiable_random_quality(header: Header):
         """
         Function So define in Eq. 17.3 and 17.4
 
@@ -61,13 +61,13 @@ class AuditingAndJudgement:
             https://graypaper.fluffylabs.dev/#/9a08063/1e89001e9c00?v=0.6.6
 
         Args:
-            entropy : Entropy-yielding VRF signature (Hv Block's Header components)
+            header : Header for fetchign its entropy (H_v)
 
         Returns:
              randomness for entropy
         """
 
-        entropy_yield_vrf_signature = entropy.entropy_source
+        entropy_yield_vrf_signature = header.entropy_source
 
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
 
@@ -94,7 +94,7 @@ class AuditingAndJudgement:
 
         # Equation : 17.7 (r = y(So))
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        entropy = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(AuditingAndJudgement.verifiable_random_quality(entropy=header)))[:32]
+        entropy = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(AuditingAndJudgement.verifiable_random_quality(header=header)))[:32]
 
         # Equation :  17.6 p = f([(c, Qc) | c <- Nc ], r )
         audit_report = self.report_to_be_audit(state)
@@ -110,8 +110,9 @@ class AuditingAndJudgement:
 
         return variable_random_selection
 
+    # Generate Tranche Index
     @staticmethod
-    def current_tranches( header : Header, state: Sigma) -> floor:
+    def current_tranches( header : Header, state: Sigma) -> int:
         """
         Eq. 17.8
 
@@ -121,16 +122,18 @@ class AuditingAndJudgement:
             https://graypaper.fluffylabs.dev/#/9a08063/1e21011e3501?v=0.6.6
 
         """
-        tranches =  floor((state.tau - (SLOT_PERIOD * header.slot)) / AUDIT_PERIOD )
+        tranches =  (CURRENT_TIME() - (SLOT_PERIOD * int(header.slot))) // AUDIT_PERIOD
         return tranches
 
     def validator_statement(self, header: Header, report: WorkReport, state: Sigma):
         """
-        Eq. !&.9, 17.10, 17.11
+        Eq. 17.9, 17.10, 17.11
 
         """
+        #17.11
         singing_context = bytes(SIGNING_CONTEXTS["jam_announce"])
-        tranches_value = self.current_tranches(header, state)
+        #17.10
+        tranches_value = self.current_tranches(header, state) #n
 
         encode_core_work = (bytes(report.core_index.encode()) + bytes(Hash.blake2b(report.encode())))
-        statements = singing_context + self.current_tranches(header, state) + encode_core_work + bytes(Hash.blake2b(header.encode()))
+        statements = singing_context + bytes(self.current_tranches(header, state)) + encode_core_work + bytes(Hash.blake2b(header.encode())) #S
