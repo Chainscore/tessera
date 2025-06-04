@@ -1,9 +1,11 @@
 from math import log2, ceil
 from typing import Optional, Callable
 
-from jam.types.base.integers.general import Int
-from jam.types.base.sequences.vector import Vector
-from jam.types.base.sequences.bytes import ByteArray32, Bytes
+from tsrkit_types.choice import Choice
+from tsrkit_types.integers import Uint
+from tsrkit_types.option import Option
+from tsrkit_types.sequences import Vector
+from tsrkit_types.bytes import Bytes
 
 from jam.types.protocol.crypto import Hash, OpaqueHash
 
@@ -11,14 +13,14 @@ class BMRFunctions:
     """General Merklization implementation for Binary Trees as defined in Section E.1"""
 
     def __init__(self):
-        self._ZERO_HASH = ByteArray32([0] * 32)
+        self._ZERO_HASH = Bytes[32]([0] * 32)
         self._NODE_PREFIX = bytes('node', 'utf-8')
         self._LEAF_PREFIX = bytes('leaf', 'utf-8')
 
     def _preprocessor_fn(
         self,
         values: Vector[Bytes],
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> Vector[OpaqueHash]:
         """
         Constancy Preprocessor Function Implementation as defined in Equation E.7 in Section E.1.2
@@ -29,7 +31,7 @@ class BMRFunctions:
             values: Sequence of 32 octet blobs
             hash_fn: Hash Function
         Returns:
-            Sequences of Hashes (in ByteArray32)
+            Sequences of Hashes (in Bytes[32])
         """
         new_values: Vector[OpaqueHash] = Vector([])
         for val in values:
@@ -41,7 +43,7 @@ class BMRFunctions:
     def _node_fn(
         self,
         values: Vector[Bytes],
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> Bytes | OpaqueHash:
         """
         Node Function Implementation as defined in Equation E.1
@@ -70,7 +72,7 @@ class BMRFunctions:
             return hash_fn(self._NODE_PREFIX + bytes(self._node_fn(left, hash_fn)) + bytes(self._node_fn(right, hash_fn)))
 
     @staticmethod
-    def _p_i(values: Vector[Bytes], index: Int) -> Int:
+    def _p_i(values: Vector[Bytes], index: Uint) -> Uint:
         """
         Util Function P_I Implementation for Trace Function
         """
@@ -78,12 +80,12 @@ class BMRFunctions:
         mid = (sz+1) // 2
 
         if index < mid:
-            return Int(0)
+            return Uint(0)
         else:
-            return Int(mid)
+            return Uint(mid)
 
     @staticmethod
-    def _p_bool(values: Vector[Bytes], index: Int, case: bool) -> Vector[Bytes]:
+    def _p_bool(values: Vector[Bytes], index: Uint, case: bool) -> Vector[Bytes]:
         """
         Util Function P_s Implementation for Trace Function
         """
@@ -99,9 +101,9 @@ class BMRFunctions:
     def _trace_fn(
         self,
         values: Vector[Bytes],
-        index: Int,
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
-    ) -> Vector[Bytes | ByteArray32]:
+        index: Uint,
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
+    ) -> Vector[Choice[Bytes, Bytes[32]]]:
         """
         Trace Function Implementation as defined in Equation E.2
 
@@ -133,7 +135,7 @@ class BMRFunctions:
     def wb_merkle_fn(
         self,
         values: Vector[Bytes],
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> OpaqueHash:
         """
         Well Balanced Binary Merkle Function Implementation as defined in Equation E.3 in Section E.1.1
@@ -155,7 +157,7 @@ class BMRFunctions:
     def cd_merkle_fn(
         self,
         values: Vector[Bytes],
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> OpaqueHash:
         """
         Constant Depth Binary Merkle Function Implementation as defined in Equation E.4 in Section E.1.2
@@ -174,9 +176,9 @@ class BMRFunctions:
     def merkle_path_fn(
         self,
         values: Vector[Bytes],
-        size: Int,
-        index: Int,
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+        size: Uint,
+        index: Uint,
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> Vector[OpaqueHash]:
         """
         Page Merkle Path Function Implementation as defined in Equation E.5
@@ -205,9 +207,9 @@ class BMRFunctions:
     def leaf_page_fn(
         self,
         values: Vector[Bytes],
-        size: Int,
-        index: Int,
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+        size: Uint,
+        index: Uint,
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> Vector[OpaqueHash]:
         """
         Leaves Page Function Implementation as defined in Equation E.6

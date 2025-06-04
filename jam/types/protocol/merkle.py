@@ -1,13 +1,12 @@
-from jam.types.base.composite.option import Option, decodable_option
-from jam.types.base.sequences.vector import Vector, decodable_vector
+from tsrkit_types.option import Option
+from tsrkit_types.sequences import TypedVector
 from jam.types.protocol.crypto import OpaqueHash
 
-@decodable_option(OpaqueHash)
-class OptionHash(Option):
+
+class OptionHash(Option[OpaqueHash]):
 	def __hash__(self):
 		value = self.get_value()
 		return int.from_bytes(bytes(value))
 
 
-@decodable_vector(OptionHash)
-class MMR(Vector[OptionHash]): ...
+MMR = TypedVector[OptionHash]

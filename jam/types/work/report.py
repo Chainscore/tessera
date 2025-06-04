@@ -1,14 +1,12 @@
 """Work report types for the JAM protocol."""
 
-from dataclasses import dataclass
-
-from jam.types.base import Int
-from jam.types.base.null import Nullable
-from jam.types.base.integers import U16, U32
-from jam.types.base.composite.choice import Choice, decodable_choice
-from jam.types.base.dictionary import decodable_dictionary, Dictionary
-from jam.types.base.bytes.bytes import Bytes
-from jam.types.base.sequences.vector import Vector, decodable_vector
+from tsrkit_types.integers import Uint
+from tsrkit_types.choice import Choice
+from tsrkit_types.dictionary import Dictionary
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.sequences import TypedVector
+from tsrkit_types.struct import structure
+from tsrkit_types.null import NullType
 from jam.types.work.package import WorkPackage
 from jam.types.work.refine_context import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
@@ -22,47 +20,40 @@ from jam.types.protocol.core import (
     WorkPackageHash,
 )
 from jam.types.work.segment import MultiSegments
-from jam.utils.json.serde import JsonSerde
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 
 
-
-@decodable_choice
 class WorkExecResult(Choice):
     """Work execution result choice."""
 
     ok: Bytes
-    out_of_gas: Nullable
-    panic: Nullable
+    out_of_gas: NullType
+    panic: NullType
     # circle dot
-    bad_exports: Nullable
+    bad_exports: NullType
     # circle minus
-    result_oversize: Nullable
+    result_oversize: NullType
     # BAD
-    bad_code: Nullable
+    bad_code: NullType
     # BIG
-    code_oversize: Nullable
+    code_oversize: NullType
 
 
-@decodable_vector(element_type=WorkExecResult)
-class ExecResults(Vector[WorkExecResult]):
-    ...
+ExecResults = TypedVector[WorkExecResult]
 
-@decodable_dataclass
-@dataclass
-class RefineLoad(Codable, JsonSerde):
+
+@structure
+class RefineLoad:
     """Refine load structure."""
 
-    gas_used: Int
-    imports: Int
-    exports: Int
-    extrinsic_count: Int
-    extrinsic_size: Int
+    gas_used: int  # I64 equivalent - using int since Sint doesn't exist
+    imports: int  # I64 equivalent
+    exports: int  # I64 equivalent
+    extrinsic_count: int  # I64 equivalent
+    extrinsic_size: int  # I64 equivalent
 
-@decodable_dataclass
-@dataclass
-class WorkResult(Codable, JsonSerde):
+
+@structure
+class WorkResult:
     """Work result structure."""
     # s
     service_id: ServiceId
@@ -77,75 +68,56 @@ class WorkResult(Codable, JsonSerde):
     # x
     refine_load: RefineLoad
 
-@decodable_dataclass
-@dataclass
-class WorkPackageSpec(Codable, JsonSerde):
+
+@structure
+class WorkPackageSpec:
     """Work package specification structure."""
     # h
     hash: WorkPackageHash
     # l
-    length: U32
+    length: Uint[32]
     # u
     erasure_root: ErasureRoot
     # e
     exports_root: ExportsRoot
     # n
-    exports_count: U16
+    exports_count: Uint[16]
 
     @staticmethod
     def empty():
         return WorkPackageSpec(
-            hash = WorkPackageHash([0] * 32),
-            length = U32(0),
-            erasure_root = ErasureRoot([0] * 32),
-            exports_root = ExportsRoot([0] * 32),
-            exports_count = U16(0)
+            hash=WorkPackageHash([0] * 32),
+            length=Uint[32](0),
+            erasure_root=ErasureRoot([0] * 32),
+            exports_root=ExportsRoot([0] * 32),
+            exports_count=Uint[16](0)
         )
 
 
-
-@decodable_dataclass
-@dataclass
-class WorkPackageBundle(Codable, JsonSerde):
+@structure
+class WorkPackageBundle:
     """Work package bundle specification structure."""
 
     package: WorkPackage
-    extrinsics: Vector[Vector[Bytes]]
-    import_segments: Vector[MultiSegments]
-    justifications: Vector[Vector[Vector[OpaqueHash]]]
+    extrinsics: TypedVector[TypedVector[Bytes]]
+    import_segments: TypedVector[MultiSegments]
+    justifications: TypedVector[TypedVector[TypedVector[OpaqueHash]]]
 
-# Deprecated Type
-# @decodable_dataclass
-# @dataclass
-# class SegmentRootLookupItem(Codable, JsonSerde):
-#     """Segment root lookup item structure."""
-#
-#     work_package_hash: WorkPackageHash
-#     segment_tree_root: OpaqueHash
-#
-#
-# @decodable_vector(SegmentRootLookupItem)
-# class SegmentRootLookup(Vector[SegmentRootLookupItem]):
-#     ...
 
-@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot,key_name="work_package_hash", value_name="segment_tree_root")
-class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
-    """contains all unique work-package hashes and segment root"""
-    ...
+SegmentRootLookup = Dictionary[WorkPackageHash, SegmentRoot]
 
-@decodable_vector(WorkResult)
-class WorkResults(Vector[WorkResult]): ...
+WorkResults = TypedVector[WorkResult]
 
-@decodable_dataclass
-@dataclass
-class WorkReport(Codable, JsonSerde):
+
+@structure
+class WorkReport:
     """Work report structure."""
     # s
     package_spec: WorkPackageSpec
     # x
     context: RefineContext
     # c
-    core_index: Int
+    core_index: int  # I64 equivalent - using int since Sint doesn't exist
     # a
     authorizer_hash: OpaqueHash
     # o
@@ -155,33 +127,25 @@ class WorkReport(Codable, JsonSerde):
     # r
     results: WorkResults
     # g
-    auth_gas_used: Int
+    auth_gas_used: int  # I64 equivalent - using int since Sint doesn't exist
 
     @classmethod
     def empty(cls, **overrides) -> "WorkReport":
         defaults = {
-            "package_spec":          WorkPackageSpec.empty(),
-            "context":               RefineContext.empty(),
-            "core_index":            CoreIndex(0),
-            "authorizer_hash":       OpaqueHash(bytes([0] * 32)),
-            "auth_output":           Bytes(b""),
-            "segment_root_lookup":   SegmentRootLookup({}),
-            "results":               WorkResults([]),
-            "auth_gas_used":         Gas(0),
+            "package_spec": WorkPackageSpec.empty(),
+            "context": RefineContext.empty(),
+            "core_index": CoreIndex(0),
+            "authorizer_hash": OpaqueHash(bytes([0] * 32)),
+            "auth_output": Bytes(b""),
+            "segment_root_lookup": SegmentRootLookup({}),
+            "results": WorkResults([]),
+            "auth_gas_used": Gas(0),
         }
         # merge in anything the caller wants to override:
         defaults.update(overrides)
         return cls(**defaults)
 
-@decodable_vector(element_type=WorkReportHash, allow_duplicates=False)
-class WorkDependencies(Vector[WorkReportHash]):
-    """Set of dependencies hashes"""
 
-    ...
+WorkDependencies = TypedVector[WorkReportHash]  # Set of dependencies hashes
 
-
-@decodable_vector(element_type=WorkReport)
-class WorkReports(Vector[WorkReport]):
-    """Vector of Work Reports"""
-
-    ...
+WorkReports = TypedVector[WorkReport]  # Vector of Work Reports

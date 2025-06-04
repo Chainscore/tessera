@@ -1,11 +1,9 @@
+from tsrkit_types.enum import Enum
 from jam.error import JamError
-from jam.types.base.enum import Enum, decodable_enum
-
 
 class DisputesError(JamError):
     ...
 
-@decodable_enum
 class DisputesErrorCode(Enum):
     """Error codes for the Disputes STF protocol."""
 

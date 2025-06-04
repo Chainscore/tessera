@@ -1,7 +1,7 @@
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.state.eta import Eta
 from jam.state.state import State
-from jam.types.base.integers.fixed import U32
+from tsrkit_types.integers import U32
 from jam.types.block import Block
 from jam.types.state.kappa import Kappa
 from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaZ

@@ -5,7 +5,7 @@ from jam.types.protocol.crypto import (
     OpaqueHash,
     BandersnatchVrfSignature,
 )
-from jam.types.base.null import Null
+from tsrkit_types.null import Null
 from jam.types.header import (
     Header,
     OptionalEpochMark,

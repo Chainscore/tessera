@@ -1,29 +1,22 @@
-from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
-
+from tsrkit_types.struct import structure
 from jam.types.block import Block
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.types.header import Header
 
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
-from jam.utils.json import JsonSerde
-
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
 
-@decodable_dataclass
-@dataclass
-class Final(Codable, JsonSerde):
+@structure
+class Final:
     block_hash: HeaderHash
     time_slot: TimeSlot
 
-@decodable_dataclass
-@dataclass
-class Announcement(Codable, JsonSerde):
+@structure
+class Announcement:
     header: Header
     final: Final
 

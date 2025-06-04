@@ -2,7 +2,8 @@ from jam.config.data_stores import main_db
 from jam.state.ghost import GhostState
 from jam.state.state import setup_state, set_state
 from jam.storage.db.kv import KVStore
-from jam.types.base import ByteArray32, U64, U32, Bytes
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U32, U64
 from jam.types.protocol.core import Balance, ServiceId
 from jam.types.protocol.crypto import Hash
 from jam.types.state.delta import AccountData, LookupTable, Timestamps, AccountMetadata
@@ -15,7 +16,7 @@ def test_state_sync(db_path):
     db = KVStore(db_path)
     setup_state(GhostState.genesis(), db)
     from jam.state.state import state as updated_state
-    assert updated_state.TRIE.root_hash != ByteArray32([0] * 32)
+    assert updated_state.TRIE.root_hash != Bytes[32]([0] * 32)
 
 def test_state_update():
     prev_hash = state.TRIE.root_hash
@@ -25,7 +26,7 @@ def test_state_update():
 def test_delta_update():
     prev_hash = state.TRIE.root_hash
     state.delta[ServiceId(1)].service = AccountMetadata(
-        code_hash=ByteArray32([1] * 32),
+        code_hash=Bytes[32]([1] * 32),
         balance=U64(10000000),
         gas_limit=U64(10000000),
         min_gas=U64(10000000),
@@ -34,7 +35,7 @@ def test_delta_update():
     )
     assert prev_hash != state.TRIE.root_hash
     data_post = state.delta[ServiceId(1)].service
-    assert data_post.code_hash == ByteArray32([1] * 32)
+    assert data_post.code_hash == Bytes[32]([1] * 32)
     assert data_post.balance == U64(10000000)
     assert data_post.gas_limit == U64(10000000)
     assert data_post.min_gas == U64(10000000)

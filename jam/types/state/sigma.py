@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from tsrkit_types.struct import structure
 
 from jam.types.state.alpha import Alpha
 from jam.types.state.phi import Phi
@@ -16,17 +16,10 @@ from jam.types.state.nu import Nu
 from jam.types.state.xi import Xi
 from jam.types.state.gamma import Gamma
 from jam.types.state.delta import Delta
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.decorators import with_json_metadata
-from jam.utils.json.serde import JsonSerde
 
-@dataclass(kw_only=True)
-@with_json_metadata(
-    lambda_={"name": "lambda"}
-)
-@decodable_dataclass
-class Sigma(Codable, JsonSerde):
+
+@structure
+class Sigma:
     """Overall system state combining all components (σ). Defined in Graypaper section 4.2."""
 
     # Core authorizations pool tracking allowed authorizers for each core (α ∈ C⟦H⟧:OH C)

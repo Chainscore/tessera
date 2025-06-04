@@ -1,5 +1,4 @@
 import asyncio
-from time import time
 
 from jam.config.logging import logger
 from jam.utils.dummy.utils import create_dummy_bytes32

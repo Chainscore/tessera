@@ -1,29 +1,21 @@
-from dataclasses import dataclass
 from typing import cast
-
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
-from jam.types.base.integers import Int
-
-from jam.utils.json import JsonSerde
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
-
+from tsrkit_types.integers import Uint
+from tsrkit_types.struct import structure
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.types.work.package import WorkPackage
 
 
-@decodable_dataclass
-@dataclass
-class WorkPackageCore(Codable, JsonSerde):
+@structure
+class WorkPackageCore:
     work_package : WorkPackage
-    core_index : Int
+    core_index : Uint
 
-@decodable_dataclass
-@dataclass
-class CE133Data(Codable, JsonSerde):
+@structure
+class CE133Data:
     package_data: WorkPackageCore
-    extrinsics: Int
+    extrinsics: Uint
 
 
 class WorkPackageSubmission(NetworkProtocol):

@@ -3,9 +3,8 @@ from jam.execution.host_calls.host_call import HostCallReturn, PsiH
 from jam.execution.host_calls.invocations.protocol import Context, DispatchFunction
 from jam.execution.pvm.code import y_function
 from jam.execution.pvm.status import PANIC, ExecutionStatus
-from jam.types.base import Bytes
+from tsrkit_types.bytes import Bytes
 from jam.types.protocol.core import Gas, ProgramCounter
-from jam.utils.codec import DecodeError
 
 ArgInvokeReturn = Tuple[Gas, ExecutionStatus | bytes, Context]
 
@@ -21,7 +20,8 @@ class PsiM:
     ) -> ArgInvokeReturn:
         try:
             code, registers, memory = y_function(bytes(Bytes(blob)), arguments)
-        except DecodeError:
+        except Exception as e:
+            print("Error", e)
             return Gas(0), PANIC, context
         return PsiM.R(
             gas,

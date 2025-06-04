@@ -1,8 +1,9 @@
 from copy import deepcopy
-from typing import Tuple, List, Set
-
+from typing import Tuple, Set
 from jam.execution.host_calls.invocations.accumulate import PsiA
-from jam.types.base import Bytes, Null, Int, U32, U64
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import Int
+from tsrkit_types.null import Null
 from jam.types.block import Block
 from jam.accumulation.types import (
     PreimageDict,
@@ -15,22 +16,19 @@ from jam.accumulation.types import (
 )
 from jam.types.protocol.crypto import Hash
 from jam.types.state.pi import ServiceStat
-
 from jam.types.state.sigma import Sigma
 from jam.types.state.delta import Delta, LookupTable, Timestamps
 from jam.types.state.tau import Tau
-from jam.types.state.chi import ChiA, ChiG, ChiM, ChiV
+from jam.types.state.chi import ChiG
 from jam.types.state.nu import AllReadyWRs, ReadyWR
 from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
 from jam.types.protocol.merkle import OptionHash
-from jam.types.protocol.core import Gas, ServiceId, TimeSlot
+from jam.types.protocol.core import Gas, ServiceId
 from jam.types.work.report import (
     WorkDependencies,
     WorkReports,
-    SegmentRootLookup,
     WorkReport,
 )
-from jam.utils.constants import EPOCH_LENGTH
 
 
 class Accumulation:

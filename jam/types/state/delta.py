@@ -1,46 +1,38 @@
-from dataclasses import dataclass
+from dataclasses import field
 from typing import Union, Tuple
 
+from tsrkit_types import Bytes
+# from jam.execution.utils import decode_code_hash
+from tsrkit_types.dictionary import Dictionary
+from tsrkit_types.integers import Uint, U32
+from tsrkit_types.sequences import TypedVector, TypedArray, TypedBoundedVector
+from tsrkit_types.struct import structure
+
 from jam.execution.utils import decode_code_hash
-from jam.types.base.dictionary import Dictionary, decodable_dictionary
-from jam.types.base.integers.fixed import U32, U64
-from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.types.base.sequences.bytes import ByteArray32, Bytes
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId, TimeSlot
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde
 from jam.types.protocol.crypto import Hash
-from jam.utils.json.decorators import with_json_metadata
 from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 
 
-ServiceCodeHash = ByteArray32
-# TODO - : Confirm these types + usage
+ServiceCodeHash = Bytes[32]
 """Number of items in the account storage"""
-Ai = U32
+Ai = Uint[32]
 
 """The total number of octets used in storage"""
-Ao = U64
+Ao = Uint[64]
 
 """The minimum, or threshold, balance needed for any given service account"""
 At = Balance
 
-@with_json_metadata(
-    gas_limit = { "name": "min_item_gas"},
-    min_gas    = { "name": "min_memo_gas"},
-    num_o    = { "name": "bytes"},
-    num_i    = { "name": "items"},
-)
-@dataclass
-@decodable_dataclass
-class AccountMetadata(Codable, JsonSerde):
+
+@structure
+class AccountMetadata:
     code_hash: ServiceCodeHash  # code_hash
     balance: Balance  # balance
-    gas_limit: Gas  # min_item_gas
-    min_gas: Gas  # min_memo_gas
-    num_o: Ao
-    num_i: Ai
+    gas_limit: Gas      = field(metadata={"name": "min_item_gas"})
+    min_gas: Gas        = field(metadata={"name": "min_memo_gas"})
+    num_o: Ao           = field(metadata={"name": "bytes"})
+    num_i: Ai           = field(metadata={"name": "items"})
 
     @property
     def t(self):
@@ -49,7 +41,7 @@ class AccountMetadata(Codable, JsonSerde):
     @staticmethod
     def empty() -> "AccountMetadata":
         return AccountMetadata(
-            code_hash=ByteArray32([0] * 32),
+            code_hash=TypedArray[int, 32]([0] * 32),
             balance=Balance(0),
             gas_limit=Gas(0),
             min_gas=Gas(0),
@@ -58,87 +50,66 @@ class AccountMetadata(Codable, JsonSerde):
         )
 
 
-@decodable_dictionary(ByteArray32, Bytes, key_name="key", value_name="value")
-class AccountStorage(Dictionary[ByteArray32, Bytes]):
+class AccountStorage(Dictionary[Bytes[32], Bytes, "key", "value"]):
     """Storage dictionary"""
     _meta: AccountMetadata
 
     def __setitem__(self, key, value):
         if hasattr(self, "_meta"):
-            is_new = key not in self.value
+            is_new = key not in self
             if is_new:
                 self._meta.num_i = self._meta.num_i + 1
                 self._meta.num_o = self._meta.num_o + len(value) + 32
             else:
-                self._meta.num_o = self._meta.num_o + len(value) - len(self.value[key])
-        self.value[key] = value
+                self._meta.num_o = self._meta.num_o + len(value) - len(self[key])
+        super().__setitem__(key, value)
 
     def __delitem__(self, key):
-        exists = key in self.value
+        exists = key in self
         if exists:
             self._meta.num_i = self._meta.num_i - 1
-            self._meta.num_o = self._meta.num_o - len(self.value[key]) - 32
-        del self.value[key]
+            self._meta.num_o = self._meta.num_o - len(self[key]) - 32
+        super().__delitem__(key)
 
 
-@decodable_dictionary(ByteArray32, Bytes, key_name="hash", value_name="blob")
-class AccountPreimages(Dictionary[ByteArray32, Bytes]):
-    """Preimage dictionary"""
-    ...
+"""Preimage dictionary"""
+AccountPreimages = Dictionary[Bytes[32], Bytes, "hash", "blob"]
 
-@decodable_vector(element_type=U32, max_length=3)
-class Timestamps(Vector[U32]):
-    """Lookup timestamps"""
-    ...
+"""Lookup timestamps"""
+Timestamps = TypedVector[U32, 0, 3]
 
-@decodable_dataclass
-@dataclass
-class LookupTable(Codable, JsonSerde):
-    hash: ByteArray32
+@structure
+class LookupTable:
+    hash: Bytes[32]
     length: BlobLength
 
     def __hash__(self):
-        return int(Hash.blake2b(self.length.encode() + self.hash.encode()))
+        return int.from_bytes(Hash.blake2b(self.length.encode() + self.hash.encode()))
 
     def to_json(self):
         return str(Hash.blake2b(self.length.encode() + self.hash.encode()))
 
 
-@decodable_dictionary(LookupTable, Timestamps, key_name="key", value_name="value")
-class AccountLookup(Dictionary[LookupTable, Timestamps]):
+class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
     """Lookup timestamps"""
     _meta: AccountMetadata
 
     def __setitem__(self, key: LookupTable, value):
         if hasattr(self, "_meta"):
-            is_new = key not in self.value
+            is_new = key not in self
             if is_new:
                 self._meta.num_i = self._meta.num_i + 2
                 self._meta.num_o = self._meta.num_o + key.length + 81
-        self.value[key] = value
-
-    def __delitem__(self, key: LookupTable):
-        exists = key in self.value
-        if exists:
-            self._meta.num_i = self._meta.num_i - 1
-            self._meta.num_o = self._meta.num_o - key.length - 81
-        del self.value[key]
+        super().__setitem__(key, value)
 
 
-@with_json_metadata(
-    # default in empty lists if JSON omits them
-    service   = { "name": "service",    "default": AccountMetadata.empty() },
-    storage   = { "name": "storage",    "default": AccountStorage({}) },
-    preimages = { "name": "preimages",  "default": AccountPreimages({}) },
-    lookup    = { "name": "lookup_meta",     "default": AccountLookup({}) },
-)
-@decodable_dataclass
-@dataclass
-class AccountData(Codable, JsonSerde):
-    service: AccountMetadata
-    storage: AccountStorage
-    preimages: AccountPreimages
-    lookup: AccountLookup
+
+@structure
+class AccountData:
+    service: AccountMetadata        = field(metadata={"default": AccountMetadata.empty()})
+    storage: AccountStorage         = field(metadata={"default": AccountStorage({})})
+    preimages: AccountPreimages     = field(metadata={"default": AccountPreimages({})})
+    lookup: AccountLookup           = field(metadata={"name": "lookup_meta", "default": AccountLookup({})})
 
     def __post_init__(self):
         self.storage._meta = self.service
@@ -149,7 +120,7 @@ class AccountData(Codable, JsonSerde):
         if img: return decode_code_hash(img)
         else: return None
 
-    def historical_lookup(self, timeslot: TimeSlot, preimage_hash: ByteArray32):
+    def historical_lookup(self, timeslot: TimeSlot, preimage_hash: Bytes[32]):
         """
         https://graypaper.fluffylabs.dev/#/cc517d7/11c70011e000?v=0.6.5
         """
@@ -182,7 +153,4 @@ class AccountData(Codable, JsonSerde):
             raise ValueError("Invalid Timestamp data")
 
 
-@decodable_dictionary(ServiceId, AccountData, key_name="id", value_name="data")
-class Delta(Dictionary[ServiceId, AccountData]):
-    """Delta state"""
-    ...
+Delta = Dictionary[ServiceId, AccountData, "id", "data"]

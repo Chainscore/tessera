@@ -10,7 +10,7 @@ from jam.storage.db.kv import KVStore
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
-from jam.types.base.integers import Int
+from tsrkit_types.integers import Uint
 
 
 async def wp_producer(node: Node, db: KVStore):
@@ -47,9 +47,9 @@ async def wp_producer(node: Node, db: KVStore):
 
         if node.is_builder:
             wp = create_dummy_package()
-            wc = WorkPackageCore(wp, Int(0))
+            wc = WorkPackageCore(wp, Uint(0))
 
-            data = CE133Data(package_data=wc, extrinsics=Int(341))
+            data = CE133Data(package_data=wc, extrinsics=Uint(341))
             logger.info(f"⛏️ ({node.name}) Producing Work Package { wp}")
             # TODO: Implement package transmission
 

@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from tsrkit_types.struct import structure
+
 from jam.types.extrinsics import (
     TicketsExtrinsic,
     PreimagesExtrinsic,
@@ -7,13 +8,9 @@ from jam.types.extrinsics import (
     DisputesExtrinsic,
 )
 from jam.types.extrinsics.disputes import Culprits, Faults, Verdicts
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.serde import JsonSerde
 
-@decodable_dataclass
-@dataclass
-class Extrinsic(Codable, JsonSerde):
+@structure
+class Extrinsic:
     """Extrinsic structure."""
 
     tickets: TicketsExtrinsic

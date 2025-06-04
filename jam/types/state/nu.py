@@ -1,29 +1,15 @@
-from dataclasses import dataclass
-from jam.types.base.sequences.array import Array, decodable_array
-from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.types.work.report import WorkReport, WorkDependencies
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from tsrkit_types.sequences import TypedArray, TypedVector
+from tsrkit_types.struct import structure
+# from jam.types.work.report import WorkReport, WorkDependencies  # Circular import issue
 from jam.utils.constants import EPOCH_LENGTH
-from jam.utils.json import JsonSerde
 
 
-@decodable_dataclass
-@dataclass
-class ReadyWR(Codable, JsonSerde):
-    report: WorkReport
-    dependencies: WorkDependencies
+@structure
+class ReadyWR:
+    report: object  # WorkReport - temporarily using object to break circular import
+    dependencies: object  # WorkDependencies - temporarily using object to break circular import
 
 
-@decodable_vector(ReadyWR)
-class AllReadyWRs(Vector[ReadyWR]):
-    """All ready work reports"""
+AllReadyWRs = TypedVector[ReadyWR]
 
-    ...
-
-
-@decodable_array(EPOCH_LENGTH, AllReadyWRs)
-class Nu(Array[AllReadyWRs]):
-    """Nu"""
-
-    ...
+Nu = TypedArray[AllReadyWRs, EPOCH_LENGTH]

@@ -5,7 +5,7 @@
 
 # from jam.types.work.segment import Segments, Segment, MultiSegments
 # from jam.utils.codec.primitives.integers import IntegerCodec
-# from jam.types.base.integers.fixed import U32, U64, U256
+# from tsrkit_types.integers.fixed import U32, U64, U256
 # from jam.services import historicalLookup
 # from jam.execution.pvm.opcode_mapping import InstructionMapper
 # from jam.execution.pvm.extract import Execution

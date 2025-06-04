@@ -1,5 +1,7 @@
 from typing import List, Type
 
+from tsrkit_types.integers import Uint
+
 from jam.execution.pvm.status import PvmError, PANIC
 from jam.execution.pvm.instructions.tables.i_imm import InstructionsWArgs1Imm
 from jam.execution.pvm.instructions.tables.i_reg_i_ewimm import InstructionsWArgs1Imm1EwImm
@@ -14,8 +16,6 @@ from jam.execution.pvm.instructions.tables.ii_reg_i_imm import InstructionsWArgs
 from jam.execution.pvm.instructions.tables.ii_reg_i_offset import InstructionsWArgs2Reg1Offset
 from jam.execution.pvm.instructions.tables.ii_reg_ii_imm import InstructionsWArgs2Reg2Imm
 from jam.execution.pvm.instructions.tables.iii_reg import InstructionsWArgs3Reg
-
-from jam.types.base.integers.fixed import U8
 from jam.execution.pvm.instructions.instruction_table import InstructionTable
 
 class InstTableMap:
@@ -38,7 +38,7 @@ class InstTableMap:
     }
 
     @classmethod
-    def get_instructions_table(cls, opcode: U8) -> Type[InstructionTable]:
+    def get_instructions_table(cls, opcode: Uint[8]) -> Type[InstructionTable]:
         """Opcode could be any integer, but it must be a valid opcode."""
         for key, value in cls.ALL_INSTRUCTION_TABLES.items():
             if opcode < key:

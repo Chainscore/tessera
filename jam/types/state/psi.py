@@ -1,41 +1,19 @@
-from dataclasses import dataclass
-from jam.types.base.sequences.vector import Vector, decodable_vector
+from tsrkit_types.sequences import TypedVector
+from tsrkit_types.struct import structure
 from jam.types.protocol.crypto import Ed25519Public, WorkReportHash
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde
-
-@decodable_vector(element_type=WorkReportHash)
-class PsiG(Vector[WorkReportHash]):
-    """Good set work report hashes"""
-
-    ...
 
 
-@decodable_vector(element_type=WorkReportHash)
-class PsiB(Vector[WorkReportHash]):
-    """Bad set work report hashes"""
+PsiG = TypedVector[WorkReportHash]
 
-    ...
+PsiB = TypedVector[WorkReportHash]
 
+PsiW = TypedVector[WorkReportHash]
 
-@decodable_vector(element_type=WorkReportHash)
-class PsiW(Vector[WorkReportHash]):
-    """Wonky set work report hashes"""
-
-    ...
+PsiO = TypedVector[Ed25519Public]
 
 
-@decodable_vector(element_type=Ed25519Public)
-class PsiO(Vector[Ed25519Public]):
-    """Offenders"""
-
-    ...
-
-
-@decodable_dataclass
-@dataclass
-class Psi(Codable,JsonSerde):
+@structure
+class Psi:
     """Disputes state"""
 
     good: PsiG

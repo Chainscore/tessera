@@ -1,18 +1,19 @@
 import pytest
+from tsrkit_types.bytes import Bytes
+
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.state.eta import Eta
-from jam.types.base.integers.fixed import U32
+from tsrkit_types.integers import U32
 from jam.types.state.kappa import Kappa
 from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
-from jam.types.protocol.crypto import ByteArray32
-from jam.types.extrinsics.tickets import TicketBody, TicketId, TicketAttempt, TicketEnvelope
+from jam.types.extrinsics.tickets import TicketBody, TicketId, TicketAttempt
 from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys, generate_ticket
-from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END, MAX_TICKETS_PER_EXTRINSIC
+from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END
 
 
 @pytest.mark.skipif(True, reason="Ring commitment takes too long")
@@ -24,7 +25,7 @@ def test_ticket_accumulation():
     # Create initial state with a ticket already in gamma_a
     initial_state = create_state(
         tau=U32(5),  # Assume this is within ticket submission period
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -54,7 +55,7 @@ def test_ticket_accumulation():
         )
         
         # Apply the transition
-        new_state = Safrole.transition(initial_state, new_block, ByteArray32(create_dummy_bytes(32)))
+        new_state = Safrole.transition(initial_state, new_block, Bytes[32](create_dummy_bytes(32)))
         
         # Check that the new ticket was accumulated
         assert len(new_state.gamma.a) == 2
@@ -73,7 +74,7 @@ def test_ticket_submission_outside_period():
     # Create initial state
     initial_state = create_state(
         tau=U32(5),
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -98,7 +99,7 @@ def test_ticket_submission_outside_period():
     
     # Verify that the transition raises the expected error
     with pytest.raises(SafroleError) as excinfo:
-        Safrole.transition(initial_state, new_block, ByteArray32(create_dummy_bytes(32)))
+        Safrole.transition(initial_state, new_block, Bytes[32](create_dummy_bytes(32)))
     
     assert excinfo.value.code == SafroleErrorCode.UNEXPECTED_TICKET
 
@@ -109,7 +110,7 @@ def test_ticket_duplicate_rejection():
     # Create initial state
     initial_state = create_state(
         tau=U32(5),  # Assume this is within ticket submission period
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -140,7 +141,7 @@ def test_ticket_duplicate_rejection():
         
         # Verify that trying to apply duplicate tickets raises the expected error
         with pytest.raises(SafroleError) as excinfo:
-            Safrole.transition(initial_state, duplicate_block, ByteArray32(bytes(32)))
+            Safrole.transition(initial_state, duplicate_block, Bytes[32](bytes(32)))
         
         # Check that the error message indicates duplicate tickets not allowed
         assert "Duplicate tickets are not allowed" in str(excinfo.value)
@@ -154,7 +155,7 @@ def test_ticket_sorting():
     # Create initial state
     initial_state = create_state(
         tau=U32(5),  # Assume this is within ticket submission period
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -202,7 +203,7 @@ def test_ticket_sorting():
         )
         
         # Apply the transition
-        new_state = Safrole.transition(initial_state, new_block, ByteArray32(create_dummy_bytes(32)))
+        new_state = Safrole.transition(initial_state, new_block, Bytes[32](create_dummy_bytes(32)))
         
         # Check that tickets were accumulated
         assert len(new_state.gamma.a) == 3

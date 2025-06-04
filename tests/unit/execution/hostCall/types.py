@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from jam.accumulation.types import DeferredTransfers
 from jam.types.base.dictionary import decodable_dictionary, Dictionary
-from jam.types.base.integers.fixed import U32
+from tsrkit_types.integers import U32
 from jam.types.base.bytes.bytes import ByteVector32, Bytes, Byte
 from jam.types.base.sequences.vector import Vector, decodable_vector
 from jam.types.base.string import String

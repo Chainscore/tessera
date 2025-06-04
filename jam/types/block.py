@@ -1,20 +1,16 @@
-from dataclasses import dataclass
+from tsrkit_types.struct import structure
 
 from jam.storage.db.kv import KVStore
 from jam.types.extrinsics.extrinsic import Extrinsic
 from jam.types.header import Header
-from jam.utils.codec.codable import Codable
-
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.serde import JsonSerde
 from jam.types.protocol.crypto import Hash
 from jam.utils.dummy.dummy_extrinsics import create_dummy_extrinsics
 from jam.utils.dummy.dummy_header import create_dummy_header
 from jam.types.protocol.core import TimeSlot
 
-@decodable_dataclass
-@dataclass
-class Block(Codable, JsonSerde):
+
+@structure
+class Block:
     """Block structure."""
 
     header: Header
@@ -45,8 +41,8 @@ class Block(Codable, JsonSerde):
             except ValueError:
                 continue
 
-    @staticmethod
-    def load(slot: TimeSlot, db: KVStore) -> "Block":
+    @classmethod
+    def load(cls, slot: TimeSlot, db: KVStore) -> "Block":
         """
         Load the block for the given slot from DB
         """
@@ -57,8 +53,7 @@ class Block(Codable, JsonSerde):
         data = db.get(Block.storage_key(slot))
         if data is None:
             raise ValueError("No block found for slot: ", slot)
-        block, _ = Block.decode_from(data)
-        return block
+        return cls.decode(data)
         
     def save(self, db: KVStore):
         """

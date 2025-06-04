@@ -5,8 +5,9 @@ from jam.storage.db.kv import KVStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.state.merkle import StateTrie
-from jam.state.utils.key_constructor import construct_state_key
-from jam.types.base import Bytes
+from jam.state.utils import construct_state_key
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.itf.codable import Codable
 from jam.types.block import Block
 from jam.types.protocol.crypto import Hash
 from jam.types.state.alpha import Alpha
@@ -24,7 +25,7 @@ from jam.types.state.xi import Xi
 from jam.types.state.beta import Beta
 from jam.types.state.phi import Phi
 from jam.types.state.gamma import Gamma
-from jam.utils.codec import Codable
+
 
 def make_state_prop(state_key: int, cl: Type[Codable]):
     def fget(self):

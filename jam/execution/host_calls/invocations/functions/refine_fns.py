@@ -5,37 +5,29 @@ from jam.execution.pvm.program import Program
 from jam.execution.pvm.pvm import PVM
 from jam.execution.pvm.status import PANIC, CONTINUE, ExecutionStatus, HostStatus, PvmError
 from jam.execution.pvm.types import Accessibility
-from jam.types.base import decodable_dictionary, Dictionary
-from jam.types.base.integers.fixed import U64
-from jam.types.base.integers.general import Int
-from jam.types.base.bytes.bytes import Bytes
+from tsrkit_types.dictionary import Dictionary
+from tsrkit_types.integers import Uint
+from tsrkit_types.bytes import Bytes
 from jam.types.protocol.core import Gas, Register, ProgramCounter
 from jam.execution.pvm.memory import Memory
 from jam.types.protocol.core import ServiceId,TimeSlot
 from jam.types.state.delta import Delta
-from jam.types.base.sequences import ByteArray32
+from tsrkit_types.sequences import TypedArray
 from jam.types.work.segment import Segment, Segments
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
-from jam.utils.codec.primitives.integers import IntegerCodec
+from tsrkit_types.struct import structure
 from jam.utils.constants import  MAX_EXPORT_ITEM, PVM_MEMORY_PAGE_SIZE, SEGMENT_SIZE
-from jam.utils.json import JsonSerde
 from jam.work_package.work_package import WorkPackageProcessing
 
-@decodable_dataclass
-@dataclass
-class IntegratedPVM(Codable, JsonSerde):
-    program_code:bytes
-    memory:Memory
+@structure
+class IntegratedPVM:
+    program_code: bytes
+    memory: Memory
     instruction_counter: ProgramCounter
 
-@decodable_dictionary(Int,IntegratedPVM)
-class RefinementMap(Dictionary[Int,IntegratedPVM]):
-    """Integrated PVM Dict(m) """
+RefinementMap = Dictionary[int, IntegratedPVM]
 
-@decodable_dataclass
-@dataclass
-class RefineContext(Codable, JsonSerde):
+@structure
+class RefineContext:
     m: RefinementMap
     e: Segments
 
@@ -59,7 +51,7 @@ class RefineFunctions(INVF):
             registers[7] = HostStatus.NONE
             return CONTINUE, registers, memory
         else:
-            v = a.historical_lookup(timeslot, ByteArray32(memory.read(h,32)))
+            v = a.historical_lookup(timeslot, TypedArray[int, 32](memory.read(h,32)))
 
         f = min(int(registers[10]), len(v))
         l = min(int(registers[11]), len(v)-f)
@@ -77,7 +69,7 @@ class RefineFunctions(INVF):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
         if memory.is_accessible(address=p, length=z, for_write=True):
-            x = WorkPackageProcessing.zero_padding(value=Bytes(memory.read(address=p,length=z)), n=Int(SEGMENT_SIZE))
+            x = WorkPackageProcessing.zero_padding(value=Bytes(memory.read(address=p,length=z)), n=int(SEGMENT_SIZE))
         else:
             raise PvmError(PANIC)
         if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:
@@ -198,48 +190,34 @@ class RefineFunctions(INVF):
         if not memory.is_accessible(o,112,True):
             raise PvmError(PANIC)
         if n not in context.m:
-            registers[7] = HostStatus.WHO
-            return CONTINUE, gas, registers, memory, context
-        m_bytes=memory.read(o,112)
-        #bytes->14size array of 8elements each 0->gas(g) 1-13->register_data(w)
-        m_array = [m_bytes[i:i + 8] for i in range(0, len(m_bytes), 8)]
-        g,_=IntegerCodec.decode_from(8,bytes(m_array[0]))
-        w=[
-            IntegerCodec.decode_from(8, bytes(m_array[i]))[0]
-            for i in range(1,14)
-        ]
-        [c,i_dash,g_dash,w_dash,u_dash]=PVM.execute(context.m[n].program_code,context.m[n].instruction_counter,g,w,context.m[n].memory)
-        memory.write(o,g_dash.encode()+w_dash.encode())
-        context.m[n].memory=u_dash
-        if c==ExecutionStatus.HOST:
-            context.m[n].instruction_counter=i_dash+1
-            registers[7]=U64(ExecutionStatus.HOST) # NOTE: Saving the ExecValu on register[7]
-            registers[8]=c.value.register
+            registers[7]=HostStatus.WHO
             return CONTINUE, gas, registers, memory, context
         else:
-            context.m[n].instruction_counter=i_dash
-            if(c==ExecutionStatus.PAGE_FAULT):
-                registers[7]=U64(ExecutionStatus.PAGE_FAULT)
-                registers[8]=c.value.register
-                return CONTINUE,registers,memory,context
-            elif(c==ExecutionStatus.OUT_OF_GAS):
-                registers[7]=U64(ExecutionStatus.OUT_OF_GAS)
-                return CONTINUE,registers,memory,context
-            elif(c==ExecutionStatus.PANIC):
-                registers[7]=U64(ExecutionStatus.PANIC)
-                return CONTINUE,registers,memory,context
-            elif(c==ExecutionStatus.HALT):
-                registers[7]=U64(ExecutionStatus.HALT)
-                return CONTINUE,registers,memory,context
-
+            # Invoke the PVM
+            status, pc, remaining_gas, registers_out, memory_out = PVM.execute(
+                context.m[n].program_code,
+                context.m[n].instruction_counter,
+                gas,
+                registers,
+                context.m[n].memory
+            )
+            # Update the context
+            context.m[n].instruction_counter = pc
+            context.m[n].memory = memory_out
+            # Write the registers to memory
+            for i, reg in enumerate(registers_out):
+                memory.write(o + i * 8, Uint[64](reg).encode())
+            registers[7] = HostStatus.OK
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(26, gas_cost=10)
     def expunge(gas:Gas,registers:list,memory:Memory,context:RefineContext):
         n=registers[7]
         if n not in context.m:
-            return(HostStatus.WHO,context.m)
+            registers[7]=HostStatus.WHO
+            return CONTINUE, gas, registers, memory, context
         else:
-            i_c=context.m.instruction_counter
-            context.m.pop(n)
-            return(i_c,context.m)
+            del context.m[n]
+            registers[7]=HostStatus.OK
+            return CONTINUE, gas, registers, memory, context

@@ -2,12 +2,12 @@ from dataclasses import dataclass
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.null import Null
 
 from jam.disputes.error import DisputesError, DisputesErrorCode
 from jam.types.state.rho import OptionalWorkReportState
 from jam.types.state.sigma import Sigma
-from jam.types.base.null import Null
-from jam.types.base.sequences.bytes import ByteArray32, ByteArray64
 from jam.types.block import Block
 from jam.types.extrinsics.disputes import DisputesExtrinsic
 from jam.types.header import OffendersMark
@@ -26,10 +26,10 @@ MINIMUM_CULPRITS_FOR_BAD = 2  # At least 2 culprits for solely invalid verdicts
 class Disputes:
     @staticmethod
     def verify_signature(
-        public_key: ByteArray32,
+        public_key: Bytes[32],
         message_bytes: bytes,
         target: bytes,
-        signature: ByteArray64,
+        signature: Bytes[64],
     ) -> bool:
         """
         Verify an Ed25519 signature using a public key.

@@ -1,3 +1,6 @@
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import Uint
+
 from jam.config.data_stores import main_db
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
@@ -6,13 +9,10 @@ from jam.execution.pvm.status import ExecutionStatus
 from jam.state.accounts import AccountMetadata
 from jam.state.ghost import GhostState
 from jam.state.state import setup_state
-from jam.storage.db.kv import KVStore
-from jam.types.base import Bytes, U16
 from jam.types.protocol.core import Balance, Gas, CoreIndex, BlobLength, ServiceId
 from jam.types.protocol.crypto import Hash
 from jam.types.state.delta import Ao, Ai, LookupTable, Timestamps
 from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs
-from jam.utils.codec.primitives.bytes import BytesCodec
 from jam.utils.dummy.dummy_package import create_dummy_package
 
 
@@ -29,7 +29,7 @@ def test_basic_wp_building(db_path):
 
 	code = Code(code=pc, read=b"", r_write=b"", z=0, s=100)
 	bytecode = code.encode()
-	service_code = BytesCodec().encode(value=b"") + bytecode
+	service_code = Bytes(b"").encode() + bytecode
 	code_hash = Hash.blake2b(service_code)
 
 	state.delta[package.auth_code_host].service = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000), gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0), num_o=Ao(0))
@@ -51,7 +51,7 @@ def test_basic_wp_building(db_path):
 	)
 	wi_code = Code(code=wi_pc, read=b"", r_write=b"", z=0, s=(1024*100))
 	wi_bytecode = wi_code.encode()
-	wi_service_code = BytesCodec().encode(value=b"") + wi_bytecode
+	wi_service_code = Bytes(b"").encode() + wi_bytecode
 	wi_code_hash = Hash.blake2b(wi_service_code)
 	wi_service = ServiceId(1)
 
@@ -66,7 +66,7 @@ def test_basic_wp_building(db_path):
 			accumulate_gas_limit=Gas(1_000),
 			import_segments=ImportSpecs([]),
 			extrinsic=ExtrinsicSpecs([]),
-			export_count=U16(1)
+			export_count=Uint[16](1)
 	)
 	package.items.append(wi)
 	print("Items:", package.items)

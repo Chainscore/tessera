@@ -23,6 +23,7 @@ aioquic = "^1.2.0"
 pytest = "^8.3.5"
 pytest-asyncio = "^0.26.0"
 py-ecc = "^8.0.0"
+tsrkit-types = {path = "/Users/prasad/projects/tessera/libraries/tsr-types"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"

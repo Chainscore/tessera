@@ -1,22 +1,16 @@
 """Refine context types for the JAM protocol."""
-from dataclasses import dataclass
-from jam.types.base import Vector
-from jam.types.base.sequences.vector import decodable_vector
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+
+from tsrkit_types.sequences import TypedVector
+from tsrkit_types.struct import structure
 from jam.types.protocol.crypto import HeaderHash, StateRoot, BeefyRoot, OpaqueHash
 from jam.types.protocol.core import TimeSlot
-from jam.utils.json.serde import JsonSerde
 
 
-@decodable_vector(OpaqueHash, allow_duplicates=False)
-class OpaqueHashes(Vector[OpaqueHash]):
-    ...
+OpaqueHashes = TypedVector[OpaqueHash]
 
 
-@decodable_dataclass
-@dataclass
-class RefineContext(Codable, JsonSerde):
+@structure
+class RefineContext:
     """Refine context structure."""
 
     anchor: HeaderHash
@@ -29,10 +23,10 @@ class RefineContext(Codable, JsonSerde):
     @staticmethod
     def empty() -> "RefineContext":
         return RefineContext(
-            anchor = HeaderHash([0]*32),
-            state_root = StateRoot([0]*32),
-            beefy_root = BeefyRoot([0]*32),
-            lookup_anchor = HeaderHash([0]*32),
-            lookup_anchor_slot = TimeSlot(0),
-            prerequisites = OpaqueHashes([]),
+            anchor=HeaderHash([0]*32),
+            state_root=StateRoot([0]*32),
+            beefy_root=BeefyRoot([0]*32),
+            lookup_anchor=HeaderHash([0]*32),
+            lookup_anchor_slot=TimeSlot(0),
+            prerequisites=OpaqueHashes([]),
         )

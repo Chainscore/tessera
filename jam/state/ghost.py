@@ -2,7 +2,6 @@ import json
 from typing import List
 
 from jam.storage.db.kv import KVStore
-from jam.types.base.null import Null
 from jam.types.protocol.validators import ValidatorsData
 from jam.types.state.alpha import Alpha
 from jam.types.state.eta import Eta
@@ -23,19 +22,19 @@ from jam.types.state.delta import Delta, AccountData, Timestamps, AccountLookup,
 from jam.types.state.sigma import Sigma
 from jam.types.work.report import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH
-from jam.state.utils.key_constructor import construct_state_key
-from jam.types.base.sequences.bytes import ByteArray32
-from jam.types.base.bytes.bytes import Bytes
-from jam.types.base.integers.fixed import U32
+from jam.state.utils import construct_state_key
 from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.protocol.core import Balance, Gas, ServiceId
 from jam.state.merkle import StateTrie
 from jam.consensus.safrole.safrole import Safrole
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U32
+from tsrkit_types.null import Null
 
 
 class GhostState(Sigma):
 
-    def generate_root(self) -> ByteArray32:
+    def generate_root(self) -> Bytes[32]:
         """Generate the root hash of the state"""
         return StateTrie().merkelize(self.transform())[0]
 
@@ -170,7 +169,7 @@ class GhostState(Sigma):
                     storage=AccountStorage({}),
                     preimages=AccountPreimages({}),
                     lookup=AccountLookup({}),
-                    code_hash=ByteArray32(ac),
+                    code_hash=Bytes[32](ac),
                     balance=Balance(ab),
                     gas_limit=Gas(ag),
                     min_gas=Gas(am),
@@ -181,7 +180,7 @@ class GhostState(Sigma):
                     # populating the storage
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
                     delta[service_id].storage[
-                        ByteArray32(Bytes(key[8:32] + Bytes(bytearray(8))))
+                        Bytes[32](Bytes(key[8:32] + Bytes(bytearray(8))))
                     ] = value
                 elif Bytes(key[7:0:-2]) == Bytes(2**32 - 2):
                     # populating the lookup
@@ -192,7 +191,7 @@ class GhostState(Sigma):
                     # populating the timestamps
                     service_id = int.from_bytes(bytes(Bytes(key[0:7:2])))
                     TimeStamps, _ = Timestamps.decode_from(bytes(value))
-                    timestamp_key = ByteArray32(
+                    timestamp_key = Bytes[32](
                         Bytes(key[1:8:2]) + Bytes(key[8:32]) + Bytes(bytearray(4))
                     )
                     delta[service_id].timestamps[timestamp_key] = TimeStamps
@@ -221,17 +220,17 @@ class GhostState(Sigma):
         """Generate the genesis state"""
         gen = json.load(open(genesis_path))
         peers = ValidatorsData.from_json(gen["peers"])
-        fallback = Safrole.arrange_fallback(ByteArray32(bytes(32)), peers)
+        fallback = Safrole.arrange_fallback(Bytes[32](bytes(32)), peers)
 
         return GhostState(
             alpha=Alpha.from_json(gen["state"]["auth_pool"]),
             beta=Beta([]),
-            gamma=Gamma(a=GammaA([]), k=GammaK(peers.value), s=fallback, z=GammaZ(bytes(144))),
+            gamma=Gamma(a=GammaA([]), k=GammaK(peers), s=fallback, z=GammaZ(bytes(144))),
             delta=Delta.from_json(gen["state"]["accounts"]),
             eta=Eta.from_json(gen["state"]["entropy"]),
-            iota=Iota(peers.value),
-            kappa=Kappa(peers.value),
-            lambda_=Lambda_(peers.value),
+            iota=Iota(peers),
+            kappa=Kappa(peers),
+            lambda_=Lambda_(peers),
             rho=Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]),
             tau=Tau(0),
             phi=Phi.from_json(gen["state"]["auth_queue"]),
@@ -255,7 +254,7 @@ class GhostState(Sigma):
             db.put(bytes(key), bytes(value))
 
     @staticmethod
-    def load(db: KVStore, keys: List[ByteArray32] = []) -> "GhostState":
+    def load(db: KVStore, keys: List[Bytes[32]] = []) -> "GhostState":
         data = {}
         service_ids: set[ServiceId] = set()
 
