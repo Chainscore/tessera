@@ -44,7 +44,8 @@ class QuicServerProtocol(QuicConnectionProtocol):
 
     def quic_event_received(self, event: QuicEvent):
         if isinstance(event, HandshakeCompleted):
-            # peer_cert = getattr(self._quic.tls, "_peer_certificate", None)
+            peer_cert = getattr(self._quic.tls, "_peer_certificate", None)
+            print("[SERVER]: peer cert", peer_cert)
             # peer_cert = self._quic.tls._peer_certificate
             #
             #

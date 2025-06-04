@@ -6,6 +6,7 @@ from typing import Dict, cast, Tuple
 from aioquic.asyncio import serve, connect
 from aioquic.asyncio.server import QuicServer
 from aioquic.quic.configuration import QuicConfiguration
+from aioquic.quic.connection import QuicConnection
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from jam.types.protocol.validators import ValidatorData
@@ -14,10 +15,17 @@ from .peer import Peer
 
 from .sessions import SessionTicketStore
 from jam.config.logging import logger
-from ..types.protocol.crypto import Ed25519Public
 
 genesis_hash = "476243ad"
 protocol_version = "0"
+
+_original_initialize = QuicConnection._initialize
+
+def _initialize(self, peer_cid: bytes) -> None:
+    _original_initialize(self, peer_cid)
+    self.tls._request_client_certificate = True
+
+QuicConnection._initialize = _initialize
 
 class Node:
     """

@@ -54,7 +54,8 @@ class QuicClientProtocol(QuicConnectionProtocol):
 
     def quic_event_received(self, event: QuicEvent) -> None:
         if isinstance(event, HandshakeCompleted):
-            # peer_cert = self._quic.tls._peer_certificate
+            peer_cert = self._quic.tls._peer_certificate
+            print("[CLIENT]: peer cert", peer_cert)
             #
             # if isinstance(peer_cert, Certificate):
             #     pk = peer_cert.public_key()
