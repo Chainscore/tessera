@@ -1,13 +1,16 @@
 from dataclasses import dataclass
 from typing import cast
 
+from sphinx.ext.autodoc.typehints import augment_descriptions_with_types
+
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 
 from jam.types.base.null import Null
 from jam.types.base.sequences.vector import Vector
-from jam.types.extrinsics.assurances import Assurance
+from jam.types.extrinsics import assurances
+from jam.types.extrinsics.assurances import Assurance, AvailAssurance, AssurancesExtrinsic
 
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.json import JsonSerde
@@ -41,19 +44,22 @@ class AssuranceDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE141
 
-    def transmit(self, node: Node, data: CE141Data):
+    async def transmit(self, node: Node, data: CE141Data):
         """ Transmit assurance, From Assurer (client) to Validator (server) """
+
 
         stream = self._prefix.encode() + data.encode()
 
-        logger.info(f"Transmitting assurance {data} to the {len(node.connections)} validators with prefix {self._prefix}")
+        # logger.info(f"Transmitting assurance {data} to the {len(node.connections)} validators with prefix {self._prefix}")
 
 
         # TODO: send assurance to particular (that share the report) validator
 
         responses = Vector([])
-        for client in node.connections:
-            data = client.stream_and_close(message=stream)
+        for peer in node.peer_conn:
+            client = node.peer_conn[peer][1]
+            data = await client.stream_and_close(message=stream)
+            logger.info("sending assurance on ", data)
             responses.append(data)
 
         return responses
@@ -66,6 +72,8 @@ class AssuranceDistribution(NetworkProtocol):
         logger.info(f"Receive assurance {data} from the assurer")
 
         # TODO: Save the assure and signature in the database
+        assurance : AvailAssurance = AvailAssurance(anchor=, bitfield=, validator_index=node.index, signature= )
+
 
     def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Assurance:
         return Null

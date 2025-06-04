@@ -25,7 +25,7 @@ def create_dummy_assurances() -> Assurance:
         ed25519_signature=Ed25519Signature(create_dummy_bytes(64))
     )
 
-async def assurance_distribution(node : Node, db: KVStore):
+async def assurance_distribution(node : Node):
     """ """
     # Record genesis timestamp in second
     genesis_ts = time()
@@ -39,17 +39,19 @@ async def assurance_distribution(node : Node, db: KVStore):
             genesis_ts = time()
             continue
 
-        state = State.load(db)
+        # state = State.load(db)
         current_timeslot = (time() - genesis_ts) // 6
         ts_epoch_index = floor(current_timeslot % EPOCH_LENGTH)
 
+
+        print("dhokha", node)
         if node.is_validator:
             print("inside the protocol 141")
             assurances = create_dummy_assurances()
             assurance_data : CE141Data = CE141Data(assurances)
 
             print("assurance_data", assurance_data)
-            assurance_send.transmit(node, assurance_data)
+            await assurance_send.transmit(node, assurance_data)
         else:
             print("skipping in assurance")
             logger.info(f"🔄 ({node.name}) skipping Node")

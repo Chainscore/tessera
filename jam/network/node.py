@@ -14,6 +14,7 @@ from .peer import Peer
 
 from .sessions import SessionTicketStore
 from jam.config.logging import logger
+from ..types.base import U16
 from ..types.protocol.crypto import Ed25519Public
 
 genesis_hash = "476243ad"

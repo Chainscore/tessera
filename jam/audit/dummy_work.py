@@ -1,12 +1,14 @@
-# from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
-# from jam.ring_vrf.ietf.ietf import IETF_VRF
-# from jam.ring_vrf.vrf import VRF
-# from jam.types import decodable_bit_array
-# from jam.types.header import Header
-# from jam.utils.constants import SIGNING_CONTEXTS
-# from jam.types.base.sequences.bytes.bit_array import BitArray
-# from jam.utils.json.codec import from_json
-# from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField
+import math
+
+from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
+from jam.ring_vrf.ietf.ietf import IETF_VRF
+from jam.ring_vrf.vrf import VRF
+from jam.types.base import decodable_bit_array
+from jam.types.header import Header
+from jam.utils.constants import SIGNING_CONTEXTS
+from jam.types.base.sequences.bytes.bit_array import BitArray
+from jam.utils.json.codec import from_json
+from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField
 
 # print("hii")
 #
@@ -76,26 +78,30 @@
 #
 # print("signature So <=> ", verifiable_random_quality())
 
-# value1 = "0xffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000"
+# value1 = "0x39dcfd35000000000000000000000000000000000000000000000000000000000000000000000000000000"
 # # print(AvailBitField.m()value).encode())
-# print(value1.)
 # @decodable_bit_array(length=341, bitorder="lsb")
 # class AvailBitField(BitArray):
 #     ...
 # print(AvailBitField(value1))
-# to fget this value we have to fund the al correspinding all achumks
+# # to fget this value we have to fund the al correspinding all achumks
+#
+#  # [Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0)]
+# # AvailBitField([Bit(1), Bit(0), Bit(0), Bit(1), Bit(1), Bit(1), Bit(0), Bit(0), Bit(0), Bit(0), Bit(1), Bit(1), Bit(1), Bit(0), Bit(1), Bit(1), Bit(1), Bit(0), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(0), Bit(1), Bit(0), Bit(1), Bit(1), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0)])
+#
+#
+# arr1 = [(1, 'a'), (2, 'b'), (3, 'c'), (4, 'd')]
+# result = []
+#
+# for i, (key, value) in enumerate(arr1):
+#     print(i, value)
+#     if value in ['b', 'c']:
+#         result.append(value)
+#     else:
+#         result.append(None)
+#
+# print(result)  # Output: [None, 'b', 'c', None]
 
- # [Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(1), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0), Bit(0)]
-
-
-arr1 = [(1, 'a'), (2, 'b'), (3, 'c'), (4, 'd')]
-result = []
-
-for i, (key, value) in enumerate(arr1):
-    print(i, value)
-    if value in ['b', 'c']:
-        result.append(value)
-    else:
-        result.append(None)
-
-print(result)  # Output: [None, 'b', 'c', None]
+# print(float(4.3))
+# print(math.ceil(4.3))
+# print(math.floor(4.3))

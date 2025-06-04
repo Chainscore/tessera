@@ -1,7 +1,9 @@
+from typing import Any
+
 from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types import Int, BitArray, Boolean
-from jam.types.base import bit
-from jam.types.base.sequences.bytes import bit_array
+from jam.types.base.integers import Int
+from jam.types.base.boolean import Boolean
+
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 from dataclasses import dataclass
@@ -18,6 +20,7 @@ class CE145Data(Codable, JsonSerde):
     validity: Boolean
     work_report_hash: WorkReportHash
     ed25519_signature: Ed25519Signature
+
 
 class JudgmentPublication(NetworkProtocol):
     """
@@ -39,3 +42,6 @@ class JudgmentPublication(NetworkProtocol):
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE145
+
+    def transmit(self, node: Node, data: CE145Data):
+        logger

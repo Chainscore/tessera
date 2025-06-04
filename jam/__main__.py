@@ -8,6 +8,7 @@ from jam.execution.pvm.code import Code
 
 from jam.network.peer import Peer
 from jam.network.node import Node
+from jam.network.utils.dummy_assurance import assurance_distribution
 from jam.network.utils.dummy_wpb import wp_producer
 
 from jam.consensus.bp_engine import BlockProducer
@@ -191,8 +192,8 @@ async def main(
                     tg.create_task(wp_producer(tsr_node, main_db))
                 else:
                     # tg.create_task(segment_shard_request(tsr_node, db))
-                    # tg.create_task(assurance_distribution(tsr_node, db))
-                    tg.create_task(block_producer.run())
+                    tg.create_task(assurance_distribution(tsr_node))
+                    # tg.create_task(block_producer.run())
 
 
         else:
