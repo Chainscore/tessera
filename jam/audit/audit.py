@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Set, Tuple
 
+from jam.types.base.sequences.bytes.byte_array import ByteArray64
 from jam.types.protocol.core import CoreIndex
 from rich.diagnose import report
 from sympy import floor
@@ -120,10 +121,10 @@ class AuditingAndJudgement:
             https://graypaper.fluffylabs.dev/#/9a08063/1e21011e3501?v=0.6.6
 
         """
-        tranches =  (CURRENT_TIME() - (SLOT_PERIOD * int(header.slot))) // AUDIT_PERIOD
-        return tranches
+        tranche_index =  (CURRENT_TIME() - (SLOT_PERIOD * int(header.slot))) // AUDIT_PERIOD
+        return tranche_index
 
-    def validator_statement(self, header: Header, state: Sigma):
+    def validator_statement(self, header: Header, state: Sigma)->List[ByteArray64]:
         """
         Eq. 17.9, 17.10, 17.11
 
@@ -132,10 +133,21 @@ class AuditingAndJudgement:
         singing_context = bytes(SIGNING_CONTEXTS["jam_announce"])
         #17.10
         tranches_index = self.generate_tranche_index(header, state) #n
-        # private_key = Ed25519PrivateKey.from_private_bytes(key)
-        # signature = private_key.sign(message)
-        # print("Signature (hex):", signature.hex())
-        # DOUBT: we will loop thru cores and get the encoded msg && will be having set of announcements
         vrs_list=self.vrs_func(header,state)
-        encode_core_work = (bytes(report.core_index.encode()) + bytes(Hash.blake2b(report.encode())))
-        statements = singing_context + bytes(tranches_index) + encode_core_work + bytes(Hash.blake2b(header.encode())) #S
+        vrs_bytes=bytes()
+        #Serializing the vrs_list -> x_n
+        for (core,wr) in vrs_list:
+            vrs_bytes+=core.encode()+ Hash.blake2b(wr.encode()).encode()
+
+        #17.9
+        #loop through the validators and signing the message with their ed25519publickey
+        announcement_statement = singing_context + bytes(tranches_index) + vrs_bytes + bytes(Hash.blake2b(header.encode())) #S
+        statement_set=[]
+        for validator in state.kappa:
+            private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
+            # Sign will give out a 64Byte Signature
+            signature = private_key.sign(announcement_statement)
+            # Explicitely modifying to the ByteArray64 format
+            statement_set.append(ByteArray64(signature))
+
+        return statement_set
