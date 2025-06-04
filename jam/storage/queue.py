@@ -1,16 +1,14 @@
-from dataclasses import dataclass
+from tsrkit_types.struct import structure
 from jam.storage.db.kv import KVStore
-from jam.types.base.bytes.bytes import Bytes
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from tsrkit_types.integers import Uint
 
-@dataclass
-@decodable_dataclass
-class StorageQueueMetadata(Codable):
+
+@structure
+class StorageQueueMetadata:
     """Metadata for the storage queue."""
-    head: Bytes # index of the head of the queue, first item to be popped
-    tail: Bytes # index of the tail of the queue, next item to be pushed
-    count: Bytes # number of items in the queue
+    head: Uint # index of the head of the queue, first item to be popped
+    tail: Uint # index of the tail of the queue, next item to be pushed
+    count: Uint # number of items in the queue
 
 class StorageQueue:
     """
@@ -34,15 +32,15 @@ class StorageQueue:
         """Get the metadata of the storage queue."""
         metadata = db.get(self.meta_key)
         if metadata is None:
-            return StorageQueueMetadata(head=Bytes(0), tail=Bytes(0), count=Bytes(0))
+            return StorageQueueMetadata(head=Uint(0), tail=Uint(0), count=Uint(0))
         return StorageQueueMetadata.decode_from(metadata)[0]
 
     def push(self, db: KVStore, value: bytes) -> int:
         """Push an item to the queue."""
         metadata = self.metadata(db)
         db.put(self.item_key(int(metadata.tail)), value)
-        metadata.tail = Bytes(int(metadata.tail) + 1)
-        metadata.count = Bytes(int(metadata.count) + 1)
+        metadata.tail = Uint(int(metadata.tail) + 1)
+        metadata.count = Uint(int(metadata.count) + 1)
         db.put(self.meta_key, metadata.encode())
         return int(metadata.tail)
     
@@ -59,7 +57,7 @@ class StorageQueue:
         """Remove an item from the queue by key."""
         metadata = self.metadata(db)
         db.delete(key)
-        metadata.count = Bytes(int(metadata.count) - 1)
+        metadata.count -= 1
         db.put(self.meta_key, metadata.encode())
 
     def remove_value(self, db: KVStore, value: bytes):
@@ -112,7 +110,7 @@ class StorageQueue:
         
         # iterate and push head pointer until a value is found
         while value is None:
-            metadata.head = Bytes(int(metadata.head) + 1)
+            metadata.head += 1
             value = db.get(self.item_key(int(metadata.head)))
             if metadata.head >= metadata.tail:
                 return None
@@ -120,7 +118,7 @@ class StorageQueue:
         db.delete(self.item_key(int(metadata.head)))
 
         # update metadata
-        metadata.head = Bytes(int(metadata.head) + 1)
-        metadata.count = Bytes(int(metadata.count) - 1)
+        metadata.head += 1
+        metadata.count -= 1
         db.put(self.meta_key, metadata.encode())
         return value

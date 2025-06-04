@@ -1,12 +1,12 @@
 from copy import deepcopy
 
-from jam.types.base.null import Null
-from jam.types.base.integers import Int
-from jam.types.base.sequences import ByteArray32
-from jam.types.protocol.core import OpaqueHash
+from tsrkit_types.null import Null
+from tsrkit_types.integers import Uint
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.sequences import Vector
+from jam.types.protocol.crypto import OpaqueHash
 
 from typing import Callable, TypeVar, Optional
-from jam.types.base import Vector, Option
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.merkle import MMR, OptionHash
 
@@ -23,7 +23,7 @@ class MMRFunctions:
     @staticmethod
     def _r(
         seq: Vector[T],
-        ind: Int,
+        ind: Uint,
         val: T
     ) -> Vector[T]:
         """
@@ -48,9 +48,9 @@ class MMRFunctions:
     def _p(
         self,
         mmr: MMR,
-        new_hash: ByteArray32,
-        index: Int,
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+        new_hash: Bytes[32],
+        index: Uint,
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> MMR:
         """
         Helper Function P Implementation as defined in Equation E.8
@@ -68,7 +68,7 @@ class MMRFunctions:
             Updated Mountain Merkle
         """
 
-        mmr_len = Int(len(mmr))
+        mmr_len = Uint(len(mmr))
 
         if index >= mmr_len:
             mmr.append(OptionHash(new_hash))
@@ -81,15 +81,15 @@ class MMRFunctions:
             mmr_dagger = self._r(mmr, index, OptionHash(Null))
             mmr_dash = MMR(mmr_dagger)
 
-            hash_dash = hash_fn(bytes(mmr[int(index)].get_value()) + bytes(new_hash))
+            hash_dash = hash_fn(bytes(mmr[Uint(index)].get_value()) + bytes(new_hash))
 
             return self._p(mmr_dash, hash_dash, index + 1, hash_fn)
 
     def append_fn(
         self,
         mmr: MMR,
-        new_hash: ByteArray32,
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+        new_hash: Bytes[32],
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> MMR:
         """
         Append Function Implementation as defined in Equation E.8
@@ -106,7 +106,7 @@ class MMRFunctions:
             Updated Mountain Merkle
         """
 
-        return self._p(mmr, new_hash, Int(0), hash_fn)
+        return self._p(mmr, new_hash, Uint(0), hash_fn)
 
     @staticmethod
     def encode_mmr(mmr: MMR) -> bytes:

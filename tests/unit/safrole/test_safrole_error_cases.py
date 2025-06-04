@@ -2,16 +2,15 @@ import pytest
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.state.eta import Eta
-from jam.types.base.integers.fixed import U32
+from tsrkit_types.integers import U32
 from jam.types.state.kappa import Kappa
 from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
-from jam.types.protocol.crypto import ByteArray32
+from tsrkit_types.bytes import Bytes
 from jam.utils.dummy.utils import create_dummy_bytes
-from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys, generate_ticket
-from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END, MAX_TICKETS_PER_EXTRINSIC
+from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
 
 
 @pytest.mark.skipif(True, reason="Ring commitment takes too long")
@@ -20,7 +19,7 @@ def test_slot_regression_error():
     # Create initial state at slot 10
     initial_state = create_state(
         tau=U32(10),
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -36,7 +35,7 @@ def test_slot_regression_error():
     
     # Verify that the transition raises an error
     with pytest.raises(SafroleError) as excinfo:
-        Safrole.transition(initial_state, regression_block, entropy=ByteArray32(create_dummy_bytes(32)))
+        Safrole.transition(initial_state, regression_block, entropy=Bytes[32](create_dummy_bytes(32)))
     
     assert excinfo.value.code == SafroleErrorCode.BAD_SLOT
 
@@ -47,7 +46,7 @@ def test_invalid_seal_signature():
     # Create initial state
     initial_state = create_state(
         tau=U32(5),
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -67,6 +66,6 @@ def test_invalid_seal_signature():
     # Verify that the transition raises an error
     # TODO: Uncomment this once the signatures are implemented
     # with pytest.raises(SafroleError) as excinfo:
-    Safrole.transition(initial_state, invalid_seal_block, ByteArray32(create_dummy_bytes(32)))
+    Safrole.transition(initial_state, invalid_seal_block, Bytes[32](create_dummy_bytes(32)))
     # TODO: Uncomment this once the signatures are implemented
     # assert excinfo.value.code == SafroleErrorCode.BAD_TICKET_PROOF

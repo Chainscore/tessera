@@ -1,10 +1,9 @@
 from jam.error import JamError
-from jam.types.base.enum import Enum, decodable_enum
+from tsrkit_types.enum import Enum
 
 class WorkPackageError(JamError):
     ...
 
-@decodable_enum
 class WorkPackagesErrorCode(Enum):
     BAD_EXPORT_ITEM = "bad_export_item"
     BAD_IMPORT_ITEM = "bad_import_item"

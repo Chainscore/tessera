@@ -1,7 +1,7 @@
 from jam.state.merkle.merkle import StateTrie as StateMerkle
 from jam.state.merkle.utils import ZERO_HASH
-from jam.state.utils.key_constructor import construct_state_key
-from jam.types.base.sequences.bytes import Bytes, ByteArray32
+from jam.state.utils import construct_state_key
+from tsrkit_types.bytes import Bytes
 
 
 def test_empty_merkelize():
@@ -72,9 +72,9 @@ def test_deterministic_merkelize():
     merkle2 = StateMerkle()
 
     state = {
-        construct_state_key(1): ByteArray32(bytes([10] * 32)),
-        construct_state_key(2): ByteArray32(bytes([20] * 32)),
-        construct_state_key(3): ByteArray32(bytes([30] * 32)),
+        construct_state_key(1): Bytes[32](bytes([10] * 32)),
+        construct_state_key(2): Bytes[32](bytes([20] * 32)),
+        construct_state_key(3): Bytes[32](bytes([30] * 32)),
     }
 
     # Insert in different orders
@@ -92,9 +92,9 @@ def test_odd_number_items_merkelize():
     """Test merkelizing odd number of items promotes last node correctly"""
     merkle = StateMerkle()
     state = {
-        construct_state_key(1): ByteArray32(bytes([10] * 32)),
-        construct_state_key(2): ByteArray32(bytes([20] * 32)),
-        construct_state_key(3): ByteArray32(bytes([30] * 32)),
+        construct_state_key(1): Bytes[32](bytes([10] * 32)),
+        construct_state_key(2): Bytes[32](bytes([20] * 32)),
+        construct_state_key(3): Bytes[32](bytes([30] * 32)),
     }
 
     root, _ = merkle.merkelize(state)

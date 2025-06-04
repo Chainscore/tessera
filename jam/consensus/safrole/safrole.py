@@ -5,12 +5,11 @@ from jam.types.state.eta import Eta
 from jam.types.state.kappa import Kappa
 from jam.types.state.lambda_ import Lambda_
 from jam.types.state.sigma import Sigma
-from jam.types.base.integers.fixed import U64, U32
-from jam.types.base.null import Null
+from tsrkit_types.integers import U64, U32
+from tsrkit_types.null import Null
 from jam.types.header import OptionalEpochMark, OptionalTicketsMark, TicketsMark
 from jam.types.state.gamma import GammaS, GammaSTickets
-from jam.types.base.bytes.byte_array import ByteArray32
-from jam.types.base.bytes.bytes import Bytes
+from tsrkit_types.bytes import Bytes
 from jam.types.block import Block
 from jam.utils.constants import (
     EPOCH_LENGTH,
@@ -79,14 +78,14 @@ class Safrole:
         return fxd_col_cs
 
     @staticmethod
-    def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
+    def vrf_output(signature: BandersnatchVrfSignature) -> Bytes[32]:
         if int(signature) == 0:
-            return ByteArray32(signature[:32])
+            return Bytes[32](signature[:32])
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        return ByteArray32(vrf.ecvrf_proof_to_hash(bytes(signature))[:32])
+        return Bytes[32](vrf.ecvrf_proof_to_hash(bytes(signature))[:32])
 
     @staticmethod
-    def transition(state: Sigma, block: Block, entropy: ByteArray32) -> Sigma:
+    def transition(state: Sigma, block: Block, entropy: Bytes[32]) -> Sigma:
         pre_tau = state.tau
         # 1. Timekeeping
         if block.header.slot > state.tau:
@@ -135,7 +134,7 @@ class Safrole:
             for k in state.iota:
                 if k.ed25519 in state.psi.offenders:
                     # Offender found, replace with default ValidatorData
-                    filtered_validators.append(ValidatorData(bandersnatch=ByteArray32(bytes(32)), ed25519=ByteArray32(bytes(32)), bls=k.bls, metadata=k.metadata))
+                    filtered_validators.append(ValidatorData(bandersnatch=Bytes[32](bytes(32)), ed25519=Bytes[32](bytes(32)), bls=k.bls, metadata=k.metadata))
                 else:
                     # Not an offender, keep the original validator data
                     filtered_validators.append(k)

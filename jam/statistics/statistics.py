@@ -1,17 +1,13 @@
 import math
-from typing import Dict, List
+from typing import List
 
-from jam.types.base import Int
 from jam.types.state.pi import (
-    AllServiceStats,
-    ServiceStat, AllValidatorStats, AllCoreStats,
-)
-from jam.types.base.integers.fixed import U32
+	ServiceStat, AllValidatorStats, )
 from jam.types.state.sigma import Sigma
 from jam.types.block import Block
-from jam.types.protocol.core import Gas, ServiceId
 from jam.types.work.report import WorkReport
 from jam.utils.constants import EPOCH_LENGTH, SEGMENT_SIZE
+from tsrkit_types.integers import Uint
 
 
 class Statistics:
@@ -76,7 +72,7 @@ class Statistics:
         for report in available_wrs:
             if report is not None:
                 core_index = report.core_index
-                pi_core[int(core_index)].da_load = Int(report.package_spec.length) + Int(
+                pi_core[int(core_index)].da_load = Uint(report.package_spec.length) + Uint(
                     SEGMENT_SIZE
                     * math.ceil(report.package_spec.exports_count * 65 / 64)
                 )

@@ -1,13 +1,10 @@
-from dataclasses import dataclass
 import json
-from jam.types.base.composite.option import Option, decodable_option
-from jam.types.base.sequences.array import Array, decodable_array
-from jam.types.base import Vector, decodable_vector
+from tsrkit_types.option import Option
+from tsrkit_types.sequences import TypedArray, TypedVector
+from tsrkit_types.struct import structure
 from jam.types.extrinsics.tickets import TicketBody
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.epoch import EpochMark
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.types.protocol.crypto import (
     BandersnatchVrfSignature,
     Ed25519Public,
@@ -17,34 +14,19 @@ from jam.types.protocol.crypto import (
     OpaqueHash,
 )
 from jam.utils.constants import EPOCH_LENGTH
-from jam.utils.json.serde import JsonSerde
 
 """Fixed-length array of ticket bodies."""
+TicketsMark = TypedArray[TicketBody, EPOCH_LENGTH]
+
+OffendersMark = TypedVector[Ed25519Public]
+
+OptionalEpochMark = Option[EpochMark]
+
+OptionalTicketsMark = Option[TicketsMark]
 
 
-@decodable_array(length=EPOCH_LENGTH, element_type=TicketBody)
-class TicketsMark(Array[TicketBody]):
-    ...
-
-
-@decodable_vector(element_type=Ed25519Public)
-class OffendersMark(Vector[Ed25519Public]):
-    ...
-
-
-@decodable_option(EpochMark)
-class OptionalEpochMark(Option):
-    ...
-
-
-@decodable_option(TicketsMark)
-class OptionalTicketsMark(Option):
-    ...
-
-
-@decodable_dataclass
-@dataclass
-class Header(Codable, JsonSerde):
+@structure
+class Header:
     """Block header structure."""
 
     parent: HeaderHash

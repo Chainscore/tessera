@@ -1,48 +1,36 @@
-from dataclasses import dataclass
-
-from jam.types.base.sequences.vector import decodable_vector, Vector
-from jam.types.base.integers.fixed import U16, U8
-from jam.types.base.sequences.array import Array, decodable_array
-from jam.types.base.bytes.byte_array import ByteArray, decodable_bytearray
-from jam.utils.byte_utils import ByteUtils
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from overrides import overrides
+from tsrkit_types.sequences import TypedVector, TypedArray
+from tsrkit_types.integers import Uint, U8
+from tsrkit_types.struct import structure
 from jam.types.protocol.crypto import BandersnatchPublic, Ed25519Public, BlsPublic
 from jam.utils.constants import VALIDATOR_COUNT
-from jam.utils.json.serde import JsonSerde
+from tsrkit_types.bytes import Bytes
 
-@decodable_array(length=4, element_type=U8)
-class IPAddress(Array): ...
+IPAddress = TypedArray[U8, 4]
 
-@decodable_bytearray(122)
-class ValidatorName(ByteArray):
-    def __init__(self, name: str):
-        if isinstance(name, str):
-            super().__init__(ByteUtils.to_bytes(name.encode("utf-8") + bytes(122 - len(name))))
-        else:
-            super().__init__(name)
-
-    @staticmethod
-    def from_json(json: str) -> "ValidatorName":
-        return ValidatorName(json)
-
-    # def __repr__(self) -> str:
-        # return self.decode("utf-8")
-
-
-@decodable_dataclass
-@dataclass
-class ValidatorMetadata(Codable, JsonSerde):
+@structure
+class ValidatorMetadata:
     """Validator metadata structure Byte-Array(128)"""
     # NOTE - Could define fns to parse metadata into a more useful format
-    name: ValidatorName  # 122 Bytes
+    name: Bytes[10]     # 10 Bytes
+    protocol: Uint[16]  # 2 Bytes
     host: IPAddress     # 4 Bytes
-    port: U16           # 2 Bytes
+    port: Uint[16]      # 2 Bytes
+
+    @property
+    def address(self) -> str:
+        res = "http://" if self.protocol == 2**16 - 1 else "https://"
+        res += ".".join([str(ip) for ip in self.host])
+        res += f":{int(self.port)}"
+        return res
+
+    @classmethod
+    def from_json(cls, hex_data) -> "ValidatorMetadata":
+        return cls.decode(Bytes.from_json(hex_data)[:18])
 
 
-@decodable_dataclass
-@dataclass
-class ValidatorData(Codable, JsonSerde):
+@structure
+class ValidatorData:
     """Validator data structure."""
 
     bandersnatch: BandersnatchPublic
@@ -52,24 +40,17 @@ class ValidatorData(Codable, JsonSerde):
 
 
 """Fixed-size array of validator data with size VALIDATOR_COUNT."""
-@decodable_array(length=VALIDATOR_COUNT, element_type=ValidatorData)
-class ValidatorsData(Array[ValidatorData]):
-    ...
+ValidatorsData = TypedArray[ValidatorData, VALIDATOR_COUNT]
 
-@decodable_vector(element_type=ValidatorData)
-class ValidatorVector(Vector[ValidatorData]):
-    ...
+ValidatorVector = TypedVector[ValidatorData]
 
 
-@decodable_dataclass
-@dataclass()
-class EpochValidator(Codable, JsonSerde):
+@structure
+class EpochValidator:
     """Validator data structure using in epoch marker."""
 
     bandersnatch: BandersnatchPublic
     ed25519: Ed25519Public
 
 
-@decodable_vector(element_type=EpochValidator)
-class EpochValidators(Vector[EpochValidator]):
-    ...
+EpochValidators = TypedVector[EpochValidator]

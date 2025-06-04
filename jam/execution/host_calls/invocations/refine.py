@@ -4,7 +4,7 @@ from jam.execution.host_calls.invocations.functions.refine_fns import RefineFunc
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from jam.execution.pvm.status import OUT_OF_GAS, PANIC
 from jam.execution.utils import decode_code_hash
-from jam.types.base import U16
+from tsrkit_types.integers import Uint
 from jam.types.protocol.core import CoreIndex, ProgramCounter
 from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.work.package import WorkPackage
@@ -14,7 +14,7 @@ from jam.utils.constants import IS_AUTHORIZED_GAS
 
 class PsiR(InvocationProtocol):
     def __init__(self, item_index: int, p: WorkPackage, auth_trace: bytes, i_segments: [[bytes]], e_offset: int):
-        self.item_index = U16(item_index)
+        self.item_index = Uint[16](item_index)
         self.work_package = p
         self.auth_trace = auth_trace
         self.i_segments = i_segments

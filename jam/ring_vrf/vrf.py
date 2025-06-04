@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Protocol, Tuple, Type, TypeVar
+from typing import List, Protocol, Tuple, Type, TypeVar
 
 from jam.types.protocol.crypto import Hash
 from jam.utils.conv_helper import ConversionHelper

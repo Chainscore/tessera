@@ -1,21 +1,18 @@
+from tsrkit_types import Bytes
 
 from jam.state.merkle.merkle import StateTrie
-
 
 def visualize_trie(trie: StateTrie) -> str:
     """Visualize the trie as a tree structure in ASCII art."""
     result = []
     
-    def format_hex(hex_str: str) -> str:
+    def format_hex(hex_str: Bytes) -> str:
         """Format a hex string for display (truncate if too long)."""
-        hex_str=str(hex_str)
-        if hex_str == 'None':
+        if hex_str == None:
             return 'None'
-        if hex_str == '0x0000000000000000000000000000000000000000000000000000000000000000':
-            return '0...0'  # Special case for all zeros
-        return hex_str[2:10] + '...' + hex_str[-4:]
+        return hex_str.hex()[2:10] + '...' + hex_str.hex()[-4:]
     
-    def traverse(node_id: str, prefix: str, is_last: bool, depth: int = 0) -> None:
+    def traverse(node_id: Bytes, prefix: str, is_last: bool, depth: int = 0) -> None:
         """Recursively traverse the trie to build the visualization."""
         if node_id not in trie.nodes and node_id != '0x0000000000000000000000000000000000000000000000000000000000000000':
             result.append(f"{prefix}{'└── ' if is_last else '├── '}{format_hex(node_id)} (leaf)")

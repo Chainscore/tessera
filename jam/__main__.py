@@ -1,5 +1,8 @@
 import asyncio
 import json
+
+from tsrkit_types.bytes import Bytes
+
 from jam.config.logging import setup_logging, logger
 from jam.config.chainspec import chain_config
 from jam.storage.db.kv import KVStore
@@ -10,7 +13,7 @@ from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
 from jam.types.state.sigma import Sigma
 from jam.state.state import setup_state
-from jam.types.base.integers.fixed import U16, U8
+from tsrkit_types.integers import U16, U8, Uint
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic
 from jam.types.block import Block
 from jam.types.header import Header
@@ -18,7 +21,6 @@ from jam.types.protocol.validators import (
     IPAddress,
     ValidatorData,
     ValidatorMetadata,
-    ValidatorName,
     ValidatorsData,
 )
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -76,7 +78,8 @@ async def main(
             ed25519_public,
             BlsPublic(bytes(144)),
             ValidatorMetadata(
-                name=ValidatorName(name),
+                name=Bytes[10](bytes(10)),
+                protocol=Uint[16](2 ** 16),
                 host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
                 port=U16(port),
             ),

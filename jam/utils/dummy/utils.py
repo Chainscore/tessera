@@ -1,18 +1,18 @@
 import random
 
-from jam.types.base.bytes.byte_array import ByteArray32, ByteArray64
+from tsrkit_types.bytes import Bytes
 
-def create_dummy_bytes32(seed: int = 0) -> ByteArray32:
+def create_dummy_bytes32(seed: int = 0) -> Bytes[32]:
     """Create dummy 32 byte value"""
     if seed > 0:
         random.seed(seed)
-    return ByteArray32(bytes([random.randint(0, 255) for _ in range(32)]))
+    return Bytes[32](bytes([random.randint(0, 255) for _ in range(32)]))
 
-def create_dummy_bytes64(seed: int = 0) -> ByteArray64:
+def create_dummy_bytes64(seed: int = 0) -> Bytes[64]:
     """Create dummy 32 byte value"""
     if seed > 0:
         random.seed(seed)
-    return ByteArray32(bytes([random.randint(0, 255) for _ in range(64)]))
+    return Bytes[64](bytes([random.randint(0, 255) for _ in range(64)]))
 
 def create_dummy_bytes(length: int, seed: int = 0) -> bytes:
     """Create dummy bytes of given length"""

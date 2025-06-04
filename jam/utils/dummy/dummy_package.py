@@ -1,4 +1,7 @@
-from jam.types.base import Bytes, U32, Int, Vector
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U32, Uint
+from tsrkit_types.sequences import Vector
+
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import WorkReportHash
 
@@ -52,7 +55,7 @@ def create_dummy_core_segment() -> CoreSegment:
 
     return CoreSegment (
         core_index=CoreIndex(0),
-        length=Int(1),
+        length=Uint(1),
         segment_root_map=segment_root_map
     )
 

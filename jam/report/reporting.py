@@ -1,13 +1,11 @@
 from typing import Dict, Set, List
 
 from jam.merklization import MMRFunctions
-from jam.types.base import decodable_vector, U32, Vector, Bytes, Null, Int
 from jam.types.protocol.core import CoreIndex
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
 from jam.types.block import Block
-import  dataclasses
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.work.report import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, SIGNING_CONTEXTS, LOOKUP_ANCHOR_MAX_AGE
@@ -17,10 +15,9 @@ from math import floor
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 from jam.report.guarantee_assignment import guarantor_assignment
+from tsrkit_types.integers import Uint
+from tsrkit_types.null import Null
 
-
-@decodable_vector(element_type=U32)
-class U32Vector(Vector): ...
 
 class Reporting:
 
@@ -241,7 +238,7 @@ class Reporting:
         if len(wp_hash_set) != len(all_reports):
             raise ReportingError(
                 ReportingErrorCode.DUPLICATE_PACKAGE,
-                f"Duplicate Work Package detected"
+                "Duplicate Work Package detected"
             )
 
         pi_core = AllCoreStats.empty()
@@ -258,26 +255,26 @@ class Reporting:
             )
             core_index = report.core_index
             for result in report.results:
-                pi_core[core_index].imports += Int(result.refine_load.imports)
-                pi_core[core_index].exports += Int(result.refine_load.exports)
-                pi_core[core_index].gas_used += Int(result.refine_load.gas_used)
-                pi_core[core_index].extrinsic_count += Int(result.refine_load.extrinsic_count)
-                pi_core[core_index].extrinsic_size += Int(result.refine_load.extrinsic_size)
-            pi_core[core_index].bundle_size = Int(report.package_spec.length)
+                pi_core[core_index].imports += Uint(result.refine_load.imports)
+                pi_core[core_index].exports += Uint(result.refine_load.exports)
+                pi_core[core_index].gas_used += Uint(result.refine_load.gas_used)
+                pi_core[core_index].extrinsic_count += Uint(result.refine_load.extrinsic_count)
+                pi_core[core_index].extrinsic_size += Uint(result.refine_load.extrinsic_size)
+            pi_core[core_index].bundle_size = Uint(report.package_spec.length)
 
             for work_result in report.results:
                 if work_result.service_id not in pi_service:
                     pi_service[work_result.service_id] = ServiceStat.empty()
                 pi_service[work_result.service_id].refinement_count += 1
-                pi_service[work_result.service_id].refinement_gas_used += Int(
+                pi_service[work_result.service_id].refinement_gas_used += Uint(
                     work_result.refine_load.gas_used
                 )
-                pi_service[work_result.service_id].imports += Int(work_result.refine_load.imports)
-                pi_service[work_result.service_id].exports += Int(work_result.refine_load.exports)
-                pi_service[work_result.service_id].extrinsic_count += Int(
+                pi_service[work_result.service_id].imports += Uint(work_result.refine_load.imports)
+                pi_service[work_result.service_id].exports += Uint(work_result.refine_load.exports)
+                pi_service[work_result.service_id].extrinsic_count += Uint(
                     work_result.refine_load.extrinsic_count
                 )
-                pi_service[work_result.service_id].extrinsic_size += Int(
+                pi_service[work_result.service_id].extrinsic_size += Uint(
                     work_result.refine_load.extrinsic_size
                 )
 

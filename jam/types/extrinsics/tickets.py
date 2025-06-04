@@ -1,35 +1,28 @@
 from dataclasses import dataclass
-from jam.types.base.integers.fixed import U8
-from jam.types.base.sequences.array import Array, decodable_array
-from jam.types.base import Vector
-from jam.types.base.sequences.vector import decodable_vector
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from tsrkit_types.integers import Uint
+from tsrkit_types.sequences import TypedArray, TypedVector, TypedBoundedVector
+from tsrkit_types.struct import structure
 from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingVrfSignature,
     OpaqueHash,
 )
 from jam.utils.constants import EPOCH_LENGTH, MAX_TICKETS_PER_EXTRINSIC
-from jam.utils.json.serde import JsonSerde
 from jam.types.protocol.crypto import Hash
 
 TicketId = OpaqueHash
-TicketAttempt = U8
+TicketAttempt = Uint[8]
 
-
-@decodable_dataclass
-@dataclass
-class TicketEnvelope(Codable, JsonSerde):
+@structure
+class TicketEnvelope:
     """Ticket entry structure."""
 
     attempt: TicketAttempt
     signature: BandersnatchRingVrfSignature
 
 
-@decodable_dataclass
-@dataclass
-class TicketBody(Codable, JsonSerde):
+@structure
+class TicketBody:
     """Ticket body structure."""
 
     id: TicketId  # This is the VRF output of TicketEnvelope.signature https://graypaper.fluffylabs.dev/#/5f542d7/0f84000fbd00
@@ -39,16 +32,8 @@ class TicketBody(Codable, JsonSerde):
         return int.from_bytes(bytes(Hash.blake2b(bytearray(bytes(self.id)) + bytes(self.attempt))))
 
 
-@decodable_array(length=EPOCH_LENGTH, element_type=TicketBody)
-class TicketsAccumulator(Array[TicketBody]):
-    ...
+TicketsAccumulator = TypedArray[TicketBody, EPOCH_LENGTH]
 
+KeysAccumulator = TypedArray[BandersnatchPublic, EPOCH_LENGTH]
 
-@decodable_array(length=EPOCH_LENGTH, element_type=BandersnatchPublic)
-class KeysAccumulator(Array[BandersnatchPublic]):
-    ...
-
-
-@decodable_vector(element_type=TicketEnvelope, max_length=MAX_TICKETS_PER_EXTRINSIC)
-class TicketsExtrinsic(Vector[TicketEnvelope]):
-    ...
+TicketsExtrinsic = TypedBoundedVector[TicketEnvelope, 0, MAX_TICKETS_PER_EXTRINSIC]

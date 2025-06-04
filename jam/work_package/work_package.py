@@ -1,13 +1,6 @@
 from math import ceil
 from typing import Tuple
 
-from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray64
-from jam.types.base.sequences.vector import Vector
-
-from jam.types.base.integers.general import Int
-from jam.types.base.integers.fixed import U8, U16, U64
-
-
 from jam.types.work.item import WorkItem
 from jam.types.work.package import  WorkPackage
 from jam.types.work.segment import Segments, Segment, MultiSegments
@@ -31,6 +24,10 @@ from jam.utils.constants import (
     REFINE_GAS,
     ACCUMULATION_GAS, MAX_ENCODED_WORK_PACKAGE_SIZE
 )
+
+from tsrkit_types.sequences import TypedVector, Vector
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import Uint
 
 from jam.types.protocol.core import SegmentRoot, CoreIndex, Gas
 from jam.types.protocol.crypto import OpaqueHash, Hash
@@ -142,7 +139,7 @@ class WorkPackageProcessing:
             return False
 
     @staticmethod
-    def fetch_extrinsics(w: WorkItem) -> Vector[Bytes]:
+    def fetch_extrinsics(w: WorkItem) -> TypedVector[Bytes]:
         """
         Function X defined in Eqn 14.14
         Takes Work Item & retrieves its required extrinsic data
@@ -154,7 +151,7 @@ class WorkPackageProcessing:
         Returns:
            Extrinsic data (Vector[Bytes])
         """
-        data: Vector[Bytes] = Vector([])
+        data = TypedVector[Bytes]([])
 
         # <!-- Currently remains unclear -->
         # TODO: Fetch extrinsic from db / some pre-sent data whose hash and length are present in w.extrinsic
@@ -225,7 +222,7 @@ class WorkPackageProcessing:
 
         return segments
 
-    def fetch_justifications(self, w: WorkItem) -> Vector[Vector[OpaqueHash]]:
+    def fetch_justifications(self, w: WorkItem) -> TypedVector[TypedVector[OpaqueHash]]:
         """
         Function J defined in Eqn 14.14
         Takes work item and compiles justifications of import segments data
@@ -237,14 +234,14 @@ class WorkPackageProcessing:
         Returns:
             Length prefixed justification
         """
-        pages: Vector[Vector[OpaqueHash]] = Vector([])
+        pages: TypedVector[TypedVector[OpaqueHash]] = TypedVector[TypedVector[OpaqueHash]]([])
         segments: Segments = Segments([])
         merkle_root = self.merkle.cd_merkle_fn(segments)
 
         # TODO: Compile proper justifications
         for (r, n) in w.import_segments:
             if self.segment_root_lookup(r) == merkle_root:
-                pages.append(self.merkle.merkle_path_fn(segments, Int(0), n))
+                pages.append(self.merkle.merkle_path_fn(segments, Uint(0), n))
         return pages
 
     def generate_wr(self, p: WorkPackage, c: CoreIndex):
@@ -287,9 +284,9 @@ class WorkPackageProcessing:
             # r, e, u = PsiR(int(c), p, o, self.fetch_imports(w), l)
 
             # TODO: Fix later on receiving more clarity
-            # r, e, u = PsiR(int(c), p, o, self.segments, l)
+            r, e, u = None, None, None # PsiR(int(c), p, o, self.segments, l)
 
-            segment = Segment([Byte(0)] * 4104)
+            segment = Segment([0] * 4104)
             segment_length = w.export_count
             zero_segment = Segments([segment for _ in range(segment_length)])
 
@@ -317,8 +314,13 @@ class WorkPackageProcessing:
 
         h = Hash.blake2b(p.encode())
 
-        wp_bundle = WorkPackageBundle(package=p, extrinsics=Vector([]), import_segments=Vector([]), justifications=create_dummy_bytes32())
-        specs = self.availability_specifier(package_hash=h, wp_bundle=wp_bundle.encode(), export_segments=Vector([]))
+        wp_bundle = WorkPackageBundle(
+            package=p, 
+            extrinsics=TypedVector(TypedVector(Bytes(0))), 
+            import_segments=TypedVector([]), 
+            justifications=create_dummy_bytes32()
+        )
+        specs = self.availability_specifier(package_hash=h, wp_bundle=wp_bundle.encode(), export_segments=TypedVector([]))
 
         # segment-root -> erasure-root , assurer
         # specs.exports_root -> specs.erasure_root, assurer, specs.hash
@@ -362,7 +364,7 @@ class WorkPackageProcessing:
         Returns:
             Work Digest
         """
-        extrinsic_size: U64 = 0
+        extrinsic_size = Uint[64](0)
         for i in item.extrinsic:
             extrinsic_size = extrinsic_size + i.len
 
@@ -375,18 +377,18 @@ class WorkPackageProcessing:
         #
         # return l
 
-        imports_count: U16 = U16(len(item.import_segments))
-        exports_count: U16 = U16(item.export_count)
-        extrinsic_count: U8 = U8(len(item.extrinsic))
+        imports_count = Uint[16](len(item.import_segments))
+        exports_count = Uint[16](item.export_count)
+        extrinsic_count = Uint[8](len(item.extrinsic))
 
         refine_load = RefineLoad(gas_used=gas, imports=imports_count, exports=exports_count,
-                                 extrinsic_count=extrinsic_count, extrinsic_size=extrinsic_size)
+                                extrinsic_count=extrinsic_count, extrinsic_size=extrinsic_size)
 
         return WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=payload_hash,
                           accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)
 
     @staticmethod
-    def zero_padding(value: Bytes, n: Int):
+    def zero_padding(value: Bytes, n: Uint):
         """
         Zero Padding function P defined in Eqn 14.17
         Ensures that the length of individual byte array becomes a multiple of a given integer n.
@@ -404,7 +406,7 @@ class WorkPackageProcessing:
         padding = n - (((length + n - 1) % n) + 1)
 
         for i in range(padding):
-            value.append(Byte(0))
+            value.append(0)
 
         return value
 
@@ -424,8 +426,8 @@ class WorkPackageProcessing:
 
         pages: Segments = Segments([])
         for x in range(page_count):
-            path = self.merkle.merkle_path_fn(values=segments, size=Int(6), index=Int(x))
-            leaf = self.merkle.leaf_page_fn(values=segments, size=Int(6), index=Int(x))
+            path = self.merkle.merkle_path_fn(values=segments, size=Uint(6), index=Uint(x))
+            leaf = self.merkle.leaf_page_fn(values=segments, size=Uint(6), index=Uint(x))
             merkle_path = bytes(len(path)) + path.encode()
             leaf =  bytes(len(leaf)) + leaf.encode()
 
@@ -458,7 +460,7 @@ class WorkPackageProcessing:
         padded_wp_bundle = self.zero_padding(wp_bundle, BASIC_ERASURE_SIZE)
         encoded_wp_bundle = erasure_codec.encode(padded_wp_bundle)
 
-        b_shards: Vector[OpaqueHash] = Vector([])
+        b_shards = TypedVector[OpaqueHash]([])
         for item in encoded_wp_bundle:
             b_shards.append(Hash.blake2b(item.encode()))
 
@@ -481,13 +483,13 @@ class WorkPackageProcessing:
         shards: Vector[Vector[OpaqueHash]] = Vector([b_shards, s_shards])
         transposed_shards = Vector([Vector([shards[j][i] for j in range(len(shards))]) for i in range(len(shards[0]))])
 
-        clubbed_shards: Vector[ByteArray64] = Vector([])
+        clubbed_shards: TypedVector[Bytes[64]] = Vector([])
 
         for item in transposed_shards:
             x_cap = b""
             for i in item:
                 x_cap += bytes(i)
-            clubbed_shards.append(ByteArray64(x_cap))
+            clubbed_shards.append(Bytes[64](x_cap))
 
         u = self.merkle.wb_merkle_fn(clubbed_shards)
 

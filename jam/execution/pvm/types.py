@@ -1,4 +1,4 @@
-from jam.types.base.enum import Enum
+from tsrkit_types.enum import Enum
 
 class Accessibility(Enum):
     NULL = "Non-Accessible"

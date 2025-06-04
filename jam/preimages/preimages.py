@@ -1,4 +1,3 @@
-import dataclasses
 from copy import deepcopy
 
 from jam.preimages.errors import PreimageError, PreimageErrorEnum

@@ -1,12 +1,9 @@
+from tsrkit_types.enum import Enum
 from jam.error import JamError
-from jam.types.base.enum import Enum, decodable_enum
-
 
 class SafroleError(JamError):
     ...
 
-
-@decodable_enum
 class SafroleErrorCode(Enum):
     """Error codes for the Safrole consensus protocol."""
 
