@@ -41,7 +41,7 @@ from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
 )
-from jam.types.work.report import SegmentRootLookup
+from jam.types.work import SegmentRootLookup
 from jam.types.protocol.core import (
     SegmentRoot,
     WorkPackageHash,
@@ -50,7 +50,7 @@ from jam.types.protocol.core import (
     ServiceId,
 )
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata, IPAddress
-from jam.types.work.report import WorkDependencies
+from jam.types.work import WorkDependencies
 from jam.utils.constants import (
     CORE_COUNT,
     EPOCH_LENGTH,

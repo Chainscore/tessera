@@ -2,7 +2,7 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
-from jam.types.work.report import WorkReport
+from jam.types.work import WorkReport
 from tsrkit_types.struct import structure
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 from jam.storage.db.kv import KVStore
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types.protocol.crypto import Hash
-from jam.types.work.package import WorkPackage
+from jam.types.work import WorkPackage
 
 
 def test_ext_encode(db_path):

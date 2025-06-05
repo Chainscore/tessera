@@ -7,7 +7,7 @@ from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
 from jam.types.block import Block
 from jam.types.protocol.crypto import Hash, OpaqueHash
-from jam.types.work.report import WorkReport
+from jam.types.work import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, SIGNING_CONTEXTS, LOOKUP_ANCHOR_MAX_AGE
 from jam.report.error import ReportingError, ReportingErrorCode
 from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, MAX_WORK_REPORT_SIZE
@@ -150,7 +150,7 @@ class Reporting:
 
         recent_exports_roots.update({report.package_spec.hash: report.package_spec.exports_root for report in all_reports})
 
-        rho_package_hashes = [pending_wr.get_value().report.package_spec.hash if pending_wr.is_some() else None for pending_wr in state.rho]
+        rho_package_hashes = [pending_wr.unwrap().report.package_spec.hash if pending_wr != None else None for pending_wr in state.rho]
         for p in wp_hash_set:
             # Ensure this WP is not previously executed - checking Beta, Nu, Rho, Xi
             # 11.38

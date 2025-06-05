@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from tsrkit_types.integers import Uint
 from tsrkit_types.sequences import TypedArray, TypedVector, TypedBoundedVector
 from tsrkit_types.struct import structure

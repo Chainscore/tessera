@@ -12,7 +12,7 @@ from jam.state.state import setup_state
 from jam.types.protocol.core import Balance, Gas, CoreIndex, BlobLength, ServiceId
 from jam.types.protocol.crypto import Hash
 from jam.types.state.delta import Ao, Ai, LookupTable, Timestamps
-from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs
+from jam.types.work import WorkItem, ImportSpecs, ExtrinsicSpecs
 from jam.utils.dummy.dummy_package import create_dummy_package
 
 

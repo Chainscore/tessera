@@ -79,7 +79,7 @@ class Safrole:
 
     @staticmethod
     def vrf_output(signature: BandersnatchVrfSignature) -> Bytes[32]:
-        if int(signature) == 0:
+        if int.from_bytes(signature) == 0:
             return Bytes[32](signature[:32])
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
         return Bytes[32](vrf.ecvrf_proof_to_hash(bytes(signature))[:32])
@@ -128,7 +128,7 @@ class Safrole:
         # 4. Epoch transition
         if new_epoch > old_epoch:
             # 4.1. Rotate validators
-            state.lambda_ = Lambda_(state.kappa.value)
+            state.lambda_ = Lambda_(state.kappa)
             state.kappa = Kappa(gamma.k)
             filtered_validators=[]
             for k in state.iota:
@@ -155,7 +155,7 @@ class Safrole:
             if len(gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
                 # If we have sufficient tickets accumulated,
                 # use outside-in sequencer and place the ticket in gamma.s
-                gamma.s = GammaS(GammaSTickets(Safrole.outside_in(gamma.a.value)))
+                gamma.s = GammaS(GammaSTickets(Safrole.outside_in(gamma.a)))
             # Else use the fallback mechanism
             else:
                 # Else fallback: use bandersnatch keys
@@ -171,7 +171,7 @@ class Safrole:
 
         # 2. Accumulate entropy
         # Use entropy coming from vrf output of Hv once we have valid seals generated
-        if int(entropy) > 0:
+        if int.from_bytes(entropy) > 0:
             eta = state.eta
             eta[0] = Hash.blake2b(
                 bytes(state.eta[0]) + bytes(entropy)
@@ -202,7 +202,7 @@ class Safrole:
 
         def sort_fn(ticket: TicketEnvelope) -> int:
             # Take VRF output of the signature and sort by it
-            return Safrole.vrf_output(ticket.signature).to_int()
+            return int.from_bytes(Safrole.vrf_output(ticket.signature))
 
         tickets_sorted = tickets.copy()
         tickets_sorted.sort(key=sort_fn)
@@ -288,7 +288,7 @@ class Safrole:
             (state.tau % EPOCH_LENGTH > TICKET_SUBMISSION_END and TICKET_SUBMISSION_END <= slot % EPOCH_LENGTH) and
             (slot // EPOCH_LENGTH == state.tau // EPOCH_LENGTH)
         ):
-            return OptionalTicketsMark(TicketsMark(Safrole.outside_in(state.gamma.a.value)))
+            return OptionalTicketsMark(TicketsMark(Safrole.outside_in(state.gamma.a)))
         else:
             return OptionalTicketsMark(Null)
 

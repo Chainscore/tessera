@@ -107,7 +107,7 @@ class Program(Codable):
         total_size += 1
         total_size += Uint(len(self.instruction_set)).encode_size()
         for jump in self.jump_table:
-            total_size += Uint[self.z](jump).encode_size()
+            total_size += Uint[self.z * 8](jump).encode_size()
         for instruction in self.instruction_set:
             total_size += instruction.encode_size()
         total_size += Bits[len(self.instruction_set)](self.offset_bitmask).encode_size()
@@ -132,7 +132,7 @@ class Program(Codable):
         )
         current_offset += size
         for jump in self.jump_table:
-            size = Uint[self.z](jump).encode_into(buffer, current_offset)
+            size = Uint[self.z * 8](jump).encode_into(buffer, current_offset)
             current_offset += size
         for instruction in self.instruction_set:
             size = instruction.encode_into(buffer, current_offset)
@@ -143,9 +143,9 @@ class Program(Codable):
         current_offset += size
         return current_offset - offset
 
-    @staticmethod
+    @classmethod
     def decode_from(
-        buffer: Union[bytes, bytearray], offset: int = 0
+        cls, buffer: Union[bytes, bytearray], offset: int = 0
     ) -> Tuple["Program", int]:
         """Decode a program from a bytes
 
@@ -175,7 +175,7 @@ class Program(Codable):
 
         j: List = []
         for _ in range(j_len):
-            val, size = Uint[z].decode_from(buffer, current_offset)
+            val, size = Uint[z * 8].decode_from(buffer, current_offset)
             bytes_read += size
             current_offset += size
             j.append(val)

@@ -28,16 +28,16 @@ def test_node_del():
 	# Build original trie and get its root
 	trie = StateTrie()
 	original_root, _ = trie.merkelize(vector)
-	print("\noriginal root", original_root)
+	# print("\noriginal root", original_root)
 
 	# Build updated trie and get expected root
 	updated_trie = StateTrie()
 	expected_root, _ = updated_trie.merkelize(updated_vector)
-	print("expected root", expected_root)
+	# print("expected root", expected_root)
 
 	# Perform in-place update on the original trie
 	new_root = trie.delete(keyval_to_delete[0])
-	print("new root", new_root)
+	# print("new root", new_root)
 
 	# The new root must equal the expected root
 	assert new_root == expected_root

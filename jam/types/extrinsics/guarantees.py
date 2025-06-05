@@ -1,10 +1,9 @@
-"""Guarantee-related extrinsic types for the JAM protocol."""
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
 from jam.types.protocol.crypto import Ed25519Signature
 from jam.types.protocol.core import ValidatorIndex, TimeSlot
-from jam.types.work.report import WorkReport
+from jam.types.work import WorkReport
 
 
 @structure

@@ -1,13 +1,13 @@
 from tsrkit_types.sequences import TypedArray, TypedVector
 from tsrkit_types.struct import structure
-# from jam.types.work.report import WorkReport, WorkDependencies  # Circular import issue
+from jam.types.work import WorkReport, WorkDependencies
 from jam.utils.constants import EPOCH_LENGTH
 
 
 @structure
 class ReadyWR:
-    report: object  # WorkReport - temporarily using object to break circular import
-    dependencies: object  # WorkDependencies - temporarily using object to break circular import
+    report: WorkReport
+    dependencies: WorkDependencies
 
 
 AllReadyWRs = TypedVector[ReadyWR]

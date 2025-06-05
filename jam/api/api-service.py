@@ -25,11 +25,11 @@ from jam.types.block import Extrinsic, Header
 from jam.types.extrinsics.guarantees import GuaranteesExtrinsic
 from jam.types.extrinsics.preimages import PreimagesExtrinsic
 from jam.types.extrinsics.tickets import TicketsExtrinsic
-from jam.types.work.refine_context import RefineContext
-from jam.types.work.item import WorkItem
-from jam.types.work.package import WorkPackage
-from jam.types.work.report import WorkReport
-from jam.types.work.report import WorkResult
+from jam.types.work import RefineContext
+from jam.types.work import WorkItem
+from jam.types.work import WorkPackage
+from jam.types.work import WorkReport
+from jam.types.work import WorkResult
 
 # Initialize FastAPI with metadata for Swagger UI
 app = FastAPI(

@@ -3,8 +3,8 @@ from typing import List, Tuple
 from jam.config.data_stores import main_db
 from jam.storage.db.kv import KVStore
 from jam.types.protocol.crypto import Hash
-from jam.types.work.item import ExtrinsicSpecs, ExtrinsicSpec
-from jam.types.work.package import WorkPackage
+from jam.types.work import ExtrinsicSpecs, ExtrinsicSpec
+from jam.types.work import WorkPackage
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32
 

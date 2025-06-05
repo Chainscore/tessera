@@ -1,7 +1,9 @@
+from dataclasses import field
+
 from tsrkit_types.choice import Choice
 from tsrkit_types.sequences import TypedArray, TypedVector
 from tsrkit_types.struct import structure
-# from jam.types.extrinsics.tickets import TicketBody  # Circular import issue
+from jam.types.extrinsics.tickets import TicketBody
 from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
@@ -12,11 +14,11 @@ from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 
 GammaK = TypedArray[ValidatorData, VALIDATOR_COUNT]
 
-GammaA = TypedVector[object]  # TicketBody - temporarily using object to break circular import
+GammaA = TypedVector[TicketBody]
 
 GammaZ = BandersnatchRingRoot
 
-GammaSTickets = TypedArray[object, EPOCH_LENGTH]  # TicketBody - temporarily using object to break circular import
+GammaSTickets = TypedArray[TicketBody, EPOCH_LENGTH]
 
 GammaSFallback = TypedArray[BandersnatchPublic, EPOCH_LENGTH]
 
@@ -32,7 +34,7 @@ class GammaS(Choice):
 class Gamma:
     """Gamma state"""
 
-    k: GammaK
-    z: GammaZ
-    s: GammaS
-    a: GammaA
+    k: GammaK = field(metadata={"name": "gamma_k"})
+    z: GammaZ = field(metadata={"name": "gamma_z"})
+    s: GammaS = field(metadata={"name": "gamma_s"})
+    a: GammaA = field(metadata={"name": "gamma_a"})

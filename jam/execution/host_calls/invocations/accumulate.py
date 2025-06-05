@@ -70,7 +70,7 @@ class PsiA(InvocationProtocol):
                 meta_n_code[1],
                 ProgramCounter(5),
                 self.gas,
-                int(self.timeslot).to_bytes(4, 'little') + int(self.service_id).to_bytes(4, 'little') + self.operandTuples.encode(),
+                Uint(self.timeslot).encode() + Uint(self.service_id).encode() + self.operandTuples.encode(),
                 self.dispatch,
                 self.context,
             )

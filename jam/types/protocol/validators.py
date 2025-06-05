@@ -1,3 +1,5 @@
+from dataclasses import field
+
 from overrides import overrides
 from tsrkit_types.sequences import TypedVector, TypedArray
 from tsrkit_types.integers import Uint, U8
@@ -16,6 +18,7 @@ class ValidatorMetadata:
     protocol: Uint[16]  # 2 Bytes
     host: IPAddress     # 4 Bytes
     port: Uint[16]      # 2 Bytes
+    buffer: Bytes[110] = field(metadata={"default": Bytes[110](110)})
 
     @property
     def address(self) -> str:
@@ -26,7 +29,7 @@ class ValidatorMetadata:
 
     @classmethod
     def from_json(cls, hex_data) -> "ValidatorMetadata":
-        return cls.decode(Bytes.from_json(hex_data)[:18])
+        return cls.decode(Bytes.from_json(hex_data))
 
 
 @structure

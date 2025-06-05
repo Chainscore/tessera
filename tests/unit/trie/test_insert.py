@@ -10,13 +10,13 @@ def to_32by(value: list) -> bytes:
 def random_key():
     # simple helper for random 32‐byte keys
     import os
-    return Bytes[32].fromhex(os.urandom(32))
+    return Bytes[32](os.urandom(32))
 
 def random_value():
     return Bytes(create_dummy_bytes(16))
 
 def test_single_insert_matches_merkelize():
-    key = Bytes[32].fromhex(to_32by([1,0,1]))
+    key = Bytes[32](to_32by([1,0,1]))
     val = random_value()
     trie = StateTrie()
     root_full, _ = trie.merkelize({key: val})
@@ -27,7 +27,7 @@ def test_single_insert_matches_merkelize():
 
 def test_multiple_inserts_order_independent():
     # five keys, insert in different orders must yield same root
-    keys = [Bytes[32].fromhex(to_32by(bits)) for bits in [
+    keys = [Bytes[32](to_32by(bits)) for bits in [
         [1,0,0,1,1],
         [0,1,0,1,0],
         [1,1,1,0,0],

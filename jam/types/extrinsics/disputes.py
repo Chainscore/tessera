@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from tsrkit_types.bool import Bool
 from tsrkit_types.integers import U32
 from tsrkit_types.sequences import TypedArray, TypedVector

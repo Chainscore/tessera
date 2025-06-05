@@ -20,7 +20,7 @@ from jam.types.state.phi import Phi
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ
 from jam.types.state.delta import Delta, AccountData, Timestamps, AccountLookup, AccountPreimages, AccountStorage
 from jam.types.state.sigma import Sigma
-from jam.types.work.report import WorkDependencies
+from jam.types.work import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH
 from jam.state.utils import construct_state_key
 from jam.types.protocol.crypto import OpaqueHash, Hash

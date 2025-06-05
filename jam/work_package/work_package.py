@@ -1,11 +1,13 @@
 from math import ceil
 from typing import Tuple
 
-from jam.types.work.item import WorkItem
-from jam.types.work.package import  WorkPackage
-from jam.types.work.segment import Segments, Segment, MultiSegments
+from tsrkit_types import ByteArray
+
+from jam.types.work import WorkItem
+from jam.types.work import  WorkPackage
+from jam.types.work import Segments, Segment, MultiSegments
 from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
-from jam.types.work.report import (
+from jam.types.work import (
     WorkResult,
     RefineLoad,
     WorkResults,
@@ -388,7 +390,7 @@ class WorkPackageProcessing:
                           accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)
 
     @staticmethod
-    def zero_padding(value: Bytes, n: Uint):
+    def zero_padding(value: ByteArray, n: Uint):
         """
         Zero Padding function P defined in Eqn 14.17
         Ensures that the length of individual byte array becomes a multiple of a given integer n.

@@ -7,8 +7,8 @@ from jam.execution.utils import decode_code_hash
 from tsrkit_types.integers import Uint
 from jam.types.protocol.core import CoreIndex, ProgramCounter
 from jam.types.protocol.crypto import OpaqueHash, Hash
-from jam.types.work.package import WorkPackage
-from jam.types.work.segment import Segments
+from jam.types.work import WorkPackage
+from jam.types.work import Segments
 from jam.utils.constants import IS_AUTHORIZED_GAS
 
 

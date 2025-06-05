@@ -3,7 +3,7 @@ from copy import deepcopy
 from tsrkit_types.null import Null
 from tsrkit_types.integers import Uint
 from tsrkit_types.bytes import Bytes
-from tsrkit_types.sequences import Vector
+from tsrkit_types.sequences import Vector, TypedVector
 from jam.types.protocol.crypto import OpaqueHash
 
 from typing import Callable, TypeVar, Optional
@@ -22,10 +22,10 @@ class MMRFunctions:
 
     @staticmethod
     def _r(
-        seq: Vector[T],
+        seq: TypedVector[T],
         ind: Uint,
         val: T
-    ) -> Vector[T]:
+    ) -> TypedVector[T]:
         """
         Helper Function R Implementation as defined in Equation E.8
 
@@ -153,8 +153,8 @@ class MMRFunctions:
             return self._ZERO_HASH
 
         elif len(h) == 1:
-            return h[0].get_value()
+            return h[0].unwrap()
 
         else:
             val = self.super_peak(MMR(h[:-1]), False)
-            return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(h[-1].get_value()))
+            return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(h[-1].unwrap()))
