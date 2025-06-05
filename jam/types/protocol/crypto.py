@@ -1,7 +1,4 @@
 from tsrkit_types.bytes import Bytes
-from tsrkit_types.sequences import (
-    TypedArray,
-)
 
 # Public key types
 BandersnatchPublic = Bytes[32]

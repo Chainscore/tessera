@@ -1,7 +1,8 @@
 from typing import Tuple, Union
 from jam.types.protocol.core import ServiceId
 from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U8, U32
+from tsrkit_types.integers import U8, U32, Uint
+
 
 def construct_state_key(
     input: Union[U8, Tuple[U32, Bytes], Tuple[U8, U32]]
@@ -23,7 +24,7 @@ def construct_state_key(
         if isinstance(input[0], (U8, int)) and isinstance(input[1], (U32, int)):
             # Case 2: (U8, ServiceId - U32)
             index, service_id = input
-            service_id_encoded = service_id.encode()
+            service_id_encoded = Uint[32](service_id).encode()
             sequence[0] = index
             for i, s_byte in enumerate(service_id_encoded):
                 sequence[i + 1] = s_byte

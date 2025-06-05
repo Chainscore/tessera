@@ -1,5 +1,7 @@
 from math import ceil, floor
 from typing import Dict, List, Self, Sequence
+
+from jam.config.logging import logger
 from jam.execution.pvm.types import Accessibility
 from jam.execution.pvm.status import PvmError, PAGE_FAULT
 from jam.utils.constants import PVM_INIT_DATA_SIZE, PVM_MEMORY_PAGE_SIZE, PVM_INIT_ZONE_SIZE
@@ -53,10 +55,12 @@ class Memory:
         # If writing, the page must be allowed to be written.
         if for_write:
             if page not in self.allowed_write_pages:
+                logger.debug(f"Not allowed to write {addr}(Page={page})")
                 raise PvmError(PAGE_FAULT(addr))
         # Else (reading), the page must be allowed to be write / read
         else:
             if (page not in self.allowed_read_pages) and (page not in self.allowed_write_pages):
+                logger.debugc(f"Not allowed to read {addr}(Page={page})")
                 raise PvmError(PAGE_FAULT(addr))
         return addr
 

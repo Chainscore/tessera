@@ -24,7 +24,7 @@ def encode_branch(left_hash: Bytes[32] = ZERO_HASH, right_hash: Bytes[32] = ZERO
     1. Clear the first bit of left_hash (AND with 0xfe)
     2. Concatenate with full right_hash
     """
-    print("Branch", [False] + Bytes(left_hash).to_bits()[1:] + right_hash.to_bits())
+    # print("Branch", [False] + Bytes(left_hash).to_bits()[1:] + right_hash.to_bits())
     return Bytes[64].from_bits([False] + Bytes(left_hash).to_bits()[1:] + right_hash.to_bits())
 
 def encode_leaf(key: Bytes, value: Bytes) -> Bytes[64]:
@@ -50,12 +50,12 @@ def encode_leaf(key: Bytes, value: Bytes) -> Bytes[64]:
         # Store key and value
         val_bits = value.to_bits() + [False] * (256 - len(value.to_bits()))
         # Rest is already zeroed
-        print("Embedded Leaf", [True, False] + Uint[1](len(value)).to_bits("msb")[:6] + key_bits + val_bits)
-        return Bytes[64].from_bits([True, False] + Uint[1](len(value)).to_bits("msb")[:6] + key_bits + val_bits)
+        node_bits = [True, False] + Bytes(Uint[1](len(value)).encode()).to_bits()[2:] + key_bits + val_bits
+        return Bytes[64].from_bits(node_bits)
     else:
         # Regular leaf - second bit is 1
         val_bits = Hash.blake2b(
             bytes(value)
         ).to_bits()
-        print("Leaf", [True, True, False, False, False, False, False, False] + key_bits + val_bits)
-        return Bytes[64].from_bits([True, True, False, False, False, False, False, False] + key_bits + val_bits)
+        node_bits = [True, True, False, False, False, False, False, False] + key_bits + val_bits
+        return Bytes[64].from_bits(node_bits)

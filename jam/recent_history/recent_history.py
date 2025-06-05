@@ -6,7 +6,7 @@ from jam.types.extrinsics import GuaranteesExtrinsic
 from jam.types.protocol.crypto import Hash
 from jam.merklization import MMRFunctions
 from jam.types.protocol.merkle import MMR
-from jam.types.work.report import SegmentRootLookup
+from jam.types.work import SegmentRootLookup
 from jam.utils.constants import RECENT_HISTORY_SIZE
 from tsrkit_types.bytes import Bytes
 

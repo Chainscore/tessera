@@ -11,8 +11,8 @@ from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.state.delta import AccountData
 from jam.types.protocol.core import Gas, ServiceId, Register, Balance
 from jam.types.state.delta import Delta
-from jam.types.work.item import WorkItem
-from jam.types.work.package import WorkPackage
+from jam.types.work import WorkItem
+from jam.types.work import WorkPackage
 from jam.utils.constants import (
     ADDITIONAL_BALANCE_PER_ITEM, SLOT_PERIOD, MAX_AUTH_QUEUE_ITEMS, ROTATION_PERIOD, MAX_ACCUMULATION_ENTRIES, EXTRINSIC_COUNT,
     UNAVAILABLE_WORK_EXPIRY, VALIDATOR_COUNT, MAX_AUTH_CODE_SIZE, MAX_ENCODED_WORK_PACKAGE_SIZE, MAX_SERVICE_CODE_SIZE, BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_IMPORT_ITEM,
@@ -130,7 +130,7 @@ class GeneralFunctions(INVF):
             if w10 == 7:
                 v = package.encode()
             elif w10 == 8:
-                v = package.code_hash + package.params
+                v = package.authorizer.code_hash + package.authorizer.params
             elif w10 == 9:
                 v = package.authorization
             elif w10 == 10:

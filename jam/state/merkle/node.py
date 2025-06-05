@@ -25,4 +25,4 @@ class Node:
         
     @property
     def key_bits_248(self) -> List[bool]:
-        return Bytes(self.encoded).to_bits()[8:]
+        return Bytes(self.encoded).to_bits()[8:256]

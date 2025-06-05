@@ -3,7 +3,7 @@ from typing import cast
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
 from tsrkit_types.integers import Uint
-from jam.types.work.report import WorkPackageBundle
+from jam.types.work import WorkPackageBundle
 from tsrkit_types.struct import structure
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 

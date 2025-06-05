@@ -8,8 +8,8 @@ from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField, Assur
 from jam.types.extrinsics.disputes import Verdicts, Culprits, Faults, DisputesExtrinsic
 from jam.types.protocol.core import ServiceId, TimeSlot, ValidatorIndex, Gas
 from tsrkit_types.integers import U32, U16, U8, U64
-from jam.types.work.report import WorkReport
-from jam.types.work.report import (
+from jam.types.work import WorkReport
+from jam.types.work import (
     SegmentRootLookup,
     WorkPackageSpec,
     WorkResult,
@@ -18,7 +18,7 @@ from jam.types.work.report import (
     RefineLoad
 )
 from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_int
-from jam.types.work.refine_context import RefineContext
+from jam.types.work import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, Ed25519Signature, BandersnatchRingVrfSignature
 from tsrkit_types.bytes import Bytes
 from jam.utils.constants import VALIDATORS_SUPER_MAJORITY

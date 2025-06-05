@@ -5,7 +5,7 @@ from jam.network.quic.server import QuicServerProtocol
 from tsrkit_types.struct import structure
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 
-from jam.types.work.report import WorkReport
+from jam.types.work import WorkReport
 from jam.types.protocol.core import TimeSlot
 
 

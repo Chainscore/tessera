@@ -4,7 +4,7 @@ from jam.network.quic.server import QuicServerProtocol
 from tsrkit_types.integers import Uint
 from tsrkit_types.struct import structure
 from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types.work.package import WorkPackage
+from jam.types.work import WorkPackage
 
 
 @structure

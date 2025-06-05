@@ -5,8 +5,8 @@ from tsrkit_types.sequences import Vector
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import WorkReportHash
 
-from jam.types.work.package import WorkItems, OpaqueHash, WorkPackage, Authorizer
-from jam.types.work.report import SegmentRootLookup, WorkPackageBundle
+from jam.types.work import WorkItems, OpaqueHash, WorkPackage, Authorizer
+from jam.types.work import SegmentRootLookup, WorkPackageBundle
 
 from jam.network.protocols.ce_134 import CoreSegment, Credential
 
