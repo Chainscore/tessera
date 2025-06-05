@@ -1,17 +1,12 @@
 from dataclasses import dataclass
 from typing import cast
-
-from sphinx.ext.autodoc.typehints import augment_descriptions_with_types
-
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
 from jam.network.protocols.base import NetworkProtocol, PrefixType
-
 from jam.types.base.null import Null
 from jam.types.base.sequences.vector import Vector
 from jam.types.extrinsics import assurances
 from jam.types.extrinsics.assurances import Assurance, AvailAssurance, AssurancesExtrinsic
-
 from jam.utils.codec.decorators import decodable_dataclass
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
@@ -48,7 +43,7 @@ class AssuranceDistribution(NetworkProtocol):
         """ Transmit assurance, From Assurer (client) to Validator (server) """
 
 
-        stream = self._prefix.encode() + data.encode()
+        message = self._prefix.encode() + data.encode()
 
         # logger.info(f"Transmitting assurance {data} to the {len(node.connections)} validators with prefix {self._prefix}")
 
@@ -58,8 +53,8 @@ class AssuranceDistribution(NetworkProtocol):
         responses = Vector([])
         for peer in node.peer_conn:
             client = node.peer_conn[peer][1]
-            data = await client.stream_and_close(message=stream)
-            logger.info("sending assurance on ", data)
+            data = await client.stream_and_close(message=message)
+            logger.info("sending assurance on", data)
             responses.append(data)
 
         return responses
@@ -71,8 +66,10 @@ class AssuranceDistribution(NetworkProtocol):
 
         logger.info(f"Receive assurance {data} from the assurer")
 
+
+
         # TODO: Save the assure and signature in the database
-        assurance : AvailAssurance = AvailAssurance(anchor=, bitfield=, validator_index=node.index, signature= )
+        # assurance : AvailAssurance = AvailAssurance(anchor=, bitfield=, validator_index=node.index, signature= )
 
 
     def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Assurance:
