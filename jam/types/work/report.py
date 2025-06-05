@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from jam.types.base.integers.general import Int
 from jam.types.base.null import Nullable
 from jam.types.base.integers import U8, U16, U32, U64
 from jam.types.base.choices.choice import Choice, decodable_choice
@@ -113,7 +114,7 @@ class WorkReport(Codable, JsonSerde):
     # x
     context: RefineContext
     # c
-    core_index: CoreIndex
+    core_index: Int
     # a
     authorizer_hash: OpaqueHash
     # o
@@ -123,7 +124,23 @@ class WorkReport(Codable, JsonSerde):
     # r
     results: WorkResults
     # g
-    auth_gas_used: Gas
+    auth_gas_used: Int
+
+    @classmethod
+    def empty(cls, **overrides) -> "WorkReport":
+        defaults = {
+            "package_spec":          WorkPackageSpec.empty(),
+            "context":               RefineContext.empty(),
+            "core_index":            CoreIndex(0),
+            "authorizer_hash":       OpaqueHash(bytes([0] * 32)),
+            "auth_output":           Bytes(b""),
+            "segment_root_lookup":   SegmentRootLookup({}),
+            "results":               WorkResults([]),
+            "auth_gas_used":         Gas(0),
+        }
+        # merge in anything the caller wants to override:
+        defaults.update(overrides)
+        return cls(**defaults)
 
 @decodable_vector(element_type=WorkReportHash, allow_duplicates=False)
 class WorkDependencies(Vector[WorkReportHash]):
