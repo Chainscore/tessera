@@ -27,7 +27,7 @@ class PsiR(InvocationProtocol):
     def table(self):
         from jam.state.state import state
         from jam.storage.item_extrinsics import ItemExtrinsics
-        from jam.config.data_stores import main_db
+        from jam.config.data_stores import data_stores
 
         return {
             0: (GeneralFunctions, ()),
@@ -42,7 +42,7 @@ class PsiR(InvocationProtocol):
                          "trace": self.auth_trace,
                          "item_index": self.item_index,
                          "import_segments": self.i_segments,
-                         "extrinsics": ItemExtrinsics(main_db).get_all(self.work_package),
+                         "extrinsics": ItemExtrinsics(data_stores.main_db).get_all(self.work_package),
                          "o": None,
                          "t": None
                      }

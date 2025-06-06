@@ -1,12 +1,12 @@
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 import json
 from jam.state.ghost import GhostState as State
 
 
 def test_kv_store_basic_operations(db_path):
-    """Test basic operations of KVStore."""
+    """Test basic operations of RockStore."""
     # Initialize store
-    kv = KVStore(db_path)
+    kv = RockStore(db_path)
     
     # Test put and get
     kv.put("State".encode(), "StateValue".encode())
@@ -36,8 +36,8 @@ def test_kv_store_basic_operations(db_path):
     kv.close()
 
 def test_kv_store_multiple_operations(db_path):
-    """Test multiple operations on KVStore."""
-    kv = KVStore(db_path)
+    """Test multiple operations on RockStore."""
+    kv = RockStore(db_path)
     
     # Add multiple key-value pairs
     test_data = {
@@ -63,18 +63,18 @@ def test_kv_store_multiple_operations(db_path):
 def test_kv_store_reopen(db_path):
     """Test that data persists after closing and reopening."""
     # Create and populate store
-    kv = KVStore(db_path)
+    kv = RockStore(db_path)
     kv.put("persistent_key".encode(), "persistent_value".encode())
     kv.close()
     
     # Reopen and check data
-    kv2 = KVStore(db_path)
+    kv2 = RockStore(db_path)
     assert kv2.get("persistent_key".encode()) == "persistent_value".encode()
     kv2.close()
 
 def test_unicode_strings(db_path):
     """Test handling of Unicode strings."""
-    kv = KVStore(db_path)
+    kv = RockStore(db_path)
     
     # Various Unicode characters
     unicode_test = {

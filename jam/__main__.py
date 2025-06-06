@@ -5,7 +5,7 @@ from tsrkit_types.bytes import Bytes
 
 from jam.config.logging import setup_logging, logger
 from jam.config.chainspec import chain_config
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.utils.dummy_wpb import wp_producer
@@ -96,7 +96,7 @@ async def main(
             is_validator=is_validator,
         )
 
-        db = KVStore(db_path)
+        db = RockStore(db_path)
 
         if start_genesis:
             # Start from genesis

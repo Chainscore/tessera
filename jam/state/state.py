@@ -1,7 +1,7 @@
 from typing import Type
 
 from jam.merklization import BMRFunctions
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.state.merkle import StateTrie
@@ -46,7 +46,7 @@ class State:
     State implementation that uses dynamic components fetched from Db
     Here we retain and update merkle trie as cache
     """
-    DB: KVStore
+    DB: RockStore
     TRIE: StateTrie
 
     alpha = make_state_prop(1, Alpha)
@@ -142,7 +142,7 @@ def set_state(new_state: State):
     state = new_state
     return state
 
-def setup_state(ghost: GhostState, db: KVStore):
+def setup_state(ghost: GhostState, db: RockStore):
     data = ghost.transform()
     trie = StateTrie()
     trie.merkelize(data, db)

@@ -1,6 +1,6 @@
 from tsrkit_types.struct import structure
 
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.types.extrinsics.extrinsic import Extrinsic
 from jam.types.header import Header
 from jam.types.protocol.crypto import Hash
@@ -28,7 +28,7 @@ class Block:
         return Block(header=Header.genesis(path), extrinsic=Extrinsic.empty())
 
     @staticmethod
-    def load_parent(slot: TimeSlot, db: KVStore) -> "Block":
+    def load_parent(slot: TimeSlot, db: RockStore) -> "Block":
         """
         Get the parent block
         """
@@ -42,7 +42,7 @@ class Block:
                 continue
 
     @classmethod
-    def load(cls, slot: TimeSlot, db: KVStore) -> "Block":
+    def load(cls, slot: TimeSlot, db: RockStore) -> "Block":
         """
         Load the block for the given slot from DB
         """
@@ -55,7 +55,7 @@ class Block:
             raise ValueError("No block found for slot: ", slot)
         return cls.decode(data)
         
-    def save(self, db: KVStore):
+    def save(self, db: RockStore):
         """
         Save the block to DB
         """

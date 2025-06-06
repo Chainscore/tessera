@@ -1,6 +1,6 @@
 from typing import Tuple
 from jam.execution.utils import decode_code_hash
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.state.merkle import StateTrie
 from jam.state.utils import construct_state_key
 from jam.types.protocol.core import Balance, ServiceId, TimeSlot, BlobLength
@@ -30,7 +30,7 @@ def make_account_prop(field):
 
 
 class AccountDataView:
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+    def __init__(self, id: ServiceId, db: RockStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie
@@ -51,7 +51,7 @@ class AccountDataView:
 
 class Account:
 
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+    def __init__(self, id: ServiceId, db: RockStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie
@@ -123,7 +123,7 @@ class Account:
 
 
 class DeltaView:
-    def __init__(self, db: KVStore, trie: StateTrie):
+    def __init__(self, db: RockStore, trie: StateTrie):
         self.DB = db
         self.TRIE = trie
 
@@ -152,7 +152,7 @@ class DeltaView:
         return self.DB.get(bytes(construct_state_key((255, key)))) is not None
 
 class StorageView:
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+    def __init__(self, id: ServiceId, db: RockStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie
@@ -190,7 +190,7 @@ class StorageView:
         self.TRIE.delete(storage_key)
 
 class PreImageView:
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+    def __init__(self, id: ServiceId, db: RockStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie
@@ -214,7 +214,7 @@ class PreImageView:
         self.TRIE.delete(storage_key)
 
 class TimestampsView:
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+    def __init__(self, id: ServiceId, db: RockStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie

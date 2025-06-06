@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
-from jam.config.data_stores import main_db
-from jam.storage.db.kv import KVStore
+from jam.config.data_stores import data_stores
+from rockstore import RockStore
 from jam.types.protocol.crypto import Hash
 from jam.types.work import ExtrinsicSpecs, ExtrinsicSpec
 from jam.types.work import WorkPackage
@@ -11,9 +11,9 @@ from tsrkit_types.integers import U32
 
 class ItemExtrinsics:
     """Place to store and get extrinsics that are received along with Work Package"""
-    DB = main_db
+    DB: RockStore
 
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.DB = db
 
     def store(self, package: WorkPackage, data: List[Bytes]):
@@ -71,7 +71,7 @@ class ItemExtrinsics:
 
         Args:
             extrinsic_hash (Bytes[32])
-            db (KVStore)
+            db (RockStore)
 
         Returns:
             Bytes

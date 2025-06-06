@@ -2,7 +2,7 @@ from typing import Dict, List, Tuple, Optional
 from jam.state.merkle.node import Node
 from jam.state.merkle.utils import ZERO_HASH, NodeHash, NodeType, encode_branch, encode_leaf
 from jam.types.protocol.crypto import Hash
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from tsrkit_types.bytes import Bytes
 
 class StateTrie:
@@ -80,7 +80,7 @@ class StateTrie:
     def merkelize(
         self,
         state_dict: Dict[Bytes, Bytes],
-        db: Optional[KVStore] = None
+        db: Optional[RockStore] = None
     ) -> Tuple[NodeHash, Dict[NodeHash, Node]]:
         """
         Implements the state Merklization (per D.2)
@@ -88,7 +88,7 @@ class StateTrie:
         
         Fully rebuilds the trie from scratch using the provided key->value map.
         Clears any previous state, invokes the recursive builder, sets root_hash,
-        and optionally persists raw key/value blobs into the given KVStore.
+        and optionally persists raw key/value blobs into the given RockStore.
         Returns the new root hash and the persistent node map.
         """
         self.clear()
@@ -112,7 +112,7 @@ class StateTrie:
     def clear(self) -> None:
         """
         Reset both transient and persistent node maps and root hash.
-        Does not touch any external KVStore.
+        Does not touch any external RockStore.
         """
         self.nodes.clear()
         self.root_hash = ZERO_HASH
