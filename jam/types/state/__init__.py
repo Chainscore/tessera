@@ -10,7 +10,6 @@ from jam.types.state.chi import Chi, ChiG
 from jam.types.state.iota import Iota
 from jam.types.state.nu import AllReadyWRs, Nu
 from jam.types.state.xi import Xi
-from jam.types.state.delta import Delta
 from jam.types.state.beta import Beta
 from jam.types.state.phi import AuthorizationQueue, AuthorizerHash, Phi
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ, GammaS

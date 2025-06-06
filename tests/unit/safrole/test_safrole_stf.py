@@ -12,7 +12,7 @@ from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
-from jam.types.extrinsics.tickets import TicketBody, TicketId, TicketAttempt
+from jam.types.protocol.ticket import TicketBody, TicketId, TicketAttempt
 from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END
@@ -88,12 +88,12 @@ def test_safrole_entropy_accumulation():
 
 @pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_ticket_accumulation():
-    """Test that Safrole correctly accumulates tickets during the submission period"""
-    # Create tickets
+    """Test that Safrole correctly accumulates ticket.py during the submission period"""
+    # Create ticket.py
     ticket1 = TicketBody(id=TicketId(bytes([1] * 32)), attempt=TicketAttempt(0))
     ticket2 = TicketBody(id=TicketId(bytes([2] * 32)), attempt=TicketAttempt(0))
     
-    # Create initial state with some tickets already in gamma_a
+    # Create initial state with some ticket.py already in gamma_a
     initial_state = create_state(
         tau=U32(5),  # Assume this is within ticket submission period
         eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
@@ -134,7 +134,7 @@ def test_safrole_ticket_accumulation():
 
 @pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_ticket_submission_outside_period():
-    """Test that Safrole rejects tickets outside the submission period"""
+    """Test that Safrole rejects ticket.py outside the submission period"""
     # Create initial state
     initial_state = create_state(
         tau=U32(5),
@@ -149,7 +149,7 @@ def test_safrole_ticket_submission_outside_period():
         offenders=PsiO([])
     )
     
-    # Create a block with tickets after the submission period
+    # Create a block with ticket.py after the submission period
     # Calculate a slot that is after TICKET_SUBMISSION_END
     slot_after_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END + 1)
     ticket_envelope = Safrole.generate_ticket()
@@ -212,11 +212,11 @@ def test_safrole_epoch_transition():
 
 @pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_fallback_mode():
-    """Test that Safrole correctly uses fallback seal keys when not enough tickets"""
+    """Test that Safrole correctly uses fallback seal keys when not enough ticket.py"""
     # Create validator data
     validators = create_validator_data_from_keys()
     
-    # Create an initial state in the last slot of an epoch, but with insufficient tickets
+    # Create an initial state in the last slot of an epoch, but with insufficient ticket.py
     last_slot_in_epoch = U32(EPOCH_LENGTH - 1)
     initial_state = create_state(
         tau=last_slot_in_epoch,
@@ -225,7 +225,7 @@ def test_safrole_fallback_mode():
         kappa=Kappa(validators),
         gamma_k=GammaK(validators),
         iota=Iota(validators),
-        gamma_a=GammaA([]),  # Empty ticket accumulator (insufficient tickets)
+        gamma_a=GammaA([]),  # Empty ticket accumulator (insufficient ticket.py)
         gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in validators * 2])),
         gamma_z=GammaZ(Safrole.compute_ring_root([keys.bandersnatch for keys in validators])),
         offenders=PsiO([])

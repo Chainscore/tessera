@@ -8,7 +8,7 @@ from jam.execution.pvm.status import ExecutionStatus, PANIC, HostStatus, CONTINU
 from tsrkit_types import U64, U32, U16, Bytes, Uint
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.state.delta import AccountData
-from jam.types.protocol.core import Gas, ServiceId, Register, Balance
+from jam.types.protocol.core import Gas, ServiceId, Register
 from jam.types.state.delta import Delta
 from jam.types.work import WorkItem
 from jam.types.work import WorkPackage

@@ -1,6 +1,6 @@
 from dataclasses import field
 
-from tsrkit_types.sequences import TypedVector, TypedArray
+from tsrkit_types.sequences import TypedArray
 from tsrkit_types.integers import Uint, U8
 from tsrkit_types.struct import structure
 from jam.types.protocol.crypto import BandersnatchPublic, Ed25519Public, BlsPublic
@@ -43,16 +43,3 @@ class ValidatorData:
 
 """Fixed-size array of validator data with size VALIDATOR_COUNT."""
 ValidatorsData = TypedArray[ValidatorData, VALIDATOR_COUNT]
-
-ValidatorVector = TypedVector[ValidatorData]
-
-
-@structure
-class EpochValidator:
-    """Validator data structure using in epoch marker."""
-
-    bandersnatch: BandersnatchPublic
-    ed25519: Ed25519Public
-
-
-EpochValidators = TypedVector[EpochValidator]

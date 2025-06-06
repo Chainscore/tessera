@@ -3,9 +3,8 @@ from typing import cast
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
 from tsrkit_types.struct import structure
-from jam.types.block import Block
+from jam.types.block import Block, Header
 from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.types.header import Header
 
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash

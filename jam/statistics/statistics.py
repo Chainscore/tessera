@@ -1,11 +1,7 @@
 import math
 from typing import List
 
-from jam.types.state.pi import (
-	ServiceStat, AllValidatorStats, )
-from jam.types.state.sigma import Sigma
-from jam.types.block import Block
-from jam.types.work import WorkReport
+from jam.types import ServiceStat, AllValidatorStats, Sigma, Block, WorkReport
 from jam.utils.constants import EPOCH_LENGTH, SEGMENT_SIZE
 from tsrkit_types.integers import Uint
 

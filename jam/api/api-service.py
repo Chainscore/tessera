@@ -18,13 +18,16 @@ from jam.consensus.safrole.errors import SafroleError
 from jam.recent_history.recent_history import RecentHistory
 from jam.utils.shuffle import shuffle
 from jam.state.utils.state_transformation import GeneralState
-from jam.types.extrinsics.assurances import AssurancesExtrinsic
-from jam.types.block import Block
-from jam.types.extrinsics.disputes import DisputesExtrinsic
-from jam.types.block import Extrinsic, Header
-from jam.types.extrinsics.guarantees import GuaranteesExtrinsic
-from jam.types.extrinsics.preimages import PreimagesExtrinsic
-from jam.types.extrinsics.tickets import TicketsExtrinsic
+from jam.types.block import (
+    Block, 
+    Header, 
+    DisputesExtrinsic,
+    AssurancesExtrinsic,
+    GuaranteesExtrinsic,
+    PreimagesExtrinsic,
+    TicketsExtrinsic,
+)
+from jam.types.block.extrinsics.extrinsic import Extrinsic
 from jam.types.work import RefineContext
 from jam.types.work import WorkItem
 from jam.types.work import WorkPackage

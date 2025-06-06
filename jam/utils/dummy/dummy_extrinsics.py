@@ -1,11 +1,11 @@
 from random import randint
 
-from jam.types.extrinsics.extrinsic import Extrinsic
-from jam.types.extrinsics.tickets import TicketEnvelope, TicketsExtrinsic
-from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
-from jam.types.extrinsics.guarantees import ReportGuarantee, ValidatorSignature, ValidatorSignatures, GuaranteesExtrinsic
-from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField, AssurancesExtrinsic
-from jam.types.extrinsics.disputes import Verdicts, Culprits, Faults, DisputesExtrinsic
+from jam.types.block.extrinsics.extrinsic import Extrinsic
+from jam.types.block.extrinsics.tickets import TicketEnvelope, TicketsExtrinsic
+from jam.types.block.extrinsics.preimages import Preimage, PreimagesExtrinsic
+from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSignature, ValidatorSignatures, GuaranteesExtrinsic
+from jam.types.block.extrinsics.assurances import AvailAssurance, AvailBitField, AssurancesExtrinsic
+from jam.types.block.extrinsics.disputes import Verdicts, Culprits, Faults, DisputesExtrinsic
 from jam.types.protocol.core import ServiceId, TimeSlot, ValidatorIndex, Gas
 from tsrkit_types.integers import U32, U16, U8, U64
 from jam.types.work import WorkReport
@@ -93,7 +93,7 @@ def create_dummy_validator_signatures() -> list[ValidatorSignature]:
 
 
 def create_dummy_tickets(num = 3) -> list[TicketEnvelope]:
-    """Create dummy tickets"""
+    """Create dummy ticket.py"""
     return [
         TicketEnvelope(
             attempt=U8(i), signature=BandersnatchRingVrfSignature(create_dummy_bytes(784))

@@ -8,9 +8,7 @@ from tsrkit_types.null import Null
 from jam.disputes.error import DisputesError, DisputesErrorCode
 from jam.types.state.rho import OptionalWorkReportState
 from jam.types.state.sigma import Sigma
-from jam.types.block import Block
-from jam.types.extrinsics.disputes import DisputesExtrinsic
-from jam.types.header import OffendersMark
+from jam.types.block import Block, OffendersMark, DisputesExtrinsic
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import (
     EPOCH_LENGTH,
