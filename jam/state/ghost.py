@@ -1,7 +1,7 @@
 import json
 from typing import List
 
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.types.protocol.validators import ValidatorsData
 from jam.types.state.alpha import Alpha
 from jam.types.state.eta import Eta
@@ -248,13 +248,13 @@ class GhostState(Sigma):
 
 
 
-    def save(self, db: KVStore):
+    def save(self, db: RockStore):
         data = self.transform()
         for key, value in data.items():
             db.put(bytes(key), bytes(value))
 
     @staticmethod
-    def load(db: KVStore, keys: List[Bytes[32]] = []) -> "GhostState":
+    def load(db: RockStore, keys: List[Bytes[32]] = []) -> "GhostState":
         data = {}
         service_ids: set[ServiceId] = set()
 

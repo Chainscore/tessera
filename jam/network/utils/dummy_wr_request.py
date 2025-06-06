@@ -3,17 +3,17 @@ import asyncio
 from jam.config.logging import logger
 from jam.utils.dummy.utils import create_dummy_bytes32
 from jam.network.node import Node
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data
 
-async def work_report_request_producer(node: Node, db: KVStore):
+async def work_report_request_producer(node: Node, db: RockStore):
     """
     Continuously simulates requesting missing work-reports by hash.
     This can be triggered on block reception (here, simulated in a loop).
 
     Args:
         node (Node): The network node for communications
-        db (KVStore): The database instance
+        db (RockStore): The database instance
     """
 
     RequestProtocol = WorkReportRequest()

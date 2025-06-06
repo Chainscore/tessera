@@ -22,7 +22,7 @@ from jam.types.protocol.crypto import BandersnatchVrfSignature, Hash, OpaqueHash
 from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD
 from jam.network.node import Node
 from jam.config.logging import logger
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.utils.dummy.utils import create_dummy_bytes
 
 class BlockProducer:
@@ -32,13 +32,13 @@ class BlockProducer:
 
     Args:
         node (Node): The network node for communications
-        db (KVStore): The database to store the genesis timestamp
+        db (RockStore): The database to store the genesis timestamp
     """
 
     node: Node
-    db: KVStore
+    db: RockStore
 
-    def __init__(self, node: Node, db: KVStore):
+    def __init__(self, node: Node, db: RockStore):
         self.node = node
         self.db = db
 

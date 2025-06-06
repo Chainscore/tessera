@@ -1,4 +1,4 @@
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 
 class Settings:
     # Node settings
@@ -18,11 +18,11 @@ class Settings:
 
     @property
     def db(self):
-        return KVStore(self.DB_PATH)
+        return RockStore(self.DB_PATH)
 
     @property
     def audit_db(self):
-        return KVStore(self.AUDIT_DB_PATH)
+        return RockStore(self.AUDIT_DB_PATH)
 
 settings: Settings = Settings()
 

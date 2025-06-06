@@ -1,6 +1,6 @@
 import pytest
 from jam.consensus.bp_engine import BlockProducer
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.network.node import Node
 from jam.state.ghost import GhostState as State
 from jam.types.block import Block
@@ -8,7 +8,7 @@ from jam.types.protocol.core import TimeSlot
 from jam.consensus.grandpa.finality import Finality
 
 def test_block_production(db_path):
-    db = KVStore(db_path)
+    db = RockStore(db_path)
     state = State.genesis()
     node = Node("0", "test_node", "0.0.0.0", 30333, state.kappa[0], [], False, True)
     producer = BlockProducer(node, db)

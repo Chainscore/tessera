@@ -1,7 +1,7 @@
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
 
-from jam.config.data_stores import main_db
+from jam.config.data_stores import data_stores
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
 from jam.execution.pvm.code import Code
@@ -16,8 +16,10 @@ from jam.types.work import WorkItem, ImportSpecs, ExtrinsicSpecs
 from jam.utils.dummy.dummy_package import create_dummy_package
 
 
+
 def test_basic_wp_building(db_path):
-	state = setup_state(GhostState.genesis(), main_db)
+	data_stores.configure_db_paths(db_path)
+	state = setup_state(GhostState.genesis(), data_stores.main_db)
 
 	package = create_dummy_package()
 

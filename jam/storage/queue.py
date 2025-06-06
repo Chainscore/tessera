@@ -1,5 +1,5 @@
 from tsrkit_types.struct import structure
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from tsrkit_types.integers import Uint
 
 
@@ -28,14 +28,14 @@ class StorageQueue:
         """Key for the item in the queue."""
         return f"{self.queue_name}:{index}".encode()
     
-    def metadata(self, db: KVStore) -> StorageQueueMetadata:
+    def metadata(self, db: RockStore) -> StorageQueueMetadata:
         """Get the metadata of the storage queue."""
         metadata = db.get(self.meta_key)
         if metadata is None:
             return StorageQueueMetadata(head=Uint(0), tail=Uint(0), count=Uint(0))
         return StorageQueueMetadata.decode_from(metadata)[0]
 
-    def push(self, db: KVStore, value: bytes) -> int:
+    def push(self, db: RockStore, value: bytes) -> int:
         """Push an item to the queue."""
         metadata = self.metadata(db)
         db.put(self.item_key(int(metadata.tail)), value)
@@ -44,7 +44,7 @@ class StorageQueue:
         db.put(self.meta_key, metadata.encode())
         return int(metadata.tail)
     
-    def key_of(self, db: KVStore, value: bytes) -> int:
+    def key_of(self, db: RockStore, value: bytes) -> int:
         """Get the index of an item in the queue."""
         metadata = self.metadata(db)
         for i in range(int(metadata.head), int(metadata.tail)):
@@ -53,25 +53,25 @@ class StorageQueue:
                 return key
         return None
     
-    def remove_key(self, db: KVStore, key: bytes):
+    def remove_key(self, db: RockStore, key: bytes):
         """Remove an item from the queue by key."""
         metadata = self.metadata(db)
         db.delete(key)
         metadata.count -= 1
         db.put(self.meta_key, metadata.encode())
 
-    def remove_value(self, db: KVStore, value: bytes):
+    def remove_value(self, db: RockStore, value: bytes):
         """Remove an item from the queue by value."""
         key = self.key_of(db, value)
         if key:
             self.remove_key(db, key)
 
-    def get(self, db: KVStore, count: int = 1, skip: int = 0) -> list[bytes]:
+    def get(self, db: RockStore, count: int = 1, skip: int = 0) -> list[bytes]:
         """Get items from the queue, starting from the head.
 
         Args:
             queue_name (str): identifier name of the queue
-            db (KVStore): database
+            db (RockStore): database
             count (int, optional): number of items to get. Defaults to 1.
             skip (int, optional): number of items to skip. Defaults to 0.
 
@@ -103,7 +103,7 @@ class StorageQueue:
 
         return items
 
-    def pop(self, db: KVStore) -> bytes:
+    def pop(self, db: RockStore) -> bytes:
         """Pop an item from the queue. Returns None if the queue is empty."""
         metadata = self.metadata(db)
         value = db.get(self.item_key(int(metadata.head)))
