@@ -5,7 +5,7 @@ from jam.types.protocol.crypto import OpaqueHash
 
 class OptionHash(Option[OpaqueHash]):
 	def __hash__(self):
-		value = self.get_value()
+		value = self.unwrap()
 		return int.from_bytes(bytes(value))
 
 

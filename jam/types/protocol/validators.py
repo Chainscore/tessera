@@ -1,6 +1,5 @@
 from dataclasses import field
 
-from overrides import overrides
 from tsrkit_types.sequences import TypedVector, TypedArray
 from tsrkit_types.integers import Uint, U8
 from tsrkit_types.struct import structure

@@ -48,10 +48,10 @@ class PVM:
                 opcode = program.zeta[program_counter]
                 table = InstTableMap.get_instructions_table(opcode)(counter=program_counter, program=program)
 
-                logger.debug(f"🤖 {int(program_counter)} | ⛽️ {remaining_gas} | {table.table()[opcode].name} ({opcode}) on {table.__class__.__name__}")
+                # logger.debug(f"🤖 {int(program_counter)} | ⛽️ {remaining_gas} | {table.table()[opcode].name} ({opcode}) on {table.__class__.__name__}")
                 status, program_counter, registers, memory = table.execute(opcode, registers, memory)
                 remaining_gas -= int(table.table()[opcode].gas)
-                logger.debug(f"Status: {status} | Gas: {remaining_gas} | PC: {program_counter} | Registers = {[int(r) for r in registers]}")
+                # logger.debug(f"Status: {status} | Gas: {remaining_gas} | PC: {program_counter} | Registers = {[int(r) for r in registers]}")
                 if remaining_gas < 0:
                     status = OUT_OF_GAS
                     break

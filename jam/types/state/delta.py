@@ -41,7 +41,7 @@ class AccountMetadata:
     @staticmethod
     def empty() -> "AccountMetadata":
         return AccountMetadata(
-            code_hash=TypedArray[int, 32]([0] * 32),
+            code_hash=Bytes[32]([0] * 32),
             balance=Balance(0),
             gas_limit=Gas(0),
             min_gas=Gas(0),
@@ -102,6 +102,11 @@ class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
                 self._meta.num_o = self._meta.num_o + key.length + 81
         super().__setitem__(key, value)
 
+    def __delitem__(self, key: LookupTable):
+        if key in self:
+            self._meta.num_i = self._meta.num_i - 1
+            self._meta.num_o = self._meta.num_o - key.length - 81
+        super().__delitem__(key)
 
 
 @structure

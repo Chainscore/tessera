@@ -64,7 +64,6 @@ class PsiA(InvocationProtocol):
         meta_n_code = self.partial_state.service_accounts[self.service_id].m_c()
         if meta_n_code is None or len(meta_n_code[1]) > MAX_SERVICE_CODE_SIZE:
             return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
-
         else:
             gas, status, context = PsiM.execute(
                 meta_n_code[1],
@@ -89,7 +88,7 @@ class PsiA(InvocationProtocol):
         """
         from jam.state.state import state
 
-        value = (Uint[32].decode_from(bytes(Hash.blake2b(int(s).to_bytes(4, 'little') + state.eta[0].encode() + int(state.tau).to_bytes(4, 'little'))))[0] % (2**32 - 2**9)) + 2**8
+        value = (Uint[32].decode_from(bytes(Hash.blake2b(Uint(s).encode() + state.eta[0].encode() + Uint(state.tau).encode())))[0] % (2**32 - 2**9)) + 2**8
         i = check(state_context, value)
         context = AccuContextX(
             s_index=s,
