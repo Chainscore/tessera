@@ -15,8 +15,7 @@ from jam.types.state.sigma import Sigma
 from jam.state.state import setup_state
 from tsrkit_types.integers import U16, U8, Uint
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic
-from jam.types.block import Block
-from jam.types.header import Header
+from jam.types.block import Block, Header
 from jam.types.protocol.validators import (
     IPAddress,
     ValidatorData,

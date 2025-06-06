@@ -1,21 +1,6 @@
 from tsrkit_types.struct import structure
 
-from jam.types.state.alpha import Alpha
-from jam.types.state.phi import Phi
-from jam.types.state.beta import Beta
-from jam.types.state.eta import Eta
-from jam.types.state.pi import Pi
-from jam.types.state.psi import Psi
-from jam.types.state.kappa import Kappa
-from jam.types.state.lambda_ import Lambda_
-from jam.types.state.rho import Rho
-from jam.types.state.tau import Tau
-from jam.types.state.chi import Chi
-from jam.types.state.iota import Iota
-from jam.types.state.nu import Nu
-from jam.types.state.xi import Xi
-from jam.types.state.gamma import Gamma
-from jam.types.state.delta import Delta
+from . import Alpha, Phi, Beta, Eta, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Nu, Xi, Gamma, Delta
 
 
 @structure
@@ -76,7 +61,7 @@ class Sigma:
     # Defined in section 10.1
     psi: Psi
 
-    # Validator activity statistics (blocks produced, tickets submitted, etc.)
+    # Validator activity statistics (blocks produced, ticket.py submitted, etc.)
     # Defined in section 13
     pi: Pi
 

@@ -2,7 +2,8 @@ from typing import Tuple, List, Set
 from tsrkit_types import structure, TypedVector, Bytes, Uint
 from jam.types.protocol.merkle import OptionHash
 from jam.types.state.phi import Phi
-from jam.types.work import WorkPackageHash, WorkExecResult
+from jam.types.work import WorkExecResult
+from jam.types.protocol.core import WorkPackageHash
 from jam.types.state.chi import Chi
 from jam.types.protocol.core import ServiceId, Gas, OpaqueHash, Balance, ExportsRoot
 from jam.types.state.delta import Delta

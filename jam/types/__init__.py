@@ -17,24 +17,12 @@ from jam.types.protocol import (
     Register,
     ProgramCounter,
     RemainingGas,
-    # Service types
-    ServiceInfo,
-    # Availability types
-    AvailabilityAssignment,
-    AvailabilityAssignments,
-    # History types
-    BlockInfo,
-    BlocksHistory,
-    ReportedWorkPackage,
     # Epoch types
     EpochMark,
     # Validator types
     ValidatorMetadata,
     ValidatorData,
     ValidatorsData,
-    EpochValidator,
-    EpochValidators,
-    ValidatorVector,
     IPAddress,
     # Crypto types
     BandersnatchPublic,
@@ -54,6 +42,10 @@ from jam.types.protocol import (
     # Merkle types
     MMR,
     OptionHash,
+    TicketId,
+    TicketAttempt,
+    TicketBody,
+    TicketsMark
 )
 
 # Work types
@@ -77,12 +69,15 @@ from jam.types.work import (
     MultiSegments,
 )
 
-# Extrinsic types
-from jam.types.extrinsics import (
+# Block types
+from jam.types.block import (
+    # Header types
+    Header,
+    OffendersMark,
+    # Block types
+    Block,
+    # Extrinsic types
     TicketEnvelope,
-    TicketBody,
-    TicketsAccumulator,
-    KeysAccumulator,
     TicketsExtrinsic,
     Verdict,
     Culprit,
@@ -162,24 +157,12 @@ __all__ = [
     "Register",
     "ProgramCounter",
     "RemainingGas",
-    # Service types
-    "ServiceInfo",
-    # Availability types
-    "AvailabilityAssignment",
-    "AvailabilityAssignments",
-    # History types
-    "BlockInfo",
-    "BlocksHistory",
-    "ReportedWorkPackage",
     # Epoch types
     "EpochMark",
     # Validator types
     "ValidatorMetadata",
     "ValidatorData",
     "ValidatorsData",
-    "EpochValidator",
-    "EpochValidators",
-    "ValidatorVector",
     "IPAddress",
     # Crypto types
     "BandersnatchPublic",
@@ -199,6 +182,10 @@ __all__ = [
     # Merkle types
     "MMR",
     "OptionHash",
+    # Block types
+    "Header",
+    "OffendersMark", 
+    "Block",
     # Work types
     "RefineContext",
     "ImportSpec",
@@ -220,9 +207,10 @@ __all__ = [
     # Extrinsic types
     "TicketEnvelope",
     "TicketBody",
-    "TicketsAccumulator",
-    "KeysAccumulator",
     "TicketsExtrinsic",
+    "TicketId",
+    "TicketAttempt",
+    "TicketsMark",
     "Verdict",
     "Culprit",
     "Judgement",

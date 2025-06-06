@@ -8,9 +8,7 @@ from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
-from jam.types.extrinsics import (
-    TicketsExtrinsic,
-)
+from jam.types.block import TicketsExtrinsic
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.utils.dummy.dummy_state import create_dummy_state

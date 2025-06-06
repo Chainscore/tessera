@@ -15,28 +15,12 @@ from jam.types.protocol.core import (
     RemainingGas,
 )
 
-from jam.types.protocol.service import ServiceInfo
-
-from jam.types.protocol.availability import (
-    AvailabilityAssignment,
-    AvailabilityAssignments,
-)
-
-from jam.types.protocol.history import (
-    BlockInfo,
-    BlocksHistory,
-    ReportedWorkPackage,
-)
-
 from jam.types.protocol.epoch import EpochMark
 
 from jam.types.protocol.validators import (
     ValidatorMetadata,
     ValidatorData,
     ValidatorsData,
-    EpochValidator,
-    EpochValidators,
-    ValidatorVector,
     IPAddress,
 )
 
@@ -59,6 +43,8 @@ from jam.types.protocol.crypto import (
 
 from jam.types.protocol.merkle import MMR, OptionHash
 
+from .ticket import TicketId, TicketAttempt, TicketBody, TicketsMark
+
 __all__ = [
     # Core types
     "TimeSlot",
@@ -75,24 +61,12 @@ __all__ = [
     "Register",
     "ProgramCounter",
     "RemainingGas",
-    # Service types
-    "ServiceInfo",
-    # Availability types
-    "AvailabilityAssignment",
-    "AvailabilityAssignments",
-    # History types
-    "BlockInfo",
-    "BlocksHistory",
-    "ReportedWorkPackage",
     # Epoch types
     "EpochMark",
     # Validator types
     "ValidatorMetadata",
     "ValidatorData",
     "ValidatorsData",
-    "EpochValidator",
-    "EpochValidators",
-    "ValidatorVector",
     "IPAddress",
     # Crypto types
     "BandersnatchPublic",

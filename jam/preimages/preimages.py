@@ -4,7 +4,7 @@ from jam.preimages.errors import PreimageError, PreimageErrorEnum
 from jam.types.state.delta import LookupTable
 from jam.types.state.sigma import Sigma
 from jam.types.block import Block
-from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
+from jam.types.block.extrinsics.preimages import Preimage, PreimagesExtrinsic
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import BlobLength
 from jam.types.state.pi import ServiceStat

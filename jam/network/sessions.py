@@ -6,7 +6,7 @@ from aioquic.tls import SessionTicket
 
 class SessionTicketStore:
     def __init__(self, port: int) -> None:
-        """Initialize the session ticket store and load existing tickets from file."""
+        """Initialize the session ticket store and load existing ticket.py from file."""
         store_path = f"sessions/{port}"
 
         if not os.path.exists(store_path):
@@ -27,12 +27,12 @@ class SessionTicketStore:
         return ticket
 
     def save_tickets(self) -> None:
-        """Save all session tickets to a file."""
+        """Save all session ticket.py to a file."""
         with open(self.file, "wb") as f:
             pickle.dump(self.tickets, f)
 
     def load_tickets(self) -> Dict[bytes, SessionTicket]:
-        """Load session tickets from file if it exists."""
+        """Load session ticket.py from file if it exists."""
         try:
             with open(self.file, "rb") as f:
                 return pickle.load(f)

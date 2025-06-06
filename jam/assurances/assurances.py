@@ -10,7 +10,7 @@ from jam.assurances.errors import AssurancesError, AssurancesErrorCode
 from jam.types.state.rho import OptionalWorkReportState
 from jam.types.state.sigma import Sigma
 from jam.types.block import Block
-from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField
+from jam.types.block.extrinsics.assurances import AvailAssurance, AvailBitField
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, Hash, OpaqueHash
 from jam.types.work import WorkReports
 from jam.utils.constants import (

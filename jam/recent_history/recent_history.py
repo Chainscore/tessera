@@ -2,7 +2,7 @@ from copy import deepcopy
 from jam.types.state.beta import BlockHistory, Beta
 from jam.types.state.sigma import Sigma
 from jam.types.block import Block
-from jam.types.extrinsics import GuaranteesExtrinsic
+from jam.types.block import GuaranteesExtrinsic
 from jam.types.protocol.crypto import Hash
 from jam.merklization import MMRFunctions
 from jam.types.protocol.merkle import MMR

@@ -3,7 +3,6 @@ from typing import Optional, Callable
 
 from tsrkit_types.choice import Choice
 from tsrkit_types.integers import Uint
-from tsrkit_types.option import Option
 from tsrkit_types.sequences import Vector
 from tsrkit_types.bytes import Bytes
 

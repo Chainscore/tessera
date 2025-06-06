@@ -3,7 +3,7 @@ from dataclasses import field
 from tsrkit_types.choice import Choice
 from tsrkit_types.sequences import TypedArray, TypedVector
 from tsrkit_types.struct import structure
-from jam.types.extrinsics.tickets import TicketBody
+from jam.types.protocol.ticket import TicketBody
 from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
