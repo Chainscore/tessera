@@ -4,17 +4,17 @@ from jam.execution.host_calls.invocations.functions.refine_fns import RefineFunc
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from jam.execution.pvm.status import OUT_OF_GAS, PANIC
 from jam.execution.utils import decode_code_hash
-from jam.types.base import U16
-from jam.types.protocol.core import CoreIndex, ProgramCounter
+from tsrkit_types.integers import Uint
+from jam.types.protocol.core import ProgramCounter
 from jam.types.protocol.crypto import OpaqueHash, Hash
-from jam.types.work.package import WorkPackage
-from jam.types.work.segment import Segments
+from jam.types.work import WorkPackage
+from jam.types.work import Segments
 from jam.utils.constants import IS_AUTHORIZED_GAS
 
 
 class PsiR(InvocationProtocol):
     def __init__(self, item_index: int, p: WorkPackage, auth_trace: bytes, i_segments: [[bytes]], e_offset: int):
-        self.item_index = U16(item_index)
+        self.item_index = Uint[16](item_index)
         self.work_package = p
         self.auth_trace = auth_trace
         self.i_segments = i_segments
@@ -27,7 +27,7 @@ class PsiR(InvocationProtocol):
     def table(self):
         from jam.state.state import state
         from jam.storage.item_extrinsics import ItemExtrinsics
-        from jam.config.data_stores import main_db
+        from jam.config.data_stores import data_stores
 
         return {
             0: (GeneralFunctions, ()),
@@ -42,7 +42,7 @@ class PsiR(InvocationProtocol):
                          "trace": self.auth_trace,
                          "item_index": self.item_index,
                          "import_segments": self.i_segments,
-                         "extrinsics": ItemExtrinsics(main_db).get_all(self.work_package),
+                         "extrinsics": ItemExtrinsics(data_stores.main_db).get_all(self.work_package),
                          "o": None,
                          "t": None
                      }

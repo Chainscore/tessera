@@ -1,6 +1,6 @@
 from typing import Dict
 
-from jam.types.extrinsics import TicketBody
+from jam.types.protocol.ticket import TicketBody
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
 from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
@@ -13,30 +13,17 @@ from jam.types.state.delta import (
     AccountLookup,
     AccountPreimages,
     ServiceCodeHash,
-    Timestamps, AccountMetadata, Ao, Ai,
+    Timestamps, AccountMetadata, Ao, Ai, LookupTable,
 )
-from jam.types.state.eta import Eta
-from jam.types.state.iota import Iota
-from jam.types.state.kappa import Kappa
-from jam.types.state.lambda_ import Lambda_
-from jam.types.state.phi import AuthorizationQueue, Phi
-from jam.types.state.pi import AllValidatorStats, Pi, ValidatorStat, AllCoreStats, CoreStat, AllServiceStats
-from jam.types.state.psi import Psi, PsiB, PsiG, PsiO, PsiW
-from jam.types.state.rho import OptionalWorkReportState, Rho
-from jam.types.state.tau import Tau
-from jam.types.state.nu import AllReadyWRs, Nu
-from jam.types.state.xi import Xi
+from jam.types import Eta, Iota, Kappa, Lambda_, AuthorizationQueue, Phi, AllValidatorStats, Pi, ValidatorStat, AllCoreStats, CoreStat, AllServiceStats, Psi, PsiB, PsiG, PsiO, PsiW, OptionalWorkReportState, Rho, Tau, AllReadyWRs, Nu, Xi
 
 from jam.state.state import State
-from jam.types.base import Bytes
-from jam.types.base.integers.fixed import U16, U32, U8
-from jam.types.base.integers.general import Int
-from jam.types.base.null import Nullable
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U16, U32, U8, Uint
+from tsrkit_types.null import Null
 
 from jam.types.protocol.crypto import (
-    BandersnatchPublic,
-    BandersnatchRingRoot,
-    BlsPublic,
+	BlsPublic,
     Ed25519Public,
     HeaderHash,
     OpaqueHash,
@@ -44,17 +31,16 @@ from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
 )
-from jam.types.work.report import WorkDependencies, SegmentRootLookup
+from jam.types.work import SegmentRootLookup
 from jam.types.protocol.core import (
     SegmentRoot,
     WorkPackageHash,
     Balance,
     Gas,
     ServiceId,
-    WorkReportHash,
 )
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata, ValidatorName, IPAddress
-from jam.types.work.report import WorkDependencies
+from jam.types.protocol.validators import ValidatorData, ValidatorMetadata, IPAddress
+from jam.types.work import WorkDependencies
 from jam.utils.constants import (
     CORE_COUNT,
     EPOCH_LENGTH,
@@ -96,7 +82,7 @@ def create_dummy_state_components() -> Dict[str, object]:
             bandersnatch=BandersnatchPublic(create_dummy_bytes32()),
             ed25519=Ed25519Public(create_dummy_bytes32()),
             bls=BlsPublic(create_dummy_bytes(144)),
-            metadata=ValidatorMetadata(name=ValidatorName(""), host=IPAddress([U8(127), U8(0), U8(0), U8(1)]), port=U16(0)),
+            metadata=ValidatorMetadata(name=Bytes(10), protocol=Uint[16](2**16 - 1), host=IPAddress([U8(127), U8(0), U8(0), U8(1)]), port=U16(0)),
         )
         for _ in range(VALIDATOR_COUNT)
     ]
@@ -126,7 +112,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     timestamps = AccountLookup(
         {
-            create_dummy_bytes32(): Timestamps([U32(i) for i in range(3)])
+            LookupTable(hash=create_dummy_bytes32(), length=Uint[32](0)): Timestamps([U32(i) for i in range(3)])
             for _ in range(2)
         }
     )
@@ -151,7 +137,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["kappa"] = Kappa(dummy_validator_data)
     components["lambda_"] = Lambda_(dummy_validator_data)
     components["rho"] = Rho(
-        [OptionalWorkReportState(Nullable()) for _ in range(CORE_COUNT)]
+        [OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]
     )
     components["tau"] = Tau(0)
 
@@ -183,12 +169,12 @@ def create_dummy_state_components() -> Dict[str, object]:
     all_validator_stats = AllValidatorStats(
         [
             ValidatorStat(
-                blocks=Int(1),
-                tickets=Int(1),
-                pre_images=Int(1),
-                pre_images_size=Int(1),
-                guarantees=Int(1),
-                assurances=Int(1),
+                blocks=Uint(1),
+                tickets=Uint(1),
+                pre_images=Uint(1),
+                pre_images_size=Uint(1),
+                guarantees=Uint(1),
+                assurances=Uint(1),
             )
             for _ in range(VALIDATOR_COUNT)
         ]
@@ -196,14 +182,14 @@ def create_dummy_state_components() -> Dict[str, object]:
     all_core_stats = AllCoreStats(
         [
             CoreStat(
-                gas_used=Int(1),
-                imports=Int(1),
-                extrinsic_count=Int(1),
-                extrinsic_size=Int(1),
-                exports=Int(1),
-                bundle_size=Int(1),
-                da_load=Int(1),
-                popularity=Int(1),
+                gas_used=Uint(1),
+                imports=Uint(1),
+                extrinsic_count=Uint(1),
+                extrinsic_size=Uint(1),
+                exports=Uint(1),
+                bundle_size=Uint(1),
+                da_load=Uint(1),
+                popularity=Uint(1),
             )
             for _ in range(CORE_COUNT)
         ]

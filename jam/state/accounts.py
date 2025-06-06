@@ -1,15 +1,14 @@
-from dataclasses import dataclass
-
+from typing import Tuple
 from jam.execution.utils import decode_code_hash
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.state.merkle import StateTrie
-from jam.state.utils.key_constructor import construct_state_key
-from jam.types.base import Bytes, ByteArray32, U32
-from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot, BlobLength
+from jam.state.utils import construct_state_key
+from jam.types.protocol.core import Balance, ServiceId, TimeSlot, BlobLength
 from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import AccountMetadata, ServiceCodeHash, Ao, Ai, LookupTable, Timestamps, AccountData
+from jam.types.state.delta import AccountMetadata, LookupTable, Timestamps, AccountData
 from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
-
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U32
 
 def make_account_prop(field):
     def getter(self):
@@ -31,7 +30,7 @@ def make_account_prop(field):
 
 
 class AccountDataView:
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+    def __init__(self, id: ServiceId, db: RockStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie
@@ -52,7 +51,7 @@ class AccountDataView:
 
 class Account:
 
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+    def __init__(self, id: ServiceId, db: RockStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie
@@ -83,10 +82,10 @@ class Account:
     def lookup(self):
         return TimestampsView(self.id, self.DB, self.TRIE)
 
-    def m_c(self) -> (bytes, bytes):
+    def m_c(self) -> Tuple[bytes, bytes]:
         return decode_code_hash(self.preimages[self.service.code_hash])
 
-    def historical_lookup(self, timeslot: TimeSlot, preimage_hash: ByteArray32):
+    def historical_lookup(self, timeslot: TimeSlot, preimage_hash: Bytes[32]):
         """
             https://graypaper.fluffylabs.dev/#/cc517d7/11c70011e000?v=0.6.5
             """
@@ -124,7 +123,7 @@ class Account:
 
 
 class DeltaView:
-    def __init__(self, db: KVStore, trie: StateTrie):
+    def __init__(self, db: RockStore, trie: StateTrie):
         self.DB = db
         self.TRIE = trie
 
@@ -153,16 +152,16 @@ class DeltaView:
         return self.DB.get(bytes(construct_state_key((255, key)))) is not None
 
 class StorageView:
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+    def __init__(self, id: ServiceId, db: RockStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie
 
-    def __getitem__(self, key: ByteArray32):
+    def __getitem__(self, key: Bytes[32]):
         data = self.DB.get(bytes(construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23]))))
         return Bytes(data) if data else data
 
-    def __setitem__(self, key: ByteArray32, value: Bytes):
+    def __setitem__(self, key: Bytes[32], value: Bytes):
         k = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
         # TODO - check for gas before adding, throw error if insufficient. This is supposed to be handled in relevent invocation
         key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
@@ -180,7 +179,7 @@ class StorageView:
         )
         self.TRIE.update(key, value)
 
-    def __delitem__(self, key: ByteArray32):
+    def __delitem__(self, key: Bytes[32]):
         curr_value = self[key]
         if curr_value:
             meta_view = AccountDataView(self.id, self.DB, self.TRIE)
@@ -191,17 +190,17 @@ class StorageView:
         self.TRIE.delete(storage_key)
 
 class PreImageView:
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+    def __init__(self, id: ServiceId, db: RockStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie
 
-    def __getitem__(self, key: ByteArray32):
+    def __getitem__(self, key: Bytes[32]):
         data = Bytes(U32(2**32 - 2).encode() + bytes(key)[1:24])
         data = self.DB.get(bytes(construct_state_key((self.id, data))))
         return Bytes(data) if data else data
 
-    def __setitem__(self, key: ByteArray32, value: Bytes):
+    def __setitem__(self, key: Bytes[32], value: Bytes):
         k = construct_state_key((self.id, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24]))
         self.DB.put(
             bytes(k),
@@ -209,13 +208,13 @@ class PreImageView:
         )
         self.TRIE.update(k, value)
 
-    def __delitem__(self, key: ByteArray32):
+    def __delitem__(self, key: Bytes[32]):
         storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
         self.DB.delete(bytes(storage_key))
         self.TRIE.delete(storage_key)
 
 class TimestampsView:
-    def __init__(self, id: ServiceId, db: KVStore, trie: StateTrie):
+    def __init__(self, id: ServiceId, db: RockStore, trie: StateTrie):
         self.id = id
         self.DB = db
         self.TRIE = trie

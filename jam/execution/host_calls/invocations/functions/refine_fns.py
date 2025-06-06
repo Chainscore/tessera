@@ -1,41 +1,29 @@
-from dataclasses import dataclass
+from tsrkit_types import structure, Dictionary, Uint, Bytes, U64, ByteArray
 
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.program import Program
 from jam.execution.pvm.pvm import PVM
 from jam.execution.pvm.status import PANIC, CONTINUE, ExecutionStatus, HostStatus, PvmError
 from jam.execution.pvm.types import Accessibility
-from jam.types.base import decodable_dictionary, Dictionary
-from jam.types.base.integers.fixed import U64
-from jam.types.base.integers.general import Int
-from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.protocol.core import Gas, Register, ProgramCounter
 from jam.execution.pvm.memory import Memory
 from jam.types.protocol.core import ServiceId,TimeSlot
 from jam.types.state.delta import Delta
-from jam.types.base.sequences import ByteArray32
-from jam.types.work.segment import Segment, Segments
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
-from jam.utils.codec.primitives.integers import IntegerCodec
+from jam.types.work import Segment, Segments
 from jam.utils.constants import  MAX_EXPORT_ITEM, PVM_MEMORY_PAGE_SIZE, SEGMENT_SIZE
-from jam.utils.json import JsonSerde
 from jam.work_package.work_package import WorkPackageProcessing
 
-@decodable_dataclass
-@dataclass
-class IntegratedPVM(Codable, JsonSerde):
+@structure
+class IntegratedPVM:
     program_code:bytes
     memory:Memory
     instruction_counter: ProgramCounter
 
-@decodable_dictionary(Int,IntegratedPVM)
-class RefinementMap(Dictionary[Int,IntegratedPVM]):
+class RefinementMap(Dictionary[Uint,IntegratedPVM]):
     """Integrated PVM Dict(m) """
 
-@decodable_dataclass
-@dataclass
-class RefineContext(Codable, JsonSerde):
+@structure
+class RefineContext:
     m: RefinementMap
     e: Segments
 
@@ -59,7 +47,7 @@ class RefineFunctions(INVF):
             registers[7] = HostStatus.NONE
             return CONTINUE, registers, memory
         else:
-            v = a.historical_lookup(timeslot, ByteArray32(memory.read(h,32)))
+            v = a.historical_lookup(timeslot, Bytes[32](memory.read(h,32)))
 
         f = min(int(registers[10]), len(v))
         l = min(int(registers[11]), len(v)-f)
@@ -77,7 +65,7 @@ class RefineFunctions(INVF):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
         if memory.is_accessible(address=p, length=z, for_write=True):
-            x = WorkPackageProcessing.zero_padding(value=Bytes(memory.read(address=p,length=z)), n=Int(SEGMENT_SIZE))
+            x = WorkPackageProcessing.zero_padding(value=ByteArray(memory.read(address=p,length=z)), n=Uint(SEGMENT_SIZE))
         else:
             raise PvmError(PANIC)
         if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:
@@ -203,9 +191,9 @@ class RefineFunctions(INVF):
         m_bytes=memory.read(o,112)
         #bytes->14size array of 8elements each 0->gas(g) 1-13->register_data(w)
         m_array = [m_bytes[i:i + 8] for i in range(0, len(m_bytes), 8)]
-        g,_=IntegerCodec.decode_from(8,bytes(m_array[0]))
+        g,_ = U64.decode_from(bytes(m_array[0]))
         w=[
-            IntegerCodec.decode_from(8, bytes(m_array[i]))[0]
+            U64.decode_from(bytes(m_array[i]))[0]
             for i in range(1,14)
         ]
         [c,i_dash,g_dash,w_dash,u_dash]=PVM.execute(context.m[n].program_code,context.m[n].instruction_counter,g,w,context.m[n].memory)

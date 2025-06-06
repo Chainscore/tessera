@@ -5,13 +5,13 @@ from jam.execution.host_calls.invocations.functions.protocol import InvocationFu
 from jam.execution.host_calls.invocations.protocol import Context, DispatchNormalReturn
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.status import ExecutionStatus, PANIC, HostStatus, CONTINUE, PvmError
-from jam.types.base import U64, U32, U16, Bytes, Int
+from tsrkit_types import U64, U32, U16, Bytes, Uint
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.state.delta import AccountData
-from jam.types.protocol.core import Gas, ServiceId, Register, Balance
+from jam.types.protocol.core import Gas, ServiceId, Register
 from jam.types.state.delta import Delta
-from jam.types.work.item import WorkItem
-from jam.types.work.package import WorkPackage
+from jam.types.work import WorkItem
+from jam.types.work import WorkPackage
 from jam.utils.constants import (
     ADDITIONAL_BALANCE_PER_ITEM, SLOT_PERIOD, MAX_AUTH_QUEUE_ITEMS, ROTATION_PERIOD, MAX_ACCUMULATION_ENTRIES, EXTRINSIC_COUNT,
     UNAVAILABLE_WORK_EXPIRY, VALIDATOR_COUNT, MAX_AUTH_CODE_SIZE, MAX_ENCODED_WORK_PACKAGE_SIZE, MAX_SERVICE_CODE_SIZE, BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_IMPORT_ITEM,
@@ -129,7 +129,7 @@ class GeneralFunctions(INVF):
             if w10 == 7:
                 v = package.encode()
             elif w10 == 8:
-                v = package.code_hash + package.params
+                v = package.authorizer.code_hash + package.authorizer.params
             elif w10 == 9:
                 v = package.authorization
             elif w10 == 10:
@@ -162,7 +162,7 @@ class GeneralFunctions(INVF):
         l = min(int(registers[9]), len(v) - f)
 
         if not memory.is_accessible(memory_start, l, for_write=True):
-            print("Memory not accessible", memory_start, l)
+            logger.error("Memory not accessible", memory_start, l)
             raise PvmError(PANIC)
 
         registers[7] = Register(len(v))
@@ -181,7 +181,6 @@ class GeneralFunctions(INVF):
             service_index: ServiceId,
             accounts: Delta
     ):
-        print(registers)
         if registers[7] == 2**64 - 1:
             s_star = service_index
         else:
@@ -268,7 +267,7 @@ class GeneralFunctions(INVF):
         o = registers[8]
 
         if t is not None:
-            m = bytes(t.service.code_hash) + Int(t.service.balance).encode() + Int(t.service.t).encode() + Int(t.service.gas_limit).encode() + Int(t.service.min_gas).encode() + Int(t.service.num_o).encode() + Int(t.service.num_i).encode()
+            m = bytes(t.service.code_hash) + Uint(t.service.balance).encode() + Uint(t.service.t).encode() + Uint(t.service.gas_limit).encode() + Uint(t.service.min_gas).encode() + Uint(t.service.num_o).encode() + Uint(t.service.num_i).encode()
 
             if memory.is_accessible(o, len(m), True):
                 registers[7] = HostStatus.OK.value

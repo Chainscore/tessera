@@ -1,18 +1,14 @@
 from copy import deepcopy
-from typing import Optional
-
 from jam.types.state.beta import BlockHistory, Beta
 from jam.types.state.sigma import Sigma
-from jam.types.base.sequences import ByteArray32
 from jam.types.block import Block
-from jam.types.extrinsics import GuaranteesExtrinsic
-from jam.types.protocol.crypto import Hash, HeaderHash
+from jam.types.block import GuaranteesExtrinsic
+from jam.types.protocol.crypto import Hash
 from jam.merklization import MMRFunctions
 from jam.types.protocol.merkle import MMR
-from jam.types.protocol.crypto import OpaqueHash
-from jam.types.work.report import SegmentRootLookup
+from jam.types.work import SegmentRootLookup
 from jam.utils.constants import RECENT_HISTORY_SIZE
-from jam.types.protocol.core import WorkPackageHash, SegmentRoot
+from tsrkit_types.bytes import Bytes
 
 
 def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
@@ -25,10 +21,11 @@ def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
 
     return package_dict
 
+
 class RecentHistory:
 
     @staticmethod
-    def transition(state: Sigma, block: Block, accumulate_root = ByteArray32([0] * 32), header_hash=None) -> Sigma:
+    def transition(state: Sigma, block: Block, accumulate_root = Bytes[32]([0] * 32), header_hash=None) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -90,7 +87,7 @@ class RecentHistory:
         n = BlockHistory(
             Hash.blake2b(block.header.encode()) if header_hash is None else header_hash,
             last,
-            ByteArray32([0] * 32),
+            Bytes[32]([0] * 32),
             package(block.extrinsic.guarantees)
         )
 

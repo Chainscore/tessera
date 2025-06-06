@@ -1,24 +1,15 @@
-from dataclasses import dataclass
 from typing import Optional
-
-from jam.types.base import String
-from jam.types.base.choices.option import Option, decodable_option
-from jam.types.base.enum import Enum, decodable_enum
-from jam.types.base.integers.fixed import U64, U8
-from jam.types.base.null import Null
-from jam.types.protocol.core import Register
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from tsrkit_types.enum import Enum
+from tsrkit_types.struct import structure
 from jam.error import JamError
 
-@dataclass
-class ExecValue(Codable):
+@structure
+class ExecValue:
     name: str
     code: int
     register: Optional[int]
 
 
-@decodable_enum
 class ExecutionStatus(Enum):
     HALT         = ExecValue("halt", 0 , None)
     PANIC        = ExecValue("panic", 1, None)
@@ -27,7 +18,7 @@ class ExecutionStatus(Enum):
     OUT_OF_GAS   = ExecValue("out-of-gas", 4, None)
     CONTINUE     = ExecValue("continue", 5, None)
 
-@decodable_enum
+
 class HostStatus(Enum):
     NONE    = 2**64 - 1
     WHAT    = 2**64 - 2

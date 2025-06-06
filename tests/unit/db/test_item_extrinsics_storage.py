@@ -1,16 +1,14 @@
 import pytest
-from unittest.mock import MagicMock, patch
-from jam.storage.db.kv import KVStore
+from unittest.mock import MagicMock
+from rockstore import RockStore
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types.protocol.crypto import Hash
-from jam.types.work.package import WorkPackage
-from jam.types.base.sequences.bytes.bytes import Bytes
-
+from jam.types.work import WorkPackage
 
 
 def test_ext_encode(db_path):
     """Test encoiding extrinsic data."""
-    db = KVStore(db_path)
+    db = RockStore(db_path)
     ie = ItemExtrinsics(db)
     test_data = [b'12345']
     ext_data, specs = ie.encode(test_data)
@@ -26,7 +24,7 @@ def test_ext_encode(db_path):
 
 def test_store_extrinsics(db_path):
     """Test storing extrinsic data."""
-    db = KVStore(db_path)
+    db = RockStore(db_path)
     # Create test data bytes
     test_data = b'12345'
     # Create test wp
@@ -50,7 +48,7 @@ def test_store_extrinsics(db_path):
 
 def test_store_invalid_hash(db_path):
     """Test that storing with invalid hash raises an error."""
-    db = KVStore(db_path)
+    db = RockStore(db_path)
     # Create test data
     test_data = b'12345'
 
@@ -79,7 +77,7 @@ def test_store_invalid_hash(db_path):
 
 def test_get_extrinsic(db_path):
     """Test retrieving stored extrinsic data."""
-    db = KVStore(db_path)
+    db = RockStore(db_path)
 
     # Store some test data first
     test_data = b'extrinsic_test_data'
@@ -101,7 +99,7 @@ def test_get_extrinsic(db_path):
 
 def test_multiple_extrinsics(db_path):
     """Test storing multiple extrinsics in one package."""
-    db = KVStore(db_path)
+    db = RockStore(db_path)
 
     # Create test data for multiple extrinsics
     test_data1 = b'123'

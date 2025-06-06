@@ -2,10 +2,10 @@ from typing import Tuple
 from jam.accumulation.types import  DeferredTransfers, OperandTuples, AccuContextX,StateContext, AccumulationContext, PreimageDict
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
-from jam.execution.host_calls.invocations.protocol import InvocationProtocol, DispatchReturn, Context
-from jam.types.base import Int, Null
-from jam.types.base.integers.fixed import U32
-from jam.types.protocol.core import Gas, ProgramCounter, ServiceId, TimeSlot, Register
+from jam.execution.host_calls.invocations.protocol import InvocationProtocol
+from tsrkit_types.null import Null
+from tsrkit_types.integers import Uint
+from jam.types.protocol.core import Gas, ProgramCounter, ServiceId, TimeSlot
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.protocol.merkle import OptionHash
 from jam.execution.host_calls.invocations.functions.accumulate_fns import AccumulateFunctions, check
@@ -64,13 +64,12 @@ class PsiA(InvocationProtocol):
         meta_n_code = self.partial_state.service_accounts[self.service_id].m_c()
         if meta_n_code is None or len(meta_n_code[1]) > MAX_SERVICE_CODE_SIZE:
             return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
-
         else:
             gas, status, context = PsiM.execute(
                 meta_n_code[1],
                 ProgramCounter(5),
                 self.gas,
-                Int(self.timeslot).encode() + Int(self.service_id).encode() + self.operandTuples.encode(),
+                Uint(self.timeslot).encode() + Uint(self.service_id).encode() + self.operandTuples.encode(),
                 self.dispatch,
                 self.context,
             )
@@ -89,7 +88,7 @@ class PsiA(InvocationProtocol):
         """
         from jam.state.state import state
 
-        value = (U32.decode_from(bytes(Hash.blake2b(Int(s).encode() + state.eta[0].encode() + Int(state.tau).encode())))[0] % (2**32 - 2**9)) + 2**8
+        value = (Uint[32].decode_from(bytes(Hash.blake2b(Uint(s).encode() + state.eta[0].encode() + Uint(state.tau).encode())))[0] % (2**32 - 2**9)) + 2**8
         i = check(state_context, value)
         context = AccuContextX(
             s_index=s,

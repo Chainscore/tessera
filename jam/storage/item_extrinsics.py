@@ -1,20 +1,19 @@
 from typing import List, Tuple
 
-from jam.config.data_stores import main_db
-from jam.storage.db.kv import KVStore
-from jam.types.base.integers import U32
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
-from jam.types.base.sequences.bytes.bytes import Bytes
+from jam.config.data_stores import data_stores
+from rockstore import RockStore
 from jam.types.protocol.crypto import Hash
-from jam.types.work.item import ExtrinsicSpecs, ExtrinsicSpec
-from jam.types.work.package import WorkPackage
+from jam.types.work import ExtrinsicSpecs, ExtrinsicSpec
+from jam.types.work import WorkPackage
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U32
 
 
 class ItemExtrinsics:
     """Place to store and get extrinsics that are received along with Work Package"""
-    DB = main_db
+    DB: RockStore
 
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.DB = db
 
     def store(self, package: WorkPackage, data: List[Bytes]):
@@ -50,7 +49,7 @@ class ItemExtrinsics:
 
 
     @staticmethod
-    def encode(wi_data: List[Bytes]) -> (Bytes, ExtrinsicSpecs):
+    def encode(wi_data: List[Bytes]) -> Tuple[Bytes, ExtrinsicSpecs]:
         """
         Encode a bundle of work item extrinsics to extrinsic bytes and ExtrinsicSpecs
         Args:
@@ -67,12 +66,12 @@ class ItemExtrinsics:
         return wi, extr_specs
 
 
-    def get(self, extrinsic_hash: ByteArray32) -> bytes:
+    def get(self, extrinsic_hash: Bytes[32]) -> bytes:
         """Gets the relevent extrinsic, assuming we already know its hash (as its stored in WI)
 
         Args:
-            extrinsic_hash (ByteArray32)
-            db (KVStore)
+            extrinsic_hash (Bytes[32])
+            db (RockStore)
 
         Returns:
             Bytes

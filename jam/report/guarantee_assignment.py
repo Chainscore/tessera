@@ -1,16 +1,13 @@
 from typing import Dict, List
 
-from jam.types.base import decodable_vector, U32, Vector
+from tsrkit_types.sequences import TypedVector
+from tsrkit_types.integers import U32
 from jam.types.protocol.core import CoreIndex
 from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
 from math import floor
 from jam.utils.shuffle import shuffle
 from collections import deque
 
-
-
-@decodable_vector(element_type=U32)
-class U32Vector(Vector): ...
 
 def guarantor_assignment(eta,  kappa, lambda_, gamma_k, block_slot, report_slot, tau) -> Dict[CoreIndex, List]:
 
@@ -32,12 +29,12 @@ def guarantor_assignment(eta,  kappa, lambda_, gamma_k, block_slot, report_slot,
 
     """
     # ------- Validator order ---------
-    array_validator: U32Vector = U32Vector([])
+    array_validator = TypedVector[U32]([])
     for i in range(VALIDATOR_COUNT):
         array_validator.append(U32(i))
 
     # ------- Validator assignment to the cores -------
-    validator_assign: U32Vector = U32Vector([])
+    validator_assign = TypedVector[U32]([])
     for i in range(VALIDATOR_COUNT):
         val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
         validator_assign.append(U32(val_core))

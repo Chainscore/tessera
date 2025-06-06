@@ -1,16 +1,11 @@
-from dataclasses import dataclass
-from typing import Tuple, List, Set, Optional
-from jam.types.base import Int
+from typing import Tuple, List, Set
+from tsrkit_types import structure, TypedVector, Bytes, Uint
 from jam.types.protocol.merkle import OptionHash
 from jam.types.state.phi import Phi
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.utils.json import JsonSerde
-from jam.types.work.report import WorkPackageHash, WorkExecResult
+from jam.types.work import WorkExecResult
+from jam.types.protocol.core import WorkPackageHash
 from jam.types.state.chi import Chi
 from jam.types.protocol.core import ServiceId, Gas, OpaqueHash, Balance, ExportsRoot
-from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.state.delta import Delta
 from jam.types.state.iota import Iota
 
@@ -20,26 +15,23 @@ GasConsumed = List[Tuple[ServiceId, Gas]]
 BeefyMap = Set[Tuple[ServiceId, OpaqueHash]]
 
 
-@decodable_dataclass
-@dataclass
-class OperandTuple(Codable, JsonSerde):
+@structure
+class OperandTuple:
     h: WorkPackageHash
     e: ExportsRoot
     a: OpaqueHash
     o: Bytes
     y: OpaqueHash
-    g: Int
+    g: Gas
     d: WorkExecResult
 
 
-@decodable_vector(OperandTuple)
-class OperandTuples(Vector[OperandTuple]):
+class OperandTuples(TypedVector[OperandTuple]):
     ...
 
 
-@decodable_dataclass
-@dataclass
-class DeferredTransfer(Codable, JsonSerde):
+@structure
+class DeferredTransfer:
     sender: ServiceId
     receiver: ServiceId
     amount: Balance
@@ -47,14 +39,12 @@ class DeferredTransfer(Codable, JsonSerde):
     gas: Gas
 
 
-@decodable_vector(DeferredTransfer)
-class DeferredTransfers(Vector[DeferredTransfer]):
+class DeferredTransfers(TypedVector[DeferredTransfer]):
     ...
 
 
-@decodable_dataclass
-@dataclass
-class StateContext(Codable,JsonSerde):
+@structure
+class StateContext:
     # d
     service_accounts: Delta
     # i
@@ -65,17 +55,15 @@ class StateContext(Codable,JsonSerde):
     privileges: Chi
 
 
-@decodable_vector(DeferredTransfer)
-class DeferredTransfers(Vector[DeferredTransfer]):
+class DeferredTransfers(TypedVector[DeferredTransfer]):
     ...
 
 
 PreimageDict = Set[Tuple[ServiceId, Bytes]]
 
 
-@decodable_dataclass
-@dataclass
-class AccuContextX(Codable, JsonSerde):
+@structure
+class AccuContextX:
     #s
     s_index: ServiceId
     #u
@@ -90,8 +78,7 @@ class AccuContextX(Codable, JsonSerde):
     preimage: PreimageDict
 
 
-@decodable_dataclass
-@dataclass
-class AccumulationContext(Codable, JsonSerde):
+@structure
+class AccumulationContext:
     x: AccuContextX
     y: AccuContextX

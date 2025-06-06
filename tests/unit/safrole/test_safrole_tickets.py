@@ -1,30 +1,31 @@
 import pytest
+from tsrkit_types.bytes import Bytes
+
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.state.eta import Eta
-from jam.types.base.integers.fixed import U32
+from tsrkit_types.integers import U32
 from jam.types.state.kappa import Kappa
 from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
-from jam.types.protocol.crypto import ByteArray32
-from jam.types.extrinsics.tickets import TicketBody, TicketId, TicketAttempt, TicketEnvelope
+from jam.types.protocol.ticket import TicketBody, TicketId, TicketAttempt
 from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys, generate_ticket
-from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END, MAX_TICKETS_PER_EXTRINSIC
+from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END
 
 
 @pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_ticket_accumulation():
-    """Test that Safrole correctly accumulates tickets during the submission period"""
-    # Create tickets
+    """Test that Safrole correctly accumulates ticket.py during the submission period"""
+    # Create ticket.py
     ticket1 = TicketBody(id=TicketId(bytes([1] * 32)), attempt=TicketAttempt(0))
     
     # Create initial state with a ticket already in gamma_a
     initial_state = create_state(
         tau=U32(5),  # Assume this is within ticket submission period
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -54,7 +55,7 @@ def test_ticket_accumulation():
         )
         
         # Apply the transition
-        new_state = Safrole.transition(initial_state, new_block, ByteArray32(create_dummy_bytes(32)))
+        new_state = Safrole.transition(initial_state, new_block, Bytes[32](create_dummy_bytes(32)))
         
         # Check that the new ticket was accumulated
         assert len(new_state.gamma.a) == 2
@@ -69,11 +70,11 @@ def test_ticket_accumulation():
 
 @pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_ticket_submission_outside_period():
-    """Test that Safrole rejects tickets outside the submission period"""
+    """Test that Safrole rejects ticket.py outside the submission period"""
     # Create initial state
     initial_state = create_state(
         tau=U32(5),
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -90,7 +91,7 @@ def test_ticket_submission_outside_period():
     # Create a ticket envelope
     ticket_envelope = generate_ticket()
     
-    # Create a block with tickets after the submission period
+    # Create a block with ticket.py after the submission period
     new_block = create_block(
         slot=slot_after_submission, 
         tickets=[ticket_envelope]
@@ -98,18 +99,18 @@ def test_ticket_submission_outside_period():
     
     # Verify that the transition raises the expected error
     with pytest.raises(SafroleError) as excinfo:
-        Safrole.transition(initial_state, new_block, ByteArray32(create_dummy_bytes(32)))
+        Safrole.transition(initial_state, new_block, Bytes[32](create_dummy_bytes(32)))
     
     assert excinfo.value.code == SafroleErrorCode.UNEXPECTED_TICKET
 
 
 @pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_ticket_duplicate_rejection():
-    """Test that Safrole correctly rejects duplicate tickets"""
+    """Test that Safrole correctly rejects duplicate ticket.py"""
     # Create initial state
     initial_state = create_state(
         tau=U32(5),  # Assume this is within ticket submission period
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -126,35 +127,35 @@ def test_ticket_duplicate_rejection():
     # Calculate slot within submission period
     slot_within_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END - 1)
     
-    # Mock the vrf_output function to return the same ID for all tickets
+    # Mock the vrf_output function to return the same ID for all ticket.py
     original_vrf_output = Safrole.vrf_output
     duplicate_id = TicketId(bytes([1] * 32))
     Safrole.vrf_output = lambda _: duplicate_id
     
     try:
-        # Create a block with duplicate tickets (same ID)
+        # Create a block with duplicate ticket.py (same ID)
         duplicate_block = create_block(
             slot=slot_within_submission, 
             tickets=[ticket_envelope, ticket_envelope]  # Same ticket twice
         )
         
-        # Verify that trying to apply duplicate tickets raises the expected error
+        # Verify that trying to apply duplicate ticket.py raises the expected error
         with pytest.raises(SafroleError) as excinfo:
-            Safrole.transition(initial_state, duplicate_block, ByteArray32(bytes(32)))
+            Safrole.transition(initial_state, duplicate_block, Bytes[32](bytes(32)))
         
-        # Check that the error message indicates duplicate tickets not allowed
-        assert "Duplicate tickets are not allowed" in str(excinfo.value)
+        # Check that the error message indicates duplicate ticket.py not allowed
+        assert "Duplicate ticket.py are not allowed" in str(excinfo.value)
     finally:
         # Restore the original function
         Safrole.vrf_output = original_vrf_output
 
 @pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_ticket_sorting():
-    """Test that Safrole correctly sorts tickets by ID"""
+    """Test that Safrole correctly sorts ticket.py by ID"""
     # Create initial state
     initial_state = create_state(
         tau=U32(5),  # Assume this is within ticket submission period
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -165,7 +166,7 @@ def test_ticket_sorting():
         offenders=PsiO([])
     )
     
-    # Create multiple ticket envelopes (3 distinct tickets)
+    # Create multiple ticket envelopes (3 distinct ticket.py)
     envelopes = [generate_ticket() for _ in range(3)]
     
     # Calculate slot within submission period
@@ -195,26 +196,26 @@ def test_ticket_sorting():
     Safrole.vrf_output = mock_vrf_output
     
     try:
-        # Create a block with the tickets
+        # Create a block with the ticket.py
         new_block = create_block(
             slot=slot_within_submission, 
             tickets=envelopes
         )
         
         # Apply the transition
-        new_state = Safrole.transition(initial_state, new_block, ByteArray32(create_dummy_bytes(32)))
+        new_state = Safrole.transition(initial_state, new_block, Bytes[32](create_dummy_bytes(32)))
         
-        # Check that tickets were accumulated
+        # Check that ticket.py were accumulated
         assert len(new_state.gamma.a) == 3
         
-        # Extract the IDs of accumulated tickets
+        # Extract the IDs of accumulated ticket.py
         accumulated_ids = [ticket.id for ticket in new_state.gamma.a]
         
-        # Check all our tickets made it into the accumulator
+        # Check all our ticket.py made it into the accumulator
         for ticket_id in ticket_ids:
             assert ticket_id in accumulated_ids, f"Ticket {ticket_id} should be in accumulator"
         
-        # Verify tickets are sorted by ID
+        # Verify ticket.py are sorted by ID
         expected_order = sorted(ticket_ids)
         assert accumulated_ids == expected_order, "Tickets should be sorted by ID"
     finally:

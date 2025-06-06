@@ -1,16 +1,16 @@
 from copy import deepcopy
 
 import pytest
-from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
+from tsrkit_types.bytes import Bytes
+
 from jam.consensus.safrole.safrole import Safrole
 from jam.types.state.eta import Eta
-from jam.types.base.integers.fixed import U32
+from tsrkit_types.integers import U32
 from jam.types.state.kappa import Kappa
 from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
-from jam.types.protocol.crypto import ByteArray32
 from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
 from jam.utils.constants import EPOCH_LENGTH
@@ -22,7 +22,7 @@ def test_slot_increment():
     # Create initial state at slot 5
     initial_state = create_state(
         tau=U32(5),
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -37,7 +37,7 @@ def test_slot_increment():
     new_block = create_block(slot=U32(6), tickets=[])
     
     # Apply transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Verify tau was updated correctly
     assert new_state.tau == U32(6)
@@ -49,7 +49,7 @@ def test_slot_jump():
     # Create initial state at slot 5
     initial_state = create_state(
         tau=U32(5),
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -64,7 +64,7 @@ def test_slot_jump():
     new_block = create_block(slot=U32(15), tickets=[])
     
     # Apply transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Verify tau was updated correctly
     assert new_state.tau == U32(15)
@@ -77,7 +77,7 @@ def test_epoch_boundary_slot():
     last_slot_in_epoch = U32(EPOCH_LENGTH - 1)
     initial_state = create_state(
         tau=last_slot_in_epoch,
-        eta=Eta([ByteArray32(bytes(32)) for _ in range(4)]),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
@@ -93,7 +93,7 @@ def test_epoch_boundary_slot():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, ByteArray32(create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Verify tau was updated correctly
     assert new_state.tau == first_slot_in_next_epoch

@@ -1,16 +1,15 @@
 from random import randint
 
-from jam.types.base.integers import U64
-from jam.types.extrinsics.extrinsic import Extrinsic
-from jam.types.extrinsics.tickets import TicketEnvelope, TicketsExtrinsic
-from jam.types.extrinsics.preimages import Preimage, PreimagesExtrinsic
-from jam.types.extrinsics.guarantees import ReportGuarantee, ValidatorSignature, ValidatorSignatures, GuaranteesExtrinsic
-from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField, AssurancesExtrinsic
-from jam.types.extrinsics.disputes import Verdict, Verdicts, Culprits, Faults, Judgement, DisputesExtrinsic
+from jam.types.block.extrinsics.extrinsic import Extrinsic
+from jam.types.block.extrinsics.tickets import TicketEnvelope, TicketsExtrinsic
+from jam.types.block.extrinsics.preimages import Preimage, PreimagesExtrinsic
+from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSignature, ValidatorSignatures, GuaranteesExtrinsic
+from jam.types.block.extrinsics.assurances import AvailAssurance, AvailBitField, AssurancesExtrinsic
+from jam.types.block.extrinsics.disputes import Verdicts, Culprits, Faults, DisputesExtrinsic
 from jam.types.protocol.core import ServiceId, TimeSlot, ValidatorIndex, Gas
-from jam.types.base.integers.fixed import U32, U16, U8, U64
-from jam.types.work.report import WorkReport
-from jam.types.work.report import (
+from tsrkit_types.integers import U32, U16, U8, U64
+from jam.types.work import WorkReport
+from jam.types.work import (
     SegmentRootLookup,
     WorkPackageSpec,
     WorkResult,
@@ -19,9 +18,9 @@ from jam.types.work.report import (
     RefineLoad
 )
 from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_int
-from jam.types.work.refine_context import RefineContext
+from jam.types.work import RefineContext
 from jam.types.protocol.crypto import OpaqueHash, Ed25519Signature, BandersnatchRingVrfSignature
-from jam.types.base.sequences.bytes.bytes import Bytes
+from tsrkit_types.bytes import Bytes
 from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
 
 
@@ -63,7 +62,7 @@ def create_dummy_work_result() -> WorkResult:
         code_hash=create_dummy_bytes32(),
         payload_hash=create_dummy_bytes32(),
         accumulate_gas=Gas(42),
-        result=WorkExecResult({"ok": Bytes(create_dummy_bytes(16))}),
+        result=WorkExecResult(Bytes(create_dummy_bytes(16))),
         refine_load=refine_load
     )
 
@@ -75,7 +74,7 @@ def create_dummy_work_report() -> WorkReport:
         context=create_dummy_work_context(),
         core_index=U16(3),
         authorizer_hash=create_dummy_bytes32(),
-        auth_output=Bytes("0x0102030405"),
+        auth_output=Bytes.fromhex("0102030405"),
         segment_root_lookup=SegmentRootLookup({}),
         results=WorkResults([create_dummy_work_result()]),
         auth_gas_used=Gas(0)
@@ -94,7 +93,7 @@ def create_dummy_validator_signatures() -> list[ValidatorSignature]:
 
 
 def create_dummy_tickets(num = 3) -> list[TicketEnvelope]:
-    """Create dummy tickets"""
+    """Create dummy ticket.py"""
     return [
         TicketEnvelope(
             attempt=U8(i), signature=BandersnatchRingVrfSignature(create_dummy_bytes(784))
@@ -127,7 +126,7 @@ def create_dummy_assurances(num = 3) -> list[AvailAssurance]:
     return [
         AvailAssurance(
             anchor=OpaqueHash(create_dummy_bytes32()),
-            bitfield=AvailBitField("0x01"),
+            bitfield=AvailBitField.from_json("0x01"),
             validator_index=ValidatorIndex(i),
             signature=Ed25519Signature(create_dummy_bytes(64)),
         )

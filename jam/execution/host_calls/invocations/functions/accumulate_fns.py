@@ -1,14 +1,13 @@
-from jam.types.base.sequences.bytes.bytes import Bytes
+from tsrkit_types import U32, U64, Bytes
+
 from jam.accumulation.types import DeferredTransfer, AccumulationContext, StateContext
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus, PvmError
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.protocol.merkle import OptionHash
 from jam.types.state.chi import Chi
 from jam.types.state.delta import AccountData, AccountStorage, LookupTable, AccountLookup, AccountPreimages, ServiceCodeHash
-from jam.types.base.integers.fixed import U32, U64
 from jam.types.protocol.core import BlobLength, Gas, ServiceId, TimeSlot
 from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE, CORE_COUNT, MAX_AUTH_QUEUE_ITEMS, PREIMAGE_EVICTION_TIMESLOTS, TRANSFER_MEMO_SIZE, VALIDATOR_COUNT
 
@@ -175,7 +174,7 @@ class AccumulateFunctions(INVF):
             raise PvmError(PANIC)
         accounts=context.x.partial_state.service_accounts
 
-        h=ByteArray32(memory.read(o,32))
+        h = Bytes[32](memory.read(o,32))
         if d!= context.x.s_index and context.x.partial_state.service_accounts[d] is not None:
             delta=accounts[d]
         else:
@@ -235,7 +234,7 @@ class AccumulateFunctions(INVF):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
-        h=ByteArray32(memory.read(o,32))
+        h = Bytes[32](memory.read(o,32))
         a = context.x.partial_state.service_accounts[context.x.s_index]
         init_lookup_val=a.timestamps[LookupTable(h,z)] # storing the initial lookup value
         if a.timestamps[LookupTable(h,z)] is None:
@@ -264,7 +263,7 @@ class AccumulateFunctions(INVF):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
-        h=ByteArray32(memory.read(o,32))
+        h = Bytes[32](memory.read(o,32))
         a = context.x.partial_state.service_accounts[context.x.s_index]
         if len(a.timestamps[LookupTable(h,z)])==0 or (len(a.timestamps[LookupTable(h,z)])==2 and (a.timestamps[LookupTable(h,z)][1]<block_timeslot-PREIMAGE_EVICTION_TIMESLOTS)):
             del a.timestamps[LookupTable(h,z)]

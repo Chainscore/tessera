@@ -1,8 +1,9 @@
 from copy import deepcopy
-from typing import Tuple, List, Set
-
+from typing import Tuple, Set
 from jam.execution.host_calls.invocations.accumulate import PsiA
-from jam.types.base import Bytes, Null, Int, U32, U64
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import Uint
+from tsrkit_types.null import Null
 from jam.types.block import Block
 from jam.accumulation.types import (
     PreimageDict,
@@ -15,22 +16,19 @@ from jam.accumulation.types import (
 )
 from jam.types.protocol.crypto import Hash
 from jam.types.state.pi import ServiceStat
-
 from jam.types.state.sigma import Sigma
 from jam.types.state.delta import Delta, LookupTable, Timestamps
 from jam.types.state.tau import Tau
-from jam.types.state.chi import ChiA, ChiG, ChiM, ChiV
+from jam.types.state.chi import ChiG
 from jam.types.state.nu import AllReadyWRs, ReadyWR
 from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
 from jam.types.protocol.merkle import OptionHash
-from jam.types.protocol.core import Gas, ServiceId, TimeSlot
-from jam.types.work.report import (
+from jam.types.protocol.core import Gas, ServiceId
+from jam.types.work import (
     WorkDependencies,
     WorkReports,
-    SegmentRootLookup,
     WorkReport,
 )
-from jam.utils.constants import EPOCH_LENGTH
 
 
 class Accumulation:
@@ -281,8 +279,8 @@ class Accumulation:
                 partial_state, work_reports, privileged_services, service, timeslot
             )
             gas_consumed.append((service,_gas_consumed))
-            if _output_hash.get_value() != Null:
-                outputs.add((service, _output_hash.get_value()))
+            if _output_hash.unwrap() != Null:
+                outputs.add((service, _output_hash.unwrap()))
             transfers.extend(_transfers)
             collected_preimages.update(_preimages)
 
@@ -331,7 +329,7 @@ class Accumulation:
                     p.append(
                         OperandTuple(
                             d=j.result,
-                            g=Int(j.accumulate_gas),
+                            g=Uint(j.accumulate_gas),
                             y=j.payload_hash,
                             o=i.auth_output,
                             e=i.package_spec.exports_root,
@@ -442,7 +440,7 @@ class Accumulation:
             xi_union.extend(ep)
 
         # Latest Work Reports to Process
-        work_reports = WorkReports(newly_avail_wrs.value)
+        work_reports = WorkReports(newly_avail_wrs)
 
         # Reports to be processed Immediately, Eq 12.4
         immediate_reports = cls.filter_wr_fn(work_reports)
@@ -516,8 +514,8 @@ class Accumulation:
         for service_id in accumulation_stats.keys():
             if service_id not in pi_service:
                 pi_service[service_id] = ServiceStat.empty()
-            pi_service[service_id].accumulate_gas_used = Int(accumulation_stats[service_id][0])
-            pi_service[service_id].accumulate_count = Int(accumulation_stats[service_id][1])
+            pi_service[service_id].accumulate_gas_used = Uint(accumulation_stats[service_id][0])
+            pi_service[service_id].accumulate_count = Uint(accumulation_stats[service_id][1])
         pi.services = pi_service
         state.pi = pi
 

@@ -1,30 +1,15 @@
 from typing import Type
 
 from jam.merklization import BMRFunctions
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.state.merkle import StateTrie
-from jam.state.utils.key_constructor import construct_state_key
-from jam.types.base import Bytes
-from jam.types.block import Block
-from jam.types.protocol.crypto import Hash
-from jam.types.state.alpha import Alpha
-from jam.types.state.eta import Eta
-from jam.types.state.nu import Nu
-from jam.types.state.pi import Pi
-from jam.types.state.psi import Psi
-from jam.types.state.kappa import Kappa
-from jam.types.state.lambda_ import Lambda_
-from jam.types.state.rho import Rho
-from jam.types.state.tau import Tau
-from jam.types.state.chi import Chi
-from jam.types.state.iota import Iota
-from jam.types.state.xi import Xi
-from jam.types.state.beta import Beta
-from jam.types.state.phi import Phi
-from jam.types.state.gamma import Gamma
-from jam.utils.codec import Codable
+from jam.state.utils import construct_state_key
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.itf.codable import Codable
+from jam.types import Block, Hash, Alpha, Eta, Nu, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma
+
 
 def make_state_prop(state_key: int, cl: Type[Codable]):
     def fget(self):
@@ -45,7 +30,7 @@ class State:
     State implementation that uses dynamic components fetched from Db
     Here we retain and update merkle trie as cache
     """
-    DB: KVStore
+    DB: RockStore
     TRIE: StateTrie
 
     alpha = make_state_prop(1, Alpha)
@@ -95,7 +80,7 @@ class State:
 
         # TODO: Validate block headers
         # Epoch markers - make sure eta0_1 are the same as current etas
-        # Tickets mark - make sure tickets are valid, present in gamma_a and outside in sequenced
+        # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
         # Offenders mark - make sure offenders are present in psi.offenders
 
         beta = self.beta
@@ -141,7 +126,7 @@ def set_state(new_state: State):
     state = new_state
     return state
 
-def setup_state(ghost: GhostState, db: KVStore):
+def setup_state(ghost: GhostState, db: RockStore):
     data = ghost.transform()
     trie = StateTrie()
     trie.merkelize(data, db)

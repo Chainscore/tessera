@@ -3,7 +3,7 @@ from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from jam.types.protocol.core import CoreIndex, ProgramCounter
 from jam.types.protocol.crypto import OpaqueHash
-from jam.types.work.package import WorkPackage
+from jam.types.work import WorkPackage
 from jam.utils.constants import IS_AUTHORIZED_GAS
 
 

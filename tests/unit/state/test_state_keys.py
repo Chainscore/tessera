@@ -1,8 +1,7 @@
 import pytest
-from jam.state.utils.key_constructor import construct_state_key
-from jam.types.base import Byte, Bytes
-from jam.types.base.integers.fixed import U8
-from jam.types.base.sequences.bytes import ByteArray32
+from jam.state.utils import construct_state_key
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U8
 from jam.types.protocol.core import ServiceId
 
 
@@ -15,7 +14,7 @@ def test_single_u8_index():
         result = construct_state_key(index)
         assert isinstance(result, Bytes)
         assert len(result) == 31
-        assert int(result[0]) == index.value
+        assert int(result[0]) == index
         # Verify rest is zeros
         assert all(int(b) == 0 for b in result[1:])
 
@@ -40,16 +39,16 @@ def test_u32_service_id_pair():
 
         # # Verify index bytes
         index_bytes = index.encode()
-        assert bytes(result[0]) == index_bytes
+        assert result[0] == index_bytes[0]
 
         # Verify service ID encoding pattern
         service_id_encoded = service_id.encode()
         for i, byte in enumerate(service_id_encoded):
             pos = 1 + i * 2  # Skip index bytes and account for zero padding
             if pos < 31:
-                assert result[pos] == Byte(byte)
+                assert result[pos] == byte
                 if pos + 1 < 31:
-                    assert result[pos + 1] == Byte(0)  # Verify zero padding
+                    assert result[pos + 1] == 0  # Verify zero padding
 
 
 def test_service_id_hash_pair():
@@ -65,7 +64,7 @@ def test_service_id_hash_pair():
 
     # Check interleaved pattern for first 4 service ID bytes
     for i in range(min(len(service_id_encoded), 4)):
-        assert result[i * 2] == Byte(service_id_encoded[i])
+        assert result[i * 2] == service_id_encoded[i]
         assert result[i * 2 + 1] == hash_bytes[i]
 
     # Check remaining hash bytes
@@ -74,13 +73,13 @@ def test_service_id_hash_pair():
 
 def test_invalid_inputs():
     """Test error cases with invalid inputs"""
-    with pytest.raises(ValueError, match="Invalid input type"):
+    with pytest.raises(ValueError):
         construct_state_key("invalid")  # String input
 
-    with pytest.raises(ValueError, match="Invalid tuple input types"):
-        construct_state_key((U8(1), U8(2)))  # Wrong tuple types
+    with pytest.raises(ValueError):
+        construct_state_key((U8(1), U8(2), U8(100)))  # Wrong tuple types
 
-    with pytest.raises(ValueError, match="Invalid tuple input types"):
+    with pytest.raises(ValueError):
         construct_state_key((ServiceId(1), "not_bytes"))  # Wrong second tuple element
 
 

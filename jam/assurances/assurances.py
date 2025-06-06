@@ -1,18 +1,18 @@
-import dataclasses
 import math
 from typing import List
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
+from tsrkit_types import Null
+
 from jam.assurances.errors import AssurancesError, AssurancesErrorCode
 from jam.types.state.rho import OptionalWorkReportState
 from jam.types.state.sigma import Sigma
-from jam.types.base.null import Null
 from jam.types.block import Block
-from jam.types.extrinsics.assurances import AvailAssurance, AvailBitField
+from jam.types.block.extrinsics.assurances import AvailAssurance, AvailBitField
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, Hash, OpaqueHash
-from jam.types.work.report import WorkReport, WorkReports
+from jam.types.work import WorkReports
 from jam.utils.constants import (
     SIGNING_CONTEXTS,
     UNAVAILABLE_WORK_EXPIRY,
@@ -66,7 +66,7 @@ class Assurances:
             # Update core assurances
             for i in range(len(assurance.bitfield)):
                 if assurance.bitfield[i]:
-                    if rho[i].get_value() == Null:
+                    if rho[i].unwrap() == Null:
                         raise AssurancesError(
                             AssurancesErrorCode.CORE_NOT_ENGAGED,
                             f"Pending work report {i} not found",
@@ -87,9 +87,9 @@ class Assurances:
                 continue
             else:
                 if core_assurances[i] > super_majority:
-                    newly_avail_reports.append(rho[i].get_value().report)
+                    newly_avail_reports.append(rho[i].unwrap().report)
                     rho[i] = OptionalWorkReportState(Null)
-                if core_assurances[i] > super_majority or block.header.slot >= rho[i].get_value().timeout + UNAVAILABLE_WORK_EXPIRY:
+                if core_assurances[i] > super_majority or block.header.slot >= rho[i].unwrap().timeout + UNAVAILABLE_WORK_EXPIRY:
                     rho[i] = OptionalWorkReportState(Null)
 
         state.rho = rho
