@@ -29,7 +29,6 @@ class PsiH:
         ):
             return status, pc, remaining_gas, registers, memory, context
         elif status == ExecutionStatus.HOST:
-            print("Host call >>", status.value.register)
             try:
                 status, remaining_gas, register, memory, context = dispatch_fn(
                     int(status.value.register), remaining_gas, registers, memory, context

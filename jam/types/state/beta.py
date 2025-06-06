@@ -6,6 +6,9 @@ from jam.types.protocol.crypto import HeaderHash, StateRoot
 from jam.merklization.mountain_merkle import MMR
 
 
+ReportedDictionary = Dictionary[Bytes[32], Bytes[32], "hash", "exports_root"]
+
+
 @structure
 class BlockHistory:
     """Block history item"""
@@ -13,7 +16,7 @@ class BlockHistory:
     header_hash: HeaderHash
     mmr: MMR
     state_root: StateRoot
-    reported: Dictionary[Bytes[32], Bytes[32]]
+    reported: ReportedDictionary
 
 
 Beta = TypedVector[BlockHistory]

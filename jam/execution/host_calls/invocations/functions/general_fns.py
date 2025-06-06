@@ -5,8 +5,7 @@ from jam.execution.host_calls.invocations.functions.protocol import InvocationFu
 from jam.execution.host_calls.invocations.protocol import Context, DispatchNormalReturn
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.status import ExecutionStatus, PANIC, HostStatus, CONTINUE, PvmError
-from tsrkit_types.integers import Uint
-from tsrkit_types.bytes import Bytes
+from tsrkit_types import U64, U32, U16, Bytes, Uint
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.state.delta import AccountData
 from jam.types.protocol.core import Gas, ServiceId, Register, Balance
@@ -94,14 +93,14 @@ class GeneralFunctions(INVF):
         v = None
         if w10 == 0:
             v = (
-                Uint[64](ADDITIONAL_BALANCE_PER_ITEM).encode() + Uint[64](ADDITIONAL_BALANCE_PER_OCTET).encode() + Uint[64](BASIC_MINIMUM_BALANCE).encode() + Uint[16](CORE_COUNT).encode() +
-                Uint[32](PREIMAGE_EVICTION_TIMESLOTS).encode() + Uint[32](EPOCH_LENGTH).encode() + Uint[64](ACCUMULATION_GAS).encode() + Uint[64](IS_AUTHORIZED_GAS).encode() +
-                Uint[64](REFINE_GAS).encode() + Uint[64](TOTAL_GAS).encode() + Uint[16](RECENT_HISTORY_SIZE).encode() + Uint[16](MAX_WORK_ITEMS).encode() + Uint[16](MAX_DEPENDENCIES).encode() +
-                Uint[32](LOOKUP_ANCHOR_MAX_AGE).encode() + Uint[16](MAX_AUTH_POOL_ITEMS).encode() + Uint[16](SLOT_PERIOD).encode() + Uint[16](MAX_AUTH_QUEUE_ITEMS).encode() +
-                Uint[16](ROTATION_PERIOD).encode() + Uint[16](MAX_ACCUMULATION_ENTRIES).encode() + Uint[16](EXTRINSIC_COUNT).encode() + Uint[16](UNAVAILABLE_WORK_EXPIRY).encode() +
-                Uint[16](VALIDATOR_COUNT).encode() + Uint[32](MAX_AUTH_CODE_SIZE).encode() + Uint[32](MAX_ENCODED_WORK_PACKAGE_SIZE).encode() + Uint[32](MAX_SERVICE_CODE_SIZE).encode() +
-                Uint[32](BASIC_ERASURE_SIZE).encode() + Uint[32](SEGMENT_SIZE).encode() + Uint[32](MAX_IMPORT_ITEM).encode() + Uint[32](ERASURE_PIECES_PER_SEGMENT).encode() +
-                Uint[32](MAX_WORK_REPORT_SIZE).encode() + Uint[32](TRANSFER_MEMO_SIZE).encode() + Uint[32](MAX_EXPORT_ITEM).encode() + Uint[32](TICKET_SUBMISSION_END).encode()
+                U64(ADDITIONAL_BALANCE_PER_ITEM).encode() + U64(ADDITIONAL_BALANCE_PER_OCTET).encode() + U64(BASIC_MINIMUM_BALANCE).encode() + U16(CORE_COUNT).encode() +
+                U32(PREIMAGE_EVICTION_TIMESLOTS).encode() + U32(EPOCH_LENGTH).encode() + U64(ACCUMULATION_GAS).encode() + U64(IS_AUTHORIZED_GAS).encode() +
+                U64(REFINE_GAS).encode() + U64(TOTAL_GAS).encode() + U16(RECENT_HISTORY_SIZE).encode() + U16(MAX_WORK_ITEMS).encode() + U16(MAX_DEPENDENCIES).encode() +
+                U32(LOOKUP_ANCHOR_MAX_AGE).encode() + U16(MAX_AUTH_POOL_ITEMS).encode() + U16(SLOT_PERIOD).encode() + U16(MAX_AUTH_QUEUE_ITEMS).encode() +
+                U16(ROTATION_PERIOD).encode() + U16(MAX_ACCUMULATION_ENTRIES).encode() + U16(EXTRINSIC_COUNT).encode() + U16(UNAVAILABLE_WORK_EXPIRY).encode() +
+                U16(VALIDATOR_COUNT).encode() + U32(MAX_AUTH_CODE_SIZE).encode() + U32(MAX_ENCODED_WORK_PACKAGE_SIZE).encode() + U32(MAX_SERVICE_CODE_SIZE).encode() +
+                U32(BASIC_ERASURE_SIZE).encode() + U32(SEGMENT_SIZE).encode() + U32(MAX_IMPORT_ITEM).encode() + U32(ERASURE_PIECES_PER_SEGMENT).encode() +
+                U32(MAX_WORK_REPORT_SIZE).encode() + U32(TRANSFER_MEMO_SIZE).encode() + U32(MAX_EXPORT_ITEM).encode() + U32(TICKET_SUBMISSION_END).encode()
             )
         elif w10 == 1 and entropy is not None:
             v = entropy
@@ -123,9 +122,9 @@ class GeneralFunctions(INVF):
                         w.refine_gas_limit.encode() +
                         w.accumulate_gas_limit.encode() +
                         w.export_count.encode() +
-                        Uint[16](len(w.import_segments)).encode() +
-                        Uint[16](len(w.extrinsic)).encode() +
-                        Uint[32](len(w.payload))
+                        U16(len(w.import_segments)).encode() +
+                        U16(len(w.extrinsic)).encode() +
+                        U32(len(w.payload))
                         )
             if w10 == 7:
                 v = package.encode()
@@ -163,7 +162,7 @@ class GeneralFunctions(INVF):
         l = min(int(registers[9]), len(v) - f)
 
         if not memory.is_accessible(memory_start, l, for_write=True):
-            print("Memory not accessible", memory_start, l)
+            logger.error("Memory not accessible", memory_start, l)
             raise PvmError(PANIC)
 
         registers[7] = Register(len(v))
@@ -182,7 +181,6 @@ class GeneralFunctions(INVF):
             service_index: ServiceId,
             accounts: Delta
     ):
-        print(registers)
         if registers[7] == 2**64 - 1:
             s_star = service_index
         else:
@@ -199,22 +197,22 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
 
         v: None|Bytes = None
-        data = memory.read(ko, kz)
+        k = Hash.blake2b(s_star.encode() + memory.read(ko, kz))
+
         if a is not None:
             # Directly get data, returns None if not found
-            v = a.storage.get(data)
+            v = a.storage[k]
 
-        f = min(int(registers[11]), len(v) if v else 0)
-        l = min(int(registers[12]), (len(v) if v else 0) - f)
-
-        if not memory.is_accessible(o, l):
-            raise PvmError(PANIC)
-
-        if v is None:
-            registers[7] = HostStatus.NONE
+        if v is None or len(v) == 0:
+            registers[7] = HostStatus.NONE.value
         else:
+            f = min(int(registers[11]), len(v))
+            l = min(int(registers[12]), len(v) - f)
+
+            if not memory.is_accessible(o, l, for_write=True):
+                raise PvmError(PANIC)
             registers[7] = Register(len(v))
-            memory.write(o, v[f:f+l])
+            memory.write(o, v[f:l])
         return CONTINUE, gas, registers, memory, context
 
 
@@ -229,19 +227,24 @@ class GeneralFunctions(INVF):
             service_index: ServiceId
     ):
         # Get key,value start,end
-        ko, kz, vo, vz = registers[8:8+4]
-
+        [ko, kz, vo, vz] = registers[7: 7+4]
         if not memory.is_accessible(ko, kz):
             raise PvmError(PANIC)
 
-        if not memory.is_accessible(vo, vz):
-            raise PvmError(PANIC)
+        k = Hash.blake2b(service_index.encode() + memory.read(ko, kz))
 
-        key = memory.read(ko, kz)
-        value = memory.read(vo, vz)
-
-        # Update storage
-        service_data.storage[key] = value
+        a = service_data.storage
+        if vz == 0:
+            a.__delitem__(k)
+        else:
+            if not memory.is_accessible(vo, vz):
+                raise PvmError(PANIC)
+            try:
+                a[k] = Bytes(memory.read(vo, vz))
+            except PvmError:
+                # TODO - Handle ONLY storage full
+                registers[7] = HostStatus.FULL
+                return CONTINUE, gas, registers, memory, service_data
 
         return CONTINUE, gas, registers, memory, context
 
@@ -257,27 +260,24 @@ class GeneralFunctions(INVF):
             accounts: Delta
     ):
         if registers[7] == 2**64 - 1:
-            s_star = service_index
+            t = accounts[service_index]
         else:
-            s_star = ServiceId(registers[7])
+            t = accounts[ServiceId(registers[7])]
 
-        a: None|AccountData = None
-        if s_star == service_index:
-            a = accounts[service_index]
-        elif s_star in accounts:
-            a = accounts[s_star]
+        o = registers[8]
 
-        if a is None:
-            registers[7] = HostStatus.WHO
+        if t is not None:
+            m = bytes(t.service.code_hash) + Uint(t.service.balance).encode() + Uint(t.service.t).encode() + Uint(t.service.gas_limit).encode() + Uint(t.service.min_gas).encode() + Uint(t.service.num_o).encode() + Uint(t.service.num_i).encode()
+
+            if memory.is_accessible(o, len(m), True):
+                registers[7] = HostStatus.OK.value
+                memory.write(o, m)
+            else:
+                raise PvmError(PANIC)
         else:
-            registers[7] = Register(a.service.balance)
-            registers[8] = Register(a.service.num_i)
-            registers[9] = Register(a.service.num_o)
-            registers[10] = Register(a.service.gas_limit)
-            registers[11] = Register(a.service.min_gas)
+            registers[7] = HostStatus.NONE.value
 
         return CONTINUE, gas, registers, memory, context
-
 
     @staticmethod
     @INVF.register(host_call=100, gas_cost=0)
@@ -287,11 +287,9 @@ class GeneralFunctions(INVF):
             memory: Memory,
             context: Optional[Any],
     ):
-        o, l = registers[7], registers[8]
+        start = int(registers[10])
+        length = int(registers[11])
+        if memory.is_accessible(start, length):
+            logger.info(memory.read(start, length))
 
-        if not memory.is_accessible(o, l):
-            raise PvmError(PANIC)
-
-        data = memory.read(o, l)
-        logger.info(f"PVM Log: {data}")
         return CONTINUE, gas, registers, memory, context

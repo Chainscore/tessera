@@ -1,14 +1,13 @@
-from tsrkit_types.bytes import Bytes
+from tsrkit_types import U32, U64, Bytes
+
 from jam.accumulation.types import DeferredTransfer, AccumulationContext, StateContext
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus, PvmError
-from tsrkit_types.sequences import TypedArray
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.protocol.merkle import OptionHash
 from jam.types.state.chi import Chi
 from jam.types.state.delta import AccountData, AccountStorage, LookupTable, AccountLookup, AccountPreimages, ServiceCodeHash
-from tsrkit_types.integers import Uint
 from jam.types.protocol.core import BlobLength, Gas, ServiceId, TimeSlot
 from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE, CORE_COUNT, MAX_AUTH_QUEUE_ITEMS, PREIMAGE_EVICTION_TIMESLOTS, TRANSFER_MEMO_SIZE, VALIDATOR_COUNT
 
@@ -34,10 +33,10 @@ class AccumulateFunctions(INVF):
         g_dict = {}
         for i in range(0, len(buf), 12):
             chunk = buf[i : i + 12]
-            s = Uint[32].decode_from(chunk[:4])             # first  4 bytes
-            g = Uint[64].decode_from(chunk[4:12],  offset=0)   # next   8 bytes
+            s = U32.decode_from(chunk[:4])             # first  4 bytes
+            g = U64.decode_from(chunk[4:12],  offset=0)   # next   8 bytes
             g_dict[s] = g
-        if not all(isinstance(x, Uint[32]) for x in (m, a, v)):
+        if not all(isinstance(x, U32) for x in (m, a, v)):
             registers[7]=HostStatus.WHO
             return(CONTINUE,registers,memory,context)
         else:
@@ -93,7 +92,7 @@ class AccumulateFunctions(INVF):
     def new(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [o,l,g,m]=registers[7:7+4]
         delta=context.x.partial_state.service_accounts
-        if not(memory.is_accessible(o,32) and isinstance(l, Uint[32])):
+        if not(memory.is_accessible(o,32) and isinstance(l, U32)):
             raise PvmError(PANIC)
         c=memory.read(0,32)
         """
@@ -175,7 +174,7 @@ class AccumulateFunctions(INVF):
             raise PvmError(PANIC)
         accounts=context.x.partial_state.service_accounts
 
-        h=TypedArray[int, 32](memory.read(o,32))
+        h = Bytes[32](memory.read(o,32))
         if d!= context.x.s_index and context.x.partial_state.service_accounts[d] is not None:
             delta=accounts[d]
         else:
@@ -200,94 +199,119 @@ class AccumulateFunctions(INVF):
             registers[7]=HostStatus.HUH
             return CONTINUE,registers,memory,context
 
-
     @classmethod
     @INVF.register(13, gas_cost=10)
     def query(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
-        [o,l]=registers[7,8]
+        [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
-        h=TypedArray[int, 32](memory.read(o,32))
-        delta=context.x.partial_state.service_accounts[context.x.s_index]
-        if delta.timestamps[LookupTable(h,l)] is None:
+        h=memory.read(o,32)
+        if not context.x.partial_state.service_accounts[context.x.s_index].timestamps[LookupTable(h,z)]:
             registers[7]=HostStatus.NONE
             return CONTINUE,registers,memory,context
-        else:
-            registers[7]=len(delta.timestamps[LookupTable(h,l)])
-            registers[8]=delta.timestamps[LookupTable(h,l)][0] if len(delta.timestamps[LookupTable(h,l)])>=1 else 0
-            registers[9]=delta.timestamps[LookupTable(h,l)][1] if len(delta.timestamps[LookupTable(h,l)])>=2 else 0
-            registers[10]=delta.timestamps[LookupTable(h,l)][2] if len(delta.timestamps[LookupTable(h,l)])>=3 else 0
+        a=context.x.partial_state.service_accounts[context.x.s_index].timestamps[LookupTable(h,z)]
+        if len(a)==0:
+            registers[7]=0
+            registers[8]=0
+            return CONTINUE,registers,memory,context
+        elif len(a)==1:
+            registers[7]=1+2**32*a[0]
+            registers[8]=0
+            return CONTINUE,registers,memory,context
+        elif len(a)==2:
+            registers[7]=2+2**32*a[0]
+            registers[8]=a[1]
+            return CONTINUE,registers,memory,context
+        elif len(a)==3:
+            registers[7]=3+2**32*a[0]
+            registers[8]=a[1]+2**32*a[2]
             return CONTINUE,registers,memory,context
 
 
     @classmethod
     @INVF.register(14, gas_cost=10)
     def solicit(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
-        [o,l]=registers[7,8]
+        [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
-        h=TypedArray[int, 32](memory.read(o,32))
-        delta=context.x.partial_state.service_accounts[context.x.s_index]
-        if delta.timestamps[LookupTable(h,l)] is None:
-            delta.timestamps[LookupTable(h,l)]=[block_timeslot]
-            registers[7]=HostStatus.OK
-            return CONTINUE,registers,memory,context
-        elif len(delta.timestamps[LookupTable(h,l)])==1:
-            delta.timestamps[LookupTable(h,l)].append(block_timeslot)
-            registers[7]=HostStatus.OK
-            return CONTINUE,registers,memory,context
-        elif len(delta.timestamps[LookupTable(h,l)])==2:
-            delta.timestamps[LookupTable(h,l)].append(block_timeslot)
-            registers[7]=HostStatus.OK
-            return CONTINUE,registers,memory,context
+        h = Bytes[32](memory.read(o,32))
+        a = context.x.partial_state.service_accounts[context.x.s_index]
+        init_lookup_val=a.timestamps[LookupTable(h,z)] # storing the initial lookup value
+        if a.timestamps[LookupTable(h,z)] is None:
+            a.timestamps[LookupTable(h,z)]=[]
+
+        elif len(a.timestamps[LookupTable(h,z)])==2:
+            a.timestamps[LookupTable(h,z)]=init_lookup_val+[block_timeslot]
         else:
-            registers[7]=HostStatus.FULL
+            registers[7]=HostStatus.HUH
             return CONTINUE,registers,memory,context
 
+        if a.balance<a.t:
+            registers[7]=HostStatus.FULL
+            if init_lookup_val is not None:
+                a.timestamps[LookupTable(h,z)]=init_lookup_val #reverting the value with its initial value
+            else:
+                del a.timestamps[LookupTable(h,z)]  # revert the value if any new lookup introduced
+            return CONTINUE,registers,memory,context
+        else:
+            registers[7]=HostStatus.OK
+            return CONTINUE,registers,memory,context
 
     @classmethod
     @INVF.register(15, gas_cost=10)
     def forget(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
-        [o,l]=registers[7,8]
+        [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
-        h=TypedArray[int, 32](memory.read(o,32))
-        delta=context.x.partial_state.service_accounts[context.x.s_index]
-        if delta.timestamps[LookupTable(h,l)] is None:
-            registers[7]=HostStatus.NONE
-            return CONTINUE,registers,memory,context
+        h = Bytes[32](memory.read(o,32))
+        a = context.x.partial_state.service_accounts[context.x.s_index]
+        if len(a.timestamps[LookupTable(h,z)])==0 or (len(a.timestamps[LookupTable(h,z)])==2 and (a.timestamps[LookupTable(h,z)][1]<block_timeslot-PREIMAGE_EVICTION_TIMESLOTS)):
+            del a.timestamps[LookupTable(h,z)]
+            del a.lookup[h]
+        elif len(a.timestamps[LookupTable(h,z)])==1:
+            a.timestamps[h,z].append(block_timeslot)
+        elif len(a.timestamps[LookupTable(h,z)])==3 and a.timestamps[LookupTable(h,z)][1]<block_timeslot-PREIMAGE_EVICTION_TIMESLOTS:
+            a.timestamps[LookupTable(h,z)][0]=a.timestamps[LookupTable(h,z)][2]
+            a.timestamps[LookupTable(h,z)][1]=block_timeslot
+            a.timeslot[LookupTable(h,z)]=a.timeslot[LookupTable(h,z)].pop()
         else:
-            del delta.timestamps[LookupTable(h,l)]
-            del delta.preimages[h]
-            registers[7]=HostStatus.OK
+            registers[7]=HostStatus.HUH
             return CONTINUE,registers,memory,context
-
+        registers[7]=HostStatus.OK
+        return CONTINUE,registers,memory,context
 
     @classmethod
     @INVF.register(16, gas_cost=10)
     def yield_(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
-        [o,l]=registers[7,8]
+        o=registers[7]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
-        h=TypedArray[int, 32](memory.read(o,32))
-        context.x.hash=OptionHash(OpaqueHash(h))
+        context.x.hash = OptionHash(OpaqueHash(memory.read(o,32)))
         registers[7]=HostStatus.OK
         return CONTINUE,registers,memory,context
-
 
     @classmethod
     @INVF.register(27, gas_cost=10)
     def provide(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext,service_id:ServiceId):
-        [o,l,h_o]=registers[7:7+3]
-        if not memory.is_accessible(o,l) and memory.is_accessible(h_o,32):
+        [o,z]=registers[8,9]
+        d=context.x.partial_state.service_accounts
+        s_star=registers[7]
+        if registers[7]==2**64-1:
+            s_star=service_id
+        if not memory.is_accessible(o,z):
             raise PvmError(PANIC)
-        h=TypedArray[int, 32](memory.read(h_o,32))
-        p=Bytes(memory.read(o,l))
-        if Hash.blake2b(p)!=h:
+        i=memory.read(o,z)
+        if d[s_star] is None:
+            registers[7]=HostStatus.WHO
+            return CONTINUE,registers,memory,context
+        a=d[s_star]
+        if a.timestamps[LookupTable(Hash.blake2b(i),z)]!=[]:
+            registers[7]=HostStatus.HUH
+            return CONTINUE,registers,memory,context
+        elif context.x.preimage[s_star]==i:
             registers[7]=HostStatus.HUH
             return CONTINUE,registers,memory,context
         else:
-            context.x.partial_state.service_accounts[context.x.s_index].preimages[h]=p
-            context.x.preimage.add(h)
+            context.x.preimage[s_star]=i
             registers[7]=HostStatus.OK
             return CONTINUE,registers,memory,context

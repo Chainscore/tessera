@@ -81,7 +81,7 @@ class MMRFunctions:
             mmr_dagger = self._r(mmr, index, OptionHash(Null))
             mmr_dash = MMR(mmr_dagger)
 
-            hash_dash = hash_fn(bytes(mmr[Uint(index)].get_value()) + bytes(new_hash))
+            hash_dash = hash_fn(bytes(mmr[Uint(index)].unwrap()) + bytes(new_hash))
 
             return self._p(mmr_dash, hash_dash, index + 1, hash_fn)
 

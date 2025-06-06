@@ -1,32 +1,26 @@
-from dataclasses import dataclass
-
-from tsrkit_types import ByteArray
+from tsrkit_types import structure, Dictionary, Uint, Bytes, U64, ByteArray
 
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.program import Program
 from jam.execution.pvm.pvm import PVM
 from jam.execution.pvm.status import PANIC, CONTINUE, ExecutionStatus, HostStatus, PvmError
 from jam.execution.pvm.types import Accessibility
-from tsrkit_types.dictionary import Dictionary
-from tsrkit_types.integers import Uint
-from tsrkit_types.bytes import Bytes
 from jam.types.protocol.core import Gas, Register, ProgramCounter
 from jam.execution.pvm.memory import Memory
 from jam.types.protocol.core import ServiceId,TimeSlot
 from jam.types.state.delta import Delta
-from tsrkit_types.sequences import TypedArray
 from jam.types.work import Segment, Segments
-from tsrkit_types.struct import structure
 from jam.utils.constants import  MAX_EXPORT_ITEM, PVM_MEMORY_PAGE_SIZE, SEGMENT_SIZE
 from jam.work_package.work_package import WorkPackageProcessing
 
 @structure
 class IntegratedPVM:
-    program_code: bytes
-    memory: Memory
+    program_code:bytes
+    memory:Memory
     instruction_counter: ProgramCounter
 
-RefinementMap = Dictionary[int, IntegratedPVM]
+class RefinementMap(Dictionary[Uint,IntegratedPVM]):
+    """Integrated PVM Dict(m) """
 
 @structure
 class RefineContext:
@@ -53,7 +47,7 @@ class RefineFunctions(INVF):
             registers[7] = HostStatus.NONE
             return CONTINUE, registers, memory
         else:
-            v = a.historical_lookup(timeslot, TypedArray[int, 32](memory.read(h,32)))
+            v = a.historical_lookup(timeslot, Bytes[32](memory.read(h,32)))
 
         f = min(int(registers[10]), len(v))
         l = min(int(registers[11]), len(v)-f)
@@ -192,34 +186,48 @@ class RefineFunctions(INVF):
         if not memory.is_accessible(o,112,True):
             raise PvmError(PANIC)
         if n not in context.m:
-            registers[7]=HostStatus.WHO
+            registers[7] = HostStatus.WHO
+            return CONTINUE, gas, registers, memory, context
+        m_bytes=memory.read(o,112)
+        #bytes->14size array of 8elements each 0->gas(g) 1-13->register_data(w)
+        m_array = [m_bytes[i:i + 8] for i in range(0, len(m_bytes), 8)]
+        g,_ = U64.decode_from(bytes(m_array[0]))
+        w=[
+            U64.decode_from(bytes(m_array[i]))[0]
+            for i in range(1,14)
+        ]
+        [c,i_dash,g_dash,w_dash,u_dash]=PVM.execute(context.m[n].program_code,context.m[n].instruction_counter,g,w,context.m[n].memory)
+        memory.write(o,g_dash.encode()+w_dash.encode())
+        context.m[n].memory=u_dash
+        if c==ExecutionStatus.HOST:
+            context.m[n].instruction_counter=i_dash+1
+            registers[7]=U64(ExecutionStatus.HOST) # NOTE: Saving the ExecValu on register[7]
+            registers[8]=c.value.register
             return CONTINUE, gas, registers, memory, context
         else:
-            # Invoke the PVM
-            status, pc, remaining_gas, registers_out, memory_out = PVM.execute(
-                context.m[n].program_code,
-                context.m[n].instruction_counter,
-                gas,
-                registers,
-                context.m[n].memory
-            )
-            # Update the context
-            context.m[n].instruction_counter = pc
-            context.m[n].memory = memory_out
-            # Write the registers to memory
-            for i, reg in enumerate(registers_out):
-                memory.write(o + i * 8, Uint[64](reg).encode())
-            registers[7] = HostStatus.OK
-            return CONTINUE, gas, registers, memory, context
+            context.m[n].instruction_counter=i_dash
+            if(c==ExecutionStatus.PAGE_FAULT):
+                registers[7]=U64(ExecutionStatus.PAGE_FAULT)
+                registers[8]=c.value.register
+                return CONTINUE,registers,memory,context
+            elif(c==ExecutionStatus.OUT_OF_GAS):
+                registers[7]=U64(ExecutionStatus.OUT_OF_GAS)
+                return CONTINUE,registers,memory,context
+            elif(c==ExecutionStatus.PANIC):
+                registers[7]=U64(ExecutionStatus.PANIC)
+                return CONTINUE,registers,memory,context
+            elif(c==ExecutionStatus.HALT):
+                registers[7]=U64(ExecutionStatus.HALT)
+                return CONTINUE,registers,memory,context
+
 
     @staticmethod
     @INVF.register(26, gas_cost=10)
     def expunge(gas:Gas,registers:list,memory:Memory,context:RefineContext):
         n=registers[7]
         if n not in context.m:
-            registers[7]=HostStatus.WHO
-            return CONTINUE, gas, registers, memory, context
+            return(HostStatus.WHO,context.m)
         else:
-            del context.m[n]
-            registers[7]=HostStatus.OK
-            return CONTINUE, gas, registers, memory, context
+            i_c=context.m.instruction_counter
+            context.m.pop(n)
+            return(i_c,context.m)

@@ -239,7 +239,7 @@ def test_safrole_fallback_mode():
     new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Check that we're using fallback seal keys (GammaSFallback)
-    assert isinstance(new_state.gamma.s.get_value(), GammaSFallback)
+    assert isinstance(new_state.gamma.s.unwrap(), GammaSFallback)
     
     # Verify slot keys are determined using F(η'₂, κ')
     # The exact values would depend on implementation details of arrange_fallback

@@ -24,7 +24,6 @@ def encode_branch(left_hash: Bytes[32] = ZERO_HASH, right_hash: Bytes[32] = ZERO
     1. Clear the first bit of left_hash (AND with 0xfe)
     2. Concatenate with full right_hash
     """
-    # print("Branch", [False] + Bytes(left_hash).to_bits()[1:] + right_hash.to_bits())
     return Bytes[64].from_bits([False] + Bytes(left_hash).to_bits()[1:] + right_hash.to_bits())
 
 def encode_leaf(key: Bytes, value: Bytes) -> Bytes[64]:

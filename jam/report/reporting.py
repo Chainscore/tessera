@@ -326,8 +326,7 @@ class Reporting:
         work_report_output = len(report.auth_output)
         for result in report.results:
             # TODO - Test this with non-OK results
-            if result.result.get_key() == "ok":
-                work_report_output += len(result.result.get_value())
+            work_report_output += len(result.result.unwrap())
 
         if work_report_output > MAX_WORK_REPORT_SIZE:
             raise ReportingError(
