@@ -43,7 +43,7 @@ htmlcov/
 .ruff_cache/
 
 # Environment
-.env
+envs/40000.env
 .venv
 env/
 ENV/

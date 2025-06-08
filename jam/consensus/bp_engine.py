@@ -20,9 +20,9 @@ from jam.types.block.extrinsics.extrinsic import Extrinsic
 from jam.types.block.extrinsics.disputes import Culprits, Faults, Verdicts
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.crypto import BandersnatchVrfSignature, Hash, OpaqueHash
+from jam.types.state.gamma import GammaSFallback
 from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD
 from jam.network.node import Node
-from jam.config.logging import logger
 from rockstore import RockStore
 from jam.utils.dummy.utils import create_dummy_bytes
 
@@ -48,6 +48,8 @@ class BlockProducer:
         Starts the block producer engine in asyncio loop. 
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
+        from jam.config.logging import logger
+        from jam.state.state import state
 
         # Record genesis timestamp in seconds
         genesis_ts = time()
@@ -57,27 +59,30 @@ class BlockProducer:
         while True:
             if not self.node.is_initialized:
                 logger.info(
-                    f"🔄 ({self.node.name}) Network is not initialized, skipping block production"
+                    f"🔄 Network is not initialized, skipping block production"
                 )
                 await asyncio.sleep(SLOT_PERIOD)
                 genesis_ts = time()
                 continue
 
             # Get state from db
-            state = State.load(self.db)
             current_timeslot = TimeSlot(math.ceil((time() - genesis_ts) / SLOT_PERIOD))
 
             # Get current timeslot
             ts_epoch_index = math.floor(int(current_timeslot) % EPOCH_LENGTH)
 
-            logger.info(
-                f"🔄 ({self.node.name}) We're in epoch slot {ts_epoch_index} and {state.gamma.s.get_key()} mode"
-            )
 
             # Check if we are in fallback or normal ticket.py
-            if state.gamma.s.get_key() == "keys":
-                author_key = state.gamma.s.get_value()[ts_epoch_index]
+            gamma_s = state.gamma.s.unwrap()
+
+            logger.debug(
+                f"🔄 We're in epoch slot {ts_epoch_index} and {type(state.gamma.s)} mode"
+            )
+
+            if isinstance(gamma_s, GammaSFallback):
+                author_key = gamma_s[ts_epoch_index]
                 if author_key == self.node.validator_data.bandersnatch:
+                    logger.info(f"⛏️ Authoring Block for {current_timeslot}")
                     block = self._produce_block(state, current_timeslot)
                     # Set local chain head to produced block
                     Finality.set_head(current_timeslot, self.db)
@@ -86,7 +91,7 @@ class BlockProducer:
                     # Announce
                     up0.transmit(self.node, block)
                 else:
-                    logger.info(f"🔄 ({self.node.name}) Skipping Block for TS {current_timeslot}")
+                    logger.info(f"🔄 Skipping Block for TS {current_timeslot}")
             else:
                 """Generate a header seal"""
                 # TODO: Implement once ring-proof are added
@@ -110,7 +115,7 @@ class BlockProducer:
         return Block(
             header=Header(
                 parent=Hash.blake2b(Block.load_parent(current_timeslot, self.db).header.encode()),
-                parent_state_root=state.generate_root(),
+                parent_state_root=state.root,
                 extrinsic_hash=self.hash_extrinsic(extrinsic),
                 slot=current_timeslot,
                 epoch_mark=Safrole.get_epoch_marker(state, current_timeslot),

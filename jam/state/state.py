@@ -1,4 +1,7 @@
+import json
 from typing import Type
+
+from tsrkit_types import Dictionary
 
 from jam.merklization import BMRFunctions
 from rockstore import RockStore
@@ -127,8 +130,12 @@ def set_state(new_state: State):
     state = new_state
     return state
 
-def setup_state(ghost: GhostState, db: RockStore):
-    data = ghost.transform()
+def setup_state(db: RockStore, genesis: GhostState | str = "dev-spec.json"):
+    if isinstance(genesis, str):
+        genesis_json = json.load(open(genesis))
+        data = Dictionary[Bytes, Bytes].from_json(genesis_json["genesis_state"])
+    else:
+        data = genesis.transform()
     trie = StateTrie()
     trie.merkelize(data, db)
 

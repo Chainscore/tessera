@@ -12,7 +12,6 @@ from .peer import Peer
 from .quic.client import QuicClientProtocol
 from .quic.server import QuicServerProtocol
 from .sessions import SessionTicketStore
-from jam.config.logging import logger
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -101,6 +100,8 @@ class Node:
         """
         Function to initialize server connection of the node.
         """
+        from jam.config.logging import logger
+
         session_ticket_store = SessionTicketStore(self.port)
 
         logger.info(f"🚀 ({self.name}) Listening on {self.host}:{self.port}")
@@ -118,6 +119,8 @@ class Node:
         self.server = server
 
     async def connect_peer(self, peer: Peer):
+        from jam.config.logging import logger
+
         """
         Function to connect the node to a peer.
         """
@@ -178,6 +181,8 @@ class Node:
         await asyncio.gather(*tasks)
 
     async def initialize(self):
+        from jam.config.logging import logger
+
         """
         Function to fully initialize a node.
         """
