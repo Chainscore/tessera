@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -35,6 +36,7 @@ async def main(
     is_builder: bool,
     is_validator: bool,
 ) -> None:
+    load_dotenv(".env")
     load_dotenv(env)
 
     name = os.environ["NODE_NAME"]
@@ -44,13 +46,25 @@ async def main(
     if not name or not port:
         raise ValueError(f"Name or Port not found in {env}")
 
-    # Setup logging
-    setup_logging(theme=theme, node_name=name)
+    # Setup logging with environment detection
+    environment = os.environ.get("ENVIRONMENT", "development")
+    log_level = os.environ.get("LOG_LEVEL", None)
+    
+    setup_logging(
+        theme=theme, 
+        node_name=name,
+        environment=environment,
+        min_level=getattr(logging, log_level.upper()) if log_level else None
+    )
 
     logger.info(
-        f"Starting {name} node on {port}",
+        "Starting JAM node",
+        node_name=name,
+        port=port,
         spec=chain_config.name,
-        listen_port=port,
+        environment=environment,
+        is_builder=is_builder,
+        is_validator=is_validator
     )
     try:
         if not start_genesis:
@@ -112,7 +126,18 @@ async def main(
 
 
     except KeyboardInterrupt:
-        logger.info(f"👋 ({name}) Shutting down JAM node 🔐")
+        logger.info(
+            "JAM node shutting down gracefully",
+            node_name=name,
+            port=port,
+            reason="keyboard_interrupt"
+        )
     except Exception as e:
-        logger.exception(f"💥 ({name}) Fatal error", error=str(e)[:100])
+        logger.critical(
+            "JAM node fatal error",
+            node_name=name,
+            port=port,
+            error=str(e)[:200],
+            error_type=type(e).__name__
+        )
         raise

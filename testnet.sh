@@ -9,7 +9,7 @@ fi
 N="$1"
 BASE_PORT=40000
 PIDS=()
-THEMES=(matrix polkadot default)  # cycle themes if n > 3
+THEMES=(matrix polkadot default noir solarized monokai)  # cycle themes if n > 3
 
 for ((i=0; i<N; i++)); do
   PORT=$((BASE_PORT + i))

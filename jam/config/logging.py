@@ -1,220 +1,418 @@
-import structlog
-from typing import Any, Dict, Union
+from __future__ import annotations
+
 import logging
-import random
-from enum import Enum
+import os
+import sys
+from enum import Enum, auto
+from typing import Any, Dict, Final, Mapping, Union
+
+import structlog
 from structlog.dev import ConsoleRenderer
-from structlog.processors import add_log_level, TimeStamper
+from structlog.processors import TimeStamper, add_log_level, JSONRenderer
+from structlog.stdlib import LoggerFactory
 
-class LogTheme(str, Enum):
-    """Available logging themes."""
-    DEFAULT = "default"
-    MATRIX = "matrix"
-    POLKADOT = "polkadot"
+# ---------- colour palette -------------------------------------------------- #
 
-class ThemeColors:
-    """Color palette for different themes."""
-    
-    # ANSI color codes
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
-    
-    # Foreground colors
-    BLACK = "\033[30m"
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    BLUE = "\033[34m"
-    MAGENTA = "\033[35m"
-    CYAN = "\033[36m"
-    WHITE = "\033[37m"
-    
-    # Bright foreground colors
-    BRIGHT_BLACK = "\033[90m"
-    BRIGHT_RED = "\033[91m"
-    BRIGHT_GREEN = "\033[92m"
-    BRIGHT_YELLOW = "\033[93m"
-    BRIGHT_BLUE = "\033[94m"
-    BRIGHT_MAGENTA = "\033[95m"
-    BRIGHT_CYAN = "\033[96m"
-    BRIGHT_WHITE = "\033[97m"
-    
-    # Background colors
-    BG_BLACK = "\033[40m"
-    BG_RED = "\033[41m"
-    BG_GREEN = "\033[42m"
-    BG_YELLOW = "\033[43m"
-    BG_BLUE = "\033[44m"
-    BG_MAGENTA = "\033[45m"
-    BG_CYAN = "\033[46m"
-    BG_WHITE = "\033[47m"
-    
-    # Bright background colors
-    BG_BRIGHT_BLACK = "\033[100m"
-    BG_BRIGHT_RED = "\033[101m"
-    BG_BRIGHT_GREEN = "\033[102m"
-    BG_BRIGHT_YELLOW = "\033[103m"
-    BG_BRIGHT_BLUE = "\033[104m"
-    BG_BRIGHT_MAGENTA = "\033[105m"
-    BG_BRIGHT_CYAN = "\033[106m"
-    BG_BRIGHT_WHITE = "\033[107m"
-    
-    @classmethod
-    def get_theme_palette(cls, theme: LogTheme) -> Dict[str, str]:
-        """Get color palette for a specific theme."""
-        palettes = {
-            LogTheme.DEFAULT: {
-                "DEBUG": cls.CYAN,
-                "INFO": cls.GREEN,
-                "WARNING": cls.YELLOW,
-                "ERROR": cls.RED,
-                "CRITICAL": cls.MAGENTA,
-                "timestamp": cls.BRIGHT_BLACK,
-                "logger_name": cls.BLUE,
-                "event": cls.WHITE,
-                "node_name": cls.BRIGHT_MAGENTA,
-            },
-            LogTheme.MATRIX: {
-                "DEBUG": cls.GREEN,
-                "INFO": cls.BRIGHT_GREEN,
-                "WARNING": f"{cls.BOLD}{cls.GREEN}",
-                "ERROR": f"{cls.BOLD}{cls.BG_BLACK}{cls.GREEN}",
-                "CRITICAL": f"{cls.BOLD}{cls.BG_GREEN}{cls.BLACK}",
-                "timestamp": cls.GREEN,
-                "logger_name": cls.GREEN,
-                "event": cls.BRIGHT_GREEN,
-                "node_name": cls.BRIGHT_GREEN,
-            },
-            LogTheme.POLKADOT: {
-                "DEBUG": cls.MAGENTA,
-                "INFO": cls.BRIGHT_MAGENTA,
-                "WARNING": f"{cls.BOLD}{cls.MAGENTA}",
-                "ERROR": f"{cls.BOLD}{cls.BG_MAGENTA}{cls.WHITE}",
-                "CRITICAL": f"{cls.BOLD}{cls.BG_BRIGHT_MAGENTA}{cls.BLACK}",
-                "timestamp": cls.BRIGHT_BLACK,
-                "logger_name": f"{cls.BOLD}{cls.MAGENTA}",
-                "event": cls.WHITE,
-                "node_name": f"{cls.BOLD}{cls.BRIGHT_MAGENTA}",
-            }
-        }
-        
-        return palettes.get(theme, palettes[LogTheme.DEFAULT])
+ESC: Final = "\033["
+RESET: Final = f"{ESC}0m"
 
-class ThemedConsole(ConsoleRenderer):
-    """Console renderer with theme support."""
-    
-    def __init__(self, theme: Union[LogTheme, str] = LogTheme.DEFAULT):
+def _fg(code: int) -> str:
+    return f"{ESC}{code}m"
+
+
+class Colour:
+    """Minimal ANSI helpers – keep it small, no colourama dependency."""
+    # basic
+    BLACK   = _fg(30);  RED    = _fg(31);  GREEN   = _fg(32);  YELLOW  = _fg(33)
+    BLUE    = _fg(34);  MAGENTA= _fg(35);  CYAN    = _fg(36);  WHITE   = _fg(37)
+
+    # bright
+    BBLACK  = _fg(90);  BRED   = _fg(91);  BGREEN  = _fg(92);  BYELLOW = _fg(93)
+    BBLUE   = _fg(94);  BMAG   = _fg(95);  BCYAN   = _fg(96);  BWHITE  = _fg(97)
+
+    BOLD    = f"{ESC}1m"
+    UNDER   = f"{ESC}4m"
+
+
+class Theme(str, Enum):
+    DEFAULT    = auto()
+    MATRIX     = auto()
+    POLKADOT   = auto()
+    SOLARIZED  = auto()
+    MONOKAI    = auto()
+    NOIR       = auto()
+
+
+class Environment(str, Enum):
+    DEVELOPMENT = "development"
+    TESTING = "testing" 
+    PRODUCTION = "production"
+
+
+_PALETTES: Mapping[Theme, Dict[str, str]] = {
+    Theme.DEFAULT: {
+        "LEVEL": {      # base colours by level
+            "DEBUG": Colour.CYAN,
+            "INFO": Colour.GREEN,
+            "WARNING": Colour.YELLOW,
+            "ERROR": Colour.RED,
+            "CRITICAL": Colour.MAGENTA,
+        },
+        "time"  : Colour.BBLACK,
+        "logger": Colour.BLUE,
+        "node"  : Colour.BMAG,
+    },
+
+    Theme.MATRIX: {
+        "LEVEL": {
+            "DEBUG": Colour.GREEN,
+            "INFO": Colour.BGREEN,
+            "WARNING": f"{Colour.BOLD}{Colour.GREEN}",
+            "ERROR": f"{Colour.BOLD}{Colour.BBLACK}{Colour.GREEN}",
+            "CRITICAL": f"{Colour.BOLD}{Colour.BGREEN}{Colour.BLACK}",
+        },
+        "time": Colour.GREEN,
+        "logger": Colour.GREEN,
+        "node": Colour.BGREEN,
+        "prefixes": ("0x", ">_", ">>", "//", "$_", "#_"),
+    },
+
+    Theme.POLKADOT: {
+        "LEVEL": {
+            "DEBUG": Colour.MAGENTA,
+            "INFO": Colour.BMAG,
+            "WARNING": f"{Colour.BOLD}{Colour.MAGENTA}",
+            "ERROR": f"{Colour.BOLD}{Colour.BMAG}{Colour.WHITE}",
+            "CRITICAL": f"{Colour.BOLD}{Colour.BWHITE}{Colour.BLACK}",
+        },
+        "time": Colour.BBLACK,
+        "logger": f"{Colour.BOLD}{Colour.MAGENTA}",
+        "node": f"{Colour.BOLD}{Colour.BMAG}",
+    },
+
+    Theme.SOLARIZED: {
+        # Approximate Solarized palette
+        "LEVEL": {
+            "DEBUG": _fg(36),   # base0 blue
+            "INFO": _fg(32),    # base1 green
+            "WARNING": _fg(33), # yellow
+            "ERROR": _fg(31),   # red
+            "CRITICAL": _fg(35) # magenta
+        },
+        "time": _fg(90),   # base01
+        "logger": _fg(94), # cyan
+        "node": _fg(96),   # base1 cyan
+    },
+
+    Theme.MONOKAI: {
+        "LEVEL": {
+            "DEBUG": _fg(94),  # blue
+            "INFO": _fg(92),   # green
+            "WARNING": _fg(93),# yellow
+            "ERROR": _fg(91),  # red
+            "CRITICAL": _fg(95)# magenta
+        },
+        "time": _fg(90),
+        "logger": _fg(95),
+        "node": _fg(92),
+    },
+
+    Theme.NOIR: {
+        "LEVEL": {
+            "DEBUG": Colour.BWHITE,
+            "INFO": Colour.WHITE,
+            "WARNING": Colour.BRED,
+            "ERROR": f"{Colour.BOLD}{Colour.RED}",
+            "CRITICAL": f"{Colour.BOLD}{Colour.RED}{Colour.UNDER}",
+        },
+        "time": Colour.BBLACK,
+        "logger": Colour.BWHITE,
+        "node": Colour.BRED,
+    },
+}
+
+# Environment-specific log level defaults
+_ENV_LOG_LEVELS = {
+    Environment.DEVELOPMENT: logging.DEBUG,
+    Environment.TESTING: logging.INFO,
+    Environment.PRODUCTION: logging.WARNING,
+}
+
+
+# ---------- renderer -------------------------------------------------------- #
+
+class ThemedRenderer(ConsoleRenderer):
+    """structlog ConsoleRenderer with six switchable skins."""
+
+    def __init__(self, theme: Union[Theme, str] = Theme.DEFAULT) -> None:
         super().__init__()
-        
-        # Convert string to enum if needed
         if isinstance(theme, str):
-            try:
-                theme = LogTheme(theme.lower())
-            except ValueError:
-                theme = LogTheme.DEFAULT
-        
-        self.theme = theme
-        self.palette = ThemeColors.get_theme_palette(theme)
-        self.reset = ThemeColors.RESET
-        
-    def get_color(self, key: str) -> str:
-        """Get color for a specific key, handling dynamic colors (functions)."""
-        color = self.palette.get(key, self.reset)
-        if callable(color):
-            return color()
-        return color
-        
+            theme = Theme[theme.upper()] if theme.upper() in Theme.__members__ else Theme.DEFAULT
+
+        self.theme: Theme = theme
+        self.pal: Dict[str, Any] = _PALETTES[self.theme]
+
+    # fast helpers
+    def _clr(self, level: str) -> str:
+        return self.pal["LEVEL"].get(level, "")
+
     def __call__(self, logger, method_name, event_dict):
-        """Render the event with themed colors."""
-        # Get the log level from the event dict
-        level = event_dict.get("level", "INFO").upper()
-        
-        # Get the original output from parent class
-        output = super().__call__(logger, method_name, event_dict)
-        
-        # Add colors based on log level
-        level_color = self.get_color(level)
-        
-        # Add extra styling around the timestamp if present
-        if "timestamp" in event_dict:
-            timestamp_str = str(event_dict["timestamp"])
-            timestamp_color = self.get_color("timestamp")
-            output = output.replace(
-                timestamp_str, 
-                f"{timestamp_color}{timestamp_str}{self.reset}"
-            )
-        
-        # Color the logger name if present
-        if "logger" in event_dict:
-            logger_name = str(event_dict["logger"])
-            logger_color = self.get_color("logger_name")
-            output = output.replace(
-                f"[{logger_name}]", 
-                f"[{logger_color}{logger_name}{self.reset}]"
-            )
-        
-        # Color the node name if present
-        if "node_name" in event_dict:
-            node_name = str(event_dict["node_name"])
-            node_color = self.get_color("node_name")
-            # Add node name to the output
-            output = f"{node_color}[{node_name}]{self.reset} {output}"
-        
-        # Apply level color to the level name
-        if level in event_dict:
-            output = output.replace(
-                f"[{level}]", 
-                f"[{level_color}{level}{self.reset}]"
-            )
-        
-        # Apply special formatting for specific themes
-        if self.theme == LogTheme.MATRIX:
-            # Add matrix-like prefixes
-            prefix = random.choice(["0x", ">_", ">>", "//", "$_", "#_"])
-            output = f"{ThemeColors.GREEN}{prefix} {output}{self.reset}"
-        
-        return f"{level_color}{output}{self.reset}"
+        level = event_dict.pop("level", method_name).upper()  # structlog ensures this
+        node  = event_dict.pop("node_name", None)
+        component = event_dict.pop("component", None)
+
+        # base render first
+        msg = super().__call__(logger, method_name, event_dict)
+
+        # assemble final line
+        parts: list[str] = []
+
+        if node:
+            parts.append(f"{self.pal['node']}[{node}]{RESET}")
+
+        if component:
+            parts.append(f"{self.pal['logger']}[{component}]{RESET}")
+
+        # timestamp comes from ConsoleRenderer already; wrap the ISO chunk
+        if self.pal.get("time"):
+            # naive replace – timestamp is always first token
+            ts, rest = msg.split(" ", 1)
+            parts.append(f"{self.pal['time']}{ts}{RESET}")
+            msg = rest
+
+        # level token
+        parts.append(f"{self._clr(level)}[{level}]{RESET}")
+
+        parts.append(msg)  # the rest
+
+        return " ".join(parts)
 
 
-def setup_logging(theme: Union[LogTheme, str] = LogTheme.DEFAULT, node_name: str = None) -> None:
-    """
-    Configure structured logging with the specified theme.
+# ---------- performance logging --------------------------------------------- #
+
+def add_performance_context(_, __, event_dict):
+    """Add performance-related context to log events."""
+    # Add process ID for multi-process debugging
+    event_dict["pid"] = os.getpid()
+    return event_dict
+
+
+def filter_sensitive_data(_, __, event_dict):
+    """Filter out sensitive data from logs in production."""
+    sensitive_keys = {"private_key", "seed", "password", "token", "secret"}
     
-    Args:
-        theme: The color theme to use for logs
-        node_name: The name of the node to include in all log messages
+    for key in list(event_dict.keys()):
+        if any(sensitive in key.lower() for sensitive in sensitive_keys):
+            event_dict[key] = "[REDACTED]"
+    
+    return event_dict
+
+
+# ---------- module filtering --------------------------------------------- #
+
+def setup_module_logging_levels():
     """
-    # Convert string to enum if needed
-    if isinstance(theme, str):
-        try:
-            theme = LogTheme(theme.lower())
-        except ValueError:
-            theme = LogTheme.DEFAULT
-        
-    # Create a processor to add node_name to all log messages
-    def add_node_name(logger, method_name, event_dict):
+    Configure different log levels for specific modules.
+    """
+    # Dict mapping module names to log levels
+    module_levels = {}
+
+    for key, value in os.environ.items():
+        if key.startswith("LOG_LEVEL_"):
+            module_suffix = str(key[10:]).lower()  # Remove "LOG_LEVEL_" prefix
+            try:
+                level = getattr(logging, value.upper())
+                module_levels[module_suffix] = level
+            except AttributeError:
+                logger.warning(f"Invalid log level: {value} for module {module_suffix}")
+
+
+    for module_name, level in module_levels.items():
+        logging.getLogger(module_name).setLevel(level)
+
+
+# ---------- bootstrap ------------------------------------------------------- #
+
+def setup_logging(
+    *,
+    theme: Union[Theme, str] = Theme.DEFAULT,
+    node_name: str | None = None,
+    min_level: int | None = None,
+    environment: Union[Environment, str] = Environment.DEVELOPMENT,
+    log_file: str | None = None,
+    enable_json_logs: bool = False,
+) -> None:
+    """
+    Initialise structlog + stdlib logging with themed console output.
+
+    Args:
+        theme: Color theme for console output
+        node_name: Name of the node for logging context
+        min_level: Minimum log level (if None, uses environment default)
+        environment: Runtime environment (development/testing/production)
+        log_file: Optional file path for log output
+        enable_json_logs: Enable JSON structured logging for production
+
+    Call once at programme start.
+    """
+    # Normalize environment
+    if isinstance(environment, str):
+        environment = Environment(environment.lower())
+    
+    # Set default log level based on environment
+    if min_level is None:
+        min_level = _ENV_LOG_LEVELS.get(environment, logging.INFO)
+
+    # silence noisy libs early
+    logging.getLogger("quic").setLevel(logging.WARNING)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
+    logging.getLogger("aioquic").setLevel(logging.WARNING)
+    
+    # Configure processors based on environment
+    processors = []
+    
+    def add_node_context(_, __, event: Dict[str, Any]) -> Dict[str, Any]:
         if node_name:
-            event_dict["node_name"] = node_name
-        return event_dict
+            event["node_name"] = node_name
+        event["environment"] = environment.value
+        return event
+
+    processors.extend([
+        add_node_context,
+        add_performance_context,
+        add_log_level,
+        TimeStamper(fmt="iso"),
+    ])
+    
+    # Add sensitive data filtering in production
+    if environment == Environment.PRODUCTION:
+        processors.insert(-2, filter_sensitive_data)
+
+    # Choose renderer based on environment and configuration
+    if enable_json_logs or environment == Environment.PRODUCTION:
+        # Use JSON renderer for production or when explicitly requested
+        processors.append(JSONRenderer())
         
+        # Set up file logging for production
+        if log_file or environment == Environment.PRODUCTION:
+            log_file = log_file or f"/var/log/jam/{node_name or 'node'}.log"
+            os.makedirs(os.path.dirname(log_file), exist_ok=True)
+            
+            # Configure file handler
+            file_handler = logging.FileHandler(log_file)
+            file_handler.setLevel(min_level)
+            
+            # Also log to stderr in production for container environments
+            if environment == Environment.PRODUCTION:
+                console_handler = logging.StreamHandler(sys.stderr)
+                console_handler.setLevel(logging.WARNING)  # Only warnings+ to console
+                
+                # Custom formatter without logger name
+                formatter = logging.Formatter('%(message)s')
+                file_handler.setFormatter(formatter)
+                console_handler.setFormatter(formatter)
+                
+                logging.basicConfig(
+                    level=min_level,
+                    handlers=[file_handler, console_handler],
+                    force=True
+                )
+            else:
+                # Custom formatter without logger name
+                formatter = logging.Formatter('%(message)s')
+                file_handler.setFormatter(formatter)
+                logging.basicConfig(level=min_level, handlers=[file_handler], force=True)
+    else:
+        # Use themed console renderer for development
+        processors.append(ThemedRenderer(theme))
+        
+        # Configure console handler with custom formatter that excludes logger name
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(min_level)
+        formatter = logging.Formatter('%(message)s')
+        console_handler.setFormatter(formatter)
+        
+        logging.basicConfig(
+            level=min_level,
+            handlers=[console_handler],
+            force=True
+        )
+
+    # Configure structlog
     structlog.configure(
-        processors=[
-            add_log_level,
-            TimeStamper(fmt="iso"),
-            add_node_name,  # Add node_name to all log messages
-            ThemedConsole(theme),
-        ],
-        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
-        context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(),
+        processors=processors,
+        wrapper_class=structlog.make_filtering_bound_logger(min_level),
+        logger_factory=LoggerFactory(),
         cache_logger_on_first_use=True,
     )
 
-    logging.basicConfig(level=logging.INFO)
+    # Setup module-specific log levels from environment
+    setup_module_logging_levels()
 
 
-def get_logger(name: str) -> Any:
-    return structlog.get_logger(name)
+def get_logger(name: str | None = None, component: str | None = None):
+    """
+    Return a themed structlog logger with optional component context.
+    
+    Args:
+        name: Logger name (typically __name__)
+        component: Component name for better log organization
+        
+    Examples:
+        logger = get_logger("pvm")
+        logger = get_logger("import")
+    """
+    logger = structlog.get_logger(name or "jam")
+    if component:
+        logger = logger.bind(component=component)
+    return logger
 
-logger = get_logger(__name__)
+
+# Performance monitoring helpers
+class PerformanceLogger:
+    """Context manager for performance logging."""
+    
+    def __init__(self, logger, operation: str, **context):
+        self.logger = logger
+        self.operation = operation
+        self.context = context
+        self.start_time = None
+    
+    def __enter__(self):
+        import time
+        self.start_time = time.perf_counter()
+        self.logger.debug(f"Starting {self.operation}", **self.context)
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        import time
+        duration = time.perf_counter() - self.start_time
+        
+        if exc_type is None:
+            self.logger.info(
+                f"Completed {self.operation}",
+                duration_ms=round(duration * 1000, 2),
+                **self.context
+            )
+        else:
+            self.logger.error(
+                f"Failed {self.operation}",
+                duration_ms=round(duration * 1000, 2),
+                error=str(exc_val),
+                **self.context
+            )
+
+
+def log_performance(logger, operation: str, **context):
+    """
+    Decorator or context manager for performance logging.
+    
+    Usage as context manager:
+        with log_performance(logger, "block_validation", block_hash=hash):
+            validate_block(block)
+    """
+    return PerformanceLogger(logger, operation, **context)
+
+
+# Module logger
+logger = get_logger("logging")

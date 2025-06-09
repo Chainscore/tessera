@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
-from jam.network.quic.server import QuicServerProtocol
+if TYPE_CHECKING:
+    from jam.network.quic.server import QuicServerProtocol
+    from jam.network.node import Node
+
 from tsrkit_types.enum import Enum
 
 class PrefixType(Enum):
@@ -39,13 +42,12 @@ class NetworkProtocol(ABC):
         - QUIC Client then intercepts response and processes it.
     """
 
-    from jam.network.node import Node
 
     _prefix: PrefixType
     max_buffer_size: int
 
     @abstractmethod
-    def transmit(self, node: Node, data: Any):
+    def transmit(self, node: "Node", data: Any):
         """
         Function to transmit data to connected server.
         Called on client. Must be implemented by subclasses.
@@ -53,7 +55,7 @@ class NetworkProtocol(ABC):
         ...
 
     @abstractmethod
-    def server_intercept(self, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, buffer: bytes, server: "QuicServerProtocol", stream_id: int):
         """
         Function to intercept & process data / query from connected client.
         And sends acknowledge / response to the client

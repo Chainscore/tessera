@@ -25,6 +25,10 @@ from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD
 from jam.network.node import Node
 from rockstore import RockStore
 from jam.utils.dummy.utils import create_dummy_bytes
+from jam.config.logging import get_logger, log_performance
+
+# Logger for Block Production / Authoring module
+logger = get_logger("author")
 
 class BlockProducer:
     """
@@ -42,24 +46,39 @@ class BlockProducer:
     def __init__(self, node: Node, db: RockStore):
         self.node = node
         self.db = db
+        
+        logger.info(
+            "Block producer initialized",
+            node_name=node.name,
+            is_validator=node.is_validator,
+            validator_key=node.validator_data.bandersnatch.hex()[:16] + "..." if node.validator_data else None
+        )
 
     async def run(self):
         """
         Starts the block producer engine in asyncio loop. 
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
-        from jam.config.logging import logger
         from jam.state.state import state
 
         # Record genesis timestamp in seconds
         genesis_ts = time()
         up0 = BlockAnnouncement()
 
+        logger.info(
+            "Starting block producer",
+            node_name=self.node.name,
+            genesis_timestamp=genesis_ts,
+            slot_period=SLOT_PERIOD,
+            epoch_length=EPOCH_LENGTH
+        )
+
         # TODO: If our validator is not in Kappa - skip block production till end of current epoch
         while True:
             if not self.node.is_initialized:
-                logger.info(
-                    f"🔄 Network is not initialized, skipping block production"
+                logger.debug(
+                    "Network not initialized - skipping block production",
+                    node_name=self.node.name
                 )
                 await asyncio.sleep(SLOT_PERIOD)
                 genesis_ts = time()
@@ -71,40 +90,87 @@ class BlockProducer:
             # Get current timeslot
             ts_epoch_index = math.floor(int(current_timeslot) % EPOCH_LENGTH)
 
-
             # Check if we are in fallback or normal ticket.py
             gamma_s = state.gamma.s.unwrap()
 
             logger.debug(
-                f"🔄 We're in epoch slot {ts_epoch_index} and {type(state.gamma.s)} mode"
+                "Block production cycle",
+                node_name=self.node.name,
+                current_timeslot=int(current_timeslot),
+                epoch_index=ts_epoch_index,
+                gamma_mode=type(gamma_s).__name__
             )
 
             if isinstance(gamma_s, GammaSFallback):
                 author_key = gamma_s[ts_epoch_index]
+                
                 if author_key == self.node.validator_data.bandersnatch:
-                    logger.info(f"⛏️ Authoring Block for {current_timeslot}")
-                    block = self._produce_block(state, current_timeslot)
-                    # Set local chain head to produced block
-                    Finality.set_head(current_timeslot, self.db)
-                    # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-                    Finality.finalise(current_timeslot, self.db)
-                    # Announce
-                    up0.transmit(self.node, block)
+                    logger.info(
+                        "Authoring block - our turn",
+                        node_name=self.node.name,
+                        current_timeslot=int(current_timeslot),
+                        epoch_index=ts_epoch_index,
+                        author_key=author_key.hex()[:16] + "..."
+                    )
+                    
+                    with log_performance(logger, "block_production", 
+                                       timeslot=int(current_timeslot), 
+                                       node_name=self.node.name):
+                        block = self._produce_block(state, current_timeslot)
+                        
+                        # Set local chain head to produced block
+                        Finality.set_head(current_timeslot, self.db)
+                        # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
+                        Finality.finalise(current_timeslot, self.db)
+                        
+                        # Announce
+                        up0.transmit(self.node, block)
+                    
+                    logger.info(
+                        "Block authored and announced successfully",
+                        node_name=self.node.name,
+                        current_timeslot=int(current_timeslot),
+                        block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "..."
+                    )
                 else:
-                    logger.info(f"🔄 Skipping Block for TS {current_timeslot}")
+                    logger.debug(
+                        "Not our turn to author - skipping",
+                        node_name=self.node.name,
+                        current_timeslot=int(current_timeslot),
+                        epoch_index=ts_epoch_index,
+                        expected_author=author_key.hex()[:16] + "...",
+                        our_key=self.node.validator_data.bandersnatch.hex()[:16] + "..."
+                    )
             else:
                 """Generate a header seal"""
                 # TODO: Implement once ring-proof are added
+                logger.warning(
+                    "Ring-proof mode not yet implemented - only fallback mode supported",
+                    node_name=self.node.name,
+                    current_timeslot=int(current_timeslot),
+                    gamma_mode=type(gamma_s).__name__
+                )
                 raise NotImplementedError("Only fallback mode is supported for now")
-                ...
 
             # Sleep for remaining time of the timeslot
-            await asyncio.sleep(6 - (time() - genesis_ts) % SLOT_PERIOD)
+            sleep_duration = 6 - (time() - genesis_ts) % SLOT_PERIOD
+            logger.debug(
+                "Sleeping until next slot",
+                node_name=self.node.name,
+                sleep_duration=sleep_duration
+            )
+            await asyncio.sleep(sleep_duration)
 
     def _produce_block(self, state: State, current_timeslot: TimeSlot) -> Block:
         """
         Produce a block for the given timeslot
         """
+        logger.debug(
+            "Building block components",
+            node_name=self.node.name,
+            timeslot=int(current_timeslot)
+        )
+        
         extrinsic = Extrinsic(
             TicketsExtrinsic([]),
             PreimagesExtrinsic([]),
@@ -112,9 +178,20 @@ class BlockProducer:
             AssurancesExtrinsic([]),
             DisputesExtrinsic(culprits=Culprits([]), faults=Faults([]), verdicts=Verdicts([]))
         )
-        return Block(
+        
+        logger.debug(
+            "Building block header",
+            node_name=self.node.name,
+            timeslot=int(current_timeslot),
+            state_root=state.root.hex()[:16] + "..."
+        )
+        
+        parent_block = Block.load_parent(current_timeslot, self.db)
+        parent_hash = Hash.blake2b(parent_block.header.encode())
+        
+        block = Block(
             header=Header(
-                parent=Hash.blake2b(Block.load_parent(current_timeslot, self.db).header.encode()),
+                parent=parent_hash,
                 parent_state_root=state.root,
                 extrinsic_hash=self.hash_extrinsic(extrinsic),
                 slot=current_timeslot,
@@ -127,6 +204,18 @@ class BlockProducer:
             ),
             extrinsic=extrinsic
         )
+        
+        logger.info(
+            "Block produced ⛏️",
+            node_name=self.node.name,
+            timeslot=int(current_timeslot),
+            parent_hash=parent_hash.hex()[:16] + "...",
+            block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...",
+            author_index=int(block.header.author_index),
+            extrinsic_hash=block.header.extrinsic_hash.hex()[:16] + "..."
+        )
+        
+        return block
     
     def get_author_index(self, state: State) -> ValidatorIndex:
         """
@@ -134,7 +223,20 @@ class BlockProducer:
         """
         for i, validator in enumerate(state.kappa):
             if validator.bandersnatch == self.node.validator_data.bandersnatch:
+                logger.debug(
+                    "Found author index in validator set",
+                    node_name=self.node.name,
+                    author_index=i,
+                    validator_key=validator.bandersnatch.hex()[:16] + "..."
+                )
                 return ValidatorIndex(i)
+        
+        logger.error(
+            "Author not found in validator set",
+            node_name=self.node.name,
+            our_key=self.node.validator_data.bandersnatch.hex()[:16] + "...",
+            validator_count=len(state.kappa)
+        )
         raise ValueError("Author not found in the state")
     
     def hash_extrinsic(self, extrinsic: Extrinsic) -> OpaqueHash:
@@ -148,4 +250,14 @@ class BlockProducer:
         enc_ext = b''
         for ext in all_ext:
             enc_ext += bytes(Hash.blake2b(ext.encode()))
-        return Hash.blake2b(enc_ext)
+        
+        extrinsic_hash = Hash.blake2b(enc_ext)
+        
+        logger.debug(
+            "Extrinsic hash computed",
+            node_name=self.node.name,
+            extrinsic_count=len(all_ext),
+            extrinsic_hash=extrinsic_hash.hex()[:16] + "..."
+        )
+        
+        return extrinsic_hash

@@ -6,12 +6,15 @@ from typing import Dict, cast, Tuple
 from aioquic.asyncio import serve, connect
 from aioquic.asyncio.server import QuicServer
 from aioquic.quic.configuration import QuicConfiguration
+from jam.config.logging import get_logger
 from jam.types.protocol.validators import ValidatorData
 from .certificate import generate_keys
 from .peer import Peer
 from .quic.client import QuicClientProtocol
 from .quic.server import QuicServerProtocol
 from .sessions import SessionTicketStore
+
+logger = get_logger("network")
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -61,9 +64,35 @@ class Node:
         self.peer_conn = {}
 
         if is_validator and is_builder:
+            logger.error(
+                "Invalid node configuration - cannot be both validator and builder",
+                node_id=node_id,
+                node_name=node_name,
+                host=host,
+                port=port
+            )
             raise ValueError("Node can't be validator and builder at same time!")
 
+        logger.debug(
+            "Initializing node",
+            node_id=node_id,
+            node_name=node_name,
+            host=host,
+            port=port,
+            is_builder=is_builder,
+            is_validator=is_validator,
+            peer_count=len(peers)
+        )
+
         self.dns = generate_keys(port)
+        
+        logger.info(
+            "Node initialized successfully",
+            node_id=node_id,
+            node_name=node_name,
+            dns=self.dns,
+            endpoint=f"{host}:{port}"
+        )
 
     def configuration(self, is_client: bool = True) -> QuicConfiguration:
         """
@@ -94,17 +123,30 @@ class Node:
         else:
             configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}", f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
 
+        logger.debug(
+            "QUIC configuration created",
+            node_name=self.name,
+            is_client=is_client,
+            is_builder=self.is_builder,
+            max_data_mb=configuration.max_data / (1024*1024),
+            alpn_protocols=configuration.alpn_protocols
+        )
+
         return configuration
     
     async def run_server(self):
         """
         Function to initialize server connection of the node.
         """
-        from jam.config.logging import logger
-
         session_ticket_store = SessionTicketStore(self.port)
 
-        logger.info(f"🚀 ({self.name}) Listening on {self.host}:{self.port}")
+        logger.info(
+            "Starting QUIC server",
+            node_name=self.name,
+            host=self.host,
+            port=self.port,
+            endpoint=f"{self.host}:{self.port}"
+        )
 
         server = await serve(
             self.host,
@@ -117,10 +159,14 @@ class Node:
 
         # Save server connection
         self.server = server
+        
+        logger.info(
+            "QUIC server started successfully",
+            node_name=self.name,
+            endpoint=f"{self.host}:{self.port}"
+        )
 
     async def connect_peer(self, peer: Peer):
-        from jam.config.logging import logger
-
         """
         Function to connect the node to a peer.
         """
@@ -129,10 +175,22 @@ class Node:
         try:
             # Skip self
             if peer.host == self.host and peer.port == self.port:
-                logger.info(f"⚠️ ({self.name}) Skipping self ({self.host}:{self.port})")
+                logger.debug(
+                    "Skipping self-connection",
+                    node_name=self.name,
+                    peer_endpoint=f"{peer.host}:{peer.port}",
+                    self_endpoint=f"{self.host}:{self.port}"
+                )
                 return
             
-            logger.info(f"🔹 ({self.name}) Creating new connection to {peer.host}:{peer.port} via QUIC...")
+            logger.info(
+                "Establishing peer connection",
+                node_name=self.name,
+                peer_host=peer.host,
+                peer_port=peer.port,
+                peer_san=peer.san,
+                peer_endpoint=f"{peer.host}:{peer.port}"
+            )
 
             async with connect(
                     peer.host,
@@ -146,55 +204,123 @@ class Node:
                 self.connections.append(client)
                 client = cast(QuicClientProtocol, client)
 
-                logger.info(f"🤝 ({self.name}) Connection to {peer.host}:{peer.port} established ✅")
+                logger.info(
+                    "Peer connection established",
+                    node_name=self.name,
+                    peer_endpoint=f"{peer.host}:{peer.port}",
+                    connection_count=len(self.connections)
+                )
 
                 stream_id = client._quic.get_next_available_stream_id()
-                client.stream_and_keep_open(stream_id=stream_id,message=json.dumps({
+                
+                # Send initial ping
+                ping_message = json.dumps({
                     "type": "ping",
                     "from": self.name
-            }).encode())
+                }).encode()
+                
+                client.stream_and_keep_open(stream_id=stream_id, message=ping_message)
+
+                logger.debug(
+                    "Initial ping sent to peer",
+                    node_name=self.name,
+                    peer_endpoint=f"{peer.host}:{peer.port}",
+                    stream_id=stream_id,
+                    message_size=len(ping_message)
+                )
 
                 # last_block = self.state.beta[-1]
                 # final = Final(block_hash=last_block.header_hash, time_slot=U32(0))
                 # await client.stream_and_keep_open(stream_id=stream_id, message=final.encode())
 
                 self.peer_conn[peer] = stream_id, client
-
-
                 self.is_initialized = True
+
+                logger.info(
+                    "Node initialization completed - peer connections active",
+                    node_name=self.name,
+                    total_connections=len(self.connections),
+                    is_initialized=self.is_initialized
+                )
 
                 # Wait indefinitely - the connection will be managed by the context manager
                 await asyncio.Future()
 
         except asyncio.CancelledError:
-            logger.info(f"🔴 ({self.name}) Connection with {peer.host}:{peer.port} cancelled")
+            logger.info(
+                "Peer connection cancelled",
+                node_name=self.name,
+                peer_endpoint=f"{peer.host}:{peer.port}"
+            )
         except Exception as e:
-            logger.warning(f"⚠️ ({self.name}) Failed to connect to {peer}: {e}")
+            logger.error(
+                "Failed to establish peer connection",
+                node_name=self.name,
+                peer_endpoint=f"{peer.host}:{peer.port}",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
     async def run_client(self):
         """
         Function to initialize client connections of the node.
         """
+        logger.info(
+            "Starting client connections",
+            node_name=self.name,
+            peer_count=len(self.peers)
+        )
+        
         tasks = []
         for peer in self.peers:
-            tasks.append(asyncio.create_task(self.connect_peer(peer)))
+            task = asyncio.create_task(self.connect_peer(peer))
+            tasks.append(task)
+            
+        logger.debug(
+            "Created connection tasks for all peers",
+            node_name=self.name,
+            task_count=len(tasks)
+        )
+        
         await asyncio.gather(*tasks)
 
     async def initialize(self):
-        from jam.config.logging import logger
-
         """
         Function to fully initialize a node.
         """
+        logger.info(
+            "Starting node initialization",
+            node_name=self.name,
+            node_type="builder" if self.is_builder else "validator",
+            endpoint=f"{self.host}:{self.port}"
+        )
+
         if self.is_builder:
-            logger.info(f"🚀 ({self.name}) Starting builder on {self.host}:{self.port}")
+            logger.info(
+                "Initializing builder node",
+                node_name=self.name,
+                endpoint=f"{self.host}:{self.port}"
+            )
 
         if not self.is_builder:
-            logger.info(f"🚀 ({self.name}) Starting server on {self.host}:{self.port}")
+            logger.info(
+                "Starting validator server",
+                node_name=self.name,
+                endpoint=f"{self.host}:{self.port}"
+            )
             await self.run_server()
 
             # Give server time to fully initialize
             await asyncio.sleep(1)
+            
+            logger.debug(
+                "Server initialization complete, starting client connections",
+                node_name=self.name
+            )
 
-        logger.info(f"🔄 ({self.name}) Opening connections to {len(self.peers)} peers...")
+        logger.info(
+            "Opening connections to peers",
+            node_name=self.name,
+            peer_count=len(self.peers)
+        )
         await self.run_client()
