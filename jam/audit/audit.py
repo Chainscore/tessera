@@ -1,8 +1,10 @@
 from dataclasses import dataclass
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from jam.types.base.sequences.bytes.byte_array import ByteArray64
 from jam.types.protocol.core import CoreIndex
+from jam.types.work.package import WorkPackage
+from jam.work_package.processor import Processor
 from rich.diagnose import report
 from sympy import floor
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
@@ -19,6 +21,9 @@ from jam.utils.shuffle import shuffle
 from jam.types.protocol.crypto import Hash
 from jam.assurances.assurances import Assurances
 from jam.types.block import Block
+from jam.audit.utils import Ξ,F,power_set
+
+
 
 
 @dataclass
@@ -26,7 +31,7 @@ class AuditingAndJudgement:
 
     def __init__(self):
         self.vrf = VRF
-        self.assurance = Assurances.transition(state=Sigma, block=Block)
+        self.state = Assurances.transition(state=Sigma, block=Block)
 
 
     def report_to_be_audit(self, state: Sigma)->List[WorkReport]:
@@ -47,7 +52,7 @@ class AuditingAndJudgement:
         pre_auditing_report = []
 
         for i, (report, slot) in enumerate(state.rho):
-            if report in self.assurance:
+            if report in self.state.rho:
                 pre_auditing_report.append(report)
             else:
                 pre_auditing_report.append(Null)
@@ -55,9 +60,9 @@ class AuditingAndJudgement:
         return pre_auditing_report
 
     @staticmethod
-    def verifiable_random_quality(header: Header):
+    def verifiable_random_quality(header: Header,tranche_index: Int = None ,workreport: Optional[WorkReport] = None):
         """
-        Function So define in Eq. 17.3 and 17.4
+        Function So define in Eq. 17.3 and 17.4 and 17.15
 
         Sources:
             https://graypaper.fluffylabs.dev/#/9a08063/1e89001e9c00?v=0.6.6
@@ -76,6 +81,11 @@ class AuditingAndJudgement:
         bandersnatch_proof = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(bytes(entropy_yield_vrf_signature)))[:32]
 
         random_quantity = bytes(SIGNING_CONTEXTS["audit"]) + bandersnatch_proof
+
+        if tranche_index is not None and tranche_index > 0 and workreport is not None:
+            random_quantity+= Hash.blake2b(workreport.encode()).encode()+tranche_index.encode() # refer 17.15
+
+        # F Function needs to be implemented Here expected to return [sets of signatures]
 
         return random_quantity
 
@@ -150,10 +160,31 @@ class AuditingAndJudgement:
             # Explicitely modifying to the ByteArray64 format
             statement_set.append(ByteArray64(signature))
 
-
-
         return statement_set
 
 
+    def evaluate_core_mappings (self,work_report:WorkReport):
+        # refer 17.17
+        if F(work_report)==self.rho[work_report.core_index].encode():
+            return Ξ(work_package,core_index=work_report.core_index)
+        else:
+            return False
 
 
+    def validator_judment_mapping(self,work_report:WorkReport,state:Sigma)-> List[ByteArray64]:
+        """
+         Go through the evaluate_core_mappings Func (refer 17.17) and provide its validity where the wr is valid or not
+         Return :
+            Set of Judgment signatures from each (kappa/current) validator
+        refer equ 17.18
+        """
+        judgement_set=[]
+        for validator in state.kappa:
+            private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
+            signing_context = SIGNING_CONTEXTS["valid"] if evaluate_core_mappings(work_report) else SIGNING_CONTEXTS["invalid"]
+            message= signing_context + Hash.blake2b(work_report.encode())
+            # Sign will give out a 64Byte Signature
+            signature = private_key.sign(message)
+            # Explicitely modifying to the ByteArray64 format
+            judgement_set.append(ByteArray64(signature))
+        return judgement_set
