@@ -1,8 +1,6 @@
 import asyncio
 import os
 import pytest
-from jam.__main__ import main
-
 clients = [
     ("Alice", 30333),
     ("Bob", 30334),
@@ -17,6 +15,7 @@ clients = [
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_connection():
     tasks = []
+    from jam.__main__ import main
     for client in clients:
         tasks.append(
             main(

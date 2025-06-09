@@ -1,29 +1,28 @@
-from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.execution.host_calls._types import DeferredTransfer, AccumulationContext,service_dict,StateContext
+from tsrkit_types import U32, U64, Bytes
+
+from jam.accumulation.types import DeferredTransfer, AccumulationContext, StateContext
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.memory import Memory
-from jam.execution.pvm.register import Registers
 from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus, PvmError
-from jam.types.base.sequences.bytes.byte_array import ByteArray32
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.crypto import Hash, OpaqueHash
+from jam.types.protocol.merkle import OptionHash
 from jam.types.state.chi import Chi
-from jam.types.state.delta import AccountData, AccountStorage, LookupTable, LookupTimestamps, PreImageLookup, ServiceCodeHash
-from jam.types.base.integers.fixed import U32, U64
+from jam.types.state.delta import AccountData, AccountStorage, LookupTable, AccountLookup, AccountPreimages, ServiceCodeHash
 from jam.types.protocol.core import BlobLength, Gas, ServiceId, TimeSlot
 from jam.utils.constants import ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE, CORE_COUNT, MAX_AUTH_QUEUE_ITEMS, PREIMAGE_EVICTION_TIMESLOTS, TRANSFER_MEMO_SIZE, VALIDATOR_COUNT
 
 
-def check(u:StateContext,i:ServiceId):
-    if u.service_accounts.get(i) is None:
+def check(u:StateContext, i:ServiceId):
+    if i not in u.service_accounts:
         return i
     else:
-        return check(u,(i-2**8)%(2**32-2**9)+2**8)
+        return check(u, (i-2**8+1) % (2**32-2**9) + 2**8)
 
 class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(5, gas_cost=10)
-    def bless(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
+    def bless(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [m,a,v,o,n]=registers[7,7+5]
         if not memory.is_accessible(o,12*n):
             raise PvmError(PANIC)
@@ -31,7 +30,7 @@ class AccumulateFunctions(INVF):
         buf: bytes = memory.read(o, 12 * n)
 
         # build a dict mapping each 4-byte U32 → its 8-byte U64
-        g_dict: service_dict = {}
+        g_dict = {}
         for i in range(0, len(buf), 12):
             chunk = buf[i : i + 12]
             s = U32.decode_from(chunk[:4])             # first  4 bytes
@@ -48,7 +47,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(6, gas_cost=10)
-    def assign(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
+    def assign(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         o=registers[8]
         if not memory.is_accessible(o,32*MAX_AUTH_QUEUE_ITEMS):
             raise PvmError(PANIC)
@@ -69,7 +68,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(7, gas_cost=10)
-    def designate(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
+    def designate(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         o=registers[7]
         if not memory.is_accessible(o,VALIDATOR_COUNT*336):
             raise PvmError(PANIC)
@@ -83,14 +82,14 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(8, gas_cost=10)
-    def checkpoint(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
+    def checkpoint(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         context.y=context.x
         registers[7]=gas
         return CONTINUE,registers,memory,context
 
     @classmethod
     @INVF.register(9, gas_cost=10)
-    def new(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
+    def new(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [o,l,g,m]=registers[7:7+4]
         delta=context.x.partial_state.service_accounts
         if not(memory.is_accessible(o,32) and isinstance(l, U32)):
@@ -103,7 +102,7 @@ class AccumulateFunctions(INVF):
         """
         a_t=BASIC_MINIMUM_BALANCE+ADDITIONAL_BALANCE_PER_ITEM*2+ADDITIONAL_BALANCE_PER_OCTET*(81+l)
         # AccountData Lookup type needs to be fixed before this func is called
-        a=AccountData(code_hash=ServiceCodeHash(c),storage=AccountStorage({}),timestamps=LookupTimestamps(LookupTable(c,l),[]),lookup=PreImageLookup(),balance=a_t,gas_limit=g,min_gas=m)
+        a=AccountData(code_hash=ServiceCodeHash(c),storage=AccountStorage({}),timestamps=AccountLookup(LookupTable(c,l),[]),lookup=AccountPreimages(),balance=a_t,gas_limit=g,min_gas=m)
         #TODO: Need to re-do it
         s=delta[context.x.s_index]
         """
@@ -126,7 +125,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(10, gas_cost=10)
-    def upgrade(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
+    def upgrade(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [o,g,m]=registers[7:7+3]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
@@ -141,7 +140,7 @@ class AccumulateFunctions(INVF):
     # TODO: Need to update the gas with registers[9]
     @classmethod
     @INVF.register(11, gas_cost=10)
-    def transfer(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
+    def transfer(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [d,a,l,o]=registers[7:7+4]
         delta=context.x.partial_state.service_accounts
         if not memory.is_accessible(o,TRANSFER_MEMO_SIZE):
@@ -169,13 +168,13 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(12, gas_cost=10)
-    def eject(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
+    def eject(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext, block_timeslot:TimeSlot):
         [d,o]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
         accounts=context.x.partial_state.service_accounts
 
-        h=ByteArray32(memory.read(o,32))
+        h = Bytes[32](memory.read(o,32))
         if d!= context.x.s_index and context.x.partial_state.service_accounts[d] is not None:
             delta=accounts[d]
         else:
@@ -202,7 +201,7 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(13, gas_cost=10)
-    def query(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
+    def query(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
@@ -231,11 +230,11 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(14, gas_cost=10)
-    def solicit(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
+    def solicit(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
-        h=ByteArray32(memory.read(o,32))
+        h = Bytes[32](memory.read(o,32))
         a = context.x.partial_state.service_accounts[context.x.s_index]
         init_lookup_val=a.timestamps[LookupTable(h,z)] # storing the initial lookup value
         if a.timestamps[LookupTable(h,z)] is None:
@@ -260,11 +259,11 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(15, gas_cost=10)
-    def forget(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
+    def forget(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext,block_timeslot:TimeSlot):
         [o,z]=registers[7,8]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
-        h=ByteArray32(memory.read(o,32))
+        h = Bytes[32](memory.read(o,32))
         a = context.x.partial_state.service_accounts[context.x.s_index]
         if len(a.timestamps[LookupTable(h,z)])==0 or (len(a.timestamps[LookupTable(h,z)])==2 and (a.timestamps[LookupTable(h,z)][1]<block_timeslot-PREIMAGE_EVICTION_TIMESLOTS)):
             del a.timestamps[LookupTable(h,z)]
@@ -283,17 +282,17 @@ class AccumulateFunctions(INVF):
 
     @classmethod
     @INVF.register(16, gas_cost=10)
-    def yield_(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext):
+    def yield_(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         o=registers[7]
         if not memory.is_accessible(o,32):
             raise PvmError(PANIC)
-        context.x.hash=Bytes(memory.read(o,32))
+        context.x.hash = OptionHash(OpaqueHash(memory.read(o,32)))
         registers[7]=HostStatus.OK
         return CONTINUE,registers,memory,context
 
     @classmethod
     @INVF.register(27, gas_cost=10)
-    def provide(cls, gas: Gas, registers: Registers, memory: Memory, context: AccumulationContext,service_id:ServiceId):
+    def provide(cls, gas: Gas, registers: list, memory: Memory, context: AccumulationContext,service_id:ServiceId):
         [o,z]=registers[8,9]
         d=context.x.partial_state.service_accounts
         s_star=registers[7]

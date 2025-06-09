@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from jam.network.quic.server import QuicServerProtocol
-from jam.types.base.enum import Enum
+from tsrkit_types.enum import Enum
 
 class PrefixType(Enum):
     # UP Streams

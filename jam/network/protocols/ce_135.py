@@ -2,6 +2,8 @@ import asyncio
 from dataclasses import dataclass
 from typing import cast
 
+from tsrkit_types import Vector, Null
+
 from jam.config.logging import logger
 from jam.config.settings import settings
 
@@ -9,32 +11,26 @@ from jam.merklization import BMRFunctions
 from jam.network.quic.server import QuicServerProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
-from jam.types.base.sequences.vector import Vector
-from jam.types.base.null import Null
-from jam.types.base.integers import Int
-from jam.types.extrinsics.guarantees import ValidatorSignatures
 from jam.types.protocol.core import ValidatorIndex, TimeSlot
 from jam.types.protocol.crypto import Hash
 from jam.types.work.report import WorkReport
 from jam.types.work.shard import ShardIndex, BundleShardUnit, SegmentsShardUnit
 from jam.utils import constants
 
-from jam.utils.json import JsonSerde
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
+from tsrkit_types.struct import structure
 
 from jam.work_package.stores.audits import AuditShardsDA
 from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentShardsDA
+from jam.types.work import WorkReport
+from jam.types.protocol.core import TimeSlot
 
 
-@decodable_dataclass
-@dataclass
-class CE135Data(Codable, JsonSerde):
+@structure
+class CE135Data:
     report: WorkReport
     slot: TimeSlot
-    len: Int
     signatures: ValidatorSignatures
 
 

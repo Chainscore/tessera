@@ -1,9 +1,7 @@
-from dataclasses import dataclass
-from jam.types.base.dictionary import Dictionary, decodable_dictionary
+from dataclasses import field
+from tsrkit_types.dictionary import Dictionary
+from tsrkit_types.struct import structure
 from jam.types.protocol.core import Gas, ServiceId
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.decorators import with_json_metadata
 
 
 """Index of Manager service that can alter Chi"""
@@ -14,24 +12,14 @@ ChiA = ServiceId
 ChiV = ServiceId
 
 
-@decodable_dictionary(key_type=ServiceId, value_type=Gas)
-class ChiG(Dictionary[ServiceId, Gas]):
-    """Dictionary containing indices of services which automatically acc in each block w/ basic gas"""
+ChiG = Dictionary[ServiceId, Gas]
 
-    ...
 
-@with_json_metadata(
-    chi_m={"name": "bless"},
-    chi_a={"name": "assign"},
-    chi_v={"name": "designate"},
-    chi_g={"name": "always_acc"}
-)
-@decodable_dataclass
-@dataclass
-class Chi(Codable):
+@structure
+class Chi:
     """Chi state"""
 
-    chi_m: ChiM
-    chi_a: ChiA
-    chi_v: ChiV
-    chi_g: ChiG
+    chi_m: ChiM = field(metadata={"name": "bless"})
+    chi_a: ChiA = field(metadata={"name": "assign"})
+    chi_v: ChiV = field(metadata={"name": "designate"})
+    chi_g: ChiG = field(metadata={"name": "always_acc"})

@@ -1,10 +1,9 @@
 from jam.error import JamError
-from jam.types.base.enum import Enum, decodable_enum
+from tsrkit_types.enum import Enum
 
 class ErasureCodingError(JamError):
     ...
 
-@decodable_enum
 class ErasureCodingErrorCode(Enum):
     BAD_ERASURE = ""
     BAD_IMPORT_MESSAGE = ""

@@ -4,22 +4,22 @@ from time import time
 
 from jam.state.state import State
 from jam.utils.constants import EPOCH_LENGTH
-from tests.dummy.dummy_extrinsics import create_dummy_work_report
+from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
 from jam.network.node import Node
 from jam.config.logging import logger
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
 from jam.types.protocol.core import TimeSlot
 
 
-async def work_report_producer(node: Node, db: KVStore):
+async def work_report_producer(node: Node, db: RockStore):
     """
     Continuously produces work reports and transmits them.
     A builder node generates a report and shares it with the network.
 
     Args:
         node (Node): The network node for communications
-        db (KVStore): The database to store the genesis timestamp
+        db (RockStore): The database to store the genesis timestamp
     """
 
     genesis_ts = time()

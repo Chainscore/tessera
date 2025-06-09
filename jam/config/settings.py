@@ -19,23 +19,22 @@ class Settings:
 
     @property
     def db(self):
-        from jam.config.data_stores import main_db
-        return main_db
+        from jam.config.data_stores import data_stores
+        return data_stores.main_db
 
     @property
     def d3l(self):
-        from jam.config.data_stores import d3l_db
-        return d3l_db
+        from jam.config.data_stores import data_stores
+        return data_stores.d3l
 
     @property
     def audit(self):
-        from jam.config.data_stores import audits_db
-        return audits_db
+        from jam.config.data_stores import data_stores
+        return data_stores.audit_da
 
 settings: Settings = Settings()
 
 def setup_setting(name: str, port: int,  db_path = "data", node_id = None):
-    from jam.config.data_stores import configure_db_paths
     global settings
 
     node_path = f"{db_path}/{port}"
@@ -49,4 +48,5 @@ def setup_setting(name: str, port: int,  db_path = "data", node_id = None):
     settings.NODE_ID = node_id
 
     # Reconfigure DBS
-    configure_db_paths()
+    from jam.config.data_stores import data_stores
+    data_stores.configure_db_paths()

@@ -1,6 +1,9 @@
 import asyncio
 import json
 
+
+from tsrkit_types.bytes import Bytes
+
 from jam.config.logging import setup_logging, logger
 from jam.config.chainspec import chain_config
 from jam.config.settings import settings, setup_setting
@@ -12,26 +15,23 @@ from jam.network.utils.dummy_wpb import wp_producer
 
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
-from jam.state.accounts import AccountMetadata
 from jam.state.ghost import GhostState
-from jam.types.base import Bytes
+from jam.state.state import setup_state
 from jam.types.protocol.core import Balance, Gas, BlobLength, ServiceId
 from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
-from jam.state.state import setup_state
-from jam.types.base.integers.fixed import U16, U8
-from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Hash, Ed25519Public
-from jam.types.block import Block
-from jam.types.header import Header
+from jam.types.protocol.crypto import Ed25519Public, Hash
+from tsrkit_types.integers import U16, U8, Uint
+from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic
+from jam.types.block import Block, Header
 from jam.types.protocol.validators import (
     IPAddress,
     ValidatorData,
     ValidatorMetadata,
-    ValidatorName,
     ValidatorsData,
 )
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jam.utils.codec.primitives.bytes import BytesCodec
+from jam.types.state.delta import AccountMetadata
 
 
 async def main(
@@ -81,8 +81,6 @@ async def main(
             if int(pr["metadata"]["port"]) != port
         ]
 
-        # print("peers", peers)
-
         # Load validator data from seeds
         my_keys = json.load(open("seeds/keys.json"))[str(port)]
         ed25519_public = Ed25519PrivateKey.from_private_bytes(
@@ -104,7 +102,8 @@ async def main(
             ed25519_public,
             BlsPublic(bytes(144)),
             ValidatorMetadata(
-                name=ValidatorName(name),
+                name=Bytes[10](bytes(10)),
+                protocol=Uint[16](2 ** 16),
                 host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
                 port=U16(port),
             ),
@@ -142,7 +141,7 @@ async def main(
 
             code = Code(code=pc, read=b"", r_write=b"", z=0, s=100)
             bytecode = code.encode()
-            service_code = BytesCodec().encode(value=b"") + bytecode
+            service_code = Bytes(b"").encode() + bytecode
             code_hash = Hash.blake2b(service_code)
 
             state.delta[ServiceId(42)] = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000),
@@ -162,7 +161,7 @@ async def main(
 
             wi_code = Code(code=wi_pc, read=b"", r_write=b"", z=0, s=(1024 * 100))
             wi_bytecode = wi_code.encode()
-            wi_service_code = BytesCodec().encode(value=b"") + wi_bytecode
+            wi_service_code = Bytes(b"").encode() + wi_bytecode
             wi_code_hash = Hash.blake2b(wi_service_code)
             wi_service = ServiceId(1)
 
@@ -175,24 +174,12 @@ async def main(
 
             block_producer = BlockProducer(tsr_node, main_db)
 
-            # # Create a loop and run it in a daemon thread
-            # def start_loop():
-            #     loop = asyncio.new_event_loop()
-            #     print("loop here", loop)
-            #     asyncio.set_event_loop(loop)
-            #     loop.run_forever()
-            #
-            # threading.Thread(target=start_loop, daemon=True).start()
-
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(tsr_node.initialize())
                 if tsr_node.is_builder:
-                    tg.create_task(wp_producer(tsr_node, main_db))
+                    tg.create_task(wp_producer(tsr_node))
                 else:
-                    # tg.create_task(segment_shard_request(tsr_node, db))
-                    # tg.create_task(assurance_distribution(tsr_node, db))
                     tg.create_task(block_producer.run())
-
 
         else:
             # TODO: Sync from peers
@@ -201,8 +188,9 @@ async def main(
     except KeyboardInterrupt:
         logger.info(f"👋 ({name}) Shutting down JAM node 🔐")
     except Exception as e:
-        from jam.config.data_stores import shutdown
+        # Close db connections
+        from jam.config.data_stores import data_stores
+        data_stores.shutdown()
 
-        shutdown()
         logger.exception(f"💥 ({name}) Fatal error", error=str(e)[:100])
         raise

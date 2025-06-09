@@ -1,7 +1,8 @@
 import json
 
-from dataclasses import dataclass
 from typing import cast
+
+from tsrkit_types import Vector
 
 from jam.config.logging import logger
 
@@ -9,16 +10,14 @@ from jam.network.quic import QuicServerProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.storage.item_extrinsics import ItemExtrinsics
 
-from jam.types.base.sequences.vector import Vector
-from jam.types.base.integers import Int
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
-from jam.types.work.report import WorkPackageBundle, SegmentRootLookup
+from jam.types.work.package import WorkPackageBundle
+from jam.types.work.report import SegmentRootLookup
 from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
-from jam.utils.json import JsonSerde
+from tsrkit_types.integers import Uint
+from tsrkit_types.struct import structure
 
 from jam.work_package.processor import Processor
 from jam.work_package.validator import Validator
@@ -26,24 +25,21 @@ from jam.work_package.validator import Validator
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
-@decodable_dataclass
-@dataclass
-class CoreSegment(Codable, JsonSerde):
+@structure
+class CoreSegment:
     core_index : CoreIndex
-    length : Int
+    length : Uint
     segment_root_map : SegmentRootLookup
 
 
-@decodable_dataclass
-@dataclass
-class Credential(Codable, JsonSerde):
+@structure
+class Credential:
     work_report_hash : WorkReportHash
     ed25519_signature : Ed25519Signature
 
 
-@decodable_dataclass
-@dataclass
-class CE134Data(Codable, JsonSerde):
+@structure
+class CE134Data:
     core_segment: CoreSegment
     work_package_bundle : WorkPackageBundle
 

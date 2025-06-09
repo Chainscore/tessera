@@ -1,12 +1,10 @@
+from tsrkit_types import Enum
 from jam.error import JamError
-from jam.types.base.enum import Enum, decodable_enum
 
 
 class AssurancesError(JamError):
     ...
 
-
-@decodable_enum
 class AssurancesErrorCode(Enum):
     """Error codes for the Assurances part of the Extrinsics."""
 

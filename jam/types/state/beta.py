@@ -1,33 +1,22 @@
-from dataclasses import dataclass
-from jam.types.base.dictionary import Dictionary, decodable_dictionary
-from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.types.protocol.core import SegmentRoot, WorkPackageHash
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.dictionary import Dictionary
+from tsrkit_types.sequences import TypedVector
+from tsrkit_types.struct import structure
 from jam.types.protocol.crypto import HeaderHash, StateRoot
 from jam.merklization.mountain_merkle import MMR
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde 
-
-@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
-class PackageDict(Dictionary[WorkPackageHash, SegmentRoot]):
-    """Work Package hashes of each item reported (no more than CORE_COUNT)"""
-
-    ...
 
 
-@decodable_dataclass
-@dataclass
-class BlockHistory(Codable, JsonSerde):
+ReportedDictionary = Dictionary[Bytes[32], Bytes[32], "hash", "exports_root"]
+
+
+@structure
+class BlockHistory:
     """Block history item"""
 
     header_hash: HeaderHash
     mmr: MMR
     state_root: StateRoot
-    packages: PackageDict
+    reported: ReportedDictionary
 
 
-@decodable_vector(BlockHistory)
-class Beta(Vector[BlockHistory]):
-    """Beta state."""
-
-    ...
+Beta = TypedVector[BlockHistory]

@@ -1,8 +1,8 @@
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 from jam.storage.queue import StorageQueue
 
 def test_storage_queue(db_path):
-    db = KVStore(db_path)
+    db = RockStore(db_path)
     queue = StorageQueue("test")
     queue.push(db, b"test1")
     queue.push(db, b"test2")
@@ -19,7 +19,7 @@ def test_storage_queue(db_path):
     assert queue.pop(db) is None
 
 def test_storage_queue_get(db_path):
-    db = KVStore(db_path)
+    db = RockStore(db_path)
     queue = StorageQueue("test")
     queue.push(db, b"test1")
     queue.push(db, b"test2")
@@ -38,7 +38,7 @@ def test_storage_queue_get(db_path):
 
 
 def test_storage_queue_pop(db_path):
-    db = KVStore(db_path)
+    db = RockStore(db_path)
     queue = StorageQueue("test")
     queue.push(db, b"test1")
     queue.push(db, b"test2")
@@ -62,7 +62,7 @@ def test_storage_queue_pop(db_path):
 
 # Remove items in between and test pop
 def test_storage_queue_pop_in_between(db_path):
-    db = KVStore(db_path)
+    db = RockStore(db_path)
     queue = StorageQueue("test")
     queue.push(db, b"test1")
     queue.push(db, b"test2")

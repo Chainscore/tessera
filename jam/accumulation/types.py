@@ -1,49 +1,50 @@
-from dataclasses import dataclass
-
-from jam.types.base import decodable_dictionary, Dictionary
+from typing import Tuple, List, Set
+from tsrkit_types import structure, TypedVector, Bytes, Uint
+from jam.types.protocol.merkle import OptionHash
 from jam.types.state.phi import Phi
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.utils.json import JsonSerde
-from jam.types.work.report import WorkPackageHash, WorkExecResult
+from jam.types.work import WorkExecResult
+from jam.types.protocol.core import WorkPackageHash
 from jam.types.state.chi import Chi
 from jam.types.protocol.core import ServiceId, Gas, OpaqueHash, Balance, ExportsRoot
-from jam.types.base.sequences.bytes.bytes import Bytes
 from jam.types.state.delta import Delta
 from jam.types.state.iota import Iota
 
-@decodable_dataclass
-@dataclass
-class OperandTuple(Codable, JsonSerde):
-    d: WorkExecResult
-    g: Gas
-    y: OpaqueHash
-    o: Bytes
-    e: ExportsRoot
+
+# Accumulation Types
+GasConsumed = List[Tuple[ServiceId, Gas]]
+BeefyMap = Set[Tuple[ServiceId, OpaqueHash]]
+
+
+@structure
+class OperandTuple:
     h: WorkPackageHash
-    a: Bytes
+    e: ExportsRoot
+    a: OpaqueHash
+    o: Bytes
+    y: OpaqueHash
+    g: Gas
+    d: WorkExecResult
 
 
-@decodable_vector(OperandTuple)
-class OperandTuples(Vector[OperandTuple]):
+class OperandTuples(TypedVector[OperandTuple]):
     ...
 
-@decodable_dataclass
-@dataclass
-class DeferredTransfer(Codable, JsonSerde):
+
+@structure
+class DeferredTransfer:
     sender: ServiceId
     receiver: ServiceId
     amount: Balance
     memo: Bytes
     gas: Gas
 
-@decodable_vector(DeferredTransfer)
-class DeferredTransfers(Vector[DeferredTransfer]):
+
+class DeferredTransfers(TypedVector[DeferredTransfer]):
     ...
 
-@dataclass
-class StateContext(Codable,JsonSerde):
+
+@structure
+class StateContext:
     # d
     service_accounts: Delta
     # i
@@ -53,25 +54,31 @@ class StateContext(Codable,JsonSerde):
     # x
     privileges: Chi
 
-# @dataclass
-# class AcclOutput(Codable,JsonSerde):
-#     service_id: ServiceId
-#     hash: OpaqueHash
 
-@decodable_dictionary(ServiceId,bytes)
-class AccumulationOutput(Dictionary[ServiceId,bytes]): #U
+class DeferredTransfers(TypedVector[DeferredTransfer]):
     ...
 
-@decodable_dataclass
-@dataclass
-class GasAccumulated(Codable, JsonSerde):
-    service_id: ServiceId
-    accumulated_gas: Gas
 
-@decodable_vector(GasAccumulated)
-class GasAccumulations(Vector[GasAccumulated]):
-    ...
+PreimageDict = Set[Tuple[ServiceId, Bytes]]
 
-@decodable_dictionary(ServiceId,Bytes)
-class PreimageDict(Dictionary[ServiceId,Bytes]):
-    ...
+
+@structure
+class AccuContextX:
+    #s
+    s_index: ServiceId
+    #u
+    partial_state: StateContext
+    #i
+    i_index: ServiceId
+    #t
+    deferred_transfers: DeferredTransfers
+    #y
+    hash: OptionHash
+    #p
+    preimage: PreimageDict
+
+
+@structure
+class AccumulationContext:
+    x: AccuContextX
+    y: AccuContextX

@@ -2,33 +2,30 @@ import asyncio
 from math import floor
 from time import time
 
+from tsrkit_types import Bytes, U16
+
 from jam.execution.pvm.code import Code
 from jam.state.accounts import AccountMetadata
-from jam.state.ghost import GhostState
-from jam.state.state import State
-from jam.types.base import Bytes, U16
 from jam.types.protocol.crypto import Hash
 from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
 from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
-from jam.types.work.manifest import Extrinsics, Extrinsic
-from jam.utils.codec.primitives.bytes import BytesCodec
+from jam.types.work.manifest import Extrinsics
 from jam.utils.constants import EPOCH_LENGTH
 from jam.network.node import Node
 from jam.config.logging import logger
-from jam.storage.db.kv import KVStore
-from tests.dummy.dummy_package import create_dummy_package
+from rockstore import RockStore
+from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex, Gas, Balance, BlobLength, ServiceId, SegmentRoot
 
-
-async def wp_producer(node: Node, db: KVStore):
+async def wp_producer(node: Node):
     """
     Continuously produces work packages and transmits them.
     A builder node produces a work package and share it with the guarantors.
     Args:
         node (Node): The network node for communications
-        db (KVStore): The database to store the genesis timestamp
+        db (RockStore): The database to store the genesis timestamp
     """
 
 
@@ -65,7 +62,7 @@ async def wp_producer(node: Node, db: KVStore):
                                   0, 165, 73, 9]
             code = Code(code=pc, read=b"", r_write=b"", z=0, s=100)
             bytecode = code.encode()
-            service_code = BytesCodec().encode(value=b"") + bytecode
+            service_code = Bytes(b"").encode() + bytecode
             code_hash = Hash.blake2b(service_code)
 
             state.delta[wp.auth_code_host] = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000),
@@ -87,7 +84,7 @@ async def wp_producer(node: Node, db: KVStore):
 
             wi_code = Code(code=wi_pc, read=b"", r_write=b"", z=0, s=(1024 * 100))
             wi_bytecode = wi_code.encode()
-            wi_service_code = BytesCodec().encode(value=b"") + wi_bytecode
+            wi_service_code = Bytes(b"").encode() + wi_bytecode
             wi_code_hash = Hash.blake2b(wi_service_code)
             wi_service = ServiceId(1)
 

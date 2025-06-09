@@ -1,29 +1,49 @@
-import os
+from rockstore import RockStore
 
-from jam.config.settings import settings
-from jam.storage.db.kv import KVStore
+class DataStores:
+    _main_db: RockStore | None
+    _audit_db: RockStore | None
+    _d3l: RockStore | None
 
-os.makedirs(settings.DB_PATH, exist_ok=True)
-os.makedirs(settings.D3L_PATH, exist_ok=True)
-os.makedirs(settings.AUDIT_DB_PATH, exist_ok=True)
+    @property
+    def main_db(self) -> RockStore:
+        if not self._main_db:
+            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
+        return self._main_db
 
-main_db = KVStore(settings.DB_PATH)
-d3l_db = KVStore(settings.D3L_PATH)
-audits_db = KVStore(settings.AUDIT_DB_PATH)
+    @property
+    def audit_da(self) -> RockStore:
+        if not self._audit_db:
+            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
+        return self._audit_db
 
-def configure_db_paths():
-    global main_db, audits_db, d3l_db
-    shutdown()
+    @property
+    def d3l(self) -> RockStore:
+        if not self._d3l:
+            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
+        return self._d3l
 
-    os.makedirs(settings.DB_PATH, exist_ok=True)
-    os.makedirs(settings.D3L_PATH, exist_ok=True)
-    os.makedirs(settings.AUDIT_DB_PATH, exist_ok=True)
+    def configure_db_paths(self, parent_path=""):
+        import os
+        from jam.config.settings import settings
+        self.shutdown()
 
-    main_db = KVStore(settings.DB_PATH)
-    d3l_db = KVStore(settings.D3L_PATH)
-    audits_db = KVStore(settings.AUDIT_DB_PATH)
+        os.makedirs(parent_path + settings.DB_PATH, exist_ok=True)
+        os.makedirs(parent_path + settings.D3L_PATH, exist_ok=True)
+        os.makedirs(parent_path + settings.AUDIT_DB_PATH, exist_ok=True)
 
-def shutdown():
-    main_db.close()
-    d3l_db.close()
-    audits_db.close()
+        self._main_db = RockStore(parent_path + settings.DB_PATH)
+        self._audit_db = RockStore(parent_path + settings.D3L_PATH)
+        self._d3l = RockStore(parent_path + settings.AUDIT_DB_PATH)
+
+    def shutdown(self):
+        if self._main_db:
+            self._main_db.close()
+        if self._d3l:
+            self._d3l.close()
+        if self._audit_db:
+            self._audit_db.close()
+
+        print("Closing down database connections.")
+
+data_stores = DataStores()

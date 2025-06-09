@@ -8,8 +8,6 @@ from jam.utils.shuffle import shuffle
 from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
 
 
-
-
 @decodable_vector(element_type=U32)
 class U32Vector(Vector): ...
 

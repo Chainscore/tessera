@@ -1,23 +1,22 @@
-from dataclasses import dataclass
 from typing import cast
+
+from tsrkit_types import Vector
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
-from jam.types.base import Vector
+from jam.types.work import WorkReport
+from tsrkit_types.struct import structure
 from jam.types.work.report import WorkReport
 
-from jam.utils.json import JsonSerde
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
+from jam.types.protocol.crypto import WorkReportHash, Hash
+from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
 from jam.types.protocol.crypto import WorkReportHash
-from tests.dummy.dummy_extrinsics import create_dummy_work_report
 
 
-@decodable_dataclass
-@dataclass
-class CE136Data(Codable, JsonSerde):
+@structure
+class CE136Data:
     work_report_hash: WorkReportHash
 
 

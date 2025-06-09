@@ -25,17 +25,6 @@ class PedersenVRFProof:
 
 
 class PedersenVRF(VRF):
-    # Blinding Base For Pedersen
-    BBx: Final[
-        int
-    ] = 14576224270591906826192118712803723445031237947873156025406837473427562701854
-    BBy: Final[
-        int
-    ] = 38436873314098705092845609371301773715650206984323659492499960072785679638442
-    BB_compressed: Final[
-        int
-    ] = 0xAA5F60F3B3126FA406972D2023EE03BF281022209D13882199113619D57FFA54
-    B_Base = BandersnatchPoint(BBx, BBy)
 
     def __init__(self, curve: Curve, point_type: Type[Point]):
         """
@@ -56,8 +45,8 @@ class PedersenVRF(VRF):
         blinding_factor: int,
         salt: bytes = b"",
     ) -> Tuple[
-        BandersnatchPoint,
-        Tuple[BandersnatchPoint, BandersnatchPoint, BandersnatchPoint, int, int],
+        Point,
+        Tuple[Point, Point, Point, int, int],
     ]:
         """
         Generate Pedersen VRF proof.
@@ -70,20 +59,20 @@ class PedersenVRF(VRF):
             salt: Optional salt for encoding
 
         Returns:
-            Tuple[BandersnatchPoint, Tuple[BandersnatchPoint,BandersnatchPoint,BandersnatchPoint,int,int]]: (output_point, (public_key_cp_proof,r_proof,Ok_proof,s,sb))
+            Tuple[Point, Tuple[Point,Point,Point,int,int]]: (output_point, (public_key_cp_proof,r_proof,Ok_proof,s,sb))
         """
 
         # Create generator point
-        generator = BandersnatchPoint(self.curve.GENERATOR_X, self.curve.GENERATOR_Y)
+        generator = self.point_type.generator_point()
 
-        B_Base = BandersnatchPoint(self.BBx, self.BBy)
-        input_point = BandersnatchPoint.encode_to_curve(alpha, salt)
+        b_base = self.point_type(self.curve.BBx, self.curve.BBy)
+        input_point = self.point_type.encode_to_curve(alpha, salt)
 
         output_point = input_point * secret_key
         k = self.generate_nonce(secret_key, input_point)
         Kb = self.generate_nonce(blinding_factor, input_point)
-        public_key_cp = generator * secret_key + B_Base * blinding_factor
-        R = generator * k + B_Base * Kb
+        public_key_cp = generator * secret_key + b_base * blinding_factor
+        R = generator * k + b_base * Kb
         Ok = input_point * k
         c = self.challenge(
             [public_key_cp, input_point, output_point, R, Ok], additional_data
@@ -95,10 +84,10 @@ class PedersenVRF(VRF):
 
     def verify(
         self,
-        input_point: BandersnatchPoint,
+        input_point: Point,
         additional_data: bytes,
-        output_point: BandersnatchPoint,
-        proof: Tuple[BandersnatchPoint, BandersnatchPoint, BandersnatchPoint, int, int],
+        output_point: Point,
+        proof: Tuple[Point, Point, Point, int, int],
     ) -> bool:
         """
         Verify Pedersen VRF proof.
@@ -112,12 +101,13 @@ class PedersenVRF(VRF):
         Returns:
             bool: True if proof is valid
         """
-        generator = BandersnatchPoint(self.curve.GENERATOR_X, self.curve.GENERATOR_Y)
-        B_Base = BandersnatchPoint(self.BBx, self.BBy)
+        generator = self.point_type.generator_point()
+
+        b_base = self.point_type(self.curve.BBx, self.curve.BBy)
         public_key_cp, R, Ok, s, Sb = proof
         c = self.challenge(
             [public_key_cp, input_point, output_point, R, Ok], additional_data
         )
         Theta0 = (Ok + output_point * c) == input_point * s
-        Theta1 = R + (public_key_cp * c) == generator * s + B_Base * Sb
+        Theta1 = R + (public_key_cp * c) == generator * s + b_base * Sb
         return Theta0 == Theta1

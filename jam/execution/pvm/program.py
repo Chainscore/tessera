@@ -1,21 +1,16 @@
 from math import floor
-from typing import List, Self, Tuple, Union
-
+from typing import List, Tuple, Union
+from tsrkit_types.itf.codable import Codable
+from tsrkit_types.integers import Uint
+from tsrkit_types.bits import Bits
 from jam.execution.pvm.status import PvmError
 from jam.execution.pvm.instructions.table_map import InstTableMap
 from jam.execution.pvm.status import CONTINUE, HALT, PANIC, ExecutionStatus
 from jam.execution.pvm.zeta import Zeta
-from jam.types.base.integers.fixed import U8, U32
-from jam.types.protocol.core import ProgramCounter
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.composite.bit_sequences import BitSequenceCodec
-from jam.utils.codec.primitives.integers import GeneralCodec, IntegerCodec
-from jam.utils.codec.utils import check_buffer_size
 from jam.utils.constants import PVM_ADDR_ALIGNMENT
-from jam.utils.json.serde import JsonSerde
 
 
-class Program(Codable, JsonSerde):
+class Program(Codable):
     """This is the program blob which the PVM will execute.
 
     Args:
@@ -26,22 +21,31 @@ class Program(Codable, JsonSerde):
 
     """
 
-    z: U8
+    z: int
     jump_table: List
-    instruction_set: List
+    instruction_set: List[int]
     offset_bitmask: List
+    basic_blocks: List
 
     def __init__(
         self,
-        z: U8,
+        z: int,
         jump_table: List[int],
-        instruction_set: List[U8],
+        instruction_set: List[int],
         offset_bitmask: List[bool],
     ):
         self.z = z
         self.jump_table = jump_table
         self.instruction_set = instruction_set
         self.offset_bitmask = offset_bitmask
+        basic_blocks = [0]
+        for n in range(len(self.instruction_set)):
+            if (
+                    self.offset_bitmask[n] and
+                    self.instruction_set[n] in InstTableMap.terminating_blocks()
+            ):
+                basic_blocks.append(n + 1 + self.skip(n))
+        self.basic_blocks = basic_blocks
 
     @property
     def zeta(self) -> Zeta:
@@ -64,41 +68,23 @@ class Program(Codable, JsonSerde):
                 break
         return min(24, value) # Reached the end of the bitmask.
 
-    @property
-    def basic_blocks(self) -> List[int]:
-        """Get the basic blocks of the program. ie. sequences of instructions
-        where the code sequence starts.
-
-        Returns:
-            List[U8]: List of basic blocks
-        """
-        basic_blocks = [0]
-        for n in range(len(self.instruction_set)):
-            if (
-                self.offset_bitmask[n] and 
-                self.instruction_set[n].value in InstTableMap.terminating_blocks()
-            ):
-                basic_blocks.append(n + 1 + self.skip(n))
-        return basic_blocks
-    
     def branch(
         self,
-        counter: ProgramCounter, 
-        branch: ProgramCounter, 
+        counter: int,
+        branch: int,
         condition: bool
-    ) -> Tuple[ExecutionStatus, ProgramCounter]:
+    ) -> Tuple[ExecutionStatus, int]:
         if not condition:
             return CONTINUE, counter
         elif branch not in self.basic_blocks:
-            print(f"Branching to {branch}, but its not a basic block")
             raise PvmError(PANIC)
         return CONTINUE, branch
 
     def djump(
         self, 
-        counter: ProgramCounter, 
+        counter: int,
         a: int
-    ) -> Tuple[ExecutionStatus, ProgramCounter]:
+    ) -> Tuple[ExecutionStatus, int]:
         if a == 2**32 - 2**16:
             return HALT, counter
         elif (
@@ -107,9 +93,9 @@ class Program(Codable, JsonSerde):
             a % PVM_ADDR_ALIGNMENT != 0 or
             self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1] not in self.basic_blocks
         ):
-            raise PvmError(PvmErrorCodes.PANIC)
+            raise PvmError(PANIC)
         return CONTINUE, self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1]
-    
+
     def encode_size(self) -> int:
         """Encode the size of the program.
 
@@ -117,16 +103,14 @@ class Program(Codable, JsonSerde):
             int: Size of the program
         """
         total_size = 0
-        total_size += GeneralCodec().encode_size(len(self.jump_table))
-        total_size += self.z.encode_size()
-        total_size += GeneralCodec().encode_size(len(self.instruction_set))
+        total_size += Uint(len(self.jump_table)).encode_size()
+        total_size += 1
+        total_size += Uint(len(self.instruction_set)).encode_size()
         for jump in self.jump_table:
-            total_size += IntegerCodec(self.z.value).encode_size(jump)
+            total_size += Uint[self.z * 8](jump).encode_size()
         for instruction in self.instruction_set:
             total_size += instruction.encode_size()
-        total_size += BitSequenceCodec(len(self.instruction_set)).encode_size(
-            self.offset_bitmask
-        )
+        total_size += Bits[len(self.instruction_set)](self.offset_bitmask).encode_size()
         return total_size
 
     def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
@@ -137,31 +121,31 @@ class Program(Codable, JsonSerde):
             offset: Offset of the buffer to start encoding from
         """
         total_size = self.encode_size()
-        check_buffer_size(buffer, total_size, offset)
+        self._check_buffer_size(buffer, total_size, offset)
         current_offset = offset
-        size = GeneralCodec().encode_into(len(self.jump_table), buffer, current_offset)
+        size = Uint[8](len(self.jump_table)).encode_into(buffer, current_offset)
         current_offset += size
-        size = self.z.encode_into(buffer, current_offset)
+        size = Uint[8](self.z).encode_into(buffer, current_offset)
         current_offset += size
-        size = GeneralCodec().encode_into(
-            len(self.instruction_set), buffer, current_offset
+        size = Uint(len(self.instruction_set)).encode_into(
+            buffer, current_offset
         )
         current_offset += size
         for jump in self.jump_table:
-            size = IntegerCodec(self.z.value).encode_into(jump, buffer, current_offset)
+            size = Uint[self.z * 8](jump).encode_into(buffer, current_offset)
             current_offset += size
         for instruction in self.instruction_set:
             size = instruction.encode_into(buffer, current_offset)
             current_offset += size
-        size = BitSequenceCodec(len(self.instruction_set), "lsb").encode_into(
-            self.offset_bitmask, buffer, current_offset
+        size = Bits[len(self.instruction_set), "lsb"](self.offset_bitmask).encode_into(
+            buffer, current_offset
         )
         current_offset += size
         return current_offset - offset
 
-    @staticmethod
+    @classmethod
     def decode_from(
-        buffer: Union[bytes, bytearray], offset: int = 0
+        cls, buffer: Union[bytes, bytearray], offset: int = 0
     ) -> Tuple["Program", int]:
         """Decode a program from a bytes
 
@@ -177,34 +161,34 @@ class Program(Codable, JsonSerde):
         current_offset = offset
         bytes_read = 0
 
-        j_len, size = GeneralCodec.decode_from(buffer, current_offset)
+        j_len, size = Uint.decode_from(buffer, current_offset)
         bytes_read += size
         current_offset += size
 
-        z, size = U8.decode_from(buffer, current_offset)
+        z, size = Uint[8].decode_from(buffer, current_offset)
         bytes_read += size
         current_offset += size
 
-        c_len, size = GeneralCodec.decode_from(buffer, current_offset)
+        c_len, size = Uint.decode_from(buffer, current_offset)
         bytes_read += size
         current_offset += size
 
         j: List = []
         for _ in range(j_len):
-            val, size = IntegerCodec.decode_from(z.value, buffer, current_offset)
+            val, size = Uint[z * 8].decode_from(buffer, current_offset)
             bytes_read += size
             current_offset += size
             j.append(val)
 
         c: List = []
         for _ in range(c_len):
-            val, size = U8.decode_from(buffer, current_offset)
+            val, size = Uint[8].decode_from(buffer, current_offset)
             bytes_read += size
             current_offset += size
             c.append(val)
 
-        offset_bitmask, size = BitSequenceCodec.decode_from(
-            buffer, current_offset, c_len, "lsb"
+        offset_bitmask, size = Bits[c_len, "lsb"].decode_from(
+            buffer, current_offset
         )
         bytes_read += size
         current_offset += size

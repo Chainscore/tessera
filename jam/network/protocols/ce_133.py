@@ -1,34 +1,30 @@
-from dataclasses import dataclass
 from typing import cast
+
+from tsrkit_types import Null, Vector
 
 from jam.config.logging import logger
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
-from jam.types.base.null import Null
-from jam.types.base.sequences.vector import Vector
 from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
-from jam.types.work.package import WorkPackage
 from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
-from jam.utils.json import JsonSerde
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
-
 from jam.work_package.processor import Processor
+from jam.network.quic.server import QuicServerProtocol
+from tsrkit_types.integers import Uint
+from tsrkit_types.struct import structure
+from jam.types.work import WorkPackage
 
 
-@decodable_dataclass
-@dataclass
-class WorkPackageCore(Codable, JsonSerde):
+@structure
+class WorkPackageCore:
     work_package : WorkPackage
     core_index : CoreIndex
 
-@decodable_dataclass
-@dataclass
-class CE133Data(Codable, JsonSerde):
+@structure
+class CE133Data:
     package_data: WorkPackageCore
     extrinsics: Extrinsics
 

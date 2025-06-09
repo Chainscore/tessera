@@ -1,5 +1,7 @@
-from dataclasses import dataclass
 from typing import cast
+
+from tsrkit_types.sequences import TypedVector
+from tsrkit_types.struct import structure
 
 from jam.config.logging import logger
 from jam.config.settings import settings
@@ -7,41 +9,26 @@ from jam.config.settings import settings
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
-from jam.utils.json import JsonSerde
-
-from jam.types.block import Block
-from jam.types.header import Header
+from jam.types.block import Block, Header
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
-from jam.types.base.sequences.vector import decodable_vector, Vector
 
-@decodable_dataclass
-@dataclass
-class Leaf(Codable, JsonSerde):
+@structure
+class Leaf:
     header_hash: HeaderHash
     time_slot: TimeSlot
 
-@decodable_vector(Leaf)
-class Leaves(Vector[Leaf]):
-    ...
+Leaves = TypedVector[Leaf]
 
-@decodable_dataclass
-@dataclass
-class Final(Codable, JsonSerde):
-    header_hash: HeaderHash
-    time_slot: TimeSlot
+Final = Leaf
 
-@decodable_dataclass
-@dataclass
-class Handshake(Codable, JsonSerde):
+@structure
+class Handshake:
     final: Final
     leaves: Leaves
 
-@decodable_dataclass
-@dataclass
-class Announcement(Codable, JsonSerde):
+@structure
+class Announcement:
     header: Header
     final: Final
 

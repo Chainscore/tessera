@@ -1,32 +1,13 @@
-from jam.types.base.sequences import Array
-from jam.types.base.sequences.array import decodable_array
-
-from jam.types.base.sequences.vector import Vector, decodable_vector
+from tsrkit_types.sequences import TypedArray, TypedVector
 from jam.types.protocol.crypto import OpaqueHash
 from jam.utils.constants import CORE_COUNT, MAX_AUTH_QUEUE_ITEMS
 
 AuthorizerHash = OpaqueHash
 
+AuthorizationQueue = TypedArray[AuthorizerHash, MAX_AUTH_QUEUE_ITEMS]
 
-@decodable_array(length=MAX_AUTH_QUEUE_ITEMS, element_type=AuthorizerHash)
-class AuthorizationQueue(Array[AuthorizerHash]):
-    """Authorization queue to have upto MAX_AUTH_QUEUE_ITEMS auth hashes"""
+Phi = TypedArray[AuthorizationQueue, CORE_COUNT]
 
-    ...
+AuthorizationVector = TypedVector[AuthorizerHash]
 
-
-@decodable_array(length=CORE_COUNT, element_type=AuthorizationQueue)
-class Phi(Array[AuthorizationQueue]):
-    """φ Phi is an array of authorization queues for all cores"""
-
-    ...
-
-
-@decodable_vector(AuthorizerHash)
-class AuthorizationVector(Vector[AuthorizerHash]):
-    ...
-
-
-@decodable_vector(AuthorizationVector)
-class PhiVector(Vector[AuthorizationVector]):
-    ...
+PhiVector = TypedVector[AuthorizationVector]
