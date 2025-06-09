@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
-from jam.network.quic.server import QuicServerProtocol
-from jam.network.protocols.base import NetworkProtocol, PrefixType
+
+from jam.network.base.quic import QuicProtocol
+from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.types.base.null import Null
 from jam.types.base.sequences.vector import Vector
@@ -56,7 +57,7 @@ class WorkPackageSubmission(NetworkProtocol):
     async def transmit(self, node: Node, data: CE133Data):
         """Transmit Work Package from Builder (client) to Guarantor (server)"""
 
-        stream_a = self._prefix.encode() + data.package_data.encode()
+        stream_a = data.package_data.encode()
         stream_b = data.extrinsics.encode()
 
         logger.info(f"Transmitting Work-Package to {len(node.connections)} Validators")
@@ -67,20 +68,21 @@ class WorkPackageSubmission(NetworkProtocol):
             if peer.data.metadata.port == 30333:
                 logger.info("sending package to 30333")
                 client = node.peer_conn[peer][1]
-                stream_id = client.stream_and_keep_open(message=stream_a)
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                client.stream_and_keep_open(message=stream_a, stream_id=stream_id)
                 data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
                 responses.append(data)
 
         return responses
 
-    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def server_intercept(self, buffer: bytes, stream_id: int, server: QuicProtocol):
         """Intercept & Process Work Package on Guarantor (server)"""
         logger.info("Received Work Package")
         data, offset = CE133Data.decode_from(buffer)
         data = cast(CE133Data, data)
 
         logger.info("Processing Work Package")
-        processor = Processor(node)
+        processor = Processor(server.node)
 
         with benchmark(f"Work Package processed"):
             wr, wr_hash = processor.process(data.package_data.work_package, data.package_data.core_index, data.extrinsics)
@@ -92,12 +94,12 @@ class WorkPackageSubmission(NetworkProtocol):
         )
 
         # Return acknowledgment to Builder
-        ack = self._prefix.encode() + b""
-        server.stream_and_close(stream_id, ack)
+        ack = b""
+        server.stream_and_close(ack, stream_id)
 
         logger.info("Sent acknowledgement back to builder")
 
-    def client_intercept(self, node: Node, buffer: bytes, stream_id: int):
+    def client_intercept(self, buffer: bytes, stream_id: int, client: QuicProtocol):
         """Intercept Acknowledgement"""
 
         logger.info(f"Work Package received on Guarantor Node via stream {stream_id}")

@@ -5,7 +5,7 @@ from typing import cast
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
 
-from jam.network.protocols.base import PrefixType
+from jam.network.base.protocol import PrefixType
 from jam.storage.db.kv import KVStore
 from jam.types.work.shard import SegmentsShard
 from jam.work_package.stores.mappings import ErasureShardsMap

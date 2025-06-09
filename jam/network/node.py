@@ -1,20 +1,25 @@
 import asyncio
-import json
 import ssl
-from typing import Dict, cast, Tuple
 
 from aioquic.asyncio import serve, connect
 from aioquic.asyncio.server import QuicServer
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.connection import QuicConnection
+
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
+from jam.config.logging import logger
+from jam.config.settings import settings
+from jam.consensus.grandpa.finality import Finality
 from jam.types.protocol.validators import ValidatorData
+from jam.types.protocol.crypto import Hash
+
+from typing import Dict, cast, Tuple, Optional
+
 from .certificate import generate_keys
 from .peer import Peer
-
 from .sessions import SessionTicketStore
-from jam.config.logging import logger
+
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -38,56 +43,66 @@ class Node:
         validator_data (ValidatorData): Public keys and metadata of the node
         peers (list[Peer]): List of all the peers of the node.
     """
+    from .quic.client import QuicClientProtocol
+
+    # Node Data
     __id: str
+    dns: str
     name: str
     host: str
     port: int
-    validator_data: ValidatorData
     seed: bytes
+    validator_data: ValidatorData
 
+    # Peers & Connections
     peers: list[Peer]
+    peer_map: Dict[Ed25519PublicKey, Peer] = {}
+    peer_conn: Dict[Peer, Tuple[int, QuicClientProtocol]] = {}
 
-    dns: str
+    # Server
     server: QuicServer
 
+    # Flags
     is_initialized: bool = False
     is_builder: bool = False
     is_validator: bool = True
 
-    from .quic.client import QuicClientProtocol
-
-    peer_conn: Dict[Peer, Tuple[int, QuicClientProtocol]] = {}
     connections: list[QuicClientProtocol] = []
 
-    def __init__(self, node_id: str, node_name: str, host: str, port: int, validator_data, peers: list[Peer], is_builder: bool, is_validator: bool):
-        self.__id = node_id
+    def __init__(self, node_name: str, host: str, port: int, validator_data, peers: list[Peer], is_builder: bool, is_validator: bool):
         self.name = node_name
         self.host = host
         self.port = port
         self.validator_data = validator_data
+
+        # Peers
         self.peers = peers
+        self.peer_map = {}
+        self.peer_conn = {}
+        self.connections = []
+        
         self.is_builder = is_builder
         self.is_validator = is_validator
-        self.connections = []
-        self.peer_conn = {}
-        # self.peer
+        for peer in self.peers:
+            self.peer_map[peer.data.ed25519] = peer
 
         if is_validator and is_builder:
             raise ValueError("Node can't be validator and builder at same time!")
 
-        self.dns = generate_keys(port)
+        self.__id = generate_keys(port)
 
-    def get_peer_from_pub(self, key: Ed25519PublicKey) -> Peer | None:
-        for peer in self.peers:
-            print("key received", key)
-            if peer.data.ed25519 == key:
-                return peer
-
-    def configuration(self, is_client: bool = True) -> QuicConfiguration:
+    def get_peer(self, key: Ed25519PublicKey) -> Peer | None:
+        if key in self.peer_map:
+            return self.peer_map[key]
+        
+        return None
+    
+    def quic_config(self, is_client: bool = True, peer: Optional[Peer] = None) -> QuicConfiguration:
         """
         Utility function to build quic configuration.
         Args:
             is_client (bool): Flag indicating node is a client
+            peer (Peer): Peer Information
         Returns:
             config (QuicConfiguration): A QUIC Configuration
         """
@@ -95,24 +110,23 @@ class Node:
             "is_client": is_client,
         }
 
-        configuration = QuicConfiguration(**properties)
-        configuration.load_cert_chain(f"seeds/{self.port}/cert.pem", f"seeds/{self.port}/key.pem")
-        configuration.load_verify_locations(cafile=f"seeds/{self.port}/cert.pem")
-        configuration.verify_mode = ssl.CERT_NONE
+        config = QuicConfiguration(**properties)
+        config.load_cert_chain(f"seeds/{self.port}/cert.pem", f"seeds/{self.port}/key.pem")
+        config.verify_mode = ssl.CERT_NONE
 
-        configuration.max_data = 104857600  # 100 MB
-        configuration.max_stream_data = 10485760  # 10 MB per stream
-        configuration.max_datagram_size = 1350
+        config.max_data = 104857600  # 100 MB
+        config.max_stream_data = 10485760  # 10 MB per stream
+        config.max_datagram_size = 1350
 
-        if is_client:
-            configuration.server_name = self.dns
+        if is_client and peer:
+            config.server_name = peer.id
 
         if self.is_builder:
-            configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
+            config.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
         else:
-            configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}", f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
+            config.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}", f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
 
-        return configuration
+        return config
     
     async def run_server(self):
         """
@@ -124,10 +138,11 @@ class Node:
 
         logger.info(f"🚀 ({self.name}) Listening on {self.host}:{self.port}")
 
+        # Start server connection
         server = await serve(
             self.host,
             self.port,
-            configuration=self.configuration(is_client=False),
+            configuration=self.quic_config(is_client=False),
             create_protocol=lambda *args, **kwargs: QuicServerProtocol(*args, node=self, **kwargs),
             session_ticket_fetcher=session_ticket_store.pop,
             session_ticket_handler=session_ticket_store.add,
@@ -141,7 +156,8 @@ class Node:
         Function to connect the node to a peer.
         """
         session_ticket_store = SessionTicketStore(self.port)
-        from .quic.client import QuicClientProtocol
+        from .base.quic import QuicProtocol
+        from jam.network.protocols.up_0 import Final, Handshake, Leaves
 
         try:
             # Skip self
@@ -155,31 +171,34 @@ class Node:
                     str(peer.data.metadata.host),
                     int(peer.data.metadata.port),
                     configuration=self.configuration(),
-                    create_protocol=lambda *args, **kwargs: QuicClientProtocol(*args, node=self, **kwargs),
+                    create_protocol=lambda *args, **kwargs: QuicProtocol(*args, node=self, **kwargs),
                     session_ticket_handler=session_ticket_store.add,
             ) as client:
 
                 # Save peer connection
-                self.connections.append(client)
-                client = cast(QuicClientProtocol, client)
+                client = cast(QuicProtocol, client)
 
                 logger.info(f"🤝 ({self.name}) Connection to {str(peer.data.metadata.host)}:{int(peer.data.metadata.port)} established ✅")
 
                 stream_id = client._quic.get_next_available_stream_id()
-                client.stream_and_keep_open(stream_id=stream_id,message=json.dumps({
-                    "type": "ping",
-                    "from": self.name
-            }).encode())
+                
+                db = settings.db
+                finality = Finality()
 
-                # last_block = self.state.beta[-1]
-                # final = Final(block_hash=last_block.header_hash, time_slot=U32(0))
-                # await client.stream_and_keep_open(stream_id=stream_id, message=final.encode())
+                final_block = finality.load_final(db)
+
+                header_hash  = Hash.blake2b(final_block.header.encode())
+                block_slot = final_block.header.slot
+                
+                final = Final(header_hash=header_hash, time_slot=block_slot)
+                leaves = Leaves([])
+
+                handshake = Handshake(final, leaves)
+
+                # Handshake Message
+                client.stream_and_keep_open(handshake.encode(), stream_id)
 
                 self.peer_conn[peer] = stream_id, client
-                # print("conn peer id", client._quic._peer_cid)
-                # print("conn host id", client._quic.host_cid)
-
-
                 self.is_initialized = True
 
                 # Wait indefinitely - the connection will be managed by the context manager

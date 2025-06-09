@@ -17,7 +17,6 @@ ZERO_SEED = b"\x00" * 32
 def base32_encode(data):
     return base64.b32encode(data).decode("utf-8").lower().replace("=", "")
 
-
 def generate_san(pubkey: bytes) -> str:
     """
     Compute the alternative name N(k) for a 32-byte Ed25519 public key,
@@ -66,7 +65,8 @@ def generate_keys(port: int):
     # Create the private key from seed and
     # Store private key in /seeds/{port}/key.pem
     # And public key in /seeds/{port}/pub_key.pem
-    # Private_key_base = ASN1_PREFIX + seed
+
+    # JIP-5 Sync
     ed25519_secret = Hash.blake2b(bytes("jam_val_key_ed25519", 'utf-8') + seed)
     private_key = Ed25519PrivateKey.from_private_bytes(bytes(ed25519_secret))
 
@@ -75,6 +75,7 @@ def generate_keys(port: int):
         format=PrivateFormat.PKCS8,
         encryption_algorithm=NoEncryption()
     )
+
     # If seeds/{port} doesn't exist, create it
     if not os.path.exists(f"seeds/{port}"):
         os.makedirs(f"seeds/{port}")
@@ -104,7 +105,7 @@ def generate_keys(port: int):
     valid_to = valid_from + timedelta(days=365)
 
     subject = issuer = x509.Name([
-        x509.NameAttribute(x509.NameOID.COMMON_NAME, "JAM Client Ed25519 Cert")
+        x509.NameAttribute(x509.NameOID.COMMON_NAME, "JAM Tessera Ed25519 Cert")
     ])
 
     cert_builder = (
@@ -118,17 +119,6 @@ def generate_keys(port: int):
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName(san)]),
             critical=False
-        )
-        .add_extension(
-            x509.BasicConstraints(ca=True, path_length=None),
-            critical=True
-        )
-        .add_extension(
-            x509.KeyUsage(digital_signature=True, key_cert_sign=True,
-                          key_encipherment=False, data_encipherment=False,
-                          key_agreement=False, content_commitment=False,
-                          crl_sign=False, encipher_only=False, decipher_only=False),
-            critical=True
         )
     )
 

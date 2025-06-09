@@ -4,9 +4,8 @@ from dataclasses import dataclass
 from jam.config.logging import logger
 from jam.config.settings import settings
 from jam.merklization import BMRFunctions
-from jam.storage.db.kv import KVStore
 from jam.network.quic.server import QuicServerProtocol
-from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types.base import ByteArray64, Byte, Bytes
 
 from jam.types.base.sequences.vector import Vector

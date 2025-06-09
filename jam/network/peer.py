@@ -25,4 +25,4 @@ class Peer:
         self.data = data
 
     def __repr__(self):
-        return f"Peer(host={self.data.metadata.host}, port={self.data.metadata.port}, name={self.data.metadata.name}, data={self.data})"
+        return f"Peer(host={self.data.metadata.host}, port={self.data.metadata.port}, name={self.data.metadata.name})"

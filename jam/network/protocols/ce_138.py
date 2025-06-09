@@ -17,7 +17,7 @@ from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
 
-from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.merklization import BMRFunctions
 
 from jam.work_package.stores.mappings import ErasureShardsMap

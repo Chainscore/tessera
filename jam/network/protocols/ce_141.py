@@ -3,7 +3,7 @@ from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
-from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.types.base.null import Null
 from jam.types.base.sequences.vector import Vector

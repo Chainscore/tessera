@@ -44,17 +44,20 @@ class QuicServerProtocol(QuicConnectionProtocol):
 
     def quic_event_received(self, event: QuicEvent):
         if isinstance(event, HandshakeCompleted):
-            peer_cert = getattr(self._quic.tls, "_peer_certificate", None)
-            print("[SERVER]: peer cert", peer_cert)
-            # peer_cert = self._quic.tls._peer_certificate
+            # peer_cert = getattr(self._quic.tls, "_peer_certificate", None)
+            # print("[SERVER]: peer cert", peer_cert)
+
+            peer_cert = self._quic.tls._peer_certificate
+
+            if isinstance(peer_cert, Certificate):
+                pk = peer_cert.public_key()
+                print("pk", pk)
+                peer = self.node.get_peer_from_pub(pk)
+                if peer:
+                    print("found peer", peer)
+            
+
             #
-            #
-            # if isinstance(peer_cert, Certificate):
-            #     pk = peer_cert.public_key()
-            #     print("pk", pk)
-            #     peer = self.node.get_peer_from_pub(pk)
-            #     if peer:
-            #         print("found peer", peer)
             #
             # if not peer_cert:
             #     print("❌ No peer certificate received")

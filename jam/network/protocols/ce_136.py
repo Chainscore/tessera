@@ -9,7 +9,7 @@ from jam.types.work.report import WorkReport
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
-from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.types.protocol.crypto import WorkReportHash
 from tests.dummy.dummy_extrinsics import create_dummy_work_report

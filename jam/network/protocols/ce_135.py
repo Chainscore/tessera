@@ -7,7 +7,7 @@ from jam.config.settings import settings
 
 from jam.merklization import BMRFunctions
 from jam.network.quic.server import QuicServerProtocol
-from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.types.base.sequences.vector import Vector
 from jam.types.base.null import Null

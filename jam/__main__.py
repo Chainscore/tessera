@@ -112,7 +112,6 @@ async def main(
 
         tsr_node = Node(
             node_name=name,
-            node_id=str(port),
             host="127.0.0.1",
             port=port,
             peers=peers,

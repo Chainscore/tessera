@@ -9,7 +9,7 @@ from jam.types.base import Vector
 
 from jam.types.work.shard import SegmentsShard
 
-from jam.network.protocols.base import PrefixType
+from jam.network.base.protocol import PrefixType
 from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.segments import SegmentShardsDA
 
