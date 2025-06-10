@@ -7,8 +7,10 @@
 #import the agg poly funcs and get the proof constructed
 # imort the verifier logic and get the proof verification ;check with all the test vectors
 
-import json
 import time
+import json
+import os
+import pytest
 start_time=time.time()
 from jam.ring_vrf.ring_proof.pcs.load_powers import g1_points, g2_points
 from jam.ring_vrf.ring_proof.transcript.phases import phase1_alphas
@@ -27,18 +29,13 @@ from jam.ring_vrf.ring_proof.proof.aggregation_poly_and_proof_gtn import AggPoly
 from jam.ring_vrf.ring_proof.verfiey import Verify
 from jam.ring_vrf.ring_proof.constants import D_512 as D
 
-import json
-import os
-
-import pytest
 
 from jam.ring_vrf.curve.specs.bandersnatch import (
     Bandersnatch_TE_Curve,
     BandersnatchPoint,
 )
 from jam.ring_vrf.pedersen.pedersen import PedersenVRF
-#
-#
+
 # # @pytest.mark.skipif("RUNALL" not in os.environ, reason="takes too long")
 # def test_prove_bandersnatch_ed_sha512_ell2_pedersen():
 #     ...
@@ -130,7 +127,7 @@ def test_ring_proof():
     with open(file_path, 'r') as f:
         data = json.load(f)
 
-    for index in range(0,1):
+    for index in range(len(data)):
 
         if index < 0 or index >= len(data):
             raise IndexError("Index out of range")
@@ -190,96 +187,98 @@ def test_ring_proof():
         witness_res = witness_obj.build()
         witness_relation_res = witness_obj.result(Blinding_Base)
         Result_plus_Seed = witness_obj.result_p_seed(witness_relation_res)
-        print("Relation to proove:", witness_relation_res)
-        print("ResultPlusSedd:", Result_plus_Seed)
+        # print("Relation to proove:", witness_relation_res)
+        # print("ResultPlusSedd:", Result_plus_Seed)
 
         # print("RESULT:", witness_relation_res)
-        for each in witness_res:
-            print("witness cmts", normalize(each.commitment))
+        # for each in witness_res:
+            # print("witness cmts", normalize(each.commitment))
 
         # building constraints
         constraints = RingConstraintBuilder(Result_plus_Seed, fixed_cols[0].coeffs, fixed_cols[1].coeffs,
                                             fixed_cols[2].coeffs, witness_res[0].coeffs, witness_res[1].coeffs,
                                             witness_res[2].coeffs, witness_res[3].coeffs)
 
+
         constraint_dict = constraints.compute()
-        print("constarints:", constraint_dict)
+        # print("constarints:", constraint_dict)
 
         # consraints Agrregation
         # convert the g2 points for fs
         fixed_col_commits = [H.to_int(nm(fixed_cols[0].commitment)), H.to_int(nm(fixed_cols[1].commitment)),
                              H.to_int(nm(fixed_cols[2].commitment))]
 
+        # print("Fixed Cols Commitment:", fixed_col_commits)
+
+
         ws = witness_res
         witness_commitments = [H.to_int(nm(ws[0].commitment)), H.to_int(nm(ws[-1].commitment)),
                                H.to_int(nm(ws[1].commitment)), H.to_int(nm(ws[2].commitment))]
+
+        # print("Witness Commitments:", witness_commitments)
+
 
         vk = {
             'g1': g1_points[0],
             'g2': H.altered_points(g2_points),
             'commitments': fixed_col_commits
         }
-        print("Verifier Key:",vk)
+        # print("Verifier Key:",vk)
+        # print("Witness relayton (cnd add):", witness_relation_res)
+        # print("Witness commitments:", witness_commitments)
 
-        #
-        # t = Transcript(S_PRIME, b"Bandersnatch_SHA-512_ELL2")
-        # alphas=[25778130082907837441645415663443632695454167836913260167829394462975766303476,
-        #         38827846651491022664129788600336043758609280321505512680808272954280508901225,
-        #         31455654673788876084019259900242894976908138914261508914143948359250215148300,
-        #         2516983942785675979564851349428317359340942837605141134715048015584320062143,
-        #         17068176859327601411582811226666610645561526860266598422340906072498128347936,
-        #         39379115659506719654641254102800862001598354868839606242641961288176620250527,
-        #         8797596432778795922944860805851185059663487000675923756407639480293438669856]
-        # # t, alpha = phase1_alphas(t, vk, witness_relation_res, witness_commitments)
-        #
-        # print("ALPHAS GOT:", alphas)
-        # # print("Alphas Got:", alphas)FF
-        # cd = constraint_dict
-        # c_polys = [cd[val] for val in cd]
+        t = Transcript(S_PRIME, b"Bandersnatch_SHA-512_ELL2")
+        t, alpha = phase1_alphas(t, vk, witness_relation_res, witness_commitments)
+
+
+        # # print("Alphas Got:", alphas)
+        cd = constraint_dict
+        c_polys = [cd[val] for val in cd]
         # print("is 7:", len(c_polys))
-        # print("C_POLYS:", c_polys)
-        # print("Inputs for alphas:", (vk, witness_relation_res, witness_commitments))
-        C_agg = aggregate_constraints(c_polys, alphas, OMEGA_2048, S_PRIME)
-        # print("constraint_agg_res:", C_agg)
 
-        # # quotient_poly generation
+        # for idx, val in enumerate(c_polys):
+        #     print("Constraint_",idx, val)
+
+        # print("C_POLYS:", len(c_polys))
+        # print("Inputs for alphas:", (vk, witness_relation_res, witness_commitments))
+        C_agg = aggregate_constraints(c_polys, alpha, OMEGA_2048, S_PRIME)
+        # print("constraint_agg_res:", C_agg)
+        #
+        # # # quotient_poly generation
         qp = QuotientPoly()
         Q_p, C_q = qp.quotient_poly(C_agg)
         # print("Quotient_POLY:", Q_p)
         C_q_nm = nm(C_q)
-        print("Quotuient_cmt:", C_q)
-        print("Quoteint_cmt_nm", C_q_nm)
 
+        # print("Quotuient_cmt:", C_q)
+        # print("Quoteint_cmt_nm", C_q_nm)
+        #possible things that can go wrong are (constarints, constraint aggrergation methodology)
         # # relevant_poly+ l_agg poly evaluations
-        # l_obj = LAggPoly(t, H.to_int(C_q_nm), fixed_cols, ws, alphas)
-        # current_t, zeta, rel_poly_evals, l_agg, zeta_omega, l_zw = l_obj.l_agg_poly()
-        # zeta=17795683184931903812503469562955618255597217692598834506476564930327178732879
-        #
-        # # print("zeta:", zeta)
-        # # print("Relevant_poly_evals:", rel_poly_evals)
-        # # print("L_AGG:", l_agg)
-        # # print("zeta_omega:", zeta_omega)
-        # # print("l_z_w:", l_zw)
+
+        l_obj = LAggPoly(t, H.to_int(C_q_nm), fixed_cols, ws, alpha)
+        current_t, zeta, rel_poly_evals, l_agg, zeta_omega, l_zw = l_obj.l_agg_poly()
+        # print("zeta:", zeta)
+        # print("Relevant_poly_evals:", rel_poly_evals)
+        # print("L_AGG:", l_agg)
+        # print("zeta_omega:", zeta_omega)
+        # print("l_z_w:", l_zw)
         # # agg_poly, 2 openings and proof construction
-        # obj = AggPoly(current_t, zeta, fixed_cols, ws, Q_p, C_q, rel_poly_evals, l_agg, zeta_omega, l_zw)
+        obj = AggPoly(current_t, zeta, fixed_cols, ws, Q_p, C_q, rel_poly_evals, l_agg, zeta_omega, l_zw)
+
+        cf_vs, proof_ptr, proof_bs = obj.construct_proof()
+        end_time = time.time()
         #
-        # cf_vs, proof_ptr, proof_bs = obj.construct_proof()
-        # end_time = time.time()
+        print("Proof point representation:", proof_ptr)
+        print("proof_byte_string:", proof_bs)
         #
-        # # print("Proof point representation:", proof_ptr)
-        # # print("proof_byte_string:", proof_bs)
-        #
-        # assert proof_bs == item['ring_proof']
-        # print(f"Is proof {index} matching:", proof_bs == item['ring_proof'])
-        #
+        assert proof_bs == item['ring_proof']
+        print(f"Is proof {index} matching:", proof_bs == item['ring_proof'])
+
         # # proof verification
-        # cnd_res = witness_relation_res
+        cnd_res = witness_relation_res
         #
-        # vfr = Verify(proof_ptr, vk, fixed_cols, cnd_res, Result_plus_Seed, SeedPoint, D)
-        # # print("proof1:", vfr.evaluation_of_linearization_poly_at_zeta_omega())
-        # # print("prioof2:", vfr.evaluation_of_quotient_poly_at_zeta())
-        # print(f"Is signature {index} valid:", vfr.is_signtaure_valid())
-        # print(f"Test_Case {index}:✅")
-
-
-
+        vfr = Verify(proof_ptr, vk, fixed_cols, cnd_res, Result_plus_Seed, SeedPoint, D)
+        print("proof1:", vfr.evaluation_of_linearization_poly_at_zeta_omega())
+        print("prioof2:", vfr.evaluation_of_quotient_poly_at_zeta())
+        print(f"Is signature {index} valid:", vfr.is_signtaure_valid())
+        print(f"Test_Case {index}:✅")
