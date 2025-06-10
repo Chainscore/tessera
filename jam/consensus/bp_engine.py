@@ -52,7 +52,7 @@ class BlockProducer:
             node_name=node.name,
             is_validator=node.is_validator,
             validator_key=node.validator_data.bandersnatch.hex()[:16] + "..." if node.validator_data else None
-        )
+    )
 
     async def run(self):
         """
@@ -72,6 +72,9 @@ class BlockProducer:
             slot_period=SLOT_PERIOD,
             epoch_length=EPOCH_LENGTH
         )
+
+        # Sleep till we're not synced
+
 
         # TODO: If our validator is not in Kappa - skip block production till end of current epoch
         while True:
@@ -93,23 +96,16 @@ class BlockProducer:
             # Check if we are in fallback or normal ticket.py
             gamma_s = state.gamma.s.unwrap()
 
-            logger.debug(
-                "Block production cycle",
-                node_name=self.node.name,
-                current_timeslot=int(current_timeslot),
-                epoch_index=ts_epoch_index,
-                gamma_mode=type(gamma_s).__name__
-            )
+            logger.debug("🔄 Block production cycle", current_timeslot=int(current_timeslot), epoch=ts_epoch_index, gamma_mode=gamma_s.__class__.__name__)
 
             if isinstance(gamma_s, GammaSFallback):
                 author_key = gamma_s[ts_epoch_index]
                 
                 if author_key == self.node.validator_data.bandersnatch:
                     logger.info(
-                        "Authoring block - our turn",
-                        node_name=self.node.name,
+                        "🧑‍🍳Authoring block - our turn",
                         current_timeslot=int(current_timeslot),
-                        epoch_index=ts_epoch_index,
+                        epoch=ts_epoch_index,
                         author_key=author_key.hex()[:16] + "..."
                     )
                     
@@ -117,48 +113,31 @@ class BlockProducer:
                                        timeslot=int(current_timeslot), 
                                        node_name=self.node.name):
                         block = self._produce_block(state, current_timeslot)
-                        
+                        block.save(self.db)
+                        header_hash = block.header.hash()
                         # Set local chain head to produced block
-                        Finality.set_head(current_timeslot, self.db)
+                        Finality.set_head(header_hash, self.db)
                         # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-                        Finality.finalise(current_timeslot, self.db)
-                        
+                        Finality.finalise(header_hash, self.db)
+
                         # Announce
                         up0.transmit(self.node, block)
-                    
-                    logger.info(
-                        "Block authored and announced successfully",
-                        node_name=self.node.name,
-                        current_timeslot=int(current_timeslot),
-                        block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "..."
-                    )
+
+                    logger.info("🧱Block authored and announced successfully", current_timeslot=int(current_timeslot), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...")
                 else:
                     logger.debug(
-                        "Not our turn to author - skipping",
-                        node_name=self.node.name,
-                        current_timeslot=int(current_timeslot),
-                        epoch_index=ts_epoch_index,
+                        "⏭️ Not our turn to author - skipping", current_timeslot=int(current_timeslot), epoch=ts_epoch_index,
                         expected_author=author_key.hex()[:16] + "...",
                         our_key=self.node.validator_data.bandersnatch.hex()[:16] + "..."
                     )
             else:
                 """Generate a header seal"""
                 # TODO: Implement once ring-proof are added
-                logger.warning(
-                    "Ring-proof mode not yet implemented - only fallback mode supported",
-                    node_name=self.node.name,
-                    current_timeslot=int(current_timeslot),
-                    gamma_mode=type(gamma_s).__name__
-                )
                 raise NotImplementedError("Only fallback mode is supported for now")
 
             # Sleep for remaining time of the timeslot
             sleep_duration = 6 - (time() - genesis_ts) % SLOT_PERIOD
-            logger.debug(
-                "Sleeping until next slot",
-                node_name=self.node.name,
-                sleep_duration=sleep_duration
-            )
+            logger.debug("😴 Sleeping until next slot", sleep_duration=sleep_duration)
             await asyncio.sleep(sleep_duration)
 
     def _produce_block(self, state: State, current_timeslot: TimeSlot) -> Block:
@@ -166,7 +145,7 @@ class BlockProducer:
         Produce a block for the given timeslot
         """
         logger.debug(
-            "Building block components",
+            "⚒️ Building block components",
             node_name=self.node.name,
             timeslot=int(current_timeslot)
         )
@@ -179,14 +158,7 @@ class BlockProducer:
             DisputesExtrinsic(culprits=Culprits([]), faults=Faults([]), verdicts=Verdicts([]))
         )
         
-        logger.debug(
-            "Building block header",
-            node_name=self.node.name,
-            timeslot=int(current_timeslot),
-            state_root=state.root.hex()[:16] + "..."
-        )
-        
-        parent_block = Block.load_parent(current_timeslot, self.db)
+        parent_block = Finality.load_latest(self.db)
         parent_hash = Hash.blake2b(parent_block.header.encode())
         
         block = Block(
@@ -205,15 +177,7 @@ class BlockProducer:
             extrinsic=extrinsic
         )
         
-        logger.info(
-            "Block produced ⛏️",
-            node_name=self.node.name,
-            timeslot=int(current_timeslot),
-            parent_hash=parent_hash.hex()[:16] + "...",
-            block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...",
-            author_index=int(block.header.author_index),
-            extrinsic_hash=block.header.extrinsic_hash.hex()[:16] + "..."
-        )
+        logger.info("Block produced ⛏️", timeslot=int(current_timeslot), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...",)
         
         return block
     

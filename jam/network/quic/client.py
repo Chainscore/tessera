@@ -115,7 +115,7 @@ class QuicClientProtocol(QuicConnectionProtocol):
 
             try:
                 from jam.network.protocols.base import PrefixType
-                prefix, _ = PrefixType.decodeFrom(buffer[0:1])
+                prefix, prefix_size = PrefixType.decode_from(buffer)
             except Exception as e:
                 logger.warning(
                     "Failed to decode message prefix",
@@ -137,7 +137,7 @@ class QuicClientProtocol(QuicConnectionProtocol):
 
             try:
                 protocol = ProtocolMap.get_protocol(prefix)()
-                protocol.client_intercept(buffer[1:], stream_id)
+                protocol.client_intercept(buffer[prefix_size:], stream_id)
                 
                 logger.debug(
                     "Message processed by protocol handler",

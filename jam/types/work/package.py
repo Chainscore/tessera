@@ -16,7 +16,7 @@ from jam.types.protocol.core import (
 )
 from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.work.item import WorkItem
-from jam.types.work.report import RefineContext
+from jam.types.work.execution import RefineContext
 from jam.types.work.segments import MultiSegments
 
 if TYPE_CHECKING:

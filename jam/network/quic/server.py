@@ -184,7 +184,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
     def _extract_prefix(self, buffer: bytes) -> PrefixType:
         """Extract message prefix from buffer"""
         try:
-            prefix, _ = PrefixType.decodeFrom(buffer[0:1])
+            prefix, _ = PrefixType.decode_from(buffer)
             return prefix
         except Exception as e:
             logger.debug(

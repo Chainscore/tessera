@@ -116,7 +116,9 @@ class BlockAnnouncement(NetworkProtocol):
                 extrinsic_hash=data.header.extrinsic_hash.hex()[:16] + "..."
             )
             
-            # TODO: Process new block
+            # Process new header
+            # If it is not in our DB, request [header.slot - latest_timeslot] blocks from peer
+
             # Process goes here
             
             logger.info(
