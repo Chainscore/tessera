@@ -88,7 +88,7 @@ class ErasureCode:
         return encoded_chunks
 
 
-    def decode(self, c: Vector[Tuple[Bytes, int]]) -> Bytes:
+    def decode(self, c: Vector) -> Bytes:
         """
         Decoding function
         Args:

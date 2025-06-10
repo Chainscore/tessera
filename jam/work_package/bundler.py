@@ -1,13 +1,12 @@
 from typing import Tuple, Dict
 
+from tsrkit_types import Vector, Bytes
+
 from jam import JamConfig
 from jam.config.logging import logger
 from jam.config.settings import settings
 from jam.storage.item_extrinsics import ItemExtrinsics
-from jam.types.base import Bytes
-
-from jam.types.base.sequences.vector import Vector
-from jam.types.extrinsics.extrinsic import Extrinsic
+from jam.types import WorkPackageBundle
 
 from jam.types.work.item import WorkItem
 from jam.types.work.package import  WorkPackage
@@ -19,11 +18,10 @@ from jam.types.work.manifest import (
     Extrinsics,
     SegmentDict,
     MultiJustifications,
-    MultiExtrinsics, ByteArray4104, Segment, SegmentIndex
+    MultiExtrinsics, Extrinsic, Segment
 )
-from jam.types.work.refine_context import OpaqueHashes
 
-from jam.types.work.report import SegmentRootLookup, WorkPackageBundle
+from jam.types.work import SegmentRootLookup
 
 from jam.types.protocol.core import SegmentRoot
 from jam.types.protocol.crypto import OpaqueHash
@@ -37,12 +35,8 @@ from jam.types.work.shard import ShardIndex, SegmentsShards, SegmentsShard
 
 from jam.erasure_coding.erasure_code import ErasureCode
 
-from jam.types.base.integers.fixed import U16
-from jam.types.base.integers.general import Int
 
 from jam.network.node import Node
-from jam.network.protocols.ce_139 import SegmentShardRequest
-from jam.network.protocols.ce_139_base import CE139Data, ShardRequest, SegmentIndexes, Response
 
 class Bundler:
     merkle: BMRFunctions
@@ -218,24 +212,7 @@ class Bundler:
                             logger.error(f"Erasure decoding failed for {h}: {err}")
                     else:
                         # Fetch Missing Shards
-                        ce_139 = SegmentShardRequest()
-
-                        requests = CE139Data([])
-                        for i in range(1023):
-                            if ShardIndex(i) not in available_indices:
-                                req: ShardRequest = ShardRequest(erasure_root=e_root, shard_Index=ShardIndex(i), length=Int(1),
-                                                                 seg_indexes=SegmentIndexes(SegmentIndex(n)))
-                                requests.append(req)
-
-                                try:
-                                    ...
-                                    responses = ce_139.transmit(self.node, data=requests)
-                                    for res in responses:
-                                        ...
-
-
-                                except Exception as e:
-                                    logger.warn(f"Failed to fetch for index {i}: {e}")
+                        ...
 
                 except KeyError as e2:
                     logger.warn(f"Warning! {e2}")
@@ -276,7 +253,7 @@ class Bundler:
 
             segments = seg_dict[s_root]
             pages = self.merkle.merkle_path_fn(segments, 0, int(n))
-            justification = Justification(length=U16(len(pages)), justification=OpaqueHashes(pages))
+            justification = Justification(pages)
 
             justifications.append(justification)
 

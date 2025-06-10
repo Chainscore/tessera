@@ -1,9 +1,11 @@
 from abc import ABC
-from jam.storage.db.kv import KVStore
+
+from rockstore import RockStore
+
 
 class DA(ABC):
     db_path: str
-    db: KVStore
+    db: RockStore
     prefix: bytes
 
     def close(self):

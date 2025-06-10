@@ -1,4 +1,4 @@
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 
 from jam.types.work.report import WorkReport, WorkReportHash
 from jam.work_package.store import DA
@@ -11,7 +11,7 @@ class ReportsDA(DA):
     Value: Segments Shard (Vector[Segment Shard])
     """
 
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.prefix = bytes("WR", 'utf-8')
         self.db = db
 

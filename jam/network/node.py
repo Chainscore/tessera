@@ -9,20 +9,21 @@ from aioquic.quic.connection import QuicConnection
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from jam.config.logging import logger
-from jam.config.settings import settings
-from jam.consensus.grandpa.finality import Finality
+
 from jam.types.protocol.validators import ValidatorData
-from jam.types.protocol.crypto import Hash
 
 from typing import Dict, cast, Tuple, Optional
 
-from .certificate import generate_keys
+from .base.quic import QuicProtocol
+from jam.network.base.certificate import generate_keys
 from .peer import Peer
-from .sessions import SessionTicketStore
+from jam.network.base.sessions import SessionTicketStore
 
 
 genesis_hash = "476243ad"
 protocol_version = "0"
+node_alpn = f"jamnp-s/{protocol_version}/{genesis_hash}"
+builder_alpn = node_alpn + "/builder"
 
 _original_initialize = QuicConnection._initialize
 
@@ -36,14 +37,12 @@ class Node:
     """
     Represents a node in the network.
     Args:
-        node_id (str): Id of the node
         node_name (str): Name of the node
         host (str): Host address
         port (int): Running port of the node
         validator_data (ValidatorData): Public keys and metadata of the node
         peers (list[Peer]): List of all the peers of the node.
     """
-    from .quic.client import QuicClientProtocol
 
     # Node Data
     __id: str
@@ -57,7 +56,7 @@ class Node:
     # Peers & Connections
     peers: list[Peer]
     peer_map: Dict[Ed25519PublicKey, Peer] = {}
-    peer_conn: Dict[Peer, Tuple[int, QuicClientProtocol]] = {}
+    peer_conn: Dict[Peer, Tuple[int, QuicProtocol]] = {}
 
     # Server
     server: QuicServer
@@ -66,8 +65,6 @@ class Node:
     is_initialized: bool = False
     is_builder: bool = False
     is_validator: bool = True
-
-    connections: list[QuicClientProtocol] = []
 
     def __init__(self, node_name: str, host: str, port: int, validator_data, peers: list[Peer], is_builder: bool, is_validator: bool):
         self.name = node_name
@@ -79,8 +76,7 @@ class Node:
         self.peers = peers
         self.peer_map = {}
         self.peer_conn = {}
-        self.connections = []
-        
+
         self.is_builder = is_builder
         self.is_validator = is_validator
         for peer in self.peers:
@@ -90,6 +86,13 @@ class Node:
             raise ValueError("Node can't be validator and builder at same time!")
 
         self.__id = generate_keys(port)
+        self.dns = self.__id
+
+    def __str__(self):
+        return f"Node({self.host}:{self.port})"
+
+    def __repr__(self):
+        return f"Node(host={self.host}, port={self.port}, name={self.name})"
 
     def get_peer(self, key: Ed25519PublicKey) -> Peer | None:
         if key in self.peer_map:
@@ -122,9 +125,9 @@ class Node:
             config.server_name = peer.id
 
         if self.is_builder:
-            config.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
+            config.alpn_protocols = [builder_alpn]
         else:
-            config.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}", f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
+            config.alpn_protocols = [node_alpn, builder_alpn]
 
         return config
     
@@ -136,7 +139,7 @@ class Node:
 
         session_ticket_store = SessionTicketStore(self.port)
 
-        logger.info(f"🚀 ({self.name}) Listening on {self.host}:{self.port}")
+        logger.info(f"🚀 ({self.name}) Listening on {str(self)}")
 
         # Start server connection
         server = await serve(
@@ -157,20 +160,19 @@ class Node:
         """
         session_ticket_store = SessionTicketStore(self.port)
         from .base.quic import QuicProtocol
-        from jam.network.protocols.up_0 import Final, Handshake, Leaves
 
         try:
             # Skip self
-            if str(peer.data.metadata.host) == self.host and int(peer.data.metadata.port) == self.port:
-                logger.info(f"⚠️ ({self.name}) Skipping self ({self.host}:{self.port})")
+            if str(peer.host) == self.host and int(peer.port) == self.port:
+                logger.info(f"⚠️ ({self.name}) Skipping self {str(self)}")
                 return
             
-            logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer.data.metadata.host)}:{int(peer.data.metadata.port)} via QUIC...")
+            logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC...")
 
             async with connect(
-                    str(peer.data.metadata.host),
-                    int(peer.data.metadata.port),
-                    configuration=self.configuration(),
+                    str(peer.host),
+                    int(peer.port),
+                    configuration=self.quic_config(peer=peer),
                     create_protocol=lambda *args, **kwargs: QuicProtocol(*args, node=self, **kwargs),
                     session_ticket_handler=session_ticket_store.add,
             ) as client:
@@ -178,25 +180,12 @@ class Node:
                 # Save peer connection
                 client = cast(QuicProtocol, client)
 
-                logger.info(f"🤝 ({self.name}) Connection to {str(peer.data.metadata.host)}:{int(peer.data.metadata.port)} established ✅")
+                logger.info(f"🤝 ({self.name}) Connection to {str(peer)} established ✅")
 
                 stream_id = client._quic.get_next_available_stream_id()
-                
-                db = settings.db
-                finality = Finality()
 
-                final_block = finality.load_final(db)
-
-                header_hash  = Hash.blake2b(final_block.header.encode())
-                block_slot = final_block.header.slot
-                
-                final = Final(header_hash=header_hash, time_slot=block_slot)
-                leaves = Leaves([])
-
-                handshake = Handshake(final, leaves)
-
-                # Handshake Message
-                client.stream_and_keep_open(handshake.encode(), stream_id)
+                from jam.network.protocols.up_0 import BlockAnnouncement
+                BlockAnnouncement.handshake(stream_id, client)
 
                 self.peer_conn[peer] = stream_id, client
                 self.is_initialized = True
@@ -205,7 +194,7 @@ class Node:
                 await asyncio.Future()
 
         except asyncio.CancelledError:
-            logger.info(f"🔴 ({self.name}) Connection with {str(peer.data.metadata.host)}:{int(peer.data.metadata.port)} cancelled")
+            logger.info(f"🔴 ({self.name}) Connection with {str(peer)} cancelled")
         except Exception as e:
             logger.warning(f"⚠️ ({self.name}) Failed to connect to {peer}: {e}")
 
@@ -223,10 +212,10 @@ class Node:
         Function to fully initialize a node.
         """
         if self.is_builder:
-            logger.info(f"🚀 ({self.name}) Starting builder on {self.host}:{self.port}")
+            logger.info(f"🚀 ({self.name}) Starting builder on {str(self)}")
 
         if not self.is_builder:
-            logger.info(f"🚀 ({self.name}) Starting server on {self.host}:{self.port}")
+            logger.info(f"🚀 ({self.name}) Starting server on {str(self)}")
             await self.run_server()
 
             # Give server time to fully initialize

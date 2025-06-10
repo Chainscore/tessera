@@ -1,4 +1,4 @@
-from jam.network.protocols.base import PrefixType
+from jam.network.base.protocol import PrefixType
 from jam.network.protocols.ce_133 import WorkPackageSubmission
 from jam.network.protocols.ce_134 import WorkPackageSharing
 from jam.network.protocols.ce_135 import WorkReportDistribution

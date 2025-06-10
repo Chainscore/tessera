@@ -1,9 +1,9 @@
 from typing import Tuple
 
-from jam.config.chainspec import chain_config
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
+from tsrkit_types import Null
 
-from jam.types.base.null import Null
+from jam.config.chainspec import chain_config
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import WorkPackageHash, ExportsRoot, ErasureRoot, WorkReportHash
 from jam.types.work.report import WorkReport
@@ -33,7 +33,7 @@ class PackageSegmentMap(DA):
     Value: Segments Root
     """
 
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.prefix = bytes("WPSR", 'utf-8')
         self.db = db
 
@@ -64,7 +64,7 @@ class SegmentErasureMap(DA):
     Key: Segments Root
     Value: Erasure Root
     """
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.prefix = bytes("SRER", 'utf-8')
         self.db = db
 
@@ -94,7 +94,7 @@ class ErasureAssurerMap(DA):
     Value: Work Report Hash, Assurers
     """
 
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.prefix = bytes("ERWRA", 'utf-8')
         self.db = db
 
@@ -128,7 +128,7 @@ class ErasureShardsMap(DA):
     Value: [(shard Index, Bundle Shard Hash, Segments Shard Root)]
     """
 
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.prefix = bytes("ERSP", 'utf-8')
         self.db = db
 

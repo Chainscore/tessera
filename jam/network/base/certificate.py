@@ -7,8 +7,8 @@ import os
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
+from tsrkit_types import Uint
 
-from jam.types.base.integers.fixed import U256
 from jam.types.protocol.crypto import Hash
 
 ASN1_PREFIX = bytes.fromhex("302e020100300506032b657004220420")
@@ -27,13 +27,13 @@ def generate_san(pubkey: bytes) -> str:
     if len(pubkey) != 32:
         raise ValueError("Public key must be exactly 32 bytes")
 
-    def b(n: U256, l: int) -> str:
+    def b(n: Uint[256], l: int) -> str:
         if l == 0:
             return ""
         return alphabet[n % 32] + b(n // 32, l - 1)
 
     alphabet = "abcdefghijklmnopqrstuvwxyz234567"
-    n, _ = U256.decode_from(pubkey)
+    n, _ = Uint[256].decode_from(pubkey)
     return "e" + b(n, 52)
 
 def generate_keys(port: int):

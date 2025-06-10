@@ -1,24 +1,41 @@
 from typing import cast
 
-from tsrkit_types import Vector
+from tsrkit_types import Vector, Option, Null, Uint, structure
 
 from jam.config.logging import logger
-from jam.network.quic.server import QuicServerProtocol
-from jam.types.work import WorkReport
-from tsrkit_types.struct import structure
-from jam.types.work.report import WorkReport
 
+from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.protocol.crypto import WorkReportHash, Hash
-from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
 from jam.types.protocol.crypto import WorkReportHash
+from jam.types.work.report import WorkReport
+from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
 
 
 @structure
 class CE136Data:
+    len: Uint[32]
     work_report_hash: WorkReportHash
 
+    @property
+    def is_valid(self):
+        if len(self.work_report_hash.encode()) == self.len:
+            return True
+        return False
+
+@structure
+class CE136Response:
+    len: Uint[32]
+    work_report: WorkReport
+
+    @property
+    def is_valid(self):
+        if len(self.work_report.encode()) == self.len:
+            return True
+        return False
+
+OptRep = Option[WorkReport]
 
 class WorkReportRequest(NetworkProtocol):
     """
@@ -41,26 +58,46 @@ class WorkReportRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE136
 
-    def transmit(self, node: Node, data: CE136Data):
+    async def transmit(self, node: Node, data: CE136Data):
         """Request Work Report from Node (server)"""
 
-        message = self._prefix.encode() + data.encode()
-        logger.info(f"Requesting Work-Report from {len(node.connections)} Validators")
+        msg_a = data.work_report_hash.encode()
+        len_a = data.len.encode()
+
+        logger.info(f"Requesting Work-Report from {len(node.peer_conn)} Validators")
 
         # TODO: Use Original Guarantor Connection
 
         responses = Vector([])
-        for client in node.connections:
-            data = client.stream_and_close(message=message)
-            responses.append(data)
+        for peer in node.peer_conn:
+            if int(peer.port) == 30336:
+                logger.info("requesting report from 30336")
+                client = node.peer_conn[peer][1]
+
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
+
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+
+                responses.append(data)
 
         return responses
 
-    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+    def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Fetch requested Work Report on Node (server)"""
+        buffer = server.stream_buffer[stream_id]
+
         logger.info("Received Work Report Request")
         data, offset = CE136Data.decode_from(buffer)
         data = cast(CE136Data, data)
+
+        if not data.is_valid:
+            raise NetworkingError(Code.INVALID_DATA)
 
         logger.info("Fetching Work Report")
         # TODO: Process received Work Report Query
@@ -70,20 +107,33 @@ class WorkReportRequest(NetworkProtocol):
         logger.info(f"📩 Processed work report query for WR {data.work_report_hash}")
 
         # Return requested report to client node
-        ack = self._prefix.encode() + report.encode()
-        server.stream_and_close(stream_id, ack)
+        msg_a = report.encode()
+        len_a = Uint[32](len(msg_a)).encode()
+
+        # Send Messages with their lengths
+        server.stream_and_keep_open(len_a, stream_id)
+        server.stream_and_close(msg_a, stream_id)
 
         logger.info("Requested report sent back to Node")
 
-    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> WorkReport:
+    def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptRep:
         """Intercept Requested Work Report"""
+        buffer = client.stream_buffer[stream_id]
 
-        logger.info(f"Requested Report received on Node (client) via stream {stream_id}")
-        data, offset = WorkReport.decode_from(buffer)
-        data = cast(WorkReport, data)
+        try:
+            data, offset = CE136Response.decode_from(buffer[1:])
+            data = cast(CE136Response, data)
+            if not data or not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
 
-        logger.info("Saving Work Report")
-        # TODO: Process & Save Work Report
-        # Process goes here
+            logger.info(f"Requested Report received on Node (client) via stream {stream_id}")
 
-        return data
+            # TODO: Save Work Report & Check Majority & Distribute
+            logger.info("Distributing this Work Report after achieving majority")
+
+            return OptRep(data.work_report)
+
+        except Exception as e:
+            logger.error(Code.BAD_RESPONSE)
+            return OptRep(Null)
+

@@ -1,23 +1,12 @@
-from dataclasses import dataclass
-from typing import cast
+from tsrkit_types import structure
 
-from jam.config.logging import logger
-from jam.network.quic import QuicServerProtocol
+from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
-from jam.types.base.null import Null
-from jam.types.base.sequences.vector import Vector
-from jam.types.extrinsics.assurances import Assurance
 
-from jam.utils.codec.decorators import decodable_dataclass
-from jam.utils.json import JsonSerde
-from jam.utils.codec import Codable
-
-
-@decodable_dataclass
-@dataclass
-class CE141Data(Codable, JsonSerde):
-    assurance : Assurance
+@structure
+class CE141Data:
+    ...
 
 
 class AssuranceDistribution(NetworkProtocol):
@@ -37,35 +26,18 @@ class AssuranceDistribution(NetworkProtocol):
 
     """
 
+    # TODO: Reimplement 141 properly
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE141
 
-    def transmit(self, node: Node, data: CE141Data):
+    async def transmit(self, node: Node, data: CE141Data):
         """ Transmit assurance, From Assurer (client) to Validator (server) """
-
-        stream = self._prefix.encode() + data.encode()
-
-        logger.info(f"Transmitting assurance {data} to the {len(node.connections)} validators with prefix {self._prefix}")
+        ...
 
 
-        # TODO: send assurance to particular (that share the report) validator
+    def req_intercept(self, stream_id: int, server: QuicProtocol):
+        ...
 
-        responses = Vector([])
-        for client in node.connections:
-            data = client.stream_and_close(message=stream)
-            responses.append(data)
-
-        return responses
-
-
-    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
-        data, offset = CE141Data.decode_from(buffer)
-        data = cast(CE141Data, data)
-
-        logger.info(f"Receive assurance {data} from the assurer")
-
-        # TODO: Save the assure and signature in the database
-
-    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Assurance:
-        return Null
+    def res_intercept(self, stream_id: int, client: QuicProtocol):
+        ...

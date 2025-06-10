@@ -1,16 +1,17 @@
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
+from tsrkit_types import Bytes
+
 from jam.types.work.shard import SegmentsShard, SegmentsShardRoots, BundleShardHashes, SegmentsShardUnit, ShardIndex, \
     BundleShardUnit
+from jam.utils.dummy.utils import create_dummy_bytes32, create_dummy_bytes12, create_dummy_bytes
 from jam.work_package.stores.audits import AuditShardsDA
 from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.segments import SegmentShardsDA
-from tests.dummy.utils import create_dummy_bytes32, create_dummy_bytes12, create_dummy_bytes
-from jam.types.base.sequences.bytes.bytes import Bytes
 
 def test_shard_db(db_path):
     """testing all three dbs that are storing shards"""
     # inserting data in Erasure root -> Shard keys Map DB
-    db = KVStore(db_path)
+    db = RockStore(db_path)
 
     keys_db = ErasureShardsMap(db)
     erasure_root = create_dummy_bytes32()

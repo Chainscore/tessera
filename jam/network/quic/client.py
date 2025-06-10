@@ -4,7 +4,6 @@ from typing import Dict, Optional
 from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted, \
     ConnectionIdIssued, ConnectionIdRetired
-from cryptography.x509 import Certificate
 
 from jam.config.logging import logging as logger
 
@@ -119,10 +118,10 @@ class QuicClientProtocol(QuicConnectionProtocol):
                             prefix = None
 
                         # Map the request to its corresponding protocol function
-                        from jam.network.protocol_map import ProtocolMap
+                        from jam.network.base.protocol_map import ProtocolMap
 
                         protocol = ProtocolMap.get_protocol(prefix)()
-                        data = protocol.client_intercept(self.node ,buffer[1:], event.stream_id)
+                        data = protocol.client_intercept(self.node, buffer[1:], event.stream_id)
 
                         # Wait for acknowledgment
                         waiter = self.waiter[event.stream_id]

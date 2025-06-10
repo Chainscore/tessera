@@ -56,7 +56,6 @@ def create_dummy_core_segment() -> CoreSegment:
 
     return CoreSegment (
         core_index=CoreIndex(0),
-        length=Uint(1),
         segment_root_map=segment_root_map
     )
 

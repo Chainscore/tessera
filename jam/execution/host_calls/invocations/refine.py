@@ -9,11 +9,10 @@ from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from jam.execution.pvm.status import OUT_OF_GAS, PANIC
 from jam.execution.utils import decode_code_hash
 from tsrkit_types.integers import Uint
-from jam.types.protocol.core import ProgramCounter
+
+from jam.types.work import WorkExecResult, Segments, WorkPackage
+from jam.types.protocol.core import ProgramCounter, Gas
 from jam.types.protocol.crypto import OpaqueHash, Hash
-from jam.types.work import WorkPackage
-from jam.types.work import Segments
-from jam.types.work.report import WorkExecResult
 from jam.utils.constants import IS_AUTHORIZED_GAS
 
 

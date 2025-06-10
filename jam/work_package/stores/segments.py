@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
 
 from jam.types.protocol.core import ExportsRoot
 from jam.types.work.manifest import Segments, ProvedSegments
@@ -16,7 +16,7 @@ class SegmentsDA(DA):
     Value: Segments (Vector[Segment])
     """
 
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.prefix = bytes("SEG", 'utf-8')
         self.db = db
 
@@ -50,7 +50,7 @@ class SegmentShardsDA(DA):
     Value: Segments Shard (Vector[Segment Shard])
     """
 
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.prefix = bytes("SS", 'utf-8')
         self.db = db
 

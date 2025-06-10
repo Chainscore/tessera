@@ -1,8 +1,10 @@
 from typing import Tuple
 
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
+from tsrkit_types import TypedVector
+
+from jam.types import OpaqueHash
 from jam.types.protocol.core import ErasureRoot
-from jam.types.work.refine_context import OpaqueHashes
 from jam.types.work.shard import BundleShardHash, BundleShardUnit, BundleShard, ShardIndex
 
 from jam.work_package.store import DA
@@ -15,22 +17,22 @@ class JustificationsDA(DA):
         Value: Vector of hashes
         """
 
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.prefix = bytes("JS", 'utf-8')
         self.db = db
 
-    def put(self, er_root: ErasureRoot, data: OpaqueHashes) -> None:
+    def put(self, er_root: ErasureRoot, data: TypedVector[OpaqueHash]) -> None:
         key = self.prefix + er_root.encode()
         self.db.put(key, data.encode())
 
-    def get(self, er_root: ErasureRoot) -> OpaqueHashes:
+    def get(self, er_root: ErasureRoot) -> TypedVector[OpaqueHash]:
         key = self.prefix + er_root.encode()
         data = self.db.get(key)
 
         if data is None:
             raise KeyError("CE137 Justification not found in Audit DA")
 
-        record, _ = OpaqueHashes.decode_from(data)
+        record, _ = TypedVector[OpaqueHash].decode_from(data)
         return record
 
     def delete(self, er_root: ErasureRoot) -> None:
@@ -46,7 +48,7 @@ class AuditShardsDA(DA):
     Value: Bundle Shard (Bytes)
     """
 
-    def __init__(self, db: KVStore):
+    def __init__(self, db: RockStore):
         self.prefix = bytes("BS", 'utf-8')
         self.db = db
 

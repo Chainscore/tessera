@@ -1,4 +1,3 @@
-import asyncio
 from typing import Dict
 
 from aioquic.asyncio import QuicConnectionProtocol
@@ -7,7 +6,6 @@ from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTermina
 from cryptography.x509 import Certificate
 
 from jam.config.logging import logging as logger
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -134,7 +132,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                         prefix = None
 
                     # Map the request to its corresponding protocol function
-                    from jam.network.protocol_map import ProtocolMap
+                    from jam.network.base.protocol_map import ProtocolMap
 
                     protocol = ProtocolMap.get_protocol(prefix)()
                     protocol.server_intercept(self.node, buffer[1:], self, event.stream_id)
@@ -161,7 +159,7 @@ class QuicServerProtocol(QuicConnectionProtocol):
                         prefix = None
 
                     if prefix == PrefixType.UP0:
-                        from jam.network.protocol_map import ProtocolMap
+                        from jam.network.base.protocol_map import ProtocolMap
                         protocol = ProtocolMap.get_protocol(prefix)()
                         protocol.server_intercept(self.node, buffer[1:], self, event.stream_id)
 

@@ -1,11 +1,11 @@
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
+
+from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
 from jam.work_package.stores.mappings import PackageSegmentMap
-from tests.dummy.dummy_extrinsics import create_dummy_work_report
 
 
 def test_wp_hash_seg_root(db_path):
-    print("starting")
-    d3l = KVStore(db_path)
+    d3l = RockStore(db_path)
     db = PackageSegmentMap(d3l)
     report = create_dummy_work_report()
     package_hash = report.package_spec.hash

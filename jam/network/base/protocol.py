@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from tsrkit_types import Enum
+
 from jam.network.base.quic import QuicProtocol
-from jam.types.base.enum import Enum
 
 class PrefixType(Enum):
     # UP Streams
@@ -53,7 +54,7 @@ class NetworkProtocol(ABC):
         ...
 
     @abstractmethod
-    def server_intercept(self, buffer: bytes, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: QuicProtocol):
         """
         Function to intercept & process data / query from connected node.
         And sends acknowledgement / response to the node.
@@ -62,7 +63,7 @@ class NetworkProtocol(ABC):
         ...
 
     @abstractmethod
-    def client_intercept(self, buffer: bytes, stream_id: int, client: QuicProtocol):
+    def res_intercept(self, stream_id: int, client: QuicProtocol):
         """
         Function to intercept & process returned data from connected node.
         Must be implemented by subclasses.

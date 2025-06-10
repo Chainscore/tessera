@@ -1,61 +1,63 @@
-from dataclasses import dataclass
 from typing import cast
 
-from jam.config.logging import logger
-from jam.config.settings import settings
-from jam.network.quic import QuicServerProtocol
-from jam.types.base.integers import Int
-from jam.types.base.sequences.bytes.byte_array import ByteArray12
-from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.work.manifest import SegmentIndex
-from jam.types.work.shard import ShardIndex, SegmentShard
+from tsrkit_types import structure, TypedVector, Uint
 
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
+from jam.config.logging import logger
+from jam.network.base.quic import QuicProtocol
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
+
+from jam.types.work.manifest import SegmentIndex, Justification, Justifications
+from jam.types.work.shard import ShardIndex, SegmentsShard, SegmentsShardUnit
+
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.utils.json import JsonSerde
 
 from jam.types.protocol.core import ErasureRoot, ValidatorIndex
-from jam.types.base.sequences.vector import decodable_vector, Vector
-from jam.work_package.stores.mappings import ErasureAssurerMap
 
 
-@decodable_vector(SegmentIndex)
-class SegmentIndexes(Vector[SegmentIndex]):
-    ...
+SegmentIndexes = TypedVector[SegmentIndex]
 
-@decodable_dataclass
-@dataclass
-class ShardRequest(Codable, JsonSerde):
+@structure
+class Query:
     erasure_root : ErasureRoot
     shard_Index: ShardIndex
-    length : Int
     seg_indexes : SegmentIndexes
 
+Queries = TypedVector[Query]
 
-@decodable_vector(Bytes)
-class Justification(Vector[Bytes]):
-    ...
+@structure
+class CE139Data:
+    len: Uint[32]
+    queries: Queries
 
-@decodable_vector(Justification)
-class Justifications(Vector[Justification]):
-    ...
+    @property
+    def is_valid(self):
+        if len(self.queries.encode()) == self.len:
+            return True
+        return False
 
-@decodable_vector(SegmentShard)
-class Response(Vector[SegmentShard]):
-    ...
+@structure()
+class CE139Response:
+    len: Uint[32]
+    s_shards: SegmentsShard
 
+    @property
+    def is_valid(self):
+        if len(self.s_shards.encode()) == self.len:
+            return True
+        return False
 
-@decodable_dataclass
-@dataclass
-class ShardsWithJustifications(Codable, JsonSerde):
-    shards: Response
-    justifications: Justifications
+@structure
+class CE140Justification:
+    len: Uint[32]
+    justification: Justification
 
+    @property
+    def is_valid(self):
+        if len(self.justification.encode()) == self.len:
+            return True
+        return False
 
-@decodable_vector(ShardRequest)
-class CE139Data(Vector[ShardRequest]):
-    ...
+CE140Data = CE139Data
 
 
 class SegmentShardRequestBase(NetworkProtocol):
@@ -66,36 +68,45 @@ class SegmentShardRequestBase(NetworkProtocol):
         super().__init__()
         self._prefix = prefix
 
-    def transmit(self, node: Node, data: CE139Data):
-        logger.info(f"Sending segment shard request with prefix {self._prefix}")
-        stream = self._prefix.encode() + data.encode()
+    async def transmit(self, node: Node, data: CE139Data):
+        """Transmit Erasure-Root and Shard Index from Guarantor to Assurer"""
 
-        d3l = settings.d3l
+        msg_a = data.queries.encode()
+        len_a = data.len.encode()
 
-        er_ar_da = ErasureAssurerMap(d3l)
+        logger.info(f"Sending segment shard request with")
 
-        responses = Vector([])
-        for req in data:
-            wr_hash, assurers = er_ar_da.get(req.erasure_root)
-            res = []
-            # for assurer in assurers:
+        for peer in node.peer_conn:
+            if int(peer.port) == 30333:
+                logger.info("requesting seg shard from 30333")
+                client = node.peer_conn[peer][1]
 
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-        for client in node.connections:
-            data = client.stream_and_close(message=stream)
-            responses.append(data)
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
 
-        return data
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+
+                if res is not None:
+                    return res
 
     @staticmethod
     def parse_request(buffer: bytes) -> CE139Data:
         data, _ = CE139Data.decode_from(buffer)
-        shard_request = cast(CE139Data, data)
-        return shard_request
+        data = cast(CE139Data, data)
 
-    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
+        if not data.is_valid:
+            raise NetworkingError(Code.INVALID_DATA)
+
+        return data
+
+    def req_intercept(self, stream_id: int, server: QuicProtocol):
         ...
 
-    def client_intercept(self, node: Node, buffer: bytes, stream_id: int):
+    def res_intercept(self, stream_id: int, client: QuicProtocol):
         ...
 

@@ -1,17 +1,17 @@
-from jam.config.settings import settings
-from jam.network.protocols.ce_139_base import SegmentShardRequestBase, Response
+from tsrkit_types import Uint
 from typing import cast
 
+from jam.config.settings import settings
+from jam.network.base.quic import QuicProtocol
+from jam.network.protocols.ce_139_base import SegmentShardRequestBase, CE139Response
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
+
 from jam.config.logging import logger
-from jam.network.quic import QuicServerProtocol
 
 from jam.network.base.protocol import PrefixType
-from jam.storage.db.kv import KVStore
 from jam.types.work.shard import SegmentsShard
 from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.segments import SegmentShardsDA
-from jam.types.base.integers.fixed import U16
-from tests.dummy.utils import create_dummy_bytes12
 
 
 class SegmentShardRequest(SegmentShardRequestBase):
@@ -33,27 +33,45 @@ class SegmentShardRequest(SegmentShardRequestBase):
     def __init__(self):
         super().__init__(PrefixType.CE139)
 
-    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
-        request = self.parse_request(buffer)
+    def req_intercept(self, stream_id: int, server: QuicProtocol):
+        """Intercept & Process Erasure-Root, Shard Index & Segment Indices on Assurer"""
+        buffer = server.stream_buffer[stream_id]
+
+        request = self.parse_request(buffer[1:])
         logger.info("Handling CE139 shard request")
         d3l = settings.d3l
         er_shards_db = ErasureShardsMap(d3l)
         ss_da = SegmentShardsDA(d3l)
 
         # Fetching segments...
-        response = Response()
-        for item in request:
-            ss_key = er_shards_db.get_ss_root(root=item.erasure_root, shard_index=item.shard_Index)
+        shards = SegmentsShard([])
+        for query in request.queries:
+            ss_key = er_shards_db.get_ss_root(root=query.erasure_root, shard_index=query.shard_Index)
             seg_shards: SegmentsShard = ss_da.get(root=ss_key.segment_shard_root)[0]
-            for index in item.seg_indexes:
-                response.append(seg_shards[index])
+            for index in query.seg_indexes:
+                shards.append(seg_shards[index])
 
-        ack = self._prefix.encode() + response.encode()
-        server.stream_and_close(stream_id, ack)
+        # Return requested shards
+        msg_a = shards.encode()
+        len_a = Uint[32](len(msg_a)).encode()
 
-    def client_intercept(self, node: Node, buffer: bytes, stream_id: int) -> Response:
-        response, _ = Response.decode_from(buffer)
-        response = cast(Response, response)
-        logger.info(f"Received CE139 shard response: {response}")
+        server.stream_and_keep_open(len_a, stream_id)
+        server.stream_and_close(msg_a, stream_id)
 
-        return response
+    def res_intercept(self, stream_id: int, client: QuicProtocol) -> SegmentsShard | None:
+        """Intercept [Segment Shard]"""
+        buffer = client.stream_buffer[stream_id]
+
+        try:
+            data, _ = CE139Response.decode_from(buffer[1:])
+            data = cast(CE139Response, data)
+            if not data or not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
+
+            logger.info(f"Received CE139 segment shards: {data.s_shards}")
+
+            return data.s_shards
+
+        except Exception as e:
+            logger.error(Code.BAD_RESPONSE)
+            return None

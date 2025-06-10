@@ -1,76 +1,36 @@
 """Segment related types for the JAM protocol."""
+from tsrkit_types import Uint, Dictionary, structure, Bytes, TypedVector, TypedArray
 
-from dataclasses import dataclass
-
-from jam.types.base.dictionary import decodable_dictionary, Dictionary
-from jam.types.base.integers import Int, U16
-from jam.types.base.sequences.vector import decodable_vector, Vector
-from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.base.sequences.bytes.byte_array import decodable_bytearray, ByteArray
+from jam.types.protocol.crypto import OpaqueHash
 from jam.types.protocol.core import WorkReportHash, ValidatorIndex, ExportsRoot
-from jam.types.work.refine_context import OpaqueHashes
 
 from jam.utils.constants import SEGMENT_SIZE
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json import JsonSerde
 
+SegmentIndex = Uint[16]
 
-@decodable_bytearray(SEGMENT_SIZE)
-class ByteArray4104(ByteArray):
-    ...
+Segment = TypedArray[int, SEGMENT_SIZE]
+Segments = TypedVector[Segment]
+MultiSegments = TypedVector[Segments]
 
-Segment = ByteArray4104
-SegmentIndex = U16
+SegmentDict = Dictionary[ExportsRoot, Segments]
 
-@decodable_vector(Segment)
-class Segments(Vector[Segment]):
-    ...
-
-@decodable_vector(Segments)
-class MultiSegments(Vector[Segments]):
-    ...
-
-@decodable_dictionary(key_type=ExportsRoot, value_type=Segments)
-class SegmentDict(Dictionary[ExportsRoot, Segments]):
-    ...
-
-@decodable_dataclass
-@dataclass
-class ProvedSegments(Codable, JsonSerde):
+@structure
+class ProvedSegments:
     segment: Segments
     proof: Segments
 
-@decodable_vector(ValidatorIndex)
-class Assurers(Vector[ValidatorIndex]):
-    ...
+Assurers = TypedVector[ValidatorIndex]
 
-@decodable_dataclass
-@dataclass
-class ReportAssurers(Codable, JsonSerde):
+@structure
+class ReportAssurers:
     report_hash: WorkReportHash
     assurers: Assurers
 
 Extrinsic = Bytes
 
-@decodable_vector(element_type=Extrinsic)
-class Extrinsics(Vector[Extrinsic]):
-    ...
+Extrinsics = TypedVector[Extrinsic]
+MultiExtrinsics = TypedVector[Extrinsics]
 
-@decodable_vector(element_type=Extrinsics)
-class MultiExtrinsics(Vector[Extrinsics]):
-    ...
-
-@decodable_dataclass
-@dataclass
-class Justification(Codable, JsonSerde):
-    length: U16
-    justification: OpaqueHashes
-
-@decodable_vector(element_type=Justification)
-class Justifications(Vector[Justification]):
-    ...
-
-@decodable_vector(element_type=Justifications)
-class MultiJustifications(Vector[Justifications]):
-    ...
+Justification = TypedVector[OpaqueHash]
+Justifications = TypedVector[Justification]
+MultiJustifications = TypedVector[Justifications]

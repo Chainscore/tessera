@@ -1,10 +1,10 @@
 import json
 import asyncio
-import threading
 from math import ceil
 from typing import Tuple
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from tsrkit_types import ByteArray, Vector, Uint, Null, Bytes
 
 from jam.config.chainspec import chain_config
 from jam.config.logging import logger
@@ -13,21 +13,14 @@ from jam.config.settings import settings
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
 
-from jam.types.base import Null
+from jam.types.block.extrinsics.guarantees import ValidatorSignatures, ValidatorSignature
 
-from jam.types.base.integers.general import Int
-from jam.types.base.integers.fixed import U8, U16, U64, U32
-from jam.types.base.sequences.bytes import Bytes, Byte, ByteArray12
-from jam.types.base.sequences.vector import Vector
-
-from jam.types.extrinsics import ValidatorSignature
-from jam.types.extrinsics.guarantees import ValidatorSignatures
-
-from jam.types.protocol.core import CoreIndex, Gas, TimeSlot, ExportsRoot
+from jam.types.protocol.core import CoreIndex, Gas, TimeSlot, ExportsRoot, ValidatorIndex
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
 
+from jam.types.work import WorkReport, SegmentRootLookup, WorkPackageSpec, WorkResults
 from jam.types.work.item import WorkItem
-from jam.types.work.package import WorkPackage
+from jam.types.work.package import WorkPackage, WorkPackageBundle
 from jam.types.work.manifest import (
     Segments,
     Segment,
@@ -44,18 +37,13 @@ from jam.types.work.shard import (
     SegmentsShardUnit,
     ShardKey, BundleShard, ShardIndex, SegmentShard
 )
-from jam.types.work.report import (
+from jam.types.work.execution import (
     WorkResult,
-    RefineLoad,
-    WorkResults,
     WorkExecResult,
-    WorkReport,
-    WorkPackageSpec,
-    SegmentRootLookup,
-    WorkPackageBundle
+    RefineLoad
 )
-from jam.utils.benchmark import benchmark
 
+from jam.utils.benchmark import benchmark
 from jam.utils.constants import BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE
 
 
@@ -78,15 +66,13 @@ class Processor:
 
     node: Node
     merkle: BMRFunctions
-    # transmit_task: Opt
-
     def __init__(self, node: Node):
         self.merkle = BMRFunctions()
         self.node = node
         self.transmit_task = None
 
     @staticmethod
-    def zero_padding(value: Bytes, n: Int):
+    def zero_padding(value: ByteArray, n: Uint):
         """
         Zero Padding function P defined in Eqn 14.17
         Ensures that the length of individual byte array becomes a multiple of a given integer n.
@@ -94,7 +80,7 @@ class Processor:
         Source:
             https://graypaper.fluffylabs.dev/#/cc517d7/1c08011c2d01?v=0.6.5
         Args:
-            value (Bytes) : Octet Array to be padded.
+            value (ByteArray) : Octet Array to be padded.
             n (Int) : The target block size. Each element will be padded to a length that is a multiple of n
         Returns:
             New list containing padded byte arrays. Each element's length is now a multiple of n, padded with zeroes at the end.
@@ -104,7 +90,7 @@ class Processor:
         padding = n - (((length + n - 1) % n) + 1)
 
         for i in range(padding):
-            value.append(Byte(0))
+            value.append(0)
 
         return value
 
@@ -126,10 +112,10 @@ class Processor:
         for x in range(page_count):
             path = self.merkle.merkle_path_fn(values=segments, size=6, index=x)
             leaf = self.merkle.leaf_page_fn(values=segments, size=6, index=x)
-            merkle_path = bytes(len(path)) + Vector(path).encode()
+            merkle_path = bytes(len(path)) + path.encode()
             leaf =  bytes(len(leaf)) + leaf.encode()
 
-            segment_proof = Segment(self.zero_padding(Bytes(merkle_path + leaf), SEGMENT_SIZE))
+            segment_proof = Segment(self.zero_padding(ByteArray(merkle_path + leaf), SEGMENT_SIZE))
             pages.append(segment_proof)
 
         return pages
@@ -148,15 +134,15 @@ class Processor:
         Returns:
             Work Digest
         """
-        extrinsic_size: U64 = U64(0)
+        extrinsic_size: Uint = Uint(0)
         for i in item.extrinsic:
             extrinsic_size = extrinsic_size + i.len
 
         payload_hash = Hash.blake2b(bytes(item.payload))
 
-        imports_count: U16 = U16(len(item.import_segments))
-        exports_count: U16 = U16(item.export_count)
-        extrinsic_count: U8 = U8(len(item.extrinsic))
+        imports_count: Uint = Uint(len(item.import_segments))
+        exports_count: Uint = Uint(item.export_count)
+        extrinsic_count: Uint = Uint(len(item.extrinsic))
 
         refine_load = RefineLoad(gas_used=gas, imports=imports_count, exports=exports_count,
                                  extrinsic_count=extrinsic_count, extrinsic_size=extrinsic_size)
@@ -213,7 +199,7 @@ class Processor:
                 r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
             # ------------------------------------------ ----------------- ------------------------------------------
 
-            segment = Segment([Byte(0)] * 4104)
+            segment = Segment([bytes(0)] * 4104)
             segment_length = w.export_count
             zero_segments = Segments([segment for _ in range(segment_length)])
 
@@ -261,7 +247,7 @@ class Processor:
             specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
 
         logger.info(f"Compiling Report..")
-        report = WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Gas(g))
+        report = WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=hash(p.authorizer), auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Gas(g))
 
         return report
 
@@ -302,7 +288,7 @@ class Processor:
         logger.info(f"Building bundle shards..")
 
         with benchmark("padding bundle"):
-            padded_wp_bundle = self.zero_padding(Bytes(wp_bundle), BASIC_ERASURE_SIZE)
+            padded_wp_bundle = self.zero_padding(ByteArray(wp_bundle), BASIC_ERASURE_SIZE)
 
         with benchmark("e coding bundle"):
             bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
@@ -360,7 +346,7 @@ class Processor:
             for si, ss in enumerate(segments_shards):
                 ss_root = self.merkle.wb_merkle_fn(ss)
 
-                ss_unit = SegmentsShardUnit(U16(si), ss)
+                ss_unit = SegmentsShardUnit(Uint[16](si), ss)
 
                 # Store Segments Shard
                 s_shards_da.put(ss_root, ss_unit)
@@ -388,8 +374,9 @@ class Processor:
             er_shards_da.put_batch(u, ss_roots, bs_hashes)
 
         logger.info(f"Compiling availability specification..")
+
         with benchmark("compiled spec"):
-            spec = WorkPackageSpec(hash=package_hash, length=U32(l), erasure_root=u, exports_root=e, exports_count=U16(n))
+            spec = WorkPackageSpec(hash=package_hash, length=Uint[32](l), erasure_root=u, exports_root=e, exports_count=Uint[16](n))
 
         return spec
 
@@ -434,8 +421,10 @@ class Processor:
         # Distribute Bundle to other Guarantors CE134
         CE134 = WorkPackageSharing()
 
-        core_segment = CoreSegment(core_index=core, segment_root_map=lookup, length=Int(len(lookup)))
-        data = CE134Data(work_package_bundle=bundle, core_segment=core_segment)
+        core_segment = CoreSegment(core_index=core, segment_root_map=lookup)
+        map_len = len(core_segment.encode())
+        bundle_len = len(bundle.encode())
+        data = CE134Data(map_len=map_len, work_package_bundle=bundle, bundle_len=bundle_len, core_segment=core_segment)
 
         loop = asyncio.get_running_loop()
         loop.set_task_factory(asyncio.eager_task_factory)
@@ -479,7 +468,7 @@ class Processor:
         # Sign the Guarantee
         sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
-        og_guarantee = ValidatorSignature(validator_index=U16(0), signature=sign)
+        og_guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=sign)
 
         # Check majority & Build guarantees:
         guarantees = ValidatorSignatures([og_guarantee])
@@ -488,17 +477,22 @@ class Processor:
         responses = await self.transmit_task
         logger.info("✅ Received responses: %s", responses)
 
+        from jam.network.protocols.ce_134 import OptCred
         for response in responses:
-            if response.work_report_hash == wr_hash:
-                guarantee = ValidatorSignature(validator_index=U16(0), signature=response.ed25519_signature)
-                guarantees.append(guarantee)
+            if response != OptCred(Null):
+                if response.work_report_hash == wr_hash:
+                    guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=response.ed25519_signature)
+                    guarantees.append(guarantee)
 
         # Distribute Guaranteed WR to Validators CE135
         logger.info(f"Distributing Work Report to other validators..")
         if len(guarantees) > 1:
+            from jam.network.protocols.ce_135 import GuaranteedWR
             CE135 = WorkReportDistribution()
-            data = CE135Data(report=wr, slot=TimeSlot(0), len=Int(len(guarantees)),
-                             signatures=guarantees)
+            # TODO: Fix timeslot
+            gwr = GuaranteedWR(report=wr, slot=TimeSlot(0), signatures=guarantees)
+            r_len = len(gwr.encode())
+            data = CE135Data(len=r_len, guaranteed_wr=gwr)
 
             acks = await CE135.transmit(node=self.node, data=data)
             print("received acks", acks)

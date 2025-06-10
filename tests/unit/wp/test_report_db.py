@@ -1,11 +1,12 @@
-from jam.storage.db.kv import KVStore
+from rockstore import RockStore
+
+from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
+from jam.utils.dummy.utils import create_dummy_bytes32
 from jam.work_package.stores.reports import ReportsDA
-from tests.dummy.dummy_extrinsics import create_dummy_work_report
-from tests.dummy.utils import create_dummy_bytes32
 
 
 def test_report_db(db_path):
-    db = KVStore(db_path)
+    db = RockStore(db_path)
     d3l = ReportsDA(db)
 
     wr_hash = create_dummy_bytes32()

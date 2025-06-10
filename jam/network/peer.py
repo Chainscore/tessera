@@ -20,9 +20,27 @@ class Peer:
 
         raise ValueError("No validator found with matching bandersnatch key.")
 
+    @property
+    def host(self):
+        return self.data.metadata.host
+
+    @property
+    def port(self):
+        return self.data.metadata.port
+
+    @property
+    def name(self):
+        return self.data.metadata.name
+
     def __init__(self, id: str, data: ValidatorData):
         self.id = id
         self.data = data
 
     def __repr__(self):
         return f"Peer(host={self.data.metadata.host}, port={self.data.metadata.port}, name={self.data.metadata.name})"
+
+    def __str__(self):
+        return f"Peer({self.data.metadata.host}:{self.data.metadata.port})"
+
+    def __int__(self):
+        return f"Peer({self.data.metadata.port})"
