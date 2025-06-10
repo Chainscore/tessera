@@ -1,4 +1,6 @@
 import time
+
+from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchParams
 from jam.ring_vrf.ring_proof.pcs.load_powers import g1_points, g2_points
 start_time=time.time()
 from sympy import mod_inverse
@@ -54,8 +56,11 @@ class Verify:
         #can even put as separate function
         self.t= Transcript(S_PRIME, b"Bandersnatch_SHA-512_ELL2")
         self.cur_t, self.alpha_list = phase1_alphas(self.t, self.verifier_key, self.relation_to_proove,list(H.to_int(nm(cmt)) for cmt in self.proof_ptr[:4]))  #cb, caccip, caccx, caccy
+
+
         self.cur_t, self.zeta_p = phase2_eval_point(self.cur_t, H.to_int(nm(self.proof_ptr[-4])))
         self.V_list = phase3_nu_vector(self.cur_t, self.proof_ptr[4:11], self.proof_ptr[-3])
+
 
     # def recover_fiat_shamir_challeneges(self):
     #     """
@@ -88,20 +93,32 @@ class Verify:
         c1_zeta = (negated * vanishing_term) % MOD
 
         # Constraint 2
-        term1 = ((self.accx_zeta - self.px_zeta) ** 2) % MOD
-        term1 = (term1 * ((self.accx_zeta + self.px_zeta) % MOD)) % MOD
-        term2 = ((self.py_zeta - self.accy_zeta) ** 2) % MOD
-        c2_inner = (term1 - term2) % MOD
-        c2 = (self.b_zeta * c2_inner) % MOD
-        c2 = (c2 - ((1 - self.b_zeta) * self.accy_zeta) % MOD) % MOD
-        c2_zeta = (c2 * ((zeta - D[-4]) % MOD)) % MOD
+        # term1 = ((self.accx_zeta - self.px_zeta) ** 2) % MOD
+        # term1 = (term1 * ((self.accx_zeta + self.px_zeta) % MOD)) % MOD
+        # term2 = ((self.py_zeta - self.accy_zeta) ** 2) % MOD
+        # c2_inner = (term1 - term2) % MOD
+        # c2 = (self.b_zeta * c2_inner) % MOD
+        # c2 = (c2 - ((1 - self.b_zeta) * self.accy_zeta) % MOD) % MOD
+        # c2_zeta = (c2 * ((zeta - D[-4]) % MOD)) % MOD
 
         # Constraint 3
-        term1 = ((self.accx_zeta - self.px_zeta) * self.accy_zeta) % MOD
-        term2 = ((self.py_zeta - self.accy_zeta) * self.accx_zeta) % MOD
-        c3 = (self.b_zeta * ((term1 + term2) % MOD)) % MOD
-        c3 = (c3 - ((1 - self.b_zeta) * self.accx_zeta) % MOD) % MOD
-        c3_zeta = (c3 * ((zeta - D[-4]) % MOD)) % MOD
+        # term1 = ((self.accx_zeta - self.px_zeta) * self.accy_zeta) % MOD
+        # term2 = ((self.py_zeta - self.accy_zeta) * self.accx_zeta) % MOD
+        # c3 = (self.b_zeta * ((term1 + term2) % MOD)) % MOD
+        # c3 = (c3 - ((1 - self.b_zeta) * self.accx_zeta) % MOD) % MOD
+        # c3_zeta = (c3 * ((zeta - D[-4]) % MOD)) % MOD
+
+
+        #constraint 1 and 2 new
+        x1, y1 = self.accx_zeta, self.accy_zeta
+        x2, y2 = self.px_zeta, self.py_zeta
+        x3, y3=0,0
+        b = self.b_zeta
+        coeff_a = BandersnatchParams.EDWARDS_A
+        c2= (b * (x3 * (y1 * y2 + coeff_a * x1 * x2) - (x1 * y1 + x2 * y2))+ (1- b) *(x3 - x1) ) %MOD
+        c2_zeta= (c2 * (zeta- D[-4])%MOD) %MOD
+        c3 =(b * (y3 * (x1 * y2 - x2 * y1) - (x1 * y1 - x2 * y2)) + (1 - b) *(y3 - y1)) % MOD
+        c3_zeta=( c3 *(zeta- D[-4])%MOD) %MOD
 
         # Constraint 4
         c4_zeta = (self.b_zeta * (1 - self.b_zeta)) % MOD
@@ -185,27 +202,61 @@ class Verify:
 
         Cl1 = multiply(self.Caccip, (zeta - self.D[-4]) % curve_order)
 
-        Cl2 = multiply(
-            add(
-                multiply(self.Caccx, (self.b_zeta * pow(self.accx_zeta - self.px_zeta, 2, curve_order)) % curve_order),
-                multiply(self.Caccy, (1 - self.b_zeta) % curve_order)
-            ),
-            (zeta - self.D[-4]) % curve_order
-        )
+        # Cl2 = multiply(
+        #     add(
+        #         multiply(self.Caccx, (self.b_zeta * pow(self.accx_zeta - self.px_zeta, 2, curve_order)) % curve_order),
+        #         multiply(self.Caccy, (1 - self.b_zeta) % curve_order)
+        #     ),
+        #     (zeta - self.D[-4]) % curve_order
+        # )
 
-        Cl3 = multiply(
-            add(
-                multiply(
-                    self.Caccx,
-                    (self.b_zeta * (self.accy_zeta - self.py_zeta) + (1 - self.b_zeta)) % curve_order
-                ),
-                multiply(
-                    self.Caccy,
-                    (self.b_zeta * (self.accx_zeta - self.px_zeta)) % curve_order
-                )
-            ),
-            (zeta - self.D[-4]) % curve_order
-        )
+        #Cl2
+        x1, y1 = self.accx_zeta, self.accy_zeta
+        x2, y2= self.px_zeta, self.py_zeta
+        b= self.b_zeta
+        coeff_a= BandersnatchParams.EDWARDS_A
+        #
+        C_acc_x= (b *(y1*y2 + (coeff_a * x1 *x2)) % S_PRIME + (1-b) %S_PRIME ) % S_PRIME
+        C_acc_y=0
+        C_acc_x_f= C_acc_x * (zeta - self.D[-4]) % curve_order
+        C_acc_y_f = C_acc_y* (zeta - self.D[-4]) % curve_order
+        #
+        term1= multiply( self.Caccx, C_acc_x_f)
+        term2= multiply(self.Caccy,C_acc_y_f)
+        # print("Cacc_x_f:", C_acc_x_f)
+        # print("Cacc_y_f:", C_acc_y_f)
+        Cl2=add(term1, term2)
+        # print("Resultant L2:" ,Cl2)
+        # return Cl2
+
+        # Cl3 = multiply(
+        #     add(
+        #         multiply(
+        #             self.Caccx,
+        #             (self.b_zeta * (self.accy_zeta - self.py_zeta) + (1 - self.b_zeta)) % curve_order
+        #         ),
+        #         multiply(
+        #             self.Caccy,
+        #             (self.b_zeta * (self.accx_zeta - self.px_zeta)) % curve_order
+        #         )
+        #     ),
+        #     (zeta - self.D[-4]) % curve_order
+        # )
+
+
+        #c3
+        b= self.b_zeta
+        x1, y1= self.accx_zeta, self.accy_zeta
+        x2, y2= self.px_zeta, self.py_zeta
+        C_acc_x=0
+        C_acc_y=((b*(x1*y2 - x2*y1)) %S_PRIME+(1- b) %S_PRIME) %S_PRIME
+        C_acc_x *=(zeta - self.D[-4]) % curve_order
+        C_acc_y*=(zeta - self.D[-4]) % curve_order
+
+        term1= multiply(self.Caccx, C_acc_x)
+        term2=multiply(self.Caccy, C_acc_y)
+        Cl3= add(term1, term2)
+
 
         Cl_list = [Cl1, Cl2, Cl3]
 
@@ -218,5 +269,4 @@ class Verify:
 
     def is_signtaure_valid(self):
         """If both the verifications are true then sign is valid"""
-
         return self.evaluation_of_quotient_poly_at_zeta() and self.evaluation_of_linearization_poly_at_zeta_omega()
