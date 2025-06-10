@@ -1,4 +1,6 @@
-from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchParams
+from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchParams, BandersnatchCurve, BandersnatchPoint
+from jam.ring_vrf.curve.twisted_edwards.te_affine_point import TEAffinePoint
+from jam.ring_vrf.curve.twisted_edwards.te_curve import TECurve
 from jam.ring_vrf.ring_proof.constants import S_PRIME
 
 from typing import  Tuple,List, Any
@@ -14,6 +16,11 @@ class TwistedEdwardCurve:
                 result = TwistedEdwardCurve.add(result, addend)
             addend = TwistedEdwardCurve.point_double(addend)
             k >>= 1
+
+        # pnt= BandersnatchPoint(point[0], point[1])
+        # pnt_scalar= pnt*k
+        # result= (pnt_scalar.x, pnt_scalar.y)
+
         return result
 
 
