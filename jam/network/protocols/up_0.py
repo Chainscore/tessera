@@ -2,6 +2,8 @@ from typing import cast, TYPE_CHECKING
 
 from jam.config.logging import get_logger
 from tsrkit_types.struct import structure
+
+from jam.network.protocols.ce_128 import BlockRequest
 from jam.types.block import Block, Header
 
 if TYPE_CHECKING:
@@ -118,6 +120,9 @@ class BlockAnnouncement(NetworkProtocol):
             
             # Process new header
             # If it is not in our DB, request [header.slot - latest_timeslot] blocks from peer
+            logger.debug("Received header, requesting its full block...", slot=data.header.slot)
+
+            BlockRequest().transmit()
 
             # Process goes here
             
