@@ -7,6 +7,8 @@ from jam.ring_vrf.ring_proof.constants import S_PRIME
 
 __all__ = ["serialize"]
 
+from jam.ring_vrf.ring_proof.short_weierstrass.banders import TwistedEdwardCurve
+
 
 def serialize(obj: Any) -> bytes:
     """Serialize objects into bytes format exactly as in the original implementation."""
@@ -20,6 +22,7 @@ def serialize(obj: Any) -> bytes:
             raise ValueError("Integer too large to serialize in 48 bytes")
 
     elif isinstance(obj, tuple):
+
         if len(obj) == 2 and (obj[0].bit_length() // 8 + obj[1].bit_length() // 8) > 64:
             # G1 point (x, y) where both are integers
             x, y = obj
@@ -27,8 +30,9 @@ def serialize(obj: Any) -> bytes:
         else:
             x, y = obj
             # Uncompressed: serialize x, y, and flag
-            flag = b'\x80' if y > (S_PRIME - 1) // 2 else b'\x00'
-            return serialize(x) + serialize(y) + flag
+            flag = b'\x01' if x > (S_PRIME - 1) // 2 else b''
+            return serialize(x) + serialize(y)
+
 
     elif isinstance(obj, list):
         # List of items
