@@ -102,7 +102,7 @@ class BlockAnnouncement(NetworkProtocol):
             up_stream, conn = node.peer_conn[peer]
             conn.stream_and_keep_open(announcement.encode(), up_stream)
 
-    def server_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercepting & Process new blocks from peers."""
         buffer = server.stream_buffer[stream_id]
         peer = server.peer
@@ -151,7 +151,7 @@ class BlockAnnouncement(NetworkProtocol):
             server._quic.close(error_code=0x4, reason_phrase="Multiple UP streams are not allowed.")
             return
 
-    def client_intercept(self, stream_id: int, client: QuicProtocol):
+    def res_intercept(self, stream_id: int, client: QuicProtocol):
         raise NotImplementedError("Client Intercept not available for UP protocols")
 
 
