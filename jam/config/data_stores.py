@@ -5,6 +5,11 @@ class DataStores:
     _audit_db: RockStore | None
     _d3l: RockStore | None
 
+    def __init__(self):
+        self._main_db = None
+        self._audit_db = None
+        self._d3l = None
+
     @property
     def main_db(self) -> RockStore:
         if not self._main_db:

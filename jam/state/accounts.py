@@ -225,6 +225,9 @@ class TimestampsView:
         return Timestamps.decode_from(data)[0] if data else data
 
     def __setitem__(self, key: LookupTable, value: Timestamps):
+        print("debugging:", key)
+        # key = LookupTable.decode_from(key)[0]
+        print(key)
         storage_key = construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))
         v = value.encode()
 

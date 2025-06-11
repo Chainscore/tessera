@@ -1,6 +1,6 @@
 import asyncio
 import json
-
+from typing import cast
 
 from tsrkit_types.bytes import Bytes
 
@@ -63,23 +63,31 @@ async def main(
         # Initialize components
         genesis = json.load(open(genesis_path))
         peerlist = genesis["peers"]
-        peers = [
-            Peer(
+        peers = []
+
+        for pr in peerlist:
+            raw = bytes.fromhex(pr["metadata"][2:])  # strip "0x" and decode
+            metadata = ValidatorMetadata(
+                name=Bytes[10](raw[0:10]),
+                protocol=U16.from_bytes(raw[10:12]),
+                host=IPAddress([U8(b) for b in raw[12:16]]),
+                port=U16.from_bytes(raw[16:18]),
+                buffer=Bytes[110](raw[18:128])
+            )
+
+            if metadata.port == port:
+                continue
+
+            peer = Peer(
                 id=pr["id"],
                 data=ValidatorData(
-                    bandersnatch=BandersnatchPublic(pr["bandersnatch"]),
-                    ed25519=Ed25519Public(pr["ed25519"]),
-                    bls=BlsPublic(pr["bls"]),
-                    metadata=ValidatorMetadata(
-                        name=ValidatorName(pr["metadata"]["name"]),
-                        host=IPAddress([U8(val) for val in pr["metadata"]["host"]]),
-                        port=U16(pr["metadata"]["port"]),
-                    )
+                    bandersnatch=BandersnatchPublic(bytes.fromhex(pr["bandersnatch"][2:])),
+                    ed25519=Ed25519Public(bytes.fromhex(pr["ed25519"][2:])),
+                    bls=BlsPublic(bytes.fromhex(pr["bls"][2:])),
+                    metadata=metadata
                 )
             )
-            for pr in peerlist
-            if int(pr["metadata"]["port"]) != port
-        ]
+            peers.append(peer)
 
         # Load validator data from seeds
         my_keys = json.load(open("seeds/keys.json"))[str(port)]
@@ -95,7 +103,7 @@ async def main(
                 )
             )
             .point_to_string()
-            .hex()
+            # .hex()
         )
         my_data = ValidatorData(
             bandersnatch_public,
@@ -103,7 +111,7 @@ async def main(
             BlsPublic(bytes(144)),
             ValidatorMetadata(
                 name=Bytes[10](bytes(10)),
-                protocol=Uint[16](2 ** 16),
+                protocol=Uint[16](2 ** 15),
                 host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
                 port=U16(port),
             ),
@@ -143,13 +151,13 @@ async def main(
             bytecode = code.encode()
             service_code = Bytes(b"").encode() + bytecode
             code_hash = Hash.blake2b(service_code)
+            print(code_hash)
 
-            state.delta[ServiceId(42)] = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000),
+            state.delta[ServiceId(42)].service = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000),
                                                                   gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
                                                                   num_o=Ao(0))
-            state.delta[ServiceId(42)].lookup[code_hash] = Bytes(service_code)
-            state.delta[ServiceId(42)].timestamps[
-                LookupTable(hash=code_hash, length=BlobLength(len(service_code)))] = Timestamps([state.tau])
+            state.delta[ServiceId(42)].service.code_hash = Bytes(service_code)
+            state.delta[ServiceId(42)].lookup[LookupTable(hash=code_hash, length=BlobLength(len(service_code)))] = Timestamps([state.tau])
 
             wi_pc = bytes(
                 [0, 0, 90, 51, 12, 149, 27, 0, 112, 254, 124, 117, 6, 40, 2, 200, 199, 3, 149, 51, 7, 200, 203, 4, 130,
@@ -165,11 +173,11 @@ async def main(
             wi_code_hash = Hash.blake2b(wi_service_code)
             wi_service = ServiceId(1)
 
-            state.delta[wi_service] = AccountMetadata(code_hash=wi_code_hash, balance=Balance(1_000_000),
+            state.delta[wi_service].service = AccountMetadata(code_hash=wi_code_hash, balance=Balance(1_000_000),
                                                       gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
                                                       num_o=Ao(0))
-            state.delta[wi_service].lookup[wi_code_hash] = Bytes(wi_service_code)
-            state.delta[wi_service].timestamps[
+            state.delta[wi_service].service.code_hash = Bytes(wi_service_code)
+            state.delta[wi_service].lookup[
                 LookupTable(hash=wi_code_hash, length=BlobLength(len(wi_service_code)))] = Timestamps([state.tau])
 
             block_producer = BlockProducer(tsr_node, main_db)
