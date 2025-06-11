@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchParams
 # from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
 from jam.ring_vrf.ring_proof.constants import SeedPoint
 from dataclasses import dataclass, field
@@ -119,39 +121,81 @@ class RingConstraintBuilder:
         if "c2x" in self._cache:
             return [self._cache["c2x"], self._cache["c3x"]]
         bx = self._b4
+        # print("bx radix 4:", self._b4)
         one_m_bx = vect_sub(1, bx, S_PRIME)
+
         accx_w = _shift(self._accx4)
         accy_w = _shift(self._accy4)
-        accx_m_px = vect_sub(self._accx4, self._px4, S_PRIME)
-        accx_m_px_sq = vect_mul(accx_m_px, accx_m_px, S_PRIME)
-        py_m_accy = vect_sub(self._py4, self._accy4, S_PRIME)
-        accx_w_m_accx = vect_sub(accx_w, self._accx4, S_PRIME)
-        term1 = vect_mul(
-            accx_m_px_sq,
-            vect_add(vect_add(self._accx4, self._px4, S_PRIME), accx_w, S_PRIME),
-            S_PRIME,
-        )
-        term2 = vect_mul(py_m_accy, py_m_accy, S_PRIME)
-        c2_base = vect_add(
-            vect_mul(bx, vect_sub(term1, term2, S_PRIME), S_PRIME),
-            vect_mul(one_m_bx, vect_sub(accy_w, self._accy4, S_PRIME), S_PRIME),
-            S_PRIME,
-        )
-        c2x = vect_mul(c2_base, _NOT_LAST, S_PRIME)
-        c3_base = vect_add(
-            vect_mul(
-                bx,
-                vect_sub(
-                    vect_mul(accx_m_px, vect_add(accy_w, self._accy4, S_PRIME), S_PRIME),
-                    vect_mul(py_m_accy, accx_w_m_accx, S_PRIME),
-                    S_PRIME,
-                ),
-                S_PRIME,
-            ),
-            vect_mul(one_m_bx, accx_w_m_accx, S_PRIME),
-            S_PRIME,
-        )
-        c3x = vect_mul(c3_base, _NOT_LAST, S_PRIME)
+        te_coeff_a= BandersnatchParams.EDWARDS_A #BandersnatchParams.EDWARDS_A % S_PRIME
+
+        # for simplicity
+        b=bx
+        x1, x2,x3=self._accx4, self._px4, accx_w
+        y1, y2, y3= self._accy4, self._py4, accy_w
+
+        # b(x_3(y_1. y_2 + ax_1 .x_2) - x_1.y_1 - y_2.x_2) + (1 - b)(x_3 - x_1) = 0
+        #=> b(x_3(y_1. y_2 + ax_1 .x_2) - (x_1.y_1 + y_2.x_2)) + (1 - b)(x_3 - x_1) = 0
+
+
+        y1_y2= vect_mul(y1, y2, S_PRIME)
+        a_x1_x2= vect_mul(te_coeff_a, vect_mul(x1, x2, S_PRIME), S_PRIME)
+        x1_y1= vect_mul(x1, y1, S_PRIME)
+        y2_x2= vect_mul(y2, x2, S_PRIME)
+        one_m_b=vect_sub(1, b, S_PRIME)
+        x3_m_x1= vect_sub(x3, x1, S_PRIME)
+
+        term1=vect_mul(x3, vect_add(y1_y2, a_x1_x2, S_PRIME), S_PRIME)
+        term2=vect_mul( b,vect_sub(term1 , vect_add(x1_y1, y2_x2, S_PRIME), S_PRIME), S_PRIME)
+        term3= vect_add(term2,vect_mul( one_m_b, x3_m_x1, S_PRIME), S_PRIME)
+        c2x= vect_mul(term3, _NOT_LAST, S_PRIME)
+
+        # print("c2x here", c2x)
+
+        # accx_m_px = vect_sub(self._accx4, self._px4, S_PRIME)
+        # accx_m_px_sq = vect_mul(accx_m_px, accx_m_px, S_PRIME)
+        # py_m_accy = vect_sub(self._py4, self._accy4, S_PRIME)
+        # accx_w_m_accx = vect_sub(accx_w, self._accx4, S_PRIME)
+        # term1 = vect_mul(
+        #     accx_m_px_sq,
+        #     vect_add(vect_add(self._accx4, self._px4, S_PRIME), accx_w, S_PRIME),
+        #     S_PRIME,
+        # )
+        #
+        # term2 = vect_mul(py_m_accy, py_m_accy, S_PRIME)
+        # c2_base = vect_add(
+        #     vect_mul(bx, vect_sub(term1, term2, S_PRIME), S_PRIME),
+        #     vect_mul(one_m_bx, vect_sub(accx_w, self._accx4, S_PRIME), S_PRIME),
+        #     S_PRIME,
+        # )
+        #
+        # c2x = vect_mul(c2_base, _NOT_LAST, S_PRIME)
+        # c3_base = vect_add(
+        #     vect_mul(
+        #         bx,
+        #         vect_sub(
+        #             vect_mul(accx_m_px, vect_add(accy_w, self._accy4, S_PRIME), S_PRIME),
+        #             vect_mul(py_m_accy, accx_w_m_accx, S_PRIME),
+        #             S_PRIME,
+        #         ),
+        #         S_PRIME,
+        #     ),
+        #     vect_mul(one_m_bx, accx_w_m_accx, S_PRIME),
+        #     S_PRIME,
+        # )
+        # c3x = vect_mul(c3_base, _NOT_LAST, S_PRIME)
+
+        # // b(y_3(x_1.y_2 - x_2.y_1) - x_1.y_1 + x_2.y_2) + (1 - b)(y_3 - y_1) = 0
+        #=> b(y_3(x_1.y_2 - x_2.y_1) - (x_1.y_1 - x_2.y_2) + (1 - b)(y_3 - y_1) = 0
+
+        x1_y2= vect_mul(x1, y2, S_PRIME)
+        x2_y1= vect_mul(x2, y1, S_PRIME)
+        y3_m_y1= vect_sub(y3, y1, S_PRIME)
+
+        term1= vect_mul(y3, vect_sub(x1_y2, x2_y1, S_PRIME), S_PRIME)
+        term2= vect_mul(b, vect_sub(term1, vect_sub(x1_y1, y2_x2, S_PRIME), S_PRIME), S_PRIME)
+        term3= vect_add( term2, vect_mul(one_m_b, y3_m_y1, S_PRIME), S_PRIME)
+        c3x= vect_mul(term3, _NOT_LAST, S_PRIME)
+
         self._cache.update({"c2x": c2x, "c3x": c3x})
         return [c2x, c3x]
 
@@ -171,7 +215,7 @@ class RingConstraintBuilder:
 
         # print("seed_here",(seed_x, seed_y))
 
-        rx_psx, ry_psy = self.Result_plus_Seed
+        rx_psx, ry_psy = self.Result_plus_Seed #try using Relation to proove
 
         # print("result here:", rx_psx, ry_psy)
 
@@ -186,6 +230,8 @@ class RingConstraintBuilder:
             vect_mul(vect_sub(self._accy4, ry_psy, S_PRIME), _LN4_RAD4, S_PRIME),
             S_PRIME,
         )
+
+
         self._cache.update({"c5x": c5x, "c6x": c6x})
         return [c5x, c6x]
 

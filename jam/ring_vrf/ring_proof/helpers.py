@@ -1,10 +1,8 @@
 from py_ecc.bls import point_compression
-from py_ecc.optimized_bls12_381 import FQ, is_on_curve
-
+from py_ecc.optimized_bls12_381 import FQ,FQ2, is_on_curve
 from jam.ring_vrf.ring_proof.constants import S_PRIME
 
 class Helpers:
-
     @staticmethod
     def knocker_delta(i, j):
         """"
@@ -68,6 +66,19 @@ class Helpers:
         return decompressed
 
     @staticmethod
+    def bls_g2_compress(g2_point):
+        if len(g2_point) == 3:
+            x,y,z=g2_point
+            point=(FQ2([x[0], x[1]]), FQ2([y[0], y[1]]), FQ2([z[0], z[1]]))
+        else:
+            x,y=g2_point
+            point=(FQ2([x[0], x[1]]), FQ2([y[0], y[1]]), FQ2([1, 0]))
+
+        #compress the point
+        compressed= point_compression.compress_G2(point)
+        return compressed[0].to_bytes(48, 'big').hex()+ compressed[1].to_bytes(48, 'big').hex()
+
+    @staticmethod
     # for fiat_shamir
     def to_int(tup):
         x, y = tup
@@ -91,12 +102,3 @@ class Helpers:
             return int.from_bytes(string, 'little')
         byts = bytes.fromhex(string)
         return int.from_bytes(byts, 'little')
-
-
-
-secret='01371ac62e04d1faaadbebaa686aaf122143e2cda23aacbaa4796d206779a501'
-print(int.from_bytes(bytes.fromhex(secret), 'little'))
-
-
-# l=[(1 << i) for i in range(100)]
-# print(l)
