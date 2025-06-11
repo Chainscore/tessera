@@ -151,7 +151,6 @@ async def main(
             bytecode = code.encode()
             service_code = Bytes(b"").encode() + bytecode
             code_hash = Hash.blake2b(service_code)
-            print(code_hash)
 
             state.delta[ServiceId(42)].service = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000),
                                                                   gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
