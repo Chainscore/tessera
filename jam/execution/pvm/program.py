@@ -23,7 +23,7 @@ class Program(Codable):
 
     z: int
     jump_table: List
-    instruction_set: List[int]
+    instruction_set: bytes
     offset_bitmask: List
     basic_blocks: List
 
@@ -108,8 +108,7 @@ class Program(Codable):
         total_size += Uint(len(self.instruction_set)).encode_size()
         for jump in self.jump_table:
             total_size += Uint[self.z * 8](jump).encode_size()
-        for instruction in self.instruction_set:
-            total_size += instruction.encode_size()
+        total_size += len(self.instruction_set)
         total_size += Bits[len(self.instruction_set)](self.offset_bitmask).encode_size()
         return total_size
 
@@ -134,9 +133,9 @@ class Program(Codable):
         for jump in self.jump_table:
             size = Uint[self.z * 8](jump).encode_into(buffer, current_offset)
             current_offset += size
-        for instruction in self.instruction_set:
-            size = instruction.encode_into(buffer, current_offset)
-            current_offset += size
+
+        buffer[current_offset:current_offset+len(self.instruction_set)] = self.instruction_set
+        current_offset+=len(self.instruction_set)
         size = Bits[len(self.instruction_set), "lsb"](self.offset_bitmask).encode_into(
             buffer, current_offset
         )
@@ -180,12 +179,8 @@ class Program(Codable):
             current_offset += size
             j.append(val)
 
-        c: List = []
-        for _ in range(c_len):
-            val, size = Uint[8].decode_from(buffer, current_offset)
-            bytes_read += size
-            current_offset += size
-            c.append(val)
+        c = buffer[current_offset:current_offset+c_len]
+        current_offset += c_len
 
         offset_bitmask, size = Bits[c_len, "lsb"].decode_from(
             buffer, current_offset

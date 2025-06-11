@@ -31,9 +31,10 @@ class Preimages:
             account = state.delta[preimage.requester]
             # If the preimage to add does not have lookup metadata, throw unneeded error
             hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(hashed_blob, BlobLength(len(preimage.blob)))
+            lookup_key = LookupTable(hash=hashed_blob, length=BlobLength(len(preimage.blob)))
+            print("lookup", account.lookup[lookup_key])
             if (
-                lookup_key not in account.lookup
+                account.lookup[lookup_key] is None
                 or len(account.lookup[lookup_key]) != 0
             ):
                 raise PreimageError(
@@ -48,7 +49,9 @@ class Preimages:
             lookup_key = LookupTable(hashed_blob, BlobLength(len(preimage.blob)))
 
             account.preimages[hashed_blob] = preimage.blob
-            account.lookup[lookup_key].append(block.header.slot)
+            metadata = account.lookup[lookup_key]
+            metadata.append(block.header.slot)
+            account.lookup[lookup_key] = metadata
             if preimage.blob is not None:
                 if preimage.requester not in state.pi.services:
                     state.pi.services[preimage.requester] = ServiceStat.empty()
@@ -73,7 +76,7 @@ class Preimages:
             # Take VRF output of the signature and sort by it
             return (
                 int(preimage.requester),
-                str(preimage.blob),
+                preimage.blob,
             )
 
         sorted_preimages = deepcopy(preimages)

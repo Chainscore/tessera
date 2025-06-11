@@ -15,13 +15,13 @@ def make_account_prop(field):
         data = self.DB.get(bytes(construct_state_key((255, self.id))))
         if data is None:
             return None
-        meta = AccountMetadata.decode_from(data)[0]
+        meta = AccountMetadata.decode(data)
         return getattr(meta, field)
     def setter(self, value):
         data = self.DB.get(bytes(construct_state_key((255, self.id))))
         if data is None:
             return
-        meta = AccountMetadata.decode_from(data)[0]
+        meta = AccountMetadata.decode(data)
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()  # Adjust encode as needed
         self.DB.put(bytes(k), v)
@@ -222,7 +222,7 @@ class TimestampsView:
     def __getitem__(self, key: LookupTable):
         storage_key = construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))
         data = self.DB.get(bytes(storage_key))
-        return Timestamps.decode_from(data)[0] if data else data
+        return Timestamps.decode(data) if data else data
 
     def __setitem__(self, key: LookupTable, value: Timestamps):
         storage_key = construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))
@@ -236,3 +236,14 @@ class TimestampsView:
 
         self.DB.put(bytes(storage_key), v)
         self.TRIE.update(storage_key, Bytes(v))
+
+    def __delitem__(self, key: LookupTable):
+        storage_key = construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))
+        curr_data = self.DB.get(bytes(storage_key))
+        if curr_data is not None:
+            meta_view = AccountDataView(self.id, self.DB, self.TRIE)
+            meta_view.num_i = meta_view.num_i - 2
+            meta_view.num_o = meta_view.num_o - key.length - 81
+
+        self.DB.delete(bytes(storage_key))
+        self.TRIE.delete(storage_key)
