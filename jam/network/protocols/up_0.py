@@ -130,6 +130,7 @@ class BlockAnnouncement(NetworkProtocol):
                     h, _ = Handshake.decode_from(server.stream_buffer[stream_id][5:])
 
                     # TODO: Process Handshake
+                    logger.info(f"{server.interface}: Received Handshake. {h}")
 
                     server.stream_buffer[stream_id] = self._prefix.encode()
                     server.peer_handshake = True
@@ -143,6 +144,7 @@ class BlockAnnouncement(NetworkProtocol):
                     h, _ = Announcement.decode_from(server.stream_buffer[stream_id][5:])
 
                     # TODO: Process new block
+                    logger.info(f"{server.interface}: Received Announcement. {h}")
 
                     server.stream_buffer[stream_id] = self._prefix.encode()
 

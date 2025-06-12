@@ -67,11 +67,15 @@ class QuicProtocol(QuicConnectionProtocol):
         logger.info(f"{self.interface}: 📤 Sending message of size {len(message)} bytes (stream {stream_id})")
         self._quic.send_stream_data(stream_id, message, end_stream=True)
 
-        if self.is_client:
-            waiter = self._loop.create_future()
-            self.waiter[stream_id] = waiter
-            self.transmit()
-            return await asyncio.shield(waiter)
+        try:
+            if self.is_client:
+                waiter = self._loop.create_future()
+                self.waiter[stream_id] = waiter
+                self.transmit()
+                print("transmitted")
+                return await asyncio.shield(waiter)
+        except Exception as e:
+            print("received error", e)
 
             # try:
             #     return await asyncio.wait_for(asyncio.shield(waiter), timeout=timeout)
@@ -126,7 +130,7 @@ class QuicProtocol(QuicConnectionProtocol):
             logger.warning(f"{self.interface}: ❌ Connection with {self.peer} terminated: {event.error_code}. Reason: {event.reason_phrase}.")
 
         elif isinstance(event, StreamDataReceived):
-            from jam.network.protocols.base import PrefixType
+            from jam.network.base.protocol import PrefixType
             from jam.network.base.protocol_map import ProtocolMap
 
 
@@ -141,42 +145,42 @@ class QuicProtocol(QuicConnectionProtocol):
             logger.info(f"{self.interface}: 🔗 Found {peer}.")
             print(f"{self.interface}: peer address", self._quic._network_paths[0].addr)
 
-            prefix = None
-
             # If we don't know stream, we receive prefix i.e. whenever client initiates connection.
             if stream_id not in self.stream_buffer:
                 try:
-                    prefix, _ = PrefixType.decodeFrom(data[0:1])
+                    prefix, _ = PrefixType.decode_from(data[0:1])
                     self.stream_buffer[stream_id] = data
                     if prefix == PrefixType.UP0:
                         if not self.is_client:
                             self.node.peer_conn[peer] = (stream_id, self)
                         return
 
-                except Exception:
+                except Exception as e:
                     prefix = None
+                    print("error occurred new stream", e)
 
             # If we know it, then append data
             else:
                 buffer = self.stream_buffer[stream_id]
                 try:
-                    prefix, _ = PrefixType.decodeFrom(data[0:1])
-                    self.stream_buffer[stream_id] = data
+                    prefix, _ = PrefixType.decode_from(buffer[0:1])
+                    self.stream_buffer[stream_id] += data
                     if prefix == PrefixType.UP0:
                         if not self.is_client:
                             self.node.peer_conn[peer] = (stream_id, self)
                         return
 
-                except Exception:
+                except Exception as e:
                     prefix = None
-                buffer += data
+                    print("error occurred old stream", e)
 
             if event.end_stream:
                 try:
                     # Map the request to its corresponding CE protocol function
+                    print("pref", prefix)
                     ce_protocol = ProtocolMap.get_protocol(prefix)()
 
-                    if self.is_client & self.waiter[stream_id] is not None:
+                    if self.is_client and self.waiter[stream_id] is not None:
                         data = ce_protocol.res_intercept(stream_id, self)
 
                         # Wait for acknowledgment
@@ -206,6 +210,7 @@ class QuicProtocol(QuicConnectionProtocol):
                     try:
                         up_protocol = ProtocolMap.get_protocol(prefix)()
                         up_protocol.req_intercept(stream_id, self)
+
                     except Exception as e:
                         # Clear buffer
                         self.stream_buffer[stream_id] = prefix.encode()

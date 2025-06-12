@@ -86,7 +86,10 @@ class WorkPackageSubmission(NetworkProtocol):
                 client.stream_and_keep_open(message=len_a, stream_id=stream_id)
                 client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                 client.stream_and_keep_open(message=len_b, stream_id=stream_id)
-                data = await client.close_and_wait(message=msg_b, stream_id=stream_id)
+                try:
+                    data = await client.close_and_wait(message=msg_b, stream_id=stream_id)
+                except Exception as e:
+                    print("Couldn't close", e)
                 if not data:
                     responses.append(OptBool(Null))
                 else:

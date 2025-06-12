@@ -81,9 +81,6 @@ class Node:
         self.is_validator = is_validator
         for peer in self.peers:
             ek = peer.data.ed25519.encode()
-            # print("ek", ek)
-            # ed_key = Ed25519PublicKey.from_public_bytes(ek)
-            # print("here", ed_key.__hash__())
             self.peer_map[ek] = peer
 
         if is_validator and is_builder:
@@ -225,10 +222,10 @@ class Node:
 
             init = self.get_initiator(self.ed_key, peer.ed_key)
             if init == self.ed_key:
-                asyncio.create_task(self.quic_connect(peer))
+                await self.quic_connect(peer)
             else:
                 # Try connection after 6 seconds, meanwhile continue forward with other connections
-                asyncio.create_task(self.quic_connect(peer, INIT_DELAY))
+                await self.quic_connect(peer, INIT_DELAY)
                 pass
 
         except asyncio.CancelledError:
