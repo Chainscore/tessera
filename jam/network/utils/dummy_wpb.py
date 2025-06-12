@@ -50,7 +50,7 @@ async def wp_producer(node: Node):
         # Get current timeslot
         ts_epoch_index = floor(current_timeslot % EPOCH_LENGTH)
 
-        logger.info(f"We're in epoch slot {ts_epoch_index} and {state.gamma.s.get_key()} mode")
+        logger.info(f"We're in epoch slot {ts_epoch_index} and {state.gamma.s._choice_key} mode")
 
         if node.is_builder:
             wp = create_dummy_package()

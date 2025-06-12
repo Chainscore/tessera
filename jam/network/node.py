@@ -6,11 +6,10 @@ from aioquic.asyncio.server import QuicServer
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.connection import QuicConnection
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-
 from jam.config.logging import logger
 
 from jam.types.protocol.validators import ValidatorData
+from jam.types.protocol.crypto import Ed25519Public
 
 from typing import Dict, cast, Tuple, Optional
 
@@ -32,6 +31,7 @@ def _initialize(self, peer_cid: bytes) -> None:
     self.tls._request_client_certificate = True
 
 QuicConnection._initialize = _initialize
+INIT_DELAY = 6
 
 class Node:
     """
@@ -55,7 +55,7 @@ class Node:
 
     # Peers & Connections
     peers: list[Peer]
-    peer_map: Dict[Ed25519PublicKey, Peer] = {}
+    peer_map: Dict[bytes, Peer] = {}
     peer_conn: Dict[Peer, Tuple[int, QuicProtocol]] = {}
 
     # Server
@@ -80,7 +80,11 @@ class Node:
         self.is_builder = is_builder
         self.is_validator = is_validator
         for peer in self.peers:
-            self.peer_map[peer.data.ed25519] = peer
+            ek = peer.data.ed25519.encode()
+            # print("ek", ek)
+            # ed_key = Ed25519PublicKey.from_public_bytes(ek)
+            # print("here", ed_key.__hash__())
+            self.peer_map[ek] = peer
 
         if is_validator and is_builder:
             raise ValueError("Node can't be validator and builder at same time!")
@@ -94,12 +98,28 @@ class Node:
     def __repr__(self):
         return f"Node(host={self.host}, port={self.port}, name={self.name})"
 
-    def get_peer(self, key: Ed25519PublicKey) -> Peer | None:
+    @property
+    def ed_key(self):
+        return self.validator_data.ed25519
+
+    def get_peer(self, key: bytes) -> Peer | None:
+        print("key", key)
         if key in self.peer_map:
             return self.peer_map[key]
-        
+
         return None
-    
+
+    @staticmethod
+    def get_initiator(k1: Ed25519Public, k2: Ed25519Public) -> Ed25519Public:
+        i1 = int.from_bytes(k1)
+        i2 = int.from_bytes(k2)
+        print("keys", i1, i2, k1, k2)
+
+        if (i1 > 127) ^ (i2 > 127) ^ (i1 < i2):
+            return k1
+        else:
+            return k2
+
     def quic_config(self, is_client: bool = True, peer: Optional[Peer] = None) -> QuicConfiguration:
         """
         Utility function to build quic configuration.
@@ -135,8 +155,6 @@ class Node:
         """
         Function to initialize server connection of the node.
         """
-        from .quic.server import QuicServerProtocol
-
         session_ticket_store = SessionTicketStore(self.port)
 
         logger.info(f"🚀 ({self.name}) Listening on {str(self)}")
@@ -146,7 +164,7 @@ class Node:
             self.host,
             self.port,
             configuration=self.quic_config(is_client=False),
-            create_protocol=lambda *args, **kwargs: QuicServerProtocol(*args, node=self, **kwargs),
+            create_protocol=lambda *args, **kwargs: QuicProtocol(*args, node=self, **kwargs),
             session_ticket_fetcher=session_ticket_store.pop,
             session_ticket_handler=session_ticket_store.add,
         )
@@ -154,21 +172,17 @@ class Node:
         # Save server connection
         self.server = server
 
-    async def connect_peer(self, peer: Peer):
-        """
-        Function to connect the node to a peer.
-        """
+    async def quic_connect(self, peer: Peer, delay: int = 0):
         session_ticket_store = SessionTicketStore(self.port)
-        from .base.quic import QuicProtocol
+        if delay:
+            await asyncio.sleep(delay)
+            logger.warning(f"Connection to {peer} delayed for {delay}s")
+
+        if peer in self.peer_conn:
+            logger.info(f"Connection already established.")
+            return
 
         try:
-            # Skip self
-            if str(peer.host) == self.host and int(peer.port) == self.port:
-                logger.info(f"⚠️ ({self.name}) Skipping self {str(self)}")
-                return
-            
-            logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC...")
-
             async with connect(
                     str(peer.host),
                     int(peer.port),
@@ -192,6 +206,30 @@ class Node:
 
                 # Wait indefinitely - the connection will be managed by the context manager
                 await asyncio.Future()
+
+        except Exception as e:
+            logger.error(f"Connection to {peer} failed: {e}")
+
+    async def connect_peer(self, peer: Peer):
+        """
+        Function to connect the node to a peer.
+        """
+
+        try:
+            # Skip self
+            if str(peer.host) == self.host and int(peer.port) == self.port:
+                logger.info(f"⚠️ ({self.name}) Skipping self {str(self)}")
+                return
+
+            logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC...")
+
+            init = self.get_initiator(self.ed_key, peer.ed_key)
+            if init == self.ed_key:
+                asyncio.create_task(self.quic_connect(peer))
+            else:
+                # Try connection after 6 seconds, meanwhile continue forward with other connections
+                asyncio.create_task(self.quic_connect(peer, INIT_DELAY))
+                pass
 
         except asyncio.CancelledError:
             logger.info(f"🔴 ({self.name}) Connection with {str(peer)} cancelled")

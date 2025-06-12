@@ -29,6 +29,10 @@ class Peer:
         return self.data.metadata.port
 
     @property
+    def ed_key(self):
+        return self.data.ed25519
+
+    @property
     def name(self):
         return self.data.metadata.name
 

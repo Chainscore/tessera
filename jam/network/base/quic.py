@@ -39,7 +39,7 @@ class QuicProtocol(QuicConnectionProtocol):
 
             if isinstance(peer_cert, Certificate):
                 pk = peer_cert.public_key()
-                peer = self.node.get_peer(pk)
+                peer = self.node.get_peer(pk.public_bytes_raw())
                 if peer:
                     self.peer = peer
                     return peer

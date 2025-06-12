@@ -75,6 +75,8 @@ async def main(
                 buffer=Bytes[110](raw[18:128])
             )
 
+            print("metadata", metadata)
+
             if metadata.port == port:
                 continue
 
@@ -107,7 +109,7 @@ async def main(
         )
         my_data = ValidatorData(
             bandersnatch_public,
-            ed25519_public,
+            Ed25519Public(ed25519_public.public_bytes_raw()),
             BlsPublic(bytes(144)),
             ValidatorMetadata(
                 name=Bytes[10](bytes(10)),
