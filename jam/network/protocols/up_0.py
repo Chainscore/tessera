@@ -74,9 +74,10 @@ class BlockAnnouncement(NetworkProtocol):
         leaves = Leaves([])
 
         handshake = Handshake(final, leaves)
+        h_len = Uint[32](len(handshake.encode()))
 
         # Handshake Message
-        conn.stream_and_keep_open(PrefixType.UP0.encode(), stream_id)
+        conn.stream_and_keep_open(h_len.encode(), stream_id)
         conn.stream_and_keep_open(handshake.encode(), stream_id)
 
     def transmit(self, node: Node, data: Block):
@@ -107,12 +108,8 @@ class BlockAnnouncement(NetworkProtocol):
         buffer = server.stream_buffer[stream_id]
         peer = server.peer
 
-        data, offset = Announcement.decode_from(buffer)
 
-        data = cast(Announcement, data)
-        logger.info(f"Received a new block with header {data.header}. Parent Block: {data.final.header_hash} in T.S {data.final.time_slot}")
-
-        logger.info(f"Processing new block.")
+        logger.info(f"Intercepting UP0 stream (stream {stream_id}).")
         # Process goes here
 
         up_stream, _ = server.node.peer_conn[peer]
@@ -124,13 +121,15 @@ class BlockAnnouncement(NetworkProtocol):
                     self.handshake(stream_id, server)
 
                 # Parse received Handshake
-                h_len, _ = Uint[32].decode_from(server.stream_buffer[stream_id][1:5])
+                h_len, _ = Uint[32].decode_from(buffer[stream_id][1:5])
 
-                if len(server.stream_buffer[stream_id][5:]) == h_len:
-                    h, _ = Handshake.decode_from(server.stream_buffer[stream_id][5:])
+                if len(buffer[stream_id][5:]) == h_len:
+                    h, _ = Handshake.decode_from(buffer[stream_id][5:])
+                    h = cast(Handshake, h)
+
 
                     # TODO: Process Handshake
-                    logger.info(f"{server.interface}: Received Handshake. {h}")
+                    logger.info(f"{server.interface}: Received peer Handshake. {h}")
 
                     server.stream_buffer[stream_id] = self._prefix.encode()
                     server.peer_handshake = True
@@ -138,13 +137,15 @@ class BlockAnnouncement(NetworkProtocol):
             # Handle announcement
             else:
                 # Parse received Announcement
-                a_len, _ = Uint[32].decode_from(server.stream_buffer[stream_id][1:5])
+                a_len, _ = Uint[32].decode_from(buffer[stream_id][1:5])
 
                 if len(server.stream_buffer[stream_id][5:]) == a_len:
-                    h, _ = Announcement.decode_from(server.stream_buffer[stream_id][5:])
+                    a, _ = Announcement.decode_from(server.stream_buffer[stream_id][5:])
+                    a = cast(Announcement, a)
+
+                    logger.info(f"Received a new block with header {a.header}. Parent Block: {a.final.header_hash} in T.S {a.final.time_slot}")
 
                     # TODO: Process new block
-                    logger.info(f"{server.interface}: Received Announcement. {h}")
 
                     server.stream_buffer[stream_id] = self._prefix.encode()
 

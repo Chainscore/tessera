@@ -151,6 +151,7 @@ class QuicProtocol(QuicConnectionProtocol):
                     prefix, _ = PrefixType.decode_from(data[0:1])
                     self.stream_buffer[stream_id] = data
                     if prefix == PrefixType.UP0:
+                        print("saving prefix here")
                         if not self.is_client:
                             self.node.peer_conn[peer] = (stream_id, self)
                         return
@@ -164,11 +165,11 @@ class QuicProtocol(QuicConnectionProtocol):
                 buffer = self.stream_buffer[stream_id]
                 try:
                     prefix, _ = PrefixType.decode_from(buffer[0:1])
-                    self.stream_buffer[stream_id] += data
-                    if prefix == PrefixType.UP0:
-                        if not self.is_client:
-                            self.node.peer_conn[peer] = (stream_id, self)
-                        return
+                    buffer += data
+                    # if prefix == PrefixType.UP0:
+                    #     if not self.is_client:
+                    #         self.node.peer_conn[peer] = (stream_id, self)
+                    #     return
 
                 except Exception as e:
                     prefix = None
@@ -208,6 +209,7 @@ class QuicProtocol(QuicConnectionProtocol):
             else:
                 if prefix == PrefixType.UP0:
                     try:
+                        print("here")
                         up_protocol = ProtocolMap.get_protocol(prefix)()
                         up_protocol.req_intercept(stream_id, self)
 
