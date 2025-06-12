@@ -30,7 +30,7 @@ class Validator:
     # https://graypaper.fluffylabs.dev/#/68eaa1f/1a9f001ad000?v=0.6.4
     @staticmethod
     def import_count(item: WorkItem):
-        if item.import_segments > MAX_IMPORT_ITEM:
+        if len(item.import_segments) > MAX_IMPORT_ITEM:
             raise WorkPackageError(
                 WorkPackagesErrorCode.BAD_IMPORT_ITEM,
                 "count of import segment are more than actual value"
@@ -39,7 +39,7 @@ class Validator:
     # https://graypaper.fluffylabs.dev/#/68eaa1f/1a9f001ad000?v=0.6.4
     @staticmethod
     def extrinsic_count(item: WorkItem):
-        if item.extrinsic > EXTRINSIC_COUNT:
+        if len(item.extrinsic) > EXTRINSIC_COUNT:
             raise WorkPackageError(
                 WorkPackagesErrorCode.BAD_EXTRINSIC_COUNT,
                 "count of extrinsic more than are more than actual value"
@@ -49,7 +49,7 @@ class Validator:
     @staticmethod
     def work_package_size(package: WorkPackage):
         auth_token = len(package.authorization)
-        parameterization = len(package.params)
+        parameterization = len(package.authorizer.params)
 
         extrinsic_len = 0
         item_count = 0

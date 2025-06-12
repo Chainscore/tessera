@@ -120,10 +120,11 @@ async def wp_producer(node: Node):
             wp.items.append(wi)
 
             wc = WorkPackageCore(wp, CoreIndex(1))
+            ext = Extrinsics([])
 
             package_len = Uint[32](len(wc.encode()))
-            ext_len = Uint[32](0)
-            data = CE133Data(package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=Extrinsics([]))
+            ext_len = Uint[32](len(ext.encode()))
+            data = CE133Data(package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext)
             logger.info(f"⛏️ ({node.name}) Producing Work Package { wp}")
             # TODO: Implement package transmission
 
