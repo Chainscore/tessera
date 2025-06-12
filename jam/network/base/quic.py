@@ -192,13 +192,13 @@ class QuicProtocol(QuicConnectionProtocol):
 
                 except Exception as e:
                     # Clear waiter
-                    if self.is_client & self.waiter[stream_id] is not None:
+                    if self.is_client and self.waiter[stream_id] is not None:
                         waiter = self.waiter[stream_id]
                         del self.waiter[stream_id]
                         waiter.set_result("failed to retrieve data")
 
                     # Clear buffer
-                    del self.stream_buffer[stream_id]
+                    self.stream_buffer.pop(stream_id, None)
                     logger.exception(f"{self.interface}: Error retrieving data from ce stream: {e}")
 
             else:
