@@ -32,7 +32,6 @@ class Preimages:
             # If the preimage to add does not have lookup metadata, throw unneeded error
             hashed_blob = Hash.blake2b(preimage.blob)
             lookup_key = LookupTable(hash=hashed_blob, length=BlobLength(len(preimage.blob)))
-            print("lookup", account.lookup[lookup_key])
             if (
                 account.lookup[lookup_key] is None
                 or len(account.lookup[lookup_key]) != 0

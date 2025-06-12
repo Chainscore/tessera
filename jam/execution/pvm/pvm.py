@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 from typing import Tuple, List
-
-from jam.config.logging import get_logger, log_performance
-from jam.execution.pvm.instructions.table_map import InstTableMap
+from jam.config.logging import get_logger
+from jam.execution.pvm.instructions.inst_map import inst_map
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.program import Program
-from jam.execution.pvm.status import OUT_OF_GAS, PAGE_FAULT, PANIC, ExecutionStatus, PvmError, CONTINUE
+from jam.execution.pvm.status import OUT_OF_GAS, PAGE_FAULT, PANIC, ExecutionStatus, PvmError
 
 # Module-specific logger
 logger = get_logger("pvm")
@@ -16,7 +15,7 @@ class PVM:
     @classmethod
     def execute(
         cls,
-        blob: bytes,
+        program: Program,
         program_counter: int,
         gas: int,
         registers: List[int],
@@ -26,7 +25,7 @@ class PVM:
         Execute the program blob `p` as per Psi specification.
 
         Args:
-            blob: Program blob
+            program: Program context
             program_counter: Initial program counter
             gas: Gas provided for execution
             registers: Initial registers
@@ -39,100 +38,35 @@ class PVM:
             Registers: Final registers
             Memory: Final memory
         """
-        program, _ = Program.decode_from(blob)
-        remaining_gas = int(gas)
-        registers = [int(reg) for reg in registers]
-        program_counter = int(program_counter)
+        remaining_gas = gas
         
-        execution_context = {
-            "blob_size": len(blob),
-            "initial_pc": program_counter,
-            "initial_gas": gas,
-            "program_size": len(program.zeta) if hasattr(program, 'zeta') else 0,
-        }
-        
-        logger.debug(
-            "Starting PVM execution",
-            **execution_context,
-            registers=registers,
-        )
-        
-        instruction_count = 0
+        logger.debug("Starting PVM execution", registers=registers, inst_size=len(program.instruction_set), initial_pc=program_counter, initial_gas=gas, program_size=len(program.zeta))
 
         while True:
             try:
-                if program_counter >= len(program.zeta):
-                    logger.error(
-                        "Program counter exceeded program size",
-                        pc=program_counter,
-                        program_size=len(program.zeta),
-                        **execution_context
-                    )
-                    status = PANIC
-                    break
-
                 opcode = program.zeta[program_counter]
-                table = InstTableMap.get_instructions_table(opcode)(counter=program_counter, program=program)
-
-                # Log detailed execution info only at DEBUG level
-                logger.debug(
-                    "Executing instruction",
-                    pc=program_counter,
-                    opcode=opcode,
-                    instruction=table.table()[opcode].name,
-                    table=table.__class__.__name__,
-                    gas_remaining=remaining_gas,
-                    gas_cost=table.table()[opcode].gas,
-                    registers=registers,
+                
+                status, program_counter, registers, memory = inst_map.execute_instruction(
+                    opcode, program, program_counter, registers, memory
                 )
+                
+                gas_cost = inst_map.get_gas_cost(opcode)
+                remaining_gas -= gas_cost
 
-                status, program_counter, registers, memory = table.execute(opcode, registers, memory)
-                remaining_gas -= int(table.table()[opcode].gas)
-                instruction_count += 1
-
-                # Check for out of gas
                 if remaining_gas < 0:
-                    logger.warning(
-                        "PVM execution ran out of gas",
-                        instructions_executed=instruction_count,
-                        final_pc=program_counter,
-                        gas_deficit=abs(remaining_gas),
-                        **execution_context
-                    )
+                    logger.warning("PVM - OUT_OF_GAS", final_pc=program_counter, gas_deficit=abs(remaining_gas))
                     status = OUT_OF_GAS
                     break
 
-                # Check for completion conditions
                 elif status == ExecutionStatus.HALT:
-                    logger.info(
-                        "PVM execution halted normally",
-                        instructions_executed=instruction_count,
-                        final_pc=program_counter,
-                        gas_remaining=remaining_gas,
-                        **execution_context
-                    )
+                    logger.info("PVM - HALT", final_pc=program_counter, gas_remaining=remaining_gas)
                     break
                 elif status == ExecutionStatus.HOST:
-                    logger.debug(
-                        "PVM execution paused for host call",
-                        instructions_executed=instruction_count,
-                        pc=program_counter,
-                        gas_remaining=remaining_gas,
-                        **execution_context
-                    )
+                    logger.debug("PVM - HOST", pc=program_counter, gas_remaining=remaining_gas)
                     break
 
             except PvmError as e:
-                logger.error(
-                    "PVM execution error",
-                    error_code=e.code,
-                    error_message=str(e),
-                    instructions_executed=instruction_count,
-                    pc=program_counter,
-                    gas_remaining=remaining_gas,
-                    **execution_context
-                )
-
+                logger.error("PVM execution error", error_message=str(e), error_code=e.code, pc=program_counter, gas_remaining=remaining_gas)
                 if e.code == PANIC:
                     status = PANIC
                     break
@@ -142,24 +76,9 @@ class PVM:
                 else:
                     raise e
             except Exception as e:
-                logger.critical(
-                    "Unexpected PVM execution error",
-                    error=str(e),
-                    error_type=type(e).__name__,
-                    instructions_executed=instruction_count,
-                    pc=program_counter,
-                    **execution_context
-                )
+                logger.critical("Unexpected PVM execution error", error=str(e), error_type=type(e).__name__, pc=program_counter)
                 raise e
 
-        logger.info(
-            "PVM execution completed",
-            status=str(status),
-            instructions_executed=instruction_count,
-            final_pc=program_counter,
-            gas_remaining=remaining_gas,
-            gas_used=gas - remaining_gas,
-            **execution_context
-        )
+        logger.info("PVM result", final_pc=program_counter, gas_remaining=remaining_gas, registers=registers, memory=memory)
         
         return status, program_counter, remaining_gas, registers, memory

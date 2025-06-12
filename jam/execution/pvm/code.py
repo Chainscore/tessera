@@ -40,7 +40,6 @@ class Code(Codable):
         offset += decoded
         c = pc[offset:offset+c_len]
         offset += c_len
-        # print([int(i) for i in c])
         return cls(read=o, r_write=w, z=z, s=s, code=c)
 
     def encode_size(self):

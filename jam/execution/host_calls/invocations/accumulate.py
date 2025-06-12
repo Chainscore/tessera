@@ -67,8 +67,8 @@ class PsiA(InvocationProtocol):
         else:
             gas, status, context = PsiM.execute(
                 meta_n_code[1],
-                ProgramCounter(5),
-                self.gas,
+                5,
+                int(self.gas),
                 Uint(self.timeslot).encode() + Uint(self.service_id).encode() + self.operandTuples.encode(),
                 self.dispatch,
                 self.context,
