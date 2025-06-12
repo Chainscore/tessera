@@ -70,7 +70,7 @@ class WorkPackageSubmission(NetworkProtocol):
         logger.info(f"Transmitting Work-Package to {len(node.peer_conn)} Validators")
         # TODO: Use Particular Validators' Connections
 
-        responses = TypedVector[bool]([])
+        responses = TypedVector[OptBool]([])
         for peer in node.peer_conn:
             if peer.port == 30333:
                 logger.info("sending package to 30333")
@@ -87,8 +87,10 @@ class WorkPackageSubmission(NetworkProtocol):
                 client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                 client.stream_and_keep_open(message=len_b, stream_id=stream_id)
                 data = await client.close_and_wait(message=msg_b, stream_id=stream_id)
-
-                responses.append(data)
+                if not data:
+                    responses.append(OptBool(Null))
+                else:
+                    responses.append(data)
 
         return responses
 

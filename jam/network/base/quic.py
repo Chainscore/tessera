@@ -71,14 +71,14 @@ class QuicProtocol(QuicConnectionProtocol):
             waiter = self._loop.create_future()
             self.waiter[stream_id] = waiter
             self.transmit()
-            # return await asyncio.shield(waiter)
+            return await asyncio.shield(waiter)
 
-            try:
-                return await asyncio.wait_for(asyncio.shield(waiter), timeout=timeout)
-            except asyncio.TimeoutError:
-                logger.warning(f"⏱️ Timeout waiting for stream {stream_id} response")
-                del self.waiter[stream_id]
-                return None
+            # try:
+            #     return await asyncio.wait_for(asyncio.shield(waiter), timeout=timeout)
+            # except asyncio.TimeoutError:
+            #     logger.warning(f"⏱️ Timeout waiting for stream {stream_id} response")
+            #     del self.waiter[stream_id]
+            #     return None
 
     def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
         if self._close_pending:
