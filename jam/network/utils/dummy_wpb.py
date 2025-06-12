@@ -2,7 +2,7 @@ import asyncio
 from math import floor
 from time import time
 
-from tsrkit_types import Bytes, U16
+from tsrkit_types import Bytes, U16, Uint
 
 from jam.execution.pvm.code import Code
 from jam.state.accounts import AccountMetadata
@@ -121,7 +121,9 @@ async def wp_producer(node: Node):
 
             wc = WorkPackageCore(wp, CoreIndex(1))
 
-            data = CE133Data(package_data=wc, extrinsics=Extrinsics([]))
+            package_len = Uint[32](len(wc.encode()))
+            ext_len = Uint[32](0)
+            data = CE133Data(package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=Extrinsics([]))
             logger.info(f"⛏️ ({node.name}) Producing Work Package { wp}")
             # TODO: Implement package transmission
 
