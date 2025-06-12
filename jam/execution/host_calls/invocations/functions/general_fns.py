@@ -53,13 +53,7 @@ class GeneralFunctions(INVF):
         hash_addr = registers[8]
         output_addr = registers[9]
         
-        logger.debug(
-            "Host call: lookup",
-            lookup_key=lookup_key,
-            hash_addr=hash_addr,
-            output_addr=output_addr,
-            service_index=int(service_index)
-        )
+        logger.debug("Host call: lookup", lookup_key=lookup_key, hash_addr=hash_addr, output_addr=output_addr, service_index=int(service_index))
         
         a: None|AccountData = None
         if service_index <= lookup_key <= 2**64-1:
@@ -118,9 +112,9 @@ class GeneralFunctions(INVF):
             registers: list,
             memory: Memory,
             context: Optional[Any],
-            package: WorkPackage,
-            entropy: OpaqueHash,
-            trace: Bytes,
+            package: Optional[WorkPackage],
+            entropy: Optional[OpaqueHash],
+            trace: Optional[Bytes],
             item_index: int,
             import_segments: Optional[List],
             extrinsics: Optional[List],
@@ -129,14 +123,7 @@ class GeneralFunctions(INVF):
         ):
         fetch_type = registers[10]
         
-        logger.debug(
-            "Host call: fetch",
-            fetch_type=fetch_type,
-            item_index=item_index,
-            has_package=package is not None,
-            has_entropy=entropy is not None,
-            has_trace=trace is not None
-        )
+        logger.debug("Host call: fetch", fetch_type=fetch_type, item_index=item_index)
         
         w10 = registers[10]
         w11 = registers[11]
@@ -160,19 +147,18 @@ class GeneralFunctions(INVF):
         elif w10 == 2 and trace is not None:
             v = trace
             logger.debug("Fetch: returning trace")
-        elif item_index is not None:
-            if w10 == 3 and w11 < len(extrinsics) and w12 < len(extrinsics[int(w11)]):
-                v = extrinsics[w11][int(w12)]
-                logger.debug("Fetch: returning extrinsic data", w11=w11, w12=w12)
-            elif w10 == 4 and w11 < len(extrinsics[item_index]):
-                v = extrinsics[item_index][w11]
-                logger.debug("Fetch: returning item extrinsic", item_index=item_index, w11=w11)
-            elif w10 == 5 and w11 < len(import_segments) and w12 < len(import_segments[w11]):
-                v = import_segments[w11][w12]
-                logger.debug("Fetch: returning import segment", w11=w11, w12=w12)
-            elif w10 == 6 and w11 < len(import_segments[item_index]):
-                v = import_segments[item_index][w11]
-                logger.debug("Fetch: returning item import segment", item_index=item_index, w11=w11)
+        elif w10 == 3 and item_index is not None and w11 < len(extrinsics) and w12 < len(extrinsics[int(w11)]):
+            v = extrinsics[w11][int(w12)]
+            logger.debug("Fetch: returning extrinsic data", w11=w11, w12=w12)
+        elif w10 == 4 and item_index is not None and w11 < len(extrinsics[item_index]):
+            v = extrinsics[item_index][w11]
+            logger.debug("Fetch: returning item extrinsic", item_index=item_index, w11=w11)
+        elif w10 == 5 and item_index is not None and w11 < len(import_segments) and w12 < len(import_segments[w11]):
+            v = import_segments[w11][w12]
+            logger.debug("Fetch: returning import segment", w11=w11, w12=w12)
+        elif w10 == 6 and item_index is not None and w11 < len(import_segments[item_index]):
+            v = import_segments[item_index][w11]
+            logger.debug("Fetch: returning item import segment", item_index=item_index, w11=w11)
         elif package is not None:
             def s_cap(w: WorkItem):
                 return (w.service.encode() +
@@ -347,14 +333,7 @@ class GeneralFunctions(INVF):
         # Get key,value start,end
         [ko, kz, vo, vz] = registers[7: 7+4]
         
-        logger.debug(
-            "Host call: write",
-            key_offset=ko,
-            key_size=kz,
-            value_offset=vo,
-            value_size=vz,
-            service_index=int(service_index)
-        )
+        logger.debug( "Host call: write", key_offset=ko, key_size=kz, value_offset=vo, value_size=vz, service_index=int(service_index))
         
         if not memory.is_accessible(ko, kz):
             logger.error(
@@ -462,23 +441,53 @@ class GeneralFunctions(INVF):
             memory: Memory,
             context: Optional[Any],
     ):
-        start = int(registers[10])
-        length = int(registers[11])
+        message_start = registers[10]
+        message_length = registers[11]
+
+        target_start = registers[8]
+        target_length = registers[9]
+
+        level = registers[7]
         
-        if memory.is_accessible(start, length):
-            log_data = memory.read(start, length)
-            logger.info(
-                "PVM log output",
-                log_data=log_data.decode('utf-8', errors='replace') if log_data else "",
-                log_data_hex=log_data.hex() if log_data else "",
-                memory_start=start,
-                data_length=length
+        # Validate memory accessibility for message
+        if not memory.is_accessible(message_start, message_length):
+            logger.error(
+                "Host call log: memory not accessible for message",
+                message_start=message_start,
+                message_length=message_length,
             )
+            raise PvmError(PANIC)
+
+        if target_length != 0 or target_start != 0:
+            if not memory.is_accessible(target_start, target_length):
+                logger.error(
+                    "Host call log: memory not accessible for target",
+                    target_start=target_start,
+                    target_length=target_length,
+                )
+                raise PvmError(PANIC)
+            target_bytes = memory.read(int(target_start), int(target_length))
+            try:
+                target_str = target_bytes.decode("utf-8", errors="replace")
+            except Exception:
+                target_str = target_bytes.hex()
         else:
-            logger.warning(
-                "Host call log: memory not accessible",
-                memory_start=start,
-                required_size=length
-            )
+            target_str = None
+
+        message_bytes = memory.read(int(message_start), int(message_length))
+        try:
+            message_str = message_bytes.decode("utf-8", errors="replace")
+        except Exception:
+            message_str = message_bytes.hex()
+
+        log_kwargs = {"target": target_str, "level": int(level)}
+        if int(level) == 0:
+            logger.error(message_str, **log_kwargs)
+        elif int(level) == 1:
+            logger.warning(message_str, **log_kwargs)
+        elif int(level) == 2:
+            logger.info(message_str, **log_kwargs)
+        else:
+            logger.debug(message_str, **log_kwargs)
 
         return CONTINUE, gas, registers, memory, context

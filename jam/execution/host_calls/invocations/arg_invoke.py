@@ -6,7 +6,7 @@ from jam.execution.pvm.code import y_function
 from jam.execution.pvm.program import Program
 from jam.execution.pvm.status import PANIC, ExecutionStatus
 from tsrkit_types.bytes import Bytes
-from jam.types.protocol.core import Gas, ProgramCounter
+from jam.types.protocol.core import Gas
 from jam.config.logging import get_logger
 
 # Module-specific logger
@@ -25,8 +25,7 @@ class PsiM:
         context: Any
     ) -> ArgInvokeReturn:
         logger.debug("Starting invocation", blob_size=len(blob), program_counter=pc, gas=int(gas), arguments_size=len(arguments), context_type=type(context).__name__)
-        start_time = time.time()
-        
+
         try:
             code, registers, memory = y_function(bytes(Bytes(blob)), arguments)
             logger.debug("Initialized program successfully", code_size=len(code), registers_count=len(registers))
@@ -37,10 +36,7 @@ class PsiM:
 
         program = Program.decode(code)
 
-        result = PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context)
-        end_time = time.time()
-        print(">> Execution time: ", end_time - start_time)
-        return PsiM.R(gas, result)
+        return PsiM.R(gas, PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context))
 
     @staticmethod
     def R(g: Gas, grouped: HostCallReturn) -> ArgInvokeReturn:

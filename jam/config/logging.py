@@ -368,51 +368,5 @@ def get_logger(name: str | None = None, component: str | None = None):
     return logger
 
 
-# Performance monitoring helpers
-class PerformanceLogger:
-    """Context manager for performance logging."""
-    
-    def __init__(self, logger, operation: str, **context):
-        self.logger = logger
-        self.operation = operation
-        self.context = context
-        self.start_time = None
-    
-    def __enter__(self):
-        import time
-        self.start_time = time.perf_counter()
-        self.logger.debug(f"Starting {self.operation}", **self.context)
-        return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        import time
-        duration = time.perf_counter() - self.start_time
-        
-        if exc_type is None:
-            self.logger.info(
-                f"Completed {self.operation}",
-                duration_ms=round(duration * 1000, 2),
-                **self.context
-            )
-        else:
-            self.logger.error(
-                f"Failed {self.operation}",
-                duration_ms=round(duration * 1000, 2),
-                error=str(exc_val),
-                **self.context
-            )
-
-
-def log_performance(logger, operation: str, **context):
-    """
-    Decorator or context manager for performance logging.
-    
-    Usage as context manager:
-        with log_performance(logger, "block_validation", block_hash=hash):
-            validate_block(block)
-    """
-    return PerformanceLogger(logger, operation, **context)
-
-
 # Module logger
 logger = get_logger("logging")

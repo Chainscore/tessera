@@ -42,7 +42,7 @@ from jam.merklization.binary_merkle import BMRFunctions
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 
 from jam.utils.dummy.utils import create_dummy_bytes32
-from jam.config.logging import get_logger, log_performance
+from jam.config.logging import get_logger
 
 # Module-specific logger
 logger = get_logger("in_core")

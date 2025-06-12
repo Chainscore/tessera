@@ -25,7 +25,7 @@ from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD
 from jam.network.node import Node
 from rockstore import RockStore
 from jam.utils.dummy.utils import create_dummy_bytes
-from jam.config.logging import get_logger, log_performance
+from jam.config.logging import get_logger
 
 # Logger for Block Production / Authoring module
 logger = get_logger("author")
@@ -109,19 +109,16 @@ class BlockProducer:
                         author_key=author_key.hex()[:16] + "..."
                     )
                     
-                    with log_performance(logger, "block_production", 
-                                       timeslot=int(current_timeslot), 
-                                       node_name=self.node.name):
-                        block = self._produce_block(state, current_timeslot)
-                        block.save(self.db)
-                        header_hash = block.header.hash()
-                        # Set local chain head to produced block
-                        Finality.set_head(header_hash, self.db)
-                        # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-                        Finality.finalise(header_hash, self.db)
+                    block = self._produce_block(state, current_timeslot)
+                    block.save(self.db)
+                    header_hash = block.header.hash()
+                    # Set local chain head to produced block
+                    Finality.set_head(header_hash, self.db)
+                    # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
+                    Finality.finalise(header_hash, self.db)
 
-                        # Announce
-                        up0.transmit(self.node, block)
+                    # Announce
+                    up0.transmit(self.node, block)
 
                     logger.info("🧱Block authored and announced successfully", current_timeslot=int(current_timeslot), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...")
                 else:

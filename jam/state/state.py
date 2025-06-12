@@ -12,7 +12,7 @@ from jam.state.utils import construct_state_key
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.itf.codable import Codable
 from jam.types import Block, Hash, Alpha, Eta, Nu, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma
-from jam.config.logging import get_logger, log_performance
+from jam.config.logging import get_logger
 
 logger = get_logger("import")
 
@@ -115,103 +115,93 @@ class State:
             **block_context
         )
 
-        with log_performance(logger, "state_transition", **block_context):
-            # TODO: Validate block headers
-            # Epoch markers - make sure eta0_1 are the same as current etas
-            # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
-            # Offenders mark - make sure offenders are present in psi.offenders
+        # TODO: Validate block headers
+        # Epoch markers - make sure eta0_1 are the same as current etas
+        # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
+        # Offenders mark - make sure offenders are present in psi.offenders
 
-            logger.debug(
-                "Updating beta with previous block state root",
-                **block_context
-            )
-            
-            beta = self.beta
-            # Step 1
-            if len(beta):
-                beta[-1].state_root = block.header.parent_state_root
-            self.beta = beta
+        logger.debug(
+            "Updating beta with previous block state root",
+            **block_context
+        )
 
-            # Disputes
-            logger.debug("Processing disputes", **block_context)
-            with log_performance(logger, "disputes_transition", **block_context):
-                Disputes.transition(self, block)
-            
-            # Work package hashes form Nu and Xi
-            logger.debug("Gathering known work packages", **block_context)
-            known_packages = [
-                queue_el.report.context.prerequisites
-                for epoch_queue in self.nu
-                for queue_el in epoch_queue
-            ]
-            known_packages.extend([
-                wps
-                for deps in self.xi
-                for wps in deps
-            ])
-            
-            logger.debug(
-                "Known packages collected",
-                package_count=len(known_packages),
-                **block_context
-            )
-            
-            # Reporting
-            logger.debug("Processing reporting", **block_context)
-            with log_performance(logger, "reporting_transition", **block_context):
-                Reporting.transition(self, block, known_packages=known_packages)
-            
-            # Assurances
-            logger.debug("Processing assurances", **block_context)
-            with log_performance(logger, "assurances_transition", **block_context):
-                _, newly_avail_wrs = Assurances.transition(self, block)
-            
-            logger.debug(
-                "Assurances processed",
-                newly_available_count=len(newly_avail_wrs) if newly_avail_wrs else 0,
-                **block_context
-            )
+        beta = self.beta
+        # Step 1
+        if len(beta):
+            beta[-1].state_root = block.header.parent_state_root
+        self.beta = beta
 
-            # Accumulation
-            logger.debug("Processing accumulation", **block_context)
-            with log_performance(logger, "accumulation_transition", **block_context):
-                _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
-            
-            logger.debug(
-                "Accumulation processed",
-                commitment_count=len(commitment_map) if commitment_map else 0,
-                **block_context
-            )
-            
-            # Authorization
-            logger.debug("Processing authorization", **block_context)
-            with log_performance(logger, "authorization_transition", **block_context):
-                Authorization.transition(self, block)
-            
-            # Recent History
-            logger.debug("Processing recent history", **block_context)
-            history_merkle = BMRFunctions().wb_merkle_fn(
-                sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]), 
-                Hash.keccak256
-            )
-            with log_performance(logger, "recent_history_transition", **block_context):
-                RecentHistory.transition(self, block, history_merkle)
-            
-            # Preimages
-            logger.debug("Processing preimages", **block_context)
-            with log_performance(logger, "preimages_transition", **block_context):
-                Preimages.transition(self, block)
-            
-            # Statistics
-            logger.debug("Processing statistics", **block_context)
-            with log_performance(logger, "statistics_transition", **block_context):
-                Statistics.transition(self, block, newly_avail_wrs)
-            
-            # Safrole
-            logger.debug("Processing safrole consensus", **block_context)
-            vrf_output = Safrole.vrf_output(block.header.entropy_source)
-            with log_performance(logger, "safrole_transition", **block_context):
-                Safrole.transition(self, block, vrf_output)
+        # Disputes
+        logger.debug("Processing disputes", **block_context)
+        Disputes.transition(self, block)
+
+        # Work package hashes form Nu and Xi
+        logger.debug("Gathering known work packages", **block_context)
+        known_packages = [
+            queue_el.report.context.prerequisites
+            for epoch_queue in self.nu
+            for queue_el in epoch_queue
+        ]
+        known_packages.extend([
+            wps
+            for deps in self.xi
+            for wps in deps
+        ])
+
+        logger.debug(
+            "Known packages collected",
+            package_count=len(known_packages),
+            **block_context
+        )
+
+        # Reporting
+        logger.debug("Processing reporting", **block_context)
+        Reporting.transition(self, block, known_packages=known_packages)
+
+        # Assurances
+        logger.debug("Processing assurances", **block_context)
+        _, newly_avail_wrs = Assurances.transition(self, block)
+
+        logger.debug(
+            "Assurances processed",
+            newly_available_count=len(newly_avail_wrs) if newly_avail_wrs else 0,
+            **block_context
+        )
+
+        # Accumulation
+        logger.debug("Processing accumulation", **block_context)
+        _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
+
+        logger.debug(
+            "Accumulation processed",
+            commitment_count=len(commitment_map) if commitment_map else 0,
+            **block_context
+        )
+
+        # Authorization
+        logger.debug("Processing authorization", **block_context)
+        Authorization.transition(self, block)
+
+        # Recent History
+        logger.debug("Processing recent history", **block_context)
+        history_merkle = BMRFunctions().wb_merkle_fn(
+            sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]),
+            Hash.keccak256
+        )
+        RecentHistory.transition(self, block, history_merkle)
+
+        # Preimages
+        logger.debug("Processing preimages", **block_context)
+        Preimages.transition(self, block)
+
+        # Statistics
+        logger.debug("Processing statistics", **block_context)
+        Statistics.transition(self, block, newly_avail_wrs)
+
+        # Safrole
+        logger.debug("Processing safrole consensus", **block_context)
+        vrf_output = Safrole.vrf_output(block.header.entropy_source)
+        Safrole.transition(self, block, vrf_output)
         
         logger.info(
             "State transition completed successfully",
