@@ -19,7 +19,7 @@ from .peer import Peer
 from jam.network.base.sessions import SessionTicketStore
 
 
-genesis_hash = "476243ad"
+genesis_hash = "b5af8eda"
 protocol_version = "0"
 node_alpn = f"jamnp-s/{protocol_version}/{genesis_hash}"
 builder_alpn = node_alpn + "/builder"
@@ -88,6 +88,7 @@ class Node:
 
         self.__id = generate_keys(port)
         self.dns = self.__id
+        print("node id", self.dns)
 
     def __str__(self):
         return f"Node({self.host}:{self.port})"
@@ -100,7 +101,6 @@ class Node:
         return self.validator_data.ed25519
 
     def get_peer(self, key: bytes) -> Peer | None:
-        print("key", key)
         if key in self.peer_map:
             return self.peer_map[key]
 
@@ -110,7 +110,6 @@ class Node:
     def get_initiator(k1: Ed25519Public, k2: Ed25519Public) -> Ed25519Public:
         i1 = int.from_bytes(k1)
         i2 = int.from_bytes(k2)
-        print("keys", i1, i2, k1, k2)
 
         if (i1 > 127) ^ (i2 > 127) ^ (i1 < i2):
             return k1
@@ -172,14 +171,17 @@ class Node:
     async def quic_connect(self, peer: Peer, delay: int = 0):
         session_ticket_store = SessionTicketStore(self.port)
         if delay:
-            await asyncio.sleep(delay)
             logger.warning(f"Connection to {peer} delayed for {delay}s")
+            await asyncio.sleep(delay)
 
         if peer in self.peer_conn:
+            print("peer conn", peer, self.peer_conn)
             logger.info(f"Connection already established.")
             return
 
         try:
+            logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC...")
+
             async with connect(
                     str(peer.host),
                     int(peer.port),
@@ -195,7 +197,10 @@ class Node:
 
                 stream_id = client._quic.get_next_available_stream_id()
 
-                from jam.network.protocols.up_0 import BlockAnnouncement
+                from jam.network.protocols.up_0 import BlockAnnouncement, PrefixType
+                client.stream_buffer[stream_id] = PrefixType.UP0.encode()
+                client.stream_and_keep_open(PrefixType.UP0.encode(), stream_id)
+
                 BlockAnnouncement.handshake(stream_id, client)
 
                 self.peer_conn[peer] = stream_id, client
@@ -218,15 +223,12 @@ class Node:
                 logger.info(f"⚠️ ({self.name}) Skipping self {str(self)}")
                 return
 
-            logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC...")
-
             init = self.get_initiator(self.ed_key, peer.ed_key)
             if init == self.ed_key:
                 await self.quic_connect(peer)
             else:
                 # Try connection after 6 seconds, meanwhile continue forward with other connections
                 await self.quic_connect(peer, INIT_DELAY)
-                pass
 
         except asyncio.CancelledError:
             logger.info(f"🔴 ({self.name}) Connection with {str(peer)} cancelled")

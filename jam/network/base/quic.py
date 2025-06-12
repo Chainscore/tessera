@@ -36,6 +36,7 @@ class QuicProtocol(QuicConnectionProtocol):
 
         else:
             peer_cert = self._quic.tls._peer_certificate
+            print("CERT", peer_cert.issuer, peer_cert.subject)
 
             if isinstance(peer_cert, Certificate):
                 pk = peer_cert.public_key()
@@ -105,11 +106,11 @@ class QuicProtocol(QuicConnectionProtocol):
             if peer:
                 logger.info(f"{self.interface}: 🔗 Handshake completed with {peer}.")
 
-        elif isinstance(event, ConnectionIdIssued):
-            logger.info(f"{self.interface}: 🔗 Connection Id issued: {event.connection_id}")
-
-        elif isinstance(event, ConnectionIdRetired):
-            logger.warning(f"{self.interface}: 🔗 Connection Id retired: {event.connection_id}")
+        # elif isinstance(event, ConnectionIdIssued):
+        #     logger.info(f"{self.interface}: 🔗 Connection Id issued: {event.connection_id}")
+        #
+        # elif isinstance(event, ConnectionIdRetired):
+        #     logger.warning(f"{self.interface}: 🔗 Connection Id retired: {event.connection_id}")
 
         elif isinstance(event, StreamReset):
             stream_id = event.stream_id
@@ -143,7 +144,6 @@ class QuicProtocol(QuicConnectionProtocol):
                 raise NetworkingError(Code.NO_PEER)
 
             logger.info(f"{self.interface}: 🔗 Found {peer}.")
-            print(f"{self.interface}: peer address", self._quic._network_paths[0].addr)
 
             # If we don't know stream, we receive prefix i.e. whenever client initiates connection.
             if stream_id not in self.stream_buffer:
@@ -151,43 +151,38 @@ class QuicProtocol(QuicConnectionProtocol):
                     prefix, _ = PrefixType.decode_from(data[0:1])
                     self.stream_buffer[stream_id] = data
                     if prefix == PrefixType.UP0:
-                        print("saving prefix here")
                         if not self.is_client:
                             self.node.peer_conn[peer] = (stream_id, self)
                         return
 
                 except Exception as e:
                     prefix = None
-                    print("error occurred new stream", e)
+                    logger.error(f"Error identifying protocol on unknown stream. {e}")
 
             # If we know it, then append data
             else:
                 buffer = self.stream_buffer[stream_id]
                 try:
                     prefix, _ = PrefixType.decode_from(buffer[0:1])
-                    buffer += data
-                    # if prefix == PrefixType.UP0:
-                    #     if not self.is_client:
-                    #         self.node.peer_conn[peer] = (stream_id, self)
-                    #     return
+                    self.stream_buffer[stream_id] += data
 
                 except Exception as e:
                     prefix = None
-                    print("error occurred old stream", e)
+                    logger.error(f"Error identifying protocol on known stream. {e}")
 
+            # CASE: CE Streams
             if event.end_stream:
                 try:
                     # Map the request to its corresponding CE protocol function
-                    print("pref", prefix)
                     ce_protocol = ProtocolMap.get_protocol(prefix)()
 
                     if self.is_client and self.waiter[stream_id] is not None:
-                        data = ce_protocol.res_intercept(stream_id, self)
+                        res = ce_protocol.res_intercept(stream_id, self)
 
                         # Wait for acknowledgment
                         waiter = self.waiter[stream_id]
                         del self.waiter[stream_id]
-                        waiter.set_result(data)
+                        waiter.set_result(res)
 
                     elif not self.is_client:
                         ce_protocol.req_intercept(stream_id, self)
@@ -197,6 +192,7 @@ class QuicProtocol(QuicConnectionProtocol):
 
                 except Exception as e:
                     # Clear waiter
+                    logger.exception(f"{self.interface}: Error retrieving data from ce stream: {e}")
                     if self.is_client and self.waiter[stream_id] is not None:
                         waiter = self.waiter[stream_id]
                         del self.waiter[stream_id]
@@ -204,16 +200,17 @@ class QuicProtocol(QuicConnectionProtocol):
 
                     # Clear buffer
                     self.stream_buffer.pop(stream_id, None)
-                    logger.exception(f"{self.interface}: Error retrieving data from ce stream: {e}")
 
+            # CASE: UP Streams
             else:
                 if prefix == PrefixType.UP0:
                     try:
-                        print("here")
+                        if len(data) == 4:
+                            return
                         up_protocol = ProtocolMap.get_protocol(prefix)()
                         up_protocol.req_intercept(stream_id, self)
 
                     except Exception as e:
                         # Clear buffer
-                        self.stream_buffer[stream_id] = prefix.encode()
                         logger.exception(f"{self.interface}: Error retrieving data from up stream: {e}")
+                        self.stream_buffer[stream_id] = prefix.encode()

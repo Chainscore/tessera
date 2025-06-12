@@ -72,12 +72,12 @@ class BlockProducer:
             ts_epoch_index = math.floor(int(current_timeslot) % EPOCH_LENGTH)
 
             logger.info(
-                f"🔄 ({self.node.name}) We're in epoch slot {ts_epoch_index} and {state.gamma.s.get_key()} mode"
+                f"🔄 ({self.node.name}) We're in epoch slot {ts_epoch_index} and {state.gamma.s._choice_key} mode"
             )
 
             # Check if we are in fallback or normal ticket.py
-            if state.gamma.s.get_key() == "keys":
-                author_key = state.gamma.s.get_value()[ts_epoch_index]
+            if state.gamma.s._choice_key == "keys":
+                author_key = state.gamma.s.unwrap()[ts_epoch_index]
                 if author_key == self.node.validator_data.bandersnatch:
                     block = self._produce_block(state, current_timeslot)
                     # Set local chain head to produced block
@@ -85,7 +85,8 @@ class BlockProducer:
                     # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                     Finality.finalise(current_timeslot, self.db)
                     # Announce
-                    up0.transmit(self.node, block)
+                    print("Produced block", block)
+                    await up0.transmit(self.node, block)
                 else:
                     logger.info(f"🔄 ({self.node.name}) Skipping Block for TS {current_timeslot}")
             else:

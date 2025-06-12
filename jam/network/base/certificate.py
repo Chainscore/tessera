@@ -105,7 +105,7 @@ def generate_keys(port: int):
     valid_to = valid_from + timedelta(days=365)
 
     subject = issuer = x509.Name([
-        x509.NameAttribute(x509.NameOID.COMMON_NAME, "JAM Tessera Ed25519 Cert")
+        x509.NameAttribute(x509.NameOID.COMMON_NAME, "rcgen self signed cert")
     ])
 
     cert_builder = (

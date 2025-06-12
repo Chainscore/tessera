@@ -75,8 +75,6 @@ async def main(
                 buffer=Bytes[110](raw[18:128])
             )
 
-            print("metadata", metadata)
-
             if metadata.port == port:
                 continue
 

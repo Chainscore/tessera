@@ -11,7 +11,7 @@ def run_jam():
     # Args parse
     parser = argparse.ArgumentParser(description="JAM node")
     parser.add_argument("--name", type=str, default="JAM", help="Name of the node")
-    parser.add_argument("--port", type=int, default=30333, help="Port to start server on")
+    parser.add_argument("--port", type=int, default=40000, help="Port to start server on")
     parser.add_argument("--genesis", type=str, default="genesis.json", help="Path to genesis file")
     parser.add_argument("--start-genesis", action="store_true", help="Flag to start from genesis")
     parser.add_argument("--theme", type=str, default="polkadot", help="Theme to use for logging")

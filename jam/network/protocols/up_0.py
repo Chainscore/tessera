@@ -80,7 +80,7 @@ class BlockAnnouncement(NetworkProtocol):
         conn.stream_and_keep_open(h_len.encode(), stream_id)
         conn.stream_and_keep_open(handshake.encode(), stream_id)
 
-    def transmit(self, node: Node, data: Block):
+    async def transmit(self, node: Node, data: Block):
         """Announce Block to Peers (servers)"""
         from jam.consensus.grandpa.finality import Finality
         from jam.types.protocol.crypto import Hash
@@ -118,13 +118,15 @@ class BlockAnnouncement(NetworkProtocol):
             if not server.peer_handshake:
                 # Reverse Handshake on Server
                 if not server.is_client:
+                    print("Doing reverse handshkae")
                     self.handshake(stream_id, server)
 
                 # Parse received Handshake
-                h_len, _ = Uint[32].decode_from(buffer[stream_id][1:5])
+                print("buffer", len(buffer), buffer)
+                h_len, _ = Uint[32].decode_from(buffer[1:5])
 
-                if len(buffer[stream_id][5:]) == h_len:
-                    h, _ = Handshake.decode_from(buffer[stream_id][5:])
+                if len(buffer[5:]) == h_len:
+                    h, _ = Handshake.decode_from(buffer[5:])
                     h = cast(Handshake, h)
 
 
@@ -137,17 +139,17 @@ class BlockAnnouncement(NetworkProtocol):
             # Handle announcement
             else:
                 # Parse received Announcement
-                a_len, _ = Uint[32].decode_from(buffer[stream_id][1:5])
+                a_len, _ = Uint[32].decode_from(buffer[1:5])
 
-                if len(server.stream_buffer[stream_id][5:]) == a_len:
-                    a, _ = Announcement.decode_from(server.stream_buffer[stream_id][5:])
+                if len(buffer[5:]) == a_len:
+                    a, _ = Announcement.decode_from(buffer[5:])
                     a = cast(Announcement, a)
 
                     logger.info(f"Received a new block with header {a.header}. Parent Block: {a.final.header_hash} in T.S {a.final.time_slot}")
 
                     # TODO: Process new block
+                    buffer = self._prefix.encode()
 
-                    server.stream_buffer[stream_id] = self._prefix.encode()
 
         else:
             logger.error(f"{server.interface}: ❌ Different UP Stream.")
