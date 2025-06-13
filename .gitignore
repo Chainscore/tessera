@@ -41,12 +41,8 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-db/
-!jam/db
-!tests/unit/db
 
 # Environment
-.env
 .venv
 env/
 ENV/
@@ -57,6 +53,7 @@ ENV/
 azure_logs/
 
 mydb/
+db/
 
 # Ignore all folders in /seeds, but not the keys.json
 /seeds/*

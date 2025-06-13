@@ -1,26 +1,21 @@
 """Epoch-related protocol types for the JAM protocol."""
-from dataclasses import dataclass
-from jam.types.base.sequences.array import Array, decodable_array
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
+from tsrkit_types.sequences import TypedArray
+from tsrkit_types.struct import structure
 from jam.types.protocol.crypto import BandersnatchPublic, Ed25519Public, Entropy
 from jam.utils.constants import VALIDATOR_COUNT
-from jam.utils.json.serde import JsonSerde
 
-@decodable_dataclass
-@dataclass
-class MinValidatorData(Codable, JsonSerde):
+
+@structure
+class MinValidatorData:
     bandersnatch: BandersnatchPublic
     ed25519: Ed25519Public
 
-@decodable_array(length=VALIDATOR_COUNT, element_type=MinValidatorData)
-class ValidatorArray(Array[MinValidatorData]):
-    ...
+
+ValidatorArray = TypedArray[MinValidatorData, VALIDATOR_COUNT]
 
 
-@decodable_dataclass
-@dataclass
-class EpochMark(Codable, JsonSerde):
+@structure
+class EpochMark:
     """Epoch mark structure."""
 
     entropy: Entropy

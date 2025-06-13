@@ -153,7 +153,7 @@ class PedersenVRF:
         return Theta0 == Theta1
 
     def select_winning_ticket(tickets: List[Dict]) -> Tuple[List[Dict], Dict]:
-        """Select the winning ticket from valid tickets based on the minimum output_point."""
+        """Select the winning ticket from valid ticket.py based on the minimum output_point."""
         valid_tickets = [ticket for ticket in tickets if ticket['valid']]
         if not valid_tickets:
             return [], None
@@ -165,7 +165,7 @@ class PedersenVRF:
 
 
 def main():
-    """Main function to generate and verify VRF tickets"""
+    """Main function to generate and verify VRF ticket.py"""
     tickets = []
     validators = ["Hello", "Hello Computer", "Hello Coder"]
     b = 0xaa5f60f3b3126fa406972d2023ee03bf281022209d13882199113619d57ffa54
@@ -191,13 +191,13 @@ def main():
     valid_tickets, winning_ticket = PedersenVRF.select_winning_ticket(tickets)
 
     if valid_tickets:
-        print("\nValid tickets:")
+        print("\nValid ticket.py:")
         for idx, ticket in enumerate(valid_tickets, 1):
             print(f"Ticket {idx}: Proof {ticket['proof']}, Output Point: {ticket['output_point']}")
 
         print(f"\nWinning ticket: Proof {winning_ticket['proof']}, Output Point: {winning_ticket['output_point']}")
     else:
-        print("\nNo valid tickets found.")
+        print("\nNo valid ticket.py found.")
 
 if __name__ == "__main__":
     main()

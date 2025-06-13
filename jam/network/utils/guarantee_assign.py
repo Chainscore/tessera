@@ -5,8 +5,6 @@ from jam.types import  decodable_vector, U32, Vector
 from collections import deque
 
 
-
-
 @decodable_vector(element_type=U32)
 class U32Vector(Vector): ...
 

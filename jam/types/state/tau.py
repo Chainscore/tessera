@@ -1,4 +1,4 @@
-from jam.types.base.integers.fixed import U32
+from tsrkit_types.integers import Uint
 
 
-Tau = U32
+Tau = Uint[32]
