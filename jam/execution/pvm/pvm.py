@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 from typing import Tuple, List
-
-from jam.config.logging import logger
-from jam.execution.pvm.instructions.table_map import InstTableMap
+from jam.config.logging import get_logger
+from jam.execution.pvm.instructions.inst_map import inst_map
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.program import Program
-from jam.execution.pvm.status import OUT_OF_GAS, PAGE_FAULT, PANIC, ExecutionStatus, PvmError, CONTINUE
+from jam.execution.pvm.status import OUT_OF_GAS, PAGE_FAULT, PANIC, ExecutionStatus, PvmError
+
+logger = get_logger("pvm")
 
 @dataclass
 class PVM:
@@ -13,7 +14,7 @@ class PVM:
     @classmethod
     def execute(
         cls,
-        blob: bytes,
+        program: Program,
         program_counter: int,
         gas: int,
         registers: List[int],
@@ -23,7 +24,7 @@ class PVM:
         Execute the program blob `p` as per Psi specification.
 
         Args:
-            blob: Program blob
+            program: Program context / Cached for faster execution
             program_counter: Initial program counter
             gas: Gas provided for execution
             registers: Initial registers
@@ -36,30 +37,35 @@ class PVM:
             Registers: Final registers
             Memory: Final memory
         """
-        program, _ = Program.decode_from(blob)
-        remaining_gas = int(gas)
-        registers = [int(reg) for reg in registers]
-        program_counter = int(program_counter)
-        # print("# \t Inst \t  Bitmask ")
-        # for i, inst in enumerate(program.instruction_set[int(program_counter):]):
-        #     print(f"{i} \t {inst} \t {"✅" if program.offset_bitmask[i] else ""}")
+        remaining_gas = gas
+        
+        logger.debug("Starting PVM execution", registers=registers, inst_size=len(program.instruction_set), initial_pc=program_counter, initial_gas=gas, program_size=len(program.zeta))
+
         while True:
             try:
                 opcode = program.zeta[program_counter]
-                table = InstTableMap.get_instructions_table(opcode)(counter=program_counter, program=program)
+                
+                status, program_counter, registers, memory = inst_map.execute_instruction(
+                    opcode, program, program_counter, registers, memory
+                )
+                
+                gas_cost = inst_map.get_gas_cost(opcode)
+                remaining_gas -= gas_cost
 
-                # logger.debug(f"🤖 {int(program_counter)} | ⛽️ {remaining_gas} | {table.table()[opcode].name} ({opcode}) on {table.__class__.__name__}")
-                status, program_counter, registers, memory = table.execute(opcode, registers, memory)
-                remaining_gas -= int(table.table()[opcode].gas)
-                # logger.debug(f"Status: {status} | Gas: {remaining_gas} | PC: {program_counter} | Registers = {[int(r) for r in registers]}")
                 if remaining_gas < 0:
+                    logger.warning("PVM - OUT_OF_GAS", final_pc=program_counter, gas_deficit=abs(remaining_gas))
                     status = OUT_OF_GAS
                     break
-                elif status == ExecutionStatus.HALT or status == ExecutionStatus.HOST:
+
+                elif status == ExecutionStatus.HALT:
+                    logger.info("PVM - HALT", final_pc=program_counter, gas_remaining=remaining_gas)
+                    break
+                elif status == ExecutionStatus.HOST:
+                    logger.debug("PVM - HOST", pc=program_counter, gas_remaining=remaining_gas)
                     break
 
             except PvmError as e:
-                print(f"PVM Error {e}")
+                logger.error("PVM execution error", error_message=str(e), error_code=e.code, pc=program_counter, gas_remaining=remaining_gas)
                 if e.code == PANIC:
                     status = PANIC
                     break
@@ -68,4 +74,10 @@ class PVM:
                     break
                 else:
                     raise e
+            except Exception as e:
+                logger.critical("Unexpected PVM execution error", error=str(e), error_type=type(e).__name__, pc=program_counter)
+                raise e
+
+        logger.info("PVM result", final_pc=program_counter, gas_remaining=remaining_gas, registers=registers, memory=memory)
+        
         return status, program_counter, remaining_gas, registers, memory

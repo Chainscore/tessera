@@ -1,5 +1,3 @@
-from rockstore import RockStore
-
 class Settings:
     # Node settings
     NODE_NAME: str = "JAM-Node"
@@ -14,15 +12,8 @@ class Settings:
     AUDIT_DB_PATH: str = "data/audit"
 
     ENV_PREFIX = "JAM_"
-    ENV_FILE = ".env"
+    ENV_FILE = "40000.env"
 
-    @property
-    def db(self):
-        return RockStore(self.DB_PATH)
-
-    @property
-    def audit_db(self):
-        return RockStore(self.AUDIT_DB_PATH)
 
 settings: Settings = Settings()
 
@@ -31,7 +22,5 @@ def setup_setting(name: str, port: int,  db_path = "data/db", node_id = None):
     s = Settings()
     s.NODE_NAME = name
     s.LISTEN_PORT = port
-    s.DB_PATH = db_path
-    s.AUDIT_DB_PATH = db_path + "/audit"
     s.NODE_ID = node_id
     settings = s

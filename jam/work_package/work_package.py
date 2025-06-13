@@ -1,5 +1,5 @@
 from math import ceil
-from typing import Tuple
+from typing import Tuple, Dict, List, Optional
 
 from tsrkit_types import ByteArray
 
@@ -31,7 +31,7 @@ from tsrkit_types.sequences import TypedVector, Vector
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
 
-from jam.types.protocol.core import SegmentRoot, CoreIndex, Gas
+from jam.types.protocol.core import SegmentRoot, CoreIndex, Gas, WorkPackageHash
 from jam.types.protocol.crypto import OpaqueHash, Hash
 
 from jam.erasure_coding.erasure_code import ErasureCode
@@ -42,7 +42,10 @@ from jam.merklization.binary_merkle import BMRFunctions
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 
 from jam.utils.dummy.utils import create_dummy_bytes32
+from jam.config.logging import get_logger
 
+# Module-specific logger
+logger = get_logger("in_core")
 
 class WorkPackageProcessing:
 

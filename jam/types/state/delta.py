@@ -76,7 +76,7 @@ class AccountStorage(Dictionary[Bytes[32], Bytes, "key", "value"]):
 AccountPreimages = Dictionary[Bytes[32], Bytes, "hash", "blob"]
 
 """Lookup timestamps"""
-Timestamps = TypedVector[U32, 0, 3]
+Timestamps = TypedBoundedVector[U32, 0, 3]
 
 @structure
 class LookupTable:
@@ -104,7 +104,7 @@ class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
 
     def __delitem__(self, key: LookupTable):
         if key in self:
-            self._meta.num_i = self._meta.num_i - 1
+            self._meta.num_i = self._meta.num_i - 2
             self._meta.num_o = self._meta.num_o - key.length - 81
         super().__delitem__(key)
 

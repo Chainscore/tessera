@@ -1,12 +1,11 @@
 from math import floor
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 from tsrkit_types.itf.codable import Codable
 from tsrkit_types.integers import Uint
 from tsrkit_types.bits import Bits
+from jam.execution.pvm.instructions.inst_map import inst_map
 from jam.execution.pvm.status import PvmError
-from jam.execution.pvm.instructions.table_map import InstTableMap
 from jam.execution.pvm.status import CONTINUE, HALT, PANIC, ExecutionStatus
-from jam.execution.pvm.zeta import Zeta
 from jam.utils.constants import PVM_ADDR_ALIGNMENT
 
 
@@ -23,34 +22,64 @@ class Program(Codable):
 
     z: int
     jump_table: List
-    instruction_set: List[int]
+    instruction_set: bytes
     offset_bitmask: List
     basic_blocks: List
+
+    # Cache frequently accessed values
+    _offset_bitmask_len: int
+    _extended_bitmask: List[bool]
+    _extended_bitmask_len: int
+    _jump_table_len: int
+    _jump_table_max_addr: int
+    _skip_cache: Dict[int, int]
 
     def __init__(
         self,
         z: int,
         jump_table: List[int],
-        instruction_set: List[int],
+        instruction_set: bytes,
         offset_bitmask: List[bool],
     ):
         self.z = z
         self.jump_table = jump_table
         self.instruction_set = instruction_set
         self.offset_bitmask = offset_bitmask
+        
+        # Pre-compute and cache frequently accessed values
+        self._offset_bitmask_len = len(self.offset_bitmask)
+        self._extended_bitmask = self.offset_bitmask + [True] * 10  # Compute once
+        self._extended_bitmask_len = len(self._extended_bitmask)
+        self._jump_table_len = len(self.jump_table)
+        self._jump_table_max_addr = self._jump_table_len * PVM_ADDR_ALIGNMENT
+        
+        # Pre-compute skip values for all positions to eliminate runtime calculation
+        self._skip_cache: Dict[int, int] = {}
+        self._precompute_skip_values()
+        
+        # Build basic blocks using cached skip values
         basic_blocks = [0]
         for n in range(len(self.instruction_set)):
             if (
                     self.offset_bitmask[n] and
-                    self.instruction_set[n] in InstTableMap.terminating_blocks()
+                    inst_map.is_terminating(self.instruction_set[n])
             ):
-                basic_blocks.append(n + 1 + self.skip(n))
+                basic_blocks.append(n + 1 + self._skip_cache.get(n, 0))
         self.basic_blocks = basic_blocks
+        self.zeta = self.instruction_set + bytes(100)
+        self._basic_blocks_set = set(self.basic_blocks)
 
-    @property
-    def zeta(self) -> Zeta:
-        return Zeta(self.instruction_set)
-    
+    def _precompute_skip_values(self):
+        """Pre-compute skip values for all positions to eliminate runtime overhead."""
+        for i in range(self._offset_bitmask_len):
+            skip_value = self._extended_bitmask_len 
+            for j in range(i + 1, self._extended_bitmask_len):
+                if self._extended_bitmask[j]:
+                    skip_value = j - i - 1
+                    break
+            
+            self._skip_cache[i] = min(24, skip_value)
+
     def skip(self, pc) -> int:
         """
         Skip the instructions until the next opcode is found.
@@ -59,14 +88,7 @@ class Program(Codable):
         Returns:
             Distance to the next opcode.
         """
-        i = int(pc)
-        extended_bitmask = self.offset_bitmask + [True] * (100)
-        value = len(extended_bitmask)
-        for j in range(i + 1, len(extended_bitmask)):
-            if extended_bitmask[j] == 1:
-                value = j - i - 1  # Distance to the next opcode.
-                break
-        return min(24, value) # Reached the end of the bitmask.
+        return self._skip_cache.get(pc, 0)
 
     def branch(
         self,
@@ -76,7 +98,7 @@ class Program(Codable):
     ) -> Tuple[ExecutionStatus, int]:
         if not condition:
             return CONTINUE, counter
-        elif branch not in self.basic_blocks:
+        elif branch not in self._basic_blocks_set:
             raise PvmError(PANIC)
         return CONTINUE, branch
 
@@ -89,9 +111,9 @@ class Program(Codable):
             return HALT, counter
         elif (
             a == 0 or
-            a > (len(self.jump_table) * PVM_ADDR_ALIGNMENT) or
+            a > self._jump_table_max_addr or
             a % PVM_ADDR_ALIGNMENT != 0 or
-            self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1] not in self.basic_blocks
+            self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1] not in self._basic_blocks_set
         ):
             raise PvmError(PANIC)
         return CONTINUE, self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1]
@@ -103,13 +125,12 @@ class Program(Codable):
             int: Size of the program
         """
         total_size = 0
-        total_size += Uint(len(self.jump_table)).encode_size()
+        total_size += Uint(self._jump_table_len).encode_size()
         total_size += 1
         total_size += Uint(len(self.instruction_set)).encode_size()
         for jump in self.jump_table:
             total_size += Uint[self.z * 8](jump).encode_size()
-        for instruction in self.instruction_set:
-            total_size += instruction.encode_size()
+        total_size += len(self.instruction_set)
         total_size += Bits[len(self.instruction_set)](self.offset_bitmask).encode_size()
         return total_size
 
@@ -123,7 +144,7 @@ class Program(Codable):
         total_size = self.encode_size()
         self._check_buffer_size(buffer, total_size, offset)
         current_offset = offset
-        size = Uint[8](len(self.jump_table)).encode_into(buffer, current_offset)
+        size = Uint[8](self._jump_table_len).encode_into(buffer, current_offset)
         current_offset += size
         size = Uint[8](self.z).encode_into(buffer, current_offset)
         current_offset += size
@@ -134,9 +155,9 @@ class Program(Codable):
         for jump in self.jump_table:
             size = Uint[self.z * 8](jump).encode_into(buffer, current_offset)
             current_offset += size
-        for instruction in self.instruction_set:
-            size = instruction.encode_into(buffer, current_offset)
-            current_offset += size
+
+        buffer[current_offset:current_offset+len(self.instruction_set)] = self.instruction_set
+        current_offset+=len(self.instruction_set)
         size = Bits[len(self.instruction_set), "lsb"](self.offset_bitmask).encode_into(
             buffer, current_offset
         )
@@ -178,14 +199,10 @@ class Program(Codable):
             val, size = Uint[z * 8].decode_from(buffer, current_offset)
             bytes_read += size
             current_offset += size
-            j.append(val)
+            j.append(int(val))
 
-        c: List = []
-        for _ in range(c_len):
-            val, size = Uint[8].decode_from(buffer, current_offset)
-            bytes_read += size
-            current_offset += size
-            c.append(val)
+        c = buffer[current_offset:current_offset+c_len]
+        current_offset += c_len
 
         offset_bitmask, size = Bits[c_len, "lsb"].decode_from(
             buffer, current_offset
@@ -193,7 +210,7 @@ class Program(Codable):
         bytes_read += size
         current_offset += size
 
-        return Program(z, j, c, list(offset_bitmask)), bytes_read
+        return Program(int(z), j, c, list(offset_bitmask)), bytes_read
 
     @classmethod
     def from_json(cls, data: Union[bytes, bytearray]) -> "Program":

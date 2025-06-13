@@ -43,7 +43,6 @@ htmlcov/
 .ruff_cache/
 
 # Environment
-.env
 .venv
 env/
 ENV/
@@ -54,6 +53,7 @@ ENV/
 azure_logs/
 
 mydb/
+db/
 
 # Ignore all folders in /seeds, but not the keys.json
 /seeds/*

@@ -5,7 +5,7 @@ from jam.types.work.execution import (
     WorkExecResult,
     ExecResults,
     RefineLoad,
-    WorkResult,
+    WorkResult, WorkResults,
 )
 
 # Item types
@@ -21,7 +21,7 @@ from jam.types.work.item import (
 from jam.types.work.report import (
     RefineContext,
     WorkReport,
-    WorkDependencies,
+    WorkDependencies, WorkReports,
 )
 
 # Package types
@@ -41,11 +41,6 @@ from jam.types.work.segments import (
     SegmentRootLookup,
 )
 
-# Collection types
-from jam.types.work.collections import (
-    WorkResults,
-    WorkReports,
-)
 
 __all__ = [
     # Execution types

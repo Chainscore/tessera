@@ -7,6 +7,7 @@ import os
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
+from tsrkit_types import Bytes, U32
 
 ASN1_PREFIX = bytes.fromhex("302e020100300506032b657004220420")
 ZERO_SEED = b"\x00" * 32
@@ -29,15 +30,7 @@ def generate_keys(port: int):
         str: SAN of the certificate
     """
 
-    with open("seeds/keys.json", "r") as f:
-        all_seeds = json.load(f)
-
-    my_keys = all_seeds[str(port)]
-    if my_keys is None:
-        raise ValueError(f"No keys found for this port {port}. Please add them to the seeds/keys.json file.")
-
-    
-    seed = bytes.fromhex(my_keys["seed"][2:] if my_keys["seed"].startswith("0x") else my_keys["seed"])
+    seed = b"".join([U32(int(os.environ["SEED"])).encode()] * 8)
     if len(seed) != 32:
         raise ValueError("Seed must be exactly 32 bytes long.")
 

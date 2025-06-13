@@ -1,7 +1,4 @@
 from typing import List
-
-from tsrkit_types import Option
-
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
 from jam.types import TicketsMark, TicketBody
 from jam.types.block import TicketEnvelope, TicketsExtrinsic
@@ -9,10 +6,8 @@ from jam.types.state.eta import Eta
 from jam.types.state.kappa import Kappa
 from jam.types.state.lambda_ import Lambda_
 from jam.types.state.sigma import Sigma
-from tsrkit_types.integers import U64, U32
-from tsrkit_types.null import Null
 from jam.types.state.gamma import GammaS, GammaSTickets
-from tsrkit_types.bytes import Bytes
+from tsrkit_types import Bytes, Option, U64, U32, Null
 from jam.types.block import Block
 from jam.utils.constants import (
     EPOCH_LENGTH,
@@ -26,13 +21,8 @@ from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatc
 from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData
 from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
+import py_ark_vrf as vrf
 
-# for ring root
-from jam.ring_vrf.ring_proof.columns.columns import PublicColumnBuilder as PC
-from jam.ring_vrf.ring_proof.helpers import Helpers as H
-
-
-# for sign verification
 
 class Safrole:
     @staticmethod
@@ -68,17 +58,18 @@ class Safrole:
 
     @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> bytes:
-        keys_as_bs_points = []
-        for key in keys:
-            point = BandersnatchPoint.string_to_point(bytes(key))  # or take key[2:] by skipping '0x'
-            keys_as_bs_points.append((point.x, point.y))
-
-        ring_root = PC()  # ring_root builder
-        fxd_cols = ring_root.build(keys_as_bs_points)
-        fxd_col_cs = bytearray.fromhex(H.bls_g1_compress(fxd_cols[0].commitment)) + bytearray.fromhex(
-            H.bls_g1_compress(fxd_cols[1].commitment)) + bytearray.fromhex(H.bls_g1_compress(fxd_cols[2].commitment))
-
-        return fxd_col_cs
+        # keys_as_bs_points = []
+        # for key in keys:
+        #     point = BandersnatchPoint.string_to_point(bytes(key))  # or take key[2:] by skipping '0x'
+        #     keys_as_bs_points.append((point.x, point.y))
+        #
+        # ring_root = PC()  # ring_root builder
+        # fxd_cols = ring_root.build(keys_as_bs_points)
+        # fxd_col_cs = bytearray.fromhex(H.bls_g1_compress(fxd_cols[0].commitment)) + bytearray.fromhex(
+        #     H.bls_g1_compress(fxd_cols[1].commitment)) + bytearray.fromhex(H.bls_g1_compress(fxd_cols[2].commitment))
+        #
+        # print(fxd_col_cs.hex())
+        return vrf.PublicKey.get_ring_commitment_bytes([bytes(k) for k in keys])
 
     @staticmethod
     def vrf_output(signature: BandersnatchVrfSignature) -> Bytes[32]:
