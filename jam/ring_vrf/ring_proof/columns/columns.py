@@ -35,18 +35,26 @@ class Column:
 
     def interpolate(self, domain_omega: int = OMEGA, prime: int = S_PRIME) -> None:
         """Fill `self.coeffs` from `self.evals` using FFT interpolation."""
+        start_time=time.time()
         if self.coeffs is None:
             self.evals+=[0]* (SIZE-len(self.evals))
             self.coeffs = poly_interpolate_fft(self.evals, domain_omega, prime)
 
+        end_time=time.time()
+        print("each i_polate:",end_time- start_time)
+
     def commit(self, kzg: KZG | None = None) -> None:
+        start_time=time.time()
         if self.coeffs is None:
             raise ValueError("call interpolate() first")
         if self.commitment is None:
             kzg = kzg or _get_default_kzg()
+            s_time= time.time()
             self.commitment = kzg.commit(self.coeffs)
-
-
+            end_time= time.time()
+            # print("each commit call:", end_time- start_time)
+        end_time=time.time()
+        # print("each commitment:", end_time- start_time)
 
 @lru_cache(maxsize=1)
 def _get_default_kzg() -> KZG:
@@ -54,6 +62,7 @@ def _get_default_kzg() -> KZG:
     # Build an SRS with proper Jacobian conversion via the helper.
     from jam.ring_vrf.ring_proof.pcs.kzg import SRS
     return KZG(SRS(g1_points, g2_points))
+
 
 import  time
 
@@ -113,9 +122,13 @@ class PublicColumnBuilder:
         col_py = Column("Py", py)
         col_s = Column("s", sel)
 
+        i_c_start=time.time()
+
         for col in (col_px, col_py, col_s):
             col.interpolate(self.omega, self.prime)
             col.commit()
+        i_c_end=time.time()
+        # print("i_c_consumption in fs:", i_c_end-i_c_start)
         return col_px, col_py, col_s
 
 
@@ -131,15 +144,19 @@ class WitnessColumnBuilder:
     prime: int = S_PRIME
 
     def _bits_vector(self) -> List[int]:
+        bv_start=time.time()
         bv = [1 if i == self.producer_index else 0 for i in range(MAX_RING_SIZE)]
         t_bits = bin(self.secret_t)[2:][::-1]
         bv.extend(int(b) for b in t_bits)
         while len(bv) < self.size - 4:
             bv.append(0)
-        bv.append(0)  # padding bit
+        bv.append(0)# padding bit
+        bv_end=time.time()
+        # print("Bits Vector Consumption:", bv_end-bv_start)
         return bv
 
     def _conditional_sum_accumulator(self, b_vector: List[int]) -> tuple[List[int], List[int]]:
+        cnd_start=time.time()
         # seed_sw = sw.from_twisted_edwards(SeedPoint)
         seed_sw= SeedPoint
 
@@ -147,6 +164,8 @@ class WitnessColumnBuilder:
         for i in range(1, self.size - 3):
             next_pt = acc[i - 1] if b_vector[i - 1] == 0 else TE.add(acc[i - 1], self.ring_pk[i - 1])
             acc.append(next_pt)
+        cnd_end=time.time()
+        # print("Cnd_add_consumption:", cnd_end-cnd_start)
         return H.unzip(acc)
 
     def _inner_product_accumulator(self, b_vector: List[int]) -> List[int]:
@@ -167,11 +186,14 @@ class WitnessColumnBuilder:
             Column("accy", acc_y),
             Column("accip", acc_ip),
         ]
+        i_c_start=time.time()
         for col in columns:
             col.interpolate(self.omega, self.prime)
             col.commit()
-        return tuple(columns)
+        i_c_end=time.time()
+        # print("Interpolation & Commirtment time:", i_c_end- i_c_start)
 
+        return tuple(columns)
 
     def result(self, Blinding_point):
         """
@@ -191,7 +213,6 @@ class WitnessColumnBuilder:
         return res
 
 
-#
 # def _unzip_points(points: Sequence[Tuple[int, int]]) -> tuple[List[int], List[int]]:
 #     xs: List[int] = []
 #     ys: List[int] = []
