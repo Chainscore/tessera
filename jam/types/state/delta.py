@@ -41,7 +41,7 @@ class AccountMetadata:
     @staticmethod
     def empty() -> "AccountMetadata":
         return AccountMetadata(
-            code_hash=Bytes[32]([0] * 32),
+            code_hash=Bytes[32](32),
             balance=Balance(0),
             gas_limit=Gas(0),
             min_gas=Gas(0),
@@ -149,7 +149,7 @@ class AccountData:
         if len(lookup_ts) == 0:
             return False
         elif len(lookup_ts) == 1:
-            return lookup_ts[0] < current_ts
+            return lookup_ts[0] <= current_ts
         elif len(lookup_ts) == 2:
             return lookup_ts[0] <= current_ts < lookup_ts[1]
         elif len(lookup_ts) == 3:

@@ -1,45 +1,34 @@
 import json
 from typing import Type
-
 from tsrkit_types import Dictionary
-
+from jam.config.data_stores import data_stores
+from jam.consensus.grandpa.finality import Finality
 from jam.merklization import BMRFunctions
 from rockstore import RockStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.state.merkle import StateTrie
+from jam.state.state_storage import StateStorage
 from jam.state.utils import construct_state_key
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.itf.codable import Codable
-from jam.types import Block, Hash, Alpha, Eta, Nu, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma
+from jam.types import Block, Hash, Alpha, Eta, Nu, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma, \
+    HeaderHash
 from jam.config.logging import get_logger
 
 logger = get_logger("import")
 
-
 def make_state_prop(state_key: int, cl: Type[Codable]):
     def fget(self):
-        raw = self.DB.get(bytes(construct_state_key(state_key)))
+        raw = self.store.get(construct_state_key(state_key))
         if raw is None:
-            logger.error(
-                "State component missing from database",
-                component=cl.__name__,
-                state_key=state_key
-            )
             raise ValueError(f"State component missing from DB: {cl.__name__}")
         return cl.decode_from(raw)[0]
 
     def fset(self, value):
         k, v = construct_state_key(state_key), value.encode()
-        self.TRIE.update(k, Bytes(v))
-        self.DB.put(bytes(k), v)
-        
-        logger.debug(
-            "State component updated",
-            component=cl.__name__,
-            state_key=state_key,
-            value_size=len(v)
-        )
+        self.store.put(bytes(k), v)
+        logger.debug("State component updated", component=cl.__name__, state_key=state_key, value_size=len(v))
 
     return property(fget, fset)
 
@@ -48,42 +37,71 @@ class State:
     State implementation that uses dynamic components fetched from Db
     Here we retain and update merkle trie as cache
     """
-    DB: RockStore
-    TRIE: StateTrie
+    store: StateStorage
 
-    alpha = make_state_prop(1, Alpha)
-    phi = make_state_prop(2, Phi)
-    beta = make_state_prop(3, Beta)
-    gamma = make_state_prop(4, Gamma)
-    psi = make_state_prop(5, Psi)
-    eta = make_state_prop(6, Eta)
-    iota = make_state_prop(7, Iota)
-    kappa = make_state_prop(8, Kappa)
-    lambda_ = make_state_prop(9, Lambda_)
-    rho = make_state_prop(10, Rho)
-    tau = make_state_prop(11, Tau)
-    chi = make_state_prop(12, Chi)
-    pi = make_state_prop(13, Pi)
-    nu = make_state_prop(14, Nu)
-    xi = make_state_prop(15, Xi)
+    # State Components
+    alpha       = make_state_prop(1,  Alpha)
+    phi         = make_state_prop(2,  Phi)
+    beta        = make_state_prop(3,  Beta)
+    gamma       = make_state_prop(4,  Gamma)
+    psi         = make_state_prop(5,  Psi)
+    eta         = make_state_prop(6,  Eta)
+    iota        = make_state_prop(7,  Iota)
+    kappa       = make_state_prop(8,  Kappa)
+    lambda_     = make_state_prop(9,  Lambda_)
+    rho         = make_state_prop(10, Rho)
+    tau         = make_state_prop(11, Tau)
+    chi         = make_state_prop(12, Chi)
+    pi          = make_state_prop(13, Pi)
+    nu          = make_state_prop(14, Nu)
+    xi          = make_state_prop(15, Xi)
 
     @property
     def delta(self) -> "DeltaView":
-        return DeltaView(self.DB, self.TRIE)
+        return DeltaView(self.store)
 
-    def __init__(self, db = None, trie = None):
-        self.DB = db
-        self.TRIE = trie
-        
-        logger.debug(
-            "State instance initialized",
-            has_db=db is not None,
-            has_trie=trie is not None
-        )
+    def __init__(self, _store: StateStorage | None):
+        self.store = _store
+
+    @classmethod
+    def from_keyvals(cls, key_vals: dict[str, str] | dict[Bytes, Bytes], db: RockStore):
+        state_dict: dict[Bytes, Bytes] = {}
+        if len(key_vals) > 0 and isinstance(list(key_vals.keys())[0], str):
+            for k, v in key_vals.items():
+                state_dict[Bytes.fromhex(k)] = Bytes.fromhex(v)
+        else:
+            state_dict = key_vals
+
+        trie = StateTrie()
+        trie.merkelize(state_dict)
+
+        for k, v in state_dict.items():
+            db.put(k, v)
+
+        return cls(StateStorage(trie, db, {}))
+
+    def load(self, header: HeaderHash) -> "State":
+        # 1. Load all caches from current head to mentioned header
+        kv = data_stores.main_db
+        curr_head = Finality.load_latest(kv).header.parent
+        _updates = {}
+        while curr_head != header:
+            data = kv.get(self.store.get_storage_key(curr_head))
+            if data is None:
+                raise ValueError("Updates missing for", curr_head)
+            _curr_updates = Dictionary[Bytes[31], Bytes].decode(data)
+            block = Block.load(curr_head, kv)
+            curr_head = block.header.parent
+
+            # 2. Join them one after another (overwriting) to get one cache record
+            for k, v in _curr_updates.items():
+                _updates[k] = v
+
+        return State(StateStorage(self.store._TRIE, self.store._DB, _updates))
 
     @property
     def root(self):
-        return self.TRIE.root_hash
+        return self.store._TRIE.root_hash
 
     def transition(self, block: Block):
         """
@@ -163,55 +181,39 @@ class State:
             final_state_root=self.root.hex()[:16] + "..."
         )
 
-state = State()
+
+state = State(None)
 
 def set_state(new_state: State):
     global state
-    
-    logger.info(
-        "Global state updated",
-        has_db=new_state.DB is not None,
-        has_trie=new_state.TRIE is not None,
-        state_root=new_state.root.hex()[:16] + "..." if new_state.TRIE else None
-    )
-    
+
+    logger.info("Global state updated")
+
     state = new_state
     return state
 
-def setup_state(db: RockStore, genesis: GhostState | str = "dev-spec.json"):
+def setup_state(db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"):
     logger.info(
         "Setting up state from genesis",
         genesis_type=type(genesis).__name__,
         genesis_source=genesis if isinstance(genesis, str) else "GhostState"
     )
-    
+
     if isinstance(genesis, str):
-        logger.debug(
-            "Loading genesis from JSON file",
-            genesis_file=genesis
-        )
         genesis_json = json.load(open(genesis))
         data = Dictionary[Bytes, Bytes].from_json(genesis_json["genesis_state"])
-    else:
+    elif isinstance(genesis, GhostState):
         logger.debug("Transforming GhostState to genesis data")
         data = genesis.transform()
-    
-    logger.debug(
-        "Building state trie from genesis data",
-        data_entries=len(data)
-    )
-    
-    trie = StateTrie()
-    trie.merkelize(data, db)
+    else:
+        data = genesis
 
-    new_state = State(db, trie)
-    
-    logger.info(
-        "State setup completed",
-        state_root=new_state.root.hex()[:16] + "...",
-        data_entries=len(data)
-    )
-    
+    new_state = State.from_keyvals(data, db)
+    new_state.store.enable_writes()
+    new_state.store.enable_cache()
+
+    logger.info("State setup completed", state_root=new_state.root.hex()[:16] + "...", data_entries=len(data))
+
     global state
     state = new_state
     return state

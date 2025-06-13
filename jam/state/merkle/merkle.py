@@ -82,8 +82,7 @@ class StateTrie:
 
     def merkelize(
         self,
-        state_dict: Dict[Bytes, Bytes],
-        db: Optional[RockStore] = None
+        state_dict: Dict[Bytes, Bytes]
     ) -> Tuple[NodeHash, Dict[NodeHash, Node]]:
         """
         Implements the state Merklization (per D.2)
@@ -100,9 +99,6 @@ class StateTrie:
         items = [encode_leaf(key, value) for key, value in state_dict.items()]
         root_hash, _ = self._merkelize_recursive(items, 0)
         self.root_hash = root_hash
-        if db is not None:
-            for key, value in state_dict.items():
-                db.put(bytes(key), bytes(value))
         return root_hash, self.nodes
 
     def get_nodes(self) -> Dict[NodeHash, Node]:
