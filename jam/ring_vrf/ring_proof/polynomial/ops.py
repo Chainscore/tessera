@@ -1,6 +1,9 @@
 from jam.ring_vrf.ring_proof.constants import S_PRIME, D_512 as D
 from sympy import symbols
 
+from jam.ring_vrf.ring_proof.polynomial.interpolation import fft, poly_interpolate_fft
+
+
 def mod_inverse(val, prime):
     """Find the modular multiplicative inverse of a under modulo m."""
     if pow(val, prime - 1, prime) != 1:
@@ -46,6 +49,7 @@ def poly_multiply(poly1, poly2, prime):
     return result
 
 
+import time
 
 def poly_division_general(c, d, p=S_PRIME):
     """
@@ -54,6 +58,7 @@ def poly_division_general(c, d, p=S_PRIME):
     p: optional modulus (for finite field arithmetic)
     returns (quotient, remainder)
     """
+    start=time.time()
     c = c[:]  # copy to avoid modifying input
     deg_c = len(c) - 1
     deg_d = len(d) - 1
@@ -93,13 +98,44 @@ def poly_scalar(poly, scalar, prime):
     result = [(coef * scalar) % prime for coef in poly]
     return result
 
+#initial
+# def poly_evaluate(poly, x, prime):
+#     """Evaluate a polynomial at point x using Horner's method."""
+#     result = 0
+#     for coef in  reversed(poly):
+#         result = (result * x + coef) % prime
+#     return result
 
-def poly_evaluate(poly, x, prime):
-    """Evaluate a polynomial at point x using Horner's method."""
-    result = 0
-    for coef in  reversed(poly):
+#30%
+# import gmpy2
+# def poly_evaluate(poly, x, prime):
+#     x = gmpy2.mpz(x)
+#     result = gmpy2.mpz(0)
+#     for coef in reversed(poly):
+#         result = (result * x + coef) % prime
+#     return int(result)
+
+#70%
+from multiprocessing import Pool, cpu_count
+
+def poly_evaluate_single(args):
+    poly, x, prime = args
+    result=0
+    for coef in reversed(poly):
         result = (result * x + coef) % prime
-    return result
+    return result  # Ensure plain Python int
+
+def poly_evaluate(poly, xs, prime):
+    prime = int(prime)
+    # Single-point evaluation
+    if isinstance(xs, int):
+        return poly_evaluate_single((poly, xs, prime))
+
+    # Multi-point evaluation
+    with Pool(processes=cpu_count()) as pool:
+        args = [(poly, x, prime) for x in xs]
+        results = pool.map(poly_evaluate_single, args)
+        return results
 
 
 def lagrange_basis_polynomial(x_coords, i, prime=S_PRIME):

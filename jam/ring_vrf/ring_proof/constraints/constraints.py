@@ -1,4 +1,6 @@
 from __future__ import annotations
+from concurrent.futures import ProcessPoolExecutor
+import time
 
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchParams
 # from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
@@ -21,9 +23,12 @@ from jam.ring_vrf.ring_proof.polynomial.ops import (
     poly_evaluate,
     lagrange_basis_polynomial,
 )
+
 def _to_radix4(vec: Sequence[int]) -> List[int]:
     """Convert a radix‑2 evaluation vector to radix‑4 """
-    return [poly_evaluate(vec, x, S_PRIME) for x in D_2048]
+    # return [poly_evaluate(vec, x, S_PRIME) for x in D_2048]
+    return poly_evaluate(vec, D_2048, S_PRIME)
+
 
 _NOT_LAST = vect_sub(D_2048, pow(OMEGA, 508, S_PRIME), S_PRIME)
 
@@ -31,10 +36,12 @@ _L0_RAD4: List[int]
 _LN4_RAD4: List[int]
 
 _l0_coeffs = lagrange_basis_polynomial(D, 0)
-_L0_RAD4 = [poly_evaluate(_l0_coeffs, x, S_PRIME) for x in D_2048]
+# _L0_RAD4 = [poly_evaluate(_l0_coeffs, x, S_PRIME) for x in D_2048]
+_L0_RAD4 = poly_evaluate(_l0_coeffs, D_2048, S_PRIME)
 
 _ln4_coeffs = lagrange_basis_polynomial(D, SIZE - 4)
-_LN4_RAD4 = [poly_evaluate(_ln4_coeffs, x, S_PRIME) for x in D_2048]
+# _LN4_RAD4 = [poly_evaluate(_ln4_coeffs, x, S_PRIME) for x in D_2048]
+_LN4_RAD4 = poly_evaluate(_ln4_coeffs, D_2048, S_PRIME)
 
 
 def _shift(vec: Sequence[int]) -> List[int]:
@@ -69,13 +76,20 @@ class RingConstraintBuilder:
 
 
     def __post_init__(self):
-        self._px4    = _to_radix4(self.px)
-        self._py4    = _to_radix4(self.py)
-        self._s4     = _to_radix4(self.s)
-        self._b4     = _to_radix4(self.b)
-        self._accx4  = _to_radix4(self.acc_x)
-        self._accy4  = _to_radix4(self.acc_y)
-        self._accip4 = _to_radix4(self.acc_ip)
+
+        # self._px4    = _to_radix4(self.px)
+        # self._py4    = _to_radix4(self.py)
+        # self._s4     = _to_radix4(self.s)
+        # self._b4     = _to_radix4(self.b)
+        # self._accx4  = _to_radix4(self.acc_x)
+        # self._accy4  = _to_radix4(self.acc_y)
+        # self._accip4 = _to_radix4(self.acc_ip)
+        input_polys = [self.px, self.py, self.s, self.b, self.acc_x, self.acc_y, self.acc_ip]
+
+        with ProcessPoolExecutor() as executor:
+            results = list(executor.map(_to_radix4, input_polys))
+
+        self._px4, self._py4, self._s4, self._b4, self._accx4, self._accy4, self._accip4 = results
 
     # convenient classmethod for Column builders
     @classmethod
@@ -107,7 +121,10 @@ class RingConstraintBuilder:
     def _c1(self) -> List[int]:
         if "c1x" in self._cache:
             return self._cache["c1x"]
+        st_time=time.time()
         accip_w = _shift(self._accip4)
+        e_time=time.time()
+        # print("Each shift consumption:", e_time - st_time)
         constraint = vect_sub(
             vect_sub(accip_w, self._accip4, S_PRIME),
             vect_mul(self._b4, self._s4, S_PRIME),
