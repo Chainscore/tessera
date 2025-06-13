@@ -103,6 +103,10 @@ class State:
     def root(self):
         return self.store._TRIE.root_hash
 
+    def settle(self, header_hash: HeaderHash):
+        """Settles a set of state changes cached in store. Marks off the settlement with an unique header hash"""
+        self.store.save_n_clear_cache(data_stores.main_db, header_hash)
+
     def transition(self, block: Block):
         """
         Main state transition function. Takes in the current state and the incoming block, returns the transitioned state

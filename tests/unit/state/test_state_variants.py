@@ -50,7 +50,7 @@ def test_block_import_state_save_n_fetch(db_path):
 		# Mockup of state transition
 		bh = HeaderHash(block.header.hash())
 		state.tau = block.header.slot
-		state.store.save_n_clear_cache(db, bh)
+		state.settle(bh)
 		Finality.set_head(bh, db)
 
 		block.save(db)
@@ -72,4 +72,4 @@ def test_delta_updates(db_path):
 	state.delta[ServiceId(100)].service.code_hash = Bytes[32]([1] * 32)
 	assert state.delta[ServiceId(100)].service.code_hash == Bytes([1] * 32)
 
-	state.store.save_n_clear_cache(data_stores.main_db, HeaderHash([0]*32))
+	state.settle(HeaderHash([0]*32))

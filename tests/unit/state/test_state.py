@@ -23,7 +23,7 @@ def test_state_update(db_path):
     prev_hash = state.root
     state.tau = Tau(1)
 
-    state.store.save_n_clear_cache(data_stores.main_db, header=Bytes([1]*32))
+    state.settle(header=Bytes([1]*32))
     assert prev_hash != state.root
 
 def test_delta_update(db_path):
@@ -38,7 +38,7 @@ def test_delta_update(db_path):
         num_o=U64(10000000),
         num_i=U32(100),
     )
-    state.store.save_n_clear_cache(data_stores.main_db, header=Bytes([1]*32))
+    state.settle(header=Bytes([1]*32))
 
     assert prev_hash != state.root
     data_post = state.delta[ServiceId(1)].service
@@ -56,7 +56,7 @@ def test_preimage_add(db_path):
     data = create_dummy_bytes(100)
     state.delta[ServiceId(1)].preimages[Hash.blake2b(data)] = Bytes(data)
 
-    state.store.save_n_clear_cache(data_stores.main_db, header=Bytes([1]*32))
+    state.settle(header=Bytes([1]*32))
 
     assert prev_hash != state.root
     assert state.delta[ServiceId(1)].preimages[Hash.blake2b(data)] == Bytes(data)
@@ -69,7 +69,7 @@ def test_storage_add(db_path):
     state.delta[ServiceId(1)] = AccountData()
     state.delta[ServiceId(1)].storage[Hash.blake2b(data)] = Bytes(data)
 
-    state.store.save_n_clear_cache(data_stores.main_db, header=Bytes([1]*32))
+    state.settle(header=Bytes([1]*32))
 
     assert prev_hash != state.root
     assert state.delta[ServiceId(1)].storage[Hash.blake2b(data)] == Bytes(data)
@@ -83,7 +83,7 @@ def test_timestamps_add(db_path):
     state.delta[ServiceId(1)] = AccountData()
     state.delta[ServiceId(1)].lookup[LookupTable(hash=Hash.blake2b(data), length=100)] = Timestamps([])
 
-    state.store.save_n_clear_cache(data_stores.main_db, header=Bytes([1]*32))
+    state.settle(header=Bytes([1]*32))
 
     assert prev_hash != state.root
     assert state.delta[ServiceId(1)].lookup[LookupTable(hash=Hash.blake2b(data), length=100)] == Timestamps([])
