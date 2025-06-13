@@ -102,3 +102,17 @@ class Helpers:
             return int.from_bytes(string, 'little')
         byts = bytes.fromhex(string)
         return int.from_bytes(byts, 'little')
+
+    @staticmethod
+    def bls_projective_2_affine(points_3d):
+        """
+        Convert a list of 3D coordinate points to 2D by removing the z-coordinate.
+        """
+        return [(x, y) for x, y, z in points_3d]
+
+    @staticmethod
+    def to_fq(point):
+        """convert a int type point cords to FQ type """
+        x, y, z = point
+        res = (FQ(x), FQ(y), FQ(z))
+        return res
