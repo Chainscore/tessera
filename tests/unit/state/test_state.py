@@ -13,20 +13,20 @@ from jam.utils.dummy.utils import create_dummy_bytes
 
 def test_state_sync(db_path):
     db = RockStore(db_path)
-    setup_state(GhostState.genesis(), db)
+    setup_state(db, GhostState.genesis())
     from jam.state.state import state as updated_state
     assert updated_state.TRIE.root_hash != Bytes[32]([0] * 32)
 
 def test_state_update(db_path):
     data_stores.configure_db_paths(db_path)
-    state = setup_state(GhostState.genesis(), data_stores.main_db)
+    state = setup_state(data_stores.main_db, GhostState.genesis())
     prev_hash = state.TRIE.root_hash
     state.tau = Tau(1)
     assert prev_hash != state.TRIE.root_hash
 
 def test_delta_update(db_path):
     data_stores.configure_db_paths(db_path)
-    state = setup_state(GhostState.genesis(), data_stores.main_db)
+    state = setup_state(data_stores.main_db, GhostState.genesis())
     prev_hash = state.TRIE.root_hash
     state.delta[ServiceId(1)].service = AccountMetadata(
         code_hash=Bytes[32]([1] * 32),
@@ -47,7 +47,7 @@ def test_delta_update(db_path):
 
 def test_preimage_add(db_path):
     data_stores.configure_db_paths(db_path)
-    state = setup_state(GhostState.genesis(), data_stores.main_db)
+    state = setup_state(data_stores.main_db, GhostState.genesis())
     prev_hash = state.TRIE.root_hash
     data = create_dummy_bytes(100)
     state.delta[ServiceId(1)].preimages[Hash.blake2b(data)] = Bytes(data)
@@ -56,7 +56,7 @@ def test_preimage_add(db_path):
 
 def test_storage_add(db_path):
     data_stores.configure_db_paths(db_path)
-    state = setup_state(GhostState.genesis(), data_stores.main_db)
+    state = setup_state(data_stores.main_db, GhostState.genesis())
     prev_hash = state.TRIE.root_hash
     data = create_dummy_bytes(100)
     state.delta[ServiceId(1)] = AccountData()
@@ -66,7 +66,7 @@ def test_storage_add(db_path):
 
 def test_timestamps_add(db_path):
     data_stores.configure_db_paths(db_path)
-    state = setup_state(GhostState.genesis(), data_stores.main_db)
+    state = setup_state(data_stores.main_db, GhostState.genesis())
 
     prev_hash = state.TRIE.root_hash
     data = create_dummy_bytes(100)
