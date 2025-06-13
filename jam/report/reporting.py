@@ -22,7 +22,7 @@ from tsrkit_types.null import Null
 class Reporting:
 
     @staticmethod
-    def transition(state: Sigma, block:Block, known_packages: List[OpaqueHash]) -> Sigma:
+    def transition(state: Sigma, block:Block, known_packages: List[OpaqueHash] = []) -> Sigma:
         """
         Description:
             This function takes two arguments: state, block. This transition function check all the boundary cases for work_report and update the state Rho.
@@ -34,6 +34,18 @@ class Reporting:
         Returns:
             Returns the updated Rho(workreport, timeslot)
         """
+
+        # Work package hashes form Nu and Xi
+        known_packages.extend([
+            queue_el.report.context.prerequisites
+            for epoch_queue in state.nu
+            for queue_el in epoch_queue
+        ])
+        known_packages.extend([
+            wps
+            for deps in state.xi
+            for wps in deps
+        ])
 
         # small w
         all_reports = []

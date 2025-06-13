@@ -220,6 +220,7 @@ def setup_module_logging_levels():
     for key, value in os.environ.items():
         if key.startswith("LOG_LEVEL_"):
             module_suffix = str(key[10:]).lower()  # Remove "LOG_LEVEL_" prefix
+            print("setting log level for", module_suffix)
             try:
                 level = getattr(logging, value.upper())
                 module_levels[module_suffix] = level
