@@ -7,7 +7,12 @@ from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTermina
 from cryptography.x509 import Certificate
 
 from jam.config.logging import logging as logger
+from jam.network.base.certificate import verify_certificate
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
+
+from cryptography import x509
+from cryptography.x509.oid import ExtensionOID
+from cryptography.x509.general_name import DNSName
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -36,12 +41,18 @@ class QuicProtocol(QuicConnectionProtocol):
 
         else:
             peer_cert = self._quic.tls._peer_certificate
-            print("CERT", peer_cert.issuer, peer_cert.subject)
 
             if isinstance(peer_cert, Certificate):
+                # Verify certificate first
+                is_valid, e = verify_certificate(peer_cert)
+                if not is_valid:
+                    logger.error(f"{self.interface}: ❌ Invalid Peer Certificate received {e}.")
+                    self._quic.close(error_code=0xA, reason_phrase=f"Invalid Peer Certificate")
+
                 pk = peer_cert.public_key()
                 peer = self.node.get_peer(pk.public_bytes_raw())
-                if peer:
+
+                if peer and peer.ed_key:
                     self.peer = peer
                     return peer
                 else:
@@ -105,6 +116,7 @@ class QuicProtocol(QuicConnectionProtocol):
             peer = self.fetch_peer()
             if peer:
                 logger.info(f"{self.interface}: 🔗 Handshake completed with {peer}.")
+                logger.info(f"{self.interface}: 🔗 Early data accepted {event.early_data_accepted}.")
 
         # elif isinstance(event, ConnectionIdIssued):
         #     logger.info(f"{self.interface}: 🔗 Connection Id issued: {event.connection_id}")

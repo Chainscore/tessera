@@ -5,7 +5,7 @@ import json
 import os
 
 from cryptography import x509
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
 from tsrkit_types import Uint
 
@@ -128,3 +128,40 @@ def generate_keys(port: int):
         f.write(certificate.public_bytes(Encoding.PEM))
 
     return san
+
+def verify_certificate(cert: x509.Certificate):
+    try:
+        now = datetime.now(timezone.utc)
+
+        if cert.not_valid_before_utc > now:
+            raise ValueError("Certificate not yet valid.")
+
+        if cert.not_valid_after_utc < now:
+            raise ValueError("Certificate expired.")
+
+        pk = cert.public_key()
+
+        if not isinstance(pk, Ed25519PublicKey):
+            raise ValueError("Certificate public key must be Ed25519.")
+
+        test_san = generate_san(pk.public_bytes_raw())
+        print("Peer Certificate Issued by: ", cert.issuer)
+
+        san_extension = cert.extensions.get_extension_for_oid(x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+        san = san_extension.value.get_values_for_type(x509.general_name.DNSName)
+
+        if len(san) != 1:
+            raise ValueError("Certificate must have exactly one Subject Alternative Name.")
+
+        if san[0] != test_san:
+            raise ValueError("Subject Alternative Name doesn't match with key.")
+
+        if cert.signature_algorithm_oid != x509.SignatureAlgorithmOID.ED25519:
+            raise ValueError("Expected Ed25519 signature algorithm.")
+
+        print("Certificate Verification Successful!!")
+
+        return True, None
+
+    except Exception as e:
+        return False, e
