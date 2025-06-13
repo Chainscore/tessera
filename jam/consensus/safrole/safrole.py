@@ -49,24 +49,24 @@ class Safrole:
     def verify_vrf(message, proof) -> bool:
         # TODO: Implement VRF verification after VRF module is added
         #
+        # according to the proof size consider taking 96, 64 or 48,32 below
         # proof_ptr = [H.bls_g1_decompress(proof[:48]), H.bls_g1_decompress(proof[48 * 1: 48 * 2]),H.bls_g1_decompress(proof[48 * 2: 48 * 3]), H.bls_g1_decompress(proof[48 * 3:48 * 4]),H.to_scalar_int(proof[48 * 4 + (0 * 32): 48 * 4 + (1 * 32)]),H.to_scalar_int(proof[48 * 4 + (1 * 32): 48 * 4 + (2 * 32)]),H.to_scalar_int(proof[48 * 4 + (2 * 32): 48 * 4 + (3 * 32)]),H.to_scalar_int(proof[48 * 4 + (3 * 32): 48 * 4 + (4 * 32)]),H.to_scalar_int(proof[48 * 4 + (4 * 32): 48 * 4 + (5 * 32)]),H.to_scalar_int(proof[48 * 4 + (5 * 32): 48 * 4 + (6 * 32)]),H.to_scalar_int(proof[48 * 4 + (6 * 32): 48 * 4 + (7 * 32)]),H.bls_g1_decompress(proof[48 * 4 + (7 * 32):48 * 4 + (7 * 32) + 48]),H.to_scalar_int(proof[48 * 4 + (7 * 32) + 48:48 * 4 + (7 * 32) + 48 + 32]),H.bls_g1_decompress(proof[48 * 4 + (7 * 32) + 48 + 32:-98]), H.bls_g1_decompress(proof[-98:])]
-        # rltn_to_proove=sw.decompress(message) #relation to proove
-        # res_plus_seeed= sw.add(sw.from_twisted_edwards(SeedPoint), rltn_to_proove)
-        #
-        # ring_root = "0x85f9095f4abd040839d793d89ab5ff25c61e50c844ab6765e2c0b22373b5a8f6fbe5fc0cd61fdde580b3d44fe1be127197e33b91960b10d2c6fc75aec03f36e16c2a8204961097dbc2c5ba7655543385399cc9ef08bf2e520ccf3b0a7569d88492e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf" #example
-        # C_px, C_py, C_s= H.bls_g1_decompress(ring_root[:98]) , H. bls_g1_decompress(ring_root[98:-98]) , H.bls_g1_decompress(ring_root[-98:])
-        # fixed_cols_cmts=[C_px, C_py, C_s]
-        #
-        # verifier_key= {
-        # 'g1':g1_points[0],
-        # 'g2':H.altered_points(g2_points),
-        #     'commitments':fixed_cols_cmts
+        # rltn_to_proove=BandersnatchPoint.string_to_point(message) #relation to proove
+        # res_plus_seed= sw.add(sw.from_twisted_edwards(SeedPoint), rltn_to_proove)
+        # rltn = (rltn_to_proove.x, rltn_to_proove.y)
+        # res_plus_seeed= TwistedEdwardCurve.add(SeedPoint,rltn)
+
+        #get the ring root from compute ring root func
+        # C_px, C_py, C_s = H.bls_g1_decompress(ring_root[:96]), H.bls_g1_decompress(
+        #     ring_root[96:-96]), H.bls_g1_decompress(ring_root[-96:])
+        # fixed_cols_cmts = [C_px, C_py, C_s]
+        # verifier_key = {
+        #     'g1': g1_points[0],
+        #     'g2': H.altered_points(g2_points),
+        #     'commitments': [H.to_int(each) for each in H.bls_projective_2_affine(fixed_cols_cmts)]
         # }
-        #
-        # valid = Verify(proof_ptr, verifier_key, fixed_cols_cmts,rltn_to_proove, res_plus_seeed,SeedPoint,D)
-        # # print("is any one:",valid.is_signtaure_valid())
-        # print('am i called')
-        # # return valid.is_signtaure_valid()
+        # valid = Verify(proof_ptr, verifier_key, fixed_cols_cmts, rltn_to_proove, res_plus_seed, SeedPoint, D)
+        # return valid.is_signtaure_valid()
 
         return True
 
