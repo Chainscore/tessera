@@ -1,4 +1,5 @@
 import sys
+import time
 
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchParams
 from jam.ring_vrf.ring_proof.constants import OMEGA as omega, D_512 as D, S_PRIME
@@ -82,15 +83,17 @@ class LAggPoly:
         return l_agg
 
     def l_agg_poly(self):
-
+        l_start=time.time()
         self.evaluate_polys_at_zeta()  # fills P_x_zeta … acc_y_zeta
         l1 = self.compute_l1()
         l2 = self.compute_l2()
         l3 = self.compute_l3()
         l_agg = self.linearize(l1, l2, l3)
 
-        l_agg_zeta_omega = poly_evaluate(l_agg, self.zeta_omega, S_PRIME)
 
+        l_agg_zeta_omega = poly_evaluate(l_agg, self.zeta_omega, S_PRIME)
+        l_end = time.time()
+        # print("l_ploly:", l_end-l_start)
         return self.t, self.zeta, {
             # "Zeta":self.zeta,
             "P_x_zeta": self.P_x_zeta,
