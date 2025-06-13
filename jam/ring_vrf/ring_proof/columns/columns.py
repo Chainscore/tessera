@@ -41,7 +41,7 @@ class Column:
             self.coeffs = poly_interpolate_fft(self.evals, domain_omega, prime)
 
         end_time=time.time()
-        print("each i_polate:",end_time- start_time)
+        # print("each i_polate:",end_time- start_time)
 
     def commit(self, kzg: KZG | None = None) -> None:
         start_time=time.time()
