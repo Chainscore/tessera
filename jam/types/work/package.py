@@ -78,7 +78,6 @@ class WorkPackage:
     items: WorkItems
 
     def m_c(self, delta: "Delta") -> Tuple[bytes, bytes]:
-        from jam.types.state.delta import Delta
         service_data = delta[self.auth_code_host].historical_lookup(self.context.lookup_anchor_slot, self.authorizer.code_hash)
         return decode_code_hash(service_data)
 

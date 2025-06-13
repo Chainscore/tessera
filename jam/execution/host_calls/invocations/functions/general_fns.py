@@ -254,13 +254,7 @@ class GeneralFunctions(INVF):
         key_size = registers[9]
         output_offset = registers[10]
         
-        logger.debug(
-            "Host call: read",
-            service_key=service_key,
-            key_offset=key_offset,
-            key_size=key_size,
-            output_offset=output_offset
-        )
+        logger.debug("Host call: read", service_key=service_key, key_offset=key_offset, key_size=key_size, output_offset=output_offset)
         
         if service_key == 2**64 - 1:
             s_star = service_index
@@ -276,11 +270,7 @@ class GeneralFunctions(INVF):
         ko, kz, o = registers[8:8+3]
 
         if not memory.is_accessible(ko, kz):
-            logger.error(
-                "Host call read: memory not accessible for key",
-                key_offset=ko,
-                key_size=kz
-            )
+            logger.error("Host call read: memory not accessible for key", key_offset=ko, key_size=kz)
             raise PvmError(PANIC)
 
         v: None|Bytes = None
@@ -292,31 +282,18 @@ class GeneralFunctions(INVF):
 
         if v is None or len(v) == 0:
             registers[7] = HostStatus.NONE.value
-            logger.debug(
-                "Host call read: storage value not found",
-                service_key=service_key,
-                storage_key=k.hex()[:16] + "..."
-            )
+            logger.debug("Host call read: storage value not found", service_key=service_key, storage_key=k.hex()[:16] + "...")
         else:
             f = min(int(registers[11]), len(v))
             l = min(int(registers[12]), len(v) - f)
 
             if not memory.is_accessible(o, l, for_write=True):
-                logger.error(
-                    "Host call read: memory not accessible for output",
-                    output_offset=o,
-                    required_size=l
-                )
+                logger.error( "Host call read: memory not accessible for output", output_offset=o, required_size=l)
                 raise PvmError(PANIC)
             registers[7] = Register(len(v))
             memory.write(o, v[f:l])
             
-            logger.debug(
-                "Host call read: storage value found",
-                service_key=service_key,
-                value_length=len(v),
-                returned_length=l
-            )
+            logger.debug("Host call read: storage value found", service_key=service_key, value_length=len(v), returned_length=l)
         return CONTINUE, gas, registers, memory, context
 
 
@@ -436,10 +413,12 @@ class GeneralFunctions(INVF):
     @staticmethod
     @INVF.register(host_call=100, gas_cost=0)
     def log(
-            gas: Gas,
-            registers: list,
-            memory: Memory,
-            context: Optional[Any],
+        gas: Gas,
+        registers: list,
+        memory: Memory,
+        context: Optional[Any],
+        core_index: int,
+        service_id: int
     ):
         message_start = registers[10]
         message_length = registers[11]
@@ -480,14 +459,17 @@ class GeneralFunctions(INVF):
         except Exception:
             message_str = message_bytes.hex()
 
-        log_kwargs = {"target": target_str, "level": int(level)}
+        log_kwargs = {"target": target_str, "level": int(level), "core_index": core_index, "service_id": service_id}
+
+        # Load the default logger
+        jam_logger = get_logger()
         if int(level) == 0:
-            logger.error(message_str, **log_kwargs)
+            jam_logger.error(message_str, **log_kwargs)
         elif int(level) == 1:
-            logger.warning(message_str, **log_kwargs)
+            jam_logger.warning(message_str, **log_kwargs)
         elif int(level) == 2:
-            logger.info(message_str, **log_kwargs)
+            jam_logger.info(message_str, **log_kwargs)
         else:
-            logger.debug(message_str, **log_kwargs)
+            jam_logger.debug(message_str, **log_kwargs)
 
         return CONTINUE, gas, registers, memory, context

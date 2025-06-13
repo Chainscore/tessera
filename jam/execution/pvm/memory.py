@@ -10,20 +10,16 @@ from jam.utils.constants import (
     PVM_INIT_ZONE_SIZE,
 )
 
-ADDR_MOD = 2**32          # module-level constants → a tiny bit quicker
+ADDR_MOD = 2**32
 PAGE_SIZE = PVM_MEMORY_PAGE_SIZE
-LOW_BOUND = 0             # keeps original semantic
+LOW_BOUND = 0
 
 
 class Memory:
     """
     Sparse, page-mapped memory model with read/write page protection.
-    Public interface identical to the original implementation.
     """
 
-    # --------------------------------------------------------------------- #
-    # Creation / basic helpers
-    # --------------------------------------------------------------------- #
 
     def __init__(
         self,
@@ -53,7 +49,7 @@ class Memory:
     # --------------------------------------------------------------------- #
 
     @staticmethod
-    def _page_index(addr: int) -> int:          # tiny helper → no div inside tight loops
+    def _page_index(addr: int) -> int:
         return addr // PAGE_SIZE
 
     def _page_for(self, addr: int, *, create: bool = False) -> bytearray:
@@ -103,7 +99,6 @@ class Memory:
         # iterate over pages spanned by the range
         cursor = 0
         while address < end:
-            pg = self._page_index(address)
             page_off = address % PAGE_SIZE
             chunk = min(PAGE_SIZE - page_off, end - address)
 
@@ -125,7 +120,6 @@ class Memory:
 
         cursor = 0
         while address < end:
-            pg = self._page_index(address)
             page_off = address % PAGE_SIZE
             chunk = min(PAGE_SIZE - page_off, end - address)
 
@@ -136,9 +130,6 @@ class Memory:
             address += chunk
             cursor += chunk
 
-    # ------------------------------------------------------------------ #
-    # Aux helpers (unchanged signatures)
-    # ------------------------------------------------------------------ #
 
     def is_accessible(self, address: int, length: int, for_write: bool = False) -> bool:
         if length <= 0:
@@ -174,9 +165,6 @@ class Memory:
                 return False
         return True
 
-    # ------------------------------------------------------------------ #
-    # Class helpers
-    # ------------------------------------------------------------------ #
 
     @classmethod
     def from_pc(cls, read: bytes, write: bytes, args: bytes, z: int, s: int) -> Self:
@@ -226,10 +214,6 @@ class Memory:
         end = end_index // PAGE_SIZE
         return list(range(start, end + 1))
 
-    # ------------------------------------------------------------------ #
-    # Extra utilities 
-    # ------------------------------------------------------------------ #
-
     def zero_memory_range(self, start_address: int, offset: int):
         if offset <= 0:
             return
@@ -248,8 +232,4 @@ class Memory:
             else:
                 self._r_pages.add(pg)
 
-
-# -------------------------------------------------------------------------- #
-# Shared zero page (read-only) – avoids re-allocating 64 KiB full of zeros
-# -------------------------------------------------------------------------- #
 _ZERO_PAGE = bytes(PAGE_SIZE)

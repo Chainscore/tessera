@@ -6,7 +6,6 @@ from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.program import Program
 from jam.execution.pvm.status import OUT_OF_GAS, PAGE_FAULT, PANIC, ExecutionStatus, PvmError
 
-# Module-specific logger
 logger = get_logger("pvm")
 
 @dataclass
@@ -25,7 +24,7 @@ class PVM:
         Execute the program blob `p` as per Psi specification.
 
         Args:
-            program: Program context
+            program: Program context / Cached for faster execution
             program_counter: Initial program counter
             gas: Gas provided for execution
             registers: Initial registers

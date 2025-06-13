@@ -57,7 +57,8 @@ class PsiA(InvocationProtocol):
                 "t": None
             }),
             27: (AccumulateFunctions, {}),                                                                 # provide (Updates preimage)
-            100: (GeneralFunctions, {}),  # log
+            # TODO: Add core_index
+            100: (GeneralFunctions, {"core_index": 0, "service_id": self.service_id}),  # log
         }
 
     def execute(self):
