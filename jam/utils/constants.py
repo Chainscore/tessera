@@ -1,5 +1,6 @@
 """Constants for the JAM protocol as defined in the specification."""
 from jam.config.chainspec import chain_config
+from datetime import datetime, timezone
 
 # ───────────────────────────────────────
 # Constants (I.4.4, JAM Graypaper Order)
@@ -149,3 +150,10 @@ REGISTER_COUNT = 13
 # ======= #
 VALIDATORS_SUPER_MAJORITY = 1 + 2 * VALIDATOR_COUNT // 3
 VALIDATORS_WONKY = VALIDATOR_COUNT // 3
+
+# Jam Common‐Era epoch (2025-01-01 12:00 UTC)
+JCE_EPOCH = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+
+# T — current seconds since JCE_EPOCH
+CURRENT_TIME = lambda: int((datetime.now(timezone.utc) - JCE_EPOCH).total_seconds())
+
