@@ -1,4 +1,7 @@
+import json
 from typing import Type
+
+from tsrkit_types import Dictionary
 
 from jam.merklization import BMRFunctions
 from rockstore import RockStore
@@ -9,12 +12,20 @@ from jam.state.utils import construct_state_key
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.itf.codable import Codable
 from jam.types import Block, Hash, Alpha, Eta, Nu, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma
+from jam.config.logging import get_logger
+
+logger = get_logger("import")
 
 
 def make_state_prop(state_key: int, cl: Type[Codable]):
     def fget(self):
         raw = self.DB.get(bytes(construct_state_key(state_key)))
         if raw is None:
+            logger.error(
+                "State component missing from database",
+                component=cl.__name__,
+                state_key=state_key
+            )
             raise ValueError(f"State component missing from DB: {cl.__name__}")
         return cl.decode_from(raw)[0]
 
@@ -22,6 +33,13 @@ def make_state_prop(state_key: int, cl: Type[Codable]):
         k, v = construct_state_key(state_key), value.encode()
         self.TRIE.update(k, Bytes(v))
         self.DB.put(bytes(k), v)
+        
+        logger.debug(
+            "State component updated",
+            component=cl.__name__,
+            state_key=state_key,
+            value_size=len(v)
+        )
 
     return property(fget, fset)
 
@@ -56,6 +74,12 @@ class State:
     def __init__(self, db = None, trie = None):
         self.DB = db
         self.TRIE = trie
+        
+        logger.debug(
+            "State instance initialized",
+            has_db=db is not None,
+            has_trie=trie is not None
+        )
 
     @property
     def root(self):
@@ -78,10 +102,13 @@ class State:
         from jam.preimages.preimages import Preimages
         from jam.statistics.statistics import Statistics
 
+        logger.info("Starting state transition on block", header_hash=block.header.hash().hex(), block_slot=int(block.header.slot), parent_hash= block.header.parent.hex()[:16] + "...", state_root= block.header.parent_state_root.hex()[:16] + "...", author_index=int(block.header.author_index))
+
         # TODO: Validate block headers
         # Epoch markers - make sure eta0_1 are the same as current etas
         # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
         # Offenders mark - make sure offenders are present in psi.offenders
+
 
         beta = self.beta
         # Step 1
@@ -90,48 +117,101 @@ class State:
         self.beta = beta
 
         # Disputes
+        logger.debug("Processing disputes...")
         Disputes.transition(self, block)
-        # Work package hashes form Nu and Xi
-        known_packages = [
-            queue_el.report.context.prerequisites
-            for epoch_queue in self.nu
-            for queue_el in epoch_queue
-        ].extend([
-            wps
-            for deps in self.xi
-            for wps in deps
-        ])
+
         # Reporting
-        Reporting.transition(self, block, known_packages=known_packages)
+        logger.debug("Processing reporting...")
+        Reporting.transition(self, block)
+
         # Assurances
+        logger.debug("Processing assurances...")
         _, newly_avail_wrs = Assurances.transition(self, block)
 
         # Accumulation
+        logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
         _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
+
         # Authorization
+        logger.debug("Processing authorization...")
         Authorization.transition(self, block)
+
         # Recent History
-        RecentHistory.transition(self, block, BMRFunctions().wb_merkle_fn(sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]), Hash.keccak256))
+        logger.debug("Processing recent history...", commitment_count=len(commitment_map))
+        history_merkle = BMRFunctions().wb_merkle_fn(
+            sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]),
+            Hash.keccak256
+        )
+        RecentHistory.transition(self, block, history_merkle)
+
         # Preimages
+        logger.debug("Processing preimages...")
         Preimages.transition(self, block)
+
         # Statistics
+        logger.debug("Processing statistics...")
         Statistics.transition(self, block, newly_avail_wrs)
+
         # Safrole
-        Safrole.transition(self, block, Safrole.vrf_output(block.header.entropy_source))
+        logger.debug("Processing safrole...")
+        vrf_output = Safrole.vrf_output(block.header.entropy_source)
+        Safrole.transition(self, block, vrf_output)
+        
+        logger.info(
+            "Block imported successfully",
+            timeslot=self.tau,
+            final_state_root=self.root.hex()[:16] + "..."
+        )
 
 state = State()
 
 def set_state(new_state: State):
     global state
+    
+    logger.info(
+        "Global state updated",
+        has_db=new_state.DB is not None,
+        has_trie=new_state.TRIE is not None,
+        state_root=new_state.root.hex()[:16] + "..." if new_state.TRIE else None
+    )
+    
     state = new_state
     return state
 
-def setup_state(ghost: GhostState, db: RockStore):
-    data = ghost.transform()
+def setup_state(db: RockStore, genesis: GhostState | str = "dev-spec.json"):
+    logger.info(
+        "Setting up state from genesis",
+        genesis_type=type(genesis).__name__,
+        genesis_source=genesis if isinstance(genesis, str) else "GhostState"
+    )
+    
+    if isinstance(genesis, str):
+        logger.debug(
+            "Loading genesis from JSON file",
+            genesis_file=genesis
+        )
+        genesis_json = json.load(open(genesis))
+        data = Dictionary[Bytes, Bytes].from_json(genesis_json["genesis_state"])
+    else:
+        logger.debug("Transforming GhostState to genesis data")
+        data = genesis.transform()
+    
+    logger.debug(
+        "Building state trie from genesis data",
+        data_entries=len(data)
+    )
+    
     trie = StateTrie()
     trie.merkelize(data, db)
 
     new_state = State(db, trie)
+    
+    logger.info(
+        "State setup completed",
+        state_root=new_state.root.hex()[:16] + "...",
+        data_entries=len(data)
+    )
+    
     global state
     state = new_state
     return state

@@ -1,136 +1,170 @@
-from math import ceil, floor
-from typing import Dict, List, Self, Sequence
+from math import ceil
+from typing import Dict, List, Sequence, Self
 
 from jam.config.logging import logger
 from jam.execution.pvm.types import Accessibility
 from jam.execution.pvm.status import PvmError, PAGE_FAULT
-from jam.utils.constants import PVM_INIT_DATA_SIZE, PVM_MEMORY_PAGE_SIZE, PVM_INIT_ZONE_SIZE
+from jam.utils.constants import (
+    PVM_INIT_DATA_SIZE,
+    PVM_MEMORY_PAGE_SIZE,
+    PVM_INIT_ZONE_SIZE,
+)
+
+ADDR_MOD = 2**32
+PAGE_SIZE = PVM_MEMORY_PAGE_SIZE
+LOW_BOUND = 0
 
 
 class Memory:
     """
-    Memory is a class that models the memory of a program.
+    Sparse, page-mapped memory model with read/write page protection.
     """
 
-    ADDR_MOD = 2 ** 32
-    LOW_BOUND = 0
 
-    heap_break = 0
+    def __init__(
+        self,
+        data: Dict[int, int] | None = None,
+        allowed_read_pages: List[int] | None = None,
+        allowed_write_pages: List[int] | None = None,
+        heap: int = 0,
+    ):
+        allowed_read_pages = allowed_read_pages or []
+        allowed_write_pages = allowed_write_pages or []
+        self._r_pages: set[int] = set(allowed_read_pages)
+        self._w_pages: set[int] = set(allowed_write_pages)
 
-    data: Dict[int, int]
+        # sparse page map: page-number → bytearray(PAGE_SIZE)
+        self._pages: Dict[int, bytearray] = {}
+        if data:
+            # bulk-load initial bytes
+            for addr, val in data.items():
+                if not (0 <= val <= 255):
+                    raise ValueError(f"Memory: invalid value {val} @ {addr}")
+                self._page_for(addr, create=True)[addr % PAGE_SIZE] = val
 
-    def __init__(self, data: Dict[int, int] = {}, allowed_read_pages=[], allowed_write_pages=[], heap = 0):
+        self.heap_break: int = heap
+
+    # --------------------------------------------------------------------- #
+    # Core helpers
+    # --------------------------------------------------------------------- #
+
+    @staticmethod
+    def _page_index(addr: int) -> int:
+        return addr // PAGE_SIZE
+
+    def _page_for(self, addr: int, *, create: bool = False) -> bytearray:
         """
-        Initialize the Memory structure.
-
-        Args:
-            allowed_read_pages (list): Set of page numbers allowed for read access.
-            allowed_write_pages (list): Set of page numbers allowed for write access.
+        Get the underlying page buffer for an address.
+        Creates a fresh zero-filled page if `create` is True.
         """
-        self.allowed_read_pages = allowed_read_pages
-        self.allowed_write_pages = allowed_write_pages
+        pg = self._page_index(addr)
+        try:
+            return self._pages[pg]
+        except KeyError:
+            if not create:
+                # return a read-only zero page (shared) to avoid dict hits
+                return _ZERO_PAGE
+            ba = bytearray(PAGE_SIZE)
+            self._pages[pg] = ba
+            return ba
 
-        # Memory is modeled as a dictionary mapping an address to a byte (0-255).
-        for addr, val in data.items():
-            # Validate
-            if not isinstance(addr, int) or not isinstance(val, int) or val < 0 or val > 255:
-                raise Exception(f"Memory: Invalid memory value at address {addr}: {val}")
-
-        self.data = data
-
-        self.heap_break = heap
-
-    def _check_address(self, addr: int, for_write=False):
-        """
-        Check if the given address is accessible.
-
-        Raises an exception if the address is below the low bound or if its page is not allowed.
-        """
-        addr = floor(addr % self.ADDR_MOD)  # Ensure address is within 0..2^32-1.
-        # Address cannot be below the low bound.
-        if addr < self.LOW_BOUND:
-            raise Exception(f"Memory Panic: Address {addr} is below the allowed threshold ({self.LOW_BOUND}).")
-        # Address must be in a valid page.
-        page = addr // PVM_MEMORY_PAGE_SIZE
-        # If writing, the page must be allowed to be written.
-        if for_write:
-            if page not in self.allowed_write_pages:
-                logger.debug(f"Not allowed to write {addr}(Page={page})")
+    # fast, branch-free address checker
+    def _assert_access(self, addr: int, *, write: bool = False) -> None:
+        if addr < LOW_BOUND:
+            raise Exception(f"Memory panic: address {addr} < {LOW_BOUND}")
+        pg = self._page_index(addr)
+        if write:
+            if pg not in self._w_pages:
+                logger.debug(f"Not allowed to write {addr}(Page={pg})")
                 raise PvmError(PAGE_FAULT(addr))
-        # Else (reading), the page must be allowed to be write / read
         else:
-            if (page not in self.allowed_read_pages) and (page not in self.allowed_write_pages):
-                logger.debugc(f"Not allowed to read {addr}(Page={page})")
+            if pg not in self._r_pages and pg not in self._w_pages:
+                logger.debug(f"Not allowed to read {addr}(Page={pg})")
                 raise PvmError(PAGE_FAULT(addr))
-        return addr
+
+    # --------------------------------------------------------------------- #
+    # Public operations (interface unchanged)
+    # --------------------------------------------------------------------- #
 
     def read(self, address: int, length: int) -> bytes:
-        """
-        Read a sequence of bytes starting from 'address' with given 'length'.
+        if length <= 0:
+            return b""
+        # Normalise once
+        address = address % ADDR_MOD
+        end = address + length
 
-        Returns a list of integers (each 0-255).
-        Unwritten addresses return 0 (default uninitialized value).
-        """
-        if length == 0:
-            return bytes(0)
-        bytes_out = []
-        for offset in range(length):
-            addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=False)
-            # Return stored byte or 0 if the address has not been written.
-            bytes_out.append(self.data.get(addr, 0))
+        out = bytearray(length)
+        out_mv = memoryview(out)
 
-        # print(f"u{length*8}[{Bytes(address)}] ({Bytes(bytes_out)})")
-        return bytes(bytes_out)
+        # iterate over pages spanned by the range
+        cursor = 0
+        while address < end:
+            page_off = address % PAGE_SIZE
+            chunk = min(PAGE_SIZE - page_off, end - address)
 
-    def write(self, address: int, data_bytes: bytes|Sequence[int]):
-        """
-        Write a sequence of bytes starting at 'address'.
+            # single access check per page instead of per-byte
+            self._assert_access(address, write=False)
+            src_page = self._page_for(address)  # ZERO_PAGE if never allocated
+            out_mv[cursor : cursor + chunk] = src_page[page_off : page_off + chunk]
 
-        data_bytes should be an iterable of integers (each 0-255).
-        """
-        if len(data_bytes) == 0:
+            address += chunk
+            cursor += chunk
+        return bytes(out)
+
+    def write(self, address: int, data_bytes: bytes | Sequence[int]) -> None:
+        if not data_bytes:
             return
-        address = int(address)
-        # print(f"u{len(data_bytes) * 8}[{(int(address) % self.ADDR_MOD).to_bytes(4).hex()}]({self.read(int(address) % self.ADDR_MOD, len(data_bytes)).hex()}) = {bytes(data_bytes).hex()}")
-        for offset, byte in enumerate(data_bytes):
-            addr = self._check_address((address + offset) % self.ADDR_MOD, for_write=True)
-            self.data[addr] = int(byte)
+        address = address % ADDR_MOD
+        end = address + len(data_bytes)
+        in_mv = memoryview(data_bytes)
 
-    def is_accessible(self, address: int, length: int, for_write = False) -> bool:
-        if length == 0:
+        cursor = 0
+        while address < end:
+            page_off = address % PAGE_SIZE
+            chunk = min(PAGE_SIZE - page_off, end - address)
+
+            self._assert_access(address, write=True)
+            dst_page = self._page_for(address, create=True)
+            dst_page[page_off : page_off + chunk] = in_mv[cursor : cursor + chunk]
+
+            address += chunk
+            cursor += chunk
+
+
+    def is_accessible(self, address: int, length: int, for_write: bool = False) -> bool:
+        if length <= 0:
             return True
         pages = self.get_pages(address, length)
-        for page in pages:
-            if for_write and page not in self.allowed_write_pages:
+        if for_write:
+            return all(pg in self._w_pages for pg in pages)
+        return all(pg in self._r_pages or pg in self._w_pages for pg in pages)
+
+    def dump_memory(self, start: int, end: int):        # debug helper
+        return [
+            self._page_for(addr)[addr % PAGE_SIZE] if self._page_index(addr) in self._pages else 0
+            for addr in range(start, end)
+        ]
+
+    # repr / equality keep old behaviour for debugging or tests
+    def __repr__(self):
+        return f"Memory(pages={len(self._pages)}, read={sorted(self._r_pages)}, write={sorted(self._w_pages)})"
+
+    def __eq__(self, other):
+        if not isinstance(other, Memory):
+            return NotImplemented
+        if self._r_pages != other._r_pages or self._w_pages != other._w_pages:
+            return False
+        # compare only the cells both memories have explicitly written
+        for pg, buf in self._pages.items():
+            other_buf = other._pages.get(pg)
+            if other_buf and buf != other_buf:
                 return False
-            # Else (reading), the page must be allowed to be write / read
-            elif (page not in self.allowed_read_pages) and (page not in self.allowed_write_pages):
+        for pg, buf in other._pages.items():
+            self_buf = self._pages.get(pg)
+            if self_buf and buf != self_buf:
                 return False
         return True
 
-    def dump_memory(self, start, end):
-        """
-        For debugging: return a list of byte values from address 'start' to 'end' (exclusive).
-        """
-        return [self.data.get(addr, 0) for addr in range(start, end)]
-
-    def __repr__(self):
-        return f"Memory(data={str(self.data)}, allowed_read_pages={str(self.allowed_read_pages)}, allowed_write_pages={str(self.allowed_write_pages)})"
-
-    def __eq__(self, other):
-        # Dont compare if zero
-        data_eq = True
-        for data in self.data:
-            if self.data[data] != 0 and data in other.data:
-                if self.data[data] != other.data[data]:
-                    data_eq = False
-
-        for data in other.data:
-            if other.data[data] != 0 and data in self.data:
-                if self.data[data] != other.data[data]:
-                    data_eq = False
-
-        return data_eq and self.allowed_read_pages == other.allowed_read_pages and self.allowed_write_pages == other.allowed_write_pages
 
     @classmethod
     def from_pc(cls, read: bytes, write: bytes, args: bytes, z: int, s: int) -> Self:
@@ -138,13 +172,13 @@ class Memory:
 
         read_start = PVM_INIT_ZONE_SIZE
         read_pages = cls.get_pages(read_start, cls.total_page_size(len(read)))
-        print(f"READ \t\t | Start: {int(read_start).to_bytes(4).hex()} \t | End {int(read_pages[-1] * PVM_MEMORY_PAGE_SIZE).to_bytes(4).hex()}")
+        # print(f"READ \t\t | Start: {int(read_start).to_bytes(4).hex()} \t | End {int(read_pages[-1] * PVM_MEMORY_PAGE_SIZE).to_bytes(4).hex()}")
         for i, byt in enumerate(read):
             memory[read_start+i] = int(byt)
 
         write_start = 2*PVM_INIT_ZONE_SIZE + cls.total_zone_size(len(read))
-        write_pages = cls.get_pages(write_start, cls.total_page_size(len(write)) + (z * PVM_MEMORY_PAGE_SIZE))
-        print(f"WRITE \t\t | Start: {int(write_start).to_bytes(4).hex()} \t | End {int((write_pages[-1] + 1) * PVM_MEMORY_PAGE_SIZE).to_bytes(4).hex()}")
+        write_pages = cls.get_pages(write_start, cls.total_page_size(len(write)) + (int(z) * PVM_MEMORY_PAGE_SIZE))
+        # print(f"WRITE \t\t | Start: {int(write_start).to_bytes(4).hex()} \t | End {int((write_pages[-1] + 1) * PVM_MEMORY_PAGE_SIZE).to_bytes(4).hex()}")
         for i, byt in enumerate(write):
             memory[write_start+i] = int(byt)
 
@@ -159,67 +193,43 @@ class Memory:
 
         arg_start = 2**32 - PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE
         read_pages.extend(cls.get_pages(arg_start, cls.total_page_size(len(args))))
-        print(f"ARG \t\t | START: {int(arg_start).to_bytes(4).hex()}")
+        # print(f"ARG \t\t | START: {int(arg_start).to_bytes(4).hex()}")
         for i, byt in enumerate(args):
             memory[arg_start+i] = int(byt)
 
         return cls(memory, read_pages, write_pages, heap=heap)
 
+    @staticmethod
     def total_page_size(blob_len: int) -> int:
-        """
-        P function from https://graypaper.fluffylabs.dev/#/cc517d7/2be0022bea02?v=0.6.5
-        Args:
-            - blob_len: len on data to be stored
-        Returns:
-            - total page length
-        """
-        return PVM_MEMORY_PAGE_SIZE*ceil(blob_len/PVM_MEMORY_PAGE_SIZE)
+        return PAGE_SIZE * ceil(blob_len / PAGE_SIZE)
 
-    def total_zone_size(blob_len: int):
-        """
-        Z function from https://graypaper.fluffylabs.dev/#/cc517d7/2be0022bea02?v=0.6.5
-        Args:
-            - blob_len: len on data to be stored
-        Returns:
-            - total zone length
-        """
-        return PVM_INIT_ZONE_SIZE*ceil(blob_len/PVM_INIT_ZONE_SIZE)
+    @staticmethod
+    def total_zone_size(blob_len: int) -> int:
+        return PVM_INIT_ZONE_SIZE * ceil(blob_len / PVM_INIT_ZONE_SIZE)
 
     @staticmethod
     def get_pages(start_index: int, length: int) -> List[int]:
-        """
-        Gives a list of page numbers that contains a specific indexed location in memory
-        """
-        start = floor(start_index/PVM_MEMORY_PAGE_SIZE)
-        length = max(length, 1)
-        end_index = start_index + length
-        end = ceil(end_index/PVM_MEMORY_PAGE_SIZE)
-        return [i for i in range(start, end+1)]
+        start = start_index // PAGE_SIZE
+        end_index = start_index + max(length, 1) - 1
+        end = end_index // PAGE_SIZE
+        return list(range(start, end + 1))
 
     def zero_memory_range(self, start_address: int, offset: int):
-        """
-        Zero out memory values from address 'start_address' to 'end_address'.
-
-        Args:
-            start_address (int): The starting address to zero out.
-            end_address (int): The ending address (excluded) to zero out.
-        """
-        # Loop over the memory range and set the values to 0
-        end_address=start_address+offset
-        for addr in range(start_address, end_address):
-            self.data[addr] = 0  # Set the memory value at the address to 0
+        if offset <= 0:
+            return
+        end_address = start_address + offset
+        while start_address < end_address:
+            dst = self._page_for(start_address, create=True)
+            pg_off = start_address % PAGE_SIZE
+            chunk = min(PAGE_SIZE - pg_off, end_address - start_address)
+            dst[pg_off : pg_off + chunk] = b"\x00" * chunk
+            start_address += chunk
 
     def alter_accessibility(self, start_address: int, length: int, access_type: Accessibility):
-        """
-        Alter the Page accessibility type from 'start_address' to 'end_address'.
-
-        Args:
-            start_address (int): The starting address to change its accebility type.
-            end_address (int): The ending address to alter the same.
-        """
-        pages = self.get_pages(start_address, length)
-        for pg in pages:
+        for pg in self.get_pages(start_address, length):
             if access_type == Accessibility.WRITE:
-                self.allowed_write_pages.append(pg)
+                self._w_pages.add(pg)
             else:
-                self.allowed_read_pages.append(pg)
+                self._r_pages.add(pg)
+
+_ZERO_PAGE = bytes(PAGE_SIZE)

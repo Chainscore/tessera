@@ -43,8 +43,8 @@ class PsiA(InvocationProtocol):
             11: (AccumulateFunctions, {}),                                                                  # transfer (Updates service deferred transfers & balance)
             12: (AccumulateFunctions, {"block_timeslot": self.timeslot}),                                   # eject (Removal of service account)
             13: (AccumulateFunctions, {}),                                                                  # query (Updates registers[7,8] wrt AccountLookup)
-            14: (AccumulateFunctions, {}),                                                                  # solicit (Updated the AccountLookup)
-            15: (AccumulateFunctions, {}),                                                                  # forget (Updates lookupTimestamp & preimage)
+            14: (AccumulateFunctions, {"block_timeslot": self.timeslot}),                                   # solicit (Updated the AccountLookup)
+            15: (AccumulateFunctions, {"block_timeslot": self.timeslot}),                                                                  # forget (Updates lookupTimestamp & preimage)
             16: (AccumulateFunctions, {}),                                                                  # yield_ (Updates context[x]_hash)
             18: (GeneralFunctions, {                                                                        # fetch (Updates context[x]_hash)
                 "package": None,
@@ -57,7 +57,8 @@ class PsiA(InvocationProtocol):
                 "t": None
             }),
             27: (AccumulateFunctions, {}),                                                                 # provide (Updates preimage)
-            100: (GeneralFunctions, {}),  # log
+            # TODO: Add core_index
+            100: (GeneralFunctions, {"core_index": 0, "service_id": self.service_id}),  # log
         }
 
     def execute(self):
@@ -67,8 +68,8 @@ class PsiA(InvocationProtocol):
         else:
             gas, status, context = PsiM.execute(
                 meta_n_code[1],
-                ProgramCounter(5),
-                self.gas,
+                5,
+                int(self.gas),
                 Uint(self.timeslot).encode() + Uint(self.service_id).encode() + self.operandTuples.encode(),
                 self.dispatch,
                 self.context,

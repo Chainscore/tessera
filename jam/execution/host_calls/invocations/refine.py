@@ -61,7 +61,8 @@ class PsiR(InvocationProtocol):
             24: (RefineFunctions, {}),
             25: (RefineFunctions, {}),
             26: (RefineFunctions, {}),
-            100: (GeneralFunctions, {}),  # log
+            # TODO: Add core_index [we'll probably be storing core_index in node info]
+            100: (GeneralFunctions, {"core_index": 0, "service_id": self.wi.service}),  # log
         }
 
     def execute(self) -> Tuple[WorkExecResult, Segments, Gas]:

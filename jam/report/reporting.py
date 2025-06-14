@@ -22,7 +22,7 @@ from tsrkit_types.null import Null
 class Reporting:
 
     @staticmethod
-    def transition(state: Sigma, block:Block, known_packages: List[OpaqueHash]) -> Sigma:
+    def transition(state: Sigma, block:Block, known_packages: List[OpaqueHash] = []) -> Sigma:
         """
         Description:
             This function takes two arguments: state, block. This transition function check all the boundary cases for work_report and update the state Rho.
@@ -34,6 +34,18 @@ class Reporting:
         Returns:
             Returns the updated Rho(workreport, timeslot)
         """
+
+        # Work package hashes form Nu and Xi
+        known_packages.extend([
+            queue_el.report.context.prerequisites
+            for epoch_queue in state.nu
+            for queue_el in epoch_queue
+        ])
+        known_packages.extend([
+            wps
+            for deps in state.xi
+            for wps in deps
+        ])
 
         # small w
         all_reports = []
@@ -212,9 +224,6 @@ class Reporting:
                         "prerequisite's hash should match the package_specification's hash of any of the reports"
                     )
 
-
-
-
         # for i in state.beta:
         #     if any(key in hashes for key in i.packages.keys()):
         #         raise ReportingError(
@@ -357,7 +366,7 @@ class Reporting:
                 if y.service_id not in state.delta:
                     raise ReportingError(
                         ReportingErrorCode.BAD_SERVICE_ID,
-                        "Service_id of each report should match with id of delta"
+                        f"Service ID {y.service_id} not found in state accounts"
                     )
                     
                 # --------------- bad_code_hash -------------------
@@ -420,5 +429,5 @@ class Reporting:
                 if validator not in guarantors_assigned[core]:
                     raise ReportingError(
                         ReportingErrorCode.WRONG_ASSIGNMENT,
-                        "Assign wrong validator to the core"
+                        f"Assign wrong validator to the core. Assignments: {guarantors_assigned}, Reported: {current_assigned}"
                     )

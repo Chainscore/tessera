@@ -1,35 +1,39 @@
 from rockstore import RockStore
+from tsrkit_types import Bytes
+
 from jam.types.block import Block
-from jam.types.protocol.core import TimeSlot
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.crypto import Hash, HeaderHash
 
 
 class Finality:
+    """
+    Instant finality
+    To be replaced by GRANDPA
+
+    Keeps track of finalised and latest header hashes, using which we can fetch its corresponding blocks
+    """
 
     FINAL_KEY = bytes(Hash.blake2b(b"FINAL_BLOCK"))
     LATEST_KEY = bytes(Hash.blake2b(b"LATEST_BLOCK"))
 
     @classmethod
-    def finalise(cls, slot: TimeSlot, kv: RockStore): 
-        # TODO Add grandpa validation logic
-        kv.put(cls.FINAL_KEY, slot.encode())
+    def finalise(cls, header_hash: HeaderHash, kv: RockStore):
+        kv.put(cls.FINAL_KEY, header_hash.encode())
 
     @classmethod
-    def set_head(cls, slot: TimeSlot, kv: RockStore):
-        kv.put(cls.LATEST_KEY, slot.encode())
+    def set_head(cls, header_hash: HeaderHash, kv: RockStore):
+        kv.put(cls.LATEST_KEY, header_hash.encode())
 
     @classmethod
     def load_final(cls, kv: RockStore) -> Block:
-        slot = TimeSlot(0)
-        slot_bytes = kv.get(cls.FINAL_KEY)
-        if slot_bytes:
-            slot, _ = TimeSlot.decode_from(slot_bytes)
-        return Block.load(slot, kv)
+        final_hh = kv.get(cls.FINAL_KEY)
+        if not final_hh:
+            final_hh = bytes(32)
+        return Block.load(final_hh, kv)
 
     @classmethod
     def load_latest(cls, kv: RockStore):
-        slot = TimeSlot(0)
-        slot_bytes = kv.get(cls.LATEST_KEY)
-        if slot_bytes:
-            slot, _ = TimeSlot.decode_from(slot_bytes)
-        return Block.load(slot, kv)
+        latest_hh = kv.get(cls.LATEST_KEY)
+        if not latest_hh:
+            latest_hh = bytes(32)
+        return Block.load(latest_hh, kv)

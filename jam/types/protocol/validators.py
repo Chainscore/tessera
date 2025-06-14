@@ -24,7 +24,7 @@ class ValidatorMetadata:
     @property
     def address(self) -> str:
         res = "http://" if self.protocol == 2**16 - 1 else "https://"
-        res += ".".join([str(ip) for ip in self.host])
+        res += ".".join([str(int(ip)) for ip in self.host])
         res += f":{int(self.port)}"
         return res
 

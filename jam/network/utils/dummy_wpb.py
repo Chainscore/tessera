@@ -4,6 +4,7 @@ from time import time
 
 from tsrkit_types import Bytes, U16, Uint
 
+from jam.state.state import State
 from jam.execution.pvm.code import Code
 from jam.state.accounts import AccountMetadata
 from jam.types.protocol.crypto import Hash
@@ -12,14 +13,17 @@ from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpe
 from jam.types.work.manifest import Extrinsics
 from jam.utils.constants import EPOCH_LENGTH
 from jam.network.node import Node
-from jam.config.logging import logger
+from jam.config.logging import get_logger
 from rockstore import RockStore
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex, Gas, Balance, BlobLength, ServiceId, SegmentRoot
 
-async def wp_producer(node: Node):
+# Module-specific logger
+logger = get_logger("in_core")
+
+async def wp_producer(node: Node, db: RockStore):
     """
     Continuously produces work packages and transmits them.
     A builder node produces a work package and share it with the guarantors.
@@ -28,29 +32,45 @@ async def wp_producer(node: Node):
         db (RockStore): The database to store the genesis timestamp
     """
 
-
     # Record genesis timestamp in seconds
     genesis_ts = time()
     C133 = WorkPackageSubmission()
 
     wp_iter = 0
+
+    logger.info(
+        "Starting work package producer",
+        node_name=node.name,
+        is_builder=node.is_builder,
+        genesis_timestamp=genesis_ts
+    )
+
     while True:
-        print("time", genesis_ts, time())
         if not node.is_initialized:
-            logger.info(f"🔄 ({node.name}) Network is not initialized, skipping packages production")
+            logger.debug(
+                "Network not initialized - skipping work package production",
+                node_name=node.name,
+                iteration=wp_iter
+            )
             await asyncio.sleep(6)
             genesis_ts = time()
             continue
 
         # Get state from db
-        from jam.state.state import state
-
+        state = State.load(db)
         current_timeslot = (time() - genesis_ts) // 6
 
         # Get current timeslot
         ts_epoch_index = floor(current_timeslot % EPOCH_LENGTH)
 
-        logger.info(f"We're in epoch slot {ts_epoch_index} and {state.gamma.s._choice_key} mode")
+        logger.debug(
+            "Work package production cycle",
+            node_name=node.name,
+            iteration=wp_iter,
+            current_timeslot=current_timeslot,
+            epoch_index=ts_epoch_index,
+            gamma_mode=state.gamma.s._choice_key
+        )
 
         if node.is_builder:
             wp = create_dummy_package()
@@ -125,14 +145,32 @@ async def wp_producer(node: Node):
             package_len = Uint[32](len(wc.encode()))
             ext_len = Uint[32](len(ext.encode()))
             data = CE133Data(package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext)
-            logger.info(f"⛏️ ({node.name}) Producing Work Package { wp}")
+
+            logger.info(
+                "Producing work package",
+                node_name=node.name,
+                iteration=wp_iter,
+                core_index=1,
+                extrinsics_count=0,
+                current_timeslot=current_timeslot
+            )
+
             # TODO: Implement package transmission
 
             responses = await C133.transmit(node, data)
+            logger.debug(
+                "Work package transmitted",
+                node_name=node.name,
+                iteration=wp_iter
+            )
+
             print("Response", responses)
         else:
-            logger.info(f"⛏️ ({node.name}) skipping Node")
-
+            logger.debug(
+                "Node is not builder - skipping work package production",
+                node_name=node.name,
+                iteration=wp_iter
+            )
 
         # Sleep for remaining time of the timeslot
         await asyncio.sleep(6 - (time() - genesis_ts) % 6)

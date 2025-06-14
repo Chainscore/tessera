@@ -19,7 +19,7 @@ from jam.utils.dummy.dummy_package import create_dummy_package
 
 def test_basic_wp_building(db_path):
 	data_stores.configure_db_paths(db_path)
-	state = setup_state(GhostState.genesis(), data_stores.main_db)
+	state = setup_state(data_stores.main_db, GhostState.genesis())
 
 	package = create_dummy_package()
 

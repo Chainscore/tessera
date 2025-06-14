@@ -1,4 +1,7 @@
 from typing import Dict, List, Tuple, Optional
+
+from tsrkit_types import TypedVector
+
 from jam.state.merkle.node import Node
 from jam.state.merkle.utils import ZERO_HASH, NodeHash, NodeType, encode_branch, encode_leaf
 from jam.types.protocol.crypto import Hash
@@ -123,10 +126,10 @@ class StateTrie:
         the branch nodes on its path, rewiring hashes upward to the root.
         Returns the new root hash.
         """
-        self.root_hash = self._recontrust_root(self.root_hash, Node(encoded=encode_leaf(key, new_value)))
+        self.root_hash = self._reconstruct_root(self.root_hash, Node(encoded=encode_leaf(key, new_value)))
         return self.root_hash
     
-    def _recontrust_root(self, root: Bytes[32], node: Node, bit_index = 0) -> NodeHash:
+    def _reconstruct_root(self, root: Bytes[32], node: Node, bit_index = 0) -> NodeHash:
         # Recompute branch nodes in reverse path
         current_node = self.nodes.get(root)
         # Empty slot
@@ -148,9 +151,9 @@ class StateTrie:
         else:
             # if 0, go left
             if node.key_bits_248[bit_index] == 0:
-                current_node.left = self._recontrust_root(current_node.left, node, bit_index=bit_index+1)
+                current_node.left = self._reconstruct_root(current_node.left, node, bit_index=bit_index+1)
             else:
-                current_node.right = self._recontrust_root(current_node.right, node, bit_index=bit_index+1)
+                current_node.right = self._reconstruct_root(current_node.right, node, bit_index=bit_index+1)
             
             new_encoded = encode_branch(current_node.left or ZERO_HASH, current_node.right or ZERO_HASH)
             new_parent_hash = NodeHash(Hash.blake2b(bytes(new_encoded)))
@@ -163,6 +166,36 @@ class StateTrie:
             )
             
             return new_parent_hash
+
+    def get_boundaries(self, key: Bytes[31]) -> TypedVector[Bytes[64]]:
+        """
+        Provides a list of "boundary" nodes, covering the path from the root to the given key.
+        The list should include only nodes on these paths, and should not include duplicate nodes.
+        If two nodes in the list have a parent-child relationship, the parent node must come first.
+        Note that in the case where the given start key is not present in the state trie, twe should terminate
+        either at a fork node with an all-zeroes hash in the branch that would be taken for the start key,
+        or at a leaf node with a different key.
+
+        -> https://github.com/zdave-parity/jam-np/blob/main/simple.md#ce-129-state-request
+        """
+        key_in_ques = self.root_hash
+        bit_index = 0
+        ret = TypedVector[Bytes[64]]([self.nodes[key_in_ques].encoded])
+
+        while self.nodes[key_in_ques].encoded[1:32] != key:
+            if not Bytes(key).to_bits()[bit_index]:
+                to_checkout = self.nodes[key_in_ques].left
+            else:
+                to_checkout = self.nodes[key_in_ques].right
+
+            if int.from_bytes(to_checkout) == 0 or self.nodes[to_checkout].type == NodeType.EMPTY:
+                break
+
+            key_in_ques = to_checkout
+            ret.append(self.nodes[key_in_ques].encoded)
+            bit_index += 1
+        return ret
+
 
     def delete(self, key: Bytes[32]) -> NodeHash:
         """

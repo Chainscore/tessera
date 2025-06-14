@@ -7,8 +7,8 @@ from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 from tsrkit_types.null import NullType
 
-from jam.types.protocol.core import Gas, ServiceId
-from jam.types.protocol.crypto import OpaqueHash
+from jam.types.protocol.core import Gas, ServiceId, TimeSlot
+from jam.types.protocol.crypto import OpaqueHash, HeaderHash, StateRoot, BeefyRoot
 
 
 class WorkExecResult(Choice):
@@ -42,6 +42,31 @@ class RefineLoad:
 
 
 @structure
+class RefineContext:
+    """Refine context structure."""
+
+    anchor: HeaderHash
+    state_root: StateRoot
+    beefy_root: BeefyRoot
+    lookup_anchor: HeaderHash
+    lookup_anchor_slot: TimeSlot
+    prerequisites: TypedVector[OpaqueHash]
+
+    @staticmethod
+    def empty() -> "RefineContext":
+        return RefineContext(
+            anchor=HeaderHash([0]*32),
+            state_root=StateRoot([0]*32),
+            beefy_root=BeefyRoot([0]*32),
+            lookup_anchor=HeaderHash([0]*32),
+            lookup_anchor_slot=TimeSlot(0),
+            prerequisites=TypedVector[OpaqueHash]([]),
+        )
+
+
+
+
+@structure
 class WorkResult:
     """Work result structure."""
     # s
@@ -55,4 +80,7 @@ class WorkResult:
     # d
     result: WorkExecResult
     # x
-    refine_load: RefineLoad 
+    refine_load: RefineLoad
+
+
+WorkResults = TypedVector[WorkResult]  # Vector of Work Results

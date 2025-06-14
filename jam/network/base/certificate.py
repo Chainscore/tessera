@@ -7,7 +7,7 @@ import os
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
-from tsrkit_types import Uint
+from tsrkit_types import Bytes, U32, Uint
 
 from jam.types.protocol.crypto import Hash
 
@@ -30,7 +30,7 @@ def generate_san(pubkey: bytes) -> str:
     def b(n: Uint[256], l: int) -> str:
         if l == 0:
             return ""
-        return alphabet[n % 32] + b(n // 32, l - 1)
+        return alphabet[n % 32] + b(Uint[256](n // 32), l - 1)
 
     alphabet = "abcdefghijklmnopqrstuvwxyz234567"
     n, _ = Uint[256].decode_from(pubkey)
@@ -51,14 +51,7 @@ def generate_keys(port: int):
         str: SAN of the certificate
     """
 
-    with open("seeds/keys.json", "r") as f:
-        all_seeds = json.load(f)
-
-    my_keys = all_seeds[str(port)]
-    if my_keys is None:
-        raise ValueError(f"No keys found for this port {port}. Please add them to the seeds/keys.json file.")
-
-    seed = bytes.fromhex(my_keys["seed"][2:] if my_keys["seed"].startswith("0x") else my_keys["seed"])
+    seed = b"".join([U32(int(os.environ["SEED"])).encode()] * 8)
     if len(seed) != 32:
         raise ValueError("Seed must be exactly 32 bytes long.")
 
@@ -105,7 +98,7 @@ def generate_keys(port: int):
     valid_to = valid_from + timedelta(days=365)
 
     subject = issuer = x509.Name([
-        x509.NameAttribute(x509.NameOID.COMMON_NAME, "rcgen self signed cert")
+        x509.NameAttribute(x509.NameOID.COMMON_NAME, "JAM Client Ed25519 Cert")
     ])
 
     cert_builder = (
