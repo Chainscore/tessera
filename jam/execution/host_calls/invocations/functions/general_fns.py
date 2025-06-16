@@ -267,33 +267,33 @@ class GeneralFunctions(INVF):
         elif s_star in accounts:
             a = accounts[s_star]
             
-        ko, kz, o = registers[8:8+3]
+        key_start, key_len, o = registers[8:8+3]
 
-        if not memory.is_accessible(ko, kz):
+        if not memory.is_accessible(key_start, key_len):
             logger.error("Host call read: memory not accessible for key", key_offset=ko, key_size=kz)
             raise PvmError(PANIC)
 
-        v: None|Bytes = None
-        k = Hash.blake2b(s_star.encode() + memory.read(ko, kz))
+        value: None|Bytes = None
+        key = Hash.blake2b(s_star.encode() + memory.read(key_start, key_len))
 
         if a is not None:
             # Directly get data, returns None if not found
-            v = a.storage[k]
+            value = a.storage[key]
 
-        if v is None or len(v) == 0:
+        if value is None or len(value) == 0:
             registers[7] = HostStatus.NONE.value
-            logger.debug("Host call read: storage value not found", service_key=service_key, storage_key=k.hex()[:16] + "...")
+            logger.debug("Host call read: storage value not found", service_key=service_key, storage_key=key.hex()[:16] + "...")
         else:
-            f = min(int(registers[11]), len(v))
-            l = min(int(registers[12]), len(v) - f)
+            start = min(int(registers[11]), len(value))
+            length = min(int(registers[12]), len(value) - start)
 
-            if not memory.is_accessible(o, l, for_write=True):
+            if not memory.is_accessible(o, length, for_write=True):
                 logger.error( "Host call read: memory not accessible for output", output_offset=o, required_size=l)
                 raise PvmError(PANIC)
-            registers[7] = Register(len(v))
-            memory.write(o, v[f:l])
+            registers[7] = Register(len(value))
+            memory.write(o, value[start:start+length])
             
-            logger.debug("Host call read: storage value found", service_key=service_key, value_length=len(v), returned_length=l)
+            logger.debug("Host call read: storage value found", service_key=service_key, value_length=len(value), returned_length=length)
         return CONTINUE, gas, registers, memory, context
 
 
@@ -310,7 +310,7 @@ class GeneralFunctions(INVF):
         # Get key,value start,end
         [ko, kz, vo, vz] = registers[7: 7+4]
         
-        logger.debug( "Host call: write", key_offset=ko, key_size=kz, value_offset=vo, value_size=vz, service_index=int(service_index))
+        logger.debug("Host call: write", key_offset=ko, key_size=kz, value_offset=vo, value_size=vz, service_index=int(service_index))
         
         if not memory.is_accessible(ko, kz):
             logger.error(
@@ -323,6 +323,9 @@ class GeneralFunctions(INVF):
         k = Hash.blake2b(service_index.encode() + memory.read(ko, kz))
 
         a = service_data.storage
+
+        curr_value = a[k]
+        storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
         if vz == 0:
             a.__delitem__(k)
             logger.debug(
@@ -346,13 +349,14 @@ class GeneralFunctions(INVF):
                 )
             except PvmError:
                 # TODO - Handle ONLY storage full
-                registers[7] = HostStatus.FULL
+                registers[7] = HostStatus.FULL.value
                 logger.warning(
                     "Host call write: storage full",
                     storage_key=k.hex()[:16] + "..."
                 )
                 return CONTINUE, gas, registers, memory, service_data
 
+        registers[7] = storage_len
         return CONTINUE, gas, registers, memory, context
 
 

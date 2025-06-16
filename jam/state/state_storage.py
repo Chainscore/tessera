@@ -63,8 +63,16 @@ class StateStorage:
 			self._updates[key_bytes] = value_bytes
 		else:
 			self._DB.put(key_bytes, value_bytes, sync)
+			self._TRIE.update(Bytes(key_bytes), Bytes(value_bytes))
 
 	def get(self, key_bytes: bytes, fill_cache: bool = True, skip_cache = False) -> bytes | None:
 		if key_bytes in self._updates.keys() and not skip_cache:
 			return self._updates[key_bytes]
 		return self._DB.get(key_bytes, fill_cache)
+
+	def delete(self, key_bytes: bytes, sync = False):
+		if self._cache_mode:
+			self._updates[key_bytes] = None
+		else:
+			self._DB.delete(key_bytes, sync)
+			self._TRIE.delete(Bytes(key_bytes))

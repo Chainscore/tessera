@@ -139,7 +139,6 @@ class StateTrie:
             if current_node.key_bits_248 == node.key_bits_248:
                 nh = NodeHash(Hash.blake2b(node.encoded))
                 self.nodes[nh] = node
-                self.nodes.pop(root)
                 return nh
             # else create a new trie from here, and attach it
             return self._merkelize_recursive([current_node.encoded, node.encoded], bit_index=bit_index)[0]

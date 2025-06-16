@@ -1,7 +1,5 @@
 from typing import Tuple
 from jam.execution.utils import decode_code_hash
-from rockstore import RockStore
-from jam.state.merkle import StateTrie
 from jam.state.state_storage import StateStorage
 from jam.state.utils import construct_state_key
 from jam.types.protocol.core import Balance, ServiceId, TimeSlot, BlobLength
@@ -149,7 +147,6 @@ class StorageView:
         return Bytes(data) if data else data
 
     def __setitem__(self, key: Bytes[32], value: Bytes):
-        k = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
         # TODO - check for gas before adding, throw error if insufficient. This is supposed to be handled in relevent invocation
         key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
         curr_data = self.store.get(bytes(key))

@@ -124,7 +124,8 @@ class State:
         from jam.preimages.preimages import Preimages
         from jam.statistics.statistics import Statistics
 
-        logger.info("Starting state transition on block", header_hash=block.header.hash().hex(), block_slot=int(block.header.slot), parent_hash= block.header.parent.hex()[:16] + "...", state_root= block.header.parent_state_root.hex()[:16] + "...", author_index=int(block.header.author_index))
+        header_hash = block.header.hash()
+        logger.info("Starting state transition on block", header_hash=header_hash.hex(), block_slot=int(block.header.slot), parent_hash= block.header.parent.hex()[:16] + "...", state_root= block.header.parent_state_root.hex()[:16] + "...", author_index=int(block.header.author_index))
 
         # TODO: Validate block headers
         # Epoch markers - make sure eta0_1 are the same as current etas
@@ -144,7 +145,7 @@ class State:
 
         # Reporting
         logger.debug("Processing reporting...")
-        Reporting.transition(self, block)
+        Reporting.transition(self, block, [])
 
         # Assurances
         logger.debug("Processing assurances...")
@@ -178,6 +179,8 @@ class State:
         logger.debug("Processing safrole...")
         vrf_output = Safrole.vrf_output(block.header.entropy_source)
         Safrole.transition(self, block, vrf_output)
+
+        state.settle(header_hash)
         
         logger.info(
             "Block imported successfully",
