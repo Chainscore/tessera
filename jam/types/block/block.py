@@ -1,9 +1,9 @@
-from tsrkit_types import Bytes
 from tsrkit_types.struct import structure
 
 from rockstore import RockStore
 
 from jam.config.logging import get_logger
+from jam.types import TimeSlot
 from jam.types.block.extrinsics.extrinsic import Extrinsic
 from jam.types.block.header import Header
 from jam.types.protocol.crypto import Hash, HeaderHash
@@ -45,22 +45,39 @@ class Block:
             # Return genesis block
             raise ValueError("Reached end of the chain")
         
-        data = db.get(header_hash)
+        data = db.get(cls.get_storage_key_block(header_hash))
         if data is None:
             raise ValueError("No block found header hash: ", header_hash.hex())
         return cls.decode(data)
-        
+
+    @classmethod
+    def load_w_ts(cls, ts: TimeSlot, db: RockStore) -> "Block":
+        ts_key = cls.get_storage_key_slot(ts)
+        header_hash = db.get(ts_key)
+        return cls.load(header_hash, db)
+
+    @staticmethod
+    def get_storage_key_block(header_hash: HeaderHash) -> bytes:
+        return Hash.blake2b("HH_TO_BLOCK".encode() + header_hash)
+
+    @staticmethod
+    def get_storage_key_slot(slot: TimeSlot) -> bytes:
+        return Hash.blake2b("TIMESLOT_TO_HH".encode() + slot.encode())
+
     def save(self, db: RockStore) -> HeaderHash:
         """
         Save the block to DB
         """
-        data = self.encode()
-        header_hash = self.header.hash()
-        logger.debug("💾 Saving block", header_hash=header_hash.hex(), len=len(data))
+        block_encoded = self.encode()
+        hh = self.header.hash()
+        logger.debug("💾 Saving block", header_hash=hh.hex(), slot=self.header.slot, len=len(block_encoded))
+
         # HeaderHash -> Block
-        db.put(header_hash, data)
+        hh_key = self.get_storage_key_block(self.header.hash())
+        db.put(hh_key, block_encoded)
         # Timeslot -> HeaderHash
-        db.put(self.header.slot.encode(), header_hash)
+        ts_key = self.get_storage_key_slot(self.header.slot)
+        db.put(ts_key, hh)
 
         # Return the HeaderHash
-        return HeaderHash(header_hash)
+        return HeaderHash(hh)

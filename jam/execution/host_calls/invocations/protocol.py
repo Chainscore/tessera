@@ -1,4 +1,6 @@
 from typing import Any, Callable, Dict, Protocol, Tuple, Union
+
+from jam.config.logging import get_logger
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.status import CONTINUE, HALT, OUT_OF_GAS, PANIC, ExecutionStatus, HostStatus
@@ -18,6 +20,8 @@ InvocationInfo = Tuple[
     InvocationFunctions,
     Tuple
 ]
+
+logger = get_logger("host_calls")
 
 class InvocationProtocol(Protocol):
     def execute(self):
