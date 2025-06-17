@@ -1,34 +1,10 @@
-from dataclasses import dataclass
+from tsrkit_types.struct import structure
 
-from jam.types.state import (
-    Alpha,
-    Phi,
-    Beta,
-    Eta,
-    Pi,
-    Psi,
-    Kappa,
-    Lambda_,
-    Rho,
-    Tau,
-    Chi,
-    Iota,
-    Nu,
-    Xi,
-    Gamma,
-    Delta
-)
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-from jam.utils.json.decorators import with_json_metadata
-from jam.utils.json.serde import JsonSerde
+from . import Alpha, Phi, Beta, Eta, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Nu, Xi, Gamma, Delta
 
-@dataclass(kw_only=True)
-@with_json_metadata(
-    lambda_={"name": "lambda"}
-)
-@decodable_dataclass
-class Sigma(Codable, JsonSerde):
+
+@structure
+class Sigma:
     """Overall system state combining all components (σ). Defined in Graypaper section 4.2."""
 
     # Core authorizations pool tracking allowed authorizers for each core (α ∈ C⟦H⟧:OH C)
@@ -85,11 +61,11 @@ class Sigma(Codable, JsonSerde):
     # Defined in section 10.1
     psi: Psi
 
-    # Validator activity statistics (blocks produced, tickets submitted, etc.)
+    # Validator activity statistics (blocks produced, ticket.py submitted, etc.)
     # Defined in section 13
     pi: Pi
 
-    # Accumulation queue for ready work-reports
+    # Accumulation ready work-reports
     # Defined in section 12
     nu: Nu
 

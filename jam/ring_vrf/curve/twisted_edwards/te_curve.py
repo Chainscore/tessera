@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Final, Tuple
 from jam.ring_vrf.curve.curve import Curve
 
 @dataclass(frozen=True)
@@ -18,8 +18,8 @@ class TECurve(Curve):
         EdwardsA: The 'a' parameter in the curve equation
         EdwardsD: The 'd' parameter in the curve equation
     """
-    EdwardsA: int
-    EdwardsD: int
+    EdwardsA: Final[int]
+    EdwardsD: Final[int]
     
     def __post_init__(self) -> None:
         """Validate curve parameters after initialization."""

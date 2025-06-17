@@ -1,50 +1,28 @@
-from dataclasses import dataclass
-from jam.types.base.choices.choice import Choice, decodable_choice
-from jam.types.base.sequences.array import Array, decodable_array
-from jam.types.base.sequences.vector import Vector, decodable_vector
-from jam.types.extrinsics.tickets import TicketBody
+from dataclasses import field
+
+from tsrkit_types.choice import Choice
+from tsrkit_types.sequences import TypedArray, TypedVector
+from tsrkit_types.struct import structure
+from jam.types.protocol.ticket import TicketBody
 from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
 )
 from jam.types.protocol.validators import ValidatorData
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 
 
-@decodable_array(length=VALIDATOR_COUNT, element_type=ValidatorData)
-class GammaK(Array[ValidatorData]):
-    """Validator set"""
+GammaK = TypedArray[ValidatorData, VALIDATOR_COUNT]
 
-    ...
-
-
-@decodable_vector(element_type=TicketBody)
-class GammaA(Vector[TicketBody]):
-    """Ticket accumulator: set of highest scoring ticket ids to be used for the next epoch"""
-
-    ...
-
+GammaA = TypedVector[TicketBody]
 
 GammaZ = BandersnatchRingRoot
 
+GammaSTickets = TypedArray[TicketBody, EPOCH_LENGTH]
 
-@decodable_array(length=EPOCH_LENGTH, element_type=TicketBody)
-class GammaSTickets(Array[TicketBody]):
-    """Current epoch's slot sealers: set of highest scoring ticket ids for this epoch"""
-
-    ...
+GammaSFallback = TypedArray[BandersnatchPublic, EPOCH_LENGTH]
 
 
-@decodable_array(length=EPOCH_LENGTH, element_type=BandersnatchPublic)
-class GammaSFallback(Array[BandersnatchPublic]):
-    """Fallback set of slot sealers: set of public keys of the slot sealers for this epoch"""
-
-    ...
-
-
-@decodable_choice
 class GammaS(Choice):
     """Either the current epoch's slot sealers or the fallback set of slot sealers"""
 
@@ -52,12 +30,11 @@ class GammaS(Choice):
     keys: GammaSFallback
 
 
-@decodable_dataclass
-@dataclass
-class Gamma(Codable):
+@structure
+class Gamma:
     """Gamma state"""
 
-    k: GammaK
-    z: GammaZ
-    s: GammaS
-    a: GammaA
+    k: GammaK = field(metadata={"name": "gamma_k"})
+    z: GammaZ = field(metadata={"name": "gamma_z"})
+    s: GammaS = field(metadata={"name": "gamma_s"})
+    a: GammaA = field(metadata={"name": "gamma_a"})

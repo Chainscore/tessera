@@ -10,11 +10,11 @@ from jam.types.state.chi import Chi, ChiG
 from jam.types.state.iota import Iota
 from jam.types.state.nu import AllReadyWRs, Nu
 from jam.types.state.xi import Xi
-from jam.types.state.delta import Delta
 from jam.types.state.beta import Beta
 from jam.types.state.phi import AuthorizationQueue, AuthorizerHash, Phi
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ, GammaS
-from jam.types.state.delta import Delta, Ai, Ai, At, AccountData, LookupTimestamps, LookupTable, Timestamps, PreImageLookup, AccountStorage
+from jam.types.state.delta import Delta, Ai, Ao, At, AccountData, AccountLookup, LookupTable, Timestamps, AccountPreimages, AccountStorage
+from jam.types.state.sigma import Sigma
 
 __all__ = [
     "Alpha",
@@ -48,5 +48,6 @@ __all__ = [
     "Phi",
     "Gamma", "GammaA", "GammaK", "GammaZ",
     "GammaS",
-    "Delta", "Ai", "Ai", "At", "AccountData", "LookupTimestamps", "LookupTable", "Timestamps", "PreImageLookup", "AccountStorage"
+    "Ai", "Ao", "At", "AccountData", "AccountLookup", "LookupTable", "Timestamps", "AccountPreimages", "AccountStorage",
+    "Sigma"
 ]

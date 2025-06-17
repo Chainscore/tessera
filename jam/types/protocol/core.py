@@ -1,15 +1,17 @@
-from jam.types.base.integers import U16, U32, U64, U128
+from tsrkit_types.integers import Uint
 from jam.types.protocol.crypto import OpaqueHash
 
 # Simple type aliases
-TimeSlot = U32
-ValidatorIndex = U16
-CoreIndex = U16
-Gas = U64
-ServiceId = U32
-Balance = U64
-BlobLength = U32
-Register = U64
+TimeSlot = Uint[32]
+ValidatorIndex = Uint[16]
+CoreIndex = Uint[16]
+Gas = Uint[64]
+RemainingGas = int
+ServiceId = Uint[32]
+Balance = Uint[64]
+BlobLength = Uint[32]
+Register = Uint[64]
+ProgramCounter = Uint[64]
 
 
 # Hash type aliases
