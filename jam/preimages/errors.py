@@ -1,4 +1,4 @@
-from jam.types.base.enum import Enum
+from tsrkit_types.enum import Enum
 from jam.error import JamError
 
 class PreimageError(JamError):

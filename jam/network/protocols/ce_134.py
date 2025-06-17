@@ -1,38 +1,31 @@
-from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic import QuicServerProtocol
-from jam.types.base.integers import Int
-from jam.types.work.report import WorkPackageBundle
-
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
+from tsrkit_types.integers import Uint
+from jam.types.work import WorkPackageBundle
+from tsrkit_types.struct import structure
 from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.utils.json import JsonSerde
 
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature
 from jam.types.protocol.core import CoreIndex
 from jam.work_package.work_package import SegmentRootLookup
 
-@decodable_dataclass
-@dataclass
-class CoreSegment(Codable, JsonSerde):
+@structure
+class CoreSegment:
     core_index : CoreIndex
-    length : Int
+    length : Uint
     segment_root_map : SegmentRootLookup
 
 
-@decodable_dataclass
-@dataclass
-class Credential(Codable, JsonSerde):
+@structure
+class Credential:
     work_report_hash : WorkReportHash
     ed25519_signature : Ed25519Signature
 
 
-@decodable_dataclass
-@dataclass
-class CE134Data(Codable, JsonSerde):
+@structure
+class CE134Data:
     core_segment: CoreSegment
     work_package_bundle : WorkPackageBundle
 
@@ -80,7 +73,7 @@ class WorkPackageSharing(NetworkProtocol):
 
         logger.info("Building Work Report")
         # TODO: Process received Work Package Bundle, Build Report & Return Credential if validated
-        from tests.dummy.dummy_package import create_dummy_credential
+        from jam.utils.dummy.dummy_package import create_dummy_credential
         credential = create_dummy_credential()
         # Process goes here
 

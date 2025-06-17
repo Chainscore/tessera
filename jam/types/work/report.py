@@ -1,144 +1,89 @@
 """Work report types for the JAM protocol."""
 
-from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from jam.types.base import Vector
-from jam.types.base.null import Nullable
-from jam.types.base.integers import U8, U16, U32, U64
-from jam.types.base.choices.choice import Choice, decodable_choice
-from jam.types.base.dictionary import decodable_dictionary, Dictionary
-from jam.types.base.sequences.bytes.bytes import Bytes
-from jam.types.base.sequences.vector import Vector, decodable_vector
+from tsrkit_types.integers import Uint
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.sequences import TypedVector
+from tsrkit_types.struct import structure
 
-from jam.types.work.package import WorkPackage
-from jam.types.work.refine_context import RefineContext
-from jam.types.protocol.crypto import OpaqueHash, WorkReportHash
-from jam.types.protocol.core import (
-    CoreIndex,
-    SegmentRoot,
-    ErasureRoot,
-    ExportsRoot,
-    Gas,
-    ServiceId,
-    WorkPackageHash,
+from jam.types.protocol.core import CoreIndex, Gas, TimeSlot
+from jam.types.protocol.crypto import (
+    OpaqueHash,
+    WorkReportHash,
+    HeaderHash,
+    BeefyRoot,
+    StateRoot,
 )
-from jam.types.work.segment import MultiSegments
 
-from jam.utils.json.serde import JsonSerde
-from jam.utils.codec.codable import Codable
-from jam.utils.codec.decorators.dataclasses import decodable_dataclass
-
-
-
-@decodable_choice
-class WorkExecResult(Choice):
-    """Work execution result choice."""
-
-    ok: Bytes
-    out_of_gas: Nullable
-    panic: Nullable
-    bad_code: Nullable
-    code_oversize: Nullable
-    bad_exports: Nullable
+if TYPE_CHECKING:
+    from jam.types.work.package import WorkPackageSpec
+    from jam.types.work.segments import SegmentRootLookup
+    from jam.types.work.collections import WorkResults
 
 
-@decodable_vector(element_type=WorkExecResult)
-class ExecResults(Vector[WorkExecResult]):
-    ...
+@structure
+class RefineContext:
+    """Refine context structure."""
 
-@decodable_dataclass
-@dataclass
-class RefineLoad(Codable, JsonSerde):
-    """Refine load structure."""
+    anchor: HeaderHash
+    state_root: StateRoot
+    beefy_root: BeefyRoot
+    lookup_anchor: HeaderHash
+    lookup_anchor_slot: TimeSlot
+    prerequisites: TypedVector[OpaqueHash]
 
-    gas_used: Gas
-    imports: U16
-    exports: U16
-    extrinsic_count: U8
-    extrinsic_size: U64
-
-@decodable_dataclass
-@dataclass
-class WorkResult(Codable, JsonSerde):
-    """Work result structure."""
-
-    service_id: ServiceId
-    code_hash: OpaqueHash
-    payload_hash: OpaqueHash
-    accumulate_gas: Gas
-    result: WorkExecResult
-    refine_load: RefineLoad
-
-@decodable_dataclass
-@dataclass
-class WorkPackageSpec(Codable, JsonSerde):
-    """Work package specification structure."""
-
-    hash: WorkPackageHash
-    length: U32
-    erasure_root: ErasureRoot
-    exports_root: ExportsRoot
-    exports_count: U16
+    @staticmethod
+    def empty() -> "RefineContext":
+        return RefineContext(
+            anchor=HeaderHash([0]*32),
+            state_root=StateRoot([0]*32),
+            beefy_root=BeefyRoot([0]*32),
+            lookup_anchor=HeaderHash([0]*32),
+            lookup_anchor_slot=TimeSlot(0),
+            prerequisites=TypedVector[OpaqueHash]([]),
+        )
 
 
-@decodable_dataclass
-@dataclass
-class WorkPackageBundle(Codable, JsonSerde):
-    """Work package bundle specification structure."""
-
-    package: WorkPackage
-    extrinsics: Vector[Vector[Bytes]]
-    import_segments: Vector[MultiSegments]
-    justifications: Vector[Vector[Vector[OpaqueHash]]]
-
-# Deprecated Type
-# @decodable_dataclass
-# @dataclass
-# class SegmentRootLookupItem(Codable, JsonSerde):
-#     """Segment root lookup item structure."""
-#
-#     work_package_hash: WorkPackageHash
-#     segment_tree_root: OpaqueHash
-#
-#
-# @decodable_vector(SegmentRootLookupItem)
-# class SegmentRootLookup(Vector[SegmentRootLookupItem]):
-#     ...
-
-@decodable_dictionary(key_type=WorkPackageHash, value_type=SegmentRoot)
-class SegmentRootLookup(Dictionary[WorkPackageHash, SegmentRoot]):
-    """contains all unique work-package hashes and segment root"""
-    ...
-
-@decodable_vector(WorkResult)
-class WorkResults(Vector[WorkResult]): ...
-
-@decodable_dataclass
-@dataclass
-class WorkReport(Codable, JsonSerde):
+@structure
+class WorkReport:
     """Work report structure."""
-
-    package_spec: WorkPackageSpec
+    # s
+    package_spec: "WorkPackageSpec"
+    # x
     context: RefineContext
-    core_index: CoreIndex
+    # c
+    core_index: Uint
+    # a
     authorizer_hash: OpaqueHash
+    # o
     auth_output: Bytes
-    segment_root_lookup: SegmentRootLookup
-    results: WorkResults
-    auth_gas_used: Gas
+    # l
+    segment_root_lookup: "SegmentRootLookup"
+    # r
+    results: "WorkResults"
+    # g
+    auth_gas_used: Uint
+
+    @classmethod
+    def empty(cls, **overrides) -> "WorkReport":
+        from jam.types.work.package import WorkPackageSpec
+        from jam.types.work.segments import SegmentRootLookup
+        from jam.types.work.collections import WorkResults
+        
+        defaults = {
+            "package_spec": WorkPackageSpec.empty(),
+            "context": RefineContext.empty(),
+            "core_index": CoreIndex(0),
+            "authorizer_hash": OpaqueHash(bytes([0] * 32)),
+            "auth_output": Bytes(b""),
+            "segment_root_lookup": SegmentRootLookup({}),
+            "results": WorkResults([]),
+            "auth_gas_used": Gas(0),
+        }
+        # merge in anything the caller wants to override:
+        defaults.update(overrides)
+        return cls(**defaults)
 
 
-@decodable_vector(element_type=WorkReportHash, allow_duplicates=False)
-class WorkDependencies(Vector[WorkReportHash]):
-    """Set of dependencies hashes"""
-
-    ...
-
-
-@decodable_vector(element_type=WorkReport)
-class WorkReports(Vector[WorkReport]):
-    """Vector of Work Reports"""
-
-    ...
-
-
+WorkDependencies = TypedVector[WorkReportHash]  # Set of dependencies hashes 

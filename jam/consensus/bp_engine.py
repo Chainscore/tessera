@@ -7,23 +7,24 @@ from jam.consensus.safrole.safrole import Safrole
 from jam.disputes.disputes import Disputes
 from jam.network.protocols.up_0 import BlockAnnouncement
 from jam.state.state import State
-from jam.types.block import Block, Extrinsic
-from jam.types.extrinsics import (
+from jam.types.block import (
+    Block, 
+    Header,
     TicketsExtrinsic,
     PreimagesExtrinsic,
     GuaranteesExtrinsic,
     AssurancesExtrinsic,
     DisputesExtrinsic,
 )
-from jam.types.extrinsics.disputes import Culprits, Faults, Verdicts
-from jam.types.header import Header
+from jam.types.block.extrinsics.extrinsic import Extrinsic
+from jam.types.block.extrinsics.disputes import Culprits, Faults, Verdicts
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.crypto import BandersnatchVrfSignature, Hash, OpaqueHash
 from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD
 from jam.network.node import Node
 from jam.config.logging import logger
-from jam.db.kv import KVStore
-from tests.dummy.utils import create_dummy_bytes
+from rockstore import RockStore
+from jam.utils.dummy.utils import create_dummy_bytes
 
 class BlockProducer:
     """
@@ -32,13 +33,13 @@ class BlockProducer:
 
     Args:
         node (Node): The network node for communications
-        db (KVStore): The database to store the genesis timestamp
+        db (RockStore): The database to store the genesis timestamp
     """
 
     node: Node
-    db: KVStore
+    db: RockStore
 
-    def __init__(self, node: Node, db: KVStore):
+    def __init__(self, node: Node, db: RockStore):
         self.node = node
         self.db = db
 
@@ -73,7 +74,7 @@ class BlockProducer:
                 f"🔄 ({self.node.name}) We're in epoch slot {ts_epoch_index} and {state.gamma.s.get_key()} mode"
             )
 
-            # Check if we are in fallback or normal tickets
+            # Check if we are in fallback or normal ticket.py
             if state.gamma.s.get_key() == "keys":
                 author_key = state.gamma.s.get_value()[ts_epoch_index]
                 if author_key == self.node.validator_data.bandersnatch:

@@ -199,7 +199,7 @@ class IETF:
         return hashlib.sha512(data).digest()
 
     def select_winning_ticket(self, tickets: List[Dict]) -> Tuple[List[Dict], Dict]:
-        """Select the winning ticket from valid tickets based on minimum output_point"""
+        """Select the winning ticket from valid ticket.py based on minimum output_point"""
         valid_tickets = [ticket for ticket in tickets if ticket['valid']]
         if not valid_tickets:
             return [], None
@@ -232,13 +232,13 @@ class IETF:
         valid_tickets, winning_ticket = self.select_winning_ticket(tickets)
 
         if valid_tickets:
-            print("\nValid tickets:")
+            print("\nValid ticket.py:")
             for idx, ticket in enumerate(valid_tickets, 1):
                 print(f"Ticket {idx}: Proof {ticket['proof']}, Output Point: {ticket['output_point']}")
 
             print(f"\nWinning ticket: Proof {winning_ticket['proof']}, Output Point: {winning_ticket['output_point']}")
         else:
-            print("\nNo valid tickets found.")
+            print("\nNo valid ticket.py found.")
 
 
 def main():

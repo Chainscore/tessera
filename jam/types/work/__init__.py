@@ -1,30 +1,80 @@
-"""Work-related types for the JAM protocol."""
+"""Work types module for the JAM protocol."""
 
-from jam.types.work.refine_context import RefineContext
-from jam.types.work.item import ImportSpec, ExtrinsicSpec, WorkItem
-from jam.types.work.package import Authorizer, WorkPackage
-from jam.types.work.report import (
+# Execution types
+from jam.types.work.execution import (
     WorkExecResult,
+    ExecResults,
+    RefineLoad,
     WorkResult,
-    WorkPackageSpec,
-    SegmentRootLookup,
+)
+
+# Item types
+from jam.types.work.item import (
+    ImportSpec,
+    ExtrinsicSpec,
+    ImportSpecs,
+    ExtrinsicSpecs,
+    WorkItem,
+)
+
+# Report types
+from jam.types.work.report import (
+    RefineContext,
     WorkReport,
+    WorkDependencies,
+)
+
+# Package types
+from jam.types.work.package import (
+    WorkPackageSpec,
+    Authorizer,
+    WorkItems,
+    WorkPackage,
+    WorkPackageBundle,
+)
+
+# Segment types
+from jam.types.work.segments import (
+    Segment,
+    Segments,
+    MultiSegments,
+    SegmentRootLookup,
+)
+
+# Collection types
+from jam.types.work.collections import (
+    WorkResults,
+    WorkReports,
 )
 
 __all__ = [
-    # Refine context
-    "RefineContext",
-    # Work item
-    "ImportSpec",
-    "ExtrinsicSpec",
-    "WorkItem",
-    # Work package
-    "Authorizer",
-    "WorkPackage",
-    # Work report
+    # Execution types
     "WorkExecResult",
+    "ExecResults", 
+    "RefineLoad",
     "WorkResult",
-    "WorkPackageSpec",
-    "SegmentRootLookup",
+    # Item types
+    "ImportSpec",
+    "ExtrinsicSpec", 
+    "ImportSpecs",
+    "ExtrinsicSpecs",
+    "WorkItem",
+    # Report types
+    "RefineContext",
     "WorkReport",
-]
+    "WorkDependencies",
+    # Package types
+    "WorkPackageSpec",
+    "Authorizer",
+    "WorkItems", 
+    "WorkPackage",
+    "WorkPackageBundle",
+    # Segment types
+    "Segment",
+    "Segments",
+    "MultiSegments",
+    "SegmentRootLookup",
+    # Collection types
+    "WorkResults",
+    "WorkReports",
+] 

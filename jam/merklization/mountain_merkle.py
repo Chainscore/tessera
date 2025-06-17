@@ -1,11 +1,14 @@
 from copy import deepcopy
-from jam.types import ByteArray32, OpaqueHash, Int, Null
+
+from tsrkit_types.null import Null
+from tsrkit_types.integers import Uint
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.sequences import TypedVector
+from jam.types.protocol.crypto import OpaqueHash
 
 from typing import Callable, TypeVar, Optional
-from jam.types.base import Vector
 from jam.types.protocol.crypto import Hash
-from jam.types.protocol.merkle import MMR
-
+from jam.types.protocol.merkle import MMR, OptionHash
 
 T = TypeVar("T")
 
@@ -19,10 +22,10 @@ class MMRFunctions:
 
     @staticmethod
     def _r(
-        seq: Vector[T],
-        ind: Int,
+        seq: TypedVector[T],
+        ind: Uint,
         val: T
-    ) -> Vector[T]:
+    ) -> TypedVector[T]:
         """
         Helper Function R Implementation as defined in Equation E.8
 
@@ -45,9 +48,9 @@ class MMRFunctions:
     def _p(
         self,
         mmr: MMR,
-        new_hash: ByteArray32,
-        index: Int,
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+        new_hash: Bytes[32],
+        index: Uint,
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> MMR:
         """
         Helper Function P Implementation as defined in Equation E.8
@@ -65,7 +68,7 @@ class MMRFunctions:
             Updated Mountain Merkle
         """
 
-        mmr_len = Int(len(mmr))
+        mmr_len = Uint(len(mmr))
 
         if index >= mmr_len:
             mmr.append(OptionHash(new_hash))
@@ -78,15 +81,15 @@ class MMRFunctions:
             mmr_dagger = self._r(mmr, index, OptionHash(Null))
             mmr_dash = MMR(mmr_dagger)
 
-            hash_dash = hash_fn(bytes(mmr[int(index)].get_value()) + bytes(new_hash))
+            hash_dash = hash_fn(bytes(mmr[Uint(index)].unwrap()) + bytes(new_hash))
 
             return self._p(mmr_dash, hash_dash, index + 1, hash_fn)
 
     def append_fn(
         self,
         mmr: MMR,
-        new_hash: ByteArray32,
-        hash_fn: Optional[Callable[[bytes], 'ByteArray32']] = Hash.blake2b
+        new_hash: Bytes[32],
+        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> MMR:
         """
         Append Function Implementation as defined in Equation E.8
@@ -103,7 +106,7 @@ class MMRFunctions:
             Updated Mountain Merkle
         """
 
-        return self._p(mmr, new_hash, Int(0), hash_fn)
+        return self._p(mmr, new_hash, Uint(0), hash_fn)
 
     @staticmethod
     def encode_mmr(mmr: MMR) -> bytes:
@@ -122,7 +125,8 @@ class MMRFunctions:
 
         return mmr.encode()
 
-    def super_peak(self, mmr: MMR) -> OpaqueHash:
+
+    def super_peak(self, mmr: MMR, flag=True) -> OpaqueHash:
         """
         MMR Super Peak Function Implementation as defined in Equation E.10
 
@@ -132,27 +136,25 @@ class MMRFunctions:
 
         Args:
             mmr: MMR Peaks
+            flag: Boolean
         Returns:
             Encoded Root
         """
+        h = []
 
-        if len(mmr) == 0:
+        if flag:
+            for peak in mmr:
+                if peak != OptionHash(Null):
+                    h.append(peak)
+        else:
+            h = mmr
+
+        if len(h) == 0:
             return self._ZERO_HASH
 
-        elif len(mmr) == 1:
-            if mmr[0] == OptionHash(Null):
-                return self._ZERO_HASH
-            else:
-                return mmr[0]
-                # return OpaqueHash(mmr[0].get_value())
+        elif len(h) == 1:
+            return h[0].unwrap()
 
         else:
-            mmr_dash = mmr[:-1]
-
-            val = (self.super_peak(mmr_dash))
-
-            if val != OptionHash(Null) and mmr[-1] != OptionHash(Null):
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(mmr[-1].get_value()))
-
-            elif val != OptionHash(Null) and mmr[-1] == OptionHash(Null):
-                return Hash.keccak256(self._PEAK_PREFIX + bytes(val.get_value()))
+            val = self.super_peak(MMR(h[:-1]), False)
+            return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(h[-1].unwrap()))

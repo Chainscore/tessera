@@ -6,20 +6,20 @@ from jam.state.state import State
 from jam.utils.constants import EPOCH_LENGTH
 from jam.network.node import Node
 from jam.config.logging import logger
-from jam.db.kv import KVStore
-from tests.dummy.dummy_package import create_dummy_package
+from rockstore import RockStore
+from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
-from jam.types import Int
+from tsrkit_types.integers import Uint
 
 
-async def wp_producer(node: Node, db: KVStore):
+async def wp_producer(node: Node, db: RockStore):
     """
     Continuously produces work packages and transmits them.
     A builder node produces a work package and share it with the guarantors.
     Args:
         node (Node): The network node for communications
-        db (KVStore): The database to store the genesis timestamp
+        db (RockStore): The database to store the genesis timestamp
     """
 
 
@@ -47,9 +47,9 @@ async def wp_producer(node: Node, db: KVStore):
 
         if node.is_builder:
             wp = create_dummy_package()
-            wc = WorkPackageCore(wp, Int(0))
+            wc = WorkPackageCore(wp, Uint(0))
 
-            data = CE133Data(package_data=wc, extrinsics=Int(341))
+            data = CE133Data(package_data=wc, extrinsics=Uint(341))
             logger.info(f"⛏️ ({node.name}) Producing Work Package { wp}")
             # TODO: Implement package transmission
 

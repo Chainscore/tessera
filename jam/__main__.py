@@ -1,25 +1,25 @@
 import asyncio
 import json
-from jam.config.logging import setup_logging, logger
-from jam.chainspec import chain_config
-from jam.db.kv import KVStore
 
+from tsrkit_types.bytes import Bytes
+
+from jam.config.logging import setup_logging, logger
+from jam.config.chainspec import chain_config
+from rockstore import RockStore
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.network.utils.dummy_wpb import wp_producer
-
 from jam.consensus.bp_engine import BlockProducer
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
-from jam.state.state import State
-from jam.types.base.integers.fixed import U16, U8
+from jam.types.state.sigma import Sigma
+from jam.state.state import setup_state
+from tsrkit_types.integers import U16, U8, Uint
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic
-from jam.types.block import Block
-from jam.types.header import Header
+from jam.types.block import Block, Header
 from jam.types.protocol.validators import (
     IPAddress,
     ValidatorData,
     ValidatorMetadata,
-    ValidatorName,
     ValidatorsData,
 )
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -77,7 +77,8 @@ async def main(
             ed25519_public,
             BlsPublic(bytes(144)),
             ValidatorMetadata(
-                name=ValidatorName(name),
+                name=Bytes[10](bytes(10)),
+                protocol=Uint[16](2 ** 16),
                 host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
                 port=U16(port),
             ),
@@ -94,7 +95,7 @@ async def main(
             is_validator=is_validator,
         )
 
-        db = KVStore(db_path)
+        db = RockStore(db_path)
 
         if start_genesis:
             # Start from genesis
@@ -104,8 +105,8 @@ async def main(
             block.header = Header.from_json(genesis["header"])
             block.save(db)
 
-            state = State.genesis()
-            state.save(db)
+            # Set genesis state
+            setup_state(Sigma.genesis(), db)
 
             block_producer = BlockProducer(tsr_node, db)
 

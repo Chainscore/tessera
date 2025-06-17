@@ -1,10 +1,9 @@
 from jam.error import JamError
-from jam.types.base.enum import Enum, decodable_enum
+from tsrkit_types.enum import Enum
 
 class ReportingError(JamError):
     ...
 
-@decodable_enum
 class ReportingErrorCode(Enum):
     """Error codes for the Reporting"""
 

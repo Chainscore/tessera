@@ -1,21 +1,16 @@
-from dataclasses import dataclass
 from typing import cast
 
 from jam.config.logging import logger
 from jam.network.quic.server import QuicServerProtocol
-
-from jam.utils.json import JsonSerde
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
+from tsrkit_types.struct import structure
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 
-from jam.types.work.report import WorkReport
+from jam.types.work import WorkReport
 from jam.types.protocol.core import TimeSlot
 
 
-@decodable_dataclass
-@dataclass
-class CE135Data(Codable, JsonSerde):
+@structure
+class CE135Data:
     report: WorkReport
     slot: TimeSlot
 
