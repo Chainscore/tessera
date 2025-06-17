@@ -7,7 +7,7 @@ from jam.merklization import BMRFunctions
 from jam.network.quic import QuicServerProtocol
 from jam.types.base import Vector
 
-from jam.types.work.shard import SegmentsShard
+from jam.types.work.shard import SegmentsShard, SegmentShard
 
 from jam.network.protocols.base import PrefixType
 from jam.work_package.stores.mappings import ErasureShardsMap
@@ -49,8 +49,15 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
             ss_key = er_shards_db.get_ss_root(root=item.erasure_root, shard_index=item.shard_Index)
             db_bs_hash = er_shards_db.get_bs_hashes(root=item.erasure_root)
 
+            # all segment shard at given shard_index with segment index
+            segs_shard_segment_index: SegmentsShard = ss_da.get(root=ss_key.segment_shard_root)[0]
+
             # all segment shard at given shard_index
-            segs_shard: SegmentsShard = ss_da.get(root=ss_key.segment_shard_root)[0]
+            segs_shards: Vector[SegmentShard] = Vector([])
+            for segs_shard in segs_shard_segment_index:
+                segs_shards.append(segs_shard.shard)
+
+            # segs_shard: SegmentsShard = ss_da.get(root=ss_key.segment_shard_root)[0]
 
             bs_hash = Vector([])
             for key in db_bs_hash:
@@ -58,9 +65,9 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
 
             # extracting segments shard for given segment index and appending them along with their justification in response data
             for index in item.seg_indexes:
-                justify = merkle.trace_fn(values=segs_shard, index=int(index))
+                justify = merkle.trace_fn(values=segs_shards, index=int(index))
                 justify.extend(bs_hash)
-                response.append(segs_shard[index])
+                response.append(segs_shards[index])
                 justifications.append(justify)
 
         ack = self._prefix.encode() + response.encode()

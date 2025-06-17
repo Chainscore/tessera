@@ -17,11 +17,15 @@ from jam.types.work.shard import BundleShard, SegmentsShard, SegmentShard, Shard
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
 from jam.utils.codec.decorators import decodable_dataclass
+from jam.types.base.sequences.vector import Vector, decodable_vector
 
 from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
+@decodable_vector(element_type=SegmentShard)
+class SegmentsShardVector(Vector[SegmentShard]):
+    ...
 
 @decodable_dataclass
 @dataclass
@@ -33,7 +37,7 @@ class CE137TransmitData(Codable, JsonSerde):
 @dataclass
 class CE137InterceptData(Codable, JsonSerde):
     bundle_shard: BundleShard
-    segments_shard: SegmentsShard
+    segments_shard: SegmentsShardVector
     justification: Justification
 
 
@@ -98,7 +102,11 @@ class ShardDistributionProtocol(NetworkProtocol):
         bundle_shard = audits_da.get(bs_hash=bundle_shard_hash)[0]
 
         segment_shard_root = bs_da.get_ss_root(data.erasure_root, data.shard_index).segment_shard_root
-        segments_shard = ss_da.get(segment_shard_root)[0]
+        # segments_shard = ss_da.get(segment_shard_root)[0]
+
+        segments_shard_with_segment_idx = ss_da.get(segment_shard_root)[0]
+
+        segments_shard = Vector([segments_shard_with_segment_idx[i].shard for i in range(len(segments_shard_with_segment_idx))])
 
         shards = bs_da.get(data.erasure_root)
         s = Vector([])

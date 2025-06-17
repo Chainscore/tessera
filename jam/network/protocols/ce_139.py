@@ -46,7 +46,10 @@ class SegmentShardRequest(SegmentShardRequestBase):
             ss_key = er_shards_db.get_ss_root(root=item.erasure_root, shard_index=item.shard_Index)
             seg_shards: SegmentsShard = ss_da.get(root=ss_key.segment_shard_root)[0]
             for index in item.seg_indexes:
-                response.append(seg_shards[index])
+                # class SegmentsShardTuple(Codable, JsonSerde):
+                #     shard_index: ShardIndex
+                #     shard: SegmentShard
+                response.append(seg_shards[index].shard)
 
         ack = self._prefix.encode() + response.encode()
         server.stream_and_close(stream_id, ack)

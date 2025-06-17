@@ -42,7 +42,7 @@ from jam.types.work.shard import (
     SegmentsShard,
     SegmentsShardRoots,
     SegmentsShardUnit,
-    ShardKey, BundleShard, ShardIndex, SegmentShard
+    ShardKey, BundleShard, ShardIndex, SegmentShard, SegmentsShardTuple
 )
 from jam.types.work.report import (
     WorkResult,
@@ -350,15 +350,23 @@ class Processor:
         with benchmark("transposing s shards"):
             segments_shards = SegmentsShards(
                 [SegmentsShard(
-                    [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
+                    [SegmentsShardTuple(U16(i), SegmentShard(all_chunks[j][i])) for j in range(len(all_chunks))]
                 ) for i in range(len(all_chunks[0]))])
+            # segments_shards = SegmentsShards(
+            #     [SegmentsShard(
+            #         [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
+            #     ) for i in range(len(all_chunks[0]))])
 
         ss_roots = SegmentsShardRoots([])
 
         logger.info(f"Storing segment shards..")
         with benchmark("storing s chunks"):
             for si, ss in enumerate(segments_shards):
-                ss_root = self.merkle.wb_merkle_fn(ss)
+
+                segments_shards_without_segment_idx = Vector([ss[j].shard for j in range(len(ss))])
+
+                ss_root = self.merkle.wb_merkle_fn(segments_shards_without_segment_idx)
+                # ss_root = self.merkle.wb_merkle_fn(ss)
 
                 ss_unit = SegmentsShardUnit(U16(si), ss)
 

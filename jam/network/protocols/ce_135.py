@@ -16,8 +16,9 @@ from jam.types.extrinsics.guarantees import ValidatorSignatures
 from jam.types.protocol.core import ValidatorIndex, TimeSlot
 from jam.types.protocol.crypto import Hash
 from jam.types.work.report import WorkReport
-from jam.types.work.shard import ShardIndex, BundleShardUnit, SegmentsShardUnit
+from jam.types.work.shard import ShardIndex, BundleShardUnit, SegmentsShardUnit, SegmentShard, SegmentsShardTuple
 from jam.utils import constants
+from jam.types.base.integers import U16
 
 from jam.utils.json import JsonSerde
 from jam.utils.codec import Codable
@@ -137,7 +138,11 @@ class WorkReportDistribution(NetworkProtocol):
 
             ss_root = bmr.wb_merkle_fn(shard[1])
 
-            ss_u = SegmentsShardUnit(shard_index=shard_index, shard=shard[1])
+            segments_shard_with_segment_idx = Vector([SegmentsShardTuple(U16(i), SegmentShard(shard[1][i])) for i in range(len(shard[1]))])
+
+            ss_u = SegmentsShardUnit(shard_index=shard_index, shard=segments_shard_with_segment_idx)
+
+            # ss_u = SegmentsShardUnit(shard_index=shard_index, shard=shard[1])
 
             ss_da.put(ss_root, ss_u)
 
