@@ -7,7 +7,7 @@ from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSign
 from jam.types.block.extrinsics.assurances import AvailAssurance, AvailBitField, AssurancesExtrinsic
 from jam.types.block.extrinsics.disputes import Verdicts, Culprits, Faults, DisputesExtrinsic
 from jam.types.protocol.core import ServiceId, TimeSlot, ValidatorIndex, Gas
-from tsrkit_types.integers import U32, U16, U8, U64
+from tsrkit_types.integers import U32, U16, U8, U64, Uint
 from jam.types.work import WorkReport
 from jam.types.work import (
     SegmentRootLookup,
@@ -35,26 +35,14 @@ def create_dummy_package_spec() -> WorkPackageSpec:
     )
 
 
-def create_dummy_work_context() -> RefineContext:
-    """Create dummy work context"""
-    return RefineContext.from_json({
-        "anchor": create_dummy_bytes(32).hex(),
-        "state_root": create_dummy_bytes(32).hex(),
-        "beefy_root": create_dummy_bytes(32).hex(),
-        "lookup_anchor": create_dummy_bytes(32).hex(),
-        "lookup_anchor_slot": 33,
-        "prerequisites": [],
-    })
-
-
 def create_dummy_work_result() -> WorkResult:
     """Create dummy work result"""
     refine_load = RefineLoad(
-        gas_used=Gas(0),
-        imports=U16(0),
-        exports=U16(0),
-        extrinsic_count=U8(0),
-        extrinsic_size=U64(0)
+        gas_used=Uint(0),
+        imports=Uint(0),
+        exports=Uint(0),
+        extrinsic_count=Uint(0),
+        extrinsic_size=Uint(0)
     )
 
     return WorkResult(
@@ -62,7 +50,7 @@ def create_dummy_work_result() -> WorkResult:
         code_hash=create_dummy_bytes32(),
         payload_hash=create_dummy_bytes32(),
         accumulate_gas=Gas(42),
-        result=WorkExecResult(Bytes(create_dummy_bytes(16))),
+        result=WorkExecResult(Bytes(b"ok")),
         refine_load=refine_load
     )
 
@@ -71,13 +59,13 @@ def create_dummy_work_report() -> WorkReport:
     """Create dummy work report"""
     return WorkReport(
         package_spec=create_dummy_package_spec(),
-        context=create_dummy_work_context(),
-        core_index=U16(3),
+        context=RefineContext.empty(),
+        core_index=Uint(3),
         authorizer_hash=create_dummy_bytes32(),
         auth_output=Bytes.fromhex("0102030405"),
         segment_root_lookup=SegmentRootLookup({}),
         results=WorkResults([create_dummy_work_result()]),
-        auth_gas_used=Gas(0)
+        auth_gas_used=Uint(0)
     )
 
 
@@ -124,12 +112,12 @@ def create_dummy_guarantees(num = 3) -> list[ReportGuarantee]:
 def create_dummy_assurances(num = 3) -> list[AvailAssurance]:
     """Create dummy assurances"""
     return [
-        AvailAssurance(
-            anchor=OpaqueHash(create_dummy_bytes32()),
-            bitfield=AvailBitField.from_json("0x01"),
-            validator_index=ValidatorIndex(i),
-            signature=Ed25519Signature(create_dummy_bytes(64)),
-        )
+        AvailAssurance.from_json({
+            "anchor": create_dummy_bytes32().hex(),
+            "bitfield": "0x01",
+            "validator_index": i,
+            "signature": create_dummy_bytes(64).hex(),
+    })
         for i in range(num)
     ]
 
