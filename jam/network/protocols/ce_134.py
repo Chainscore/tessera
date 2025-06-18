@@ -148,7 +148,7 @@ class WorkPackageSharing(NetworkProtocol):
             "Work package bundle transmission completed",
             node_name=node.name,
             transmitted_to=transmitted_count,
-            total_guarantors=len(node.connections),
+            total_guarantors=len(node.peer_conn),
             core_index=int(data.core_segment.core_index)
         )
 

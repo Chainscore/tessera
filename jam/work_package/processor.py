@@ -164,92 +164,96 @@ class Processor:
         Returns:
             Work Report
         """
+        try:
+            # Work Package, p
+            p = b.package
 
-        # Work Package, p
-        p = b.package
+            # ------------------------------------------ IS AUTH INVOCATION ------------------------------------------
+            logger.info(f"Checking authorization..")
+            # Auth Output o & Gas g
+            with benchmark("auth check done"):
+                o, g = PsiI(p, c).execute()
+            # ------------------------------------------ -- ---- ---------- ------------------------------------------
 
-        # ------------------------------------------ IS AUTH INVOCATION ------------------------------------------
-        logger.info(f"Checking authorization..")
-        # Auth Output o & Gas g
-        with benchmark("auth check done"):
-            o, g = PsiI(p, c).execute()
-        # ------------------------------------------ -- ---- ---------- ------------------------------------------
+            s_result = 0
 
-        s_result = 0
+            def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
+                """
+                Function I defined in Eqn 14.11
+                Performs Ordered Accumulation of work items in a package p
 
-        def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
-            """
-            Function I defined in Eqn 14.11
-            Performs Ordered Accumulation of work items in a package p
+                https://graypaper.fluffylabs.dev/#/cc517d7/1b3f011b8d01?v=0.6.5
+                """
 
-            https://graypaper.fluffylabs.dev/#/cc517d7/1b3f011b8d01?v=0.6.5
-            """
+                nonlocal s_result
+                w = p.items[j]
 
-            nonlocal s_result
-            w = p.items[j]
+                l = 0
+                k = int(j)
+                for i in range(k):
+                    l += p.items[i].export_count
 
-            l = 0
-            k = int(j)
-            for i in range(k):
-                l += p.items[i].export_count
+                # ------------------------------------------ REFINE INVOCATION ------------------------------------------
+                logger.info(f"Refining Work Item {j}..")
+                with benchmark(f"Refined Work Item {j}"):
+                    r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
+                # ------------------------------------------ ----------------- ------------------------------------------
 
-            # ------------------------------------------ REFINE INVOCATION ------------------------------------------
-            logger.info(f"Refining Work Item {j}..")
-            with benchmark(f"Refined Work Item {j}"):
-                r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
-            # ------------------------------------------ ----------------- ------------------------------------------
+                segment = Segment([bytes(0)] * 4104)
+                segment_length = w.export_count
+                zero_segments = Segments([segment for _ in range(segment_length)])
 
-            segment = Segment([bytes(0)] * 4104)
-            segment_length = w.export_count
-            zero_segments = Segments([segment for _ in range(segment_length)])
+                z = len(o) + s_result
 
-            z = len(o) + s_result
-
-            if r.get_key() != "ok":
-                return r, u, zero_segments
-            elif z + len(r.get_value()) > MAX_WORK_REPORT_SIZE:
-                return WorkExecResult({"result_oversize": Null}), u, zero_segments
-            elif len(e) != w.export_count:
-                return WorkExecResult({"bad_exports": Null}), u, zero_segments
-            else:
-                s_result += len(r.get_value())
-                return r, u, e
-
-
-        # Work Results, r
-        r_list = WorkResults([])
-
-        # Exported Segments
-        e_list = MultiSegments([])
-
-        for _j in range(len(p.items)):
-            _r, _u, _e = utils_i(_j)
+                if r.get_key() != "ok":
+                    return r, u, zero_segments
+                elif z + len(r.get_value()) > MAX_WORK_REPORT_SIZE:
+                    return WorkExecResult({"result_oversize": Null}), u, zero_segments
+                elif len(e) != w.export_count:
+                    return WorkExecResult({"bad_exports": Null}), u, zero_segments
+                else:
+                    s_result += len(r.get_value())
+                    return r, u, e
 
 
-            comp = self.item_to_digest(p.items[_j], _r, _u)
-            r_list.append(comp)
-            e_list.append(_e)
+            # Work Results, r
+            r_list = WorkResults([])
+
+            # Exported Segments
+            e_list = MultiSegments([])
+
+            for _j in range(len(p.items)):
+                _r, _u, _e = utils_i(_j)
 
 
-        # Work Package Hash, h
-        h = Hash.blake2b(p.encode())
+                comp = self.item_to_digest(p.items[_j], _r, _u)
+                r_list.append(comp)
+                e_list.append(_e)
 
-        # Accumulate all exported segments
-        e_bar_cap = Segments([])
-        for segments in e_list:
-            e_bar_cap.extend(segments)
 
-        logger.info(f"Exported {len(e_bar_cap)} Segments!")
+            # Work Package Hash, h
+            h = Hash.blake2b(p.encode())
 
-        # Availability Specification, s
-        logger.info(f"Building availability specification..")
-        with benchmark("specification built"):
-            specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
+            # Accumulate all exported segments
+            e_bar_cap = Segments([])
+            for segments in e_list:
+                e_bar_cap.extend(segments)
 
-        logger.info(f"Compiling Report..")
-        report = WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=hash(p.authorizer), auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Gas(g))
+            logger.info(f"Exported {len(e_bar_cap)} Segments!")
 
-        return report
+            # Availability Specification, s
+            logger.info(f"Building availability specification..")
+            with benchmark("specification built"):
+                specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
+
+            logger.info(f"Compiling Report..")
+            report = WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=hash(p.authorizer), auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Gas(g))
+
+            return report
+
+        except Exception as e:
+            logger.error(f"Failed to build report", error=e)
+
 
     def availability_specifier(self, package_hash: OpaqueHash, wp_bundle: bytes, export_segments: Segments) -> WorkPackageSpec:
         """
@@ -495,4 +499,4 @@ class Processor:
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
 
             acks = await CE135.transmit(node=self.node, data=data)
-            print("received acks", acks)
+            print("Received acks", acks)

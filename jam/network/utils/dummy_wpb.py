@@ -57,7 +57,7 @@ async def wp_producer(node: Node, db: RockStore):
             continue
 
         # Get state from db
-        state = State.load(db)
+        from jam.state.state import state
         current_timeslot = (time() - genesis_ts) // 6
 
         # Get current timeslot

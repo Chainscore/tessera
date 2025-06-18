@@ -85,8 +85,8 @@ class WorkPackageSubmission(NetworkProtocol):
         responses = TypedVector[OptBool]([])
         for peer in node.peer_conn:
             try:
-                if peer.port == 30333:
-                    logger.info("sending package to 30333")
+                if peer.port == 40000:
+                    logger.info("sending package to 40000")
                     client = node.peer_conn[peer][1]
                     transmitted_count += 1
 

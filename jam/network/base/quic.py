@@ -89,6 +89,7 @@ class QuicProtocol(QuicConnectionProtocol):
         except Exception as e:
             print("received error", e)
 
+            # TODO: Wait for responses for a certain timeout
             # try:
             #     return await asyncio.wait_for(asyncio.shield(waiter), timeout=timeout)
             # except asyncio.TimeoutError:

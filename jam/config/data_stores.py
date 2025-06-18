@@ -44,12 +44,12 @@ class DataStores:
         os.makedirs(parent_path + settings.DB_PATH, exist_ok=True)
         os.makedirs(parent_path + settings.D3L_PATH, exist_ok=True)
         os.makedirs(parent_path + settings.AUDIT_DB_PATH, exist_ok=True)
-        os.makedirs(parent_path + "/state", exist_ok=True)
+        os.makedirs(parent_path + settings.STATE_DB_PATH, exist_ok=True)
 
         self._main_db = RockStore(parent_path + settings.DB_PATH)
         self._audit_db = RockStore(parent_path + settings.D3L_PATH)
         self._d3l = RockStore(parent_path + settings.AUDIT_DB_PATH)
-        self._state_db = RockStore(parent_path + "/state")
+        self._state_db = RockStore(parent_path + settings.STATE_DB_PATH)
 
     def shutdown(self):
         if self._main_db:
@@ -63,7 +63,7 @@ class DataStores:
             print("Closing audits db")
         if self._state_db:
             self._state_db.close()
-            print("Closing audits db")
+            print("Closing state db")
 
 
 data_stores = DataStores()

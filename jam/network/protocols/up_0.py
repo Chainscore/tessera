@@ -80,13 +80,15 @@ class BlockAnnouncement(NetworkProtocol):
 
         # TODO: Fetch leaves (descendants of the latest finalized block with no known children)
         leaves = Leaves([])
-
         handshake = Handshake(final, leaves)
-        h_len = Uint[32](len(handshake.encode()))
+        print("here in h")
+        h = handshake.encode()
+        print("here after h")
+        h_len = Uint[32](len(h))
 
         # Handshake Message
         conn.stream_and_keep_open(h_len.encode(), stream_id)
-        conn.stream_and_keep_open(handshake.encode(), stream_id)
+        conn.stream_and_keep_open(h, stream_id)
 
     async def transmit(self, node: "Node", data: Block):
         """Announce Block to Peers (servers)"""

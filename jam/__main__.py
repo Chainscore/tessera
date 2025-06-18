@@ -4,19 +4,16 @@ import logging
 import os
 import time
 from math import floor
-from typing import cast
 
 from dotenv import load_dotenv
 from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U16, U8, Uint
 
-from jam.config.data_stores import data_stores
 from jam.config.keys import setup_keys
 from jam.config.logging import setup_logging, logger
 from jam.config.chainspec import chain_config
-from rockstore import RockStore
 
 from jam.consensus.grandpa.finality import Finality
-from jam.consensus.sync import sync
 from jam.config.settings import settings, setup_setting
 from jam.execution.pvm.code import Code
 
@@ -25,16 +22,11 @@ from jam.network.node import Node
 from jam.network.utils.dummy_wpb import wp_producer
 
 from jam.consensus.bp_engine import BlockProducer
-from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint
-from jam.state.ghost import GhostState
 from jam.state.state import setup_state
-from tsrkit_types.integers import U16, U8, Uint, U32
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Hash
 from jam.types.protocol.core import Balance, Gas, BlobLength, ServiceId
 from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
 from jam.types.protocol.crypto import Ed25519Public, Hash
-from tsrkit_types.integers import U16, U8, Uint
-from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic
 from jam.types.block import Block, Header
 from jam.types.protocol.validators import (
     IPAddress,
@@ -48,7 +40,6 @@ from jam.types.state.delta import AccountMetadata
 
 async def main(
     genesis_path: str,
-    db_path: str,
     env: str,
     start_genesis: bool,
     theme: str,
@@ -112,40 +103,15 @@ async def main(
         # Genesis specs
         dev_spec = json.load(open(genesis_path))
 
-        peers = []
         # TODO: Fix peers
-        # for pr in peerlist:
-        #     raw = bytes.fromhex(pr["metadata"][2:])  # strip "0x" and decode
-        #     metadata = ValidatorMetadata(
-        #         name=Bytes[10](raw[0:10]),
-        #         protocol=U16.from_bytes(raw[10:12]),
-        #         host=IPAddress([U8(b) for b in raw[12:16]]),
-        #         port=U16.from_bytes(raw[16:18]),
-        #         buffer=Bytes[110](raw[18:128])
-        #     )
-        #
-        #     if metadata.port == port:
-        #         continue
-        #
-        #     peer = Peer(
-        #         id=pr["id"],
-        #         data=ValidatorData(
-        #             bandersnatch=BandersnatchPublic(bytes.fromhex(pr["bandersnatch"][2:])),
-        #             ed25519=Ed25519Public(bytes.fromhex(pr["ed25519"][2:])),
-        #             bls=BlsPublic(bytes.fromhex(pr["bls"][2:])),
-        #             metadata=metadata
-        #         )
-        #     )
-        #     peers.append(peer)
-        #
-        # peers = [
-        #     Peer(
-        #         port=int(val.metadata.port),
-        #         host=".".join([str(int(val)) for val in val.metadata.host]),
-        #         san=val.metadata.name,
-        #     )
-        #     for val in state.kappa
-        # ]
+        peers = [
+            Peer(
+                id=bytes.decode(val.metadata.name, 'utf-8'),
+                data=val
+            )
+            for val in state.kappa
+            if val.metadata.port != port
+        ]
 
         # TODO: Fix Node
         tsr_node = Node(
@@ -160,7 +126,7 @@ async def main(
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
                     protocol=Uint[16](2 ** 16 - 1),
-                    host=IPAddress([U8(0), U8(0), U8(0), U8(0)]),
+                    host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
                     port=U16(port),
                 ),
             ),
