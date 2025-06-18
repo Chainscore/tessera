@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from tsrkit_types.bytes import Bytes
@@ -12,7 +10,7 @@ from jam.types.block import Block, OffendersMark, DisputesExtrinsic
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import (
     EPOCH_LENGTH,
-    VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY
+    VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY, X
 )
 
 # Define minimum requirements
@@ -20,39 +18,7 @@ MINIMUM_FAULTS_FOR_GOOD = 1  # At least 1 fault for solely valid verdicts
 MINIMUM_CULPRITS_FOR_BAD = 2  # At least 2 culprits for solely invalid verdicts
 
 
-@dataclass
 class Disputes:
-    @staticmethod
-    def verify_signature(
-        public_key: Bytes[32],
-        message_bytes: bytes,
-        target: bytes,
-        signature: Bytes[64],
-    ) -> bool:
-        """
-        Verify an Ed25519 signature using a public key.
-
-        Args:
-            public_key: ByteArray32 containing the Ed25519 public key (32 bytes).
-            message_bytes: Bytes of the message that was signed.
-            signature: ByteArray64 containing the Ed25519 signature (64 bytes).
-            target: Bytes of the target that was signed.
-        Returns:
-            bool: True if the signature is valid, False otherwise.
-        """
-
-        try:
-            public_key_bytes = bytes(public_key)  # Convert ByteArray32 to bytes
-            signature_bytes = bytes(signature)  # Convert ByteArray64 to bytes
-            public_key_obj = Ed25519PublicKey.from_public_bytes(public_key_bytes)
-            msg_bytes = bytes(message_bytes) + bytes(target)
-            public_key_obj.verify(signature_bytes, msg_bytes)
-            return True
-        except InvalidSignature:
-            return False
-        except Exception as e:
-            print(f"Signature verification failed: {e}")
-        return False
 
     @staticmethod
     def transition(state: Sigma, block: Block) -> Sigma:
@@ -80,27 +46,24 @@ class Disputes:
         # 4. Verifying signatures
         # Verifying fault signatures
         for fault in disputes.faults:
-            message_bytes = b"jam_valid" if fault.vote else b"jam_invalid"
-            if not Disputes.verify_signature(
-                fault.key, message_bytes, fault.target, fault.signature
-            ):
+            try:
+                message_bytes = (X.VALID if fault.vote else X.INVALID).value
+                Ed25519PublicKey.from_public_bytes(fault.key).verify(fault.signature, message_bytes + fault.target)
+            except InvalidSignature:
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
-            if fault.key not in [v.ed25519
-                for v in (*state.lambda_, *state.kappa)]:
+            if fault.key not in [v.ed25519 for v in (*state.lambda_, *state.kappa)]:
                 raise DisputesError(DisputesErrorCode.BAD_AUDITOR_KEY)
 
 
         # Verifying culprit signatures
         for culprit in disputes.culprits:
-            message_bytes = b"jam_guarantee"
-            if not Disputes.verify_signature(
-                culprit.key, message_bytes, culprit.target, culprit.signature
-            ):
+            try:
+                message_bytes = X.GUARANTEE.value
+                Ed25519PublicKey.from_public_bytes(culprit.key).verify(culprit.signature, message_bytes + culprit.target)
+            except InvalidSignature:
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
-            if culprit.key not in [validator.ed25519
-                for validator in (*state.lambda_, *state.kappa)]:
+            if culprit.key not in [validator.ed25519 for validator in (*state.lambda_, *state.kappa)]:
                 raise DisputesError(DisputesErrorCode.BAD_GUARANTOR_KEY)
-
 
         # Verifying verdicts are sorted by target
         for verdict in disputes.verdicts:
@@ -116,17 +79,11 @@ class Disputes:
                     public_key = validator.ed25519
 
                 # Get the vote value and message
-                message_bytes = b"jam_valid" if vote.vote else b"jam_invalid"
-                message = verdict.target
-                signature = vote.signature
-
-                # Verify the vote signature
-                if not Disputes.verify_signature(
-                    public_key, message_bytes, verdict.target, signature
-                ):
-                    raise DisputesError(
-                        DisputesErrorCode.BAD_SIGNATURE,
-                    )
+                try:
+                    message_bytes = (X.VALID if vote.vote else X.INVALID).value
+                    Ed25519PublicKey.from_public_bytes(public_key).verify(vote.signature, message_bytes + verdict.target)
+                except InvalidSignature:
+                    raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
 
         # 5. Validate verdicts
         # Verify verdicts are sorted by target (ascending order)
@@ -264,7 +221,6 @@ class Disputes:
         and return the offenders mark.
         https://graypaper.fluffylabs.dev/#/68eaa1f/131c00131c00?v=0.6.4
         """
-        c_keys = [culprit.key for culprit in disputes.culprits]
-        f_keys = [fault.key for fault in disputes.faults]
-        offenders = list(set(c_keys + f_keys))
+        offenders = [culprit.key for culprit in disputes.culprits]
+        offenders.extend([fault.key for fault in disputes.faults])
         return OffendersMark(offenders)
