@@ -85,13 +85,7 @@ async def wp_producer(node: Node, db: RockStore):
             service_code = Bytes(b"").encode() + bytecode
             code_hash = Hash.blake2b(service_code)
 
-            state.delta[wp.auth_code_host].service = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000),
-                                                                  gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
-                                                                  num_o=Ao(0))
-            state.delta[wp.auth_code_host].service.code_hash = Bytes(service_code)
-            state.delta[wp.auth_code_host].lookup[
-                LookupTable(hash=code_hash, length=BlobLength(len(service_code)))] = Timestamps([state.tau])
-            wp.code_hash = code_hash
+            wp.authorizer.code_hash = code_hash
             wp.authorization = Bytes(int(1).to_bytes(1))
 
             wi_pc = bytes(
@@ -107,13 +101,6 @@ async def wp_producer(node: Node, db: RockStore):
             wi_service_code = Bytes(b"").encode() + wi_bytecode
             wi_code_hash = Hash.blake2b(wi_service_code)
             wi_service = ServiceId(1)
-
-            state.delta[wi_service].service = AccountMetadata(code_hash=wi_code_hash, balance=Balance(1_000_000),
-                                                      gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
-                                                      num_o=Ao(0))
-            state.delta[wi_service].service.code_hash = Bytes(wi_service_code)
-            state.delta[wi_service].lookup[
-                LookupTable(hash=wi_code_hash, length=BlobLength(len(wi_service_code)))] = Timestamps([state.tau])
 
             import_spec1 = ImportSpec(tree_root=SegmentRoot(b"0x3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91"), index=U16(0))
             import_spec2 = ImportSpec(tree_root=SegmentRoot(b"0x6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694"), index=U16(0))

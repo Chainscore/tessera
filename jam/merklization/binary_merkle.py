@@ -181,7 +181,8 @@ class BMRFunctions:
         """
 
         leaves = self._preprocessor_fn(values, hash_fn)
-        return self._node_fn(leaves, hash_fn)
+        node = self._node_fn(leaves, hash_fn)
+        return OpaqueHash(node.unwrap())
 
     def merkle_path_fn(
         self,
@@ -212,7 +213,7 @@ class BMRFunctions:
         leaves = self._preprocessor_fn(values, hash_fn)
 
         path = self.trace_fn(leaves, ind, hash_fn)
-        return path[:sz]
+        return Vector[Choice[Bytes, Bytes[32]]](path[:sz])
 
     def leaf_page_fn(
         self,

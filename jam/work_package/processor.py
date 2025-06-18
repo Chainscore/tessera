@@ -174,7 +174,6 @@ class Processor:
             with benchmark("auth check done"):
                 o, g = PsiI(p, c).execute()
             # ------------------------------------------ -- ---- ---------- ------------------------------------------
-
             s_result = 0
 
             def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
@@ -199,20 +198,20 @@ class Processor:
                     r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
                 # ------------------------------------------ ----------------- ------------------------------------------
 
-                segment = Segment([bytes(0)] * 4104)
+                segment = Segment([0] * 4104)
                 segment_length = w.export_count
                 zero_segments = Segments([segment for _ in range(segment_length)])
 
                 z = len(o) + s_result
 
-                if r.get_key() != "ok":
+                if r._choice_key != "ok":
                     return r, u, zero_segments
-                elif z + len(r.get_value()) > MAX_WORK_REPORT_SIZE:
+                elif z + len(r.unwrap()) > MAX_WORK_REPORT_SIZE:
                     return WorkExecResult({"result_oversize": Null}), u, zero_segments
                 elif len(e) != w.export_count:
                     return WorkExecResult({"bad_exports": Null}), u, zero_segments
                 else:
-                    s_result += len(r.get_value())
+                    s_result += len(r.unwrap())
                     return r, u, e
 
 
@@ -229,7 +228,6 @@ class Processor:
                 comp = self.item_to_digest(p.items[_j], _r, _u)
                 r_list.append(comp)
                 e_list.append(_e)
-
 
             # Work Package Hash, h
             h = Hash.blake2b(p.encode())
@@ -269,120 +267,121 @@ class Processor:
         Returns:
             s: Availability specifier
         """
+        try:
+            # Work Bundle Length, l
+            l = len(wp_bundle)
 
-        # Work Bundle Length, l
-        l = len(wp_bundle)
+            # Segment Root, e
+            e = ExportsRoot(self.merkle.cd_merkle_fn(export_segments))
+            logger.info(f"Exports Root calculated - {e.hex()}")
 
-        # Segment Root, e
-        e = ExportsRoot(self.merkle.cd_merkle_fn(export_segments))
-        logger.info(f"Exports Root calculated - {e}")
+            # Segments Count, n
+            n = len(export_segments)
 
-        # Segments Count, n
-        n = len(export_segments)
+            erasure_codec = ErasureCode()
 
-        erasure_codec = ErasureCode()
+            # Access DA
+            d3l = settings.d3l
+            audits = settings.audit
 
-        # Access DA
-        d3l = settings.d3l
-        audits = settings.audit
+            # Build Bundle Shards
+            audits_da = AuditShardsDA(audits)
 
-        # Build Bundle Shards
-        audits_da = AuditShardsDA(audits)
+            logger.info(f"Building bundle shards..")
 
-        logger.info(f"Building bundle shards..")
+            with benchmark("padding bundle"):
+                padded_wp_bundle = self.zero_padding(ByteArray(wp_bundle), BASIC_ERASURE_SIZE)
 
-        with benchmark("padding bundle"):
-            padded_wp_bundle = self.zero_padding(ByteArray(wp_bundle), BASIC_ERASURE_SIZE)
+            with benchmark("e coding bundle"):
+                bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
 
-        with benchmark("e coding bundle"):
-            bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
+            bs_hashes = BundleShardHashes([])
 
-        bs_hashes = BundleShardHashes([])
+            logger.info(f"Storing bundle shards..")
 
-        logger.info(f"Storing bundle shards..")
+            with benchmark("storing bundle chunks"):
+                for si, bs in enumerate(bundle_shards):
+                    bs_hash = Hash.blake2b(BundleShard(bs).encode())
 
-        with benchmark("storing bundle chunks"):
-            for si, bs in enumerate(bundle_shards):
-                bs_hash = Hash.blake2b(BundleShard(bs).encode())
+                    bs_unit = BundleShardUnit(ShardIndex(si), BundleShard(bs))
 
-                bs_unit = BundleShardUnit(ShardIndex(si), BundleShard(bs))
+                    # Store Bundle Shard
+                    audits_da.put(bs_hash, bs_unit)
+                    bs_hashes.append(bs_hash)
 
-                # Store Bundle Shard
-                audits_da.put(bs_hash, bs_unit)
-                bs_hashes.append(bs_hash)
+            # Store Exported Segments
+            seg_da = SegmentsDA(d3l)
 
+            logger.info(f"Storing segments..")
+            with benchmark("building proofs"):
+                proofs = self.paged_proof(export_segments)
+                proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
 
-        # Store Exported Segments
-        seg_da = SegmentsDA(d3l)
+            with benchmark("storing proofs"):
+                seg_da.put(e, proved_segments)
 
-        logger.info(f"Storing segments..")
-        with benchmark("building proofs"):
-            proofs = self.paged_proof(export_segments)
-            proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
+            # Build Segment Shards
+            s_shards_da = SegmentShardsDA(d3l)
 
-        with benchmark("storing proofs"):
-            seg_da.put(e, proved_segments)
+            logger.info(f"Building segment shards..")
+            justified_segments: Segments = export_segments
+            justified_segments.extend(proofs)
 
-        # Build Segment Shards
-        s_shards_da = SegmentShardsDA(d3l)
+            all_chunks = Vector([])
 
-        logger.info(f"Building segment shards..")
-        justified_segments: Segments = export_segments
-        justified_segments.extend(proofs)
+            with benchmark("e coding segments"):
+                for item in justified_segments:
+                    seg_chunks = erasure_codec.encode(item.encode())
+                    all_chunks.append(seg_chunks)
 
-        all_chunks = Vector([])
+            with benchmark("transposing s shards"):
+                segments_shards = SegmentsShards(
+                    [SegmentsShard(
+                        [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
+                    ) for i in range(len(all_chunks[0]))])
 
-        with benchmark("e coding segments"):
-            for item in justified_segments:
-                seg_chunks = erasure_codec.encode(item.encode())
-                all_chunks.append(seg_chunks)
+            ss_roots = SegmentsShardRoots([])
 
-        with benchmark("transposing s shards"):
-            segments_shards = SegmentsShards(
-                [SegmentsShard(
-                    [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
-                ) for i in range(len(all_chunks[0]))])
+            logger.info(f"Storing segment shards..")
+            with benchmark("storing s chunks"):
+                for si, ss in enumerate(segments_shards):
+                    ss_root = self.merkle.wb_merkle_fn(ss)
 
-        ss_roots = SegmentsShardRoots([])
+                    ss_unit = SegmentsShardUnit(Uint[16](si), ss)
 
-        logger.info(f"Storing segment shards..")
-        with benchmark("storing s chunks"):
-            for si, ss in enumerate(segments_shards):
-                ss_root = self.merkle.wb_merkle_fn(ss)
+                    # Store Segments Shard
+                    s_shards_da.put(ss_root, ss_unit)
+                    ss_roots.append(ss_root)
 
-                ss_unit = SegmentsShardUnit(Uint[16](si), ss)
+            # Build Complete Shard Key
+            if len(ss_roots) != chain_config.num_validators or len(bs_hashes) != chain_config.num_validators:
+                raise ValueError(f"Length of both batches should be {chain_config.num_validators}")
 
-                # Store Segments Shard
-                s_shards_da.put(ss_root, ss_unit)
-                ss_roots.append(ss_root)
+            shards_keys = Vector([])
+            for i in range(chain_config.num_validators):
+                shards_key = ShardKey(bs_hashes[i], ss_roots[i])
+                shards_keys.append(shards_key.encode())
 
-        # Build Complete Shard Key
-        if len(ss_roots) != chain_config.num_validators or len(bs_hashes) != chain_config.num_validators:
-            raise ValueError(f"Length of both batches should be {chain_config.num_validators}")
+            # Erasure Root
+            with benchmark("calculated erasure root"):
+                u = self.merkle.wb_merkle_fn(shards_keys)
+            logger.info(f"Erasure Root calculated - {u}")
 
-        shards_keys = Vector([])
-        for i in range(chain_config.num_validators):
-            shards_key = ShardKey(bs_hashes[i], ss_roots[i])
-            shards_keys.append(shards_key.encode())
+            # Store Erasure Root - Shards Mapping
+            er_shards_da = ErasureShardsMap(d3l)
 
-        # Erasure Root
-        with benchmark("calculated erasure root"):
-            u = self.merkle.wb_merkle_fn(shards_keys)
-        logger.info(f"Erasure Root calculated - {u}")
+            logger.info("Storing shards mappings..")
+            with benchmark("storing mappings"):
+                er_shards_da.put_batch(u, ss_roots, bs_hashes)
 
-        # Store Erasure Root - Shards Mapping
-        er_shards_da = ErasureShardsMap(d3l)
+            logger.info(f"Compiling availability specification..")
 
-        logger.info("Storing shards mappings..")
-        with benchmark("storing mappings"):
-            er_shards_da.put_batch(u, ss_roots, bs_hashes)
+            with benchmark("compiled spec"):
+                spec = WorkPackageSpec(hash=package_hash, length=Uint[32](l), erasure_root=u, exports_root=e, exports_count=Uint[16](n))
 
-        logger.info(f"Compiling availability specification..")
-
-        with benchmark("compiled spec"):
-            spec = WorkPackageSpec(hash=package_hash, length=Uint[32](l), erasure_root=u, exports_root=e, exports_count=Uint[16](n))
-
-        return spec
+            return spec
+        except Exception as e:
+            logger.error("Failed to build availability specification", error=e)
 
     def process_bundle(self, core: CoreIndex, bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup) -> Tuple[WorkReport, WorkReportHash]:
         # Generate Report

@@ -33,7 +33,6 @@ from jam.types.protocol.validators import (
     ValidatorData,
     ValidatorMetadata,
 )
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.types.state.delta import AccountMetadata
 
@@ -97,13 +96,14 @@ async def main(
 
         # Set genesis state
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
-        state = setup_state(main_db, "dev-spec.json")
+        state = setup_state(settings.state_db, "dev-spec.json")
+        state.store.disable_cache()
+
         keys = setup_keys(int(seed))
 
         # Genesis specs
         dev_spec = json.load(open(genesis_path))
 
-        # TODO: Fix peers
         peers = [
             Peer(
                 id=bytes.decode(val.metadata.name, 'utf-8'),
@@ -113,7 +113,6 @@ async def main(
             if val.metadata.port != port
         ]
 
-        # TODO: Fix Node
         tsr_node = Node(
             node_name=name,
             host="127.0.0.1",
@@ -155,9 +154,9 @@ async def main(
         state.delta[ServiceId(42)].service = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000),
                                                              gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
                                                              num_o=Ao(0))
-        state.delta[ServiceId(42)].service.code_hash = Bytes(service_code)
         state.delta[ServiceId(42)].lookup[
             LookupTable(hash=code_hash, length=BlobLength(len(service_code)))] = Timestamps([state.tau])
+        state.delta[ServiceId(42)].preimages[code_hash] = service_code
 
         wi_pc = bytes(
             [0, 0, 90, 51, 12, 149, 27, 0, 112, 254, 124, 117, 6, 40, 2, 200, 199, 3, 149, 51, 7, 200, 203, 4, 130,
@@ -176,9 +175,10 @@ async def main(
         state.delta[wi_service].service = AccountMetadata(code_hash=wi_code_hash, balance=Balance(1_000_000),
                                                           gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
                                                           num_o=Ao(0))
-        state.delta[wi_service].service.code_hash = Bytes(wi_service_code)
         state.delta[wi_service].lookup[
             LookupTable(hash=wi_code_hash, length=BlobLength(len(wi_service_code)))] = Timestamps([state.tau])
+        state.delta[wi_service].preimages[wi_code_hash] = wi_service_code
+
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
             # tg.create_task(sync(state))
