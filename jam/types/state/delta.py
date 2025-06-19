@@ -129,6 +129,7 @@ class AccountData:
         """
         https://graypaper.fluffylabs.dev/#/cc517d7/11c70011e000?v=0.6.5
         """
+        print("ccc",self.preimages[preimage_hash] )
         if (
                 self.preimages[preimage_hash] is not None and
                 self.is_preimage_valid(

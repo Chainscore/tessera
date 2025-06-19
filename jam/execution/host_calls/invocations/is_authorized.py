@@ -32,6 +32,7 @@ class PsiI(InvocationProtocol):
     def execute(self):
         from jam.state.state import state
 
+        print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",state.delta)
         _, pc = self.work_package.m_c(state.delta)
         u, r, _ = PsiM.execute(
             blob=pc,

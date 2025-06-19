@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple
-
-from jam.types.base import ByteArray96
-from jam.types.base.sequences.bytes.byte_array import ByteArray64
+from tsrkit_types import Null, Bytes, Bytes64
 from jam.types.protocol.core import CoreIndex
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -10,7 +8,7 @@ from jam.types.work.report import WorkReport
 from jam.state.state import state
 from jam.utils.constants import CORE_COUNT, CURRENT_TIME, SLOT_PERIOD, AUDIT_PERIOD
 from jam.ring_vrf.vrf import VRF
-from jam.types.header import Header
+from jam.types.block.header import Header
 from jam.utils.constants import SIGNING_CONTEXTS
 from jam.utils.shuffle import shuffle
 from jam.types.protocol.crypto import Hash, BandersnatchPublic
@@ -18,7 +16,6 @@ from jam.assurances.assurances import Assurances
 from jam.types.block import Block
 from jam.audit.utils import Ξ,F,power_set
 from jam.ring_vrf.ietf.ietf import IETF_VRF
-from jam.types.base.null import Null
 from jam.types.work.package import WorkPackage
 from jam.work_package.processor import Processor
 
@@ -56,7 +53,7 @@ class AuditingAndJudgement:
         return pre_auditing_report
 
     @staticmethod
-    def vrf_signature_bandersnatch(header: Header, bandersnatch_key: BandersnatchPublic, tranche_index: int = None , w_report: Optional[WorkReport] = None) -> ByteArray96:
+    def vrf_signature_bandersnatch(header: Header, bandersnatch_key: BandersnatchPublic, tranche_index: int = None , w_report: Optional[WorkReport] = None) -> Bytes[96]:
         # bandersnatch_key : BandersnatchPublic  [replace this with] => state.kappa[0]["bandersnatch"]
 
         """
@@ -124,7 +121,7 @@ class AuditingAndJudgement:
 
         shuffle_report = shuffle(entropy, core_report)
 
-        # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
+        # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }tes64(signature))
         vrs_list = [(c, w) for (c, w) in shuffle_report if w is not Null]
 
         return vrs_list
@@ -143,7 +140,7 @@ class AuditingAndJudgement:
         tranche_index =  (CURRENT_TIME() - (SLOT_PERIOD * int(header.slot))) // AUDIT_PERIOD
         return tranche_index
 
-    def validator_announcement_statement(self, header: Header, state: state) -> set[ByteArray64]:
+    def validator_announcement_statement(self, header: Header, state: state) -> set[Bytes64]:
         """
         Eq. 17.9, 17.10, 17.11
         This function define the sequence of work_report which required to audit(Q)
@@ -180,7 +177,7 @@ class AuditingAndJudgement:
         # S
         announcement_statement = signing_context + bytes(tranches_index) + vrs_bytes +  header_hash
 
-        statement_set : set[ByteArray64] = set()
+        statement_set : set[Bytes[64]] = set()
 
         for validator in state.kappa:
             private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
@@ -191,14 +188,14 @@ class AuditingAndJudgement:
 
         return statement_set
 
-    def evaluate_core_mappings (self, core_index: int , package: WorkPackage, ):
-        # refer 17.17
-        if F(w)  ==  self.rho[w_r.core_index].encode():
-            return self.process.process_bundle(core=core_index, bundle=package, sr_lookup=)
-        else:
-            return False
+    # def evaluate_core_mappings (self, core_index: int , package: WorkPackage, ):
+    #     # refer 17.17
+    #     if F(w)  ==  self.rho[w_r.core_index].encode():
+    #         return self.process.process_bundle(core=core_index, bundle=package, sr_lookup=)
+    #     else:
+    #         return False
 
-    def validator_judment_mapping(self,work_report:WorkReport,state:state)-> List[ByteArray64]:
+    def validator_judment_mapping(self,work_report:WorkReport,state:state)-> List[Bytes[64]]:
         """
          Go through the evaluate_core_mappings Func (refer 17.17) and provide its validity where the wr is valid or not
          Return :
@@ -213,7 +210,7 @@ class AuditingAndJudgement:
             # Sign will give out a 64Byte Signature
             signature = private_key.sign(message)
             # Explicitely modifying to the ByteArray64 format
-            judgement_set.append(ByteArray64(signature))
+            judgement_set.append(Bytes64(signature))
         return judgement_set
 
 

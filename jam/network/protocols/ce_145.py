@@ -1,5 +1,6 @@
 from typing import Any
 
+from anyio.to_process import process_worker
 from jam.network.protocols.base import NetworkProtocol, PrefixType
 from jam.network.quic import QuicServerProtocol
 from jam.types.base.sequences.vector import Vector
@@ -69,6 +70,8 @@ class JudgmentPublication(NetworkProtocol):
         logger.info(f"Receive assurance for the work report")
 
         # TODO: Save the auditing somewhere
+        # process_work_package = pe
+        report = data.work_report_hash
 
 
     def client_intercept(self, node: Node, buffer: bytes, stream_id: int):

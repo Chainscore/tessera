@@ -1,53 +1,46 @@
 from venv import logger
-
-from Crypto.SelfTest.IO.test_PKCS8 import clear_key
-
-from jam.network.protocols.base import NetworkProtocol, PrefixType
-from jam.network.quic import QuicServerProtocol
-from jam.types.base import U8, Nullable
-from jam.utils.codec import Codable
-from jam.utils.codec.decorators import decodable_dataclass
-from dataclasses import dataclass
-from jam.types.protocol.core import CoreIndex
+from tsrkit_types import TypedVector, Option, Uint, structure, Null
+from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.network.base.quic import QuicProtocol
+from jam.types.protocol.core import CoreIndex, ValidatorIndex
+from tsrkit_types import U8, Vector
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, BandersnatchVrfSignature, HeaderHash
-from jam.utils.json import JsonSerde
 from jam.config.logging import logger
-from jam.types.base.sequences.vector import Vector
 from typing import cast
-from jam.types.base.null import Null
+from jam.work_package.processor import Processor
+from jam.network.protocols.ce_138 import CE138Data
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 
-@decodable_dataclass
-@dataclass
-class EvidenceTrancheZero(Codable, JsonSerde):
-    bandersnatch_signature : BandersnatchVrfSignature
-
-
-@decodable_dataclass
-@dataclass
-class EvidenceTrancheNotZero(Codable, JsonSerde):
-    ...
-
-
-@decodable_dataclass
-@dataclass
-class Announcement(Codable, JsonSerde):
+@structure
+class Announcement:
     core_index: CoreIndex
     work_report_hash: WorkReportHash
     ed25519_signature: Ed25519Signature
 
+@structure
+class EvidenceTrancheZero:
+    bandersnatch_signature : BandersnatchVrfSignature
 
-@decodable_dataclass
-@dataclass
-class Transmit(Codable, JsonSerde):
+@structure
+class NoShow:
+    validator_index : ValidatorIndex
+    Announcement : Announcement
+
+@structure
+class EvidenceTrancheNotZero:
+    bandersnatch_signature : BandersnatchVrfSignature
+
+
+@structure
+class Transmit:
     header_hash : HeaderHash
     tranches : U8
     announcement : Announcement
 
 
-@decodable_dataclass
-@dataclass
-class CE144data(Codable, JsonSerde):
+@structure
+class CE144data:
     transmit : Transmit
     Evidence : EvidenceTrancheZero
 
@@ -72,6 +65,7 @@ class AuditAnnouncement(NetworkProtocol):
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE144
+        self.proces
 
     async def transmit(self, node: Node, data: CE144data):
         logger.info(f"Announcement of requirement of audit with evidence =>  {node.connections}")
@@ -83,17 +77,33 @@ class AuditAnnouncement(NetworkProtocol):
 
         responses = Vector([])
         for peer in node.peer_conn:
-            client = node.peer_conn[peer][1]
-            stream_id = client.stream_and_keep_open(message=stream_a)
-            data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
-            responses.append(data)
+            if int(peer.data.metadata.port) == 40001:
+                logger.info("sending announcement to other validators")
+                client = node.peer_conn[peer][1]
+                stream_id = client.stream_and_keep_open(message=stream_a)
+                data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
+                responses.append(data)
 
         return responses
 
-    def server_intercept(self, node: Node, buffer: bytes, server: QuicServerProtocol, stream_id: int):
-        logger.info("Receiving assurance for work report")
-        data, offset = CE144data.decode_from(buffer)
+    def req_intercept(self, stream_id: int, server: QuicProtocol):
+        node = server.node
+        buffer = server.stream_buffer[stream_id]
+
+        logger.info("Receive Work report announce,")
+        data, offset = CE144data.decode_from(buffer[1:])
         data = cast(CE144data, data)
+
+        if not data.is_valid:
+            raise Net
+
+
+        # TODO: Extract report
+        get_report = data.transmit.announcement.work_report_hash
+
+        # TODO: Request Audit shard request
+        shard_request = CE138Data()
+
 
 
 

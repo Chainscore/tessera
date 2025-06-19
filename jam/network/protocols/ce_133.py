@@ -71,9 +71,10 @@ class WorkPackageSubmission(NetworkProtocol):
         # TODO: Use Particular Validators' Connections
 
         responses = TypedVector[OptBool]([])
+        print("receive work package bundle -------------------------------------------------------")
         for peer in node.peer_conn:
-            if peer.port == 30333:
-                logger.info("sending package to 30333")
+            if peer.port == 40001:
+                logger.info("sending package to 40000")
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix

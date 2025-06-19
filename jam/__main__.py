@@ -188,6 +188,7 @@ async def main(
                 else:
                     tg.create_task(block_producer.run())
 
+
         else:
             # TODO: Sync from peers
             raise NotImplementedError("Syncing from peers is not implemented yet")
