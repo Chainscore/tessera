@@ -49,7 +49,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
             ss_key = er_shards_db.get_ss_root(root=query.erasure_root, shard_index=query.shard_Index)
             seg_shards: SegmentsShard = ss_da.get(root=ss_key.segment_shard_root)[0]
             for index in query.seg_indexes:
-                shards.append(seg_shards[index])
+                shards.append(seg_shards[index].shard)
 
         # Return requested shards
         msg_a = shards.encode()

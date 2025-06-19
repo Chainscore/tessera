@@ -13,8 +13,26 @@ BundleShardHash = OpaqueHash
 SegmentsShardRoots = TypedVector[SegmentsShardRoot]
 BundleShardHashes = TypedVector[BundleShardHash]
 
-SegmentsShard = TypedVector[SegmentShard]
+@structure
+class SegmentsShardTuple:
+    segment_shard_index: ShardIndex
+    shard: SegmentShard
+
+SegmentsShard = TypedVector[SegmentsShardTuple]
+# SegmentsShards = TypedVector[SegmentsShard]
 SegmentsShards = TypedVector[SegmentsShard]
+
+# @decodable_vector(element_type=SegmentsShardTuple)
+# class SegmentsShard(Vector[SegmentsShardTuple]):
+#     ...
+
+# @decodable_vector(element_type=SegmentShard)
+# class SegmentsShard(Vector[SegmentShard]):
+#     ...
+
+# @decodable_vector(element_type=SegmentsShard)
+# class SegmentsShards(Vector[SegmentsShard]):
+#     ...
 
 BundleShards = TypedVector[BundleShard]
 

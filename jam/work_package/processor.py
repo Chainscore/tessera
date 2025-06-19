@@ -35,7 +35,7 @@ from jam.types.work.shard import (
     SegmentsShard,
     SegmentsShardRoots,
     SegmentsShardUnit,
-    ShardKey, BundleShard, ShardIndex, SegmentShard
+    ShardKey, BundleShard, ShardIndex, SegmentShard, SegmentsShardTuple
 )
 from jam.types.work.execution import (
     WorkResult,
@@ -44,9 +44,10 @@ from jam.types.work.execution import (
 )
 
 from jam.utils.benchmark import benchmark
+
 from jam.utils.constants import BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE
 
-
+from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 
 from jam.erasure_coding.erasure_code import ErasureCode
 from jam.merklization.binary_merkle import BMRFunctions
@@ -337,15 +338,23 @@ class Processor:
             with benchmark("transposing s shards"):
                 segments_shards = SegmentsShards(
                     [SegmentsShard(
-                        [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
+                        [SegmentsShardTuple(U16(i), SegmentShard(all_chunks[j][i])) for j in range(len(all_chunks))]
                     ) for i in range(len(all_chunks[0]))])
+                # segments_shards = SegmentsShards(
+                #     [SegmentsShard(
+                #         [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
+                #     ) for i in range(len(all_chunks[0]))])
 
-            ss_roots = SegmentsShardRoots([])
+                ss_roots = SegmentsShardRoots([])
 
             logger.info(f"Storing segment shards..")
             with benchmark("storing s chunks"):
                 for si, ss in enumerate(segments_shards):
-                    ss_root = self.merkle.wb_merkle_fn(ss)
+
+                    segments_shards_without_segment_idx = Vector([ss[j].shard for j in range(len(ss))])
+
+                    ss_root = self.merkle.wb_merkle_fn(segments_shards_without_segment_idx)
+                    # ss_root = self.merkle.wb_merkle_fn(ss)
 
                     ss_unit = SegmentsShardUnit(Uint[16](si), ss)
 
@@ -353,33 +362,33 @@ class Processor:
                     s_shards_da.put(ss_root, ss_unit)
                     ss_roots.append(ss_root)
 
-            # Build Complete Shard Key
-            if len(ss_roots) != chain_config.num_validators or len(bs_hashes) != chain_config.num_validators:
-                raise ValueError(f"Length of both batches should be {chain_config.num_validators}")
+                # Build Complete Shard Key
+                if len(ss_roots) != chain_config.num_validators or len(bs_hashes) != chain_config.num_validators:
+                    raise ValueError(f"Length of both batches should be {chain_config.num_validators}")
 
-            shards_keys = Vector[Bytes]([])
-            for i in range(chain_config.num_validators):
-                shards_key = ShardKey(bs_hashes[i], ss_roots[i])
-                shards_keys.append(Bytes(shards_key.encode()))
+                shards_keys = Vector[Bytes]([])
+                for i in range(chain_config.num_validators):
+                    shards_key = ShardKey(bs_hashes[i], ss_roots[i])
+                    shards_keys.append(Bytes(shards_key.encode()))
 
-            # Erasure Root
-            with benchmark("calculated erasure root"):
-                u = self.merkle.wb_merkle_fn(shards_keys)
-            logger.info(f"Erasure Root calculated - {u}")
+                # Erasure Root
+                with benchmark("calculated erasure root"):
+                    u = self.merkle.wb_merkle_fn(shards_keys)
+                logger.info(f"Erasure Root calculated - {u}")
 
-            # Store Erasure Root - Shards Mapping
-            er_shards_da = ErasureShardsMap(d3l)
+                # Store Erasure Root - Shards Mapping
+                er_shards_da = ErasureShardsMap(d3l)
 
-            logger.info("Storing shards mappings..")
-            with benchmark("storing mappings"):
-                er_shards_da.put_batch(u, ss_roots, bs_hashes)
+                logger.info("Storing shards mappings..")
+                with benchmark("storing mappings"):
+                    er_shards_da.put_batch(u, ss_roots, bs_hashes)
 
-            logger.info(f"Compiling availability specification..")
+                logger.info(f"Compiling availability specification..")
 
-            with benchmark("compiled spec"):
-                spec = WorkPackageSpec(hash=package_hash, length=Uint[32](l), erasure_root=u, exports_root=e, exports_count=Uint[16](n))
+                with benchmark("compiled spec"):
+                    spec = WorkPackageSpec(hash=package_hash, length=Uint[32](l), erasure_root=u, exports_root=e, exports_count=Uint[16](n))
 
-            return spec
+                return spec
         except Exception as e:
             logger.error("Failed to build availability specification", error=e)
 
@@ -490,6 +499,14 @@ class Processor:
         # Distribute Guaranteed WR to Validators CE135
         logger.info(f"Distributing Work Report to other validators..")
         if len(guarantees) > 1:
+
+            d3l = settings.d3l
+            map_da = PackageSegmentMap(d3l)
+            sr_er_da = SegmentErasureMap(d3l)
+
+            sr_er_da.put(root=wr.package_spec.exports_root, data=wr.package_spec.erasure_root)
+            map_da.put(wr)
+
             from jam.network.protocols.ce_135 import GuaranteedWR
             CE135 = WorkReportDistribution()
             # TODO: Fix timeslot

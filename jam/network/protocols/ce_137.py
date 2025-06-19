@@ -17,7 +17,6 @@ from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
-
 @structure
 class Query:
     erasure_root: ErasureRoot
@@ -128,8 +127,12 @@ class ShardDistributionProtocol(NetworkProtocol):
 
         bundle_shard = audits_da.get(bs_hash=bundle_shard_hash)[0]
 
-        segment_shard_root = bs_da.get_ss_root(query.erasure_root, query.shard_index)
-        segments_shard = ss_da.get(segment_shard_root)[0]
+        segment_shard_root = bs_da.get_ss_root(query.erasure_root, query.shard_index).segment_shard_root
+        # segments_shard = ss_da.get(segment_shard_root)[0]
+
+        segments_shard_with_segment_idx = ss_da.get(segment_shard_root)[0]
+
+        segments_shard = Vector([segments_shard_with_segment_idx[i].shard for i in range(len(segments_shard_with_segment_idx))])
 
         shards = bs_da.get(query.erasure_root)
         s = Vector([])
