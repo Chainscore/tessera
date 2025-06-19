@@ -43,6 +43,7 @@ from jam.types.base.integers.general import Int
 from jam.network.node import Node
 from jam.network.protocols.ce_139 import SegmentShardRequest
 from jam.network.protocols.ce_139_base import CE139Data, ShardRequest, SegmentIndexes, Response
+from jam.config.chainspec import chain_config
 
 class Bundler:
     merkle: BMRFunctions
@@ -154,20 +155,10 @@ class Bundler:
 
         # shard_indices = []
 
-        print("import segments as per wp", w.import_segments)
-
-        print("imports segments", imports)
-
-        print("import map", import_map)
-
-        print("import map items", import_map.items())
-
         for h, shard_indices in import_map.items():
 
             s_root = self.lookup_root(h)
             logger.info(f"Fetching segments with root {s_root}")
-
-            print("shard indices", shard_indices)
 
             for n in shard_indices:
                 # try:
@@ -193,31 +184,22 @@ class Bundler:
                     decodable_shards: Vector[Tuple[Bytes, int]] = Vector([])
                     available_indices = set[ShardIndex]()
 
-                    print("segment root", s_root)
-                    print("h", h)
-
-                    h_e_root = sr_er_da.get(h)
-                    print("h erasure root", h_e_root)
-
                     e_root = sr_er_da.get(s_root)
-
-                    print("erasure root", e_root)
 
                     ce_139 = SegmentShardRequest()
 
                     requests = CE139Data([])
-                    for i in range(JamConfig.num_validators):
+
+                    for i in range(chain_config.num_validators):
                         if ShardIndex(i) not in available_indices:
-                            req: ShardRequest = ShardRequest(erasure_root=e_root, shard_Index=ShardIndex(i), length=JamConfig.num_validators,
+                            req: ShardRequest = ShardRequest(erasure_root=e_root, shard_Index=ShardIndex(i), length=chain_config.num_validators,
                                                              seg_indexes=SegmentIndexes(SegmentIndex(n)))
                             requests.append(req)
                             try:
                                 responses = ce_139.transmit(self.node, data=requests)
-                                print("CE139 response", responses)
                                 for i, shard in enumerate(responses):
                                     decodable_shards.append((shard, i))
                                 segment = erasure_code.decode(decodable_shards)
-                                print("segment", n, " ", segment)
                                 imports.append(segment)
                             except KeyError as e3:
                                 logger.warn(f"Warning! {e3}")

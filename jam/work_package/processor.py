@@ -58,7 +58,7 @@ from jam.utils.benchmark import benchmark
 
 from jam.utils.constants import BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE
 
-
+from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 
 from jam.erasure_coding.erasure_code import ErasureCode
 from jam.merklization.binary_merkle import BMRFunctions
@@ -504,6 +504,14 @@ class Processor:
         # Distribute Guaranteed WR to Validators CE135
         logger.info(f"Distributing Work Report to other validators..")
         if len(guarantees) > 1:
+
+            d3l = settings.d3l
+            map_da = PackageSegmentMap(d3l)
+            sr_er_da = SegmentErasureMap(d3l)
+
+            sr_er_da.put(root=wr.package_spec.exports_root, data=wr.package_spec.erasure_root)
+            map_da.put(wr)
+
             CE135 = WorkReportDistribution()
             data = CE135Data(report=wr, slot=TimeSlot(0), len=Int(len(guarantees)),
                              signatures=guarantees)
