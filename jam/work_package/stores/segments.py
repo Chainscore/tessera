@@ -21,8 +21,11 @@ class SegmentsDA(DA):
         self.db = db
 
     def put(self, root: ExportsRoot, segments: ProvedSegments) -> None:
-        key = self.prefix + root.encode()
-        self.db.put(key, segments.encode())
+        try:
+            key = self.prefix + root.encode()
+            self.db.put(key, segments.encode())
+        except Exception as e:
+            print("raised error", e)
 
     def get(self, root: ExportsRoot) -> Tuple[Segments, Segments]:
         key = self.prefix + root.encode()

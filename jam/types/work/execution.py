@@ -34,11 +34,11 @@ ExecResults = TypedVector[WorkExecResult]
 class RefineLoad:
     """Refine load structure."""
 
-    gas_used: Uint
-    imports: Uint
-    exports: Uint
-    extrinsic_count: Uint
-    extrinsic_size: Uint
+    gas_used: Gas
+    imports: Uint[16]
+    extrinsic_count: Uint[8]
+    extrinsic_size: Uint[64]
+    exports: Uint[16]
 
 
 @structure

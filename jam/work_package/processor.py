@@ -4,7 +4,7 @@ from math import ceil
 from typing import Tuple
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from tsrkit_types import ByteArray, Vector, Uint, Null, Bytes
+from tsrkit_types import ByteArray, Vector, Uint, Null, Bytes, U8, U16, U64
 
 from jam.config.chainspec import chain_config
 from jam.config.logging import logger
@@ -134,21 +134,22 @@ class Processor:
         Returns:
             Work Digest
         """
-        extrinsic_size: Uint = Uint(0)
+        extrinsic_size: U64 = U64(0)
         for i in item.extrinsic:
             extrinsic_size = extrinsic_size + i.len
 
         payload_hash = Hash.blake2b(bytes(item.payload))
 
-        imports_count: Uint = Uint(len(item.import_segments))
-        exports_count: Uint = Uint(item.export_count)
-        extrinsic_count: Uint = Uint(len(item.extrinsic))
+        imports_count: U16 = U16(len(item.import_segments))
+        exports_count: U16 = U16(item.export_count)
+        extrinsic_count: U8 = U8(len(item.extrinsic))
 
         refine_load = RefineLoad(gas_used=gas, imports=imports_count, exports=exports_count,
                                  extrinsic_count=extrinsic_count, extrinsic_size=extrinsic_size)
 
-        return WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=payload_hash,
+        result = WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=payload_hash,
                           accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)
+        return result
 
     def build_report(self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup):
         """
@@ -198,10 +199,9 @@ class Processor:
                     r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
                 # ------------------------------------------ ----------------- ------------------------------------------
 
-                segment = Segment([0] * 4104)
-                segment_length = w.export_count
-                zero_segments = Segments([segment for _ in range(segment_length)])
-
+                segment = Segment([U8(0)] * SEGMENT_SIZE)
+                segment_count = w.export_count
+                zero_segments = Segments([segment for _ in range(segment_count)])
                 z = len(o) + s_result
 
                 if r._choice_key != "ok":
@@ -245,7 +245,7 @@ class Processor:
                 specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
 
             logger.info(f"Compiling Report..")
-            report = WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=hash(p.authorizer), auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Gas(g))
+            report = WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Gas(g))
 
             return report
 
@@ -357,10 +357,10 @@ class Processor:
             if len(ss_roots) != chain_config.num_validators or len(bs_hashes) != chain_config.num_validators:
                 raise ValueError(f"Length of both batches should be {chain_config.num_validators}")
 
-            shards_keys = Vector([])
+            shards_keys = Vector[Bytes]([])
             for i in range(chain_config.num_validators):
                 shards_key = ShardKey(bs_hashes[i], ss_roots[i])
-                shards_keys.append(shards_key.encode())
+                shards_keys.append(Bytes(shards_key.encode()))
 
             # Erasure Root
             with benchmark("calculated erasure root"):
