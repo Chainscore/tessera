@@ -41,7 +41,7 @@ class AccountMetadata:
     @staticmethod
     def empty() -> "AccountMetadata":
         return AccountMetadata(
-            code_hash=Bytes[32]([0] * 32),
+            code_hash=Bytes[32](32),
             balance=Balance(0),
             gas_limit=Gas(0),
             min_gas=Gas(0),
@@ -76,7 +76,7 @@ class AccountStorage(Dictionary[Bytes[32], Bytes, "key", "value"]):
 AccountPreimages = Dictionary[Bytes[32], Bytes, "hash", "blob"]
 
 """Lookup timestamps"""
-Timestamps = TypedVector[U32, 0, 3]
+Timestamps = TypedBoundedVector[U32, 0, 3]
 
 @structure
 class LookupTable:
@@ -104,7 +104,7 @@ class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
 
     def __delitem__(self, key: LookupTable):
         if key in self:
-            self._meta.num_i = self._meta.num_i - 1
+            self._meta.num_i = self._meta.num_i - 2
             self._meta.num_o = self._meta.num_o - key.length - 81
         super().__delitem__(key)
 
@@ -150,7 +150,7 @@ class AccountData:
         if len(lookup_ts) == 0:
             return False
         elif len(lookup_ts) == 1:
-            return lookup_ts[0] < current_ts
+            return lookup_ts[0] <= current_ts
         elif len(lookup_ts) == 2:
             return lookup_ts[0] <= current_ts < lookup_ts[1]
         elif len(lookup_ts) == 3:

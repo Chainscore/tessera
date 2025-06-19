@@ -1,5 +1,8 @@
 from typing import Dict, Set, List
 
+from tsrkit_types import Bytes
+
+from jam.config.logging import get_logger
 from jam.merklization import MMRFunctions
 from jam.types.protocol.core import CoreIndex
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
@@ -18,11 +21,12 @@ from jam.report.guarantee_assignment import guarantor_assignment
 from tsrkit_types.integers import Uint
 from tsrkit_types.null import Null
 
+logger = get_logger("import")
 
 class Reporting:
 
     @staticmethod
-    def transition(state: Sigma, block:Block, known_packages: List[OpaqueHash]) -> Sigma:
+    def transition(state: Sigma, block:Block, known_packages: List[OpaqueHash] = []) -> Sigma:
         """
         Description:
             This function takes two arguments: state, block. This transition function check all the boundary cases for work_report and update the state Rho.
@@ -35,9 +39,21 @@ class Reporting:
             Returns the updated Rho(workreport, timeslot)
         """
 
+        # Work package hashes form Nu and Xi
+        known_packages.extend([
+            queue_el.report.context.prerequisites
+            for epoch_queue in state.nu
+            for queue_el in epoch_queue
+        ])
+        known_packages.extend([
+            wps
+            for deps in state.xi
+            for wps in deps
+        ])
+
         # small w
         all_reports = []
-        wp_hash_set = set()
+        wp_hash_set: set[Bytes] = set()
 
         # First we loop through all guarantees to check their validity
         for guarantee in block.extrinsic.guarantees:
@@ -155,7 +171,8 @@ class Reporting:
             # Ensure this WP is not previously executed - checking Beta, Nu, Rho, Xi
             # 11.38
             if p in beta_wp_hashes or p in known_packages or p in rho_package_hashes:
-                raise ReportingError(ReportingErrorCode.DUPLICATE_PACKAGE)
+                logger.error("Duplicate work package found", package=p.hex(), found_in_beta_wp_hashes=(p in beta_wp_hashes), found_in_known_packages=(p in known_packages), found_in_rho=(p in rho_package_hashes))
+                raise ReportingError(ReportingErrorCode.DUPLICATE_PACKAGE, f"Work report {p.hex()} is found to be a duplicate. Previously either seen in recent history, is already in pending set for reporting or accumulation")
 
         Reporting.ensure_valid_report_result(state,block)
         # Check core assignments
@@ -211,9 +228,6 @@ class Reporting:
                         ReportingErrorCode.DEPENDENCY_MISSING,
                         "prerequisite's hash should match the package_specification's hash of any of the reports"
                     )
-
-
-
 
         # for i in state.beta:
         #     if any(key in hashes for key in i.packages.keys()):
@@ -357,7 +371,7 @@ class Reporting:
                 if y.service_id not in state.delta:
                     raise ReportingError(
                         ReportingErrorCode.BAD_SERVICE_ID,
-                        "Service_id of each report should match with id of delta"
+                        f"Service ID {y.service_id} not found in state accounts"
                     )
                     
                 # --------------- bad_code_hash -------------------
@@ -420,5 +434,5 @@ class Reporting:
                 if validator not in guarantors_assigned[core]:
                     raise ReportingError(
                         ReportingErrorCode.WRONG_ASSIGNMENT,
-                        "Assign wrong validator to the core"
+                        f"Assign wrong validator to the core. Assignments: {guarantors_assigned}, Reported: {current_assigned}"
                     )

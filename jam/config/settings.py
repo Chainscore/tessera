@@ -13,9 +13,10 @@ class Settings:
     DB_PATH = f"{NODE_PATH}/main"
     D3L_PATH = f"{NODE_PATH}/d3l"
     AUDIT_DB_PATH = f"{NODE_PATH}/audit"
+    STATE_DB_PATH = f"{NODE_PATH}/state"
 
     ENV_PREFIX = "JAM_"
-    ENV_FILE = ".env"
+    ENV_FILE = "40000.env"
 
     @property
     def db(self):
@@ -32,6 +33,11 @@ class Settings:
         from jam.config.data_stores import data_stores
         return data_stores.audit_da
 
+    @property
+    def state_db(self):
+        from jam.config.data_stores import data_stores
+        return data_stores.state_db
+
 settings: Settings = Settings()
 
 def setup_setting(name: str, port: int,  db_path = "data", node_id = None):
@@ -44,6 +50,7 @@ def setup_setting(name: str, port: int,  db_path = "data", node_id = None):
     settings.LISTEN_PORT = port
     settings.DB_PATH = f"{node_path}/main"
     settings.AUDIT_DB_PATH = f"{node_path}/audit"
+    settings.STATE_DB_PATH = f"{node_path}/state"
     settings.D3L_PATH = f"{node_path}/d3l"
     settings.NODE_ID = node_id
 

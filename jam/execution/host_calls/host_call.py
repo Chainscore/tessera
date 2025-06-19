@@ -1,5 +1,6 @@
 from typing import Any, Tuple
 
+from jam.execution.pvm.program import Program
 from jam.execution.pvm.status import CONTINUE
 from jam.execution.host_calls.invocations.protocol import Context, DispatchFunction
 from jam.execution.pvm.memory import Memory
@@ -12,7 +13,7 @@ class PsiH:
 
     @staticmethod
     def execute(
-        blob: bytes,
+        program: Program,
         pc: int,
         gas: int,
         registers: list,
@@ -20,7 +21,7 @@ class PsiH:
         dispatch_fn: DispatchFunction,
         context: Any
     ) -> HostCallReturn:
-        status, pc, remaining_gas, registers, memory = PVM.execute(blob, pc, gas, registers, memory)
+        status, pc, remaining_gas, registers, memory = PVM.execute(program, pc, gas, registers, memory)
         if (
             status == ExecutionStatus.PANIC
             or status == ExecutionStatus.OUT_OF_GAS
@@ -37,7 +38,7 @@ class PsiH:
                     status = ExecutionStatus.OUT_OF_GAS
 
                 if status == CONTINUE:
-                    return PsiH.execute(blob, pc, remaining_gas, registers, memory, dispatch_fn, context)
+                    return PsiH.execute(program, pc, remaining_gas, registers, memory, dispatch_fn, context)
                 return status, pc, remaining_gas, registers, memory, context
             except PvmError as e:
                 return e.code, pc, remaining_gas, registers, memory, context

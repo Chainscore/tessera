@@ -61,7 +61,8 @@ class PsiR(InvocationProtocol):
             24: (RefineFunctions, {}),
             25: (RefineFunctions, {}),
             26: (RefineFunctions, {}),
-            100: (GeneralFunctions, {}),  # log
+            # TODO: Add core_index [we'll probably be storing core_index in node info]
+            100: (GeneralFunctions, {"core_index": 0, "service_id": self.wi.service}),  # log
         }
 
     def execute(self) -> Tuple[WorkExecResult, Segments, Gas]:
@@ -78,7 +79,9 @@ class PsiR(InvocationProtocol):
             RefineContext(m=RefinementMap({}), e=Segments([])),
         )
         if r == PANIC:
-            return WorkExecResult({"panic": Null}), Segments([]), Gas(u)
+            return WorkExecResult(Null, key="panic"), Segments([]), Gas(u)
+
         elif r == OUT_OF_GAS:
-            return WorkExecResult({"out_of_gas": Null}), Segments([]), Gas(u)
-        return WorkExecResult({"ok": Bytes(r)}), Segments(context.e), Gas(u)
+            return WorkExecResult(Null, key="out_of_gas"), Segments([]), Gas(u)
+
+        return WorkExecResult(Bytes(r), key="ok"), Segments(context.e), Gas(u)

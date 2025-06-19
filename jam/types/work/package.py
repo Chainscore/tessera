@@ -16,8 +16,8 @@ from jam.types.protocol.core import (
 )
 from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.work.item import WorkItem
-from jam.types.work.report import RefineContext
-from jam.types.work.segments import MultiSegments
+from jam.types.work.execution import RefineContext
+from jam.types.work.manifest import MultiSegments
 
 if TYPE_CHECKING:
     from jam.types.state.delta import Delta
@@ -56,9 +56,6 @@ class Authorizer:
     # p
     params: Bytes
 
-    def __hash__(self) -> int:
-        return int.from_bytes(Hash.blake2b(self.code_hash.encode() + self.params.encode()).encode())
-
 
 WorkItems = TypedVector[WorkItem]
 
@@ -77,8 +74,11 @@ class WorkPackage:
     # w
     items: WorkItems
 
+    @property
+    def a(self) -> OpaqueHash:
+        return Hash.blake2b(self.authorizer.code_hash.encode() + self.authorizer.params.encode())
+
     def m_c(self, delta: "Delta") -> Tuple[bytes, bytes]:
-        from jam.types.state.delta import Delta
         service_data = delta[self.auth_code_host].historical_lookup(self.context.lookup_anchor_slot, self.authorizer.code_hash)
         print("bbbb",service_data)
         if service_data  == None:

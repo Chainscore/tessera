@@ -132,7 +132,7 @@ def test_sign():
 
     seed = bytes.fromhex("0500000005000000050000000500000005000000050000000500000005000000")
     private_key = Ed25519PrivateKey.from_private_bytes(seed)
-    op = Ed25519Signature("939c76652641416f92ac95b886de5ab23477c41b799942d004e314ccc28e34d01c2bf266659133ae9fc0aa373ea781495b2045b646a8807ac078e885cfc2f103")
+    op = Ed25519Signature("0x939c76652641416f92ac95b886de5ab23477c41b799942d004e314ccc28e34d01c2bf266659133ae9fc0aa373ea781495b2045b646a8807ac078e885cfc2f103")
     signature = private_key.sign(g + hash_val.encode())
     # print("S", signature)
     pk = private_key.public_key()

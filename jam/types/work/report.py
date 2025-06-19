@@ -1,7 +1,5 @@
 """Work report types for the JAM protocol."""
 
-from typing import TYPE_CHECKING
-
 from tsrkit_types.integers import Uint
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
@@ -11,65 +9,38 @@ from jam.types.protocol.core import CoreIndex, Gas, TimeSlot
 from jam.types.protocol.crypto import (
     OpaqueHash,
     WorkReportHash,
-    HeaderHash,
-    BeefyRoot,
-    StateRoot,
 )
+from jam.types.work.execution import WorkResults, RefineContext
+from jam.types.work.package import WorkPackageSpec
+from jam.types.work.manifest import SegmentRootLookup
 
-if TYPE_CHECKING:
-    from jam.types.work.package import WorkPackageSpec
-    from jam.types.work.segments import SegmentRootLookup
-    from jam.types.work.collections import WorkResults
-
-
-@structure
-class RefineContext:
-    """Refine context structure."""
-
-    anchor: HeaderHash
-    state_root: StateRoot
-    beefy_root: BeefyRoot
-    lookup_anchor: HeaderHash
-    lookup_anchor_slot: TimeSlot
-    prerequisites: TypedVector[OpaqueHash]
-
-    @staticmethod
-    def empty() -> "RefineContext":
-        return RefineContext(
-            anchor=HeaderHash([0]*32),
-            state_root=StateRoot([0]*32),
-            beefy_root=BeefyRoot([0]*32),
-            lookup_anchor=HeaderHash([0]*32),
-            lookup_anchor_slot=TimeSlot(0),
-            prerequisites=TypedVector[OpaqueHash]([]),
-        )
 
 
 @structure
 class WorkReport:
     """Work report structure."""
     # s
-    package_spec: "WorkPackageSpec"
+    package_spec: WorkPackageSpec
     # x
     context: RefineContext
     # c
-    core_index: Uint
+    core_index: CoreIndex
     # a
     authorizer_hash: OpaqueHash
     # o
     auth_output: Bytes
     # l
-    segment_root_lookup: "SegmentRootLookup"
+    segment_root_lookup: SegmentRootLookup
     # r
-    results: "WorkResults"
+    results: WorkResults
     # g
-    auth_gas_used: Uint
+    auth_gas_used: Gas
 
     @classmethod
     def empty(cls, **overrides) -> "WorkReport":
         from jam.types.work.package import WorkPackageSpec
-        from jam.types.work.segments import SegmentRootLookup
-        from jam.types.work.collections import WorkResults
+        from jam.types.work.manifest import SegmentRootLookup
+        from jam.types.work import WorkResults
         
         defaults = {
             "package_spec": WorkPackageSpec.empty(),
@@ -86,4 +57,6 @@ class WorkReport:
         return cls(**defaults)
 
 
-WorkDependencies = TypedVector[WorkReportHash]  # Set of dependencies hashes 
+WorkDependencies = TypedVector[WorkReportHash]  # Set of dependencies hashes
+
+WorkReports = TypedVector[WorkReport]  # Vector of Work Reports

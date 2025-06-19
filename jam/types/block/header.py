@@ -34,7 +34,10 @@ class Header:
     seal: BandersnatchVrfSignature
 
     def __hash__(self) -> int:
-        return int(Hash.blake2b(self.encode()))
+        return int.from_bytes(self.hash())
+
+    def hash(self) -> bytes:
+        return Hash.blake2b(self.encode())
     
     @staticmethod
     def genesis(path = "genesis.json") -> "Header":

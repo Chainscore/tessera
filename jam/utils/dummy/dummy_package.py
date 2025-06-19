@@ -2,6 +2,7 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32, Uint
 from tsrkit_types.sequences import Vector
 
+from jam.types import RefineContext
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import WorkReportHash
 
@@ -11,7 +12,6 @@ from jam.types.work import SegmentRootLookup, WorkPackageBundle
 
 from jam.network.protocols.ce_134 import CoreSegment, Credential
 
-from jam.utils.dummy.dummy_extrinsics import create_dummy_work_context
 from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32, create_dummy_bytes64
 
 
@@ -31,7 +31,7 @@ def create_dummy_package() -> WorkPackage:
             code_hash=OpaqueHash(create_dummy_bytes32()),
             params=Bytes(create_dummy_bytes(10)),
         ),
-        context=create_dummy_work_context(),
+        context=RefineContext.empty(),
         items=WorkItems([])
     )
 

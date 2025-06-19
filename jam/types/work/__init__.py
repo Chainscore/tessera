@@ -5,7 +5,7 @@ from jam.types.work.execution import (
     WorkExecResult,
     ExecResults,
     RefineLoad,
-    WorkResult,
+    WorkResult, WorkResults,
 )
 
 # Item types
@@ -21,7 +21,7 @@ from jam.types.work.item import (
 from jam.types.work.report import (
     RefineContext,
     WorkReport,
-    WorkDependencies,
+    WorkDependencies, WorkReports,
 )
 
 # Package types
@@ -33,18 +33,19 @@ from jam.types.work.package import (
     WorkPackageBundle,
 )
 
-# Segment types
-from jam.types.work.segments import (
+
+from jam.types.work.manifest import (
     Segment,
     Segments,
     MultiSegments,
-    SegmentRootLookup,
-)
-
-# Collection types
-from jam.types.work.collections import (
-    WorkResults,
-    WorkReports,
+    Extrinsic,
+    Extrinsics,
+    MultiExtrinsics,
+    Justification,
+    Justifications,
+    MultiJustifications,
+    Assurers,
+    SegmentRootLookup
 )
 
 __all__ = [
@@ -74,6 +75,14 @@ __all__ = [
     "Segments",
     "MultiSegments",
     "SegmentRootLookup",
+    # Extrinsic
+    "Extrinsic",
+    "Extrinsics",
+    "MultiExtrinsics",
+    # Justification
+    "Justification",
+    "Justifications",
+    "MultiJustifications",
     # Collection types
     "WorkResults",
     "WorkReports",
