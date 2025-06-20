@@ -15,13 +15,12 @@ from jam.types.block.extrinsics.guarantees import ValidatorSignatures
 from jam.types.protocol.core import ValidatorIndex, TimeSlot
 from jam.types.protocol.crypto import Hash
 from jam.types.work.report import WorkReport
-from jam.types.work.shard import ShardIndex, BundleShardUnit, SegmentsShardUnit, SegmentShard, SegmentsShardTuple
+from jam.types.work.shard import ShardIndex, SegmentShard
 from jam.utils import constants
 
 from tsrkit_types.struct import structure
 
 from jam.work_package.stores.audits import AuditShardsDA
-from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
@@ -148,31 +147,15 @@ class WorkReportDistribution(NetworkProtocol):
 
         # Save Shard
         if shard is not None:
-            bmr = BMRFunctions()
-            d3l = settings.d3l
+            # Store Bundle Shard
             audits = settings.audit
-
             bs_da = AuditShardsDA(audits)
+            bs_da.put(er_root, shard_index, shard[0])
+
+            # Store Segments Shard
+            d3l = settings.d3l
             ss_da = SegmentShardsDA(d3l)
-            er_shard_map = ErasureShardsMap(d3l)
-
-            bs_hash = Hash.blake2b(shard[0])
-
-            bs_u = BundleShardUnit(shard_index=shard_index, shard=shard[0])
-            bs_da.put(bs_hash, bs_u)
-
-            ss_root = bmr.wb_merkle_fn(shard[1])
-
-            segments_shard_with_segment_idx = Vector([SegmentsShardTuple(Uint[16](i), SegmentShard(shard[1][i])) for i in range(len(shard[1]))])
-
-            ss_u = SegmentsShardUnit(shard_index=shard_index, shard=segments_shard_with_segment_idx)
-
-            # ss_u = SegmentsShardUnit(shard_index=shard_index, shard=shard[1])
-
-            ss_da.put(ss_root, ss_u)
-
-            # er_shard_map.put(er_root, bs_hash, ss_root, shard_index)
-            er_shard_map.put(root=er_root, ss_root=ss_root, bs_hash=bs_hash, shard_index=shard_index)
+            ss_da.put(er_root, shard_index, shard[1])
 
             # Distribute Assurance
             from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
@@ -185,7 +168,6 @@ class WorkReportDistribution(NetworkProtocol):
 
             # Save Report
             rep_da = ReportsDA(d3l)
-
             wr_hash = Hash.blake2b(report.encode())
             rep_da.put(wr_hash, report)
 

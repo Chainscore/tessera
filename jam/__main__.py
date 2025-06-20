@@ -133,8 +133,7 @@ async def main(
             is_validator=is_validator,
         )
 
-        block = Block.from_random(0)
-        block.header = Header.decode(Bytes.fromhex(dev_spec["genesis_header"]))
+        block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
 

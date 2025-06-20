@@ -8,19 +8,6 @@ from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import WorkPackageHash, ExportsRoot, ErasureRoot, WorkReportHash
 from jam.types.work.report import WorkReport
 from jam.types.work.manifest import Assurers, ReportAssurers
-from jam.types.work.shard import (
-    ShardIndex,
-    ShardKeyUnit,
-    ShardKeyUnits,
-    BSKeysUnit,
-    BSKeysUnits,
-    SSKeysUnit,
-    SSKeysUnits,
-    BundleShardHash,
-    SegmentsShardRoot,
-    BundleShardHashes,
-    SegmentsShardRoots
-)
 
 from jam.work_package.store import DA
 
@@ -65,7 +52,7 @@ class SegmentErasureMap(DA):
     Value: Erasure Root
     """
     def __init__(self, db: RockStore):
-        self.prefix = bytes("SRER", 'utf-8')
+        self.prefix = bytes("SR-ER", 'utf-8')
         self.db = db
 
     def put(self, root: ExportsRoot, data: ErasureRoot) -> None:
@@ -95,7 +82,7 @@ class ErasureAssurerMap(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("ERWRA", 'utf-8')
+        self.prefix = bytes("ER-WR-A", 'utf-8')
         self.db = db
 
     def put(self, report: WorkReport, assurers: Assurers) -> None:
@@ -115,126 +102,6 @@ class ErasureAssurerMap(DA):
         data, _ = ReportAssurers.decode_from(data)
 
         return data.report_hash, data.assurers
-
-    def delete(self, root: ErasureRoot) -> None:
-        key = self.prefix + root.encode()
-        self.db.delete(key)
-
-class ErasureShardsMap(DA):
-    """
-    ErasureShardsMap Maps all the erasure root to their shards (bundle shard hash, segments shard root).
-
-    Key: Erasure Root
-    Value: [(shard Index, Bundle Shard Hash, Segments Shard Root)]
-    """
-
-    def __init__(self, db: RockStore):
-        self.prefix = bytes("ERSP", 'utf-8')
-        self.db = db
-
-    def put(self, root: ErasureRoot, ss_root: SegmentsShardRoot, bs_hash: BundleShardHash, shard_index: ShardIndex) -> None:
-        key = self.prefix + root.encode()
-
-        data = self.db.get(key)
-
-        shard_key = ShardKeyUnit(shard_index, bs_hash, ss_root)
-
-        if data is None:
-            shard_keys = ShardKeyUnits([shard_key])
-            self.db.put(key, shard_keys.encode())
-
-        else:
-            shard_keys, _ = ShardKeyUnits.decode_from(data)
-            shard_keys.append(shard_key)
-            self.db.put(key, shard_keys.encode())
-
-    def put_batch(self, root: ErasureRoot, ss_roots: SegmentsShardRoots, bs_hashes: BundleShardHashes) -> None:
-        if len(ss_roots) != chain_config.num_validators or len(bs_hashes) != chain_config.num_validators:
-            raise ValueError(f"Length of both batches should be {chain_config.num_validators}")
-
-        key = self.prefix + root.encode()
-        data = self.db.get(key)
-
-        if data is not None:
-            self.delete(root)
-
-        shard_keys = ShardKeyUnits([])
-        for i in range(chain_config.num_validators):
-            shard_key = ShardKeyUnit(ShardIndex(i), bs_hashes[i], ss_roots[i])
-            shard_keys.append(shard_key)
-
-        self.db.put(key, shard_keys.encode())
-
-
-    def get(self, root: ErasureRoot) -> ShardKeyUnits:
-        key = self.prefix + root.encode()
-        data = self.db.get(key)
-        if data is None:
-            raise KeyError("Shards not found in DA")
-
-        data, _ = ShardKeyUnits.decode_from(data)
-
-        return data
-
-    def get_ss_roots(self, root: ErasureRoot) -> SSKeysUnits:
-        key = self.prefix + root.encode()
-        data = self.db.get(key)
-        if data is None:
-            raise KeyError("Shards not found in DA")
-
-        data, _ = ShardKeyUnits.decode_from(data)
-
-        ss_roots = SSKeysUnits([])
-        for key in data:
-            ss_key = SSKeysUnit(key.shard_index, key.segment_shard_root)
-            ss_roots.append(ss_key)
-
-        return ss_roots
-
-    def get_ss_root(self, root: ErasureRoot, shard_index: ShardIndex):
-        key = self.prefix + root.encode()
-        data = self.db.get(key)
-        if data is None:
-            raise KeyError("Shards not found in DA")
-
-        data, _ = ShardKeyUnits.decode_from(data)
-
-        for key in data:
-            ss_key = SSKeysUnit(key.shard_index, key.segment_shard_root)
-            if key.shard_index == shard_index:
-                return ss_key
-
-        return Null
-
-    def get_bs_hashes(self, root: ErasureRoot) -> BSKeysUnits:
-        key = self.prefix + root.encode()
-        data = self.db.get(key)
-        if data is None:
-            raise KeyError("Shards not found in DA")
-
-        data, _ = ShardKeyUnits.decode_from(data)
-
-        bs_hashes = BSKeysUnits([])
-        for key in data:
-            bs_key = BSKeysUnit(key.shard_index, key.bundle_shard_hash)
-            bs_hashes.append(bs_key)
-
-        return bs_hashes
-
-    def get_bs_hash(self, root: ErasureRoot, shard_index: ShardIndex):
-        key = self.prefix + root.encode()
-        data = self.db.get(key)
-        if data is None:
-            raise KeyError("Shards not found in DA")
-
-        data, _ = ShardKeyUnits.decode_from(data)
-
-        for key in data:
-            bs_key = BSKeysUnit(key.shard_index, key.bundle_shard_hash)
-            if key.shard_index == shard_index:
-                return bs_key
-
-        return Null
 
     def delete(self, root: ErasureRoot) -> None:
         key = self.prefix + root.encode()

@@ -13,7 +13,6 @@ from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
 from jam.types.work.shard import BundleShard, SegmentsShard, SegmentShard, ShardIndex
 
-from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
@@ -118,33 +117,20 @@ class ShardDistributionProtocol(NetworkProtocol):
         d3l = settings.d3l
         audit = settings.audit
 
-        bs_da = ErasureShardsMap(d3l)
-        audits_da = AuditShardsDA(audit)
         justification_da = JustificationsDA(audit)
+
+        # Fetch Bundle Shard
+        audits_da = AuditShardsDA(audit)
+        bs_dict = audits_da.get(query.erasure_root)
+        bundle_shard = bs_dict[query.shard_index]
+
+        # Fetch Segments Shard
         ss_da = SegmentShardsDA(d3l)
+        ss_dict = ss_da.get(query.erasure_root)
+        segments_shard = ss_dict[query.shard_index]
 
-        bundle_shard_hash = bs_da.get_bs_hash(query.erasure_root, query.shard_index).bundle_shard_hash
-
-        bundle_shard = audits_da.get(bs_hash=bundle_shard_hash)[0]
-
-        segment_shard_root = bs_da.get_ss_root(query.erasure_root, query.shard_index).segment_shard_root
-        # segments_shard = ss_da.get(segment_shard_root)[0]
-
-        segments_shard_with_segment_idx = ss_da.get(segment_shard_root)[0]
-
-        segments_shard = Vector([segments_shard_with_segment_idx[i].shard for i in range(len(segments_shard_with_segment_idx))])
-
-        shards = bs_da.get(query.erasure_root)
-        s = Vector([])
-        for shard in shards:
-            pair = Bytes[64](shard.bundle_shard_hash + shard.segment_shard_root)
-            print(pair)
-            s.append(pair)
-
-        bmr = BMRFunctions()
-        justification = bmr.trace_fn(values=s, index=query.shard_index)
-
-        justification_da.put(query.erasure_root, justification)
+        # TODO: Fetch Justifications
+        justification = Justification([])
 
         # Return requested shards
         msg_a = bundle_shard.encode()

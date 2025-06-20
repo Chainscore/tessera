@@ -5,6 +5,7 @@ from aioquic.asyncio import serve, connect
 from aioquic.asyncio.server import QuicServer
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.connection import QuicConnection
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.config.logging import get_logger
 
@@ -103,6 +104,23 @@ class Node:
     def ed_key(self):
         return self.validator_data.ed25519
 
+    @property
+    def ed_pvt_key(self) -> Ed25519PrivateKey:
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+        key_file = f"seeds/{self.port}/key.pem"
+
+        # Load the ED25519 private key
+        with open(key_file, "rb") as key_file:
+            private_key = load_pem_private_key(
+                key_file.read(),
+                password=None,
+                backend=default_backend()
+            )
+
+        return private_key
+
     def get_peer(self, key: bytes) -> Peer | None:
         if key in self.peer_map:
             return self.peer_map[key]
@@ -115,8 +133,10 @@ class Node:
         i2 = int.from_bytes(k2)
 
         if (i1 > 127) ^ (i2 > 127) ^ (i1 < i2):
+            print("self init")
             return k1
         else:
+            print("peer init")
             return k2
 
     def quic_config(self, is_client: bool = True, peer: Optional[Peer] = None) -> QuicConfiguration:
@@ -204,7 +224,7 @@ class Node:
                     pref = PrefixType.UP0.encode()
                     client.stream_buffer[stream_id] = pref
                     client.stream_and_keep_open(pref, stream_id)
-
+                    print("here before handshake")
                     BlockAnnouncement.handshake(stream_id, client)
 
 

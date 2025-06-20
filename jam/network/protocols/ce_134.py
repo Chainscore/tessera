@@ -91,19 +91,27 @@ class WorkPackageSharing(NetworkProtocol):
     async def transmit(self, node: "Node", data: CE134Data):
         """Request Work Report from Node (server)"""
 
-
-        msg_a = data.core_segment.encode()
-        len_a = Uint[32](len(msg_a)).encode()
-        msg_b = data.work_package_bundle.encode()
-        len_b = Uint[32](len(msg_b)).encode()
+        try:
+            print("inside transmit")
+            msg_a = data.core_segment.encode()
+            print("asd")
+            len_a = data.map_len.encode()
+            print("asde")
+            msg_b = data.work_package_bundle.encode()
+            print("asdr")
+            len_b = data.bundle_len.encode()
+            print("asdt")
+        except Exception as e:
+            print("error transmit", e)
+            raise
 
         logger.info(
             "Transmitting work package bundle to guarantors",
             node_name=node.name,
             core_index=int(data.core_segment.core_index),
             guarantor_count=len(node.peer_conn),
-            stream_a_size=len_a,
-            stream_b_size=len_b,
+            stream_a_size=data.map_len,
+            stream_b_size=data.bundle_len,
             segment_map_length=len(data.core_segment.segment_root_map)
         )
 
@@ -112,8 +120,10 @@ class WorkPackageSharing(NetworkProtocol):
         # TODO: Use Actual Guarantors Connections
         for peer in node.peer_conn:
             try:
-                if int(peer.data.metadata.port) == 30335:
-                    logger.info("sending bundle to 30335")
+                print("inside check transmit", peer.port)
+                if int(peer.port) == 40002:
+                    print("inside 40002 transmit")
+                    logger.info("sending bundle to 40002")
                     client = node.peer_conn[peer][1]
 
                     # Send Protocol Prefix
@@ -192,11 +202,7 @@ class WorkPackageSharing(NetworkProtocol):
                 report, report_hash = processor.process_bundle(core=data.core_segment.core_index, bundle=bundle,
                                              sr_lookup=data.core_segment.segment_root_map)
 
-            port = node.port
-            my_keys = json.load(open("seeds/keys.json"))[str(port)]
-            ed25519_key = Ed25519PrivateKey.from_private_bytes(
-                bytes.fromhex(my_keys["ed25519_private"][2:])
-            )
+            ed25519_key = node.ed_pvt_key
 
             # Build Guarantee
             logger.info("Building Guarantee..")

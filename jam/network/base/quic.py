@@ -114,6 +114,9 @@ class QuicProtocol(QuicConnectionProtocol):
     def quic_event_received(self, event: QuicEvent) -> None:
         if isinstance(event, HandshakeCompleted):
             # verify Certificate & fetch Peer info
+            if not self.node.is_initialized:
+                self.node.is_initialized = True
+
             peer = self.fetch_peer()
             if peer:
                 logger.info(f"{self.interface}: 🔗 Handshake completed with {peer}.")
@@ -141,6 +144,9 @@ class QuicProtocol(QuicConnectionProtocol):
 
         elif isinstance(event, ConnectionTerminated):
             self._close_pending = True
+            if self.peer in self.node.peer_conn:
+                print("removing peer form connections")
+                del self.node.peer_conn[self.peer]
             logger.warning(f"{self.interface}: ❌ Connection with {self.peer} terminated: {event.error_code}. Reason: {event.reason_phrase}.")
 
         elif isinstance(event, StreamDataReceived):

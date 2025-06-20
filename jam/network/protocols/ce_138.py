@@ -16,7 +16,6 @@ from jam.types.work.shard import SegmentsShard, ShardIndex, BundleShard
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
-from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
@@ -107,20 +106,17 @@ class AuditShardRequestProtocol(NetworkProtocol):
         d3l = settings.d3l
         audit = settings.audit
 
-        bs_da = ErasureShardsMap(d3l)
         audits_da = AuditShardsDA(audit)
         ss_da = SegmentShardsDA(d3l)
         justification_da = JustificationsDA(audit)
 
-        bundle_shard_hash = bs_da.get_bs_hash(query.erasure_root, query.shard_index).bundle_shard_hash
+        # Fetch Bundle Shard
+        audits_da = AuditShardsDA(audit)
+        bs_dict = audits_da.get(query.erasure_root)
+        bundle_shard = bs_dict[query.shard_index]
 
-        bundle_shard = audits_da.get(bs_hash=bundle_shard_hash)[0]
-
-        segment_shard_root = bs_da.get_ss_root(query.erasure_root, query.shard_index)
-
-        justification_ce137 = justification_da.get(query.erasure_root)
-
-        justification = justification_ce137 + segment_shard_root
+        # TODO: Fetch Justifications
+        justification = Justification([])
 
         # Return requested shards
         msg_a = bundle_shard.encode()

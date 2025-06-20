@@ -1,10 +1,10 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 
 from tsrkit_types import Vector, Bytes
 
-from jam import JamConfig
-from jam.config.logging import logger
+from jam.config.logging import get_logger
 from jam.config.settings import settings
+from jam.network.protocols.ce_137 import ShardDistributionProtocol
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types import WorkPackageBundle
 
@@ -12,24 +12,25 @@ from jam.types.work.item import WorkItem
 from jam.types.work.package import  WorkPackage
 from jam.types.work.manifest import (
     Segments,
+    SegmentIndex,
     MultiSegments,
     Justifications,
     Justification,
     Extrinsics,
     SegmentDict,
     MultiJustifications,
-    MultiExtrinsics, Extrinsic, Segment
+    MultiExtrinsics, Extrinsic, Segment, Assurers
 )
 
 from jam.types.work import SegmentRootLookup
 
-from jam.types.protocol.core import SegmentRoot
+from jam.types.protocol.core import SegmentRoot, ErasureRoot
 from jam.types.protocol.crypto import OpaqueHash
 
 from jam.merklization.binary_merkle import BMRFunctions
 from jam.utils.benchmark import benchmark
 
-from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap, ErasureShardsMap
+from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
 from jam.types.work.shard import ShardIndex, SegmentsShards, SegmentsShard, SegmentShard
 
@@ -40,6 +41,9 @@ from jam.network.node import Node
 from jam.network.protocols.ce_139 import SegmentShardRequest
 from jam.network.protocols.ce_139_base import CE139Data, SegmentIndexes
 from jam.config.chainspec import chain_config
+
+# Module-specific logger
+logger = get_logger("in_core")
 
 class Bundler:
     merkle: BMRFunctions
@@ -86,9 +90,12 @@ class Bundler:
         Returns:
             r if r is already a segment root else Segment root from dictionary if r is a work package hash.
         """
-        if self.sr_lookup.value is not None and r in self.sr_lookup.keys():
+        print("here 1", self.sr_lookup)
+        if self.sr_lookup is not None and r in self.sr_lookup.keys():
+            print("here 2")
             return self.sr_lookup[r]
         else:
+            print("here 3")
             return r
 
     @staticmethod
@@ -105,7 +112,10 @@ class Bundler:
         Returns:
            Extrinsic data (Vector[Bytes])
         """
-        ext_da = ItemExtrinsics()
+        # Access DA
+        db = settings.db
+
+        ext_da = ItemExtrinsics(db)
         ext: Extrinsics = ext_da.process_item(w, data)
 
         return ext
@@ -131,15 +141,17 @@ class Bundler:
 
         seg_da = SegmentsDA(d3l)
         sr_er_da = SegmentErasureMap(d3l)
-        er_shards_da = ErasureShardsMap(d3l)
         shards_da = SegmentShardsDA(d3l)
 
         erasure_code = ErasureCode()
 
+        # Cached Segments
         seg_dict = SegmentDict({})
-        # shards_dict: Dict[SegmentRoot, Vector[Tuple[ShardIndex, SegmentsShard]]] = {}
-        shards_dict: Dict[SegmentRoot, Vector[Tuple[ShardIndex, Vector[SegmentShard]]]] = {}
-        import_map = {}
+
+        shards_dict: Dict[SegmentRoot, List[Tuple[ShardIndex, List[SegmentShard]]]] = {}
+
+        # Pre-computed map for imports
+        import_map: Dict[OpaqueHash, List[SegmentIndex]] = {}
         for spec in w.import_segments:
             h = spec.tree_root
             n = spec.index
@@ -149,150 +161,75 @@ class Bundler:
             else:
                 import_map[h] = [n]
 
-        # shard_indices = []
+        fetched_imports: Dict[Tuple[SegmentRoot,SegmentIndex], Segment] = {}
+        # requested_shards: Dict[Tuple[SegmentRoot,SegmentIndex], Dict[ShardIndex, Tuple[Assurers, ErasureRoot]]] = {}
 
         for h, shard_indices in import_map.items():
-
+            print("checking ", h, h.hex())
             s_root = self.lookup_root(h)
             logger.info(f"Fetching segments with root {s_root}")
 
             for n in shard_indices:
-                # try:
-                #     # Check for Segments in cache first
-                #     if s_root in seg_dict:
-                #         print("if")
-                #         segments = seg_dict[s_root]
-                #         imports.append(segments[n])
-                #
-                #     # If cache miss, check in DB, and cache it
-                #     else:
-                #         print("else")
-                #         segments, _ = seg_da.get(s_root)
-                #         seg_dict[s_root] = segments
-                #         imports.append(segments[n])
-                #
-                #     print("imports", imports)
-                #
-                # except KeyError as e:
-                #     logger.warn(f"Warning! {e}")
-                #     logger.warn("Looking for segment shards in DA!")
                 try:
-                    decodable_shards: Vector[Tuple[Bytes, int]] = Vector([])
-                    available_indices = set[ShardIndex]()
+                    # Check for Segments in cache first
+                    if s_root in seg_dict:
+                        print("cache hit")
+                        segments = seg_dict[s_root]
+                        fetched_imports[(s_root,n)] = segments[n]
 
+                    # If cache miss, check in DB, and cache it
+                    else:
+                        print("cache miss")
+                        segments, _ = seg_da.get(s_root)
+                        print("fetching seg from root", s_root.hex())
+                        seg_dict[s_root] = segments
+                        print("fetched seg", hash(segments[n]), len(segments[n]))
+                        fetched_imports[(s_root, n)] = segments[n]
+
+                except KeyError as e:
+                    logger.warn(f"Warning! {e}")
+                    logger.warn("Looking for segment shards in DA!")
+
+                    # Get Erasure Root
                     e_root = sr_er_da.get(s_root)
+                    try:
+                        # CASE: Not enough shards available
+                        # CASE: Enough shards available
+                        # CASE: Not enough segment indexed Shards
+                        # CASE: Enough Segment indexed Shards
+                        # TOTAL POSSIBILITIES IV
 
-                    ce_139 = SegmentShardRequest()
+                        # FOR NOW JUST REQUEST ALL THE SHARDS (SOMEWHAT GREATER THAN 341)
+                        # TODO: Fetch shards based on self availability
 
-                    requests = CE139Data([])
+                        print("segment miss")
+                        ss_dict = shards_da.get(e_root)
+                        shards = ss_dict.get_shard_tuple(n)
+                        if len(shards) > chain_config.recovery_threshold:
+                            segment = Segment(erasure_code.decode(shards))
+                            fetched_imports[(s_root, n)] = segment
 
-                    # for i in range(chain_config.num_validators):
-                    #     if ShardIndex(i) not in available_indices:
-                    #         req: ShardRequest = ShardRequest(erasure_root=e_root, shard_Index=ShardIndex(i), length=chain_config.num_validators,
-                    #                                          seg_indexes=SegmentIndexes(SegmentIndex(n)))
-                    #         requests.append(req)
-                    #         try:
-                    #             responses = ce_139.transmit(self.node, data=requests)
-                    #             for i, shard in enumerate(responses):
-                    #                 decodable_shards.append((shard, i))
-                    #             segment = erasure_code.decode(decodable_shards)
-                    #             imports.append(segment)
-                    #         except KeyError as e3:
-                    #             logger.warn(f"Warning! {e3}")
+                        else:
+                            raise KeyError("Not enough shards available")
 
-                except KeyError as e2:
-                    logger.warn(f"Warning! {e2}")
-                    logger.warn("Fetching all segment shards from assurers!")
 
-        # for spec in w.import_segments:
-        #     h = spec.tree_root
-        #     n = spec.index
-        #
-        #     s_root = self.lookup_root(h)
-        #     logger.info(f"Fetching segments with root {s_root}")
-        #
-        #     try:
-        #         # Check for Segments in cache first
-        #         if s_root in seg_dict:
-        #             segments = seg_dict[s_root]
-        #             imports.append(segments[n])
-        #
-        #         # If cache miss, check in DB, and cache it
-        #         else:
-        #             segments, _ = seg_da.get(s_root)
-        #             seg_dict[s_root] = segments
-        #             imports.append(segments[n])
-        #
-        #     except KeyError as e:
-        #         logger.warn(f"Warning! {e}")
-        #         logger.warn("Looking for segment shards in DA!")
-        #         try:
-        #             decodable_shards: Vector[Tuple[Bytes, int]] = Vector([])
-        #             available_indices = set[ShardIndex]()
-        #
-        #             # Check for root in cache first
-        #             if s_root in shards_dict:
-        #                 shards = shards_dict[s_root]
-        #
-        #                 for i, (shard_index, seg_shards) in enumerate(shards):
-        #                     if len(seg_shards) > n:
-        #                         decodable_shards.append((seg_shards[n], int(shard_index)))
-        #                         available_indices.add(shard_index)
-        #
-        #             else:
-        #                 e_root = sr_er_da.get(s_root)
-        #                 shard_roots = er_shards_da.get_ss_roots(e_root)
-        #
-        #                 for i, root in enumerate(shard_roots):
-        #                     try:
-        #                         seg_shards, shard_index = shards_da.get(root.segment_shard_root)
-        #
-        #                         # Cache SegmentsShard
-        #                         shards_dict[s_root].append((shard_index, seg_shards))
-        #
-        #                         # Collect Specific Chunks
-        #                         if len(seg_shards) > n:
-        #                             decodable_shards.append((seg_shards[n], int(shard_index)))
-        #
-        #                     except (IndexError, KeyError) as err:
-        #                         logger.warn(f"Shard access error: {err}")
-        #                         continue
-        #
-        #             if len(decodable_shards) > JamConfig.erasure_coding_original_shards:
-        #                 try:
-        #                     # Reconstructing Segment
-        #                     decoded_segment = erasure_code.decode(decodable_shards)
-        #                     segment = Segment(decoded_segment)
-        #                     imports.append(segment)
-        #                 except Exception as err:
-        #                     logger.error(f"Erasure decoding failed for {h}: {err}")
-        #             else:
-        #                 # Fetch Missing Shards
-        #                 ce_139 = SegmentShardRequest()
-        #
-        #                 requests = CE139Data([])
-        #                 for i in range(1023):
-        #                     if ShardIndex(i) not in available_indices:
-        #                         req: ShardRequest = ShardRequest(erasure_root=e_root, shard_Index=ShardIndex(i), length=Int(1),
-        #                                                          seg_indexes=SegmentIndexes(SegmentIndex(n)))
-        #                         requests.append(req)
-        #
-        #                         try:
-        #                             ...
-        #                             responses = ce_139.transmit(self.node, data=requests)
-        #                             for res in responses:
-        #                                 ...
-        #
-        #
-        #                         except Exception as e:
-        #                             logger.warn(f"Failed to fetch for index {i}: {e}")
-        #
-        #         except KeyError as e2:
-        #             logger.warn(f"Warning! {e2}")
-        #             logger.warn("Fetching all segment shards from assurers!")
+                    except KeyError as e2:
+                        print("shard miss")
 
-                    # TODO: Fetch All Shards
-            temp_hash = h
+                        # TODO: Request all shards using CE 137
+                        ce_137 = ShardDistributionProtocol()
+
+                        # TODO: Reconstruct Segment
+                        # BLOCKER: Fetching is asynchronous, need to handle that properly.
+                        logger.error(f"Unable to import segment {n} of seg root {s_root}")
+                        raise NotImplementedError("Shard Requesting isn't integrated")
+
+            for spec in w.import_segments:
+                h = spec.tree_root
+                n = spec.index
+                segment = fetched_imports[(h,n)]
+                imports.append(segment)
+
 
         self.segments_lookup.append(seg_dict)
         return imports
@@ -322,11 +259,15 @@ class Bundler:
             logger.info(f"Compiling justification for root {s_root}")
 
             if s_root not in seg_dict:
+                print("not found", s_root, seg_dict)
                 raise KeyError("Segments not found")
 
             segments = seg_dict[s_root]
+            print("stop check 1")
             pages = self.merkle.merkle_path_fn(segments, 0, int(n))
-            justification = Justification(pages)
+            print("stop check 2")
+            justification = Justification(pages.unwrap())
+            print("stop check 3")
 
             justifications.append(justification)
 
@@ -360,32 +301,3 @@ class Bundler:
 
         logger.info("Compiling bundle..")
         return bundle
-
-
-
-# Check for root in cache first
-# if s_root in shards_dict:
-#     shards = shards_dict[s_root]
-#
-#     for i, (shard_index, seg_shards) in enumerate(shards):
-#         if len(seg_shards) > n:
-#             decodable_shards.append((seg_shards[n], int(shard_index)))
-#             available_indices.add(shard_index)
-# else:
-#     e_root = sr_er_da.get(s_root)
-#     shard_roots = er_shards_da.get_ss_roots(e_root)
-#
-#     for i, root in enumerate(shard_roots):
-#         try:
-#             seg_shards, shard_index = shards_da.get(root.segment_shard_root)
-#
-#             # Cache SegmentsShard
-#             shards_dict[s_root].append((shard_index, seg_shards))
-#
-#             # Collect Specific Chunks
-#             if len(seg_shards) > n:
-#                 decodable_shards.append((seg_shards[n], int(shard_index)))
-#
-#         except (IndexError, KeyError) as err:
-#             logger.warn(f"Shard access error: {err}")
-#             continue

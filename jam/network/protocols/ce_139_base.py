@@ -7,7 +7,7 @@ from jam.network.base.quic import QuicProtocol
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 from jam.types.work.manifest import SegmentIndex, Justification, Justifications
-from jam.types.work.shard import ShardIndex, SegmentsShard, SegmentsShardUnit
+from jam.types.work.shard import ShardIndex, SegmentsShard
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
@@ -19,7 +19,7 @@ SegmentIndexes = TypedVector[SegmentIndex]
 @structure
 class Query:
     erasure_root : ErasureRoot
-    shard_Index: ShardIndex
+    shard_index: ShardIndex
     seg_indexes : SegmentIndexes
 
 Queries = TypedVector[Query]

@@ -12,7 +12,7 @@ class ReportsDA(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("WR", 'utf-8')
+        self.prefix = bytes("WREP", 'utf-8')
         self.db = db
 
     def put(self, wr_hash: WorkReportHash, report: WorkReport) -> None:
