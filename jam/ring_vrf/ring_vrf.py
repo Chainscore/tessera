@@ -2,8 +2,6 @@
 
 from typing import List
 
-from jam.types import BandersnatchPublic
-
 from jam.ring_vrf.ring_proof.ring_vrf_go_tos import*
 
 class RingVrf:
