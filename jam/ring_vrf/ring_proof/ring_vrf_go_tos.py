@@ -4,7 +4,8 @@ import pytest
 from typing import List
 import time
 from jam.ring_vrf.ring_proof.short_weierstrass.banders import TwistedEdwardCurve
-from jam.types import ByteArray32
+from jam.types.base import ByteArray32
+
 from jam.types.protocol.crypto import BandersnatchPublic
 from jam.ring_vrf.ring_proof.columns.columns import PublicColumnBuilder as PC
 from jam.ring_vrf.ring_proof.pcs.load_powers import g1_points, g2_points
