@@ -1,20 +1,19 @@
 from typing import cast, TYPE_CHECKING
 
-from tsrkit_types import Bytes, TypedVector, ByteArray, Dictionary, Enum
+from tsrkit_types import TypedVector, Enum
 
 from jam.config.data_stores import data_stores
 from jam.config.logging import get_logger
 from jam.consensus.grandpa.finality import Finality
-from jam.state.state import state
+from jam.network.base.quic import QuicProtocol
 from jam.types import HeaderHash, Block, TimeSlot
 
 if TYPE_CHECKING:
-	from jam.network.quic.server import QuicServerProtocol
 	from jam.network.node import Node
 
 from tsrkit_types.integers import U32
 from tsrkit_types.struct import structure
-from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 # Module-specific logger
 logger = get_logger("network")
@@ -52,26 +51,33 @@ class BlockRequest(NetworkProtocol):
 		super().__init__()
 		self._prefix = PrefixType.CE128
 
-	def transmit(self, node: "Node", data: CE128Data):
+	async def transmit(self, node: "Node", data: CE128Data):
 		"""Transmit State Request"""
 
-		stream_data = self._prefix.encode() + data.encode()
+		stream_data = data.encode()
 
 		logger.info(
 			"Transmitting block request to node", header_hash=data.header, direction=data.dir, max_blocks=data.max_blocks,
 		)
 
 		transmitted_count = 0
-		for client in node.connections:
+		responses = []
+		for peer in node.peer_conn:
+			_, client = node.peer_conn[peer]
+
 			try:
-				stream_id = client.stream_and_close(message=stream_data)
+				stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+				data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
+
 				transmitted_count += 1
+				responses.append(data)
 
 				logger.debug(
 					"Block request transmitted to node",
 					stream_id=stream_id
 				)
 			except Exception as e:
+				responses.append(None)
 				logger.error(
 					"Failed to transmit state request",
 					node_name=node.name,
@@ -84,8 +90,12 @@ class BlockRequest(NetworkProtocol):
 			transmitted_to=transmitted_count,
 		)
 
-	def server_intercept(self, buffer: bytes, server: "QuicServerProtocol", stream_id: int):
+		return responses
+
+	def req_intercept(self, stream_id: int, server: QuicProtocol):
 		"""Intercept & Process Work Package on Guarantor (server)"""
+		node = server.node
+		buffer = server.stream_buffer[stream_id]
 
 		try:
 			logger.debug(
@@ -126,7 +136,7 @@ class BlockRequest(NetworkProtocol):
 					logger.warning("Block missing", timeslot=ts)
 
 			blocks_enc = all_blocks.encode()
-			server.stream_and_close(stream_id, blocks_enc)
+			server.stream_and_close(stream_id=stream_id, message=blocks_enc)
 
 			logger.info(
 				"Blocks request completed successfully. Closed stream",
@@ -143,8 +153,9 @@ class BlockRequest(NetworkProtocol):
 				error_type=type(e).__name__
 			)
 
-	def client_intercept(self, buffer: bytes, stream_id: int):
+	def res_intercept(self, stream_id: int, client: QuicProtocol):
 		"""Intercept Acknowledgement"""
+		buffer = client.stream_buffer[stream_id]
 
 		logger.info(
 			"Block request ack received",

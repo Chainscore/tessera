@@ -33,14 +33,20 @@ from jam.types.work.package import (
     WorkPackageBundle,
 )
 
-# Segment types
-from jam.types.work.segments import (
+
+from jam.types.work.manifest import (
     Segment,
     Segments,
     MultiSegments,
-    SegmentRootLookup,
+    Extrinsic,
+    Extrinsics,
+    MultiExtrinsics,
+    Justification,
+    Justifications,
+    MultiJustifications,
+    Assurers,
+    SegmentRootLookup
 )
-
 
 __all__ = [
     # Execution types
@@ -69,6 +75,14 @@ __all__ = [
     "Segments",
     "MultiSegments",
     "SegmentRootLookup",
+    # Extrinsic
+    "Extrinsic",
+    "Extrinsics",
+    "MultiExtrinsics",
+    # Justification
+    "Justification",
+    "Justifications",
+    "MultiJustifications",
     # Collection types
     "WorkResults",
     "WorkReports",

@@ -85,8 +85,8 @@ class WorkPackageSubmission(NetworkProtocol):
         responses = TypedVector[OptBool]([])
         for peer in node.peer_conn:
             try:
-                if peer.port == 30333:
-                    logger.info("sending package to 30333")
+                if peer.port == 40000:
+                    logger.info("sending package to 40000")
                     client = node.peer_conn[peer][1]
                     transmitted_count += 1
 
@@ -100,14 +100,15 @@ class WorkPackageSubmission(NetworkProtocol):
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
                     client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                     client.stream_and_keep_open(message=len_b, stream_id=stream_id)
+                    res = None
                     try:
-                        data = await client.close_and_wait(message=msg_b, stream_id=stream_id)
+                        res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
                     except Exception as e:
                         print("Couldn't close", e)
-                    if not data:
+                    if not res:
                         responses.append(OptBool(Null))
                     else:
-                        responses.append(data)
+                        responses.append(res)
 
                     logger.debug(
                         "Work package transmitted to guarantor",
@@ -199,7 +200,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 stream_id=stream_id,
                 buffer_size=len(buffer)
             )
-            return OptBool(True)
+            return OptBool(Bool(True))
 
         return OptBool(Null)
 
