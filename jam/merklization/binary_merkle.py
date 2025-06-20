@@ -168,7 +168,7 @@ class BMRFunctions:
 
         else:
             node = self._node_fn(values, hash_fn)
-            return OpaqueHash(node.unwrap())
+            return OpaqueHash(node)
 
     def cd_merkle_fn(
         self,
