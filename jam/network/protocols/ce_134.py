@@ -92,15 +92,10 @@ class WorkPackageSharing(NetworkProtocol):
         """Request Work Report from Node (server)"""
 
         try:
-            print("inside transmit")
             msg_a = data.core_segment.encode()
-            print("asd", len(msg_a))
             len_a = data.map_len.encode()
-            print("asde", data.map_len)
             msg_b = data.work_package_bundle.encode()
-            print("asdr", len(msg_b))
             len_b = data.bundle_len.encode()
-            print("asdt", data.bundle_len)
         except Exception as e:
             print("error transmit", e)
             raise
@@ -122,8 +117,7 @@ class WorkPackageSharing(NetworkProtocol):
             try:
                 print("inside check transmit", peer.port)
                 if int(peer.port) == 40002:
-                    print("inside 40002 transmit")
-                    logger.info("sending bundle to 40002")
+                    logger.info("Sending bundle to 40002")
                     client = node.peer_conn[peer][1]
 
                     # Send Protocol Prefix

@@ -46,7 +46,9 @@ async def wp_producer(node: Node, db: RockStore):
     )
 
     while True:
-        if not node.is_initialized:
+        has_40000 = any(peer.port == 40000 for peer in node.peer_conn)
+
+        if not has_40000:
             logger.debug(
                 "Network not initialized - skipping work package production",
                 node_name=node.name,
@@ -114,13 +116,14 @@ async def wp_producer(node: Node, db: RockStore):
             import_spec1 = ImportSpec(tree_root=SegmentRoot.fromhex("3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91"), index=U16(0))
             import_spec2 = ImportSpec(tree_root=SegmentRoot.fromhex("6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694"), index=U16(0))
 
-            if current_timeslot % 4 == 0:
+            print("CURRENT TIMESLOT", current_timeslot, wp_iter)
+            if wp_iter % 4 == 0:
                 import_specs = []
-            elif current_timeslot % 4 == 1:
+            elif wp_iter % 4 == 1:
                 import_specs = [import_spec1]
-            elif current_timeslot % 4 == 2:
+            elif wp_iter % 4 == 2:
                 import_specs = [import_spec2]
-            else:  # current_timeslot % 4 == 3
+            else:  # wp_iter % 4 == 3
                 import_specs = [import_spec1, import_spec2]
 
             wi = WorkItem(

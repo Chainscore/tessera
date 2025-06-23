@@ -164,12 +164,12 @@ class Bundler:
         fetched_imports: Dict[Tuple[SegmentRoot,SegmentIndex], Segment] = {}
         # requested_shards: Dict[Tuple[SegmentRoot,SegmentIndex], Dict[ShardIndex, Tuple[Assurers, ErasureRoot]]] = {}
 
-        for h, shard_indices in import_map.items():
+        for h, seg_indices in import_map.items():
             print("checking ", h, h.hex())
             s_root = self.lookup_root(h)
             logger.info(f"Fetching segments with root {s_root}")
 
-            for n in shard_indices:
+            for n in seg_indices:
                 try:
                     # Check for Segments in cache first
                     if s_root in seg_dict:
@@ -223,12 +223,14 @@ class Bundler:
                         # BLOCKER: Fetching is asynchronous, need to handle that properly.
                         logger.error(f"Unable to import segment {n} of seg root {s_root}")
                         raise NotImplementedError("Shard Requesting isn't integrated")
+                except Exception as e:
+                    logger.error(f"Exception occurred fetching imports ({s_root},{n})")
 
-            for spec in w.import_segments:
-                h = spec.tree_root
-                n = spec.index
-                segment = fetched_imports[(h,n)]
-                imports.append(segment)
+        for spec in w.import_segments:
+            h = spec.tree_root
+            n = spec.index
+            segment = fetched_imports[(h,n)]
+            imports.append(segment)
 
 
         self.segments_lookup.append(seg_dict)
@@ -252,24 +254,27 @@ class Bundler:
         seg_dict = self.segments_lookup[i]
 
         for spec in w.import_segments:
-            r = spec.tree_root
-            n = spec.index
+            try:
+                r = spec.tree_root
+                n = spec.index
 
-            s_root = self.lookup_root(r)
-            logger.info(f"Compiling justification for root {s_root}")
+                s_root = self.lookup_root(r)
+                logger.info(f"Compiling justification for root {s_root}")
 
-            if s_root not in seg_dict:
-                print("not found", s_root, seg_dict)
-                raise KeyError("Segments not found")
+                if s_root not in seg_dict:
+                    print("not found", s_root, seg_dict)
+                    raise KeyError("Segments not found")
 
-            segments = seg_dict[s_root]
-            print("stop check 1")
-            pages = self.merkle.merkle_path_fn(segments, 0, int(n))
-            print("stop check 2")
-            justification = Justification(pages.unwrap())
-            print("stop check 3")
+                segments = seg_dict[s_root]
+                print("stop check 1")
+                pages = self.merkle.merkle_path_fn(segments, 0, int(n))
+                print("stop check 2")
+                justification = Justification(pages.unwrap())
+                print("stop check 3")
 
-            justifications.append(justification)
+                justifications.append(justification)
+            except Exception as e:
+                logger.error(f"Unable to compile justification for item {i+1}")
 
         return justifications
 
