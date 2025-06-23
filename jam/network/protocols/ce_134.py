@@ -2,7 +2,7 @@ import json
 
 from typing import cast, TYPE_CHECKING
 
-from tsrkit_types import TypedVector, Option, Uint, structure, Null
+from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32
 
 if TYPE_CHECKING:
     from jam.network.node import Node
@@ -94,13 +94,13 @@ class WorkPackageSharing(NetworkProtocol):
         try:
             print("inside transmit")
             msg_a = data.core_segment.encode()
-            print("asd")
+            print("asd", len(msg_a))
             len_a = data.map_len.encode()
-            print("asde")
+            print("asde", data.map_len)
             msg_b = data.work_package_bundle.encode()
-            print("asdr")
+            print("asdr", len(msg_b))
             len_b = data.bundle_len.encode()
-            print("asdt")
+            print("asdt", data.bundle_len)
         except Exception as e:
             print("error transmit", e)
             raise
@@ -116,7 +116,7 @@ class WorkPackageSharing(NetworkProtocol):
         )
 
         transmitted_count = 0
-        responses = TypedVector[Credential]([])
+        responses = TypedVector[OptCred]([])
         # TODO: Use Actual Guarantors Connections
         for peer in node.peer_conn:
             try:
@@ -136,7 +136,7 @@ class WorkPackageSharing(NetworkProtocol):
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
                     client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                     client.stream_and_keep_open(message=len_b, stream_id=stream_id)
-                    data = await client.close_and_wait(message=msg_b, stream_id=stream_id)
+                    res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
 
                     transmitted_count += 1
 
@@ -146,7 +146,8 @@ class WorkPackageSharing(NetworkProtocol):
                         stream_id=stream_id,
                         core_index=int(data.core_segment.core_index)
                     )
-                    responses.append(data)
+
+                    responses.append(res)
             except Exception as e:
                 logger.error(
                     "Failed to transmit work package bundle to guarantor",
@@ -176,7 +177,13 @@ class WorkPackageSharing(NetworkProtocol):
                 buffer_size=len(buffer[1:])
             )
             data, offset = CE134Data.decode_from(buffer[1:])
+            # print("data bundle", data, len(data.encode()))
             data = cast(CE134Data, data)
+
+            print("received bundle", len(data.encode()), len(buffer[1:]))
+
+            print("len bundle", data.bundle_len, U32(len(data.work_package_bundle.encode())))
+            print("len map", data.map_len, U32(len(data.core_segment.encode())))
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
@@ -238,6 +245,14 @@ class WorkPackageSharing(NetworkProtocol):
             )
 
         except Exception as e:
+            logger.info("Failed to Guarantee..")
+            msg_a = Null.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+
+            # Send response
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_close(msg_a, stream_id)
+
             logger.error(
                 "Error processing work package bundle",
                 stream_id=stream_id,
@@ -265,8 +280,8 @@ class WorkPackageSharing(NetworkProtocol):
             logger.info(
                 "Report credential received - checking for majority",
                 stream_id=stream_id,
-                work_report_hash=data.work_report_hash.hex()[:16] + "...",
-                signature_length=len(data.ed25519_signature)
+                work_report_hash=data.cred.work_report_hash.hex()[:16] + "...",
+                signature_length=len(data.cred.work_report_hash)
             )
 
             # TODO: Save Work Report & Check Majority & Distribute
@@ -274,7 +289,7 @@ class WorkPackageSharing(NetworkProtocol):
             logger.debug(
                 "Report credential processed",
                 stream_id=stream_id,
-                work_report_hash=data.work_report_hash.hex()[:16] + "..."
+                work_report_hash=data.cred.work_report_hash.hex()[:16] + "..."
             )
             return OptCred(data.cred)
 

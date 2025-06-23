@@ -451,8 +451,13 @@ class Processor:
         CE134 = WorkPackageSharing()
 
         core_segment = CoreSegment(core_index=core, segment_root_map=lookup)
+
         map_len = U32(len(core_segment.encode()))
+        print("map length", map_len, len(core_segment.encode()))
+
         bundle_len = U32(len(bundle.encode()))
+        print("bundle length", bundle_len, len(bundle.encode()))
+
         data = CE134Data(map_len=map_len, work_package_bundle=bundle, bundle_len=bundle_len, core_segment=core_segment)
 
         loop = asyncio.get_running_loop()
@@ -508,8 +513,10 @@ class Processor:
         from jam.network.protocols.ce_134 import OptCred
         for response in responses:
             if response != OptCred(Null):
-                if response.work_report_hash == wr_hash:
-                    guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=response.ed25519_signature)
+                print("RESPONSE", response)
+                cred = response.unwrap()
+                if cred.work_report_hash == wr_hash:
+                    guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=cred.ed25519_signature)
                     guarantees.append(guarantee)
 
         # Distribute Guaranteed WR to Validators CE135
@@ -537,7 +544,7 @@ class Processor:
             CE135 = WorkReportDistribution()
             # TODO: Fix timeslot
             gwr = GuaranteedWR(report=wr, slot=TimeSlot(0), signatures=guarantees)
-            r_len = len(gwr.encode())
+            r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
 
             acks = await CE135.transmit(node=self.node, data=data)

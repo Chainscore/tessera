@@ -1,6 +1,6 @@
 from typing import cast, TYPE_CHECKING
 
-from tsrkit_types import Uint
+from tsrkit_types import Uint, U32
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
@@ -134,6 +134,10 @@ class BlockAnnouncement(NetworkProtocol):
         for peer in node.peer_conn:
             try:
                 up_stream, conn = node.peer_conn[peer]
+                ann_len = U32(len(message))
+                print("ANN LEN SENT", ann_len)
+
+                conn.stream_and_keep_open(ann_len.encode(), up_stream)
                 conn.stream_and_keep_open(message, up_stream)
                 announced_count += 1
 
@@ -169,6 +173,7 @@ class BlockAnnouncement(NetworkProtocol):
 
         logger.info(
             "Intercepting UP0 stream",
+            peer=peer,
             stream_id=stream_id,
         )
 
@@ -210,8 +215,10 @@ class BlockAnnouncement(NetworkProtocol):
             else:
                 # Parse received Announcement
                 a_len, _ = Uint[32].decode_from(buffer[1:5])
+                print("CHECK ANN", len(buffer), a_len)
 
                 if len(buffer[5:]) == a_len:
+                    print("CHECK SUCCESS")
                     a, _ = Announcement.decode_from(buffer[5:])
                     a = cast(Announcement, a)
 
