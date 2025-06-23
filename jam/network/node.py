@@ -133,10 +133,10 @@ class Node:
         i2 = int.from_bytes(k2)
 
         if (i1 > 127) ^ (i2 > 127) ^ (i1 < i2):
-            print("self init")
+            logger.debug("Self node is connection initiator")
             return k1
         else:
-            print("peer init")
+            logger.debug("Peer node is connection initiator")
             return k2
 
     def quic_config(self, is_client: bool = True, peer: Optional[Peer] = None) -> QuicConfiguration:
@@ -224,7 +224,6 @@ class Node:
                     pref = PrefixType.UP0.encode()
                     client.stream_buffer[stream_id] = pref
                     client.stream_and_keep_open(pref, stream_id)
-                    print("here before handshake")
                     BlockAnnouncement.handshake(stream_id, client)
 
 
@@ -296,3 +295,7 @@ class Node:
         except Exception as e:
             logger.critical(f"🚀 {self} failed to initialize!")
 
+    def shutdown(self):
+        for peer in self.peer_conn:
+            _, conn = self.peer_conn[peer]
+            conn.close(reason_phrase=f"Closing node {self.__id}")

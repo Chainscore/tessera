@@ -83,6 +83,7 @@ class WorkPackageSubmission(NetworkProtocol):
         # TODO: Use Particular Validators' Connections
 
         responses = TypedVector[OptBool]([])
+        print("Sending imports", len(data.package_data.work_package.items[0].import_segments))
         for peer in node.peer_conn:
             try:
                 if peer.port == 40000:
@@ -152,6 +153,7 @@ class WorkPackageSubmission(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
+            print("received imports", len(data.package_data.work_package.items[0].import_segments))
             logger.info(
                 "Processing work package submission",
                 stream_id=stream_id,
