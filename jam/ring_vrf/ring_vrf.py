@@ -12,9 +12,6 @@ class RingVrf:
             get the all the data needed and
             return the signature as an output"
             """
-        #secret_t(Bytearray32), producer_key(BandernstachKey)
-        # signature = func() #make the call or logic u want
-        # return signature
         return generate_bls_signature(secret_t, producer_key, keys)
 
     @staticmethod
@@ -22,34 +19,30 @@ class RingVrf:
         """
         get the data needed and construct the rng root
         """
-        #
-        # ring_root= func() make the call ore logic u want
-        # return ring_root
         return construct_ring_root(keys)
 
     @staticmethod
-    def verify_signature(message, ring_signature):
+    def verify_signature(message:bytes,ring_root:bytes, ring_signature:bytes):
         """
         get the bls signature, other params if needed and verify it
         """
-        # is_valid=func() # make the func call or logic u want
-        # return is_valid
-        return verify_signature(message, ring_signature)
+        return verify_signature(message,ring_root, ring_signature)
 
     @staticmethod
-    def ring_vrf_proof(alpha, add, blinding_factor, producer_key, keys:List[BandersnatchPublic] ):
+    def ring_vrf_proof(alpha:bytes, add:bytes, blinding_factor:bytes, producer_key:bytes, keys:List[BandersnatchPublic] ):
         """get the args u want and generate the
         ring_vrf_proof (pedersen vrf proof + ring_proof ) \
         which of length 784 bytes"""
-
-        # pedersen_proof=get the pedersen proof
-        # ring_proof= get the ring proof
-        # rvrf_proof= add the pedersen and ring proof
-        # return rvrf_proof
         return ring_vrf_proof(alpha, add, blinding_factor, producer_key, keys)
 
     @staticmethod
-    def pedersen_proof_to_hash(pedersen_proof):
+    def ring_vrf_proof_verify(ad_data:bytes, ring_root:bytes, signature:bytes, message=b"")->bool:
+        """get the c, r, signature, m and verify the signature"""
+        #verfify the signature (pedersen_proof+ring_proof)
+        return ring_vrf_proof_verify(ad_data, ring_root, signature)
+
+    @staticmethod
+    def pedersen_proof_to_hash(pedersen_proof:bytes):
         """get the pedersen proof alone and return the 32 bytes hash"""
         return pedersen_proof_to_hash(pedersen_proof)
 
