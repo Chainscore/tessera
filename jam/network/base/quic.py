@@ -80,12 +80,11 @@ class QuicProtocol(QuicConnectionProtocol):
         self._quic.send_stream_data(stream_id, message, end_stream=True)
 
         try:
-            if self.is_client:
-                waiter = self._loop.create_future()
-                self.waiter[stream_id] = waiter
-                self.transmit()
-                print("transmitted")
-                return await asyncio.shield(waiter)
+            waiter = self._loop.create_future()
+            self.waiter[stream_id] = waiter
+            self.transmit()
+            print("transmitted, now waiting for response")
+            return await asyncio.shield(waiter)
         except Exception as e:
             print("received error", e)
 
@@ -194,8 +193,9 @@ class QuicProtocol(QuicConnectionProtocol):
                 try:
                     # Map the request to its corresponding CE protocol function
                     ce_protocol = ProtocolMap.get_protocol(prefix)()
-
-                    if self.is_client and self.waiter[stream_id] is not None:
+                    print("waiting list", self.waiter)
+                    if (stream_id in self.waiter) and (self.waiter[stream_id] is not None):
+                        print("RES INTERCEPT")
                         res = ce_protocol.res_intercept(stream_id, self)
 
                         # Wait for acknowledgment
@@ -203,7 +203,8 @@ class QuicProtocol(QuicConnectionProtocol):
                         del self.waiter[stream_id]
                         waiter.set_result(res)
 
-                    elif not self.is_client:
+                    else:
+                        print("REQ INTERCEPT")
                         ce_protocol.req_intercept(stream_id, self)
 
                     # Clear buffer

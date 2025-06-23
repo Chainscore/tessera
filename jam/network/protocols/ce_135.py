@@ -1,7 +1,7 @@
 import asyncio
 from typing import cast
 
-from tsrkit_types import Vector, Null, Option, Bool, Uint, TypedVector
+from tsrkit_types import Vector, Null, Option, Bool, Uint, TypedVector, U32
 
 from jam.config.logging import logger
 from jam.config.settings import settings
@@ -74,8 +74,8 @@ class WorkReportDistribution(NetworkProtocol):
 
         responses = TypedVector[OptBool]([])
         for peer in node.peer_conn:
-            if int(peer.port) == 30336:
-                logger.info("sending report to 30336")
+            if int(peer.port) == 40003:
+                logger.info("sending report to 40003")
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
@@ -142,12 +142,15 @@ class WorkReportDistribution(NetworkProtocol):
         CE137 = ShardDistributionProtocol()
 
         query = Query(shard_index=shard_index, erasure_root=er_root)
-        data = CE137Data(len=len(query.encode()), query=query)
+        data = CE137Data(len=U32(len(query.encode())), query=query)
+
+        print("requesting shard")
         shard = await CE137.transmit(node=node, data=data)
 
         # Save Shard
         if shard is not None:
             # Store Bundle Shard
+            print("shard received", shard)
             audits = settings.audit
             bs_da = AuditShardsDA(audits)
             bs_da.put(er_root, shard_index, shard[0])
