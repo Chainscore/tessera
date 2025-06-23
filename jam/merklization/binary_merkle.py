@@ -359,4 +359,4 @@ def check_verify():
     print("whether original root and verified root is correct or not:",verified_root == root )
     assert root == verified_root
 
-check_verify()
+# check_verify()
