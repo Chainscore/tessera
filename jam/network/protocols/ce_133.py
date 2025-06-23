@@ -74,8 +74,8 @@ class WorkPackageSubmission(NetworkProtocol):
             node_name=node.name,
             core_index=int(data.package_data.core_index),
             guarantor_count=len(node.peer_conn),
-            stream_a_size=len_a,
-            stream_b_size=len_b,
+            stream_a_size=data.package_len,
+            stream_b_size=data.extrinsics_len,
             extrinsics_count=len(data.extrinsics)
         )
 

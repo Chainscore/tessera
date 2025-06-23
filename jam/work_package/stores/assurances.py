@@ -13,7 +13,7 @@ class AssurancesDA(DA):
 
     """
     def __init__(self, db : RockStore):
-        self.prefix = bytes("AA", 'utf-8')
+        self.prefix = bytes("ASUR", 'utf-8')
         self.db = db
 
     # TODO: Fix Assurance Type Later

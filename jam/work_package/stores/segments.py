@@ -2,9 +2,9 @@ from typing import Tuple
 
 from rockstore import RockStore
 
-from jam.types.protocol.core import ExportsRoot
-from jam.types.work.manifest import Segments, ProvedSegments
-from jam.types.work.shard import SegmentsShardRoot, SegmentsShardUnit, SegmentsShard, ShardIndex, SegmentsShardRoots
+from jam.types.protocol.core import ExportsRoot, ErasureRoot
+from jam.types.work.manifest import Segments, ProvedSegments, SegmentIndex
+from jam.types.work.shard import SegmentsShardRoot, SegmentsShard, SegmentShard, ShardIndex, SegShardsDict, SegShardDict
 from jam.work_package.store import DA
 
 
@@ -17,10 +17,11 @@ class SegmentsDA(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("SEG", 'utf-8')
+        self.prefix = bytes("SEGS", 'utf-8')
         self.db = db
 
     def put(self, root: ExportsRoot, segments: ProvedSegments) -> None:
+        print("storing segs with root", root.hex())
         try:
             key = self.prefix + root.encode()
             self.db.put(key, segments.encode())
@@ -28,6 +29,7 @@ class SegmentsDA(DA):
             print("raised error", e)
 
     def get(self, root: ExportsRoot) -> Tuple[Segments, Segments]:
+        print("getting segs with root", root.hex())
         key = self.prefix + root.encode()
         data = self.db.get(key)
 
@@ -49,28 +51,65 @@ class SegmentShardsDA(DA):
     """
     Segment Shards DA Stores all the segments shards built / fetched by a node
 
-    Key: Segments Shard Root
+    Key: Erasure Root
     Value: Segments Shard (Vector[Segment Shard])
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("SS", 'utf-8')
+        self.prefix = bytes("SSHRD", 'utf-8')
         self.db = db
 
-    def put(self, root: SegmentsShardRoot, data: SegmentsShardUnit) -> None:
-        key = self.prefix + root.encode()
+    def put_batch(self, er_root: ErasureRoot, data: SegShardsDict) -> None:
+        key = self.prefix + er_root.encode()
         self.db.put(key, data.encode())
 
-    def get(self, root: SegmentsShardRoot) -> Tuple[SegmentsShard, ShardIndex]:
-        key = self.prefix + root.encode()
+    def put_seg_shard(self, er_root: ErasureRoot, shard_index: ShardIndex, segment_index: SegmentIndex, shard: SegmentShard) -> None:
+        key = self.prefix + er_root.encode()
         data = self.db.get(key)
+
+        if data is None:
+            ss_dict = SegShardsDict({})
+        else:
+            ss_dict = SegShardsDict.decode(data)
+
+        if shard_index in ss_dict:
+            s_dict = ss_dict[segment_index]
+        else:
+            s_dict = SegShardDict({})
+
+        s_dict[segment_index] = shard
+        ss_dict[shard_index] = s_dict
+        self.db.put(key, ss_dict.encode())
+
+    def put(self, er_root: ErasureRoot, shard_index: ShardIndex, shard: SegmentsShard) -> None:
+        key = self.prefix + er_root.encode()
+        data = self.db.get(key)
+
+        if data is None:
+            ss_dict = SegShardsDict({})
+        else:
+            ss_dict = SegShardsDict.decode(data)
+
+        s_dict = SegShardDict({})
+        for sgi, ss in enumerate(shard):
+            seg_index = SegmentIndex(sgi)
+            s_shard = SegmentShard(ss)
+
+            s_dict[seg_index] = s_shard
+
+        ss_dict[shard_index] = s_dict
+        self.db.put(key, ss_dict.encode())
+
+    def get(self, er_root: ErasureRoot) -> SegShardsDict:
+        key = self.prefix + er_root.encode()
+        data = self.db.get(key)
+
         if data is None:
             raise KeyError("Segment Shards not found in DA")
 
-        record, _ = SegmentsShardUnit.decode_from(data)
+        ss_dict = SegShardsDict.decode(data)
+        return ss_dict
 
-        return record.shard, record.shard_index
-
-    def delete(self, root: SegmentsShardRoot) -> None:
-        key = self.prefix + root.encode()
+    def delete(self, er_root: ErasureRoot) -> None:
+        key = self.prefix + er_root.encode()
         self.db.delete(key)

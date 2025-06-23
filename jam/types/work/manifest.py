@@ -21,6 +21,9 @@ class ProvedSegments:
     segment: Segments
     proof: Segments
 
+    def __len__(self):
+        return len(self.segment) + len(self.proof)
+
 Assurers = TypedVector[ValidatorIndex]
 
 @structure
@@ -33,6 +36,6 @@ Extrinsic = Bytes
 Extrinsics = TypedVector[Extrinsic]
 MultiExtrinsics = TypedVector[Extrinsics]
 
-Justification = TypedVector[OpaqueHash]
+Justification = TypedVector[Bytes]
 Justifications = TypedVector[Justification]
 MultiJustifications = TypedVector[Justifications]

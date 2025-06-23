@@ -1,7 +1,10 @@
 from time import perf_counter as now
 from contextlib import contextmanager
 
-from jam.config.logging import logger
+from jam.config.logging import get_logger
+
+# Module-specific logger
+logger = get_logger("in_core")
 
 BENCHMARK_FILE = "benchmark_results.txt"
 

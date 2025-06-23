@@ -13,10 +13,8 @@ from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
 from jam.types.work.shard import BundleShard, SegmentsShard, SegmentShard, ShardIndex
 
-from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
-
 
 @structure
 class Query:
@@ -82,10 +80,10 @@ class ShardDistributionProtocol(NetworkProtocol):
         len_a = data.len.encode()
 
         logger.info(f"Transmitting shard index & erasure root to {len(node.peer_conn)} guarantors")
-
+        print("SHARD REQ")
         for peer in node.peer_conn:
-            if int(peer.port) == 30335:
-                logger.info("requesting shard from 30335")
+            if int(peer.port) == 40002:
+                logger.info("requesting shard from", peer=peer)
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
@@ -105,10 +103,13 @@ class ShardDistributionProtocol(NetworkProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
         buffer = server.stream_buffer[stream_id]
 
-        logger.info("Received Shard index & erasure root")
+        logger.info("Received Shard index & erasure root from", peer=server.peer)
         data, offset = CE137Data.decode_from(buffer[1:])
         data = cast(CE137Data, data)
 
+        print("received shard", len(data.encode()), len(buffer[1:]))
+
+        print("shard len", data.len, (len(data.query.encode())))
         if not data.is_valid:
             raise NetworkingError(Code.INVALID_DATA)
 
@@ -119,37 +120,35 @@ class ShardDistributionProtocol(NetworkProtocol):
         d3l = settings.d3l
         audit = settings.audit
 
-        bs_da = ErasureShardsMap(d3l)
-        audits_da = AuditShardsDA(audit)
         justification_da = JustificationsDA(audit)
+
+        # Fetch Bundle Shard
+        audits_da = AuditShardsDA(audit)
+        bs_dict = audits_da.get(query.erasure_root)
+        bundle_shard = BundleShard(bs_dict[query.shard_index])
+
+        # Fetch Segments Shard
         ss_da = SegmentShardsDA(d3l)
+        ss_dict = ss_da.get(query.erasure_root)
+        if query.shard_index not in ss_dict:
+            raise "Shard not found"
 
-        bundle_shard_hash = bs_da.get_bs_hash(query.erasure_root, query.shard_index).bundle_shard_hash
+        print("type", type(ss_dict[query.shard_index]))
+        segments_shard = SegmentsShard(ss_dict[query.shard_index].shard)
 
-        bundle_shard = audits_da.get(bs_hash=bundle_shard_hash)[0]
-
-        segment_shard_root = bs_da.get_ss_root(query.erasure_root, query.shard_index)
-        segments_shard = ss_da.get(segment_shard_root)[0]
-
-        shards = bs_da.get(query.erasure_root)
-        s = Vector([])
-        for shard in shards:
-            pair = Bytes[64](shard.bundle_shard_hash + shard.segment_shard_root)
-            print(pair)
-            s.append(pair)
-
-        bmr = BMRFunctions()
-        justification = bmr.trace_fn(values=s, index=query.shard_index)
-
-        justification_da.put(query.erasure_root, justification)
+        # TODO: Fetch Justifications
+        justification = Justification([])
 
         # Return requested shards
         msg_a = bundle_shard.encode()
         len_a = Uint[32](len(msg_a)).encode()
+        print("len bundle", len(msg_a))
         msg_b = segments_shard.encode()
-        len_b = Uint[32](len(msg_a)).encode()
+        len_b = Uint[32](len(msg_b)).encode()
+        print("len shard", len(msg_b))
         msg_c = justification.encode()
-        len_c = Uint[32](len(msg_a)).encode()
+        len_c = Uint[32](len(msg_c)).encode()
+        print("len jfn", len(msg_c))
 
         server.stream_and_keep_open(len_a, stream_id)
         server.stream_and_keep_open(msg_a, stream_id)
@@ -166,8 +165,14 @@ class ShardDistributionProtocol(NetworkProtocol):
             data, offset = CE137Response.decode_from(buffer[1:])
             data = cast(CE137Response, data)
 
+            print("received shard 137", len(data.encode()), len(buffer[1:]))
+
+            print("len bundle", data.bs_len, (len(data.bundle_shard.encode())))
+            print("len shard", data.ss_len, (len(data.segments_shard.encode())))
+            print("len jufn", data.j_len, (len(data.justification.encode())))
+
             if not data or not data.is_valid:
-                    raise NetworkingError(Code.INVALID_DATA)
+                raise NetworkingError(Code.INVALID_DATA)
 
             logger.info("Data received on Assurer Node")
 
@@ -177,5 +182,6 @@ class ShardDistributionProtocol(NetworkProtocol):
             return data.bundle_shard, data.segments_shard, data.justification
 
         except Exception as e:
+            print("error bad response", e)
             logger.error(Code.BAD_RESPONSE)
             return None

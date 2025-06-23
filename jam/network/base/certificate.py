@@ -7,7 +7,7 @@ import os
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
-from tsrkit_types import Bytes, U32, Uint
+from tsrkit_types import U32, Uint
 
 from jam.types.protocol.crypto import Hash
 
