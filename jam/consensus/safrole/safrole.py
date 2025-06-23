@@ -16,10 +16,10 @@ from jam.utils.constants import (
     EPOCH_LENGTH,
     TICKET_SUBMISSION_END,
     TICKET_ENTRIES_PER_VALIDATOR,
-    MAX_TICKETS_PER_EXTRINSIC
+    MAX_TICKETS_PER_EXTRINSIC, SIGNING_CONTEXTS
 )
 from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingVrfSignature, BandersnatchVrfSignature, Hash, Entropy
-from jam.ring_vrf.ietf.ietf import IETF_VRF
+from jam.ring_vrf.pedersen.pedersen import PedersenVRF
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData
@@ -27,15 +27,7 @@ from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
 from copy import deepcopy
 
 
-# for ring root
-from jam.ring_vrf.ring_proof.columns.columns import PublicColumnBuilder as PC
-from jam.ring_vrf.ring_proof.helpers import Helpers as H
-from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
-
-# for sign verification
-from jam.ring_vrf.ring_proof.verfiey import Verify
-from jam.ring_vrf.ring_proof.constants import SeedPoint
-from jam.ring_vrf.ring_proof.constants import D_512 as D, OMEGA_2048 as omega
+from jam.ring_vrf.ring_vrf import RingVrf
 
 class Safrole:
     @staticmethod
@@ -46,55 +38,22 @@ class Safrole:
         )
 
     @staticmethod
-    def verify_vrf(message, proof) -> bool:
-        # TODO: Implement VRF verification after VRF module is added
-        #
-        # according to the proof size consider taking 96, 64 or 48,32 below
-        # proof_ptr = [H.bls_g1_decompress(proof[:48]), H.bls_g1_decompress(proof[48 * 1: 48 * 2]),H.bls_g1_decompress(proof[48 * 2: 48 * 3]), H.bls_g1_decompress(proof[48 * 3:48 * 4]),H.to_scalar_int(proof[48 * 4 + (0 * 32): 48 * 4 + (1 * 32)]),H.to_scalar_int(proof[48 * 4 + (1 * 32): 48 * 4 + (2 * 32)]),H.to_scalar_int(proof[48 * 4 + (2 * 32): 48 * 4 + (3 * 32)]),H.to_scalar_int(proof[48 * 4 + (3 * 32): 48 * 4 + (4 * 32)]),H.to_scalar_int(proof[48 * 4 + (4 * 32): 48 * 4 + (5 * 32)]),H.to_scalar_int(proof[48 * 4 + (5 * 32): 48 * 4 + (6 * 32)]),H.to_scalar_int(proof[48 * 4 + (6 * 32): 48 * 4 + (7 * 32)]),H.bls_g1_decompress(proof[48 * 4 + (7 * 32):48 * 4 + (7 * 32) + 48]),H.to_scalar_int(proof[48 * 4 + (7 * 32) + 48:48 * 4 + (7 * 32) + 48 + 32]),H.bls_g1_decompress(proof[48 * 4 + (7 * 32) + 48 + 32:-98]), H.bls_g1_decompress(proof[-98:])]
-        # rltn_to_proove=BandersnatchPoint.string_to_point(message) #relation to proove
-        # res_plus_seed= sw.add(sw.from_twisted_edwards(SeedPoint), rltn_to_proove)
-        # rltn = (rltn_to_proove.x, rltn_to_proove.y)
-        # res_plus_seeed= TwistedEdwardCurve.add(SeedPoint,rltn)
-
-        #get the ring root from compute ring root func
-        # C_px, C_py, C_s = H.bls_g1_decompress(ring_root[:96]), H.bls_g1_decompress(
-        #     ring_root[96:-96]), H.bls_g1_decompress(ring_root[-96:])
-        # fixed_cols_cmts = [C_px, C_py, C_s]
-        # verifier_key = {
-        #     'g1': g1_points[0],
-        #     'g2': H.altered_points(g2_points),
-        #     'commitments': [H.to_int(each) for each in H.bls_projective_2_affine(fixed_cols_cmts)]
-        # }
-        # valid = Verify(proof_ptr, verifier_key, fixed_cols_cmts, rltn_to_proove, res_plus_seed, SeedPoint, D)
-        # return valid.is_signtaure_valid()
-
-        return True
+    def verify_vrf(add_data, ring_root, proof) -> bool:
+        """pass the add_data, ring_root and proof to verify the signature"""
+        RVRF=RingVrf()
+        return RVRF.ring_vrf_proof_verify(add_data, ring_root, proof)
 
     @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> bytes:
-        # # TODO - Implementation of KZG_commitment(⟦HB⟧) once the module is added
-
-        keys_as_bs_points = []
-        for key in keys:
-            point = BandersnatchPoint.string_to_point(bytes(key))  # or take key[2:] by skipping '0x'
-            keys_as_bs_points.append((point.x, point.y))
-
-        ring_root = PC()  # ring_root builder
-        fxd_cols = ring_root.build(keys_as_bs_points)
-        fxd_col_cs = bytearray.fromhex(H.bls_g1_compress(fxd_cols[0].commitment)) + bytearray.fromhex(
-            H.bls_g1_compress(fxd_cols[1].commitment)) + bytearray.fromhex(H.bls_g1_compress(fxd_cols[2].commitment))
-        # print("fixed_col_cs", len(fxd_col_cs), type(fxd_col_cs),fxd_col_cs)
-
-        return fxd_col_cs
-
+        """pass the list of bandersnatch keys to get the Rig_Root"""
+        RVRF=RingVrf()
+        return RVRF.construct_ring_root(keys)
 
     @staticmethod
-    def vrf_output(signature: BandersnatchVrfSignature) -> ByteArray32:
-        # TODO - Use Ring VRF class once it's implemented
-        if int(signature) == 0:
-            return ByteArray32(signature[:32])
-        vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        return ByteArray32(vrf.ecvrf_proof_to_hash(bytes(signature))[:32])
+    def vrf_output(signature: BandersnatchRingVrfSignature) -> ByteArray32:
+        """pass the 784 bytes signature and get the 32 bytes proof to hash"""
+        RVRF=RingVrf()
+        return RVRF.pedersen_proof_to_hash(signature)
 
     @staticmethod
     def transition(state: Sigma, block: Block, entropy: ByteArray32) -> Sigma:
@@ -240,11 +199,11 @@ class Safrole:
             )
 
     @staticmethod
-    def ensure_valid_vrf(ticket: TicketEnvelope):
+    def ensure_valid_vrf(ticket: TicketEnvelope, state: Sigma):
         """
         Signature must be valid Ring-VRF proof
         """
-        if not Safrole.verify_vrf(ticket.attempt, ticket.signature):
+        if not Safrole.verify_vrf(SIGNING_CONTEXTS["ticket_seal"].encode() + state.eta[2] + [ticket.attempt], state.gamma.z, ticket.signature): #ring root, relation_to_proove, signature, add, alpha
             raise SafroleError(
                 SafroleErrorCode.BAD_TICKET_PROOF,
                 f"Ticket {ticket} VRF Proof is invalid",
