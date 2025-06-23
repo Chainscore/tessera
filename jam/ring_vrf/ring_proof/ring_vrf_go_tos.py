@@ -1,11 +1,7 @@
-import json
-import os
-import pytest
+
 from typing import List
-import time
 from jam.ring_vrf.ring_proof.short_weierstrass.banders import TwistedEdwardCurve
 from jam.types.base import ByteArray32
-
 from jam.types.protocol.crypto import BandersnatchPublic
 from jam.ring_vrf.ring_proof.columns.columns import PublicColumnBuilder as PC
 from jam.ring_vrf.ring_proof.pcs.load_powers import g1_points, g2_points
@@ -112,35 +108,34 @@ def construct_ring_root(keys: List[BandersnatchPublic]):
     return fxd_col_cs
 
 
-def verify_signature(message, proof):
+def verify_signature(message, ring_root, proof):
     """
     get the bls signature, other params if needed and verify it
     """
     # is_valid=func() # make the func call or logic u want
     # return is_valid
-    proof_ptr = [H.bls_g1_decompress(proof[:96]),
-                 H.bls_g1_decompress(proof[96 * 1: 96 * 2]),
-                 H.bls_g1_decompress(proof[96 * 2: 96 * 3]),
-                 H.bls_g1_decompress(proof[96 * 3:96 * 4]),
-                 H.to_scalar_int(proof[96 * 4 + (0 * 64): 96 * 4 + (1 * 64)]),
-                 H.to_scalar_int(proof[96 * 4 + (1 * 64): 96 * 4 + (2 * 64)]),
-                 H.to_scalar_int(proof[96 * 4 + (2 * 64): 96 * 4 + (3 * 64)]),
-                 H.to_scalar_int(proof[96 * 4 + (3 * 64): 96 * 4 + (4 * 64)]),
-                 H.to_scalar_int(proof[96 * 4 + (4 * 64): 96 * 4 + (5 * 64)]),
-                 H.to_scalar_int(proof[96 * 4 + (5 * 64): 96 * 4 + (6 * 64)]),
-                 H.to_scalar_int(proof[96 * 4 + (6 * 64): 96 * 4 + (7 * 64)]),
-                 H.bls_g1_decompress(proof[96 * 4 + (7 * 64):(96 * 4) + (7 * 64) + 96]),
-                 H.to_scalar_int(proof[(96 * 4) + (7 * 64) + 96: 96 * 4 + (7 * 64) + 96 + 64]),
-                 H.bls_g1_decompress(proof[96 * 4 + (7 * 64) + 96 + 64:-96]),
-                 H.bls_g1_decompress(proof[-96:])]
+    proof_ptr = [H.bls_g1_decompress(proof[:48]),
+                 H.bls_g1_decompress(proof[48 * 1: 48 * 2]),
+                 H.bls_g1_decompress(proof[48 * 2: 48 * 3]),
+                 H.bls_g1_decompress(proof[48 * 3:48 * 4]),
+                 H.to_scalar_int(proof[48 * 4 + (0 * 32): 48 * 4 + (1 * 32)]),
+                 H.to_scalar_int(proof[48 * 4 + (1 * 32): 48 * 4 + (2 * 32)]),
+                 H.to_scalar_int(proof[48 * 4 + (2 * 32): 48 * 4 + (3 * 32)]),
+                 H.to_scalar_int(proof[48 * 4 + (3 * 32): 48 * 4 + (4 * 32)]),
+                 H.to_scalar_int(proof[48 * 4 + (4 * 32): 48 * 4 + (5 * 32)]),
+                 H.to_scalar_int(proof[48 * 4 + (5 * 32): 48 * 4 + (6 * 32)]),
+                 H.to_scalar_int(proof[48 * 4 + (6 * 32): 48 * 4 + (7 * 32)]),
+                 H.bls_g1_decompress(proof[48 * 4 + (7 * 32):(48 * 4) + (7 * 32) + 48]),
+                 H.to_scalar_int(proof[(48 * 4) + (7 * 32) + 48: 48 * 4 + (7 * 32) + 48 + 32]),
+                 H.bls_g1_decompress(proof[48 * 4 + (7 * 32) + 48 + 32:-48]),
+                 H.bls_g1_decompress(proof[-48:])]
 
 
     rltn_to_proove =BandersnatchPoint.string_to_point(message) #relation to proove
     rltn=(rltn_to_proove.x, rltn_to_proove.y)
     res_plus_seed= TwistedEdwardCurve.add(SeedPoint,rltn)
-    ring_root = "afd34e92148ec643fbb578f0e14a1ca9369d3e96b821fcc811c745c320fe2264172545ca9b6b1d8a196734bc864e171484f45ba5b95d9be39f03214b59520af3137ea80e302730a5df8e4155003414f6dcf0523d15c6ef5089806e1e8e5782be92e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf"  # example
-    C_px, C_py, C_s = H.bls_g1_decompress(ring_root[:96]), H.bls_g1_decompress(ring_root[96:-96]), H.bls_g1_decompress(
-        ring_root[-96:])
+    C_px, C_py, C_s = H.bls_g1_decompress(ring_root[:48]), H.bls_g1_decompress(ring_root[48:-48]), H.bls_g1_decompress(
+        ring_root[-48:])
     fixed_cols_cmts = [C_px, C_py, C_s]
     verifier_key = {
         'g1': g1_points[0],
@@ -149,7 +144,6 @@ def verify_signature(message, proof):
     }
     valid = Verify(proof_ptr, verifier_key, fixed_cols_cmts, rltn, res_plus_seed, SeedPoint, D)
     return valid.is_signtaure_valid()
-
 
 
 def ring_vrf_proof(alpha, add, blinding_factor, producer_key, keys:List[BandersnatchPublic]):
@@ -181,15 +175,71 @@ def ring_vrf_proof(alpha, add, blinding_factor, producer_key, keys:List[Bandersn
     return rvrf_proof
 
 
-
 def pedersen_proof_to_hash(pedersen_proof):
     """get the pedersen proof alone and return the 32 bytes hash"""
-    if int() == 0:
+    if int.from_bytes(pedersen_proof[:32], 'little') == 0:
         return ByteArray32(pedersen_proof[:32])
     vrf = PedersenVRF(Bandersnatch_TE_Curve, BandersnatchPoint)
     # extract the fist 32 bytes as it's the gamma
     gamma= BandersnatchPoint.string_to_point(pedersen_proof[:32])
-    return ByteArray32(vrf.proof_to_hash(gamma))
+    p_2h=vrf.proof_to_hash(gamma)
+    return p_2h[:32]
+
+
+#pedersen+ring_proof verification
+
+def ring_vrf_proof_verify(context, ring_root, proof, alpha=b""): #context(add), ring_root, signature, message(alpha)
+
+    pedersen_proof= proof[:192]
+    vrf = PedersenVRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+    #get the input point
+    input_point = BandersnatchPoint.encode_to_curve(alpha)
+    output_point=BandersnatchPoint.string_to_point(pedersen_proof[32*0:32*1]) #O.p
+    rel_to_proove = BandersnatchPoint.string_to_point(pedersen_proof[32*1:32*2]) #Y'
+    R=BandersnatchPoint.string_to_point(pedersen_proof[32*2:32*3]) #R
+    Ok=BandersnatchPoint.string_to_point(pedersen_proof[32*3:32*4])#Ok
+    S=H.bytes_to_int(pedersen_proof[32*4:32*5])
+    Sb=H.bytes_to_int(pedersen_proof[32*5:32*6])
+
+    proof_tup=(rel_to_proove,R, Ok, S, Sb)
+
+    #is pedersen proof valid
+    p_proof_valid= vrf.verify(
+        input_point, context , output_point, proof_tup
+    )
+
+    #Extract and verify the Ring proof
+    ring_proof=proof[192:]
+    proof_ptr = [H.bls_g1_decompress(ring_proof[:48]),
+                 H.bls_g1_decompress(ring_proof[48 * 1: 48 * 2]),
+                 H.bls_g1_decompress(ring_proof[48 * 2: 48 * 3]),
+                 H.bls_g1_decompress(ring_proof[48 * 3:48 * 4]),
+                 H.to_scalar_int(ring_proof[48 * 4 + (0 * 32): 48 * 4 + (1 * 32)]),
+                 H.to_scalar_int(ring_proof[48 * 4 + (1 * 32): 48 * 4 + (2 * 32)]),
+                 H.to_scalar_int(ring_proof[48 * 4 + (2 * 32): 48 * 4 + (3 * 32)]),
+                 H.to_scalar_int(ring_proof[48 * 4 + (3 * 32): 48 * 4 + (4 * 32)]),
+                 H.to_scalar_int(ring_proof[48 * 4 + (4 * 32): 48 * 4 + (5 * 32)]),
+                 H.to_scalar_int(ring_proof[48 * 4 + (5 * 32): 48 * 4 + (6 * 32)]),
+                 H.to_scalar_int(ring_proof[48 * 4 + (6 * 32): 48 * 4 + (7 * 32)]),
+                 H.bls_g1_decompress(ring_proof[48 * 4 + (7 * 32):(48 * 4) + (7 * 32) + 48]),
+                 H.to_scalar_int(ring_proof[(48 * 4) + (7 * 32) + 48: 48 * 4 + (7 * 32) + 48 + 32]),
+                 H.bls_g1_decompress(ring_proof[48 * 4 + (7 * 32) + 48 + 32:-48]),
+                 H.bls_g1_decompress(ring_proof[-48:])]
+
+    rltn = (rel_to_proove.x, rel_to_proove.y) #relartion to proove
+    res_plus_seed = TwistedEdwardCurve.add(SeedPoint, rltn)
+    C_px, C_py, C_s = H.bls_g1_decompress(ring_root[:48]), H.bls_g1_decompress(ring_root[48:-48]), H.bls_g1_decompress(
+        ring_root[-48:])
+    fixed_cols_cmts = [C_px, C_py, C_s]
+    verifier_key = {
+        'g1': g1_points[0],
+        'g2': H.altered_points(g2_points),
+        'commitments': [H.to_int(each) for each in H.bls_projective_2_affine(fixed_cols_cmts)]
+    }
+    valid = Verify(proof_ptr, verifier_key, fixed_cols_cmts, rltn, res_plus_seed, SeedPoint, D)
+    #is ring_proof valid
+    ring_proof_valid= valid.is_signtaure_valid()
+    return p_proof_valid and ring_proof_valid
 
 
 
@@ -199,6 +249,4 @@ def pedersen_proof_to_hash(pedersen_proof):
 #options
 # put the interface logic in the vrf file itself
 # or create a separate calls for ring_vrf inside the vrf file
-
-#1
 #we can include one more fun for verifying the ring_vrf proof (pedersen+ring_proof)
