@@ -59,8 +59,12 @@ class Helpers:
 
     @staticmethod
     # bls string to point
-    def bls_g1_decompress(byte_array):
-        dcp_scalar = int(byte_array, 16)
+    def bls_g1_decompress(byte_array:bytes|str):
+        if isinstance(byte_array, bytes):
+            byte_array= byte_array.hex()
+            dcp_scalar = int(byte_array, 16)
+        else:
+            dcp_scalar = int(byte_array, 16)
         decompressed = point_compression.decompress_G1(dcp_scalar)
         assert is_on_curve(decompressed, 4), "INVALID POINT"
         return decompressed
@@ -116,3 +120,7 @@ class Helpers:
         x, y, z = point
         res = (FQ(x), FQ(y), FQ(z))
         return res
+
+    @staticmethod
+    def bytes_to_int(byte_array:bytes):
+        return int.from_bytes(byte_array,'little')
