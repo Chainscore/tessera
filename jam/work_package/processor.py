@@ -131,17 +131,17 @@ class Processor:
         Returns:
             Work Digest
         """
-        extrinsic_size: U64 = U64(0)
+        extrinsic_size: Uint = Uint(0)
         for i in item.extrinsic:
-            extrinsic_size = extrinsic_size + i.len
+            extrinsic_size = extrinsic_size + Uint(i.len)
 
         payload_hash = Hash.blake2b(bytes(item.payload))
 
-        imports_count: U16 = U16(len(item.import_segments))
-        exports_count: U16 = U16(item.export_count)
-        extrinsic_count: U8 = U8(len(item.extrinsic))
+        imports_count: Uint = Uint(len(item.import_segments))
+        exports_count: Uint = Uint(item.export_count)
+        extrinsic_count: Uint = Uint(len(item.extrinsic))
 
-        refine_load = RefineLoad(gas_used=gas, imports=imports_count, exports=exports_count,
+        refine_load = RefineLoad(gas_used=Uint(gas), imports=imports_count, exports=exports_count,
                                  extrinsic_count=extrinsic_count, extrinsic_size=extrinsic_size)
 
         result = WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=payload_hash,
@@ -242,7 +242,7 @@ class Processor:
                 specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
 
             logger.info(f"Compiling Report..")
-            report = WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Gas(g))
+            report = WorkReport(package_spec=specs, context=p.context, core_index=Uint(c), authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Uint(g))
 
             return report
 
