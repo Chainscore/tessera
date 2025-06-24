@@ -83,7 +83,7 @@ class Bundler:
         Returns:
             r if r is already a segment root else Segment root from dictionary if r is a work package hash.
         """
-        if self.sr_lookup.value is not None and r in self.sr_lookup.keys():
+        if self.sr_lookup.values is not None and r in self.sr_lookup.keys():
             return self.sr_lookup[r]
         else:
             return r
