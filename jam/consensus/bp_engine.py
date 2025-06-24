@@ -118,7 +118,7 @@ class BlockProducer:
                     Finality.finalise(header_hash, self.db)
 
                     # Announce
-                    up0.transmit(self.node, block)
+                    await up0.transmit(self.node, block)
 
                     logger.info("🧱Block authored and announced successfully", current_timeslot=int(current_timeslot), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...")
                 else:

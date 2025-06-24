@@ -17,7 +17,7 @@ from jam.types.protocol.core import (
 from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.work.item import WorkItem
 from jam.types.work.execution import RefineContext
-from jam.types.work.manifest import MultiSegments
+from jam.types.work.manifest import MultiSegments, MultiExtrinsics, MultiJustifications
 
 if TYPE_CHECKING:
     from jam.types.state.delta import Delta
@@ -88,6 +88,6 @@ class WorkPackageBundle:
     """Work package bundle specification structure."""
 
     package: WorkPackage
-    extrinsics: TypedVector[TypedVector[Bytes]]
-    import_segments: TypedVector[MultiSegments]
-    justifications: TypedVector[TypedVector[TypedVector[OpaqueHash]]]
+    extrinsics: MultiExtrinsics
+    import_segments: MultiSegments
+    justifications: MultiJustifications

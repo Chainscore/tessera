@@ -10,7 +10,6 @@ from jam.config.logging import logger
 
 from jam.network.base.protocol import PrefixType
 from jam.types.work.shard import SegmentsShard
-from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.segments import SegmentShardsDA
 
 
@@ -40,16 +39,15 @@ class SegmentShardRequest(SegmentShardRequestBase):
         request = self.parse_request(buffer[1:])
         logger.info("Handling CE139 shard request")
         d3l = settings.d3l
-        er_shards_db = ErasureShardsMap(d3l)
         ss_da = SegmentShardsDA(d3l)
 
         # Fetching segments...
         shards = SegmentsShard([])
         for query in request.queries:
-            ss_key = er_shards_db.get_ss_root(root=query.erasure_root, shard_index=query.shard_Index)
-            seg_shards: SegmentsShard = ss_da.get(root=ss_key.segment_shard_root)[0]
+            ss_dict = ss_da.get(query.erasure_root)
+            s_dict = ss_dict[query.shard_index]
             for index in query.seg_indexes:
-                shards.append(seg_shards[index])
+                shards.append(s_dict[index])
 
         # Return requested shards
         msg_a = shards.encode()

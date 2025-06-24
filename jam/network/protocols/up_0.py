@@ -1,6 +1,6 @@
 from typing import cast, TYPE_CHECKING
 
-from tsrkit_types import Uint
+from tsrkit_types import Uint, U32
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
@@ -71,7 +71,12 @@ class BlockAnnouncement(NetworkProtocol):
         db = settings.db
         finality = Finality()
 
-        final_block = finality.load_final(db)
+        logger.debug("Handshake started", peer=conn.peer)
+        try:
+            final_block = finality.load_final(db)
+        except Exception as e:
+            logger.error(f"Error occurred while loading final block {e}")
+            final_block = Block.genesis()
 
         header_hash = Hash.blake2b(final_block.header.encode())
         block_slot = final_block.header.slot
@@ -81,9 +86,7 @@ class BlockAnnouncement(NetworkProtocol):
         # TODO: Fetch leaves (descendants of the latest finalized block with no known children)
         leaves = Leaves([])
         handshake = Handshake(final, leaves)
-        print("here in h")
         h = handshake.encode()
-        print("here after h")
         h_len = Uint[32](len(h))
 
         # Handshake Message
@@ -123,13 +126,16 @@ class BlockAnnouncement(NetworkProtocol):
         for peer in node.peer_conn:
             try:
                 up_stream, conn = node.peer_conn[peer]
+                ann_len = U32(len(message))
+
+                conn.stream_and_keep_open(ann_len.encode(), up_stream)
                 conn.stream_and_keep_open(message, up_stream)
                 announced_count += 1
 
                 logger.debug(
                     "Block announced to peer",
                     node_name=node.name,
-                    peer_endpoint=f"{peer.host}:{peer.port}",
+                    peer=str(peer),
                     stream_id=up_stream,
                     block_slot=int(data.header.slot)
                 )
@@ -137,7 +143,7 @@ class BlockAnnouncement(NetworkProtocol):
                 logger.error(
                     "Failed to announce block to peer",
                     node_name=node.name,
-                    peer_endpoint=f"{peer.host}:{peer.port}",
+                    peer=str(peer),
                     error=str(e),
                     error_type=type(e).__name__
                 )
@@ -158,10 +164,9 @@ class BlockAnnouncement(NetworkProtocol):
 
         logger.info(
             "Intercepting UP0 stream",
+            peer=peer,
             stream_id=stream_id,
         )
-
-        # Process goes here
 
         up_stream, _ = server.node.peer_conn[peer]
         if stream_id == up_stream:
@@ -187,7 +192,7 @@ class BlockAnnouncement(NetworkProtocol):
                         "Received peer handshake",
                         stream_id=stream_id,
                         block_slot=int(h.final.time_slot),
-                        parent_hash=h.final.block_hash.hex()[:16] + "...",
+                        parent_hash=h.final.header_hash.hex()[:16] + "...",
                         buffer_size=len(buffer),
                         interface=server.interface
                     )
@@ -208,7 +213,7 @@ class BlockAnnouncement(NetworkProtocol):
                         "Received block announcement",
                         stream_id=stream_id,
                         block_slot=int(a.final.time_slot),
-                        parent_hash=a.final.block_hash.hex()[:16] + "...",
+                        parent_hash=a.final.header_hash.hex()[:16] + "...",
                         buffer_size=len(buffer)
                     )
 
@@ -219,15 +224,19 @@ class BlockAnnouncement(NetworkProtocol):
                         parent_hash=a.header.parent.hex()[:16] + "...",
                         extrinsic_hash=a.header.extrinsic_hash.hex()[:16] + "..."
                     )
+
                     logger.info(
-                        f"Received a new block with header {a.header}. Parent Block: {a.final.header_hash} in T.S {a.final.time_slot}")
+                        f"Processed a new block with header {a.header}.",
+                        parent_block=a.final.header_hash,
+                        parent_time_slot=a.final.time_slot
+                    )
 
                     server.stream_buffer[stream_id] = self._prefix.encode()
 
                     # TODO: Process new block
                     # Process new header
                     # If it is not in our DB, request [header.slot - latest_timeslot] blocks from peer
-                    logger.debug("Received header, requesting its full block...", slot=data.header.slot)
+                    # logger.debug("Received header, requesting its full block...", slot=data.header.slot)
 
                     # BlockRequest().transmit()
 

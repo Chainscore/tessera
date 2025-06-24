@@ -46,7 +46,9 @@ async def wp_producer(node: Node, db: RockStore):
     )
 
     while True:
-        if not node.is_initialized:
+        has_40000 = any(peer.port == 40000 for peer in node.peer_conn)
+
+        if not has_40000:
             logger.debug(
                 "Network not initialized - skipping work package production",
                 node_name=node.name,
@@ -95,23 +97,32 @@ async def wp_producer(node: Node, db: RockStore):
                  23, 0, 112, 254, 100, 40, 10, 19, 149, 23, 0, 112, 254, 51, 8, 50, 0, 133, 148, 164, 146, 74, 1, 164,
                  138, 84, 161, 66, 1]
             )
-
+            #
             wi_code = Code(code=wi_pc, read=b"", r_write=b"", z=0, s=(1024 * 100))
             wi_bytecode = wi_code.encode()
             wi_service_code = Bytes(b"").encode() + wi_bytecode
             wi_code_hash = Hash.blake2b(wi_service_code)
             wi_service = ServiceId(1)
+            # "3cf9b7c011a52ccd5b2513c68cde23"
 
-            import_spec1 = ImportSpec(tree_root=SegmentRoot(b"0x3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91"), index=U16(0))
-            import_spec2 = ImportSpec(tree_root=SegmentRoot(b"0x6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694"), index=U16(0))
+            # import_spec1 = ImportSpec(
+            #     tree_root=SegmentRoot(b"0x3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91"),
+            #     index=U16(0))
+            # import_spec2 = ImportSpec(
+            #     tree_root=SegmentRoot(b"0x6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694"),
+            #     index=U16(0))
 
-            if current_timeslot % 4 == 0:
+
+            import_spec1 = ImportSpec(tree_root=SegmentRoot.fromhex("3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91"), index=U16(0))
+            import_spec2 = ImportSpec(tree_root=SegmentRoot.fromhex("6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694"), index=U16(0))
+
+            if wp_iter % 4 == 0:
                 import_specs = []
-            elif current_timeslot % 4 == 1:
+            elif wp_iter % 4 == 1:
                 import_specs = [import_spec1]
-            elif current_timeslot % 4 == 2:
+            elif wp_iter % 4 == 2:
                 import_specs = [import_spec2]
-            else:  # current_timeslot % 4 == 3
+            else:  # wp_iter % 4 == 3
                 import_specs = [import_spec1, import_spec2]
 
             wi = WorkItem(
@@ -151,7 +162,6 @@ async def wp_producer(node: Node, db: RockStore):
                 iteration=wp_iter
             )
 
-            print("Response", responses)
         else:
             logger.debug(
                 "Node is not builder - skipping work package production",

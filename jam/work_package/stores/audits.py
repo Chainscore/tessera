@@ -5,7 +5,7 @@ from tsrkit_types import TypedVector
 
 from jam.types import OpaqueHash
 from jam.types.protocol.core import ErasureRoot
-from jam.types.work.shard import BundleShardHash, BundleShardUnit, BundleShard, ShardIndex
+from jam.types.work.shard import BundleShard, ShardIndex, BundleShardsDict
 
 from jam.work_package.store import DA
 
@@ -18,7 +18,7 @@ class JustificationsDA(DA):
         """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("JS", 'utf-8')
+        self.prefix = bytes("JUST", 'utf-8')
         self.db = db
 
     def put(self, er_root: ErasureRoot, data: TypedVector[OpaqueHash]) -> None:
@@ -49,23 +49,35 @@ class AuditShardsDA(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("BS", 'utf-8')
+        self.prefix = bytes("BSHRD", 'utf-8')
         self.db = db
 
-    def put(self, bs_hash: BundleShardHash, data: BundleShardUnit) -> None:
-        key = self.prefix + bs_hash.encode()
+    def put_batch(self, er_root: ErasureRoot, data: BundleShardsDict) -> None:
+        key = self.prefix + er_root.encode()
         self.db.put(key, data.encode())
 
-    def get(self, bs_hash: BundleShardHash) -> Tuple[BundleShard, ShardIndex]:
-        key = self.prefix + bs_hash.encode()
+    def put(self, er_root: ErasureRoot, shard_index: ShardIndex, shard: BundleShard) -> None:
+        key = self.prefix + er_root.encode()
+        data = self.db.get(key)
+
+        if data is None:
+            bs_dict = BundleShardsDict({})
+        else:
+            bs_dict = BundleShardsDict.decode(data)
+
+        bs_dict[shard_index] = shard
+        self.db.put(key, bs_dict.encode())
+
+    def get(self, er_root: ErasureRoot) -> BundleShardsDict:
+        key = self.prefix + er_root.encode()
         data = self.db.get(key)
 
         if data is None:
             raise KeyError("Bundle Shard not found in Audit DA")
 
-        record, _ = BundleShardUnit.decode_from(data)
-        return record.shard, record.shard_index
+        bs_dict = BundleShardsDict.decode(data)
+        return bs_dict
 
-    def delete(self, bs_hash: BundleShardHash) -> None:
-        key = self.prefix + bs_hash.encode()
+    def delete(self, er_root: ErasureRoot) -> None:
+        key = self.prefix + er_root.encode()
         self.db.delete(key)

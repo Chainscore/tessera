@@ -11,6 +11,7 @@ from jam.network.protocols.ce_137 import ShardDistributionProtocol
 from jam.network.protocols.ce_138 import AuditShardRequestProtocol
 
 class ProtocolMap:
+    """mapping for all the protocols"""
     ALL_PROTOCOLS = {
         PrefixType.UP0: BlockAnnouncement,
         PrefixType.CE133: WorkPackageSubmission,

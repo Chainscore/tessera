@@ -1,22 +1,20 @@
 from typing import cast, Tuple
 
-from tsrkit_types import structure, Uint, Null, Bytes, Vector
+from tsrkit_types import structure, Uint, Null
 
 from jam.config.logging import logger
 from jam.config.settings import settings
-from jam.merklization import BMRFunctions
+
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.quic import QuicProtocol
 
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
-from jam.types.work.shard import BundleShard, SegmentsShard, SegmentShard, ShardIndex
+from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex
 
-from jam.work_package.stores.mappings import ErasureShardsMap
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
-
 
 @structure
 class Query:
@@ -81,82 +79,107 @@ class ShardDistributionProtocol(NetworkProtocol):
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting shard index & erasure root to {len(node.peer_conn)} guarantors")
+        logger.info(f"Requesting shard from {len(node.peer_conn)} guarantors")
 
         for peer in node.peer_conn:
-            if int(peer.port) == 30335:
-                logger.info("requesting shard from 30335")
-                client = node.peer_conn[peer][1]
+            try:
+                if int(peer.port) == 40002:
+                    logger.debug("Requesting shard from", peer=str(peer))
+                    client = node.peer_conn[peer][1]
 
-                # Send Protocol Prefix
-                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                    # Send Protocol Prefix
+                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                # Append prefix to stream buffer so that we know the stream for handling response
-                client.stream_buffer[stream_id] = self._prefix.encode()
+                    # Append prefix to stream buffer so that we know the stream for handling response
+                    client.stream_buffer[stream_id] = self._prefix.encode()
 
-                # Send Messages with their lengths
-                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    # Send Messages with their lengths
+                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                    res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                if res is not None:
-                    return res
+                    if res is not None:
+                        return res
+
+            except Exception as e:
+                logger.error(
+                    "Failed to request shard.",
+                    peer=str(peer),
+                    error=str(e),
+                    error_type=type(e).__name__
+                )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
         buffer = server.stream_buffer[stream_id]
 
-        logger.info("Received Shard index & erasure root")
-        data, offset = CE137Data.decode_from(buffer[1:])
-        data = cast(CE137Data, data)
+        try:
+            data, offset = CE137Data.decode_from(buffer[1:])
+            data = cast(CE137Data, data)
 
-        if not data.is_valid:
-            raise NetworkingError(Code.INVALID_DATA)
+            logger.info(
+                "Received shard request",
+                erasure_root=data.query.erasure_root,
+                shard_index=data.query.shard_index,
+                peer=server.peer
+            )
 
-        logger.info("Processing")
-        # TODO: Process received erasure root & shard index
-        query = data.query
+            if not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
 
-        d3l = settings.d3l
-        audit = settings.audit
+            # TODO: Process received erasure root & shard index
+            query = data.query
 
-        bs_da = ErasureShardsMap(d3l)
-        audits_da = AuditShardsDA(audit)
-        justification_da = JustificationsDA(audit)
-        ss_da = SegmentShardsDA(d3l)
+            d3l = settings.d3l
+            audit = settings.audit
 
-        bundle_shard_hash = bs_da.get_bs_hash(query.erasure_root, query.shard_index).bundle_shard_hash
+            justification_da = JustificationsDA(audit)
 
-        bundle_shard = audits_da.get(bs_hash=bundle_shard_hash)[0]
+            # Fetch Bundle Shard
+            audits_da = AuditShardsDA(audit)
+            bs_dict = audits_da.get(query.erasure_root)
+            bundle_shard = BundleShard(bs_dict[query.shard_index])
 
-        segment_shard_root = bs_da.get_ss_root(query.erasure_root, query.shard_index)
-        segments_shard = ss_da.get(segment_shard_root)[0]
+            # Fetch Segments Shard
+            ss_da = SegmentShardsDA(d3l)
+            ss_dict = ss_da.get(query.erasure_root)
+            if query.shard_index not in ss_dict:
+                raise "Shard not found"
 
-        shards = bs_da.get(query.erasure_root)
-        s = Vector([])
-        for shard in shards:
-            pair = Bytes[64](shard.bundle_shard_hash + shard.segment_shard_root)
-            print(pair)
-            s.append(pair)
+            segments_shard = SegmentsShard(ss_dict[query.shard_index].shard)
 
-        bmr = BMRFunctions()
-        justification = bmr.trace_fn(values=s, index=query.shard_index)
+            # TODO: Fetch Justifications
+            justification = Justification([])
 
-        justification_da.put(query.erasure_root, justification)
+            # Return requested shards
+            msg_a = bundle_shard.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+            msg_b = segments_shard.encode()
+            len_b = Uint[32](len(msg_b)).encode()
+            msg_c = justification.encode()
+            len_c = Uint[32](len(msg_c)).encode()
 
-        # Return requested shards
-        msg_a = bundle_shard.encode()
-        len_a = Uint[32](len(msg_a)).encode()
-        msg_b = segments_shard.encode()
-        len_b = Uint[32](len(msg_a)).encode()
-        msg_c = justification.encode()
-        len_c = Uint[32](len(msg_a)).encode()
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_keep_open(msg_a, stream_id)
+            server.stream_and_keep_open(len_b, stream_id)
+            server.stream_and_keep_open(msg_b, stream_id)
+            server.stream_and_keep_open(len_c, stream_id)
+            server.stream_and_close(msg_c, stream_id)
 
-        server.stream_and_keep_open(len_a, stream_id)
-        server.stream_and_keep_open(msg_a, stream_id)
-        server.stream_and_keep_open(len_b, stream_id)
-        server.stream_and_keep_open(msg_b, stream_id)
-        server.stream_and_keep_open(len_c, stream_id)
-        server.stream_and_close(msg_c, stream_id)
+        except Exception as e:
+            msg_a = Null.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+
+            # Send response
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_close(msg_a, stream_id)
+
+            logger.error(
+                "Error processing shard request",
+                stream_id=stream_id,
+                buffer_size=len(buffer),
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
         """Intercept Bundle Shard, [Segment Shard] and Justification"""
@@ -167,7 +190,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             data = cast(CE137Response, data)
 
             if not data or not data.is_valid:
-                    raise NetworkingError(Code.INVALID_DATA)
+                raise NetworkingError(Code.INVALID_DATA)
 
             logger.info("Data received on Assurer Node")
 
@@ -177,5 +200,5 @@ class ShardDistributionProtocol(NetworkProtocol):
             return data.bundle_shard, data.segments_shard, data.justification
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE)
+            logger.error(Code.BAD_RESPONSE, error=str(e))
             return None

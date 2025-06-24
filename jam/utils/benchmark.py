@@ -1,7 +1,10 @@
 from time import perf_counter as now
 from contextlib import contextmanager
 
-from jam.config.logging import logger
+from jam.config.logging import get_logger
+
+# Module-specific logger
+logger = get_logger("in_core")
 
 BENCHMARK_FILE = "benchmark_results.txt"
 
@@ -14,7 +17,7 @@ def benchmark(label: str):
     duration = now() - start
     slot_fraction = 6 / duration if duration > 0 else float('inf')
 
-    logger.info(f"{label} in {duration:.6f} seconds (~ 1/{int(slot_fraction)} of a slot)")
+    logger.debug(f"{label} in {duration:.6f} seconds (~ 1/{int(slot_fraction)} of a slot)")
 
     benchmark_results.append({
         "label": label,
@@ -29,7 +32,7 @@ def write_benchmarks_to_txt(filename=BENCHMARK_FILE):
     fraction_width = 15
 
     if not benchmark_results:
-        logger.info("No new benchmark results to write.")
+        logger.debug("No new benchmark results to write.")
         return
 
     with open(filename, "a") as f:

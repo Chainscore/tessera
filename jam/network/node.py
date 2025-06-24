@@ -5,20 +5,23 @@ from aioquic.asyncio import serve, connect
 from aioquic.asyncio.server import QuicServer
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.connection import QuicConnection
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.config.logging import get_logger
 
 from jam.types.protocol.validators import ValidatorData
+from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import Ed25519Public
+from jam.types.work.shard import ShardIndex
 
 from typing import Dict, cast, Tuple, Optional
 
 from .base.quic import QuicProtocol
 from jam.network.base.certificate import generate_keys
 from jam.network.base.protocol import PrefixType
-from .peer import Peer
 from jam.network.base.sessions import SessionTicketStore
-
+from jam.utils import constants
+from .peer import Peer
 
 # Module-specific logger
 logger = get_logger("network")
@@ -103,11 +106,48 @@ class Node:
     def ed_key(self):
         return self.validator_data.ed25519
 
+    @property
+    def ed_pvt_key(self) -> Ed25519PrivateKey:
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+        key_file = f"seeds/{self.port}/key.pem"
+
+        # Load the ED25519 private key
+        with open(key_file, "rb") as key_file:
+            private_key = load_pem_private_key(
+                key_file.read(),
+                password=None,
+                backend=default_backend()
+            )
+
+        return private_key
+
     def get_peer(self, key: bytes) -> Peer | None:
         if key in self.peer_map:
             return self.peer_map[key]
 
         return None
+
+    @property
+    def validator_index(self):
+        from jam.state.state import state
+
+        for i, val in enumerate(state.kappa):
+            if val.bandersnatch == self.validator_data.bandersnatch:
+                return i
+
+        raise ValueError("No validator found with matching bandersnatch key.")
+
+    def get_shard_index(self, core_index: CoreIndex):
+        from jam.config.chainspec import chain_config
+        vi = self.validator_index
+        shard_index = ShardIndex(
+            (core_index * chain_config.recovery_threshold + vi)
+            % constants.VALIDATOR_COUNT
+        )
+
+        return shard_index
 
     @staticmethod
     def get_initiator(k1: Ed25519Public, k2: Ed25519Public) -> Ed25519Public:
@@ -115,8 +155,10 @@ class Node:
         i2 = int.from_bytes(k2)
 
         if (i1 > 127) ^ (i2 > 127) ^ (i1 < i2):
+            logger.debug("Self node is connection initiator")
             return k1
         else:
+            logger.debug("Peer node is connection initiator")
             return k2
 
     def quic_config(self, is_client: bool = True, peer: Optional[Peer] = None) -> QuicConfiguration:
@@ -204,7 +246,6 @@ class Node:
                     pref = PrefixType.UP0.encode()
                     client.stream_buffer[stream_id] = pref
                     client.stream_and_keep_open(pref, stream_id)
-
                     BlockAnnouncement.handshake(stream_id, client)
 
 
@@ -276,3 +317,7 @@ class Node:
         except Exception as e:
             logger.critical(f"🚀 {self} failed to initialize!")
 
+    def shutdown(self):
+        for peer in self.peer_conn:
+            _, conn = self.peer_conn[peer]
+            conn.close(reason_phrase=f"Closing node {self.__id}")
