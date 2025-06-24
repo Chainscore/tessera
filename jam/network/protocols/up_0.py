@@ -71,30 +71,22 @@ class BlockAnnouncement(NetworkProtocol):
         db = settings.db
         finality = Finality()
 
-        print("here in handshake")
+        logger.debug("Handshake started", peer=conn.peer)
         try:
             final_block = finality.load_final(db)
         except Exception as e:
-            print("error occurred ", e)
+            logger.error(f"Error occurred while loading final block {e}")
             final_block = Block.genesis()
 
-        print("here a")
-
         header_hash = Hash.blake2b(final_block.header.encode())
-        print("here b")
         block_slot = final_block.header.slot
-        print("here c")
 
         final = Final(header_hash=header_hash, time_slot=block_slot)
-        print("here d")
 
         # TODO: Fetch leaves (descendants of the latest finalized block with no known children)
         leaves = Leaves([])
-        print("here e")
         handshake = Handshake(final, leaves)
-        print("here in h")
         h = handshake.encode()
-        print("here after h")
         h_len = Uint[32](len(h))
 
         # Handshake Message
@@ -135,7 +127,6 @@ class BlockAnnouncement(NetworkProtocol):
             try:
                 up_stream, conn = node.peer_conn[peer]
                 ann_len = U32(len(message))
-                print("ANN LEN SENT", ann_len)
 
                 conn.stream_and_keep_open(ann_len.encode(), up_stream)
                 conn.stream_and_keep_open(message, up_stream)
@@ -144,7 +135,7 @@ class BlockAnnouncement(NetworkProtocol):
                 logger.debug(
                     "Block announced to peer",
                     node_name=node.name,
-                    peer_endpoint=f"{peer.host}:{peer.port}",
+                    peer=str(peer),
                     stream_id=up_stream,
                     block_slot=int(data.header.slot)
                 )
@@ -152,7 +143,7 @@ class BlockAnnouncement(NetworkProtocol):
                 logger.error(
                     "Failed to announce block to peer",
                     node_name=node.name,
-                    peer_endpoint=f"{peer.host}:{peer.port}",
+                    peer=str(peer),
                     error=str(e),
                     error_type=type(e).__name__
                 )
@@ -176,8 +167,6 @@ class BlockAnnouncement(NetworkProtocol):
             peer=peer,
             stream_id=stream_id,
         )
-
-        # Process goes here
 
         up_stream, _ = server.node.peer_conn[peer]
         if stream_id == up_stream:
@@ -215,10 +204,8 @@ class BlockAnnouncement(NetworkProtocol):
             else:
                 # Parse received Announcement
                 a_len, _ = Uint[32].decode_from(buffer[1:5])
-                print("CHECK ANN", len(buffer), a_len)
 
                 if len(buffer[5:]) == a_len:
-                    print("CHECK SUCCESS")
                     a, _ = Announcement.decode_from(buffer[5:])
                     a = cast(Announcement, a)
 
@@ -237,8 +224,12 @@ class BlockAnnouncement(NetworkProtocol):
                         parent_hash=a.header.parent.hex()[:16] + "...",
                         extrinsic_hash=a.header.extrinsic_hash.hex()[:16] + "..."
                     )
+
                     logger.info(
-                        f"Received a new block with header {a.header}. Parent Block: {a.final.header_hash} in T.S {a.final.time_slot}")
+                        f"Processed a new block with header {a.header}.",
+                        parent_block=a.final.header_hash,
+                        parent_time_slot=a.final.time_slot
+                    )
 
                     server.stream_buffer[stream_id] = self._prefix.encode()
 

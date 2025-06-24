@@ -116,7 +116,6 @@ async def wp_producer(node: Node, db: RockStore):
             import_spec1 = ImportSpec(tree_root=SegmentRoot.fromhex("3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91"), index=U16(0))
             import_spec2 = ImportSpec(tree_root=SegmentRoot.fromhex("6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694"), index=U16(0))
 
-            print("CURRENT TIMESLOT", current_timeslot, wp_iter)
             if wp_iter % 4 == 0:
                 import_specs = []
             elif wp_iter % 4 == 1:
@@ -163,7 +162,6 @@ async def wp_producer(node: Node, db: RockStore):
                 iteration=wp_iter
             )
 
-            print("Response", responses)
         else:
             logger.debug(
                 "Node is not builder - skipping work package production",

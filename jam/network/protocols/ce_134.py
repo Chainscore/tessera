@@ -1,7 +1,4 @@
-import json
-
 from typing import cast, TYPE_CHECKING
-
 from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32
 
 if TYPE_CHECKING:
@@ -9,8 +6,8 @@ if TYPE_CHECKING:
 
 from jam.config.logging import get_logger
 from jam.config.settings import settings
-from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.quic import QuicProtocol
 from jam.storage.item_extrinsics import ItemExtrinsics
@@ -23,9 +20,6 @@ from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
 from jam.work_package.processor import Processor
 from jam.work_package.validator import Validator
-
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
 
 # Module-specific logger
 logger = get_logger("network")
@@ -91,14 +85,10 @@ class WorkPackageSharing(NetworkProtocol):
     async def transmit(self, node: "Node", data: CE134Data):
         """Request Work Report from Node (server)"""
 
-        try:
-            msg_a = data.core_segment.encode()
-            len_a = data.map_len.encode()
-            msg_b = data.work_package_bundle.encode()
-            len_b = data.bundle_len.encode()
-        except Exception as e:
-            print("error transmit", e)
-            raise
+        msg_a = data.core_segment.encode()
+        len_a = data.map_len.encode()
+        msg_b = data.work_package_bundle.encode()
+        len_b = data.bundle_len.encode()
 
         logger.info(
             "Transmitting work package bundle to guarantors",
@@ -115,9 +105,8 @@ class WorkPackageSharing(NetworkProtocol):
         # TODO: Use Actual Guarantors Connections
         for peer in node.peer_conn:
             try:
-                print("inside check transmit", peer.port)
                 if int(peer.port) == 40002:
-                    logger.info("Sending bundle to 40002")
+                    logger.debug("Sending bundle to 40002")
                     client = node.peer_conn[peer][1]
 
                     # Send Protocol Prefix
@@ -171,13 +160,7 @@ class WorkPackageSharing(NetworkProtocol):
                 buffer_size=len(buffer[1:])
             )
             data, offset = CE134Data.decode_from(buffer[1:])
-            # print("data bundle", data, len(data.encode()))
             data = cast(CE134Data, data)
-
-            print("received bundle", len(data.encode()), len(buffer[1:]))
-
-            print("len bundle", data.bundle_len, U32(len(data.work_package_bundle.encode())))
-            print("len map", data.map_len, U32(len(data.core_segment.encode())))
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
@@ -239,7 +222,6 @@ class WorkPackageSharing(NetworkProtocol):
             )
 
         except Exception as e:
-            logger.info("Failed to Guarantee..")
             msg_a = Null.encode()
             len_a = Uint[32](len(msg_a)).encode()
 

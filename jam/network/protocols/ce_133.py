@@ -1,10 +1,9 @@
 from typing import cast
-
-from tsrkit_types import Null, Vector, structure, Uint, Bool, TypedVector, Option
+from tsrkit_types import Null, structure, Uint, Bool, TypedVector, Option
 
 from jam.config.logging import get_logger
-from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
@@ -83,11 +82,10 @@ class WorkPackageSubmission(NetworkProtocol):
         # TODO: Use Particular Validators' Connections
 
         responses = TypedVector[OptBool]([])
-        print("Sending imports", len(data.package_data.work_package.items[0].import_segments))
         for peer in node.peer_conn:
             try:
                 if peer.port == 40000:
-                    logger.info("sending package to 40000")
+                    logger.debug("Sending package to 40000")
                     client = node.peer_conn[peer][1]
                     transmitted_count += 1
 
@@ -101,11 +99,8 @@ class WorkPackageSubmission(NetworkProtocol):
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
                     client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                     client.stream_and_keep_open(message=len_b, stream_id=stream_id)
-                    res = None
-                    try:
-                        res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
-                    except Exception as e:
-                        print("Couldn't close", e)
+                    res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
+
                     if not res:
                         responses.append(OptBool(Null))
                     else:
@@ -153,25 +148,27 @@ class WorkPackageSubmission(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            print("received imports", len(data.package_data.work_package.items[0].import_segments))
+            wp = data.package_data.work_package
+            ci = data.package_data.core_index
+
             logger.info(
                 "Processing work package submission",
                 stream_id=stream_id,
-                core_index=int(data.package_data.core_index),
+                core_index=int(ci),
                 extrinsics_count=len(data.extrinsics),
-                work_package_hash=hash(str(data.package_data.work_package))  # Simple hash for logging
+                work_package_hash=hash(str(wp))  # Simple hash for logging
             )
+
+            # Start Refinement Process
             processor = Processor(server.node)
-
             with benchmark(f"Work Package processed"):
-                wr, wr_hash = processor.process(data.package_data.work_package, data.package_data.core_index, data.extrinsics)
-
+                wr, wr_hash = processor.process(wp, ci, data.extrinsics)
             write_benchmarks_to_txt("benchmarks/refinement.txt")
 
             logger.info(
                 "Work package processed successfully",
                 stream_id=stream_id,
-                core_index=int(data.package_data.core_index)
+                core_index=int(ci)
             )
 
             # Return acknowledgment to Builder

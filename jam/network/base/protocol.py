@@ -42,7 +42,6 @@ class NetworkProtocol(ABC):
         - Uses client intercept to process received ack / data.
     """
 
-
     _prefix: PrefixType
     max_buffer_size: int
 

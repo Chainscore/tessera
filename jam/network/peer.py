@@ -11,14 +11,14 @@ class Peer:
     data: ValidatorData
 
     @property
-    def get_validator_index(self):
+    def peer_index(self):
         from jam.state.state import state
 
         for i,val in enumerate(state.kappa):
             if val.bandersnatch == self.data.bandersnatch:
                 return i
 
-        raise ValueError("No validator found with matching bandersnatch key.")
+        raise ValueError("No peer found with matching bandersnatch key.")
 
     @property
     def host(self):

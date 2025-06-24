@@ -10,16 +10,18 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jam.config.logging import get_logger
 
 from jam.types.protocol.validators import ValidatorData
+from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import Ed25519Public
+from jam.types.work.shard import ShardIndex
 
 from typing import Dict, cast, Tuple, Optional
 
 from .base.quic import QuicProtocol
 from jam.network.base.certificate import generate_keys
 from jam.network.base.protocol import PrefixType
-from .peer import Peer
 from jam.network.base.sessions import SessionTicketStore
-
+from jam.utils import constants
+from .peer import Peer
 
 # Module-specific logger
 logger = get_logger("network")
@@ -126,6 +128,26 @@ class Node:
             return self.peer_map[key]
 
         return None
+
+    @property
+    def validator_index(self):
+        from jam.state.state import state
+
+        for i, val in enumerate(state.kappa):
+            if val.bandersnatch == self.validator_data.bandersnatch:
+                return i
+
+        raise ValueError("No validator found with matching bandersnatch key.")
+
+    def get_shard_index(self, core_index: CoreIndex):
+        from jam.config.chainspec import chain_config
+        vi = self.validator_index
+        shard_index = ShardIndex(
+            (core_index * chain_config.recovery_threshold + vi)
+            % constants.VALIDATOR_COUNT
+        )
+
+        return shard_index
 
     @staticmethod
     def get_initiator(k1: Ed25519Public, k2: Ed25519Public) -> Ed25519Public:

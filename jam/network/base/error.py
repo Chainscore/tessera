@@ -2,6 +2,7 @@ from jam.error import JamError
 from tsrkit_types.enum import Enum
 
 class NetworkingError(JamError):
+    """error type for networking module"""
     ...
 
 class NetworkingErrorCode(Enum):
