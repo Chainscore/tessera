@@ -14,7 +14,7 @@ from jam.utils.shuffle import shuffle
 from jam.types.protocol.crypto import Hash, BandersnatchPublic
 from jam.assurances.assurances import Assurances
 from jam.types.block import Block
-from jam.audit.utils import Ξ,F,power_set
+from jam.audit.utils import bandersnatch_f, bandersnatch_y, Ξ
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.types.work.package import WorkPackage
 from jam.work_package.processor import Processor
@@ -58,8 +58,8 @@ class AuditingAndJudgement:
 
     def vrf_signature_bandersnatch(self, header: Header, validator_index: ValidatorIndex, tranche_index: int = 0, w_report: Optional[WorkReport] = None) -> Bytes[96]:
         """
-        refer 17.3
         https://graypaper.fluffylabs.dev/#/cc517d7/1e89001e8f00?v=0.6.5
+        Function s_n && s_0 define in Eq. 17.3 and 17.15
 
         s_0: The initial VRF (Verifiable Random Function) signature used to select work-reports for auditing in the first tranche (n=0).
 
@@ -77,34 +77,24 @@ class AuditingAndJudgement:
 
         """
 
-        entropy_yield = header.entropy_source
-
-        vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-
-        entropy_vrf_proof = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(bytes(entropy_yield)))[:32]
-
+        entropy_vrf_proof=bandersnatch_y(header.entropy_source)
         random_quantity = bytes(SIGNING_CONTEXTS["audit"]) + entropy_vrf_proof #Xv + y(Hv)
 
-        key = int.from_bytes(bytes.fromhex(str(self.state.kappa[validator_index]["bandersnatch"])))
+        key = int.from_bytes(self.state.kappa[validator_index].bandersnatch)
 
-        output_point, proof=  vrf.prove(alpha=b"" , secret_key=key,  additional_data=random_quantity,salt=b"")
-        op_bt_str= output_point.point_to_string()
-
-        proof_bt_str= proof[0].to_bytes()+ proof[1].to_bytes()
-        signature= op_bt_str + proof_bt_str #Expected S0 (96bytes)
 
         if tranche_index > 0 and w_report is not None:
             random_quantity+= bytes(Hash.blake2b(w_report.encode()).encode()) + bytes(tranche_index) # refer 17.15
-
-        # F Function needs to be implemented Here expected to return [sets of signatures]
-
+        signature=bandersnatch_f(key,context=random_quantity)#Expected S0 (96bytes)
         return signature
 
     # Verifiable Random Selection Function (within 10 cores) a_n
-    def vrs_func(self, header: Header, validator_index:ValidatorIndex) -> List[Tuple[CoreIndex, WorkReport]]:
+    def vrs_func(self, header: Header, validator_index:ValidatorIndex,tranche_index:int=0) -> List[Tuple[CoreIndex, WorkReport]]:
 
         """
         This function give the non-empty-item to audit through a verifiable random selection of ten cores:
+        https://graypaper.fluffylabs.dev/#/cc517d7/1e1c021e3702?v=0.6.5
+        Function a_n && a_0 define in Eq. 17.5 and 17.16
 
         Sources:
             https://graypaper.fluffylabs.dev/#/9a08063/1ebc001e1701?v=0.6.6
@@ -116,8 +106,8 @@ class AuditingAndJudgement:
         """
 
         # Equation : 17.7 (r = y(So))
-        vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        entropy = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(self.vrf_signature_bandersnatch(header=header, validator_index=validator_index)))[:32]
+        s_n=self.vrf_signature_bandersnatch(header=header, validator_index=validator_index,tranche_index=tranche_index)
+        entropy = bandersnatch_y(s_n)
 
          # Equation 17.6: p = f([(c, Qc) | c <- Nc ], r)
         audit_report = self.report_to_be_audit()
@@ -151,7 +141,7 @@ class AuditingAndJudgement:
         tranche_index =  (CURRENT_TIME() - (SLOT_PERIOD * int(header.slot))) // AUDIT_PERIOD
         return tranche_index
 
-    def validator_announcement_statement(self, header: Header, state: state) -> set[Bytes64]:
+    def validator_announcement_statement(self, header: Header,validator_index:ValidatorIndex) -> set[Bytes64]:
         """
         Eq. 17.9, 17.10, 17.11
         This function define the sequence of work_report which required to audit(Q)
@@ -161,7 +151,7 @@ class AuditingAndJudgement:
 
         Args:
             header (block's header H)
-            state : get kappa from state for validator
+            Validator_index : to fetch its announcement statements
 
 
         Returns:
@@ -176,21 +166,21 @@ class AuditingAndJudgement:
         tranches_index = self.generate_tranche_index(header)
 
         # block's header hash
-        header_hash = bytes(Hash.blake2b(header.encode()))
-
-        # x_n  => Serializing the vrs_list -> x_n
-        vrs_list=self.vrs_func(header,state)
-        vrs_bytes=bytes()
-        for (core,wr) in vrs_list:
-            vrs_bytes += core.encode() + Hash.blake2b(wr.encode()).encode()
-
-        #loop through the validators and signing the message with their ed25519publickey
-        # S
-        announcement_statement = signing_context + bytes(tranches_index) + vrs_bytes +  header_hash
+        hashed_header = bytes(Hash.blake2b(header.encode()))
 
         statement_set : set[Bytes[64]] = set()
 
-        for validator in state.kappa:
+        #loop through the validators and signing the message with their ed25519publickey
+        for index, validator in enumerate(state.kappa):
+            # x_n  => Serializing the vrs_list -> x_n
+            vrs_list=self.vrs_func(header,validator_index= ValidatorIndex(index))
+            vrs_bytes=bytes()
+            for (core,wr) in vrs_list:
+                vrs_bytes += core.encode() + Hash.blake2b(wr.encode()).encode()
+
+            # S
+            announcement_statement = signing_context + bytes(tranches_index) + vrs_bytes +  hashed_header
+
             private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
             # Sign will give out a 64Byte Signature
             signature = private_key.sign(announcement_statement)
@@ -206,7 +196,7 @@ class AuditingAndJudgement:
     #     else:
     #         return False
 
-    def validator_judment_mapping(self,work_report:WorkReport,state:state)-> List[Bytes[64]]:
+    def validator_judment_mapping(self,work_report:WorkReport)-> List[Bytes[64]]:
         """
          Go through the evaluate_core_mappings Func (refer 17.17) and provide its validity where the wr is valid or not
          Return :
@@ -214,7 +204,7 @@ class AuditingAndJudgement:
         refer equ 17.18
         """
         judgement_set=[]
-        for validator in state.kappa:
+        for validator in self.state.kappa:
             private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
             signing_context = SIGNING_CONTEXTS["valid"] if evaluate_core_mappings(work_report) else SIGNING_CONTEXTS["invalid"]
             message= signing_context + Hash.blake2b(work_report.encode())

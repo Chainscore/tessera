@@ -55,11 +55,17 @@ def Ξ(work_package: WorkPackage,core_index:Int)->WorkReport:
 
     return WorkReport.empty()
 
-
-# def Bandersnatch_F(key):
-
-def Bandersnatch_y(key: bytes):
+def bandersnatch_y(key: bytes):
     entropy_yield_vrf_signature = key
     vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
     bandersnatch_proof = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(entropy_yield_vrf_signature))[:32]
     return bandersnatch_proof
+
+def bandersnatch_f(key,context,message:bytes=b""):
+    vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+    output_point, proof=  vrf.prove(alpha=message, secret_key=key,  additional_data=context,salt=b"")
+    op_bt_str= output_point.point_to_string()
+
+    proof_bt_str= proof[0].to_bytes()+ proof[1].to_bytes()
+    signature= op_bt_str + proof_bt_str
+    return signature
