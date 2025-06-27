@@ -6,6 +6,7 @@ from jam.network.protocols.ce_136 import WorkReportRequest
 from jam.network.protocols.ce_139 import SegmentShardRequest
 from jam.network.protocols.ce_140 import SegmentShardRequestWithJustifications
 from jam.network.protocols.ce_141 import AssuranceDistribution
+from jam.network.protocols.ce_145 import JudgmentPublication
 from jam.network.protocols.up_0 import BlockAnnouncement
 from jam.network.protocols.ce_137 import ShardDistributionProtocol
 from jam.network.protocols.ce_138 import AuditShardRequestProtocol
@@ -22,7 +23,8 @@ class ProtocolMap:
         PrefixType.CE138: AuditShardRequestProtocol,
         PrefixType.CE139: SegmentShardRequest,
         PrefixType.CE140: SegmentShardRequestWithJustifications,
-        PrefixType.CE141: AssuranceDistribution
+        PrefixType.CE141: AssuranceDistribution,
+        PrefixType.CE145: JudgmentPublication
     }
 
     @classmethod

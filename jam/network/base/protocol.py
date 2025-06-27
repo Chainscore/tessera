@@ -28,6 +28,7 @@ class PrefixType(Enum):
     CE141 = 141
     CE142 = 142
     CE143 = 143
+    CE145 = 145
 
 
 class NetworkProtocol(ABC):
