@@ -289,6 +289,7 @@ class QuicProtocol(QuicConnectionProtocol):
                     logger.exception(
                         f"Error retrieving data from ce stream.",
                         error=str(e),
+                        prefix=prefix,
                         interface=self.interface
                     )
 
@@ -315,6 +316,7 @@ class QuicProtocol(QuicConnectionProtocol):
                         logger.exception(
                             f"Error retrieving data from up stream.",
                             error=str(e),
+                            prefix=prefix,
                             interface=self.interface
                         )
                         self.stream_buffer[stream_id] = prefix.encode()

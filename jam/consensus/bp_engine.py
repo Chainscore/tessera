@@ -21,7 +21,7 @@ from jam.types.block.extrinsics.disputes import Culprits, Faults, Verdicts
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.crypto import BandersnatchVrfSignature, Hash, OpaqueHash
 from jam.types.state.gamma import GammaSFallback
-from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD
+from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
 from jam.network.node import Node
 from rockstore import RockStore
 from jam.utils.dummy.utils import create_dummy_bytes
@@ -62,7 +62,7 @@ class BlockProducer:
         from jam.state.state import state
 
         # Record genesis timestamp in seconds
-        genesis_ts = time()
+        genesis_ts = GENESIS_TS
         up0 = BlockAnnouncement()
 
         logger.info(
@@ -87,29 +87,27 @@ class BlockProducer:
                 genesis_ts = time()
                 continue
 
-            # Get state from db
-            current_timeslot = TimeSlot(math.ceil((time() - genesis_ts) / SLOT_PERIOD))
-
             # Get current timeslot
-            ts_epoch_index = math.floor(int(current_timeslot) % EPOCH_LENGTH)
+            curr_ts = TimeSlot((time() - genesis_ts) // SLOT_PERIOD)
+            curr_ep = int(curr_ts // EPOCH_LENGTH)
 
             # Check if we are in fallback or normal ticket.py
             gamma_s = state.gamma.s.unwrap()
 
-            logger.debug("🔄 Block production cycle", current_timeslot=int(current_timeslot), epoch=ts_epoch_index, gamma_mode=gamma_s.__class__.__name__)
+            logger.debug("🔄 Block production cycle", curr_timeslot=int(curr_ts), epoch=curr_ep, gamma_mode=gamma_s.__class__.__name__)
 
             if isinstance(gamma_s, GammaSFallback):
-                author_key = gamma_s[ts_epoch_index]
+                author_key = gamma_s[curr_ep]
 
                 if author_key == self.node.validator_data.bandersnatch:
                     logger.info(
                         "🧑‍🍳Authoring block - our turn",
-                        current_timeslot=int(current_timeslot),
-                        epoch=ts_epoch_index,
+                        curr_timeslot=int(curr_ts),
+                        epoch=curr_ep,
                         author_key=author_key.hex()[:16] + "..."
                     )
 
-                    block = self._produce_block(state, current_timeslot)
+                    block = self._produce_block(state, curr_ts)
                     block.save(self.db)
                     header_hash = block.header.hash()
                     # Set local chain head to produced block
@@ -120,10 +118,10 @@ class BlockProducer:
                     # Announce
                     await up0.transmit(self.node, block)
 
-                    logger.info("🧱Block authored and announced successfully", current_timeslot=int(current_timeslot), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...")
+                    logger.info("🧱Block authored and announced successfully", curr_timeslot=int(curr_ts), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...")
                 else:
                     logger.debug(
-                        "⏭️ Not our turn to author - skipping", current_timeslot=int(current_timeslot), epoch=ts_epoch_index,
+                        "⏭️ Not our turn to author - skipping", curr_timeslot=int(curr_ts), epoch=curr_ep,
                         expected_author=author_key.hex()[:16] + "...",
                         our_key=self.node.validator_data.bandersnatch.hex()[:16] + "..."
                     )
@@ -133,18 +131,18 @@ class BlockProducer:
                 raise NotImplementedError("Only fallback mode is supported for now")
 
             # Sleep for remaining time of the timeslot
-            sleep_duration = 6 - (time() - genesis_ts) % SLOT_PERIOD
+            sleep_duration = SLOT_PERIOD - (time() - genesis_ts) % SLOT_PERIOD
             logger.debug("😴 Sleeping until next slot", sleep_duration=sleep_duration)
             await asyncio.sleep(sleep_duration)
 
-    def _produce_block(self, state: State, current_timeslot: TimeSlot) -> Block:
+    def _produce_block(self, state: State, curr_ts: TimeSlot) -> Block:
         """
         Produce a block for the given timeslot
         """
         logger.debug(
             "⚒️ Building block components",
             node_name=self.node.name,
-            timeslot=int(current_timeslot)
+            timeslot=int(curr_ts)
         )
 
         extrinsic = Extrinsic(
@@ -163,9 +161,9 @@ class BlockProducer:
                 parent=parent_hash,
                 parent_state_root=state.root,
                 extrinsic_hash=self.hash_extrinsic(extrinsic),
-                slot=current_timeslot,
-                epoch_mark=Safrole.get_epoch_marker(state, current_timeslot),
-                tickets_mark=Safrole.get_tickets_marker(state, current_timeslot),
+                slot=curr_ts,
+                epoch_mark=Safrole.get_epoch_marker(state, curr_ts),
+                tickets_mark=Safrole.get_tickets_marker(state, curr_ts),
                 offenders_mark=Disputes.get_offenders_mark(extrinsic.disputes),
                 author_index=self.get_author_index(state),
                 entropy_source=BandersnatchVrfSignature(create_dummy_bytes(96)),
@@ -174,7 +172,7 @@ class BlockProducer:
             extrinsic=extrinsic
         )
 
-        logger.info("Block produced ⛏️", timeslot=int(current_timeslot), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...",)
+        logger.info("Block produced ⛏️", timeslot=int(curr_ts), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...",)
 
         return block
 

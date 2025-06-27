@@ -176,6 +176,7 @@ class BlockAnnouncement(NetworkProtocol):
                 if not server.is_client:
                     logger.info(
                         "Doing reverse handshake",
+                        peer=str(server.peer),
                         interface=server.interface
                     )
                     self.handshake(stream_id, server)
@@ -187,10 +188,13 @@ class BlockAnnouncement(NetworkProtocol):
                     h, _ = Handshake.decode_from(buffer[5:])
                     h = cast(Handshake, h)
 
+
                     # TODO: Process Handshake
                     logger.info(
                         "Received peer handshake",
                         stream_id=stream_id,
+                        peer=str(server.peer),
+                        handshake=h,
                         block_slot=int(h.final.time_slot),
                         parent_hash=h.final.header_hash.hex()[:16] + "...",
                         buffer_size=len(buffer),
@@ -212,6 +216,7 @@ class BlockAnnouncement(NetworkProtocol):
                     logger.info(
                         "Received block announcement",
                         stream_id=stream_id,
+                        peer=str(server.peer),
                         block_slot=int(a.final.time_slot),
                         parent_hash=a.final.header_hash.hex()[:16] + "...",
                         buffer_size=len(buffer)
@@ -220,13 +225,15 @@ class BlockAnnouncement(NetworkProtocol):
                     logger.debug(
                         "Processing incoming block",
                         stream_id=stream_id,
+                        peer=str(server.peer),
                         header_slot=int(a.header.slot),
                         parent_hash=a.header.parent.hex()[:16] + "...",
                         extrinsic_hash=a.header.extrinsic_hash.hex()[:16] + "..."
                     )
 
                     logger.info(
-                        f"Processed a new block with header {a.header}.",
+                        f"Processed a new block with header {str(a.header)}.",
+                        peer=str(server.peer),
                         parent_block=a.final.header_hash,
                         parent_time_slot=a.final.time_slot
                     )
@@ -245,6 +252,7 @@ class BlockAnnouncement(NetworkProtocol):
                     logger.info(
                         "Block announcement processed successfully",
                         stream_id=stream_id,
+                        peer=str(server.peer),
                         block_slot=int(a.final.time_slot)
                     )
 

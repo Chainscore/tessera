@@ -29,6 +29,7 @@ class ProtocolMap:
 
     @classmethod
     def get_protocol(cls, prefix: PrefixType):
+        print("PROTOCOL", prefix)
         protocol = cls.ALL_PROTOCOLS.get(prefix)
 
         if protocol is None:

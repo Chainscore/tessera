@@ -4,8 +4,8 @@ class Settings:
     NODE_ID: str | None = None
 
     # Network settings
-    LISTEN_ADDRESS: str = "0.0.0.0"
-    LISTEN_PORT: int = 30333
+    LISTEN_ADDRESS: str = "127.0.0.1"
+    LISTEN_PORT: int = 40000
     MAX_PEERS: int = 50
 
     # Database settings
@@ -40,7 +40,7 @@ class Settings:
 
 settings: Settings = Settings()
 
-def setup_setting(name: str, port: int,  db_path = "data", node_id = None):
+def setup_setting(name: str, port: int,  db_path = "data", node_id = None) -> Settings:
     global settings
 
     node_path = f"{db_path}/{port}"
@@ -53,7 +53,11 @@ def setup_setting(name: str, port: int,  db_path = "data", node_id = None):
     settings.STATE_DB_PATH = f"{node_path}/state"
     settings.D3L_PATH = f"{node_path}/d3l"
     settings.NODE_ID = node_id
+    settings.ENV_FILE = f"{port}.env"
+
 
     # Reconfigure DBS
     from jam.config.data_stores import data_stores
     data_stores.configure_db_paths()
+
+    return settings

@@ -181,9 +181,10 @@ class Node:
         config.max_data = 104857600  # 100 MB
         config.max_stream_data = 10485760  # 10 MB per stream
         config.max_datagram_size = 1350
+        config.idle_timeout = 120.0
 
-        if is_client and peer:
-            config.server_name = peer.id
+        if is_client:
+            config.server_name = self.__id
 
         if self.is_builder:
             config.alpn_protocols = [builder_alpn]
@@ -270,9 +271,9 @@ class Node:
                 return
 
             # TODO: Abstract out builder connections
-            if int(peer.port) == 40001:
-                logger.info(f"⚠️ ({self.name}) Skipping builder {str(peer)}")
-                return
+            # if int(peer.port) == 40001:
+            #     logger.info(f"⚠️ ({self.name}) Skipping builder {str(peer)}")
+            #     return
 
             init = self.get_initiator(self.ed_key, peer.ed_key)
             if init == self.ed_key:
