@@ -83,7 +83,7 @@ class MMRFunctions:
 
             hash_dash = hash_fn(bytes(mmr[Uint(index)].unwrap()) + bytes(new_hash))
 
-            return self._p(mmr_dash, hash_dash, index + 1, hash_fn)
+            return self._p(mmr_dash, hash_dash, Uint(index + 1), hash_fn)
 
     def append_fn(
         self,
@@ -125,8 +125,7 @@ class MMRFunctions:
 
         return mmr.encode()
 
-
-    def super_peak(self, mmr: MMR, flag=True) -> OpaqueHash:
+    def super_peak(self, mmr: MMR, flag = True) -> OpaqueHash:
         """
         MMR Super Peak Function Implementation as defined in Equation E.10
 

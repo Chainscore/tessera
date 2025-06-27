@@ -1,15 +1,22 @@
-from typing import List
-from jam.erasure_coding.error import ErasureCodingErrorCode, ErasureCodingError
-# from jam.erasure_coding.galois_field import GF
+import math
+import reed_solomon_leopard
 
+from typing import Tuple
 
-class ErasureCode():
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.sequences import Vector
+
+from jam.config.chainspec import chain_config
+
+class ErasureCode:
 
     def __init__(self):
-        self.init_tables(0x1002D)
+        self.total_shards = chain_config.num_validators
+        self.original_shards = chain_config.erasure_coding_original_shards
+        self.recovery_shards = chain_config.erasure_coding_recovery_shards
 
     @staticmethod
-    def unzip(data: List[int], n: int, k: int):
+    def unzip(data: Bytes, n: int, k: int) -> Vector[Bytes]:
         """
             Use the unzip function to divide the array into k sequences d_0,d_1,…,d_k-1.
             https://graypaper.fluffylabs.dev/#/5f542d7/3ca7003cc900
@@ -22,151 +29,16 @@ class ErasureCode():
             Returns:
                 List[Bytes]
         """
-
-        res = []
+        res = Vector([])
         for i in range(0, k):
-            temp = []
+            temp = Vector([])
             for j in range(0, n):
                 temp.append(data[(j * k) + i])
             res.append(temp)
 
         return res
 
-    def encode_msg(self, input, paritySym):
-        """
-        Reed solomon encoding function
-        Args:
-            input:
-            paritySym:
-        Returns:
-            input+parity_bits
-        """
-        gen = self.generator_poly(paritySym)
-        output = [0] * (len(input) + len(gen)-1)
-        output[:len(input)] = input
-
-        for i in range(len(input)):
-            coefficient = output[i]
-            if coefficient != 0:
-                for j in range(1, len(gen)):
-                    output[i+j] ^= self.multiply(gen[j], coefficient) # in GF addition is equivalent to xor
-
-        output[:len(input)] = input
-
-        return output
-
-    def syndrome_calculation(self, msg, nsym):
-        """
-        Calculate syndromes polynomial based on message and error correcting symbols.
-        Args:
-            msg:
-            nsym: number parity bits
-        Returns:
-            Syndromes polynomial
-        """
-        synd = [0] * nsym
-        for i in range(0, nsym):
-            synd[i] = self.poly_eval(msg, self.pow(2,i))
-        return [0] + synd
-
-    def find_error_locator_poly(self, erasure_pos):
-        """
-        Calculate error/erasure locator polynomial from given positions
-        Args:
-            erasure_pos: Erasure positions
-        Returns:
-            Erasure locator polynomial
-        """
-        e_loc = [1]
-        for i in erasure_pos:
-            e_loc = self.poly_mul( e_loc, self.poly_add([1], [self.pow(2, i), 0]) )
-        return e_loc
-
-
-    def find_error_evaluator_poly(self, synd, err_loc, nsym):
-        """
-        calculate error evaluator polynomial using Erasure locator polynomial & Syndromes
-        Args:
-            synd: syndromes
-            err_loc: Erasure locator polynomial
-            nsym: Number of parity bits
-        Returns:
-            Error evaluator polynomial
-        """
-        _, remainder = self.poly_div( self.poly_mul(synd, err_loc), ([1] + [0]*(nsym+1)) )
-        return remainder
-
-    def erasure_correction(self, msg_in, synd, err_pos):
-        """
-        Forney's algorithm to calculate the values of erasure
-        Args:
-            err_pos: Erasure positions
-            msg_in: input message
-            synd: error syndrome
-        """
-        coef_pos = [len(msg_in) - 1 - p for p in err_pos]
-        err_loc = self.find_error_locator_poly(coef_pos)
-        err_eval = self.find_error_evaluator_poly(synd[::-1], err_loc, len(err_loc) - 1)[::-1]
-
-        X = []
-        for i in range(0, len(coef_pos)):
-            l = 65535 - coef_pos[i]
-            X.append(self.pow(2, -l))
-
-        E = [0] * (len(msg_in))
-        Xlength = len(X)
-        for i, Xi in enumerate(X):
-            Xi_inv = self.inverse(Xi)
-            err_loc_prime_tmp = []
-            for j in range(0, Xlength):
-                if j != i:
-                    err_loc_prime_tmp.append((1^self.multiply(Xi_inv, X[j])))
-            err_loc_prime = 1
-            for coef in err_loc_prime_tmp:
-                err_loc_prime = self.multiply(err_loc_prime, coef)
-            y = self.poly_eval(err_eval[::-1], Xi_inv)
-            y = self.multiply(self.pow(Xi, 1), y)
-
-            if err_loc_prime == 0:
-                raise ErasureCodingError(ErasureCodingErrorCode.BAD_ERASURE , "Could not find error magnitude")
-
-            magnitude = self.div(y, err_loc_prime)
-            E[err_pos[i]] = magnitude
-
-        msg_in = self.poly_add(msg_in, E)
-        return msg_in
-
-    def decode_msg(self, msg_in, nsym, erasure_pos=None):
-        """
-        Reed solomon decoding function
-        Args:
-            msg_in: message received
-            nsym: number of parity bits
-            erasure_pos: erasure position
-        """
-        if len(msg_in) > 65535:
-            raise ErasureCodingError(ErasureCodingErrorCode.BAD_IMPORT_MESSAGE , "Message is too long")
-
-        msg_out = list(msg_in)
-
-        # cannot correct erasure greater than 681
-        if len(erasure_pos) > nsym: raise ErasureCodingError(ErasureCodingErrorCode.BAD_ERASURE, "Too many erasures to correct")
-        # prepare the syndrome polynomial
-        synd = self.syndrome_calculation(msg_out, nsym)
-
-        if max(synd) == 0:
-            return msg_out
-
-        msg_out = self.erasure_correction(msg_out, synd, erasure_pos)
-
-        synd = self.syndrome_calculation(msg_out, nsym)
-
-        if max(synd) > 0:
-            raise ErasureCodingError(ErasureCodingErrorCode.BAD_MESSAGE, "Could not correct message")
-
-        return msg_out
-
-    def encode(self, data):
+    def encode(self, data: bytes) -> Vector[bytes]:
         """
         Erasure-code chunking function
         Args:
@@ -175,37 +47,48 @@ class ErasureCode():
             1023 sequences of sequences
         """
         length = len(data)
-
+        # Data whose length is not divisible by 684 is padded with zero
         if length % 684 != 0:
             target_size = ((length // 684) + 1) * 684
             padding_size = target_size - length
             data = data + (b'\x00' * padding_size)
 
+        bytes_per_chunk = math.ceil(len(data) / (2*self.original_shards))
         octet_pairs = []
         for i in range(0, len(data), 2):
-            resultant = int.from_bytes(data[i:i + 2], 'little')
+            resultant = bytes(b for b in data[i:i + 2])
             octet_pairs.append(resultant)
 
-        k = len(octet_pairs) // 342
-        res = self.unzip(octet_pairs, 342, k)
+        # zero padding if octet pairs are not multiple of bytes_per_chunk
+        length = len(octet_pairs)
+        if length % bytes_per_chunk != 0:
+            target_size = ((length // bytes_per_chunk) + 1) * bytes_per_chunk
+            padding_size = target_size - length
+            for i in range(padding_size):
+                octet_pairs.append(b'00')
 
-        op = []
-        for i in res:
-            msg = self.encode_msg(i, 681)
-            op.append(msg)
+        # unzip
+        p = self.unzip(octet_pairs, self.original_shards, bytes_per_chunk)
 
-        transposed = [[op[j][i] for j in range(len(op))] for i in range(len(op[0]))]
+        # reed solomon encoding
+        for i in p:
+            recovery = reed_solomon_leopard.encode(i, self.recovery_shards)
+            i.extend(recovery)
 
-        encodedChunks = []
-        for i in range(0, len(transposed)):
-            resStr = ''
-            for j in range(0, k):
-                resStr += transposed[i][j].to_bytes(2, byteorder='little').hex()
-            encodedChunks.append(resStr)
+        # transpose
+        c = [[p[j][i] for j in range(len(p))] for i in range(len(p[0]))]
 
-        return encodedChunks
+        encoded_chunks = Vector([])
+        for i in range(0, len(c)):
+            res_str = b''
+            for j in range(0, bytes_per_chunk):
+                res_str += c[i][j]
+            encoded_chunks.append(res_str)
 
-    def decode(self, c):
+        return encoded_chunks
+
+
+    def decode(self, c: Vector) -> Bytes:
         """
         Decoding function
         Args:
@@ -213,51 +96,46 @@ class ErasureCode():
         Returns:
             Decoded information
         """
-        k = len(c[0][0]) // 2
-        erasure_pos = []
-        present_pos = []
-        for msg in c:
-            index = msg[1]
-            present_pos.append(index)
-
-        for i in range(1023):
-            if i not in present_pos:
-                erasure_pos.append(i)
-
-        # using b'00'*k as placeholder for erasure
-        new_c = [b'00' * k] * 1023
-
-        for msg in c:
-            index = msg[1]
-            chunk = msg[0]
-            new_c[index] = chunk
-
-        decoded = []
-        for i in range(0, 1023):
-            chunk = new_c[i]
+        # split
+        split_c = []
+        for i in c:
+            chunk = i[0]
+            index = i[1]
             symbols = []
             for j in range(0, len(chunk), 2):
-                symbols.append(int.from_bytes(chunk[j:j + 2], 'little'))
-            decoded.append(symbols)
+                symbols.append((chunk[j:j + 2], index))
+            split_c.append(symbols)
 
-        decoded_transposed = [[decoded[j][i] for j in range(len(decoded))] for i in range(len(decoded[0]))]
+        # transpose
+        transposed = [[split_c[j][i] for j in range(len(split_c))] for i in range(len(split_c[0]))]
 
-        final_decoded = []
-        for i in decoded_transposed:
-            decoded = self.decode_msg(i, 681, erasure_pos)
-            final_decoded.append(decoded)
+        # reed solomon decoding
+        for i in transposed:
+            original_partial = {}
+            recovery_partial = {}
 
-        transposed = [[final_decoded[j][i] for j in range(len(final_decoded))] for i in range(len(final_decoded[0]))]
+            for msg in i:
+                index = msg[1]
+                chunk = msg[0]
+                if index < self.original_shards:
+                    original_partial[index] = chunk
+                else:
+                    recovery_partial[index-self.original_shards] = chunk
 
-        decoded_chunks = []
-        for i in range(0, len(transposed)):
-            resStr = ''
-            for j in range(0, k):
-                resStr += transposed[i][j].to_bytes(2, byteorder='little').hex()
-            decoded_chunks.append(resStr)
+            restored = reed_solomon_leopard.decode(self.original_shards, self.recovery_shards, original_partial, recovery_partial)
 
-        decoded_data = ""
-        for i in range(342):
-            decoded_data += decoded_chunks[i]
+            for key in restored:
+                i.append((restored[key], key))
+
+        # sorting decoded chunks
+        sorted_decoded = []
+        for i in transposed:
+            sorted_list = sorted(i, key=lambda x: x[1])
+            sorted_decoded.append(sorted_list)
+
+        decoded_data = b''
+        for i in range(self.original_shards):
+            for j in range(len(sorted_decoded)):
+                decoded_data += sorted_decoded[j][i][0]
 
         return decoded_data

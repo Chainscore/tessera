@@ -9,13 +9,10 @@ from jam.types.protocol.core import CoreIndex, Gas, TimeSlot
 from jam.types.protocol.crypto import (
     OpaqueHash,
     WorkReportHash,
-    HeaderHash,
-    BeefyRoot,
-    StateRoot,
 )
 from jam.types.work.execution import WorkResults, RefineContext
 from jam.types.work.package import WorkPackageSpec
-from jam.types.work.segments import SegmentRootLookup
+from jam.types.work.manifest import SegmentRootLookup
 
 
 
@@ -42,8 +39,8 @@ class WorkReport:
     @classmethod
     def empty(cls, **overrides) -> "WorkReport":
         from jam.types.work.package import WorkPackageSpec
-        from jam.types.work.segments import SegmentRootLookup
-        from jam.types.work.collections import WorkResults
+        from jam.types.work.manifest import SegmentRootLookup
+        from jam.types.work import WorkResults
         
         defaults = {
             "package_spec": WorkPackageSpec.empty(),

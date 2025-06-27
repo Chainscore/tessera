@@ -61,7 +61,7 @@ async def work_report_producer(node: Node, db: RockStore):
             gamma_mode=state.gamma.s.get_key()
         )
 
-        if not node.is_builder:
+        if not node.is_validator:
             report = create_dummy_work_report()
             report_data = CE135Data(report=report, slot=TimeSlot(int(current_timeslot)))
 

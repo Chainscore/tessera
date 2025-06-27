@@ -91,6 +91,8 @@ class RecentHistory:
             package(block.extrinsic.guarantees)
         )
 
+        # TODO: Genesis Unclear
+
         # Step 3
         beta.append(n)
 

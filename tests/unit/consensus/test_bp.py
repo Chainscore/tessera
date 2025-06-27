@@ -15,8 +15,7 @@ def test_block_production(db_path):
     db = RockStore(db_path)
     state = State.genesis()
     os.environ["SEED"] = "1"
-    node = Node("0", "test_node", "0.0.0.0", 30333, state.kappa[0], [], False, True)
-
+    node = Node("test_node", "0.0.0.0", 30333, state.kappa[0], [], False, True)
     producer = BlockProducer(node, db)
     genesis = Block.load(TimeSlot(0), db)
     assert genesis == Block.genesis()

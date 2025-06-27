@@ -150,7 +150,7 @@ def create_dummy_disputes(num = 3) -> DisputesExtrinsic:
                 "vote": True,
                 "key": create_dummy_bytes(32).hex(),
                 "signature": create_dummy_bytes(64).hex()
-            } for _ in range(num)
+            } for _ in range(0)
         ]),
     )
 

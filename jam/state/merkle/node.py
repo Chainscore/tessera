@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional
 from jam.state.merkle.utils import NodeHash, NodeType
-from jam.utils.byte_utils import ByteUtils
 from tsrkit_types.bytes import Bytes
 
 @dataclass

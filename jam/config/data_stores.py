@@ -7,7 +7,10 @@ class DataStores:
     _d3l: RockStore | None
 
     def __init__(self):
-        self._main_db, self._state_db, self._audit_db, self._d3l  = None, None, None, None
+        self._main_db = None
+        self._audit_db = None
+        self._d3l = None
+        self._state_db = None
 
     @property
     def main_db(self) -> RockStore:
@@ -33,11 +36,34 @@ class DataStores:
             raise ValueError("DB Paths are not set, call configure_db_paths before this.")
         return self._state_db
 
-    def configure_db_paths(self, parent_path = "data"):
-        self._main_db = RockStore(parent_path+"/main")
-        self._audit_db = RockStore(parent_path+"/audit")
-        self._d3l = RockStore(parent_path+"/d3l")
-        self._state_db = RockStore(parent_path+"/state")
+    def configure_db_paths(self, parent_path=""):
+        import os
+        from jam.config.settings import settings
+        self.shutdown()
+
+        os.makedirs(parent_path + settings.DB_PATH, exist_ok=True)
+        os.makedirs(parent_path + settings.D3L_PATH, exist_ok=True)
+        os.makedirs(parent_path + settings.AUDIT_DB_PATH, exist_ok=True)
+        os.makedirs(parent_path + settings.STATE_DB_PATH, exist_ok=True)
+
+        self._main_db = RockStore(parent_path + settings.DB_PATH)
+        self._audit_db = RockStore(parent_path + settings.D3L_PATH)
+        self._d3l = RockStore(parent_path + settings.AUDIT_DB_PATH)
+        self._state_db = RockStore(parent_path + settings.STATE_DB_PATH)
+
+    def shutdown(self):
+        if self._main_db:
+            self._main_db.close()
+            print("Closing main db")
+        if self._d3l:
+            self._d3l.close()
+            print("Closing d3l db")
+        if self._audit_db:
+            self._audit_db.close()
+            print("Closing audits db")
+        if self._state_db:
+            self._state_db.close()
+            print("Closing state db")
 
 
 data_stores = DataStores()

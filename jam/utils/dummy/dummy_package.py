@@ -56,7 +56,6 @@ def create_dummy_core_segment() -> CoreSegment:
 
     return CoreSegment (
         core_index=CoreIndex(0),
-        length=Uint(1),
         segment_root_map=segment_root_map
     )
 
@@ -65,6 +64,3 @@ def create_dummy_credential() -> Credential:
         work_report_hash=WorkReportHash(create_dummy_bytes32()),
         ed25519_signature=create_dummy_bytes64()
     )
-
-
-

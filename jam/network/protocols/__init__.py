@@ -3,5 +3,8 @@ from jam.network.protocols.ce_133 import WorkPackageSubmission
 from jam.network.protocols.ce_134 import WorkPackageSharing
 from jam.network.protocols.ce_135 import WorkReportDistribution
 from jam.network.protocols.ce_136 import WorkReportRequest
+from jam.network.protocols.ce_139 import SegmentShardRequest
+from jam.network.protocols.ce_140 import SegmentShardRequestWithJustifications
 
-__all__ = ["BlockAnnouncement", "WorkReportDistribution", "WorkReportRequest", "WorkPackageSubmission", "WorkPackageSharing"]
+
+__all__ = ["BlockAnnouncement", "WorkReportDistribution", "WorkReportRequest", "WorkPackageSubmission", "WorkPackageSharing", "SegmentShardRequest", "SegmentShardRequestWithJustifications"]
