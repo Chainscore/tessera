@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/types/block/extrinsics/__init__.py
+# hypothesis_version: 6.135.10
+
+['AssurancesExtrinsic', 'Culprit', 'DisputesExtrinsic', 'DisputesRecords', 'Fault', 'GuaranteesExtrinsic', 'Judgement', 'PreimagesExtrinsic', 'ReportGuarantee', 'TicketEnvelope', 'TicketsExtrinsic', 'ValidatorSignature', 'Verdict']

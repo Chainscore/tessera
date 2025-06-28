@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/types/work/report.py
+# hypothesis_version: 6.135.10
+
+['WorkReport', 'auth_gas_used', 'auth_output', 'authorizer_hash', 'context', 'core_index', 'package_spec', 'results', 'segment_root_lookup']

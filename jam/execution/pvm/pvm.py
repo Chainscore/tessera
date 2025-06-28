@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 from typing import Tuple, List
 from jam.config.logging import get_logger
@@ -40,6 +41,8 @@ class PVM:
         remaining_gas = gas
         
         logger.debug("Starting PVM execution", registers=registers, inst_size=len(program.instruction_set), initial_pc=program_counter, initial_gas=gas, program_size=len(program.zeta))
+        start_gas = gas
+        start_time = time.time_ns()
 
         while True:
             try:
@@ -77,6 +80,11 @@ class PVM:
             except Exception as e:
                 logger.critical("Unexpected PVM execution error", error=str(e), error_type=type(e).__name__, pc=program_counter)
                 raise e
+
+        consumed_gas = start_gas - remaining_gas
+        consumed_time = time.time_ns() - start_time
+
+        print(10**3 * consumed_gas / (consumed_time), "gas/us")
 
         logger.info("PVM result", final_pc=program_counter, gas_remaining=remaining_gas, registers=registers, memory=memory)
         

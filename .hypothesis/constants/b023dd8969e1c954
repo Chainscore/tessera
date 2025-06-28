@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/utils/constants.py
+# hypothesis_version: 6.135.10
+
+[b'jam_announce', b'jam_audit', b'jam_available', b'jam_beefy', b'jam_entropy', b'jam_fallback_seal', b'jam_guarantee', b'jam_invalid', b'jam_ticket_seal', b'jam_valid', 100, 128, 684, 1024, 3072, 4104, 14400, 19200, 64000, 4000000, 10000000, 50000000, 3500000000, 5000000000, 'announce', 'audit', 'available', 'beefy', 'entropy', 'fallback_seal', 'guarantee', 'invalid', 'ticket_seal', 'valid']

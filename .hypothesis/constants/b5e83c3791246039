@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/config/data_stores.py
+# hypothesis_version: 6.135.10
+
+['/audit', '/d3l', '/main', '/state', 'data']

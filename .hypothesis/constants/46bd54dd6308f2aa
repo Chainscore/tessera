@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/state/state_storage.py
+# hypothesis_version: 6.135.10
+
+['Cache is not empty', 'STORAGE_CACHE']

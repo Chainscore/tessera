@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/types/protocol/__init__.py
+# hypothesis_version: 6.135.10
+
+['Balance', 'BandersnatchPublic', 'BandersnatchRingRoot', 'BeefyRoot', 'BlobLength', 'BlsPublic', 'CoreIndex', 'Ed25519Public', 'Ed25519Signature', 'Entropy', 'EpochMark', 'ErasureRoot', 'ExportsRoot', 'Gas', 'Hash', 'HeaderHash', 'IPAddress', 'MMR', 'OpaqueHash', 'OptionHash', 'ProgramCounter', 'Register', 'RemainingGas', 'ServiceId', 'StateRoot', 'TimeSlot', 'ValidatorData', 'ValidatorIndex', 'ValidatorMetadata', 'ValidatorsData', 'WorkPackageHash', 'WorkReportHash']

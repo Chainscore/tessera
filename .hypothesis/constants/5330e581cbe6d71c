@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/types/state/pi.py
+# hypothesis_version: 6.135.10
+
+['AllValidatorStats', 'CoreStat', 'ServiceStat', 'ValidatorStat', 'accumulate_count', 'accumulate_gas_used', 'assurances', 'blocks', 'exports', 'extrinsic_count', 'extrinsic_size', 'guarantees', 'id', 'imports', 'on_transfers_count', 'pre_images', 'pre_images_size', 'provided_count', 'provided_size', 'record', 'refinement_count', 'refinement_gas_used', 'tickets']

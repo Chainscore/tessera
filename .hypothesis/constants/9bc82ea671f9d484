@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/ring_vrf/curve/point.py
+# hypothesis_version: 6.135.10
+
+[255, 'C', 'CurveProtocol', 'PointProtocol[C]', 'Point[C]', 'little']

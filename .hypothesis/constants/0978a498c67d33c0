@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/utils/dummy/dummy_state_comp.py
+# hypothesis_version: 6.135.10
+
+[100, 127, 144, 1000, 5000, 'alpha', 'beta', 'chi', 'delta', 'eta', 'gamma', 'iota', 'kappa', 'lambda_', 'nu', 'phi', 'pi', 'psi', 'rho', 'tau', 'xi']

@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/state/ghost.py
+# hypothesis_version: 6.135.10
+
+[144, 255, 'GhostState', 'accounts', 'auth_pool', 'auth_queue', 'entropy', 'genesis.json', 'peers', 'state']

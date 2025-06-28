@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/types/state/delta.py
+# hypothesis_version: 6.135.10
+
+['AccountMetadata', '_meta', 'blob', 'bytes', 'data', 'default', 'hash', 'id', 'items', 'key', 'lookup_meta', 'min_item_gas', 'min_memo_gas', 'name', 'value']

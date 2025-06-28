@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/ring_vrf/curve/curve.py
+# hypothesis_version: 6.135.10
+
+[128, 255, 256, 65535, 'No inverse exists', 'big', 'integer too large']

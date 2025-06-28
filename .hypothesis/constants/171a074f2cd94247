@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/consensus/grandpa/finality.py
+# hypothesis_version: 6.135.10
+
+[b'FINAL_BLOCK', b'LATEST_BLOCK']

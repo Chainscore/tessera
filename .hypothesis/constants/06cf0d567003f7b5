@@ -1,0 +1,4 @@
+# file: /Users/prasad/projects/tessera/tsr-py/jam/types/protocol/validators.py
+# hypothesis_version: 6.135.10
+
+[110, '.', 'ValidatorMetadata', 'default', 'http://', 'https://']

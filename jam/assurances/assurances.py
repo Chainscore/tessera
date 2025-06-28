@@ -107,7 +107,7 @@ class Assurances:
         try:
             Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
                 bytes(signature),
-                X.AVAILABLE
+                X.AVAILABLE.value
                 + bytes(Hash.blake2b(bytes(parent) + bitfield.encode())),
             )
         except InvalidSignature:
