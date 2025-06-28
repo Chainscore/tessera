@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/consensus/safrole/errors.py
-# hypothesis_version: 6.135.10
-
-['bad_slot', 'bad_ticket_attempt', 'bad_ticket_count', 'bad_ticket_order', 'bad_ticket_proof', 'duplicate_ticket', 'reserved', 'unexpected_ticket']

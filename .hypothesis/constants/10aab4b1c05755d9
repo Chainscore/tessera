@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/__init__.py
-# hypothesis_version: 6.135.10
-
-['--builder', '--db', '--env', '--genesis', '--start-genesis', '--theme', '--validator', '40000.env', 'Flag for builders', 'Flag for validators', 'JAM node', 'JamConfig', 'Path to genesis file', 'chain_config', 'db', 'dev-spec.json', 'polkadot', 'store_true']

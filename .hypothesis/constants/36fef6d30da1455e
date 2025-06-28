@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/types/block/__init__.py
-# hypothesis_version: 6.135.10
-
-['AssurancesExtrinsic', 'Block', 'Culprit', 'DisputesExtrinsic', 'DisputesRecords', 'Fault', 'GuaranteesExtrinsic', 'Header', 'Judgement', 'OffendersMark', 'PreimagesExtrinsic', 'ReportGuarantee', 'TicketEnvelope', 'TicketsExtrinsic', 'ValidatorSignature', 'Verdict']

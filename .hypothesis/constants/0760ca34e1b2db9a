@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/disputes/error.py
-# hypothesis_version: 6.135.10
-
-['already_judged', 'bad_auditor_key', 'bad_guarantor_key', 'bad_judgement_age', 'bad_signature', 'bad_vote_split', 'fault_verdict_wrong', 'not_enough_culprits', 'not_enough_faults']

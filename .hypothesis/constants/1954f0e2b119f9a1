@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/merklization/binary_merkle.py
-# hypothesis_version: 6.135.10
-
-['Bytes[32]', 'index out of range', 'leaf', 'node', 'utf-8']

@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/types/state/__init__.py
-# hypothesis_version: 6.135.10
-
-['AccountData', 'AccountLookup', 'AccountPreimages', 'AccountStorage', 'Ai', 'AllCoreStats', 'AllReadyWRs', 'AllServiceStats', 'AllValidatorStats', 'Alpha', 'Ao', 'At', 'AuthorizationPool', 'AuthorizationQueue', 'AuthorizerHash', 'Beta', 'Chi', 'ChiG', 'CoreStat', 'Delta', 'Eta', 'Gamma', 'GammaA', 'GammaK', 'GammaS', 'GammaZ', 'Iota', 'Kappa', 'Lambda_', 'LookupTable', 'Nu', 'Phi', 'Pi', 'Psi', 'PsiB', 'PsiG', 'PsiO', 'PsiW', 'Rho', 'Sigma', 'Tau', 'Timestamps', 'ValidatorStat', 'Xi']

@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/config/chainspec.py
-# hypothesis_version: 6.135.10
-
-[100, 120, 128, 192, 200, 240, 250, 300, 341, 384, 500, 576, 600, 1023, '2xlarge', '3xlarge', 'JAM_CHAIN_SPEC', 'JamConfig', 'full', 'large', 'medium', 'small', 'tiny', 'xlarge']

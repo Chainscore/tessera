@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/utils/dummy/dummy_extrinsics.py
-# hypothesis_version: 6.135.10
-
-[b'ok', 784, 16909060, '0102030405', '0x01', 'age', 'anchor', 'bitfield', 'blob', 'index', 'key', 'requester', 'signature', 'target', 'validator_index', 'vote', 'votes']

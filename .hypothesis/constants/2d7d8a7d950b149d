@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/types/state/chi.py
-# hypothesis_version: 6.135.10
-
-['always_acc', 'assign', 'bless', 'designate', 'name']

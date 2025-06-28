@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/state/accounts.py
-# hypothesis_version: 6.135.10
-
-[255, 'balance', 'code_hash', 'gas_limit', 'min_gas', 'num_i', 'num_o']

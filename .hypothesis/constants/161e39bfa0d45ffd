@@ -1,4 +1,0 @@
-# file: /Users/prasad/projects/tessera/tsr-py/jam/ring_vrf/vrf.py
-# hypothesis_version: 6.135.10
-
-[b'\x00', b'\x03', 'C', 'P', 'S out of bounds', 'big', 'little']
