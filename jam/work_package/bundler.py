@@ -110,7 +110,7 @@ class Bundler:
            Extrinsic data (Vector[Bytes])
         """
         # Access DA
-        db = settings.db
+        db = settings.main_db
 
         ext_da = ItemExtrinsics(db)
         ext: Extrinsics = ext_da.process_item(w, data)

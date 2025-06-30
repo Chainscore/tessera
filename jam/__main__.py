@@ -53,9 +53,10 @@ async def main(
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
     seed = os.environ["SEED"]
+    host = os.environ["HOST"]
 
-    if not name or not port:
-        raise ValueError(f"Name or Port not found in {env}")
+    if not name or not port or not host or not seed:
+        raise ValueError(f"Missing node info in {env}")
 
     # ---------- SETUP LOGGING ----------
     environment = os.environ.get("ENVIRONMENT", "development")
@@ -69,7 +70,7 @@ async def main(
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=seed, data_path="data/")
+    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
 
     main_db = settings.main_db
 
@@ -104,9 +105,10 @@ async def main(
             if val.metadata.port != port
         ]
 
+        ip = IPAddress.from_str(host)
         tsr_node = Node(
             node_name=name,
-            host="127.0.0.1",
+            host=str(host),
             port=int(port),
             peers=peers,
             validator_data=ValidatorData(
@@ -116,7 +118,7 @@ async def main(
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
                     protocol=Uint[16](2 ** 16 - 1),
-                    host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
+                    host=ip,
                     port=U16(port),
                 ),
             ),

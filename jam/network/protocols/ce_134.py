@@ -171,7 +171,7 @@ class WorkPackageSharing(NetworkProtocol):
             validator = Validator()
             validator.validate_wp(bundle.package)
 
-            db = settings.db
+            db = settings.main_db
             logger.info("Storing Extrinsics..")
             extrinsics = bundle.extrinsics
             ext_da = ItemExtrinsics(db)

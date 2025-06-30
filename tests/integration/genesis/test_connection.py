@@ -2,10 +2,11 @@
 
 import pytest
 import asyncio
-import json
 import logging
+import signal
 import os
 import time
+from multiprocessing import Process
 
 from dotenv import load_dotenv
 from tsrkit_types.bytes import Bytes
@@ -21,9 +22,10 @@ from jam.network.peer import Peer
 from jam.network.node import Node
 
 from jam.consensus.bp_engine import BlockProducer
+from jam.network.protocols.ce_201 import CE201Data, GhostProtocol
 from jam.operations import Builder
 from jam.operations.utils.state_update import update_state
-from jam.state.state import setup_state
+from jam.state.state import setup_state, State
 from jam.types.protocol.crypto import BlsPublic
 from jam.types.block import Block
 from jam.types.protocol.validators import (
@@ -35,6 +37,24 @@ from jam.types.protocol.validators import (
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 
 clients = [40000, 40001]
+
+
+# DEFINE NODE TASKS
+async def start_node(node: Node):
+    # TEMP FIX: Wait for node to initialize
+    await asyncio.sleep(5)
+
+    for peer in node.peer_conn:
+        up_stream, conn = node.peer_conn[peer]
+
+        protocol = GhostProtocol()
+        message = f"Hello {peer.name}"
+
+        responses = await protocol.transmit(node, message)
+        expected_message = f"DATA RECEIVED: {message}"
+
+        for response in responses:
+            assert response == expected_message
 
 async def run_node(
     genesis_path: str,
@@ -56,9 +76,10 @@ async def run_node(
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
     seed = os.environ["SEED"]
+    host = os.environ["HOST"]
 
-    if not name or not port:
-        raise ValueError(f"Name or Port not found in {env}")
+    if not name or not port or not host or not seed:
+        raise ValueError(f"Missing node info in {env}")
 
     # ---------- SETUP LOGGING ----------
     environment = os.environ.get("ENVIRONMENT", "development")
@@ -95,9 +116,6 @@ async def run_node(
         state.store.disable_cache()
         update_state(state)
 
-        # Genesis specs
-        dev_spec = json.load(open(genesis_path))
-
         peers = [
             Peer(
                 id=bytes.decode(val.metadata.name, 'utf-8'),
@@ -107,9 +125,11 @@ async def run_node(
             if val.metadata.port != port
         ]
 
+        ip = IPAddress.from_str(host)
+
         tsr_node = Node(
             node_name=name,
-            host="127.0.0.1",
+            host=str(host),
             port=int(port),
             peers=peers,
             validator_data=ValidatorData(
@@ -119,7 +139,7 @@ async def run_node(
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
                     protocol=Uint[16](2 ** 16 - 1),
-                    host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
+                    host=ip,
                     port=U16(port),
                 ),
             ),
@@ -133,11 +153,7 @@ async def run_node(
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            # tg.create_task(sync(state))
-            if tsr_node.is_builder:
-                tg.create_task(Builder(tsr_node, settings).run())
-            else:
-                tg.create_task(BlockProducer(tsr_node, main_db).run())
+            tg.create_task(start_node(tsr_node))
 
     except KeyboardInterrupt:
         logger.info(
@@ -154,6 +170,7 @@ async def run_node(
             error=str(e)[:200],
             error_type=type(e).__name__
         )
+
         # Close db connections
         settings.clear()
 
@@ -161,21 +178,53 @@ async def run_node(
 
 session_name = "jam_test"
 
+def run_node_process(
+    genesis_path: str,
+    env: str,
+    start_genesis: bool,
+    theme: str,
+    is_builder: bool,
+    is_validator: bool,
+):
+    # Handle clean termination
+    def handle_sigterm(signum, frame):
+        exit(0)
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
+    asyncio.run(run_node(
+        genesis_path,
+        env,
+        start_genesis,
+        theme,
+        is_builder,
+        is_validator
+    ))
+
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_connection():
     tasks = []
-    from jam.__main__ import main
 
-    for client in clients:
-        tasks.append(
-            main(
-                genesis_path="dev-spec.json",
-                env=f"envs/{client}.env",
-                start_genesis=True,
-                theme="matrix",
-                is_builder=False,
-                is_validator=True,
-            )
-        )
-    await asyncio.gather(*tasks)
+    p_alice = Process(
+        target=run_node_process,
+        args=("", 'envs/40000.env', True, "matrix", False, True)
+    )
+    p_bob = Process(
+        target=run_node_process,
+        args=("", 'envs/40001.env', True, "polkadot", False, True)
+    )
+
+    p_alice.start()
+    p_bob.start()
+
+    # KEEP TEST ALIVE FOR SOME TIME
+    await asyncio.sleep(40)
+
+
+    print("END OF TEST")
+
+    p_alice.terminate()
+    p_bob.terminate()
+    p_alice.join()
+    p_bob.join()
+

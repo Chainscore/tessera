@@ -89,7 +89,7 @@ class BlockProducer:
 
             # Get current timeslot
             curr_ts = TimeSlot((time() - genesis_ts) // SLOT_PERIOD)
-            curr_ep = int(curr_ts // EPOCH_LENGTH)
+            curr_ep = int(curr_ts % EPOCH_LENGTH)
 
             # Check if we are in fallback or normal ticket.py
             gamma_s = state.gamma.s.unwrap()
