@@ -15,7 +15,7 @@ from jam.types.extrinsics.assurances import Assurance
 from jam.network.node import Node
 from time import time
 from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
-from jam.config.logging import logger
+from jam.logging import logger
 
 
 def create_dummy_assurances() -> Assurance:

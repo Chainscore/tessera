@@ -3,8 +3,8 @@ from typing import cast, TYPE_CHECKING
 from tsrkit_types import Uint, U8, U16, U32, structure
 from tsrkit_types.bytes import Bytes
 
-from jam.config.settings import settings
-from jam.config.logging import get_logger
+from jam.settings import settings
+from jam.logging import get_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data

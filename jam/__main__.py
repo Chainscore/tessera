@@ -8,13 +8,12 @@ from dotenv import load_dotenv
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
 
-from jam.config.keys import setup_keys
-from jam.config.logging import setup_logging, logger
-from jam.config.chainspec import chain_config
+from jam.logging import setup_logging, logger
+from jam.utils.chainspec import chain_config
+from jam.settings import setup_setting
 
 from jam.consensus.bp_engine import BlockProducer
 from jam.consensus.grandpa.finality import Finality
-from jam.config.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
@@ -30,8 +29,6 @@ from jam.types.protocol.validators import (
     ValidatorData,
     ValidatorMetadata,
 )
-
-from jam.types.state.delta import AccountMetadata
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
 
 
@@ -73,9 +70,9 @@ async def main(
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name, int(port))
+    settings = setup_setting(name, int(port), seed, data_path="data/")
 
-    main_db = settings.db
+    main_db = settings.main_db
 
     logger.info(
         "Starting JAM node",
@@ -138,7 +135,7 @@ async def main(
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            # tg.create_task(sync(state))
+            tg.create_task(sync(state))
             if tsr_node.is_builder:
                 tg.create_task(Builder(tsr_node, settings).run())
             else:
@@ -160,7 +157,6 @@ async def main(
             error_type=type(e).__name__
         )
         # Close db connections
-        from jam.config.data_stores import data_stores
-        data_stores.shutdown()
+        settings.clear()
 
         raise

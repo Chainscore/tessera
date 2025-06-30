@@ -4,9 +4,9 @@ from typing import Tuple
 
 from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, U16, U64, TypedVector, U32
 
-from jam.config.chainspec import chain_config
-from jam.config.logging import get_logger
-from jam.config.settings import settings
+from jam.utils.chainspec import chain_config
+from jam.logging import get_logger
+from jam.settings import settings
 
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR

@@ -1,7 +1,7 @@
 from time import perf_counter as now
 from contextlib import contextmanager
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 # Module-specific logger
 logger = get_logger("in_core")

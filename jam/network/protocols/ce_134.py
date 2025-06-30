@@ -4,8 +4,8 @@ from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32
 if TYPE_CHECKING:
     from jam.network.node import Node
 
-from jam.config.logging import get_logger
-from jam.config.settings import settings
+from jam.logging import get_logger
+from jam.settings import settings
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType

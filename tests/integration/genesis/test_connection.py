@@ -2,24 +2,21 @@
 
 import pytest
 import asyncio
-import json
 import logging
 import signal
 import os
 import time
-import sys
 from multiprocessing import Process
 
 from dotenv import load_dotenv
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
 
-from jam.config.keys import setup_keys
-from jam.config.logging import setup_logging, logger
-from jam.config.chainspec import chain_config
+from jam.logging import setup_logging, logger
+from jam.utils.chainspec import chain_config
 
 from jam.consensus.grandpa.finality import Finality
-from jam.config.settings import setup_setting
+from jam.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
@@ -37,7 +34,6 @@ from jam.types.protocol.validators import (
     ValidatorMetadata,
 )
 
-from jam.types.state.delta import AccountMetadata
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 
 clients = [40000, 40001]
@@ -66,8 +62,8 @@ async def run_node(
     start_genesis: bool,
     theme: str,
     is_builder: bool,
-    is_validator: bool,
-) -> (Node, State):
+    is_validator: bool
+):
     # ---------- SETUP LOGGING ----------
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
     init_ts = (time.time() - genesis_ts) / SLOT_PERIOD
@@ -97,9 +93,9 @@ async def run_node(
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name, int(port))
+    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
 
-    main_db = settings.db
+    main_db = settings.main_db
 
     logger.info(
         "Starting JAM node",
@@ -120,8 +116,6 @@ async def run_node(
         state.store.disable_cache()
         update_state(state)
 
-        keys = setup_keys(int(seed))
-
         peers = [
             Peer(
                 id=bytes.decode(val.metadata.name, 'utf-8'),
@@ -139,8 +133,8 @@ async def run_node(
             port=int(port),
             peers=peers,
             validator_data=ValidatorData(
-                keys.bandersnatch_public,
-                keys.ed25519_public,
+                settings.bandersnatch_public,
+                settings.ed25519_public,
                 BlsPublic(bytes(144)),
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
@@ -176,9 +170,9 @@ async def run_node(
             error=str(e)[:200],
             error_type=type(e).__name__
         )
+
         # Close db connections
-        from jam.config.data_stores import data_stores
-        data_stores.shutdown()
+        settings.clear()
 
         raise
 
@@ -223,31 +217,11 @@ async def test_connection():
     p_alice.start()
     p_bob.start()
 
-    # tasks.append(run_node("", 'envs/40000.env', True, "matrix", False, True))
-    # tasks.append(run_node("", 'envs/40001.env', True, "polkadot", False, True))
-
-    # print("ALICE", alice, alice_state, alice_settings)
-    # print("BOB", bob, bob_state, bob_settings)
-    # peer_alice = get_peer(alice_state, alice.port)
-    # peer_bob = get_peer(bob_state, bob.port)
-    #
-    # async with asyncio.TaskGroup() as tg:
-    #     tg.create_task(alice.initialize())
-    #     tg.create_task(bob.initialize())
-    #
-
     # KEEP TEST ALIVE FOR SOME TIME
     await asyncio.sleep(40)
 
-    #
-    #
-    # # Test to check
-    # tasks.append(start_alice(alice, peer_bob))
-    # tasks.append(start_bob(bob, peer_alice))
 
-    # await asyncio.gather(*tasks)
-
-    print("END TEST")
+    print("END OF TEST")
 
     p_alice.terminate()
     p_bob.terminate()

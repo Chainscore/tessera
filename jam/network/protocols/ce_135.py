@@ -2,8 +2,8 @@ import asyncio
 from typing import cast
 from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
 
-from jam.config.logging import logger
-from jam.config.settings import settings
+from jam.logging import logger
+from jam.settings import settings
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType

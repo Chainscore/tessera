@@ -2,7 +2,7 @@ from tsrkit_types.struct import structure
 
 from rockstore import RockStore
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.types import TimeSlot
 from jam.types.block.extrinsics.extrinsic import Extrinsic
 from jam.types.block.header import Header

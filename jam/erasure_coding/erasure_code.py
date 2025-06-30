@@ -1,12 +1,10 @@
 import math
 import reed_solomon_leopard
 
-from typing import Tuple
-
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import Vector
 
-from jam.config.chainspec import chain_config
+from jam.utils.chainspec import chain_config
 
 class ErasureCode:
 

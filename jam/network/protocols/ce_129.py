@@ -2,8 +2,8 @@ from typing import cast, TYPE_CHECKING
 
 from tsrkit_types import Bytes, TypedVector, ByteArray, Dictionary
 
-from jam.config.data_stores import data_stores
-from jam.config.logging import get_logger
+from jam.utils.data_stores import data_stores
+from jam.logging import get_logger
 from jam.network.base.quic import QuicProtocol
 from jam.state.state import state
 from jam.types import HeaderHash

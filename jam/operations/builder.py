@@ -3,7 +3,7 @@ from time import time
 
 from tsrkit_types import Bytes, U16, Uint
 
-from jam.config.settings import Settings
+from jam.settings import Settings
 from jam.execution.pvm.code import Code
 from jam.types import WorkPackage
 from jam.types.protocol.crypto import Hash
@@ -11,7 +11,7 @@ from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpe
 from jam.types.work.manifest import Extrinsics
 from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
 from jam.network.node import Node
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore

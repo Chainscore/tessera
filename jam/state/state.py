@@ -1,7 +1,7 @@
 import json
 from typing import Type
 from tsrkit_types import Dictionary
-from jam.config.data_stores import data_stores
+from jam.settings import settings
 from jam.consensus.grandpa.finality import Finality
 from jam.merklization import BMRFunctions
 from rockstore import RockStore
@@ -14,7 +14,7 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.itf.codable import Codable
 from jam.types import Block, Hash, Alpha, Eta, Nu, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma, \
     HeaderHash
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 logger = get_logger("import")
 
@@ -82,7 +82,9 @@ class State:
 
     def load(self, header: HeaderHash) -> "State":
         # 1. Load all caches from current head to mentioned header
-        kv = data_stores.main_db
+        from jam.settings import settings
+        kv = settings.main_db
+
         curr_head = Finality.load_latest(kv).header.parent
         _updates = {}
         while curr_head != header:
@@ -105,7 +107,8 @@ class State:
 
     def settle(self, header_hash: HeaderHash):
         """Settles a set of state changes cached in store. Marks off the settlement with an unique header hash"""
-        self.store.save_n_clear_cache(data_stores.main_db, header_hash)
+        from jam.settings import settings
+        self.store.save_n_clear_cache(settings.main_db, header_hash)
 
     def transition(self, block: Block):
         """

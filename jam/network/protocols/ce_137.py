@@ -2,8 +2,8 @@ from typing import cast, Tuple
 
 from tsrkit_types import structure, Uint, Null
 
-from jam.config.logging import logger
-from jam.config.settings import settings
+from jam.logging import logger
+from jam.settings import settings
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
