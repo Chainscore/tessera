@@ -48,7 +48,7 @@ class Settings:
             self, 
             data_path: Optional[str], 
             seed = Optional[int], 
-            name: str = "god_mode", 
+            name: str = "god_mode",
             port: int = 3000
     ):
         self.NODE_NAME = name 
@@ -57,19 +57,24 @@ class Settings:
         
         # Cleanup
         self.clear()
+
+        self._main_db = None
+        self._audit_db = None
+        self._d3l = None
+        self._state_db = None
         
         if data_path:
             import os
-            data_path = data_path + str(port) 
-            # Create a folder for this node 
+            data_path = data_path + str(port)
+            # Create a folder for this node
             os.makedirs(data_path, exist_ok=True)
-            # Setup DB 
+            # Setup DB
             self._main_db = RockStore(data_path + "/main")
             self._audit_db = RockStore(data_path + "/audit")
             self._d3l = RockStore(data_path + "/d3l")
             self._state_db = RockStore(data_path + "/state")
         
-        if seed:
+        if seed is not None:
             self.seed = Bytes[32](b"".join([U32(seed).encode()] * 8))
             self.ed25519_private = Hash.blake2b(Bytes(b"jam_val_key_ed25519") + self.seed)
             self.bandersnatch_private = Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed)
@@ -132,6 +137,6 @@ settings: Settings = Settings(data_path=None, seed=None)
 
 # When starting a node, pass node params to set global settings 
 def setup_setting(*args, **kwargs) -> Settings:
-    global settings 
+    global settings
     settings = Settings(*args, **kwargs)
     return settings

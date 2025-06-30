@@ -19,7 +19,6 @@ class IPAddress(TypedArray[U8, 4]):
 
         octets = [U8(int(part)) for part in parts]
 
-        print("ADD FORMED", cls(octets))
         return cls(octets)
 
 @structure

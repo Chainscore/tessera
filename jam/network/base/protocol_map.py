@@ -16,6 +16,11 @@ class ProtocolMap:
     """mapping for all the protocols"""
     ALL_PROTOCOLS = {
         PrefixType.UP0: BlockAnnouncement,
+        PrefixType.CE128: GhostProtocol,
+        PrefixType.CE129: GhostProtocol,
+        PrefixType.CE130: GhostProtocol,
+        PrefixType.CE131: GhostProtocol,
+        PrefixType.CE132: GhostProtocol,
         PrefixType.CE133: WorkPackageSubmission,
         PrefixType.CE134: WorkPackageSharing,
         PrefixType.CE135: WorkReportDistribution,

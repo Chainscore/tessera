@@ -5,7 +5,6 @@ from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
 from jam.logging import get_logger
-from jam.settings import settings
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -68,7 +67,7 @@ class BlockAnnouncement(NetworkProtocol):
         from jam.consensus.grandpa.finality import Finality
         from jam.types.protocol.crypto import Hash
 
-        db = settings.db
+        db = settings.main_db
         finality = Finality()
 
         logger.debug("Handshake started", peer=conn.peer)
@@ -99,8 +98,9 @@ class BlockAnnouncement(NetworkProtocol):
         from jam.types.protocol.crypto import Hash
 
         logger.info(f"Announcing blocks to {len(node.peer_conn)} peers.")
+        from jam.settings import settings
 
-        db = settings.db
+        db = settings.main_db
         finality = Finality()
 
         final_block = finality.load_final(db)

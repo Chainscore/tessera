@@ -2,7 +2,7 @@ from typing import cast
 
 from tsrkit_types import Vector, Null, Uint, structure, Bytes
 
-from jam.config.logging import logger
+from jam.logging import logger
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
