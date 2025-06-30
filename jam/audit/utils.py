@@ -2,8 +2,7 @@ from typing import List, Optional
 
 from jam.ring_vrf.curve.specs.bandersnatch import Bandersnatch_TE_Curve, BandersnatchPoint
 from jam.ring_vrf.ietf.ietf import IETF_VRF
-from jam.types.base.integers.general import Int
-from jam.types.base.sequences.bytes.byte_array import ByteArray64, ByteArray96
+# from jam.types.base.sequences.bytes.byte_array import ByteArray64, ByteArray96
 from jam.types.work.package import WorkPackage
 from jam.types.work.report import WorkReport
 
@@ -43,7 +42,7 @@ def F(work_report: WorkReport) -> bytes:
     # NOTE: Currently its a dummy
     return work_report.encode()
 
-def Ξ(work_package: WorkPackage,core_index:Int)->WorkReport:
+def Ξ(work_package: WorkPackage,core_index:int)->WorkReport:
     """
     Ξ as mentioned in equ 17.17 take package and core index and give out a workreport
     if the condition is True then only

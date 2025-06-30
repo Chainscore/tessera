@@ -6,7 +6,7 @@ from jam.types.block.extrinsics.preimages import Preimage, PreimagesExtrinsic
 from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSignature, ValidatorSignatures, GuaranteesExtrinsic
 from jam.types.block.extrinsics.assurances import AvailAssurance, AvailBitField, AssurancesExtrinsic
 from jam.types.block.extrinsics.disputes import Verdicts, Culprits, Faults, DisputesExtrinsic
-from jam.types.protocol.core import ServiceId, TimeSlot, ValidatorIndex, Gas
+from jam.types.protocol.core import CoreIndex, ServiceId, TimeSlot, ValidatorIndex, Gas
 from tsrkit_types.integers import U32, U16, U8, U64, Uint
 from jam.types.work import WorkReport
 from jam.types.work import (
@@ -55,12 +55,12 @@ def create_dummy_work_result() -> WorkResult:
     )
 
 
-def create_dummy_work_report() -> WorkReport:
+def create_dummy_work_report(core_index:CoreIndex=CoreIndex(3)) -> WorkReport:
     """Create dummy work report"""
     return WorkReport(
         package_spec=create_dummy_package_spec(),
         context=RefineContext.empty(),
-        core_index=Uint(3),
+        core_index=core_index,
         authorizer_hash=create_dummy_bytes32(),
         auth_output=Bytes.fromhex("0102030405"),
         segment_root_lookup=SegmentRootLookup({}),

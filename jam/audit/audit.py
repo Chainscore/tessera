@@ -14,14 +14,20 @@ from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.types import BandersnatchVrfSignature
 from jam.types.work.report import WorkReportHash
 from jam.types.protocol.merkle import OptionHash
+from jam.types.work.package import WorkPackage
+# from jam.work_package.processor import Processor
+from tsrkit_types.sequences import TypedVector
+from tsrkit_types.integers import Uint
 
 
 
 @dataclass
 class AuditingAndJudgement:
 
-    def __init__(self):
-        self.vrf = VRF
+    def __init__(self, current_state, current_assurances):
+        self.state = current_state
+        self.assurance = current_assurances
+        # self.process = Processor
 
     @staticmethod
     def report_to_be_audit(available_reports : TypedVector[OptionHash]) -> TypedVector[OptionHash]:
@@ -192,3 +198,22 @@ class AuditingAndJudgement:
     #         judgement_set.append(Bytes[64](signature))
     #     return judgement_set
 
+    def validator_judment_mapping(self,work_report:WorkReport)-> List[Bytes[64]]:
+        """
+         Go through the evaluate_core_mappings Func (refer 17.17) and provide its validity where the wr is valid or not
+         Return :
+            Set of Judgment signatures from each (kappa/current) validator
+        refer equ 17.18
+        """
+        judgement_set=[]
+        for validator in self.state.kappa:
+            private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
+            # signing_context = SIGNING_CONTEXTS["valid"] if evaluate_core_mappings(work_report) else SIGNING_CONTEXTS["invalid"]
+            signing_context = SIGNING_CONTEXTS["valid"] if True else SIGNING_CONTEXTS["invalid"]
+
+            message= signing_context + Hash.blake2b(work_report.encode())
+            # Sign will give out a 64Byte Signature
+            signature = private_key.sign(message)
+            # Explicitely modifying to the ByteArray64 format
+            judgement_set.append(Bytes64(signature))
+        return judgement_set
