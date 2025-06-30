@@ -69,7 +69,7 @@ async def main(
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name, int(port), seed, data_path="data/")
+    settings = setup_setting(name=name, port=int(port), seed=seed, data_path="data/")
 
     main_db = settings.main_db
 
@@ -92,8 +92,6 @@ async def main(
         state.store.disable_cache()
         update_state(state)
 
-        keys = setup_keys(int(seed))
-
         # Genesis specs
         dev_spec = json.load(open(genesis_path))
 
@@ -112,8 +110,8 @@ async def main(
             port=int(port),
             peers=peers,
             validator_data=ValidatorData(
-                keys.bandersnatch_public,
-                keys.ed25519_public,
+                settings.bandersnatch_public,
+                settings.ed25519_public,
                 BlsPublic(bytes(144)),
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
@@ -132,7 +130,7 @@ async def main(
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            tg.create_task(sync(state))
+            # tg.create_task(sync(state))
             if tsr_node.is_builder:
                 tg.create_task(Builder(tsr_node, settings).run())
             else:
