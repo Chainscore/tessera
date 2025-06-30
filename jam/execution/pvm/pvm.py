@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Tuple, List
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.execution.pvm.instructions.inst_map import inst_map
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.program import Program

@@ -7,7 +7,7 @@ from jam.execution.pvm.program import Program
 from jam.execution.pvm.status import PANIC, ExecutionStatus
 from tsrkit_types.bytes import Bytes
 from jam.types.protocol.core import Gas
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 # Module-specific logger
 logger = get_logger("host_calls")

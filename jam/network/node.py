@@ -7,7 +7,7 @@ from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.connection import QuicConnection
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 from jam.types.protocol.validators import ValidatorData
 from jam.types.protocol.core import CoreIndex
@@ -33,12 +33,15 @@ builder_alpn = node_alpn + "/builder"
 
 _original_initialize = QuicConnection._initialize
 
+
 def _initialize(self, peer_cid: bytes) -> None:
     _original_initialize(self, peer_cid)
     self.tls._request_client_certificate = True
 
+
 QuicConnection._initialize = _initialize
 INIT_DELAY = 6
+
 
 class Node:
     """
@@ -73,7 +76,16 @@ class Node:
     is_builder: bool = False
     is_validator: bool = True
 
-    def __init__(self, node_name: str, host: str, port: int, validator_data, peers: list[Peer], is_builder: bool, is_validator: bool):
+    def __init__(
+        self,
+        node_name: str,
+        host: str,
+        port: int,
+        validator_data: ValidatorData,
+        peers: list[Peer],
+        is_builder: bool,
+        is_validator: bool,
+    ):
         self.name = node_name
         self.host = host
         self.port = port
@@ -116,9 +128,7 @@ class Node:
         # Load the ED25519 private key
         with open(key_file, "rb") as key_file:
             private_key = load_pem_private_key(
-                key_file.read(),
-                password=None,
-                backend=default_backend()
+                key_file.read(), password=None, backend=default_backend()
             )
 
         return private_key
@@ -140,7 +150,8 @@ class Node:
         raise ValueError("No validator found with matching bandersnatch key.")
 
     def get_shard_index(self, core_index: CoreIndex):
-        from jam.config.chainspec import chain_config
+        from jam.utils.chainspec import chain_config
+
         vi = self.validator_index
         shard_index = ShardIndex(
             (core_index * chain_config.recovery_threshold + vi)
@@ -161,7 +172,9 @@ class Node:
             logger.debug("Peer node is connection initiator")
             return k2
 
-    def quic_config(self, is_client: bool = True, peer: Optional[Peer] = None) -> QuicConfiguration:
+    def quic_config(
+        self, is_client: bool = True, peer: Optional[Peer] = None
+    ) -> QuicConfiguration:
         """
         Utility function to build quic configuration.
         Args:
@@ -175,7 +188,9 @@ class Node:
         }
 
         config = QuicConfiguration(**properties)
-        config.load_cert_chain(f"seeds/{self.port}/cert.pem", f"seeds/{self.port}/key.pem")
+        config.load_cert_chain(
+            f"seeds/{self.port}/cert.pem", f"seeds/{self.port}/key.pem"
+        )
         config.verify_mode = ssl.CERT_NONE
 
         config.max_data = 104857600  # 100 MB
@@ -192,7 +207,7 @@ class Node:
             config.alpn_protocols = [node_alpn, builder_alpn]
 
         return config
-    
+
     async def run_server(self):
         """
         Function to initialize server connection of the node.
@@ -206,7 +221,9 @@ class Node:
             self.host,
             self.port,
             configuration=self.quic_config(is_client=False),
-            create_protocol=lambda *args, **kwargs: QuicProtocol(*args, node=self, **kwargs),
+            create_protocol=lambda *args, **kwargs: QuicProtocol(
+                *args, node=self, **kwargs
+            ),
             session_ticket_fetcher=session_ticket_store.pop,
             session_ticket_handler=session_ticket_store.add,
         )
@@ -225,30 +242,36 @@ class Node:
             return
 
         try:
-            logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC...")
+            logger.info(
+                f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC..."
+            )
             async with connect(
                 str(peer.host),
                 int(peer.port),
                 configuration=self.quic_config(peer=peer),
-                create_protocol=lambda *args, **kwargs: QuicProtocol(*args, node=self, **kwargs),
+                create_protocol=lambda *args, **kwargs: QuicProtocol(
+                    *args, node=self, **kwargs
+                ),
                 session_ticket_handler=session_ticket_store.add,
             ) as client:
 
                 # Save peer connection
                 client = cast(QuicProtocol, client)
 
-                logger.info(f"🤝 ({self.name}) Connection to {str(peer)} established ✅")
+                logger.info(
+                    f"🤝 ({self.name}) Connection to {str(peer)} established ✅"
+                )
 
                 stream_id = -1
                 if not self.is_builder:
                     stream_id = client._quic.get_next_available_stream_id()
 
                     from jam.network.protocols.up_0 import BlockAnnouncement
+
                     pref = PrefixType.UP0.encode()
                     client.stream_buffer[stream_id] = pref
                     client.stream_and_keep_open(pref, stream_id)
                     BlockAnnouncement.handshake(stream_id, client)
-
 
                 self.peer_conn[peer] = stream_id, client
                 self.is_initialized = True
@@ -311,7 +334,9 @@ class Node:
                 # Give server time to fully initialize
                 await asyncio.sleep(1)
 
-            logger.info(f"🔄 ({self.name}) Opening connections to {len(self.peers)} peers...")
+            logger.info(
+                f"🔄 ({self.name}) Opening connections to {len(self.peers)} peers..."
+            )
             await self.run_client()
 
             logger.info(f"🚀 {self} initialized successfully!")

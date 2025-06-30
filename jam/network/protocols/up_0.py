@@ -4,8 +4,8 @@ from tsrkit_types import Uint, U32
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.config.logging import get_logger
-from jam.config.settings import settings
+from jam.logging import get_logger
+from jam.settings import settings
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -64,7 +64,7 @@ class BlockAnnouncement(NetworkProtocol):
 
     @staticmethod
     def handshake(stream_id: int, conn: QuicProtocol):
-        from jam.config.settings import settings
+        from jam.settings import settings
         from jam.consensus.grandpa.finality import Finality
         from jam.types.protocol.crypto import Hash
 

@@ -6,19 +6,16 @@ import json
 import logging
 import os
 import time
-import sys
-import subprocess
 
 from dotenv import load_dotenv
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
 
-from jam.config.keys import setup_keys
-from jam.config.logging import setup_logging, logger
-from jam.config.chainspec import chain_config
+from jam.logging import setup_logging, logger
+from jam.utils.chainspec import chain_config
 
 from jam.consensus.grandpa.finality import Finality
-from jam.config.settings import setup_setting
+from jam.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
@@ -35,7 +32,6 @@ from jam.types.protocol.validators import (
     ValidatorMetadata,
 )
 
-from jam.types.state.delta import AccountMetadata
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 
 clients = [40000, 40001]
@@ -76,9 +72,9 @@ async def run_node(
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name, int(port))
+    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
 
-    main_db = settings.db
+    main_db = settings.main_db
 
     logger.info(
         "Starting JAM node",
@@ -99,8 +95,6 @@ async def run_node(
         state.store.disable_cache()
         update_state(state)
 
-        keys = setup_keys(int(seed))
-
         # Genesis specs
         dev_spec = json.load(open(genesis_path))
 
@@ -119,8 +113,8 @@ async def run_node(
             port=int(port),
             peers=peers,
             validator_data=ValidatorData(
-                keys.bandersnatch_public,
-                keys.ed25519_public,
+                settings.bandersnatch_public,
+                settings.ed25519_public,
                 BlsPublic(bytes(144)),
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
@@ -161,8 +155,7 @@ async def run_node(
             error_type=type(e).__name__
         )
         # Close db connections
-        from jam.config.data_stores import data_stores
-        data_stores.shutdown()
+        settings.clear()
 
         raise
 

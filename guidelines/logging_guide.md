@@ -5,7 +5,7 @@ This guide explains how to properly use logging in the JAM node codebase for bot
 ## Quick Start
 
 ```python
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 # Create a logger for your module
 logger = get_logger("module-name")
@@ -135,7 +135,7 @@ logger.info(
 
 ```python
 # At the top of your module
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 logger = get_logger("pvm")  # Component name for context
 ```
@@ -143,7 +143,7 @@ logger = get_logger("pvm")  # Component name for context
 ### 3. Use Performance Logging for Critical Paths
 
 ```python
-from jam.config.logging import log_performance
+from jam.logging import log_performance
 
 # Context manager for automatic timing
 with log_performance(logger, "block_validation", block_hash=hash):
@@ -220,7 +220,7 @@ export LOG_LEVEL_EXECUTION=DEBUG
 ### Method 2: Programmatic Filtering
 
 ```python
-from jam.config.logging import setup_logging
+from jam.logging import setup_logging
 
 # Show only specific modules
 setup_logging(
@@ -231,7 +231,7 @@ setup_logging(
 
 # Block noisy modules
 setup_logging(
-    theme='matrix', 
+    theme='matrix',
     node_name='debug-node',
     blocked_modules=['jam.network.protocols', 'jam.types']
 )
@@ -254,10 +254,12 @@ setup_logging(
 ## Real-World Examples
 
 ### Network Protocol Handler
+
 ```python
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 logger = get_logger("quic-server")
+
 
 def handle_message(self, buffer: bytes, stream_id: int):
     logger.debug(
@@ -266,7 +268,7 @@ def handle_message(self, buffer: bytes, stream_id: int):
         buffer_size=len(buffer),
         message_type=message_type
     )
-    
+
     try:
         result = process_message(buffer)
         logger.info(
@@ -291,32 +293,34 @@ def handle_message(self, buffer: bytes, stream_id: int):
 ```
 
 ### PVM Execution
+
 ```python
-from jam.config.logging import get_logger, log_performance
+from jam.logging import get_logger, log_performance
 
 logger = get_logger("pvm")
+
 
 def execute_program(self, program, gas):
     context = {
         "program_size": len(program),
         "initial_gas": gas
     }
-    
+
     with log_performance(logger, "pvm_execution", **context):
         logger.debug("Starting PVM execution", **context)
-        
+
         while gas > 0:
             instruction = program[pc]
-            
+
             logger.debug(
                 "Executing instruction",
                 pc=pc,
                 opcode=instruction.opcode,
                 gas_remaining=gas
             )
-            
+
             # ... execution logic ...
-            
+
             if error:
                 logger.error(
                     "PVM execution error",
@@ -325,7 +329,7 @@ def execute_program(self, program, gas):
                     **context
                 )
                 break
-        
+
         logger.info(
             "PVM execution completed",
             final_pc=pc,
@@ -336,10 +340,12 @@ def execute_program(self, program, gas):
 ```
 
 ### Consensus Engine
+
 ```python
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 logger = get_logger("consensus")
+
 
 def validate_block(self, block):
     logger.info(
@@ -348,7 +354,7 @@ def validate_block(self, block):
         block_number=block.number,
         parent_hash=block.parent_hash
     )
-    
+
     # Check block structure
     if not self.validate_structure(block):
         logger.error(
@@ -357,7 +363,7 @@ def validate_block(self, block):
             validation_step="structure"
         )
         return False
-    
+
     # Check transactions
     invalid_txs = self.validate_transactions(block.transactions)
     if invalid_txs:
@@ -367,7 +373,7 @@ def validate_block(self, block):
             invalid_count=len(invalid_txs),
             total_txs=len(block.transactions)
         )
-    
+
     logger.info(
         "Block validation completed",
         block_hash=block.hash(),

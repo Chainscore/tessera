@@ -6,7 +6,7 @@ from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTermina
     ConnectionIdIssued, ConnectionIdRetired, StreamReset, StopSendingReceived
 from cryptography.x509 import Certificate
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.network.base.certificate import verify_certificate
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 

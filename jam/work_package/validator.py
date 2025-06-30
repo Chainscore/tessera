@@ -1,4 +1,4 @@
-from jam.config.logging import logger
+from jam.logging import logger
 
 from jam.utils.constants import (
     MAX_EXPORT_ITEM,

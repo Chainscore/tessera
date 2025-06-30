@@ -25,7 +25,7 @@ from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
 from jam.network.node import Node
 from rockstore import RockStore
 from jam.utils.dummy.utils import create_dummy_bytes
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 # Logger for Block Production / Authoring module
 logger = get_logger("author")
