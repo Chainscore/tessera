@@ -1,16 +1,18 @@
+import asyncio
 from typing import cast, TYPE_CHECKING
 
 from tsrkit_types import Uint, U32
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
+from jam.consensus.grandpa.finality import Finality
 from jam.logging import get_logger
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 
-from jam.network.protocols.ce_128 import BlockRequest
+from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
 from jam.types.block import Block, Header
 
 if TYPE_CHECKING:
@@ -203,6 +205,9 @@ class BlockAnnouncement(NetworkProtocol):
 
                     server.stream_buffer[stream_id] = self._prefix.encode()
                     server.peer_handshake = True
+                    
+                    # Start synchornization
+                    asyncio.create_task(self.synchronise(h, server.node))
 
             # Handle announcement
             else:
@@ -265,5 +270,35 @@ class BlockAnnouncement(NetworkProtocol):
     def res_intercept(self, stream_id: int, client: QuicProtocol):
         raise NotImplementedError("Client Intercept not available for UP protocols")
 
+    
+    @classmethod
+    async def synchronise(cls, h: Handshake, node: "Node"):
+        from jam.state.state import state
+        from jam.settings import settings
+        # To know how many blocks to fetch
+        # (h.final.slot - state.tau) 
+        if h.final.time_slot <= state.tau:
+            return
+        
+        data_req = CE128Data(
+            header=HeaderHash(h.final.header_hash), 
+            dir=Direction.DesInc, 
+            max_blocks=U32(h.final.time_slot - state.tau)
+        )
 
+        logger.info("Requesting Blocks to Sync", num=data_req.max_blocks)
+
+        blocks_to_import = (await BlockRequest().transmit(node, data_req))[0]
+        logger.info(f"Received {len(blocks_to_import)} blocks. Importing...")
+
+        for block in reversed(blocks_to_import): 
+            state.transition(block)
+            hh = HeaderHash(block.header.hash())
+            Finality.set_head(hh, settings.main_db)
+            Finality.finalise(hh, settings.main_db)
+            block.save(settings.main_db)
+            print("State Root after sync", state.root.hex())
+
+        print("Sync complete!")
+        return 
 

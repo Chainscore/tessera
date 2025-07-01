@@ -46,7 +46,7 @@ class GhostProtocol(NetworkProtocol):
         msg_a = Bytes(data, "utf-8").encode()
         len_a = Uint[32](len(msg_a)).encode()
 
-        logger.info(f"Transmitting to {len(node.peer_conn)} Validators")
+        logger.info(f"GHOST - Transmitting to {len(node.peer_conn)} Validators", protocol="201")
 
         # TODO: Use Original Guarantor Connection
 
