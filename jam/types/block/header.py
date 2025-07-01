@@ -36,6 +36,22 @@ class Header:
     def __hash__(self) -> int:
         return int.from_bytes(self.hash())
 
+    def __str__(self):
+        return (
+            f"Header(\n"
+            f"  parent={self.parent.hex()},\n"
+            f"  state_root={self.parent_state_root.hex()},\n"
+            f"  extrinsic_hash={self.extrinsic_hash.hex()},\n"
+            f"  slot={self.slot},\n"
+            f"  epoch_mark={self.epoch_mark},\n"
+            f"  tickets_mark={self.tickets_mark},\n"
+            f"  offenders_mark={self.offenders_mark},\n"
+            f"  author_index={self.author_index},\n"
+            f"  entropy_source={self.entropy_source.hex()},\n"
+            f"  seal={self.seal.hex()}\n"
+            f")"
+        )
+
     def hash(self) -> bytes:
         return Hash.blake2b(self.encode())
     

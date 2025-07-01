@@ -24,7 +24,7 @@ class WorkReport:
     # x
     context: RefineContext
     # c
-    core_index: CoreIndex
+    core_index: Uint
     # a
     authorizer_hash: OpaqueHash
     # o
@@ -34,7 +34,7 @@ class WorkReport:
     # r
     results: WorkResults
     # g
-    auth_gas_used: Gas
+    auth_gas_used: Uint
 
     @classmethod
     def empty(cls, **overrides) -> "WorkReport":

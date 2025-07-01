@@ -2,8 +2,8 @@ from typing import cast, Tuple
 
 from tsrkit_types import Uint, structure, TypedVector, Bytes
 
-from jam.config.logging import logger
-from jam.config.settings import settings
+from jam.logging import logger
+from jam.settings import settings
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_137 import CE137Data

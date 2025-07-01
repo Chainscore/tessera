@@ -1,17 +1,17 @@
 from typing import cast, Tuple
 
-from tsrkit_types import structure, Uint, Null, Bytes, Vector
+from tsrkit_types import structure, Uint, Null
 
-from jam.config.logging import logger
-from jam.config.settings import settings
-from jam.merklization import BMRFunctions
+from jam.logging import logger
+from jam.settings import settings
+
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.quic import QuicProtocol
 
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
-from jam.types.work.shard import BundleShard, SegmentsShard, SegmentShard, ShardIndex
+from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex
 
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
@@ -79,83 +79,107 @@ class ShardDistributionProtocol(NetworkProtocol):
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting shard index & erasure root to {len(node.peer_conn)} guarantors")
-        print("SHARD REQ")
+        logger.info(f"Requesting shard from {len(node.peer_conn)} guarantors")
+
         for peer in node.peer_conn:
-            if int(peer.port) == 40002:
-                logger.info("requesting shard from", peer=peer)
-                client = node.peer_conn[peer][1]
+            try:
+                if int(peer.port) == 40002:
+                    logger.debug("Requesting shard from", peer=str(peer))
+                    client = node.peer_conn[peer][1]
 
-                # Send Protocol Prefix
-                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                    # Send Protocol Prefix
+                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                # Append prefix to stream buffer so that we know the stream for handling response
-                client.stream_buffer[stream_id] = self._prefix.encode()
+                    # Append prefix to stream buffer so that we know the stream for handling response
+                    client.stream_buffer[stream_id] = self._prefix.encode()
 
-                # Send Messages with their lengths
-                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    # Send Messages with their lengths
+                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                    res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                if res is not None:
-                    return res
+                    if res is not None:
+                        return res
+
+            except Exception as e:
+                logger.error(
+                    "Failed to request shard.",
+                    peer=str(peer),
+                    error=str(e),
+                    error_type=type(e).__name__
+                )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
         buffer = server.stream_buffer[stream_id]
 
-        logger.info("Received Shard index & erasure root from", peer=server.peer)
-        data, offset = CE137Data.decode_from(buffer[1:])
-        data = cast(CE137Data, data)
+        try:
+            data, offset = CE137Data.decode_from(buffer[1:])
+            data = cast(CE137Data, data)
 
-        print("received shard", len(data.encode()), len(buffer[1:]))
+            logger.info(
+                "Received shard request",
+                erasure_root=data.query.erasure_root,
+                shard_index=data.query.shard_index,
+                peer=server.peer
+            )
 
-        print("shard len", data.len, (len(data.query.encode())))
-        if not data.is_valid:
-            raise NetworkingError(Code.INVALID_DATA)
+            if not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
 
-        logger.info("Processing")
-        # TODO: Process received erasure root & shard index
-        query = data.query
+            # TODO: Process received erasure root & shard index
+            query = data.query
 
-        d3l = settings.d3l
-        audit = settings.audit
+            d3l = settings.d3l
+            audit = settings.audit
 
-        justification_da = JustificationsDA(audit)
+            justification_da = JustificationsDA(audit)
 
-        # Fetch Bundle Shard
-        audits_da = AuditShardsDA(audit)
-        bs_dict = audits_da.get(query.erasure_root)
-        bundle_shard = BundleShard(bs_dict[query.shard_index])
+            # Fetch Bundle Shard
+            audits_da = AuditShardsDA(audit)
+            bs_dict = audits_da.get(query.erasure_root)
+            bundle_shard = BundleShard(bs_dict[query.shard_index])
 
-        # Fetch Segments Shard
-        ss_da = SegmentShardsDA(d3l)
-        ss_dict = ss_da.get(query.erasure_root)
-        if query.shard_index not in ss_dict:
-            raise "Shard not found"
+            # Fetch Segments Shard
+            ss_da = SegmentShardsDA(d3l)
+            ss_dict = ss_da.get(query.erasure_root)
+            if query.shard_index not in ss_dict:
+                raise "Shard not found"
 
-        print("type", type(ss_dict[query.shard_index]))
-        segments_shard = SegmentsShard(ss_dict[query.shard_index].shard)
+            segments_shard = SegmentsShard(ss_dict[query.shard_index].shard)
 
-        # TODO: Fetch Justifications
-        justification = Justification([])
+            # TODO: Fetch Justifications
+            justification = Justification([])
 
-        # Return requested shards
-        msg_a = bundle_shard.encode()
-        len_a = Uint[32](len(msg_a)).encode()
-        print("len bundle", len(msg_a))
-        msg_b = segments_shard.encode()
-        len_b = Uint[32](len(msg_b)).encode()
-        print("len shard", len(msg_b))
-        msg_c = justification.encode()
-        len_c = Uint[32](len(msg_c)).encode()
-        print("len jfn", len(msg_c))
+            # Return requested shards
+            msg_a = bundle_shard.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+            msg_b = segments_shard.encode()
+            len_b = Uint[32](len(msg_b)).encode()
+            msg_c = justification.encode()
+            len_c = Uint[32](len(msg_c)).encode()
 
-        server.stream_and_keep_open(len_a, stream_id)
-        server.stream_and_keep_open(msg_a, stream_id)
-        server.stream_and_keep_open(len_b, stream_id)
-        server.stream_and_keep_open(msg_b, stream_id)
-        server.stream_and_keep_open(len_c, stream_id)
-        server.stream_and_close(msg_c, stream_id)
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_keep_open(msg_a, stream_id)
+            server.stream_and_keep_open(len_b, stream_id)
+            server.stream_and_keep_open(msg_b, stream_id)
+            server.stream_and_keep_open(len_c, stream_id)
+            server.stream_and_close(msg_c, stream_id)
+
+        except Exception as e:
+            msg_a = Null.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+
+            # Send response
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_close(msg_a, stream_id)
+
+            logger.error(
+                "Error processing shard request",
+                stream_id=stream_id,
+                buffer_size=len(buffer),
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
         """Intercept Bundle Shard, [Segment Shard] and Justification"""
@@ -164,12 +188,6 @@ class ShardDistributionProtocol(NetworkProtocol):
         try:
             data, offset = CE137Response.decode_from(buffer[1:])
             data = cast(CE137Response, data)
-
-            print("received shard 137", len(data.encode()), len(buffer[1:]))
-
-            print("len bundle", data.bs_len, (len(data.bundle_shard.encode())))
-            print("len shard", data.ss_len, (len(data.segments_shard.encode())))
-            print("len jufn", data.j_len, (len(data.justification.encode())))
 
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
@@ -182,6 +200,5 @@ class ShardDistributionProtocol(NetworkProtocol):
             return data.bundle_shard, data.segments_shard, data.justification
 
         except Exception as e:
-            print("error bad response", e)
-            logger.error(Code.BAD_RESPONSE)
+            logger.error(Code.BAD_RESPONSE, error=str(e))
             return None

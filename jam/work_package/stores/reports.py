@@ -5,10 +5,10 @@ from jam.work_package.store import DA
 
 class ReportsDA(DA):
     """
-    Reports DA Stores all the segments shards built / fetched by a node
+    Reports DA Stores all the reports compiled / received by a node
 
-    Key: Segments Shard Root
-    Value: Segments Shard (Vector[Segment Shard])
+    Key: Work Report Hash
+    Value: Work Report
     """
 
     def __init__(self, db: RockStore):

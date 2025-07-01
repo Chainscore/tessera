@@ -1,7 +1,7 @@
 from math import ceil
 from typing import Dict, List, Sequence, Self
 
-from jam.config.logging import logger
+from jam.logging import logger
 from jam.execution.pvm.types import Accessibility
 from jam.execution.pvm.status import PvmError, PAGE_FAULT
 from jam.utils.constants import (

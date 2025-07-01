@@ -4,8 +4,7 @@ from tsrkit_types import Uint, U32
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.config.logging import get_logger
-from jam.config.settings import settings
+from jam.logging import get_logger
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -64,37 +63,29 @@ class BlockAnnouncement(NetworkProtocol):
 
     @staticmethod
     def handshake(stream_id: int, conn: QuicProtocol):
-        from jam.config.settings import settings
+        from jam.settings import settings
         from jam.consensus.grandpa.finality import Finality
         from jam.types.protocol.crypto import Hash
 
-        db = settings.db
+        db = settings.main_db
         finality = Finality()
 
-        print("here in handshake")
+        logger.debug("Handshake started", peer=conn.peer)
         try:
             final_block = finality.load_final(db)
         except Exception as e:
-            print("error occurred ", e)
+            logger.error(f"Error occurred while loading final block {e}")
             final_block = Block.genesis()
 
-        print("here a")
-
         header_hash = Hash.blake2b(final_block.header.encode())
-        print("here b")
         block_slot = final_block.header.slot
-        print("here c")
 
         final = Final(header_hash=header_hash, time_slot=block_slot)
-        print("here d")
 
         # TODO: Fetch leaves (descendants of the latest finalized block with no known children)
         leaves = Leaves([])
-        print("here e")
         handshake = Handshake(final, leaves)
-        print("here in h")
         h = handshake.encode()
-        print("here after h")
         h_len = Uint[32](len(h))
 
         # Handshake Message
@@ -107,8 +98,9 @@ class BlockAnnouncement(NetworkProtocol):
         from jam.types.protocol.crypto import Hash
 
         logger.info(f"Announcing blocks to {len(node.peer_conn)} peers.")
+        from jam.settings import settings
 
-        db = settings.db
+        db = settings.main_db
         finality = Finality()
 
         final_block = finality.load_final(db)
@@ -135,7 +127,6 @@ class BlockAnnouncement(NetworkProtocol):
             try:
                 up_stream, conn = node.peer_conn[peer]
                 ann_len = U32(len(message))
-                print("ANN LEN SENT", ann_len)
 
                 conn.stream_and_keep_open(ann_len.encode(), up_stream)
                 conn.stream_and_keep_open(message, up_stream)
@@ -144,7 +135,7 @@ class BlockAnnouncement(NetworkProtocol):
                 logger.debug(
                     "Block announced to peer",
                     node_name=node.name,
-                    peer_endpoint=f"{peer.host}:{peer.port}",
+                    peer=str(peer),
                     stream_id=up_stream,
                     block_slot=int(data.header.slot)
                 )
@@ -152,7 +143,7 @@ class BlockAnnouncement(NetworkProtocol):
                 logger.error(
                     "Failed to announce block to peer",
                     node_name=node.name,
-                    peer_endpoint=f"{peer.host}:{peer.port}",
+                    peer=str(peer),
                     error=str(e),
                     error_type=type(e).__name__
                 )
@@ -177,8 +168,6 @@ class BlockAnnouncement(NetworkProtocol):
             stream_id=stream_id,
         )
 
-        # Process goes here
-
         up_stream, _ = server.node.peer_conn[peer]
         if stream_id == up_stream:
             # Handle handshake message
@@ -187,6 +176,7 @@ class BlockAnnouncement(NetworkProtocol):
                 if not server.is_client:
                     logger.info(
                         "Doing reverse handshake",
+                        peer=str(server.peer),
                         interface=server.interface
                     )
                     self.handshake(stream_id, server)
@@ -198,10 +188,13 @@ class BlockAnnouncement(NetworkProtocol):
                     h, _ = Handshake.decode_from(buffer[5:])
                     h = cast(Handshake, h)
 
+
                     # TODO: Process Handshake
                     logger.info(
                         "Received peer handshake",
                         stream_id=stream_id,
+                        peer=str(server.peer),
+                        handshake=h,
                         block_slot=int(h.final.time_slot),
                         parent_hash=h.final.header_hash.hex()[:16] + "...",
                         buffer_size=len(buffer),
@@ -215,16 +208,15 @@ class BlockAnnouncement(NetworkProtocol):
             else:
                 # Parse received Announcement
                 a_len, _ = Uint[32].decode_from(buffer[1:5])
-                print("CHECK ANN", len(buffer), a_len)
 
                 if len(buffer[5:]) == a_len:
-                    print("CHECK SUCCESS")
                     a, _ = Announcement.decode_from(buffer[5:])
                     a = cast(Announcement, a)
 
                     logger.info(
                         "Received block announcement",
                         stream_id=stream_id,
+                        peer=str(server.peer),
                         block_slot=int(a.final.time_slot),
                         parent_hash=a.final.header_hash.hex()[:16] + "...",
                         buffer_size=len(buffer)
@@ -233,12 +225,18 @@ class BlockAnnouncement(NetworkProtocol):
                     logger.debug(
                         "Processing incoming block",
                         stream_id=stream_id,
+                        peer=str(server.peer),
                         header_slot=int(a.header.slot),
                         parent_hash=a.header.parent.hex()[:16] + "...",
                         extrinsic_hash=a.header.extrinsic_hash.hex()[:16] + "..."
                     )
+
                     logger.info(
-                        f"Received a new block with header {a.header}. Parent Block: {a.final.header_hash} in T.S {a.final.time_slot}")
+                        f"Processed a new block with header {str(a.header)}.",
+                        peer=str(server.peer),
+                        parent_block=a.final.header_hash,
+                        parent_time_slot=a.final.time_slot
+                    )
 
                     server.stream_buffer[stream_id] = self._prefix.encode()
 
@@ -254,6 +252,7 @@ class BlockAnnouncement(NetworkProtocol):
                     logger.info(
                         "Block announcement processed successfully",
                         stream_id=stream_id,
+                        peer=str(server.peer),
                         block_slot=int(a.final.time_slot)
                     )
 

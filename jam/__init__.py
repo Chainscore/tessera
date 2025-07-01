@@ -1,9 +1,8 @@
 import argparse
-import os
 
 from dotenv import load_dotenv
 
-from .config.chainspec import JamConfig, chain_config
+from jam.utils.chainspec import JamConfig, chain_config
 import asyncio
 
 __all__ = ["JamConfig", "chain_config"]

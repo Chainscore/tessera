@@ -358,5 +358,3 @@ def check_verify():
     verified_root = merkle.verify_wb_merkle(temp[2], Uint(2), justification)
     print("whether original root and verified root is correct or not:",verified_root == root )
     assert root == verified_root
-
-# check_verify()

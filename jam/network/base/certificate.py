@@ -1,15 +1,18 @@
+import os
 import base64
 
 from datetime import datetime, timedelta, timezone
-import json
-import os
 
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
 from tsrkit_types import U32, Uint
 
+from jam.logging import get_logger
 from jam.types.protocol.crypto import Hash
+
+# Module-specific logger
+logger = get_logger("network")
 
 ASN1_PREFIX = bytes.fromhex("302e020100300506032b657004220420")
 ZERO_SEED = b"\x00" * 32
@@ -138,7 +141,6 @@ def verify_certificate(cert: x509.Certificate):
             raise ValueError("Certificate public key must be Ed25519.")
 
         test_san = generate_san(pk.public_bytes_raw())
-        print("Peer Certificate Issued by: ", cert.issuer)
 
         san_extension = cert.extensions.get_extension_for_oid(x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
         san = san_extension.value.get_values_for_type(x509.general_name.DNSName)
@@ -152,7 +154,7 @@ def verify_certificate(cert: x509.Certificate):
         if cert.signature_algorithm_oid != x509.SignatureAlgorithmOID.ED25519:
             raise ValueError("Expected Ed25519 signature algorithm.")
 
-        print("Certificate Verification Successful!!")
+        logger.info("Certificate verification successful!", issuer=cert.issuer)
 
         return True, None
 

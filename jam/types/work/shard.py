@@ -1,12 +1,11 @@
 """Shard related types for the JAM protocol."""
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 from tsrkit_types import Uint, Bytes, TypedVector, structure, Dictionary, TypedArray
 
-from jam.config.chainspec import chain_config
+from jam.utils.chainspec import chain_config
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.work.manifest import SegmentIndex
-from jam.utils.constants import SEGMENT_SIZE
 
 ShardIndex = Uint[16]
 

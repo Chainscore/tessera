@@ -11,16 +11,16 @@ from jam.types.protocol.crypto import Hash
 from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
 from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
 from jam.types.work.manifest import Extrinsics
-from jam.utils.constants import EPOCH_LENGTH
+from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
 from jam.network.node import Node
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from rockstore import RockStore
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex, Gas, Balance, BlobLength, ServiceId, SegmentRoot
 
-# Module-specific logger
+# Logger for WP Production
 logger = get_logger("in_core")
 
 async def wp_producer(node: Node, db: RockStore):
@@ -34,6 +34,7 @@ async def wp_producer(node: Node, db: RockStore):
 
     # Record genesis timestamp in seconds
     genesis_ts = time()
+
     C133 = WorkPackageSubmission()
 
     wp_iter = 0
@@ -116,7 +117,6 @@ async def wp_producer(node: Node, db: RockStore):
             import_spec1 = ImportSpec(tree_root=SegmentRoot.fromhex("3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91"), index=U16(0))
             import_spec2 = ImportSpec(tree_root=SegmentRoot.fromhex("6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694"), index=U16(0))
 
-            print("CURRENT TIMESLOT", current_timeslot, wp_iter)
             if wp_iter % 4 == 0:
                 import_specs = []
             elif wp_iter % 4 == 1:
@@ -163,7 +163,6 @@ async def wp_producer(node: Node, db: RockStore):
                 iteration=wp_iter
             )
 
-            print("Response", responses)
         else:
             logger.debug(
                 "Node is not builder - skipping work package production",

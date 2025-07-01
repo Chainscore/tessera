@@ -2,8 +2,8 @@ from typing import cast, TYPE_CHECKING
 
 from tsrkit_types import TypedVector, Enum
 
-from jam.config.data_stores import data_stores
-from jam.config.logging import get_logger
+from jam.settings import settings
+from jam.logging import get_logger
 from jam.consensus.grandpa.finality import Finality
 from jam.network.base.quic import QuicProtocol
 from jam.types import HeaderHash, Block, TimeSlot
@@ -116,7 +116,7 @@ class BlockRequest(NetworkProtocol):
 			# To be thought upon
 
 			# Get the start block
-			start_block = Block.load(data.header, data_stores.main_db)
+			start_block = Block.load(data.header, settings.main_db)
 			start_timeslot = start_block.header.slot
 
 			latest = Finality.load_latest(data_stores.main_db)

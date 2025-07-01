@@ -1,6 +1,6 @@
 import asyncio
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.utils.dummy.utils import create_dummy_bytes32
 from jam.network.node import Node
 from rockstore import RockStore

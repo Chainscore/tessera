@@ -1,6 +1,6 @@
 from typing import Any, Optional, List
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.host_calls.invocations.protocol import Context, DispatchNormalReturn
 from jam.execution.pvm.memory import Memory

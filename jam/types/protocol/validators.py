@@ -11,6 +11,16 @@ class IPAddress(TypedArray[U8, 4]):
     def __str__(self):
         return ".".join(str(int(octet)) for octet in self)
 
+    @classmethod
+    def from_str(cls, ip_str: str) -> "IPAddress":
+        parts = ip_str.strip().split(".")
+        if len(parts) != 4:
+            raise ValueError(f"Invalid IP format: {ip_str}")
+
+        octets = [U8(int(part)) for part in parts]
+
+        return cls(octets)
+
 @structure
 class ValidatorMetadata:
     """Validator metadata structure Byte-Array(128)"""

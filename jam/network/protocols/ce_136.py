@@ -2,7 +2,7 @@ from typing import cast
 
 from tsrkit_types import Vector, Option, Null, Uint, structure
 
-from jam.config.logging import logger
+from jam.logging import logger
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -70,8 +70,8 @@ class WorkReportRequest(NetworkProtocol):
 
         responses = Vector([])
         for peer in node.peer_conn:
-            if int(peer.port) == 30336:
-                logger.info("requesting report from 30336")
+            if int(peer.port) == 40000:
+                logger.debug("Requesting report from 40000")
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
@@ -99,12 +99,9 @@ class WorkReportRequest(NetworkProtocol):
         if not data.is_valid:
             raise NetworkingError(Code.INVALID_DATA)
 
-        logger.info("Fetching Work Report")
+        logger.debug("Fetching Work Report")
         # TODO: Process received Work Report Query
         report = create_dummy_work_report()
-        # Process goes here
-
-        logger.info(f"📩 Processed work report query for WR {data.work_report_hash}")
 
         # Return requested report to client node
         msg_a = report.encode()
@@ -114,7 +111,11 @@ class WorkReportRequest(NetworkProtocol):
         server.stream_and_keep_open(len_a, stream_id)
         server.stream_and_close(msg_a, stream_id)
 
-        logger.info("Requested report sent back to Node")
+        logger.info(
+            f"📩 Processed work report query.",
+            report_hash=data.work_report_hash.hex()[:16] + "...",
+            peer=server.peer
+        )
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptRep:
         """Intercept Requested Work Report"""
@@ -126,14 +127,17 @@ class WorkReportRequest(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info(f"Requested Report received on Node (client) via stream {stream_id}")
+            logger.info(
+                f"Requested Report received.",
+                peer=client.peer,
+                stream_id=stream_id
+            )
 
-            # TODO: Save Work Report & Check Majority & Distribute
-            logger.info("Distributing this Work Report after achieving majority")
+            # TODO: Save Work Report
 
             return OptRep(data.work_report)
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE)
+            logger.error(Code.BAD_RESPONSE, error=str(e))
             return OptRep(Null)
 

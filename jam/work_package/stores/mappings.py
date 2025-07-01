@@ -3,7 +3,6 @@ from typing import Tuple
 from rockstore import RockStore
 from tsrkit_types import Null
 
-from jam.config.chainspec import chain_config
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import WorkPackageHash, ExportsRoot, ErasureRoot, WorkReportHash
 from jam.types.work.report import WorkReport

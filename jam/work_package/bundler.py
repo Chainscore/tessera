@@ -2,8 +2,8 @@ from typing import Tuple, Dict, List
 
 from tsrkit_types import Vector, Bytes
 
-from jam.config.logging import get_logger
-from jam.config.settings import settings
+from jam.logging import get_logger
+from jam.settings import settings
 from jam.network.protocols.ce_137 import ShardDistributionProtocol
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types import WorkPackageBundle
@@ -19,12 +19,12 @@ from jam.types.work.manifest import (
     Extrinsics,
     SegmentDict,
     MultiJustifications,
-    MultiExtrinsics, Extrinsic, Segment, Assurers
+    MultiExtrinsics, Extrinsic, Segment
 )
 
 from jam.types.work import SegmentRootLookup
 
-from jam.types.protocol.core import SegmentRoot, ErasureRoot
+from jam.types.protocol.core import SegmentRoot
 from jam.types.protocol.crypto import OpaqueHash
 
 from jam.merklization.binary_merkle import BMRFunctions
@@ -32,15 +32,13 @@ from jam.utils.benchmark import benchmark
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
-from jam.types.work.shard import ShardIndex, SegmentsShards, SegmentsShard, SegmentShard
+from jam.types.work.shard import ShardIndex, SegmentShard
 
 from jam.erasure_coding.erasure_code import ErasureCode
 
 
 from jam.network.node import Node
-from jam.network.protocols.ce_139 import SegmentShardRequest
-from jam.network.protocols.ce_139_base import CE139Data, SegmentIndexes
-from jam.config.chainspec import chain_config
+from jam.utils.chainspec import chain_config
 
 # Module-specific logger
 logger = get_logger("in_core")
@@ -90,12 +88,11 @@ class Bundler:
         Returns:
             r if r is already a segment root else Segment root from dictionary if r is a work package hash.
         """
-        print("here 1", self.sr_lookup)
         if self.sr_lookup is not None and r in self.sr_lookup.keys():
-            print("here 2")
+            logger.debug("Lookup Hit")
             return self.sr_lookup[r]
         else:
-            print("here 3")
+            logger.debug("Lookup Miss")
             return r
 
     @staticmethod
@@ -113,7 +110,7 @@ class Bundler:
            Extrinsic data (Vector[Bytes])
         """
         # Access DA
-        db = settings.db
+        db = settings.main_db
 
         ext_da = ItemExtrinsics(db)
         ext: Extrinsics = ext_da.process_item(w, data)
@@ -165,7 +162,6 @@ class Bundler:
         # requested_shards: Dict[Tuple[SegmentRoot,SegmentIndex], Dict[ShardIndex, Tuple[Assurers, ErasureRoot]]] = {}
 
         for h, seg_indices in import_map.items():
-            print("checking ", h, h.hex())
             s_root = self.lookup_root(h)
             logger.info(f"Fetching segments with root {s_root}")
 
@@ -173,17 +169,17 @@ class Bundler:
                 try:
                     # Check for Segments in cache first
                     if s_root in seg_dict:
-                        print("cache hit")
+                        logger.debug("Cache Hit")
                         segments = seg_dict[s_root]
                         fetched_imports[(s_root,n)] = segments[n]
 
                     # If cache miss, check in DB, and cache it
                     else:
-                        print("cache miss")
+                        logger.debug("Cache Miss")
                         segments, _ = seg_da.get(s_root)
-                        print("fetching seg from root", s_root.hex())
+                        logger.debug("Fetching segments from root", segment_root=s_root.hex())
                         seg_dict[s_root] = segments
-                        print("fetched seg", hash(segments[n]), len(segments[n]))
+                        logger.debug("Fetched segments from root", segment_root=s_root.hex(), count=len(segments))
                         fetched_imports[(s_root, n)] = segments[n]
 
                 except KeyError as e:
@@ -202,7 +198,7 @@ class Bundler:
                         # FOR NOW JUST REQUEST ALL THE SHARDS (SOMEWHAT GREATER THAN 341)
                         # TODO: Fetch shards based on self availability
 
-                        print("segment miss")
+                        logger.debug("Segment Miss")
                         ss_dict = shards_da.get(e_root)
                         shards = ss_dict.get_shard_tuple(n)
                         if len(shards) > chain_config.recovery_threshold:
@@ -214,7 +210,7 @@ class Bundler:
 
 
                     except KeyError as e2:
-                        print("shard miss")
+                        logger.debug("Shard Miss")
 
                         # TODO: Request all shards using CE 137
                         ce_137 = ShardDistributionProtocol()
@@ -262,15 +258,11 @@ class Bundler:
                 logger.info(f"Compiling justification for root {s_root}")
 
                 if s_root not in seg_dict:
-                    print("not found", s_root, seg_dict)
                     raise KeyError("Segments not found")
 
                 segments = seg_dict[s_root]
-                print("stop check 1")
                 pages = self.merkle.merkle_path_fn(segments, 0, int(n))
-                print("stop check 2")
                 justification = Justification(pages.unwrap())
-                print("stop check 3")
 
                 justifications.append(justification)
             except Exception as e:

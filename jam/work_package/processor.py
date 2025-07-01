@@ -1,14 +1,12 @@
-import json
 import asyncio
 from math import ceil
 from typing import Tuple
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from tsrkit_types import ByteArray, Vector, Uint, Null, Bytes, U8, U16, U64, TypedVector, U32
+from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, U16, U64, TypedVector, U32
 
-from jam.config.chainspec import chain_config
-from jam.config.logging import get_logger
-from jam.config.settings import settings
+from jam.utils.chainspec import chain_config
+from jam.logging import get_logger
+from jam.settings import settings
 
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
@@ -133,17 +131,17 @@ class Processor:
         Returns:
             Work Digest
         """
-        extrinsic_size: U64 = U64(0)
+        extrinsic_size: Uint = Uint(0)
         for i in item.extrinsic:
-            extrinsic_size = extrinsic_size + i.len
+            extrinsic_size = extrinsic_size + Uint(i.len)
 
         payload_hash = Hash.blake2b(bytes(item.payload))
 
-        imports_count: U16 = U16(len(item.import_segments))
-        exports_count: U16 = U16(item.export_count)
-        extrinsic_count: U8 = U8(len(item.extrinsic))
+        imports_count: Uint = Uint(len(item.import_segments))
+        exports_count: Uint = Uint(item.export_count)
+        extrinsic_count: Uint = Uint(len(item.extrinsic))
 
-        refine_load = RefineLoad(gas_used=gas, imports=imports_count, exports=exports_count,
+        refine_load = RefineLoad(gas_used=Uint(gas), imports=imports_count, exports=exports_count,
                                  extrinsic_count=extrinsic_count, extrinsic_size=extrinsic_size)
 
         result = WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=payload_hash,
@@ -244,7 +242,7 @@ class Processor:
                 specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
 
             logger.info(f"Compiling Report..")
-            report = WorkReport(package_spec=specs, context=p.context, core_index=c, authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Gas(g))
+            report = WorkReport(package_spec=specs, context=p.context, core_index=Uint(c), authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Uint(g))
 
             return report
 
@@ -273,16 +271,13 @@ class Processor:
             # Work Bundle Length, l
             l = len(wp_bundle)
 
-            # TODO: Remove
-            for seg in export_segments:
-                print("Segment built", hash(seg), len(seg))
-
             # Segment Root, e
             e = ExportsRoot(self.merkle.cd_merkle_fn(export_segments))
             logger.info(f"Exports Root calculated - {e.hex()} {e}")
 
             # Segments Count, n
             n = len(export_segments)
+            logger.debug("Segments formed", count=n)
 
             erasure_codec = ErasureCode()
 
@@ -294,7 +289,7 @@ class Processor:
 
             with benchmark("Erasure Coded Bundle"):
                 bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
-                print(f"{len(bundle_shards)} bundle shards formed")
+                logger.debug("Bundle Shards formed", count=len(bundle_shards))
 
             bs_hashes = BundleShardHashes([])
             bs_dict = BundleShardsDict({})
@@ -309,9 +304,8 @@ class Processor:
 
             with benchmark("Built proofs"):
                 proofs = self.paged_proof(export_segments)
-                print(f"{len(proofs)} proofs formed")
+                logger.debug("Proofs formed", count=len(proofs))
                 proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
-                print(f"{len(proved_segments)} all segs formed")
 
 
             # Build Segment Shards
@@ -326,7 +320,7 @@ class Processor:
                 for item in justified_segments:
                     seg_chunks = erasure_codec.encode(item.encode())
                     all_chunks.append(seg_chunks)
-                    print(f"{len(seg_chunks)} seg shards formed for {i}th seg/proof")
+                    logger.debug("Segments Shard formed", count=len(seg_chunks), segment=i)
                     i += 1
 
             with benchmark("Transposed segment shards"):
@@ -345,14 +339,11 @@ class Processor:
 
             with benchmark("Processed segment chunks"):
                 for si, ss in enumerate(segments_shards):
-                    print("here", type(ss), type(si))
                     shard_index = ShardIndex(si)
-                    print("ss shard", shard_index,  len(ss))
                     s_dict = SegShardDict({})
 
                     for sgi, s in enumerate(ss):
                         segment_index = SegmentIndex(sgi)
-                        print("s shard", segment_index, len(s), s[:12])
                         s_dict[segment_index] = SegmentShard(s)
 
                     ss_root = self.merkle.wb_merkle_fn(ss)
@@ -453,10 +444,7 @@ class Processor:
         core_segment = CoreSegment(core_index=core, segment_root_map=lookup)
 
         map_len = U32(len(core_segment.encode()))
-        print("map length", map_len, len(core_segment.encode()))
-
         bundle_len = U32(len(bundle.encode()))
-        print("bundle length", bundle_len, len(bundle.encode()))
 
         data = CE134Data(map_len=map_len, work_package_bundle=bundle, bundle_len=bundle_len, core_segment=core_segment)
 
@@ -464,10 +452,7 @@ class Processor:
         loop.set_task_factory(asyncio.eager_task_factory)
 
         # Distribute Bundle, parallely
-        print("transmit call")
-        print("peers", self.node.peer_conn)
         self.transmit_task = loop.create_task(CE134.transmit(node=self.node, data=data))
-        print("transmit called")
 
         # Build Report
         with benchmark("bundle processed"):
@@ -513,7 +498,6 @@ class Processor:
         from jam.network.protocols.ce_134 import OptCred
         for response in responses:
             if response != OptCred(Null):
-                print("RESPONSE", response)
                 cred = response.unwrap()
                 if cred.work_report_hash == wr_hash:
                     guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=cred.ed25519_signature)
@@ -548,4 +532,3 @@ class Processor:
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
 
             acks = await CE135.transmit(node=self.node, data=data)
-            print("Received acks", acks)
