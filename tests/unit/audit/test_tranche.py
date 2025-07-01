@@ -83,7 +83,7 @@ if __name__ == "__main__":
                     print(f"❌ WR {wr} NOT audited in tranche {tranche}, will retry in next tranche.")
 
             tranche += 1
-            time.sleep(0.5)  # Simulate time between tranches
+            time.sleep(2)  # Simulate time between tranches
 
         if len(audited_wrs) == len(all_wrs):
             print("\n🎉 All WRs successfully audited across all tranches!")
