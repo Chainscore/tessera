@@ -1,3 +1,4 @@
+import json
 import pytest
 import asyncio
 import logging
@@ -58,6 +59,8 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
     main_db = settings.main_db
 
     logger.info("Starting JAM node", name=name, port=port, ts=init_ts, epoch=init_ep, env=environment)
+    
+    genesis = json.load(open("dev-spec.json"))
 
     # Set genesis state
     # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
@@ -83,8 +86,9 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
         is_validator=True,
     )
 
-    block = Block.genesis()
+    block = Block.decode(bytes.fromhex(genesis["genesis_header"]))
     header_hash = block.save(main_db)
+    print("Genesis HH", header_hash.hex())
     Finality.set_head(header_hash, main_db)
     Finality.finalise(header_hash, main_db)
 
