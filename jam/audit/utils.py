@@ -1,13 +1,11 @@
 from typing import List, Optional
-
+from tsrkit_types import TypedVector
 from jam.ring_vrf.curve.specs.bandersnatch import Bandersnatch_TE_Curve, BandersnatchPoint
 from jam.ring_vrf.ietf.ietf import IETF_VRF
-from jam.types.base.integers.general import Int
-from jam.types.base.sequences.bytes.byte_array import ByteArray64, ByteArray96
 from jam.types.work.package import WorkPackage
 from jam.types.work.report import WorkReport
 
-def power_set(input_list: List, length: Optional[int] = None) -> List[List]:
+def power_set(input_list: TypedVector, length: Optional[int] = None) -> TypedVector[TypedVector]:
     """
     Compute the power set of the given list. Optionally, limit to subsets of a specific length.
 
@@ -33,27 +31,16 @@ def power_set(input_list: List, length: Optional[int] = None) -> List[List]:
     return power_set_result
 
 
-def F(work_report: WorkReport) -> bytes:
-    """
-    F(w) function: will fetch wp encoding and
-    reconstructing the Erasure Coded Chunks (Through Erasure coding's Merkle root)
-    refer equ 17.17
-    """
-    # TODO: Do as per comment.
-    # NOTE: Currently its a dummy
-    return work_report.encode()
+# def F(work_report: WorkReport) -> bytes:
+#     """
+#     F(w) function: will fetch wp encoding and
+#     reconstructing the Erasure Coded Chunks (Through Erasure coding's Merkle root)
+#     refer equ 17.17
+#     """
+#     # TODO: Do as per comment.
+#     # NOTE: Currently its a dummy
+#     return work_report.encode()
 
-def Ξ(work_package: WorkPackage,core_index:Int)->WorkReport:
-    """
-    Ξ as mentioned in equ 17.17 take package and core index and give out a workreport
-    if the condition is True then only
-    As per Eqn 14.11 its already build but not getting expected result so for the timing
-
-    NOTE: This Dummy Func got introduced
-    TODO: Need to remove after the main func is implemented
-    """
-
-    return WorkReport.empty()
 
 def bandersnatch_y(key: bytes):
     entropy_yield_vrf_signature = key
@@ -63,7 +50,7 @@ def bandersnatch_y(key: bytes):
 
 def bandersnatch_f(key,context,message:bytes=b""):
     vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-    output_point, proof=  vrf.prove(alpha=message, secret_key=key,  additional_data=context,salt=b"")
+    output_point, proof=  vrf.prove(alpha=message, secret_key=key,  additional_data=context, salt=b"")
     op_bt_str= output_point.point_to_string()
 
     proof_bt_str= proof[0].to_bytes()+ proof[1].to_bytes()

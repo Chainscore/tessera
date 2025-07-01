@@ -82,13 +82,13 @@ from tsrkit_types import Bytes, TypedVector, U32, Null
 # shuffle = shuffle(h="777bcc9cc655838fd28c223ce459060bf6bccd1e081ed11cc19fdddc46a978639aa298f678112cb4e8c15386f6414a841d10b487f465faf31c2c515e07ca4c0424c763a274bc12202ffc9e493a90cfbdb0623cc593f15a47c2571047d40d0802", array=dummy_array)
 # print("Shuffle based on the first function output =>  ", shuffle)
 
-
-print(a.vrs_func(entropy_source="f7caffd3498473b08ab9de28ba3bd76d94f3fe47acc96e6e0111dfe301ba4d0bc7b3a95ebf21a76fb76102c13fdf9947c6c243d71b9893fae0b9adf94aa83f0a81b4566c15c796a79a4e124971130cba959c03066efba2161334cedc0d02151a",
-        bandersnatch_key="ff71c6c03ff88adb5ed52c9681de1629a54e702fc14729f6b50d2f0a76f185b3"))
-
-
-
-
+#
+# print(a.vrs_func(entropy_source="f7caffd3498473b08ab9de28ba3bd76d94f3fe47acc96e6e0111dfe301ba4d0bc7b3a95ebf21a76fb76102c13fdf9947c6c243d71b9893fae0b9adf94aa83f0a81b4566c15c796a79a4e124971130cba959c03066efba2161334cedc0d02151a",
+#         bandersnatch_key="ff71c6c03ff88adb5ed52c9681de1629a54e702fc14729f6b50d2f0a76f185b3"))
+#
+#
+#
+#
 
 
 

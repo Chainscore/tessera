@@ -51,7 +51,6 @@ async def main(
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
     seed = os.environ["SEED"]
-    host = os.environ["HOST"]
 
     if not name or not port:
         raise ValueError(f"Name or Port not found in {env}")
@@ -116,7 +115,6 @@ async def main(
 
         tsr_node = Node(
             node_name=name,
-            host=str(host),
             port=int(port),
             peers=peers,
             validator_data=ValidatorData(
@@ -126,7 +124,7 @@ async def main(
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
                     protocol=Uint[16](2 ** 16 - 1),
-                    host=IPAddress([U8(10), U8(57), U8(163), U8(172)]),
+                    host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
                     port=U16(port),
                 ),
             ),
