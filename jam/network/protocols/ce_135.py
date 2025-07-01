@@ -1,6 +1,6 @@
 import asyncio
 from typing import cast
-from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
+from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure, Bytes
 
 from jam.config.logging import logger
 from jam.config.settings import settings
@@ -17,6 +17,9 @@ from jam.types.work.report import WorkReport
 from jam.work_package.stores.audits import AuditShardsDA
 from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentShardsDA
+
+from jam.merklization import BMRFunctions
+from jam.types.work.shard import ShardKey
 
 @structure
 class GuaranteedWR:
@@ -141,30 +144,49 @@ class WorkReportDistribution(NetworkProtocol):
 
         # Save Shard
         if shard is not None:
-            # Store Bundle Shard
-            audits = settings.audit
-            bs_da = AuditShardsDA(audits)
-            bs_da.put(er_root, shard_index, shard[0])
+            bmrfunctions = BMRFunctions()
 
-            # Store Segments Shard
-            d3l = settings.d3l
-            ss_da = SegmentShardsDA(d3l)
-            ss_da.put(er_root, shard_index, shard[1])
+            bundle_shard = shard[0]
+            segments_shard = shard[1]
+            justification = shard[2]
 
-            # Distribute Assurance
-            # TODO: Fix Assurances Distribution
-            from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
-            CE141 = AssuranceDistribution()
+            bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
+            segments_shard_root = bmrfunctions.wb_merkle_fn(values=segments_shard)
 
-            from jam.network.utils.dummy_assurance import create_dummy_assurances
-            assurance = create_dummy_assurances()
-            data = CE141Data(assurance)
-            ack = await CE141.transmit(node=node, data=data)
+            shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
 
-            # Save Report
-            rep_da = ReportsDA(d3l)
-            wr_hash = Hash.blake2b(report.encode())
-            rep_da.put(wr_hash, report)
+            s = Bytes(shards_key.encode())
+
+            verification = bmrfunctions.verify_wb_merkle(leaf=s, index=shard_index, justification=justification, erasure_root=er_root)
+
+            if verification:
+                # Store Bundle Shard
+                audits = settings.audit
+                bs_da = AuditShardsDA(audits)
+                bs_da.put(er_root, shard_index, shard[0])
+
+                # Store Segments Shard
+                d3l = settings.d3l
+                ss_da = SegmentShardsDA(d3l)
+                ss_da.put(er_root, shard_index, shard[1])
+
+                # Distribute Assurance
+                # TODO: Fix Assurances Distribution
+                from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
+                CE141 = AssuranceDistribution()
+
+                from jam.network.utils.dummy_assurance import create_dummy_assurances
+                assurance = create_dummy_assurances()
+                data = CE141Data(assurance)
+                ack = await CE141.transmit(node=node, data=data)
+
+                # Save Report
+                rep_da = ReportsDA(d3l)
+                wr_hash = Hash.blake2b(report.encode())
+                rep_da.put(wr_hash, report)
 
 
-            logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
+                logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
+
+            else:
+                ...

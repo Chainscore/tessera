@@ -7,7 +7,8 @@ from tsrkit_types.integers import Uint
 from tsrkit_types.sequences import Vector
 
 from jam.types.protocol.crypto import Hash, OpaqueHash
-from jam.utils.dummy.utils import create_dummy_bytes
+from jam.config.chainspec import chain_config
+from jam.config.logging import logger
 
 
 ChoicedHash = Choice[Bytes, Bytes[32]]
@@ -89,10 +90,11 @@ class BMRFunctions:
             left = values[:mid]
             right = values[mid:]
 
-            left_node = self._node_fn(left, hash_fn)
-            right_node = self._node_fn(right, hash_fn)
+            left_node = self._node_fn(left, hash_fn).unwrap()
+            right_node = self._node_fn(right, hash_fn).unwrap()
 
-            node_val = hash_fn(self._NODE_PREFIX + left_node.encode() + right_node.encode())
+            node_val = hash_fn(self._NODE_PREFIX + left_node + right_node)
+
             return ChoicedHash(node_val)
 
     @staticmethod
@@ -260,28 +262,6 @@ class BMRFunctions:
 
         return page
 
-    def verify_proof(self, trace: Vector[OpaqueHash], leaves: Vector[OpaqueHash], leaf_index: int) -> OpaqueHash:
-        """
-        Merkle Proof Verification Function for Well-Balanced Tree (not provided in GP)
-
-        Args:
-            trace: Sequence of nodes depicting path of a tree to a particular index
-            leaves: Sequence of leaf nodes
-            leaf_index: Node Index
-        Returns:
-            Verification Result
-        """
-
-        root = self._node_fn(leaves)
-        for sibling in reversed(trace):
-            if leaf_index % 2 == 0:
-                root = self._node_fn(Vector([root, sibling]))
-            else:
-                root = self._node_fn(Vector([sibling, root]))
-            leaf_index = leaf_index // 2
-
-        return root
-
     # def verify_constant_proof(self, leaf_slice: Vector[OpaqueHash], page_index: int, x: int, trace: Vector[OpaqueHash], expected_root: OpaqueHash):
     #     """
     #         Verify constant-depth Merkle proof (𝓜 + 𝓛ₓ + 𝒥ₓ)
@@ -312,49 +292,66 @@ class BMRFunctions:
     #         index //= 2
     #     return current_hash == expected_root
 
-    def verify_wb_merkle(
-            self,
-            leaf: Bytes,
-            index: Uint,
-            justification: Vector[ChoicedHash],
-            hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b,
-    ) -> OpaqueHash:
+    def reconstruct_root(self,
+               index: Uint,
+               justification: TypedVector[Bytes],
+               nodes: Uint,
+               start: Uint,
+               leaf: Bytes,
+               hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b,
+        ) -> OpaqueHash:
         """
-        Verifies the Merkle justification by reconstructing the Merkle root.
-
+            Verifies the Merkle justification by reconstructing the Merkle root.
         Args:
-            leaf: The leaf value being verified (raw bytes)
             index: The original index of the leaf in the full vector
             justification: Vector of MerkleByte (sibling hashes along path)
+            leaf: The leaf value being verified (raw bytes)
+            nodes: Total number of nodes
+            start: starting index of justification
             hash_fn: Hash function used in the tree
 
         Returns:
             The reconstructed Merkle root (OpaqueHash)
         """
-        # Start from the hash of the leaf
-        current_hash = leaf
-        justification = reversed(justification)
-        for sibling in justification:
-            sibling = sibling.unwrap()
-            if index % 2 == 0:
-                current_hash = hash_fn(self._NODE_PREFIX + current_hash.encode() + sibling.encode())
-            else:
-                current_hash = hash_fn(self._NODE_PREFIX + sibling.encode() + current_hash.encode())
+        if start == len(justification):
+            return leaf
 
-            index = index // 2
+        mid = ceil(nodes / 2)
+        sibling = justification[start]
+        start += 1
+        if index >= mid:
+            length = Uint(nodes - mid)
+            idx = Uint(index - mid)
+            child_hash = self.reconstruct_root(idx, justification, length, start, leaf)
+            return hash_fn(self._NODE_PREFIX + sibling + child_hash)
+        else:
+            length = Uint(nodes - mid)
+            child_hash = self.reconstruct_root(index, justification, length, start, leaf)
+            return hash_fn(self._NODE_PREFIX + child_hash + sibling)
 
-        return current_hash
+    def verify_wb_merkle(
+            self,
+            leaf: Bytes,
+            erasure_root: Bytes,
+            index: Uint,
+            justification: TypedVector[Bytes],
+            hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b,
+    ) -> OpaqueHash:
+        """
+            Merkle Proof Verification Function for Well-Balanced Tree (not provided in GP)
+        Args:
+            leaf: The leaf value being verified (raw bytes)
+            erasure_root:
+            index: The original index of the leaf in the full vector
+            justification: Vector of MerkleByte (sibling hashes along path)
+            hash_fn: Hash function used in the tree
 
+        Returns:
+            Verification Result
+        """
+        verification_root = self.reconstruct_root(index, justification, chain_config.num_validators, Uint(0), leaf, hash_fn)
 
-def check_verify():
-    merkle = BMRFunctions()
-    temp = Vector([])
-    for i in range(0, 15):
-        temp.append(Bytes(create_dummy_bytes(32)))
+        logger.debug("Received erasure root", verification_root)
+        logger.debug("Reconstructed erasure root", erasure_root)
 
-    root = merkle.wb_merkle_fn(temp)
-    justification = merkle.trace_fn(temp, Uint(2))
-
-    verified_root = merkle.verify_wb_merkle(temp[2], Uint(2), justification)
-    print("whether original root and verified root is correct or not:",verified_root == root )
-    assert root == verified_root
+        return verification_root == erasure_root

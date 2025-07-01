@@ -1,6 +1,6 @@
 from typing import cast, Tuple
 
-from tsrkit_types import structure, Uint, Null
+from tsrkit_types import structure, Uint, Null, TypedVector, Bytes
 
 from jam.config.logging import logger
 from jam.config.settings import settings
@@ -11,10 +11,14 @@ from jam.network.base.quic import QuicProtocol
 
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
-from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex
+from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex, ShardKey
 
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
+
+from jam.types.protocol.crypto import Hash
+from jam.merklization import BMRFunctions
+from jam.config.chainspec import chain_config
 
 @structure
 class Query:
@@ -147,8 +151,23 @@ class ShardDistributionProtocol(NetworkProtocol):
 
             segments_shard = SegmentsShard(ss_dict[query.shard_index].shard)
 
-            # TODO: Fetch Justifications
-            justification = Justification([])
+            # TODO: Build Justifications
+            bundle_shard_indices = bs_dict.keys()
+            segment_shard_indices = ss_dict.keys()
+
+            if len(bundle_shard_indices) != chain_config.num_validators or len(segment_shard_indices) != chain_config.num_validators:
+                raise ValueError(f"Length of both type of shards should be {chain_config.num_validators}")
+
+            bmrfunctions = BMRFunctions()
+            s = TypedVector[Bytes]([])
+            for i in range(chain_config.num_validators):
+                bundle_shard_hash = Hash.blake2b(bs_dict[i].encode())
+                segment_shard = SegmentsShard(ss_dict[i].shard)
+                segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
+                shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+                s.append(Bytes(shards_key.encode()))
+
+            justification = Justification(bmrfunctions.trace_fn(values=s, index=query.shard_index).unwrap())
 
             # Return requested shards
             msg_a = bundle_shard.encode()
