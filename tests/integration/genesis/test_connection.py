@@ -1,5 +1,3 @@
-# TODO: Work in Progress
-
 import pytest
 import asyncio
 import logging
@@ -150,11 +148,6 @@ async def run_node(
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
-
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(tsr_node.initialize())
-            tg.create_task(start_node(tsr_node))
-
     except KeyboardInterrupt:
         logger.info(
             "JAM node shutting down gracefully",
@@ -199,6 +192,11 @@ def run_node_process(
         is_builder,
         is_validator
     ))
+
+    async with asyncio.TaskGroup() as tg:
+        tg.create_task(tsr_node.initialize())
+        tg.create_task(start_node(tsr_node))
+
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
