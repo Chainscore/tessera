@@ -1,8 +1,11 @@
+# TODO: Work in Progress
+
 import pytest
 import asyncio
 import logging
 import signal
 import os
+import subprocess
 import time
 from multiprocessing import Process
 
@@ -34,8 +37,6 @@ from jam.types.protocol.validators import (
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 
-clients = [40000, 40001]
-
 
 # DEFINE NODE TASKS
 async def start_node(node: Node):
@@ -55,9 +56,7 @@ async def start_node(node: Node):
             assert response == expected_message
 
 async def run_node(
-    genesis_path: str,
     env: str,
-    start_genesis: bool,
     theme: str,
     is_builder: bool,
     is_validator: bool
@@ -148,6 +147,11 @@ async def run_node(
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
+
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(tsr_node.initialize())
+            tg.create_task(start_node(tsr_node))
+
     except KeyboardInterrupt:
         logger.info(
             "JAM node shutting down gracefully",
@@ -168,61 +172,3 @@ async def run_node(
         settings.clear()
 
         raise
-
-session_name = "jam_test"
-
-def run_node_process(
-    genesis_path: str,
-    env: str,
-    start_genesis: bool,
-    theme: str,
-    is_builder: bool,
-    is_validator: bool,
-):
-    # Handle clean termination
-    def handle_sigterm(signum, frame):
-        exit(0)
-    signal.signal(signal.SIGTERM, handle_sigterm)
-
-    asyncio.run(run_node(
-        genesis_path,
-        env,
-        start_genesis,
-        theme,
-        is_builder,
-        is_validator
-    ))
-
-    async with asyncio.TaskGroup() as tg:
-        tg.create_task(tsr_node.initialize())
-        tg.create_task(start_node(tsr_node))
-
-
-@pytest.mark.asyncio
-@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_connection():
-    tasks = []
-
-    p_alice = Process(
-        target=run_node_process,
-        args=("", 'envs/40000.env', True, "matrix", False, True)
-    )
-    p_bob = Process(
-        target=run_node_process,
-        args=("", 'envs/40001.env', True, "polkadot", False, True)
-    )
-
-    p_alice.start()
-    p_bob.start()
-
-    # KEEP TEST ALIVE FOR SOME TIME
-    await asyncio.sleep(40)
-
-
-    print("END OF TEST")
-
-    p_alice.terminate()
-    p_bob.terminate()
-    p_alice.join()
-    p_bob.join()
-

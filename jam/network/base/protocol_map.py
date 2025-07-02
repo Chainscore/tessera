@@ -1,4 +1,5 @@
 from jam.network.base.protocol import PrefixType
+from jam.network.protocols.ce_128 import BlockRequest
 from jam.network.protocols.ce_133 import WorkPackageSubmission
 from jam.network.protocols.ce_134 import WorkPackageSharing
 from jam.network.protocols.ce_135 import WorkReportDistribution
@@ -17,7 +18,7 @@ class ProtocolMap:
     """mapping for all the protocols"""
     ALL_PROTOCOLS = {
         PrefixType.UP0: BlockAnnouncement,
-        PrefixType.CE128: GhostProtocol,
+        PrefixType.CE128: BlockRequest,
         PrefixType.CE129: GhostProtocol,
         PrefixType.CE130: GhostProtocol,
         PrefixType.CE131: GhostProtocol,

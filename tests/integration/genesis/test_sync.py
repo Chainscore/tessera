@@ -25,38 +25,6 @@ from jam.consensus.bp_engine import BlockProducer
 
 clients = [40000, 40001]
 
-TENTH_HH = "a18affdfdcf9ab1959e58a826d8b34aa65a9106b2efef0eaa59dda2085ee6599"
-
-async def _test_blocks_requests(node: Node, main_db):
-    await asyncio.sleep(5)
-
-    for peer in node.peer_conn:
-        num_blocks = 5 
-
-        protocol = BlockRequest()
-        message = CE128Data(
-            header=HeaderHash(main_db.get(Finality.FINAL_KEY)), 
-            dir=Direction.AscExc, 
-            max_blocks=U32(num_blocks)
-        )
-
-        responses = await protocol.transmit(node, message)
-        print(f"ASC {message.header.hex()} [max={num_blocks}] {[bl.header.hash().hex() for bl in responses[0]]}")
-        assert len(responses[0]) == min(num_blocks, 10)
-        
-    for peer in node.peer_conn:
-        num_blocks = 5 
-        
-        protocol = BlockRequest()
-        message = CE128Data(
-            header=HeaderHash.fromhex(TENTH_HH), 
-            dir=Direction.DesInc, 
-            max_blocks=U32(num_blocks)
-        )
-        responses = await protocol.transmit(node, message)
-        print(f"DSC {TENTH_HH} [max={num_blocks}] {[bl.header.hash().hex() for bl in responses[0]]}")
-        assert len(responses[0]) == min(num_blocks, 10)
-
 
 async def run_node(env: str, theme: str, height: int, is_requester = False):
     # ---------- SETUP LOGGING ----------
@@ -123,16 +91,17 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
     # Generate random blocks upto height 
     for i in range(1, height+1):
         i_block = BlockProducer(tsr_node, main_db)._produce_block(state, TimeSlot(i))
+        state.transition(i_block)
         i_block.save(main_db)
 
         hh = HeaderHash(i_block.header.hash())
 
         Finality.set_head(hh, main_db)
         Finality.finalise(hh, main_db)
+        print("State Root:", state.root.hex())
 
     async with asyncio.TaskGroup() as tg:
         tg.create_task(tsr_node.initialize())
-        if is_requester: tg.create_task(_test_blocks_requests(tsr_node, settings.main_db))
 
 session_name = "jam_test"
 

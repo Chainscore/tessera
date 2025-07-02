@@ -73,10 +73,11 @@ class Safrole:
 
     @staticmethod
     def vrf_output(signature: BandersnatchVrfSignature) -> Bytes[32]:
-        if int.from_bytes(signature) == 0:
-            return Bytes[32](signature[:32])
-        vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        return Bytes[32](vrf.ecvrf_proof_to_hash(bytes(signature))[:32])
+        # if int.from_bytes(signature) == 0:
+        #     return Bytes[32](signature[:32])
+        # vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+        # return Bytes[32](vrf.ecvrf_proof_to_hash(bytes(signature))[:32])
+        return Bytes[32](32)
 
     @staticmethod
     def transition(state: Sigma, block: Block, entropy: Bytes[32]) -> Sigma:
