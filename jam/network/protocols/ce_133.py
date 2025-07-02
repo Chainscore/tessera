@@ -15,6 +15,8 @@ from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
 from jam.work_package.processor import Processor
 
+from jam.work_package.guarantor_assignments import guarantor_assignments
+
 # Module-specific logger
 logger = get_logger("network")
 
@@ -68,6 +70,12 @@ class WorkPackageSubmission(NetworkProtocol):
         msg_b = data.extrinsics.encode()
         len_b = data.extrinsics_len.encode()
 
+        ci = data.package_data.core_index
+
+        from jam.state.state import state
+        logger.info("Tau", tau=state.tau)
+        mapping = guarantor_assignments(state.eta[2], state.tau, state.kappa)[ci]
+
         logger.info(
             "Transmitting work package to guarantors",
             node_name=node.name,
@@ -84,8 +92,9 @@ class WorkPackageSubmission(NetworkProtocol):
         responses = TypedVector[OptBool]([])
         for peer in node.peer_conn:
             try:
-                if peer.port == 40000:
-                    logger.debug("Sending package to 40000")
+                if peer.ed_key in mapping:
+                # if peer.port == 40000:
+                    logger.info("Sending package to", port=peer.port)
                     client = node.peer_conn[peer][1]
                     transmitted_count += 1
 
@@ -112,6 +121,8 @@ class WorkPackageSubmission(NetworkProtocol):
                         stream_id=stream_id,
                         core_index=int(data.package_data.core_index)
                     )
+
+                    break
 
             except Exception as e:
                 logger.error(

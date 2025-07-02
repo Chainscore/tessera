@@ -125,6 +125,8 @@ async def wp_producer(node: Node, db: RockStore):
             else:  # wp_iter % 4 == 3
                 import_specs = [import_spec1, import_spec2]
 
+            # import_specs = [import_spec2]
+
             wi = WorkItem(
                 service=wi_service,
                 code_hash=wi_code_hash,
@@ -172,3 +174,5 @@ async def wp_producer(node: Node, db: RockStore):
         # Sleep for remaining time of the timeslot
         await asyncio.sleep(6 - (time() - genesis_ts) % 6)
         wp_iter += 1
+
+        # break

@@ -351,7 +351,7 @@ class BMRFunctions:
         """
         verification_root = self.reconstruct_root(index, justification, chain_config.num_validators, Uint(0), leaf, hash_fn)
 
-        logger.debug("Received erasure root", verification_root)
-        logger.debug("Reconstructed erasure root", erasure_root)
+        logger.debug("Received erasure root", verification_root=verification_root)
+        logger.debug("Reconstructed erasure root", erasure_root=erasure_root)
 
         return verification_root == erasure_root
