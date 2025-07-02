@@ -6,7 +6,7 @@ from jam.state.state import State
 from jam.utils.constants import EPOCH_LENGTH
 from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
 from jam.network.node import Node
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from rockstore import RockStore
 from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
 from jam.types.protocol.core import TimeSlot
@@ -61,7 +61,7 @@ async def work_report_producer(node: Node, db: RockStore):
             gamma_mode=state.gamma.s.get_key()
         )
 
-        if not node.is_builder:
+        if not node.is_validator:
             report = create_dummy_work_report()
             report_data = CE135Data(report=report, slot=TimeSlot(int(current_timeslot)))
 

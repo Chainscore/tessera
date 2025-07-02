@@ -25,3 +25,17 @@ def create_dummy_int(bits: int, seed: int = 0) -> int:
     if seed > 0:
         random.seed(seed)
     return random.randint(0, 2**bits - 1)
+
+
+def create_dummy_bytes12(seed: int = 0) -> Bytes[12]:
+    """Create dummy 12 byte value"""
+    if seed > 0:
+        random.seed(seed)
+    return Bytes[12](bytes([random.randint(0, 255) for _ in range(12)]))
+
+
+def create_dummy_bytes4104(seed: int = 0) -> Bytes[4104]:
+    """Create dummy 4104 byte value"""
+    if seed > 0:
+        random.seed(seed)
+    return Bytes[4104](bytes([random.randint(0, 255) for _ in range(4104)]))

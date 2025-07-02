@@ -41,4 +41,5 @@ class PsiI(InvocationProtocol):
             dispatch_fn=self.dispatch,
             context=None,
         )
-        return (r, u)
+
+        return r, u

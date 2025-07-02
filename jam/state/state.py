@@ -1,8 +1,8 @@
 import json
 from typing import Type
 from tsrkit_types import Dictionary
-from jam.config.data_stores import data_stores
 from jam.consensus.grandpa.finality import Finality
+from jam.error import JamError
 from jam.merklization import BMRFunctions
 from rockstore import RockStore
 from jam.state.accounts import DeltaView
@@ -14,7 +14,7 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.itf.codable import Codable
 from jam.types import Block, Hash, Alpha, Eta, Nu, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma, \
     HeaderHash
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 logger = get_logger("import")
 
@@ -37,6 +37,7 @@ class State:
     State implementation that uses dynamic components fetched from Db
     Here we retain and update merkle trie as cache
     """
+    _lock = False
     store: StateStorage
 
     # State Components
@@ -82,7 +83,9 @@ class State:
 
     def load(self, header: HeaderHash) -> "State":
         # 1. Load all caches from current head to mentioned header
-        kv = data_stores.main_db
+        from jam.settings import settings
+        kv = settings.main_db
+
         curr_head = Finality.load_latest(kv).header.parent
         _updates = {}
         while curr_head != header:
@@ -105,7 +108,8 @@ class State:
 
     def settle(self, header_hash: HeaderHash):
         """Settles a set of state changes cached in store. Marks off the settlement with an unique header hash"""
-        self.store.save_n_clear_cache(data_stores.main_db, header_hash)
+        from jam.settings import settings
+        self.store.save_n_clear_cache(settings.main_db, header_hash)
 
     def transition(self, block: Block):
         """
@@ -114,6 +118,13 @@ class State:
         Args:
             block: Incoming block
         """
+        
+        if self._lock:
+            logger.error("Lock detected, skipping transition")
+            return
+
+        self._lock = True 
+        
         from jam.accumulation.accumulation import Accumulation
         from jam.report.reporting import Reporting
         from jam.authorization.authorization import Authorization
@@ -123,71 +134,96 @@ class State:
         from jam.disputes.disputes import Disputes
         from jam.preimages.preimages import Preimages
         from jam.statistics.statistics import Statistics
+        from jam.settings import settings as _set
 
-        header_hash = block.header.hash()
-        logger.info("Starting state transition on block", header_hash=header_hash.hex(), block_slot=int(block.header.slot), parent_hash= block.header.parent.hex()[:16] + "...", state_root= block.header.parent_state_root.hex()[:16] + "...", author_index=int(block.header.author_index))
+        try:
+            header_hash = HeaderHash(block.header.hash())
+            logger.info("Starting state transition on block", header_hash=header_hash.hex(), block_slot=int(block.header.slot), parent_hash= block.header.parent.hex()[:16] + "...", state_root= block.header.parent_state_root.hex()[:16] + "...", author_index=int(block.header.author_index))
 
-        # TODO: Validate block headers
-        # Epoch markers - make sure eta0_1 are the same as current etas
-        # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
-        # Offenders mark - make sure offenders are present in psi.offenders
+            # TODO: Validate block headers
+            # Epoch markers - make sure eta0_1 are the same as current etas
+            # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
+            # Offenders mark - make sure offenders are present in psi.offenders
+            if block.header.slot == 0:
+                logger.debug("Found genesis block, skipping", hh=header_hash.hex())
+                self._lock = False 
+                return 
+            
+            if _set.main_db.get(Block.get_storage_key_block(header_hash)) is not None:
+                logger.warning("Duplicate block found, skipping", hh=header_hash.hex())
+                self._lock = False
+                return
 
+            beta = self.beta
+            # Step 1
+            if len(beta):
+                beta[-1].state_root = block.header.parent_state_root
+            self.beta = beta
 
-        beta = self.beta
-        # Step 1
-        if len(beta):
-            beta[-1].state_root = block.header.parent_state_root
-        self.beta = beta
+            # Disputes
+            logger.debug("Processing disputes...")
+            Disputes.transition(self, block)
 
-        # Disputes
-        logger.debug("Processing disputes...")
-        Disputes.transition(self, block)
+            # Reporting
+            logger.debug("Processing reporting...")
+            Reporting.transition(self, block, [])
 
-        # Reporting
-        logger.debug("Processing reporting...")
-        Reporting.transition(self, block, [])
+            # Assurances
+            logger.debug("Processing assurances...")
+            _, newly_avail_wrs = Assurances.transition(self, block)
 
-        # Assurances
-        logger.debug("Processing assurances...")
-        _, newly_avail_wrs = Assurances.transition(self, block)
+            # Accumulation
+            logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
+            _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
 
-        # Accumulation
-        logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
-        _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
+            # Authorization
+            logger.debug("Processing authorization...")
+            Authorization.transition(self, block)
 
-        # Authorization
-        logger.debug("Processing authorization...")
-        Authorization.transition(self, block)
+            # Recent History
+            logger.debug("Processing recent history...", commitment_count=len(commitment_map))
+            history_merkle = BMRFunctions().wb_merkle_fn(
+                sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]),
+                Hash.keccak256
+            )
+            RecentHistory.transition(self, block, history_merkle)
 
-        # Recent History
-        logger.debug("Processing recent history...", commitment_count=len(commitment_map))
-        history_merkle = BMRFunctions().wb_merkle_fn(
-            sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]),
-            Hash.keccak256
-        )
-        RecentHistory.transition(self, block, history_merkle)
+            # Preimages
+            logger.debug("Processing preimages...")
+            Preimages.transition(self, block)
 
-        # Preimages
-        logger.debug("Processing preimages...")
-        Preimages.transition(self, block)
+            # Statistics
+            logger.debug("Processing statistics...")
+            Statistics.transition(self, block, newly_avail_wrs)
 
-        # Statistics
-        logger.debug("Processing statistics...")
-        Statistics.transition(self, block, newly_avail_wrs)
+            # Safrole
+            logger.debug("Processing safrole...")
+            vrf_output = Safrole.vrf_output(block.header.entropy_source)
+            Safrole.transition(self, block, vrf_output)
 
-        # Safrole
-        logger.debug("Processing safrole...")
-        vrf_output = Safrole.vrf_output(block.header.entropy_source)
-        Safrole.transition(self, block, vrf_output)
-
-        state.settle(header_hash)
+            state.settle(header_hash)
+            
+            logger.info(
+                "Block imported!",
+                header=header_hash.hex()[:16] + "...",
+                timeslot=self.tau,
+                final_state_root=self.root.hex()[:16] + "..."
+            )
+            
+                        
+            block.save(_set.main_db)
+            # Set local chain head to produced block
+            Finality.set_head(header_hash, _set.main_db)
+            # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
+            Finality.finalise(header_hash, _set.main_db)
+            
         
-        logger.info(
-            "Block imported successfully",
-            timeslot=self.tau,
-            final_state_root=self.root.hex()[:16] + "..."
-        )
-
+        except JamError as jam_e:
+            logger.error("Invalid block", error=jam_e, hh=block.header.hash().hex(), slot=block.header.slot)
+            self.store.clear()
+        
+        self._lock = False
+        return
 
 state = State(None)
 

@@ -1,5 +1,5 @@
 """Constants for the JAM protocol as defined in the specification."""
-from jam.config.chainspec import chain_config
+from jam.utils.chainspec import chain_config
 
 # ───────────────────────────────────────
 # Constants (I.4.4, JAM Graypaper Order)
@@ -87,7 +87,7 @@ VALIDATOR_COUNT = chain_config.num_validators
 MAX_AUTH_CODE_SIZE = 64_000
 
 # W_B — Max encoded size of a work-package (extrinsics + imports), in octets.
-MAX_ENCODED_WORK_PACKAGE_SIZE = 2 ** 20  # 2^20 octets
+MAX_ENCODED_WORK_PACKAGE_SIZE = 12 * (2 ** 20)  # 12 * 2^20 octets
 
 # W_C — Max size of service code, in octets.
 MAX_SERVICE_CODE_SIZE = 4_000_000
@@ -149,3 +149,4 @@ REGISTER_COUNT = 13
 # ======= #
 VALIDATORS_SUPER_MAJORITY = 1 + 2 * VALIDATOR_COUNT // 3
 VALIDATORS_WONKY = VALIDATOR_COUNT // 3
+GENESIS_TS = 1735732800 # January 1, 2025 12:00 UTC

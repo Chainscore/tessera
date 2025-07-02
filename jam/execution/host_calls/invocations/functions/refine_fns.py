@@ -11,7 +11,6 @@ from jam.types.protocol.core import ServiceId,TimeSlot
 from jam.types.state.delta import Delta
 from jam.types.work import Segment, Segments
 from jam.utils.constants import  MAX_EXPORT_ITEM, PVM_MEMORY_PAGE_SIZE, SEGMENT_SIZE
-from jam.work_package.work_package import WorkPackageProcessing
 
 @structure
 class IntegratedPVM:
@@ -65,7 +64,8 @@ class RefineFunctions(INVF):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
         if memory.is_accessible(address=p, length=z, for_write=True):
-            x = WorkPackageProcessing.zero_padding(value=ByteArray(memory.read(address=p,length=z)), n=Uint(SEGMENT_SIZE))
+            from jam.work_package.processor import Processor
+            x = Processor.zero_padding(value=ByteArray(memory.read(address=p,length=z)), n=Uint(SEGMENT_SIZE))
         else:
             raise PvmError(PANIC)
         if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:

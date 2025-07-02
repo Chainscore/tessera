@@ -1,27 +1,27 @@
-from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
 from math import floor
-from jam.utils.shuffle import shuffle
-from jam.types import  decodable_vector, U32, Vector
 from collections import deque
+
+from jam.types.base.integers import U32
+from jam.types.base.sequences.vector import  decodable_vector, Vector
+
+from jam.utils.shuffle import shuffle
+from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
 
 
 @decodable_vector(element_type=U32)
 class U32Vector(Vector): ...
 
-def guarantor_assignment(eta,  kappa, lambda_, block_slot, report_slot):
-
+def guarantor_assignment(validators, entropy, slot):
     """
     Description:
-        In this given function take some entropy according to epoch and slot and create mapping between core and validator.
+        Fetch core mappings of guarantors for an epoch
 
-    Args :
-        eta: define as entropy
-        kappa:  help to get current validator data
-        lambda_: help to get the previous validator data
-        block_slot: through this we get the current block's slot
-        report_slot: slot assigned to the work report
+    Args:
+        validators:  set of validators in target epoch
+        entropy: entropy for that set in target epoch
+        slot: timeslot in target epoch
 
-    Return:
+    Returns:
         It's return the dict that is mapping between core and validator
     """
     # ------- validator order ---------

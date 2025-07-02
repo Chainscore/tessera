@@ -2,7 +2,7 @@ from tsrkit_types.struct import structure
 
 from rockstore import RockStore
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.types import TimeSlot
 from jam.types.block.extrinsics.extrinsic import Extrinsic
 from jam.types.block.header import Header
@@ -20,7 +20,7 @@ class Block:
     extrinsic: Extrinsic
 
     @staticmethod
-    def from_random(seed: int = 0, n_et = 3, n_ep = 3, n_ea = 3, n_eg = 3, n_ed = 3) -> "Block":
+    def from_random(seed: int = 0, n_et = 3, n_ep = 3, n_ea = 3, n_eg = 3, n_ed = 2) -> "Block":
         """
         Create a random block
         """

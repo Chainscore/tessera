@@ -1,26 +1,41 @@
-from typing import cast, TYPE_CHECKING
+import asyncio
+from typing import cast
+from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
 
-from jam.config.logging import get_logger
+from jam.logging import logger
+from jam.settings import settings
 
-if TYPE_CHECKING:
-    from jam.network.quic.server import QuicServerProtocol
-    from jam.network.node import Node
+from jam.network.base.quic import QuicProtocol
+from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from tsrkit_types.struct import structure
-from jam.network.protocols.base import NetworkProtocol, PrefixType
+from jam.types.block.extrinsics.guarantees import ValidatorSignatures
+from jam.types.protocol.core import ValidatorIndex, TimeSlot
+from jam.types.protocol.crypto import Hash
+from jam.types.work.report import WorkReport
 
-from jam.types.work import WorkReport
-from jam.types.protocol.core import TimeSlot
+from jam.work_package.stores.audits import AuditShardsDA
+from jam.work_package.stores.reports import ReportsDA
+from jam.work_package.stores.segments import SegmentShardsDA
 
-# Module-specific logger
-logger = get_logger("network")
-
+@structure
+class GuaranteedWR:
+    report: WorkReport
+    slot: TimeSlot
+    signatures: ValidatorSignatures
 
 @structure
 class CE135Data:
-    report: WorkReport
-    slot: TimeSlot
+    len: Uint[32]
+    guaranteed_wr: GuaranteedWR
 
+    @property
+    def is_valid(self):
+        if len(self.guaranteed_wr.encode()) == self.len:
+            return True
+        return False
+
+OptBool = Option[Bool]
 
 class WorkReportDistribution(NetworkProtocol):
     """
@@ -36,112 +51,120 @@ class WorkReportDistribution(NetworkProtocol):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-135-work-report-distribution
     """
 
+    from jam.network.node import Node
+
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE135
 
-    def transmit(self, node: "Node", data: CE135Data):
+    async def transmit(self, node: Node, data: CE135Data):
         """Transmit Work Report from Guarantor (client) to Validator (server)"""
 
-        # TODO: Add Validator Index & Signature as per GP
-        message = self._prefix.encode() + data.report.encode() + data.slot.encode()
-        
-        logger.info(
-            "Distributing guaranteed work report to validators",
-            node_name=node.name,
-            time_slot=int(data.slot),
-            validator_count=len(node.connections),
-            message_size=len(message),
-            core_index=int(data.report.core_index)
-        )
-        
-        distributed_count = 0
+        msg_a = data.guaranteed_wr.encode()
+        len_a = data.len.encode()
+
+        logger.info(f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators")
         # TODO: Use All Validators Connections
-        for client in node.connections:
-            try:
-                client.stream_and_close(message=message)
-                distributed_count += 1
-                
-                logger.debug(
-                    "Work report distributed to validator",
-                    node_name=node.name,
-                    time_slot=int(data.slot),
-                    core_index=int(data.report.core_index)
-                )
-            except Exception as e:
-                logger.error(
-                    "Failed to distribute work report to validator",
-                    node_name=node.name,
-                    error=str(e),
-                    error_type=type(e).__name__
-                )
-        
-        logger.info(
-            "Work report distribution completed",
-            node_name=node.name,
-            distributed_to=distributed_count,
-            total_validators=len(node.connections),
-            time_slot=int(data.slot),
-            core_index=int(data.report.core_index)
-        )
 
-    def server_intercept(self, buffer: bytes, server: "QuicServerProtocol", stream_id: int):
+        responses = TypedVector[OptBool]([])
+        for peer in node.peer_conn:
+            if int(peer.port) == 40003:
+                logger.debug("Sending report to 40003")
+                client = node.peer_conn[peer][1]
+
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
+
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+
+                responses.append(data)
+
+        return responses
+
+    def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Work Report on Validator (server)"""
+        node = server.node
+        buffer = server.stream_buffer[stream_id]
 
-        try:
-            logger.debug(
-                "Received work report distribution",
-                stream_id=stream_id,
-                buffer_size=len(buffer)
-            )
-            
-            data, offset = CE135Data.decode_from(buffer)
-            data = cast(CE135Data, data)
+        logger.info("Received Work Report")
+        data, offset = CE135Data.decode_from(buffer[1:])
+        data = cast(CE135Data, data)
 
-            logger.info(
-                "Processing guaranteed work report",
-                stream_id=stream_id,
-                time_slot=int(data.slot),
-                core_index=int(data.report.core_index),
-                authorizer_hash=data.report.authorizer_hash.hex()[:16] + "..."
-            )
-            
-            # TODO: Process received Work Report
-            # Process goes here
+        if not data.is_valid:
+            raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info(
-                "Work report processed successfully",
-                stream_id=stream_id,
-                time_slot=int(data.slot),
-                core_index=int(data.report.core_index)
-            )
+        # Send Acknowledgement
+        ack = self._prefix.encode()
+        server.stream_and_close(ack, stream_id)
 
-            # Send Acknowledgement
-            ack = self._prefix.encode() + b""
-            server.stream_and_close(stream_id, ack)
+        logger.info("Sent acknowledgement back to guarantor")
 
-            logger.debug(
-                "Acknowledgement sent to guarantor",
-                stream_id=stream_id,
-                ack_size=len(ack)
-            )
-            
-        except Exception as e:
-            logger.error(
-                "Error processing work report distribution",
-                stream_id=stream_id,
-                buffer_size=len(buffer),
-                error=str(e),
-                error_type=type(e).__name__
-            )
+        logger.info("Fetching assigned shard")
+        asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
 
-    def client_intercept(self, buffer: bytes, stream_id: int):
+
+    def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
         """Intercept Acknowledgement"""
+        buffer = client.stream_buffer[stream_id]
+        if buffer[1:] == b"":
+            logger.info(
+                f"Guaranteed Report received on Guarantor Node.",
+                stream_id=stream_id
+            )
+            return OptBool(True)
 
-        logger.info(
-            "Work report acknowledgement received from validator",
-            stream_id=stream_id,
-            buffer_size=len(buffer)
-        )
+        return OptBool(Null)
+
+    @staticmethod
+    async def _req_shard(data: GuaranteedWR, node: Node):
+        slot = data.slot
+        signatures = data.signatures
+
+        report = data.report
+        er_root = report.package_spec.erasure_root
+
+        shard_index = node.get_shard_index(report.core_index)
+
+        from jam.network.protocols.ce_137 import ShardDistributionProtocol, CE137Data, Query
+        CE137 = ShardDistributionProtocol()
+
+        query = Query(shard_index=shard_index, erasure_root=er_root)
+        data = CE137Data(len=U32(len(query.encode())), query=query)
+
+        logger.debug("Requesting Shard", shard_index=shard_index, erasure_root=er_root)
+        shard = await CE137.transmit(node=node, data=data)
+
+        # Save Shard
+        if shard is not None:
+            # Store Bundle Shard
+            audits = settings.audit
+            bs_da = AuditShardsDA(audits)
+            bs_da.put(er_root, shard_index, shard[0])
+
+            # Store Segments Shard
+            d3l = settings.d3l
+            ss_da = SegmentShardsDA(d3l)
+            ss_da.put(er_root, shard_index, shard[1])
+
+            # Distribute Assurance
+            # TODO: Fix Assurances Distribution
+            from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
+            CE141 = AssuranceDistribution()
+
+            from jam.network.utils.dummy_assurance import create_dummy_assurances
+            assurance = create_dummy_assurances()
+            data = CE141Data(assurance)
+            ack = await CE141.transmit(node=node, data=data)
+
+            # Save Report
+            rep_da = ReportsDA(d3l)
+            wr_hash = Hash.blake2b(report.encode())
+            rep_da.put(wr_hash, report)
 
 
+            logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")

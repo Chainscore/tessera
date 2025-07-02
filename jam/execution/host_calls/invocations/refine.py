@@ -1,3 +1,7 @@
+from typing import Tuple
+
+from tsrkit_types import Bytes, Null
+
 from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.functions.refine_fns import RefineFunctions, RefineContext, RefinementMap
@@ -5,10 +9,10 @@ from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from jam.execution.pvm.status import OUT_OF_GAS, PANIC
 from jam.execution.utils import decode_code_hash
 from tsrkit_types.integers import Uint
-from jam.types.protocol.core import ProgramCounter
+
+from jam.types.work import WorkExecResult, Segments, WorkPackage
+from jam.types.protocol.core import ProgramCounter, Gas
 from jam.types.protocol.crypto import OpaqueHash, Hash
-from jam.types.work import WorkPackage
-from jam.types.work import Segments
 from jam.utils.constants import IS_AUTHORIZED_GAS
 
 
@@ -27,7 +31,7 @@ class PsiR(InvocationProtocol):
     def table(self):
         from jam.state.state import state
         from jam.storage.item_extrinsics import ItemExtrinsics
-        from jam.config.data_stores import data_stores
+        from jam.settings import settings
 
         return {
             0: (GeneralFunctions, ()),
@@ -42,7 +46,7 @@ class PsiR(InvocationProtocol):
                          "trace": self.auth_trace,
                          "item_index": self.item_index,
                          "import_segments": self.i_segments,
-                         "extrinsics": ItemExtrinsics(data_stores.main_db).get_all(self.work_package),
+                         "extrinsics": ItemExtrinsics(settings.main_db).get_all(self.work_package),
                          "o": None,
                          "t": None
                      }
@@ -61,7 +65,7 @@ class PsiR(InvocationProtocol):
             100: (GeneralFunctions, {"core_index": 0, "service_id": self.wi.service}),  # log
         }
 
-    def execute(self):
+    def execute(self) -> Tuple[WorkExecResult, Segments, Gas]:
         from jam.state.state import state
 
         _, pc = decode_code_hash(state.delta[self.wi.service].historical_lookup(self.work_package.context.lookup_anchor_slot, self.wi.code_hash))
@@ -74,6 +78,10 @@ class PsiR(InvocationProtocol):
             self.dispatch,
             RefineContext(m=RefinementMap({}), e=Segments([])),
         )
-        if r == PANIC or r == OUT_OF_GAS:
-            return r, Segments([]), u
-        return r, context.e, u
+        if r == PANIC:
+            return WorkExecResult(Null, key="panic"), Segments([]), Gas(u)
+
+        elif r == OUT_OF_GAS:
+            return WorkExecResult(Null, key="out_of_gas"), Segments([]), Gas(u)
+
+        return WorkExecResult(Bytes(r), key="ok"), Segments(context.e), Gas(u)

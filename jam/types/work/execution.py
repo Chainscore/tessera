@@ -36,9 +36,9 @@ class RefineLoad:
 
     gas_used: Uint
     imports: Uint
-    exports: Uint
     extrinsic_count: Uint
     extrinsic_size: Uint
+    exports: Uint
 
 
 @structure

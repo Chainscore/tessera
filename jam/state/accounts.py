@@ -183,7 +183,7 @@ class PreImageView:
         self.store.put(k, value)
 
     def __delitem__(self, key: Bytes[32]):
-        storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
+        storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24]))
         self.store.delete(storage_key)
 
 class TimestampsView:
