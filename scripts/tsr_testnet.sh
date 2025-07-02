@@ -37,16 +37,16 @@ ROW4=${L1}      # bottom ~25%
 
 # 6) Dispatch validators into the four rows
 tmux send-keys -t "${SESSION}:network.${ROW1}" \
-  "poetry run jam --start-genesis --validator --theme 'bitcoin' --env 'envs/40002.env'" C-m
+  "poetry run jam --start-genesis --validator --theme 'default' --env 'envs/40002.env'" C-m
 
 tmux send-keys -t "${SESSION}:network.${ROW2}" \
-  "poetry run jam --start-genesis --validator --theme 'default' --env 'envs/40003.env'" C-m
+  "poetry run jam --start-genesis --validator --theme 'solarized' --env 'envs/40003.env'" C-m
 
 tmux send-keys -t "${SESSION}:network.${ROW3}" \
-  "poetry run jam --start-genesis --validator --theme 'polkadot' --env 'envs/40004.env'" C-m
+  "poetry run jam --start-genesis --validator --theme 'monokai' --env 'envs/40004.env'" C-m
 
 tmux send-keys -t "${SESSION}:network.${ROW4}" \
-  "poetry run jam --start-genesis --validator --theme 'matrix' --env 'envs/40005.env'" C-m
+  "poetry run jam --start-genesis --validator --theme 'noir' --env 'envs/40005.env'" C-m
 
 # 7) Attach so you see all six panes running
 tmux attach -t "$SESSION"
