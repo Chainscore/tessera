@@ -1,5 +1,8 @@
 from typing import Optional, Tuple, List
 from tsrkit_types import Bytes, TypedVector, U32, Null
+
+from jam.types import WorkPackageBundle, WorkPackage, Authorizer, RefineContext, WorkItem, ImportSpec, ExtrinsicSpec
+from tsrkit_types import Bytes, U64, U16
 # from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 # from jam.types.work.report import WorkReport
 # from jam.utils.constants import SIGNING_CONTEXTS
@@ -90,6 +93,69 @@ from tsrkit_types import Bytes, TypedVector, U32, Null
 #
 #
 
+# bundle = WorkPackageBundle(package=WorkPackage(authorization=b'\x01',
+#                                       auth_code_host=U32(42),
+#                                       authorizer=Authorizer(code_hash=b'\x10S&j'
+#                                                                       b'\x87\x96\xf3\xfb'
+#                                                                       b'\xb2\x93b3'
+#                                                                       b'\xf7\xb0"\x18'
+#                                                                       b'iK\x04\xe8'
+#                                                                       b'`J\xc3\xc8'
+#                                                                       b'\x89.AT'
+#                                                                       b')\xf0\xa1-',
+#                                                             params=b'+\xfe\xa6\xd1'
+#                                                                    b'\xa5\xb7\x85)'
+#                                                                    b'\xc7\xd0'),
+#                                       context=RefineContext(anchor=b'\x00\x00\x00\x00'
+#                                                                    b'\x00\x00\x00\x00'
+#                                                                    b'\x00\x00\x00\x00'
+#                                                                    b'\x00\x00\x00\x00'
+#                                                                    b'\x00\x00\x00\x00'
+#                                                                    b'\x00\x00\x00\x00'
+#                                                                    b'\x00\x00\x00\x00'
+#                                                                    b'\x00\x00\x00\x00',
+#                                                             state_root=b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00',
+#                                                             beefy_root=b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00'
+#                                                                        b'\x00\x00\x00\x00',
+#                                                             lookup_anchor=b'\x00\x00\x00\x00'
+#                                                                           b'\x00\x00\x00\x00'
+#                                                                           b'\x00\x00\x00\x00'
+#                                                                           b'\x00\x00\x00\x00'
+#                                                                           b'\x00\x00\x00\x00'
+#                                                                           b'\x00\x00\x00\x00'
+#                                                                           b'\x00\x00\x00\x00'
+#                                                                           b'\x00\x00\x00\x00',
+#                                                             lookup_anchor_slot=U32(0),
+#                                                             prerequisites=TypedVector[Bytes[32]]([])),
+#                                       items=TypedVector[WorkItem]([WorkItem(service=U32(1), code_hash=b's\x8b\x9a\xff:\xcb\xcc\xabvnE\xcaN\xe1\x1d\x1d\xb9c\xca\xd1|\x9b\x931\xb2\xdaK\x10\xba@\xa8\x94', payload=b'bobaboba', refine_gas_limit=U64(1000), accumulate_gas_limit=U64(1000), import_segments=TypedVector[ImportSpec]([]), extrinsic=TypedVector[ExtrinsicSpec]([]), export_count=U16(1))])),
+#                             extrinsics=TypedVector[TypedVector[Bytes]]([]),
+#                             import_segments=TypedVector[TypedVector[Bytes[4104]]]([TypedVector[Bytes[4104]]([])]),
+#                             justifications=TypedVector[TypedVector[TypedVector[Bytes]]]([TypedVector[TypedVector[Bytes]]([])]))
+#
+# print(package)
+
+def greet(name):
+    return f"Hello, {name}!"
+
+# Call the function
+result = greet("Dikshant")
+
+# Save the output to a file
+with open("output.txt", "w") as f:
+    print(result, file=f)
 
 
 

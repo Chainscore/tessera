@@ -10,7 +10,7 @@ from jam.network.protocols.ce_139 import SegmentShardRequest
 from jam.network.protocols.ce_140 import SegmentShardRequestWithJustifications
 from jam.network.protocols.ce_141 import AssuranceDistribution
 from jam.network.protocols.ce_144 import AuditAnnouncement
-from jam.network.protocols.ce_145 import JudgmentPublication
+# from jam.network.protocols.ce_145 import JudgmentPublication
 from jam.network.protocols.ce_201 import GhostProtocol
 from jam.network.protocols.up_0 import BlockAnnouncement
 
@@ -31,15 +31,14 @@ class ProtocolMap:
         PrefixType.CE138: AuditShardRequestProtocol,
         PrefixType.CE139: SegmentShardRequest,
         PrefixType.CE140: SegmentShardRequestWithJustifications,
-        PrefixType.CE141: AssuranceDistribution,
-        PrefixType.CE144: AuditAnnouncement,
-        PrefixType.CE145: JudgmentPublication,
-        PrefixType.CE201: GhostProtocol
+        # PrefixType.CE141: AssuranceDistribution,
+        # PrefixType.CE144: AuditAnnouncement,
+        # PrefixType.CE145: JudgmentPublication,
+        # PrefixType.CE201: GhostProtocol
     }
 
     @classmethod
     def get_protocol(cls, prefix: PrefixType):
-        print("PROTOCOL", prefix)
         protocol = cls.ALL_PROTOCOLS.get(prefix)
 
         if protocol is None:

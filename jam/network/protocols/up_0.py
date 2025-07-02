@@ -1,19 +1,19 @@
 import asyncio
-from typing import cast, TYPE_CHECKING
+from typing import List, cast, TYPE_CHECKING
 
 from tsrkit_types import Uint, U32
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.consensus.grandpa.finality import Finality
 from jam.logging import get_logger
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 
+from jam.network.peer import Peer
 from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
-from jam.types.block import Block, Header
+from jam.types.block import Block, Header, header
 
 if TYPE_CHECKING:
     from jam.network.node import Node
@@ -161,8 +161,7 @@ class BlockAnnouncement(NetworkProtocol):
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercepting & Process new blocks from peers."""
         buffer = server.stream_buffer[stream_id]
-        peer = server.peer
-
+        peer = server.peer 
 
         logger.info(
             "Intercepting UP0 stream",
@@ -207,7 +206,7 @@ class BlockAnnouncement(NetworkProtocol):
                     server.peer_handshake = True
                     
                     # Start synchornization
-                    asyncio.create_task(self.synchronise(h, server.node))
+                    asyncio.create_task(self.synchronise(h, server.node, peer=peer))
 
             # Handle announcement
             else:
@@ -227,22 +226,6 @@ class BlockAnnouncement(NetworkProtocol):
                         buffer_size=len(buffer)
                     )
 
-                    logger.debug(
-                        "Processing incoming block",
-                        stream_id=stream_id,
-                        peer=str(server.peer),
-                        header_slot=int(a.header.slot),
-                        parent_hash=a.header.parent.hex()[:16] + "...",
-                        extrinsic_hash=a.header.extrinsic_hash.hex()[:16] + "..."
-                    )
-
-                    logger.info(
-                        f"Processed a new block with header {str(a.header)}.",
-                        peer=str(server.peer),
-                        parent_block=a.final.header_hash,
-                        parent_time_slot=a.final.time_slot
-                    )
-
                     server.stream_buffer[stream_id] = self._prefix.encode()
 
                     # TODO: Process new block
@@ -250,8 +233,8 @@ class BlockAnnouncement(NetworkProtocol):
                     # If it is not in our DB, request [header.slot - latest_timeslot] blocks from peer
                     # logger.debug("Received header, requesting its full block...", slot=data.header.slot)
 
-                    # BlockRequest().transmit()
-
+                    asyncio.create_task(self._process_header(server.node, header=a.header, peer=peer))
+                    
                     # Process goes here
 
                     logger.info(
@@ -269,10 +252,28 @@ class BlockAnnouncement(NetworkProtocol):
 
     def res_intercept(self, stream_id: int, client: QuicProtocol):
         raise NotImplementedError("Client Intercept not available for UP protocols")
-
     
     @classmethod
-    async def synchronise(cls, h: Handshake, node: "Node"):
+    async def _process_header(cls, node: "Node", header: Header, peer: Peer):
+        from jam.state.state import state 
+
+        logger.info("Fetching block to import", slot=header.slot)
+        blocks = await BlockRequest().transmit(
+            node, 
+            CE128Data(
+                header=HeaderHash(header.hash()), 
+                dir=Direction.DesInc, 
+                max_blocks=U32(1)
+            ),
+            [conn for _peer, conn in node.peer_conn.items() if _peer == peer]
+        )
+        for block in blocks[0]:
+            state.transition(block)
+            logger.debug("Imported block", slot=block.header.slot)
+
+
+    @classmethod
+    async def synchronise(cls, h: Handshake, node: "Node", peer: Peer):
         from jam.state.state import state
         from jam.settings import settings
         # To know how many blocks to fetch
@@ -288,17 +289,13 @@ class BlockAnnouncement(NetworkProtocol):
 
         logger.info("Requesting Blocks to Sync", num=data_req.max_blocks)
 
-        blocks_to_import = (await BlockRequest().transmit(node, data_req))[0]
-        logger.info(f"Received {len(blocks_to_import)} blocks. Importing...")
+        blocks_to_import = (await BlockRequest().transmit(node, data_req, [conn for _peer, conn in node.peer_conn.items() if _peer == peer]))[0]
+        logger.debug(f"Received {len(blocks_to_import)} blocks. Importing...")
 
         for block in reversed(blocks_to_import): 
             state.transition(block)
-            hh = HeaderHash(block.header.hash())
-            Finality.set_head(hh, settings.main_db)
-            Finality.finalise(hh, settings.main_db)
-            block.save(settings.main_db)
-            print("State Root after sync", state.root.hex())
-
-        print("Sync complete!")
+            logger.debug("Imported block", header_hash=block.header.hash().hex(), slot=block.header.slot)
+           
+        logger.info("Sync complete!", state_root=state.root)
         return 
 

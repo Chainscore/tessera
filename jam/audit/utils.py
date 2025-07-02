@@ -56,3 +56,4 @@ def bandersnatch_f(key,context,message:bytes=b""):
     proof_bt_str= proof[0].to_bytes()+ proof[1].to_bytes()
     signature= op_bt_str + proof_bt_str
     return signature
+

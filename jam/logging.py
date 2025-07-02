@@ -186,15 +186,6 @@ class ThemedRenderer(ConsoleRenderer):
         return " ".join(parts)
 
 
-# ---------- performance logging --------------------------------------------- #
-
-def add_performance_context(_, __, event_dict):
-    """Add performance-related context to log events."""
-    # Add process ID for multi-process debugging
-    event_dict["pid"] = os.getpid()
-    return event_dict
-
-
 def filter_sensitive_data(_, __, event_dict):
     """Filter out sensitive data from logs in production."""
     sensitive_keys = {"private_key", "seed", "password", "token", "secret"}
@@ -220,7 +211,7 @@ def setup_module_logging_levels():
             module_suffix = str(key[10:]).lower()  # Remove "LOG_LEVEL_" prefix
             try:
                 level = value.upper()
-                print("setting log level for", module_suffix, value.upper())
+                print("Log level for", module_suffix, value.upper())
                 module_levels[module_suffix] = value.upper()
             except AttributeError:
                 logger.warning(f"Invalid log level: {value} for module {module_suffix}")
@@ -273,12 +264,11 @@ def setup_logging(
     def add_node_context(_, __, event: Dict[str, Any]) -> Dict[str, Any]:
         if node_name:
             event["node_name"] = node_name
-        event["environment"] = environment.value
+        # event["environment"] = environment.value
         return event
 
     processors.extend([
         add_node_context,
-        add_performance_context,
         add_log_level,
         TimeStamper(fmt="iso"),
     ])
@@ -351,7 +341,7 @@ def setup_logging(
 
 def get_logger(name: str | None = None, component: str | None = None):
     """
-    Return a themed structlog logger with optional component context.
+    Return/ a themed structlog logger with optional component context.
     
     Args:
         name: Logger name (typically __name__)

@@ -1,4 +1,4 @@
-from typing import cast, TYPE_CHECKING
+from typing import List, cast, TYPE_CHECKING
 
 from tsrkit_types import TypedVector, Enum
 
@@ -47,19 +47,22 @@ class BlockRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE128
 
-    async def transmit(self, node: "Node", data: CE128Data):
-        """Transmit State Request"""
+    async def transmit(self, node: "Node", data: CE128Data, peer_conns: List | None = None):
+        """Transmit Block Request"""
 
         stream_data = data.encode()
 
         logger.info(
-            "Transmitting block request to node", header_hash=data.header, direction=data.dir, max_blocks=data.max_blocks,
+            "Transmitting block request to node", num=len(peer_conns or node.peer_conn), header_hash=data.header, direction=data.dir, max_blocks=data.max_blocks,
         )
 
         transmitted_count = 0
         responses = []
-        for peer in node.peer_conn:
-            _, client = node.peer_conn[peer]
+
+        if peer_conns is None:
+            peer_conns = list(node.peer_conn.values())
+        for peer in peer_conns:
+            _, client = peer
 
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -131,16 +134,14 @@ class BlockRequest(NetworkProtocol):
 
             # Get all header hashes in between
             all_blocks = TypedVector[Block]([])
-            for ts in _range:
-                _header_hash = settings.main_db.get(Block.get_storage_key_slot(TimeSlot(ts)))
-                if _header_hash is not None:
-                    _block = Block.decode(settings.main_db.get(Block.get_storage_key_block(_header_hash)))
-                    if _block:
-                        all_blocks.append(_block)
-                    else:
-                        logger.error("Block not found against recorded header_hash", header_hash=_header_hash, timeslot=ts)
+            hh = data.header  
+            while hh != HeaderHash(32) and len(all_blocks) != int(data.max_blocks):
+                _block = Block.decode(settings.main_db.get(Block.get_storage_key_block(hh)))
+                if _block:
+                    all_blocks.append(_block)
+                    hh = _block.header.parent
                 else:
-                    logger.warning("Block missing", timeslot=ts)
+                    logger.error("Block not found against recorded header_hash", header_hash=_header_hash, timeslot=ts)
 
             blocks_enc = all_blocks.encode()
             server.stream_and_close(stream_id=stream_id, message=self._prefix.encode() + blocks_enc)

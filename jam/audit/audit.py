@@ -16,13 +16,29 @@ from jam.types.work.report import WorkReportHash
 from jam.types.block.header import Header
 from jam.types.state.rho import Rho
 
+from jam.work_package.processor import Processor
+
+from jam.network.node import Node
+
+import json
+
+json_path = 'data/dummy_data.json'
+
+with open(json_path, 'r') as f:
+    data = json.load(f)
+
+print(data["slot"])
+
 
 
 @dataclass
 class AuditingAndJudgement:
 
+    node: Node
+
     def __init__(self):
         self.vrf = VRF
+        self.node: Node
 
     @staticmethod
     def report_to_be_audit(available_reports : TypedVector[Option[WorkReport]], pending_report: Rho) -> TypedVector[Option[WorkReport]]:      #---------------------------------
@@ -88,7 +104,20 @@ class AuditingAndJudgement:
 
         return Bytes(signature)
 
-    def vrs_func(self, entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_report: TypedVector[Option[WorkReport]]) -> List[Tuple[CoreIndex, WorkReportHash]]:
+    def vrs_func(self, entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_report: TypedVector[Option[WorkReport]]) -> TypedVector[Tuple[CoreIndex, WorkReportHash]]:
+
+        """
+        This function is a_o as the non-empty items to audit through a verifiable random selection of ten cores:
+
+        Args:
+            entropy_source: Entropy to get random selection
+            bandersnatch_key: Validator (Node) bandersnatch key to create randomness using Proof of hash function
+            pre_report: All thr reports exist in Q(just available report)
+
+        Return:
+            List of tuple : Non-null random ten work reports with corresponding there coreIndex
+
+        """
 
         # Equation : 17.7 (r = y(So))
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
@@ -133,13 +162,13 @@ class AuditingAndJudgement:
         tranche_index =  (CURRENT_TIME() - (SLOT_PERIOD * int(header_slot))) // AUDIT_PERIOD
         return tranche_index
 
-    def validator_announcement_statement(self, assign_report: TypedVector[Tuple[CoreIndex, Option[WorkReport]]], header : Header, ed25519_public: Ed25519Public) -> set[Bytes[64]]:
+    def validator_announcement_statement(self, assign_report: TypedVector[Tuple[CoreIndex, Option[WorkReport]]], header : Header, ed25519_public: Ed25519Public, tranche: Uint) -> set[Bytes[64]]:
 
         validator_announcement_set : set[Bytes[64]]  = set()
 
         signing_context = Bytes(SIGNING_CONTEXTS["jam_announce"])
 
-        tranches_index = Bytes(self.generate_tranche_index(header.slot))
+        # tranches_index = Bytes(self.generate_tranche_index(header.slot))
 
         header_hash = Bytes(Hash.blake2b(header.encode()))
 
@@ -148,7 +177,7 @@ class AuditingAndJudgement:
         encoded_core_report = Bytes(b" ")
 
         for c, r in assign_report:
-            encoded_core_report = encoded_core_report + c.to_byte(2, 'little') + Hash.blake2b(r.encode()) + signing_context + tranches_index + header_hash
+            encoded_core_report = encoded_core_report + c.to_byte(2, 'little') + Hash.blake2b(r.encode()) + signing_context + Bytes(tranche) + header_hash
             signature = private_key.sign(encoded_core_report)
             validator_announcement_set.add(Bytes(signature))
             encoded_core_report = Bytes(b"")
@@ -156,30 +185,57 @@ class AuditingAndJudgement:
         return validator_announcement_set
 
 
+    def judgment(self, q : TypedVector[Option[WorkReport]], node: Node):
+
+        # assign work report which exist in the Q
+        assigned_report = self.vrs_func(entropy_source="f7caffd3498473b08ab9de28ba3bd76d94f3fe47acc96e6e0111dfe301ba4d0bc7b3a95ebf21a76fb76102c13fdf9947c6c243d71b9893fae0b9adf94aa83f0a81b4566c15c796a79a4e124971130cba959c03066efba2161334cedc0d02151a", bandersnatch_key=node.ed_pvt_key, pre_report= q)
+
+        # announcement
+        announcement = self.validator_announcement_statement(assign_report=assigned_report, header=Header(data), ed25519_public=node.ed_key, tranche=Uint(0))
+        # TODO: transmit using protocol 144
+
+        # reconstruct work package
+        # TODO: Protocol: 137, 138 to generate the work package and get Work Package Bundle
+        # bundle  = here bundle comes
+
+        # refine logic
+        process = Processor(node=node)
+
+        judgment : set[bool] = set()
 
 
-    # def evaluate_core_mappings (self, core_index: int , package: WorkPackage):
-    #     # refer 17.17
-    #     if F(w)  ==  self.rho[w_r.core_index].encode():
-    #         return self.process.process_bundle(core=core_index, bundle=package, sr_lookup=)
-    #     else:
-    #         return False
+        # logi will later on the add in the protocol:144 req_intercept
+        w_r = Node
+        for c,r in assigned_report:
+            w_r, wr_hash = process.process_bundle(core=, bundle= , sr_lookup=())
+            if wr_hash == given_hash:
+                judgment.add(True)
+            else:
+                judgment.add(False)
 
-    def validator_judment_mapping(self,work_report:WorkReport,state:state)-> List[Bytes[64]]:
-        """
-         Go through the evaluate_core_mappings Func (refer 17.17) and provide its validity where the wr is valid or not
-         Return :
-            Set of Judgment signatures from each (kappa/current) validator
-        refer equ 17.18
-        """
-        judgement_set=[]
-        for validator in state.kappa:
-            private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
-            signing_context = SIGNING_CONTEXTS["valid"] if evaluate_core_mappings(work_report) else SIGNING_CONTEXTS["invalid"]
-            message= signing_context + Hash.blake2b(work_report.encode())
-            # Sign will give out a 64Byte Signature
-            signature = private_key.sign(message)
-            # Explicitely modifying to the ByteArray64 format
-            judgement_set.append(Bytes[64](signature))
-        return judgement_set
+        return judgment
 
+    def evaluate_core_mappings (self, core_index: int , package: WorkPackage):
+        # refer 17.17
+        if F(w)  ==  self.rho[w_r.core_index].encode():
+            return self.process.process_bundle(core=core_index, bundle=package, sr_lookup=)
+        else:
+            return False
+
+    # def validator_judgment_mapping(self,work_report:WorkReport,state:state)-> List[Bytes[64]]:
+    #     """
+    #      Go through the evaluate_core_mappings Func (refer 17.17) and provide its validity where the wr is valid or not
+    #      Return :
+    #         Set of Judgment signatures from each (kappa/current) validator
+    #     refer equ 17.18
+    #     """
+    #     judgement_set=[]
+    #     for validator in state.kappa:
+    #         private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
+    #         signing_context = SIGNING_CONTEXTS["valid"] if evaluate_core_mappings(work_report) else SIGNING_CONTEXTS["invalid"]
+    #         message= signing_context + Hash.blake2b(work_report.encode())
+    #         # Sign will give out a 64Byte Signature
+    #         signature = private_key.sign(message)
+    #         # Explicitely modifying to the ByteArray64 format
+    #         judgement_set.append(Bytes[64](signature))
+    #     return judgement_set

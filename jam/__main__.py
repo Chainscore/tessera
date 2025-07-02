@@ -126,9 +126,10 @@ async def main(
             is_validator=is_validator,
         )
 
-        block = Block.genesis()
+        block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
+        Finality.finalise(header_hash, main_db)
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())

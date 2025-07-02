@@ -59,7 +59,6 @@ class BlockProducer:
         Starts the block producer engine in asyncio loop. 
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
-        from jam.state.state import state
 
         # Record genesis timestamp in seconds
         genesis_ts = GENESIS_TS
@@ -78,13 +77,13 @@ class BlockProducer:
 
         # TODO: If our validator is not in Kappa - skip block production till end of current epoch
         while True:
+            from jam.state.state import state
             if not self.node.is_initialized:
                 logger.debug(
                     "Network not initialized - skipping block production",
                     node_name=self.node.name
                 )
                 await asyncio.sleep(SLOT_PERIOD)
-                genesis_ts = time()
                 continue
 
             # Get current timeslot
@@ -102,19 +101,11 @@ class BlockProducer:
                 if author_key == self.node.validator_data.bandersnatch:
                     logger.info(
                         "🧑‍🍳Authoring block - our turn",
-                        curr_timeslot=int(curr_ts),
-                        epoch=curr_ep,
-                        author_key=author_key.hex()[:16] + "..."
+                        ts=int(curr_ts), epoch=curr_ep, author=author_key.hex()[:16] + "..."
                     )
 
                     block = self._produce_block(state, curr_ts)
-                    block.save(self.db)
-                    header_hash = block.header.hash()
-                    # Set local chain head to produced block
-                    Finality.set_head(header_hash, self.db)
-                    # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-                    Finality.finalise(header_hash, self.db)
-
+                    state.transition(block)
                     # Announce
                     await up0.transmit(self.node, block)
 

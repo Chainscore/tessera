@@ -7,27 +7,22 @@ import os
 import time
 from multiprocessing import Process
 
-from tsrkit_types import U32
 from dotenv import load_dotenv
 from jam.logging import setup_logging, logger
 from jam.consensus.grandpa.finality import Finality
-from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
-from jam.network.protocols.up_0 import Final
 from jam.settings import setup_setting
 from jam.network.peer import Peer
 from jam.network.node import Node
 from jam.operations.utils.state_update import update_state
-from jam.state.state import setup_state, State
+from jam.state.state import setup_state
 from jam.types.block import Block
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.consensus.bp_engine import BlockProducer
 
-clients = [40000, 40001]
 
-
-async def run_node(env: str, theme: str, height: int, is_requester = False):
+async def run_node(env: str, theme: str, height: int, db_path: str, is_requester = False):
     # ---------- SETUP LOGGING ----------
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
     init_ts = (time.time() - genesis_ts) / SLOT_PERIOD
@@ -54,7 +49,7 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path=db_path+"/")
 
     main_db = settings.main_db
 
@@ -101,43 +96,42 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
 
         Finality.set_head(hh, main_db)
         Finality.finalise(hh, main_db)
-        print("State Root:", state.root.hex())
 
     async with asyncio.TaskGroup() as tg:
         tg.create_task(tsr_node.initialize())
+        tg.create_task(BlockProducer(tsr_node, main_db).run())
+
 
 session_name = "jam_test"
 
-def run_node_process(env: str, theme: str, height = 0, req = False):
+def run_node_process(env: str, theme: str, db_path: str, height = 0, req = False):
     # Handle clean termination
     def handle_sigterm(signum, frame):
         exit(0)
     signal.signal(signal.SIGTERM, handle_sigterm)
 
-    asyncio.run(run_node(env, theme, height, req))
+    asyncio.run(run_node(env, theme, height, req, db_path))
+
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_128():
-    p_alice = Process(
-        target=run_node_process,
-        args=('envs/40000.env', "matrix", 10, False)
-    )
-    p_bob = Process(
-        target=run_node_process,
-        args=('envs/40001.env', "polkadot", 0, True)
-    )
+async def test_128(db_path):
+    node_processes = []
+    node_processes.append(
+        Process(target=run_node_process, args=('envs/40000.env', "matrix", 10, False, db_path)))
+    node_processes.append(
+        Process(target=run_node_process, args=('envs/40001.env', "polkadot", 10, False, db_path)))
+    node_processes.append(
+        Process(target=run_node_process, args=('envs/40002.env', "bitcoin", 10, False, db_path)))
+    node_processes.append(
+        Process(target=run_node_process, args=('envs/40003.env', "default", 10, False, db_path)))
 
-    p_alice.start()
-    p_bob.start()
+    for pr in node_processes:
+        pr.start()
 
     # KEEP TEST ALIVE FOR SOME TIME
     await asyncio.sleep(10)
 
-    print("END OF TEST")
-
-    p_alice.terminate()
-    p_bob.terminate()
-    p_alice.join()
-    p_bob.join()
-
+    for pr in node_processes:
+        pr.terminate()
+        pr.join()

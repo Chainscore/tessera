@@ -195,7 +195,6 @@ class Node:
 
         config.max_data = 104857600  # 100 MB
         config.max_stream_data = 10485760  # 10 MB per stream
-        config.max_datagram_size = 1350
         config.idle_timeout = 120.0
 
         if is_client:

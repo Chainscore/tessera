@@ -3,7 +3,6 @@ from typing import cast
 from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
 
 from jam.logging import logger
-from jam.settings import settings
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -122,6 +121,7 @@ class WorkReportDistribution(NetworkProtocol):
 
     @staticmethod
     async def _req_shard(data: GuaranteedWR, node: Node):
+        from jam.settings import settings
         slot = data.slot
         signatures = data.signatures
 
@@ -142,7 +142,7 @@ class WorkReportDistribution(NetworkProtocol):
         # Save Shard
         if shard is not None:
             # Store Bundle Shard
-            audits = settings.audit
+            audits = settings.audit_da
             bs_da = AuditShardsDA(audits)
             bs_da.put(er_root, shard_index, shard[0])
 
@@ -153,13 +153,13 @@ class WorkReportDistribution(NetworkProtocol):
 
             # Distribute Assurance
             # TODO: Fix Assurances Distribution
-            from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
-            CE141 = AssuranceDistribution()
-
-            from jam.network.utils.dummy_assurance import create_dummy_assurances
-            assurance = create_dummy_assurances()
-            data = CE141Data(assurance)
-            ack = await CE141.transmit(node=node, data=data)
+            # from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
+            # CE141 = AssuranceDistribution()
+            #
+            # from jam.network.utils.dummy_assurance import create_dummy_assurances
+            # assurance = create_dummy_assurances()
+            # data = CE141Data(assurance)
+            # ack = await CE141.transmit(node=node, data=data)
 
             # Save Report
             rep_da = ReportsDA(d3l)

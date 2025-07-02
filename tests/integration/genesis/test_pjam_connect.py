@@ -116,19 +116,20 @@ def run_node_process(env: str, theme: str, height = 0, req = False):
 
     asyncio.run(run_node(env, theme, height, req))
 
+
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_128():
-    p_alice = Process(
-        target=run_node_process,
-        args=('envs/40000.env', "matrix", 10, False)
-    )
+async def test_polkajam_connect():
+    # p_alice = Process(
+    #     target=run_node_process,
+    #     args=('envs/40000.env', "matrix", 10, False)
+    # )
     p_bob = Process(
         target=run_node_process,
         args=('envs/40001.env', "polkadot", 0, True)
     )
 
-    p_alice.start()
+    # p_alice.start()
     p_bob.start()
 
     # KEEP TEST ALIVE FOR SOME TIME
@@ -136,8 +137,8 @@ async def test_128():
 
     print("END OF TEST")
 
-    p_alice.terminate()
+    # p_alice.terminate()
     p_bob.terminate()
-    p_alice.join()
+    # p_alice.join()
     p_bob.join()
 

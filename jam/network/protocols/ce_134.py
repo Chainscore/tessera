@@ -5,7 +5,6 @@ if TYPE_CHECKING:
     from jam.network.node import Node
 
 from jam.logging import get_logger
-from jam.settings import settings
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -150,6 +149,7 @@ class WorkPackageSharing(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept Work Package Bundle & Build Work Report on Core's Guarantors (server)"""
+        from jam.settings import settings
         node = server.node
         buffer = server.stream_buffer[stream_id]
 

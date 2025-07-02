@@ -10,7 +10,7 @@ from jam.network.base.quic import QuicProtocol
 from jam.types.protocol.core import CoreIndex, ValidatorIndex
 from tsrkit_types import U8, Vector
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, BandersnatchVrfSignature, HeaderHash
-from jam.config.logging import logger
+# from jam.config.logging import logger
 from typing import cast
 from jam.work_package.processor import Processor
 from jam.network.protocols.ce_138 import CE138Data
@@ -103,18 +103,18 @@ class AuditAnnouncement(NetworkProtocol):
         transmitted_count = 0
         responses = TypedVector([])
         stream_a = self._prefix.encode() + data.transmit.encode()
-            stream_b = data.Evidence.encode()
+        stream_b = data.Evidence.encode()
 
-            responses = Vector([])
-            for peer in node.peer_conn:
-                if int(peer.data.metadata.port) == 40001:
-                    logger.info("sending announcement to other validators")
-                    client = node.peer_conn[peer][1]
-                    stream_id = client.stream_and_keep_open(message=stream_a)
-                    data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
-                    responses.append(data)
+        responses = Vector([])
+        for peer in node.peer_conn:
+            if int(peer.data.metadata.port) == 40001:
+                logger.info("sending announcement to other validators")
+                client = node.peer_conn[peer][1]
+                stream_id = client.stream_and_keep_open(message=stream_a)
+                data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
+                responses.append(data)
 
-            return responses
+        return responses
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         node = server.node
