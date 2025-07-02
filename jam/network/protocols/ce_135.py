@@ -2,8 +2,7 @@ import asyncio
 from typing import cast
 from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure, Bytes
 
-from jam.config.logging import logger
-from jam.config.settings import settings
+from jam.logging import logger
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -125,6 +124,8 @@ class WorkReportDistribution(NetworkProtocol):
 
     @staticmethod
     async def _req_shard(data: GuaranteedWR, node: Node):
+        from jam.settings import settings
+
         slot = data.slot
         signatures = data.signatures
 

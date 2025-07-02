@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey,
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
 from tsrkit_types import U32, Uint
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.types.protocol.crypto import Hash
 
 # Module-specific logger

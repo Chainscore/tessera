@@ -2,15 +2,12 @@ from typing import cast, Tuple
 
 from tsrkit_types import Uint, structure, TypedVector, Bytes
 
-from jam.config.logging import logger
-from jam.config.settings import settings
+from jam.logging import logger
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_137 import CE137Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.protocol.core import ErasureRoot
-from jam.types.protocol.crypto import Hash
 from jam.types.work.manifest import Segment, Justification
 from jam.types.work.shard import SegmentsShard, ShardIndex, BundleShard
 
@@ -89,6 +86,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Assurer (server)"""
+        from jam.settings import settings
         buffer = server.stream_buffer[stream_id]
 
         logger.info("Received Shard index & erasure root")

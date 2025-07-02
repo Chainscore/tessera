@@ -1,7 +1,6 @@
 import time
 import os
 
-from jam.config.keys import setup_keys
 from jam.state.state import setup_state
 from jam.types import IPAddress, ValidatorData, BlsPublic, ValidatorMetadata
 from jam.utils.dummy.dummy_package import create_dummy_package
@@ -14,7 +13,7 @@ from jam.network.node import Node
 from jam.work_package.processor import Processor
 from tsrkit_types.integers import U16, U8, Uint
 from jam.network.peer import Peer
-from jam.config.settings import settings, setup_setting
+from jam.settings import settings, setup_setting
 from jam.utils.benchmark import benchmark
 from dotenv import load_dotenv
 
@@ -77,12 +76,8 @@ def wp_bench():
 
     load_dotenv(".env")
     load_dotenv("40000.env")
-    # name = os.environ["NODE_NAME"]
-    # port = os.environ["PORT"]
-    # seed = os.environ["SEED"]
-    keys = setup_keys(int(50))
-    setup_setting("name", int(3000))
-    state = setup_state(settings.state_db, "/home/faizahmad817/tessera/dev-spec.json")
+    setup_setting(name="name", port=int(3000), seed=50, data_path="data/")
+    state = setup_state(settings.state_db, "/dev-spec.json")
     state.store.disable_cache()
     peers = [
         Peer(

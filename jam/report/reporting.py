@@ -2,7 +2,7 @@ from typing import Dict, Set, List
 
 from tsrkit_types import Bytes
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.merklization import MMRFunctions
 from jam.types.protocol.core import CoreIndex
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats

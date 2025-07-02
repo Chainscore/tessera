@@ -1,9 +1,8 @@
 from typing import cast, TYPE_CHECKING
 
-from tsrkit_types import Bytes, TypedVector, ByteArray, Dictionary
+from tsrkit_types import Bytes, TypedVector, Dictionary
 
-from jam.config.data_stores import data_stores
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.network.base.quic import QuicProtocol
 from jam.state.state import state
 from jam.types import HeaderHash
@@ -92,6 +91,7 @@ class StateRequest(NetworkProtocol):
 
 	def req_intercept(self, stream_id: int, server: QuicProtocol):
 		"""Intercept & Process Work Package on Guarantor (server)"""
+		from jam.settings import settings
 		node = server.node
 		buffer = server.stream_buffer[stream_id]
 
@@ -128,7 +128,7 @@ class StateRequest(NetworkProtocol):
 			)
 
 			# Key Vals
-			_state_data_raw: dict = data_stores.state_db.get_range(data.start, data.end)
+			_state_data_raw: dict = settings.state_db.get_range(data.start, data.end)
 			state_data = Dictionary[Bytes[32], Bytes]({})
 			for k, v in _state_data_raw:
 				state_data[Bytes[32](k)] = Bytes(v)

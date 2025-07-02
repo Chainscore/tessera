@@ -1,7 +1,7 @@
 from tsrkit_types import U32, U64, Bytes
 
 from jam.accumulation.types import DeferredTransfer, AccumulationContext, StateContext
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions as INVF
 from jam.execution.pvm.memory import Memory
 from jam.execution.pvm.status import CONTINUE, PANIC, HostStatus, PvmError, ExecutionStatus

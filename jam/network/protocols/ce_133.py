@@ -1,7 +1,7 @@
 from typing import cast
 from tsrkit_types import Null, structure, Uint, Bool, TypedVector, Option
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.quic import QuicProtocol

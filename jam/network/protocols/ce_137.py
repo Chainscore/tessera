@@ -2,8 +2,7 @@ from typing import cast, Tuple
 
 from tsrkit_types import structure, Uint, Null, TypedVector, Bytes
 
-from jam.config.logging import logger
-from jam.config.settings import settings
+from jam.logging import logger
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -114,6 +113,7 @@ class ShardDistributionProtocol(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
+        from jam.settings import settings
         buffer = server.stream_buffer[stream_id]
 
         try:
@@ -134,7 +134,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             query = data.query
 
             d3l = settings.d3l
-            audit = settings.audit
+            audit = settings.audit_da
 
             justification_da = JustificationsDA(audit)
 

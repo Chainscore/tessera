@@ -1,5 +1,5 @@
 """Constants for the JAM protocol as defined in the specification."""
-from jam.config.chainspec import chain_config
+from jam.utils.chainspec import chain_config
 
 # ───────────────────────────────────────
 # Constants (I.4.4, JAM Graypaper Order)
@@ -149,3 +149,4 @@ REGISTER_COUNT = 13
 # ======= #
 VALIDATORS_SUPER_MAJORITY = 1 + 2 * VALIDATOR_COUNT // 3
 VALIDATORS_WONKY = VALIDATOR_COUNT // 3
+GENESIS_TS = 1735732800 # January 1, 2025 12:00 UTC

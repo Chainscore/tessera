@@ -5,8 +5,9 @@ from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted, \
     ConnectionIdIssued, ConnectionIdRetired, StreamReset, StopSendingReceived
 from cryptography.x509 import Certificate
+from tsrkit_types import U8
 
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 from jam.network.base.certificate import verify_certificate
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -81,7 +82,7 @@ class QuicProtocol(QuicConnectionProtocol):
         if stream_id is None:
             stream_id = self._quic.get_next_available_stream_id()
 
-        logger.info(
+        logger.debug(
             f"📤 Sending message of size {len(message)} bytes",
             stream_id=stream_id,
             interface=self.interface
@@ -97,7 +98,7 @@ class QuicProtocol(QuicConnectionProtocol):
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
 
-        logger.info(
+        logger.debug(
             f"📤 Sending message of size {len(message)} bytes.",
             stream_id=stream_id,
             interface=self.interface
@@ -110,7 +111,7 @@ class QuicProtocol(QuicConnectionProtocol):
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
 
-        logger.info(
+        logger.debug(
             f"📤 Sending message of size {len(message)} bytes.",
             stream_id = stream_id,
             interface=self.interface
@@ -223,7 +224,7 @@ class QuicProtocol(QuicConnectionProtocol):
             if not peer:
                 raise NetworkingError(Code.NO_PEER)
 
-            logger.info(
+            logger.debug(
                 f"📩 Received data of size {len(data)} bytes.",
                 peer=peer,
                 stream_id=stream_id,
@@ -236,7 +237,7 @@ class QuicProtocol(QuicConnectionProtocol):
             if stream_id not in self.stream_buffer:
                 try:
                     # Add prefix to the buffer
-                    prefix, _ = PrefixType.decode_from(data[0:1])
+                    prefix, _ = U8.decode_from(data[0:1])
                     self.stream_buffer[stream_id] = data
 
                     # Handle connection mapping for servers.
@@ -247,13 +248,13 @@ class QuicProtocol(QuicConnectionProtocol):
 
                 except Exception as e:
                     prefix = None
-                    logger.error(f"Error identifying protocol on unknown stream. {e}")
+                    logger.error(f"Error identifying protocol on unknown stream. {e}", stream_id=stream_id)
 
             # If we know it, then append data in the buffer
             else:
                 buffer = self.stream_buffer[stream_id]
                 try:
-                    prefix, _ = PrefixType.decode_from(buffer[0:1])
+                    prefix, _ = U8.decode_from(buffer[0:1])
                     self.stream_buffer[stream_id] += data
 
                 except Exception as e:
@@ -289,6 +290,7 @@ class QuicProtocol(QuicConnectionProtocol):
                     logger.exception(
                         f"Error retrieving data from ce stream.",
                         error=str(e),
+                        prefix=prefix,
                         interface=self.interface
                     )
 
@@ -315,6 +317,7 @@ class QuicProtocol(QuicConnectionProtocol):
                         logger.exception(
                             f"Error retrieving data from up stream.",
                             error=str(e),
+                            prefix=prefix,
                             interface=self.interface
                         )
                         self.stream_buffer[stream_id] = prefix.encode()

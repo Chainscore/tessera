@@ -2,8 +2,7 @@ from typing import Tuple, Dict, List
 
 from tsrkit_types import Vector, Bytes
 
-from jam.config.logging import get_logger
-from jam.config.settings import settings
+from jam.logging import get_logger
 from jam.network.protocols.ce_137 import ShardDistributionProtocol
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types import WorkPackageBundle
@@ -19,12 +18,12 @@ from jam.types.work.manifest import (
     Extrinsics,
     SegmentDict,
     MultiJustifications,
-    MultiExtrinsics, Extrinsic, Segment, Assurers
+    MultiExtrinsics, Extrinsic, Segment
 )
 
 from jam.types.work import SegmentRootLookup
 
-from jam.types.protocol.core import SegmentRoot, ErasureRoot
+from jam.types.protocol.core import SegmentRoot
 from jam.types.protocol.crypto import OpaqueHash
 
 from jam.merklization.binary_merkle import BMRFunctions
@@ -32,15 +31,13 @@ from jam.utils.benchmark import benchmark
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
-from jam.types.work.shard import ShardIndex, SegmentsShards, SegmentsShard, SegmentShard
+from jam.types.work.shard import ShardIndex, SegmentShard
 
 from jam.erasure_coding.erasure_code import ErasureCode
 
 
 from jam.network.node import Node
-from jam.network.protocols.ce_139 import SegmentShardRequest
-from jam.network.protocols.ce_139_base import CE139Data, SegmentIndexes
-from jam.config.chainspec import chain_config
+from jam.utils.chainspec import chain_config
 
 # Module-specific logger
 logger = get_logger("in_core")
@@ -59,6 +56,7 @@ class Bundler:
 
     def build_lookup(self, p: WorkPackage) -> SegmentRootLookup:
         # Access DA
+        from jam.settings import settings
         d3l = settings.d3l
 
         map_da = PackageSegmentMap(d3l)
@@ -112,7 +110,8 @@ class Bundler:
            Extrinsic data (Vector[Bytes])
         """
         # Access DA
-        db = settings.db
+        from jam.settings import settings
+        db = settings.main_db
 
         ext_da = ItemExtrinsics(db)
         ext: Extrinsics = ext_da.process_item(w, data)
@@ -134,6 +133,7 @@ class Bundler:
         """
 
         # Access DA
+        from jam.settings import settings
         d3l = settings.d3l
 
         imports: Segments = Segments([])
