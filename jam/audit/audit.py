@@ -1,31 +1,36 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from tsrkit_types import Null, Bytes, TypedVector, U32, Bytes, Uint, Option
-from jam.types.protocol.core import CoreIndex, TimeSlot
+from jam.types.protocol.core import CoreIndex, TimeSlot, ValidatorIndex
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jam.types.work.report import WorkReport
 from jam.state.state import state
+from jam.types.block.header import Header
 from jam.utils.constants import CORE_COUNT, CURRENT_TIME, SLOT_PERIOD, AUDIT_PERIOD, SIGNING_CONTEXTS
 from jam.ring_vrf.vrf import VRF
 from jam.utils.shuffle import shuffle
-from jam.types.protocol.crypto import Hash, BandersnatchPublic, Ed25519Public
+from jam.types.protocol.crypto import Hash, BandersnatchPublic
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.types import BandersnatchVrfSignature
 from jam.types.work.report import WorkReportHash
-from jam.types.block.header import Header
-from jam.types.state.rho import Rho
+from jam.types.protocol.merkle import OptionHash
+from jam.types.work.package import WorkPackage
+# from jam.work_package.processor import Processor
+from tsrkit_types.sequences import TypedVector
+from tsrkit_types.integers import Uint
 
 
 
 @dataclass
 class AuditingAndJudgement:
 
-    def __init__(self):
-        self.vrf = VRF
+    def __init__(self, current_state, current_assurances):
+        self.state = current_state
+        self.assurance = current_assurances
+        # self.process = Processor
 
-    @staticmethod
-    def report_to_be_audit(available_reports : TypedVector[Option[WorkReport]], pending_report: Rho) -> TypedVector[Option[WorkReport]]:      #---------------------------------
+    def report_to_be_audit(self,available_reports : TypedVector[OptionHash]) -> TypedVector[OptionHash]:
         """
         Function Q define in Eq. 17.1 and 17.2
         This function define the sequence of work_report which required to audit(Q)
@@ -35,15 +40,13 @@ class AuditingAndJudgement:
 
         Args:
             available_reports : Pending Work Reports
-            pending_report: report, rho contains
 
         Returns:
             Array of Work Reports to be Audit
         """
 
-        pre_auditing_report = TypedVector[Option[WorkReport]]([])
-
-        for i, (report, slot) in enumerate(pending_report):
+        pre_auditing_report =  TypedVector[OptionHash]([])
+        for i, (report, slot) in enumerate(state.rho):
             if report in available_reports:
                 pre_auditing_report.append(report)
             else:
@@ -52,7 +55,7 @@ class AuditingAndJudgement:
         return pre_auditing_report
 
     @staticmethod
-    def vrf_signature_bandersnatch( entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, tranche_index: int = Null, w_report: Optional[WorkReport] = Null) -> Bytes[96]:
+    def vrf_signature_bandersnatch( entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, tranche_index: int = 0, w_report: Optional[WorkReport] = None) -> Bytes[96]:
         """
         s_0: The initial VRF (Verifiable Random Function) signature used to select work-reports for auditing in the first tranche (n=0).
 
@@ -86,23 +89,24 @@ class AuditingAndJudgement:
         if tranche_index is not Null and tranche_index > 0 and w_report is not Null:
             random_quantity += Bytes(Hash.blake2b(w_report.encode()).encode()) + Bytes(tranche_index)  # refer 17.15
 
-        return Bytes(signature)
+        return signature
 
-    def vrs_func(self, entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_report: TypedVector[Option[WorkReport]]) -> List[Tuple[CoreIndex, WorkReportHash]]:
+
+    def vrs_func(self, entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic) -> List[Tuple[CoreIndex, WorkReportHash]]:
 
         # Equation : 17.7 (r = y(So))
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
         entropy = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(self.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=bandersnatch_key)))[:32]
 
         #  Equation :  17.6 p = f([(c, Qc) | c <- Nc ], r )
-        pre_audit_report = pre_report
-        core_indexes = TypedVector[Tuple[CoreIndex, Option[WorkReport]]]([])
-        for c, w_r in enumerate(pre_audit_report):
-            core_indexes.append((CoreIndex(c), Optional[WorkReport(w_r)]))
+        audit_report = self.report_to_be_audit(self.assurance)
+        core_indexes = TypedVector[Tuple[Uint[32], WorkReportHash]]([])
+        for c, w_r in enumerate(audit_report):
+            core_indexes.append((Uint[32](c), Optional[WorkReportHash(w_r)]))
 
         #------------------------------------- audit size array and shuffle --------------------------------------------
         array_index = TypedVector[Uint[32]]([])
-        for i in range(len(pre_audit_report)):
+        for i in range(len(audit_report)):
             array_index.append(Uint[32](i))
 
         shuffle_array = shuffle(entropy, array_index)
@@ -110,14 +114,16 @@ class AuditingAndJudgement:
 
         # ------------------------------------------ updated shuffle auditing list -------------------------------------
         lookup = dict(core_indexes)
-        updated_array : TypedVector[Tuple[Uint[16], Option[WorkReport]]] = [(Uint[16](i), lookup[i]) for i in shuffle_array]
+        updated_array = [(i, lookup[i]) for i in shuffle_array]
         print(updated_array)
 
         # ------------------------------------------ take initial 10 values -------------------------------------
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-        shuffle_not_null : TypedVector[Tuple[Uint[32], WorkReport]] = [(c, w) for (c, w) in updated_array if w is not Null][:10]
+
+        shuffle_not_null = [(c, w) for (c, w) in updated_array if w is not Null][:10]
 
         return shuffle_not_null
+
 
     @staticmethod
     def generate_tranche_index(header_slot: TimeSlot) -> Uint:
@@ -133,39 +139,69 @@ class AuditingAndJudgement:
         tranche_index =  (CURRENT_TIME() - (SLOT_PERIOD * int(header_slot))) // AUDIT_PERIOD
         return tranche_index
 
-    def validator_announcement_statement(self, assign_report: TypedVector[Tuple[CoreIndex, Option[WorkReport]]], header : Header, ed25519_public: Ed25519Public) -> set[Bytes[64]]:
 
-        validator_announcement_set : set[Bytes[64]]  = set()
+    def validator_announcement_statement(self, header: Header, validator_index: ValidatorIndex) -> set[Bytes[64]]:
+        """
+        Validator’s announcement statements must be in the set S
+        refer to Eq. 17.9
+        """
 
-        signing_context = Bytes(SIGNING_CONTEXTS["jam_announce"])
+        # Ed25519 Audit announcement statements
+        signing_context = bytes(SIGNING_CONTEXTS["jam_announce"])
 
-        tranches_index = Bytes(self.generate_tranche_index(header.slot))
+        # n (tranche index)
+        tranches_index = self.generate_tranche_index(header.slot)
 
-        header_hash = Bytes(Hash.blake2b(header.encode()))
+        # block's header hash
+        header_hash = bytes(Hash.blake2b(header.encode()))
 
-        private_key = Ed25519PrivateKey.from_private_bytes(Bytes(ed25519_public))
+        # x_n  => Serializing the vrs_list -> x_n
+        vrs_list=self.vrs_func(header.entropy_source,self.state.kappa[validator_index].bandersnatch)
+        vrs_bytes=bytes()
+        for (core,wr) in vrs_list:
+            vrs_bytes += core.encode() + Hash.blake2b(wr.encode()).encode()
 
-        encoded_core_report = Bytes(b" ")
+        #loop through the validators and signing the message with their ed25519publickey
+        # S
+        announcement_statement = signing_context + bytes(tranches_index) + vrs_bytes +  header_hash
 
-        for c, r in assign_report:
-            encoded_core_report = encoded_core_report + c.to_byte(2, 'little') + Hash.blake2b(r.encode()) + signing_context + tranches_index + header_hash
-            signature = private_key.sign(encoded_core_report)
-            validator_announcement_set.add(Bytes(signature))
-            encoded_core_report = Bytes(b"")
+        statement_set : set[Bytes[64]] = set()
 
-        return validator_announcement_set
+        for validator in state.kappa:
+            private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
+            # Sign will give out a 64Byte Signature
+            signature = private_key.sign(announcement_statement)
+            # Explicitly modifying to the ByteArray64 format
+            statement_set.add(signature)
 
-
-
-
-    # def evaluate_core_mappings (self, core_index: int , package: WorkPackage):
+        return statement_set
+    #
+    # def evaluate_core_mappings (self, core_index: int , package: WorkPackage, ):
     #     # refer 17.17
     #     if F(w)  ==  self.rho[w_r.core_index].encode():
     #         return self.process.process_bundle(core=core_index, bundle=package, sr_lookup=)
     #     else:
     #         return False
+    #
+    # def validator_judment_mapping(self,work_report:WorkReport,state:state)-> List[Bytes[64]]:
+    #     """
+    #      Go through the evaluate_core_mappings Func (refer 17.17) and provide its validity where the wr is valid or not
+    #      Return :
+    #         Set of Judgment signatures from each (kappa/current) validator
+    #     refer equ 17.18
+    #     """
+    #     judgement_set=[]
+    #     for validator in state.kappa:
+    #         private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
+    #         signing_context = SIGNING_CONTEXTS["valid"] if evaluate_core_mappings(work_report) else SIGNING_CONTEXTS["invalid"]
+    #         message= signing_context + Hash.blake2b(work_report.encode())
+    #         # Sign will give out a 64Byte Signature
+    #         signature = private_key.sign(message)
+    #         # Explicitely modifying to the ByteArray64 format
+    #         judgement_set.append(Bytes[64](signature))
+    #     return judgement_set
 
-    def validator_judment_mapping(self,work_report:WorkReport,state:state)-> List[Bytes[64]]:
+    def validator_judment_mapping(self,work_report:WorkReport)-> List[Bytes[64]]:
         """
          Go through the evaluate_core_mappings Func (refer 17.17) and provide its validity where the wr is valid or not
          Return :
@@ -173,13 +209,14 @@ class AuditingAndJudgement:
         refer equ 17.18
         """
         judgement_set=[]
-        for validator in state.kappa:
-            private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
-            signing_context = SIGNING_CONTEXTS["valid"] if evaluate_core_mappings(work_report) else SIGNING_CONTEXTS["invalid"]
+        for validator in self.state.kappa:
+            # private_key = Ed25519PrivateKey.from_private_bytes(bytes(validator.ed25519))
+            # signing_context = SIGNING_CONTEXTS["valid"] if evaluate_core_mappings(work_report) else SIGNING_CONTEXTS["invalid"]
+            signing_context = SIGNING_CONTEXTS["valid"] if True else SIGNING_CONTEXTS["invalid"]
+
             message= signing_context + Hash.blake2b(work_report.encode())
             # Sign will give out a 64Byte Signature
             signature = private_key.sign(message)
             # Explicitely modifying to the ByteArray64 format
-            judgement_set.append(Bytes[64](signature))
+            judgement_set.append(Bytes64(signature))
         return judgement_set
-
