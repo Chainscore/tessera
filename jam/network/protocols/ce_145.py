@@ -3,7 +3,6 @@ from typing import cast, TYPE_CHECKING
 from tsrkit_types import Uint, U8, U16, U32, structure
 from tsrkit_types.bytes import Bytes
 
-from jam.settings import settings
 from jam.logging import get_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.quic import QuicProtocol
@@ -479,6 +478,7 @@ class JudgmentPublication(NetworkProtocol):
         3. Audit the work report to determine validity
         4. Create and return judgment
         """
+        from jam.settings import settings
         logger.info(
             "Auditor creating judgment",
             node_name=node.name,

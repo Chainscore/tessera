@@ -3,7 +3,6 @@ from typing import Tuple, Dict, List
 from tsrkit_types import Vector, Bytes
 
 from jam.logging import get_logger
-from jam.settings import settings
 from jam.network.protocols.ce_137 import ShardDistributionProtocol
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types import WorkPackageBundle
@@ -57,6 +56,7 @@ class Bundler:
 
     def build_lookup(self, p: WorkPackage) -> SegmentRootLookup:
         # Access DA
+        from jam.settings import settings
         d3l = settings.d3l
 
         map_da = PackageSegmentMap(d3l)
@@ -110,6 +110,7 @@ class Bundler:
            Extrinsic data (Vector[Bytes])
         """
         # Access DA
+        from jam.settings import settings
         db = settings.main_db
 
         ext_da = ItemExtrinsics(db)
@@ -132,6 +133,7 @@ class Bundler:
         """
 
         # Access DA
+        from jam.settings import settings
         d3l = settings.d3l
 
         imports: Segments = Segments([])
