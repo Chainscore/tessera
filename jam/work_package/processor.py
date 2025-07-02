@@ -368,7 +368,7 @@ class Processor:
 
             # Access DA
             d3l = settings.d3l
-            audits = settings.audit
+            audits = settings.audit_da
 
             # Store Exported Segments
             seg_da = SegmentsDA(d3l)
