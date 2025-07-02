@@ -87,13 +87,14 @@ async def main(
     )
 
     try:
-        genesis = json.load(open("dev-spec.json"))
-
         # Set genesis state
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, "dev-spec.json")
         state.store.disable_cache()
         update_state(state)
+
+        # Genesis specs
+        dev_spec = json.load(open(genesis_path))
 
         peers = [
             Peer(
@@ -125,7 +126,7 @@ async def main(
             is_validator=is_validator,
         )
 
-        block = Block.decode(bytes.fromhex(genesis["genesis_header"]))
+        block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db)

@@ -82,7 +82,7 @@ class QuicProtocol(QuicConnectionProtocol):
         if stream_id is None:
             stream_id = self._quic.get_next_available_stream_id()
 
-        logger.info(
+        logger.debug(
             f"📤 Sending message of size {len(message)} bytes",
             stream_id=stream_id,
             interface=self.interface
@@ -98,7 +98,7 @@ class QuicProtocol(QuicConnectionProtocol):
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
 
-        logger.info(
+        logger.debug(
             f"📤 Sending message of size {len(message)} bytes.",
             stream_id=stream_id,
             interface=self.interface
@@ -111,7 +111,7 @@ class QuicProtocol(QuicConnectionProtocol):
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
 
-        logger.info(
+        logger.debug(
             f"📤 Sending message of size {len(message)} bytes.",
             stream_id = stream_id,
             interface=self.interface
@@ -224,7 +224,7 @@ class QuicProtocol(QuicConnectionProtocol):
             if not peer:
                 raise NetworkingError(Code.NO_PEER)
 
-            logger.info(
+            logger.debug(
                 f"📩 Received data of size {len(data)} bytes.",
                 peer=peer,
                 stream_id=stream_id,

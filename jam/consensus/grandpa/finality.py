@@ -5,7 +5,7 @@ from tsrkit_types import Bytes
 from jam.types.block import Block
 from jam.types.protocol.crypto import Hash, HeaderHash
 
-logger = get_logger()
+logger = get_logger("grandpa")
 
 class Finality:
     """
@@ -20,12 +20,12 @@ class Finality:
 
     @classmethod
     def finalise(cls, header_hash: HeaderHash, kv: RockStore):
-        logger.info("Finalised block", header_hash=header_hash.hex())
+        logger.debug("Finalised block", header_hash=header_hash.hex())
         kv.put(cls.FINAL_KEY, header_hash.encode())
 
     @classmethod
     def set_head(cls, header_hash: HeaderHash, kv: RockStore):
-        logger.info("Setting header...", header_hash=header_hash.hex())
+        logger.debug("Setting header...", header_hash=header_hash.hex())
         kv.put(cls.LATEST_KEY, header_hash.encode())
 
     @classmethod
