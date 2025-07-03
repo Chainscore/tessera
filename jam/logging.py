@@ -56,7 +56,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": Colour.RED,
             "CRITICAL": Colour.MAGENTA,
         },
-        "time"  : Colour.BBLACK,
+        "time"  : Colour.BBLUE,
         "logger": Colour.BLUE,
         "node"  : Colour.BMAG,
     },
@@ -69,7 +69,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": f"{Colour.BOLD}{Colour.BBLACK}{Colour.GREEN}",
             "CRITICAL": f"{Colour.BOLD}{Colour.BGREEN}{Colour.BLACK}",
         },
-        "time": Colour.GREEN,
+        "time": Colour.BBLUE,
         "logger": Colour.GREEN,
         "node": Colour.BGREEN,
         "prefixes": ("0x", ">_", ">>", "//", "$_", "#_"),
@@ -83,7 +83,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": f"{Colour.BOLD}{Colour.BMAG}{Colour.WHITE}",
             "CRITICAL": f"{Colour.BOLD}{Colour.BWHITE}{Colour.BLACK}",
         },
-        "time": Colour.BBLACK,
+        "time": Colour.BBLUE,
         "logger": f"{Colour.BOLD}{Colour.MAGENTA}",
         "node": f"{Colour.BOLD}{Colour.BMAG}",
     },
@@ -97,7 +97,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": _fg(31),   # red
             "CRITICAL": _fg(35) # magenta
         },
-        "time": _fg(90),   # base01
+        "time": Colour.BBLUE,   # base01
         "logger": _fg(94), # cyan
         "node": _fg(96),   # base1 cyan
     },
@@ -110,7 +110,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": _fg(91),  # red
             "CRITICAL": _fg(95)# magenta
         },
-        "time": _fg(90),
+        "time": Colour.BBLUE,
         "logger": _fg(95),
         "node": _fg(92),
     },
@@ -123,7 +123,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": f"{Colour.BOLD}{Colour.RED}",
             "CRITICAL": f"{Colour.BOLD}{Colour.RED}{Colour.UNDER}",
         },
-        "time": Colour.BBLACK,
+        "time": Colour.BBLUE,
         "logger": Colour.BWHITE,
         "node": Colour.BRED,
     },
@@ -269,8 +269,8 @@ def setup_logging(
 
     processors.extend([
         add_node_context,
+        TimeStamper(fmt="%Y-%m-%d|%H:%M:%S", utc=False),
         add_log_level,
-        TimeStamper(fmt="iso"),
     ])
     
     # Add sensitive data filtering in production
