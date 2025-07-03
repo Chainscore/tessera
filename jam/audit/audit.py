@@ -55,7 +55,7 @@ class AuditingAndJudgement:
         return pre_auditing_report
 
     @staticmethod
-    def vrf_signature_bandersnatch( entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, tranche_index: int = 0, w_report: Optional[WorkReport] = None) -> Bytes[96]:
+    def vrf_signature_bandersnatch(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, tranche_index: int = 0, w_report: Optional[WorkReport] = None) -> Bytes[96]:
         """
         s_0: The initial VRF (Verifiable Random Function) signature used to select work-reports for auditing in the first tranche (n=0).
 

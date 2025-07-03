@@ -5,6 +5,13 @@ import json
 import random
 import time
 
+from jam.state.ghost import GhostState
+from jam.state.state import setup_state
+from jam.types import state
+from jam.types.protocol.core import CoreIndex
+from jam.types.protocol.crypto import Hash
+from jam.types.work.report import WorkReport
+
 def populate_db(db, wr_list, tranche):
     """
     Populates the database with dummy data for announcements and judgements per tranche.
@@ -42,10 +49,11 @@ def J_f(db, wr, tranche):
 def dummy_vrf_check(wr, tranche):
     """
     Dummy VRF: returns True with 30% chance, else False.
+    Actually should be making s_0 and use y_bandersnatch func on it.
     """
 
-    vrf=utils.bandersnatch_y(bytes)
-    # return random.random() < 0.3
+    # vrf=utils.bandersnatch_y(bytes)
+    return random.random() < 0.3
 
 # if __name__ == "__main__":
 #     with tempfile.TemporaryDirectory() as tmpdir:
@@ -97,11 +105,25 @@ def dummy_vrf_check(wr, tranche):
 #                 print(f"  - {wr}")
 
 
+def dummy_wrs(core_range:int)->list[WorkReport]:
+    """n: No. of dummy wrs till the no. of cores required"""
+    wrs=[]
+    for core_index in range(core_range):
+        dummy_wr=WorkReport.empty()
+        dummy_wr.core_index=CoreIndex(core_index)
+        wrs.append(dummy_wr)
+    return wrs
 
 if __name__ == "__main__":
-    bytes=b"bytes bhai"
+    with tempfile.TemporaryDirectory() as tmpdir:
+        jam.settings.setup_setting(data_path=tmpdir, seed=0)
+        db = jam.settings.settings.main_db
+        setup_state(db, GhostState.genesis())
+        from jam.state.state import state as updated_state
+        rho=updated_state.rho
+        dummy_wr_list=dummy_wrs(2)
+        print(dummy_wr_list)
 
-    for i in range(10):
-        vrf_bytes=utils.bandersnatch_y(bytes)
-        print(vrf_bytes[i])
-    # print("All tests passed!",vrf_bytes[i])
+        # audited_wrs = set()
+        # tranche = 0
+        # max_tranches = 10
