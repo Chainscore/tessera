@@ -41,10 +41,10 @@ class Peer:
         self.data = data
 
     def __repr__(self):
-        return f"Peer(host={self.data.metadata.host}, port={self.data.metadata.port}, name={self.data.metadata.name})"
+        return f"Peer(host={self.host}, port={int(self.port)}, id=...{self.id[:4]})"
 
     def __str__(self):
-        return f"Peer({self.data.metadata.host}:{self.data.metadata.port})"
+        return f"Peer({self.host}:{int(self.port)})"
 
     def __int__(self):
-        return f"Peer({self.data.metadata.port})"
+        return f"Peer({int(self.port)})"

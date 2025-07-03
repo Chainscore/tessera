@@ -143,7 +143,7 @@ class WorkReportDistribution(NetworkProtocol):
         # Save Shard
         if shard is not None:
             # Store Bundle Shard
-            audits = settings.audit
+            audits = settings.audit_da
             bs_da = AuditShardsDA(audits)
             bs_da.put(er_root, shard_index, shard[0])
 
