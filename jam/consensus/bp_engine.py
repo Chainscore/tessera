@@ -1,7 +1,7 @@
 import asyncio
-import math
 from time import time
 
+from jam.storage.stores import (guarantee_store, dispute_store, preimage_store, ticket_store, assurance_store)
 from jam.consensus.grandpa.finality import Finality
 from jam.consensus.safrole.safrole import Safrole
 from jam.disputes.disputes import Disputes
@@ -21,7 +21,7 @@ from jam.types.block.extrinsics.disputes import Culprits, Faults, Verdicts
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.crypto import BandersnatchVrfSignature, Hash, OpaqueHash
 from jam.types.state.gamma import GammaSFallback
-from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
+from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
 from jam.network.node import Node
 from rockstore import RockStore
 from jam.utils.dummy.utils import create_dummy_bytes
@@ -47,12 +47,7 @@ class BlockProducer:
         self.node = node
         self.db = db
 
-        logger.info(
-            "Block producer initialized",
-            node_name=node.name,
-            is_validator=node.is_validator,
-            validator_key=node.validator_data.bandersnatch.hex()[:16] + "..." if node.validator_data else None
-    )
+        logger.info("Block producer initialized", validator_key=node.validator_data.bandersnatch.hex()[:16] + "..." if node.validator_data else None)
 
     async def run(self):
         """
@@ -60,20 +55,16 @@ class BlockProducer:
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
 
-        # Record genesis timestamp in seconds
-        genesis_ts = GENESIS_TS
         up0 = BlockAnnouncement()
 
         logger.info(
             "Starting block producer",
-            node_name=self.node.name,
-            genesis_timestamp=genesis_ts,
+            genesis_timestamp=GENESIS_TS,
             slot_period=SLOT_PERIOD,
             epoch_length=EPOCH_LENGTH
         )
 
         # Sleep till we're not synced
-
 
         # TODO: If our validator is not in Kappa - skip block production till end of current epoch
         while True:
@@ -87,7 +78,7 @@ class BlockProducer:
                 continue
 
             # Get current timeslot
-            curr_ts = TimeSlot((time() - genesis_ts) // SLOT_PERIOD)
+            curr_ts = TimeSlot((time() - GENESIS_TS) // SLOT_PERIOD)
             curr_ep = int(curr_ts % EPOCH_LENGTH)
 
             # Check if we are in fallback or normal ticket.py
@@ -99,7 +90,7 @@ class BlockProducer:
                 author_key = gamma_s[curr_ep]
 
                 if author_key == self.node.validator_data.bandersnatch:
-                    logger.info(
+                    logger.debug(
                         "🧑‍🍳Authoring block - our turn",
                         ts=int(curr_ts), epoch=curr_ep, author=author_key.hex()[:16] + "..."
                     )
@@ -109,7 +100,7 @@ class BlockProducer:
                     # Announce
                     await up0.transmit(self.node, block)
 
-                    logger.info("🧱Block authored and announced successfully", curr_timeslot=int(curr_ts), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...")
+                    logger.debug("🧱Block produced & announced", curr_timeslot=int(curr_ts), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...")
                 else:
                     logger.debug(
                         "⏭️ Not our turn to author - skipping", curr_timeslot=int(curr_ts), epoch=curr_ep,
@@ -122,24 +113,30 @@ class BlockProducer:
                 raise NotImplementedError("Only fallback mode is supported for now")
 
             # Sleep for remaining time of the timeslot
-            sleep_duration = SLOT_PERIOD - (time() - genesis_ts) % SLOT_PERIOD
+            sleep_duration = SLOT_PERIOD - (time() - GENESIS_TS) % SLOT_PERIOD
             logger.debug("😴 Sleeping until next slot", sleep_duration=sleep_duration)
             await asyncio.sleep(sleep_duration)
+    
 
     def _produce_block(self, state: State, curr_ts: TimeSlot) -> Block:
         """
         Produce a block for the given timeslot
         """
-        logger.debug(
-            "⚒️ Building block components",
-            timeslot=int(curr_ts)
-        )
+        logger.debug("⚒️ Building block components", timeslot=int(curr_ts))
+        
+        eg, et, ea, ep = [], [], [], []
+        from .ext_store import ext_store
+        for rg in ext_store.eg:
+            # TODO: Take only one WR per core [?]
+            eg.append(rg)
+            if len(eg) >= CORE_COUNT:
+                break 
 
         extrinsic = Extrinsic(
-            TicketsExtrinsic([]),
-            PreimagesExtrinsic([]),
-            GuaranteesExtrinsic([]),
-            AssurancesExtrinsic([]),
+            TicketsExtrinsic(et),
+            PreimagesExtrinsic(ep),
+            GuaranteesExtrinsic(eg),
+            AssurancesExtrinsic(ea),
             DisputesExtrinsic(culprits=Culprits([]), faults=Faults([]), verdicts=Verdicts([]))
         )
 
@@ -172,17 +169,10 @@ class BlockProducer:
         """
         for i, validator in enumerate(state.kappa):
             if validator.bandersnatch == self.node.validator_data.bandersnatch:
-                logger.debug(
-                    "Found author index in validator set",
-                    node_name=self.node.name,
-                    author_index=i,
-                    validator_key=validator.bandersnatch.hex()[:16] + "..."
-                )
-                return ValidatorIndex(i)
+               return ValidatorIndex(i)
 
         logger.error(
             "Author not found in validator set",
-            node_name=self.node.name,
             our_key=self.node.validator_data.bandersnatch.hex()[:16] + "...",
             validator_count=len(state.kappa)
         )
@@ -201,12 +191,5 @@ class BlockProducer:
             enc_ext += bytes(Hash.blake2b(ext.encode()))
 
         extrinsic_hash = Hash.blake2b(enc_ext)
-
-        logger.debug(
-            "Extrinsic hash computed",
-            node_name=self.node.name,
-            extrinsic_count=len(all_ext),
-            extrinsic_hash=extrinsic_hash.hex()[:16] + "..."
-        )
 
         return extrinsic_hash

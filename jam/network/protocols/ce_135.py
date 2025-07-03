@@ -4,11 +4,12 @@ from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
 
 from jam.logging import logger
 
+from jam.storage.stores import guarantee_store
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.block.extrinsics.guarantees import ValidatorSignatures
+from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSignatures
 from jam.types.protocol.core import ValidatorIndex, TimeSlot
 from jam.types.protocol.crypto import Hash
 from jam.types.work.report import WorkReport
@@ -17,22 +18,18 @@ from jam.work_package.stores.audits import AuditShardsDA
 from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
-@structure
-class GuaranteedWR:
-    report: WorkReport
-    slot: TimeSlot
-    signatures: ValidatorSignatures
 
 @structure
 class CE135Data:
     len: Uint[32]
-    guaranteed_wr: GuaranteedWR
+    guaranteed_wr: ReportGuarantee
 
     @property
     def is_valid(self):
         if len(self.guaranteed_wr.encode()) == self.len:
             return True
         return False
+
 
 OptBool = Option[Bool]
 
@@ -67,21 +64,20 @@ class WorkReportDistribution(NetworkProtocol):
 
         responses = TypedVector[OptBool]([])
         for peer in node.peer_conn:
-            if int(peer.port) == 40003:
-                logger.debug("Sending report to 40003")
-                client = node.peer_conn[peer][1]
+            logger.debug("Sending report to 40003")
+            client = node.peer_conn[peer][1]
 
-                # Send Protocol Prefix
-                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+            # Send Protocol Prefix
+            stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                # Append prefix to stream buffer so that we know the stream for handling response
-                client.stream_buffer[stream_id] = self._prefix.encode()
+            # Append prefix to stream buffer so that we know the stream for handling response
+            client.stream_buffer[stream_id] = self._prefix.encode()
 
-                # Send Messages with their lengths
-                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+            # Send Messages with their lengths
+            client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+            data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                responses.append(data)
+            responses.append(data)
 
         return responses
 
@@ -91,11 +87,15 @@ class WorkReportDistribution(NetworkProtocol):
         buffer = server.stream_buffer[stream_id]
 
         logger.info("Received Work Report")
-        data, offset = CE135Data.decode_from(buffer[1:])
+        data = CE135Data.decode(buffer[1:])
         data = cast(CE135Data, data)
 
         if not data.is_valid:
             raise NetworkingError(Code.INVALID_DATA)
+
+        # Save extrinsic
+        from jam.consensus.ext_store import ext_store
+        ext_store.process_guarantee(data.guaranteed_wr)
 
         # Send Acknowledgement
         ack = self._prefix.encode()
