@@ -84,34 +84,33 @@ class WorkPackageSubmission(NetworkProtocol):
         responses = TypedVector[OptBool]([])
         for peer in node.peer_conn:
             try:
-                if peer.port == 40000:
-                    logger.debug("Sending package to 40000")
-                    client = node.peer_conn[peer][1]
-                    transmitted_count += 1
+                logger.debug("Sending package", peer=str(peer))
+                client = node.peer_conn[peer][1]
+                transmitted_count += 1
 
-                    # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                    # Append prefix to stream buffer so that we know the stream for handling response
-                    client.stream_buffer[stream_id] = self._prefix.encode()
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
 
-                    # Send Messages with their lengths
-                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
-                    client.stream_and_keep_open(message=len_b, stream_id=stream_id)
-                    res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
+                client.stream_and_keep_open(message=len_b, stream_id=stream_id)
+                res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
 
-                    if not res:
-                        responses.append(OptBool(Null))
-                    else:
-                        responses.append(res)
+                if not res:
+                    responses.append(OptBool(Null))
+                else:
+                    responses.append(res)
 
-                    logger.debug(
-                        "Work package transmitted to guarantor",
-                        node_name=node.name,
-                        stream_id=stream_id,
-                        core_index=int(data.package_data.core_index)
-                    )
+                logger.debug(
+                    "Work package transmitted to guarantor",
+                    node_name=node.name,
+                    stream_id=stream_id,
+                    core_index=int(data.package_data.core_index)
+                )
 
             except Exception as e:
                 logger.error(
@@ -163,6 +162,7 @@ class WorkPackageSubmission(NetworkProtocol):
             processor = Processor(server.node)
             with benchmark(f"Work Package processed"):
                 wr, wr_hash = processor.process(wp, ci, data.extrinsics)
+
             write_benchmarks_to_txt("benchmarks/refinement.txt")
 
             logger.info(

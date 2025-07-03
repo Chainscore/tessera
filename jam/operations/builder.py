@@ -60,9 +60,7 @@ class Builder:
             curr_ep = int(curr_ts // EPOCH_LENGTH)
 
             # TODO: Remove hard-coded transmission. Use desired guarantors' connections.
-            has_40000 = any(peer.port == 40000 for peer in node.peer_conn)
-
-            if not has_40000:
+            if len(node.peer_conn) == 0:
                 logger.debug(
                     "Network not initialized - skipping work package production",
                     node_name=node.name,
