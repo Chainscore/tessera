@@ -10,6 +10,7 @@ from tsrkit_types import U8
 from jam.logging import get_logger
 from jam.network.base.certificate import verify_certificate
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
+from jam.network.base.protocol import PrefixType
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -22,7 +23,7 @@ class QuicProtocol(QuicConnectionProtocol):
     from jam.network.peer import Peer
 
     stream_buffer: Dict[int, bytes] = {}
-    peer: Peer | None
+    peer: Peer | None | str
 
     def __init__(self, *args, node, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -40,6 +41,9 @@ class QuicProtocol(QuicConnectionProtocol):
 
         if self.peer:
             return self.peer
+
+        elif self in self.node.builder_conn:
+            return "BUILDER"
 
         else:
             peer_cert = self._quic.tls._peer_certificate
@@ -148,19 +152,77 @@ class QuicProtocol(QuicConnectionProtocol):
     def quic_event_received(self, event: QuicEvent) -> None:
         """function that handles all the quic events"""
 
+        from jam.network.node import node_alpn, builder_alpn
+
         # Handle TLS Handshake
         if isinstance(event, HandshakeCompleted):
-            # verify Certificate & fetch Peer info
-            if not self.node.is_initialized:
-                self.node.is_initialized = True
+            node = self.node
 
-            peer = self.fetch_peer()
-            if peer:
-                logger.info(
-                    f"🔗 Handshake completed with {peer}.",
+            # Verify Certificate & fetch Peer info
+            if not node.is_initialized:
+                node.is_initialized = True
+
+            if node.is_validator and event.alpn_protocol == node_alpn:
+                peer = self.fetch_peer()
+                if peer:
+                    logger.info(
+                        f"🔗 Handshake completed with {peer}.",
+                        interface=self.interface,
+                        early_data=event.early_data_accepted
+                    )
+
+            elif node.is_validator and event.alpn_protocol == builder_alpn:
+                if len(node.builder_conn) < node.max_builders:
+                    from jam.network.protocols.up_0 import BlockAnnouncement
+
+                    self.peer = "BUILDER"
+                    stream_id = self._quic.get_next_available_stream_id()
+
+                    pref = PrefixType.UP0.encode()
+                    self.stream_buffer[stream_id] = pref
+                    self.stream_and_keep_open(pref, stream_id)
+                    print("SENDING HANDSHAKE TO BUILDER")
+                    BlockAnnouncement.handshake(stream_id, self)
+
+                    node.builder_conn[self] = stream_id
+
+                    logger.info(
+                        f"🔗 Handshake completed with a builder.",
+                        interface=self.interface,
+                        builders=len(node.builder_conn)
+                    )
+
+                else:
+                    logger.error(
+                        f"❌ Max builder connections already achieved!",
+                        interface=self.interface,
+                        builders=len(node.builder_conn)
+                    )
+                    self._quic.close(error_code=0xA, reason_phrase=f"Builder connection limit exceeded!")
+
+            elif node.is_builder:
+                try:
+                    peer = self.fetch_peer()
+                    if peer:
+                        logger.info(
+                            f"🔗 Handshake completed with {peer}.",
+                            interface="BUILDER CLIENT",
+                            early_data=event.early_data_accepted
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"Builder cannot accept any connection request.",
+                        interface=self.interface,
+                        early_data=event.early_data_accepted
+                    )
+
+            else:
+                logger.error(
+                    f"❌ Unknown node tried to establish contact.",
                     interface=self.interface,
-                    early_data=event.early_data_accepted
+                    alpn=event.alpn_protocol
                 )
+                self._quic.close(error_code=0xA, reason_phrase=f"Malicious node tried to connect.")
 
         # elif isinstance(event, ConnectionIdIssued):
         #     logger.debug(f"🔗 Connection Id issued: {event.connection_id}",
@@ -213,7 +275,6 @@ class QuicProtocol(QuicConnectionProtocol):
 
         # Handle Received Data Event
         elif isinstance(event, StreamDataReceived):
-            from jam.network.base.protocol import PrefixType
             from jam.network.base.protocol_map import ProtocolMap
 
             # Fetch peer & data
@@ -269,6 +330,7 @@ class QuicProtocol(QuicConnectionProtocol):
                 try:
                     # Map the request to its corresponding CE protocol function
                     ce_protocol = ProtocolMap.get_protocol(prefix)()
+                    logger.debug(f"CE PROTOCOL TRIGGERED",prefix=prefix, protocol=type(ce_protocol).__name__)
                     if (stream_id in self.waiter) and (self.waiter[stream_id] is not None):
                         logger.debug("Intercepting Response.", protocol=prefix, stream_id=stream_id)
                         res = ce_protocol.res_intercept(stream_id, self)
@@ -310,6 +372,7 @@ class QuicProtocol(QuicConnectionProtocol):
                         if len(data) == 4:
                             return
                         up_protocol = ProtocolMap.get_protocol(prefix)()
+                        logger.debug(f"UP PROTOCOL TRIGGERED",prefix=prefix, protocol=type(up_protocol).__name__)
                         up_protocol.req_intercept(stream_id, self)
 
                     except Exception as e:

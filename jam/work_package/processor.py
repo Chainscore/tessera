@@ -6,7 +6,6 @@ from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, U16, U64, TypedVector
 
 from jam.utils.chainspec import chain_config
 from jam.logging import get_logger
-from jam.settings import settings
 
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
@@ -266,6 +265,7 @@ class Processor:
             s: Availability specifier
         """
         from jam.erasure_coding.erasure_code import ErasureCode
+        from jam.settings import settings
 
         try:
             # Work Bundle Length, l
@@ -368,7 +368,7 @@ class Processor:
 
             # Access DA
             d3l = settings.d3l
-            audits = settings.audit
+            audits = settings.audit_da
 
             # Store Exported Segments
             seg_da = SegmentsDA(d3l)
@@ -396,6 +396,8 @@ class Processor:
             raise
 
     def process_bundle(self, core: CoreIndex, bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup) -> Tuple[WorkReport, WorkReportHash]:
+        from jam.settings import settings
+
         try:
             # Generate Report
             logger.info("Building Work Report..")
@@ -477,6 +479,7 @@ class Processor:
         Utility Async function for receiving guarantees and processing it.
         """
         from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
+        from jam.settings import settings
 
         ed25519_key = self.node.ed_pvt_key
 

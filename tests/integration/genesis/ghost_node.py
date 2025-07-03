@@ -1,28 +1,32 @@
+# TODO: Work in Progress
+
+import pytest
 import asyncio
-import json
 import logging
+import signal
 import os
+import subprocess
 import time
+from multiprocessing import Process
 
 from dotenv import load_dotenv
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
 
 from jam.logging import setup_logging, logger
-from jam.network.base.certificate import generate_san
 from jam.utils.chainspec import chain_config
-from jam.settings import setup_setting
 
-from jam.consensus.bp_engine import BlockProducer
 from jam.consensus.grandpa.finality import Finality
+from jam.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
 
+from jam.consensus.bp_engine import BlockProducer
+from jam.network.protocols.ce_201 import CE201Data, GhostProtocol
 from jam.operations import Builder
 from jam.operations.utils.state_update import update_state
-
-from jam.state.state import setup_state
+from jam.state.state import setup_state, State
 from jam.types.protocol.crypto import BlsPublic
 from jam.types.block import Block
 from jam.types.protocol.validators import (
@@ -30,26 +34,41 @@ from jam.types.protocol.validators import (
     ValidatorData,
     ValidatorMetadata,
 )
-from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
+
+from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 
 
-async def main(
-    genesis_path: str,
+# DEFINE NODE TASKS
+async def start_node(node: Node):
+    # TEMP FIX: Wait for node to initialize
+    await asyncio.sleep(5)
+
+    for peer in node.peer_conn:
+        up_stream, conn = node.peer_conn[peer]
+
+        protocol = GhostProtocol()
+        message = f"Hello {peer.name}"
+
+        responses = await protocol.transmit(node, message)
+        expected_message = f"DATA RECEIVED: {message}"
+
+        for response in responses:
+            assert response == expected_message
+
+async def run_node(
     env: str,
-    start_genesis: bool,
     theme: str,
     is_builder: bool,
-    is_validator: bool,
-) -> None:
+    is_validator: bool
+):
     # ---------- SETUP LOGGING ----------
-    genesis_ts = GENESIS_TS         # Actual Genesis time for JAM Common Era
-    init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
-    init_ep = int(init_ts // EPOCH_LENGTH)
-
+    genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
+    init_ts = (time.time() - genesis_ts) / SLOT_PERIOD
+    init_ep = init_ts // EPOCH_LENGTH
 
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
-    load_dotenv(env,override=True)
+    load_dotenv(env, override=True)
 
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
@@ -94,12 +113,9 @@ async def main(
         state.store.disable_cache()
         update_state(state)
 
-        # Genesis specs
-        dev_spec = json.load(open(genesis_path))
-
         peers = [
             Peer(
-                id=generate_san(val.ed25519),
+                id=bytes.decode(val.metadata.name, 'utf-8'),
                 data=val
             )
             for val in state.kappa
@@ -107,6 +123,7 @@ async def main(
         ]
 
         ip = IPAddress.from_str(host)
+
         tsr_node = Node(
             node_name=name,
             host=str(host),
@@ -127,18 +144,13 @@ async def main(
             is_validator=is_validator,
         )
 
-        block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
+        block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db)
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            tg.create_task(ws_app.run(debug=True, host="0.0.0.0", port=5001))
-            if tsr_node.is_builder:
-                tg.create_task(Builder(tsr_node, settings).run())
-            else:
-                tg.create_task(BlockProducer(tsr_node, main_db).run())
+            tg.create_task(start_node(tsr_node))
 
     except KeyboardInterrupt:
         logger.info(
@@ -155,6 +167,7 @@ async def main(
             error=str(e)[:200],
             error_type=type(e).__name__
         )
+
         # Close db connections
         settings.clear()
 
