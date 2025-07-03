@@ -132,7 +132,6 @@ class BlockProducer:
         """
         logger.debug(
             "⚒️ Building block components",
-            node_name=self.node.name,
             timeslot=int(curr_ts)
         )
 

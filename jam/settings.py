@@ -23,6 +23,8 @@ class Settings:
     _audit_db: RockStore | None
     _d3l: RockStore | None
     
+    _data_path: str 
+
     # Key Store 
     seed: Bytes[32]
     ed25519_private: Bytes[32]
@@ -73,7 +75,8 @@ class Settings:
             self._audit_db = RockStore(data_path + "/audit")
             self._d3l = RockStore(data_path + "/d3l")
             self._state_db = RockStore(data_path + "/state")
-        
+            self._data_path = data_path
+
         if seed is not None:
             self.seed = Bytes[32](b"".join([U32(seed).encode()] * 8))
             self.ed25519_private = Hash.blake2b(Bytes(b"jam_val_key_ed25519") + self.seed)

@@ -1,6 +1,6 @@
 from typing import Tuple
 from jam.execution.utils import decode_code_hash
-from jam.state.state_storage import StateStorage
+from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
 from jam.types.protocol.core import Balance, ServiceId, TimeSlot, BlobLength
 from jam.types.protocol.crypto import Hash

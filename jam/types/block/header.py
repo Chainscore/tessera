@@ -56,5 +56,5 @@ class Header:
         return Hash.blake2b(self.encode())
     
     @staticmethod
-    def genesis(path = "genesis.json") -> "Header":
-        return Header.from_json(json.load(open(path))["header"])
+    def genesis(path = "dev-spec.json") -> "Header":
+        return Header.decode(bytes.fromhex(json.load(open(path))["genesis_header"]))

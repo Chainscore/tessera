@@ -8,7 +8,7 @@ from rockstore import RockStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.state.merkle import StateTrie
-from jam.state.state_storage import StateStorage
+from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.itf.codable import Codable
@@ -37,7 +37,11 @@ class State:
     State implementation that uses dynamic components fetched from Db
     Here we retain and update merkle trie as cache
     """
+
+    # STF Lock, we can only process only Block at a time 
     _lock = False
+
+    # DB + Trie + Cache 
     store: StateStorage
 
     # State Components
@@ -81,35 +85,41 @@ class State:
 
         return cls(StateStorage(trie, db, {}))
 
-    def load(self, header: HeaderHash) -> "State":
-        # 1. Load all caches from current head to mentioned header
-        from jam.settings import settings
-        kv = settings.main_db
-
-        curr_head = Finality.load_latest(kv).header.parent
-        _updates = {}
-        while curr_head != header:
-            data = kv.get(self.store.get_storage_key(curr_head))
-            if data is None:
-                raise ValueError("Updates missing for", curr_head)
-            _curr_updates = Dictionary[Bytes[31], Bytes].decode(data)
-            block = Block.load(curr_head, kv)
-            curr_head = block.header.parent
-
-            # 2. Join them one after another (overwriting) to get one cache record
-            for k, v in _curr_updates.items():
-                _updates[k] = v
-
-        return State(StateStorage(self.store._TRIE, self.store._DB, _updates))
-
     @property
     def root(self):
         return self.store._TRIE.root_hash
 
+    def revert(self, header_hash):
+        """
+        Revert the node to a previous header_hash 
+        
+        1. Collect all updates from latest -> header_hash 
+        2. Apply these to Trie + DB 
+        3. Clear cache
+        """
+        self.store._updates = self.store._load_updates(header_hash)
+        self.store.save_n_clear_cache()
+
+    @classmethod
+    def load(cls, header_hash) -> "State":
+        """
+        Load a readable instance of state. Made for serving API data.
+        Create a cloned state (RO DB + Trie Clone w applied updates[do we really need trie?])
+        """
+        from jam.settings import settings
+        # Empty trie -I dont think we need past trie data anywhere
+        trie = StateTrie()
+        # Create a Read-Only instance
+        db = RockStore(settings._data_path + "/state", options={"read_only": True})
+        # Load past updates
+        cache = state.store._load_updates(header_hash)
+
+        return State(StateStorage(trie, db, cache))
+
     def settle(self, header_hash: HeaderHash):
         """Settles a set of state changes cached in store. Marks off the settlement with an unique header hash"""
         from jam.settings import settings
-        self.store.save_n_clear_cache(settings.main_db, header_hash)
+        self.store.save_n_clear_cache(header_hash, settings.main_db)
 
     def transition(self, block: Block):
         """
@@ -118,7 +128,6 @@ class State:
         Args:
             block: Incoming block
         """
-        
         if self._lock:
             logger.error("Lock detected, skipping transition")
             return
@@ -145,7 +154,7 @@ class State:
             # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
             # Offenders mark - make sure offenders are present in psi.offenders
             if block.header.slot == 0:
-                logger.debug("Found genesis block, skipping", hh=header_hash.hex())
+                logger.warning("Found genesis block, skipping", hh=header_hash.hex())
                 self._lock = False 
                 return 
             
@@ -235,7 +244,7 @@ def set_state(new_state: State):
     state = new_state
     return state
 
-def setup_state(db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"):
+def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"):
     logger.info(
         "Setting up state from genesis",
         genesis_type=type(genesis).__name__,
@@ -251,7 +260,7 @@ def setup_state(db: RockStore, genesis: GhostState | str | dict = "dev-spec.json
     else:
         data = genesis
 
-    new_state = State.from_keyvals(data, db)
+    new_state = State.from_keyvals(data, state_db)
     new_state.store.enable_writes()
     new_state.store.enable_cache()
 

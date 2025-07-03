@@ -133,7 +133,7 @@ async def main(
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            # tg.create_task(sync(state))
+            tg.create_task(ws_app.run(debug=True, host="0.0.0.0", port=5001))
             if tsr_node.is_builder:
                 tg.create_task(Builder(tsr_node, settings).run())
             else:
