@@ -50,7 +50,7 @@ MAX_WORK_ITEMS = 16
 # J — Max number of dependency items in a work-report.
 MAX_DEPENDENCIES = 8
 
-# K — Max number of ticket.py that can be submitted in a single extrinsic.
+# K — Max number of tickets that can be submitted in a single extrinsic.
 MAX_TICKETS_PER_EXTRINSIC = 16
 
 # L — Max age (in timeslots) of the lookup anchor.

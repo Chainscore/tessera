@@ -120,7 +120,7 @@ class WorkReportDistribution(NetworkProtocol):
         return OptBool(Null)
 
     @staticmethod
-    async def _req_shard(data: GuaranteedWR, node: Node):
+    async def _req_shard(data: ReportGuarantee, node: Node):
         from jam.settings import settings
 
         slot = data.slot

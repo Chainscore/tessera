@@ -55,6 +55,12 @@ CLIENTS = [
         "genesis": True
     },
     {
+        "port": 40001,
+        "role": "VALIDATOR",
+        "theme": "default",
+        "genesis": True
+    },
+    {
         "port": 40006,
         "role": "BUILDER",
         "theme": "polkadot",
@@ -103,7 +109,7 @@ async def start_node(node: Node):
 
     else:
         # Wait for refinement to happen
-        await asyncio.sleep(10)
+        await asyncio.sleep(20)
         from jam.settings import settings
 
         # Check if report exists in db or not

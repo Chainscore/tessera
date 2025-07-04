@@ -1,6 +1,7 @@
 import json
 from typing import Type
 from tsrkit_types import Dictionary
+from jam.consensus.ext_store import ext_store
 from jam.consensus.grandpa.finality import Finality
 from jam.error import JamError
 from jam.merklization import BMRFunctions
@@ -226,6 +227,7 @@ class State:
             # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
             Finality.finalise(header_hash, _set.main_db)
             
+            ext_store.clear_on_import(block)
         
         except JamError as jam_e:
             logger.error("Invalid block", error=jam_e, hh=block.header.hash().hex(), slot=block.header.slot)

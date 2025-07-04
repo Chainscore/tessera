@@ -4,6 +4,8 @@ from typing import List
 from structlog import get_logger
 from tsrkit_types import TypedVector
 
+from jam.preimages import preimages
+from jam.types.block.block import Block
 from jam.types.block.extrinsics.assurances import AssurancesExtrinsic
 from jam.types.block.extrinsics.disputes import Culprits, DisputesExtrinsic, Faults, Verdicts
 from jam.types.block.extrinsics.guarantees import GuaranteesExtrinsic, ReportGuarantee
@@ -62,5 +64,22 @@ class ExtrinsicStore:
     # ----- ET ----- #
     # ----- ED ----- #
     # ----- EP ----- #
+
+    def clear_on_import(self, block: Block):
+        # Remove Preimages 
+        for preimage in block.extrinsic.preimages:
+            if preimage in self.ep: self.ep.remove(preimage)
+        # Remove Tickets
+        for ticket in block.extrinsic.tickets:
+            if ticket in self.et: self.et.remove(ticket)
+        # Remove Assurances 
+        for assurance in block.extrinsic.assurances:
+            if assurance in self.ea: self.ea.remove(assurance)
+        # Remove WRs
+        for grte in block.extrinsic.guarantees:
+            if grte in self.eg: self.eg.remove(grte)
+        # TODO: Remove disputes 
+
+        return
 
 ext_store = ExtrinsicStore()

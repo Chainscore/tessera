@@ -21,7 +21,7 @@ from jam.types.block.extrinsics.disputes import Culprits, Faults, Verdicts
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.crypto import BandersnatchVrfSignature, Hash, OpaqueHash
 from jam.types.state.gamma import GammaSFallback
-from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
+from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH, MAX_TICKETS_PER_EXTRINSIC, SLOT_PERIOD, GENESIS_TS
 from jam.network.node import Node
 from rockstore import RockStore
 from jam.utils.dummy.utils import create_dummy_bytes
@@ -124,21 +124,17 @@ class BlockProducer:
         """
         logger.debug("⚒️ Building block components", timeslot=int(curr_ts))
         
-        eg, et, ea, ep = [], [], [], []
+        eg, et, ea, ep = GuaranteesExtrinsic([]), [], [], []
         from .ext_store import ext_store
         for rg in ext_store.eg:
-            # TODO: Take only one WR per core [?]
+            # TODO: Filtering - Take only one WR per core [?]
             eg.append(rg)
             if len(eg) >= CORE_COUNT:
                 break 
-
-        extrinsic = Extrinsic(
-            TicketsExtrinsic(et),
-            PreimagesExtrinsic(ep),
-            GuaranteesExtrinsic(eg),
-            AssurancesExtrinsic(ea),
-            DisputesExtrinsic(culprits=Culprits([]), faults=Faults([]), verdicts=Verdicts([]))
-        )
+        ep = ext_store.ep 
+        et = TicketsExtrinsic(ext_store.et[:MAX_TICKETS_PER_EXTRINSIC])
+        ea = ext_store.ea 
+        extrinsic = Extrinsic(et, ep, eg, ea, ext_store.ed)
 
         parent_block = Finality.load_latest(self.db)
         parent_hash = Hash.blake2b(parent_block.header.encode())

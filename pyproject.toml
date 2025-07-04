@@ -31,6 +31,10 @@ python-dotenv = "^1.1.0"
 asyncio = "^3.4.3"
 dot_ring = { path = "../dot-ring", develop = true }
 
+[tool.pyrefly]
+project-includes = ["**/*"]
+project-excludes = ["**/*venv/**/*"]
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
 pytest-cov = "^6.0.0"
