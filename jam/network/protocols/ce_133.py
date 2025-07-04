@@ -174,6 +174,7 @@ class WorkPackageSubmission(NetworkProtocol):
             processor = Processor(server.node)
             with benchmark(f"Work Package processed"):
                 wr, wr_hash = processor.process(wp, ci, data.extrinsics)
+
             write_benchmarks_to_txt("benchmarks/refinement.txt")
 
             logger.info(

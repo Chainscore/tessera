@@ -64,8 +64,8 @@ async def run_node(
 ):
     # ---------- SETUP LOGGING ----------
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
-    init_ts = (time.time() - genesis_ts) / SLOT_PERIOD
-    init_ep = init_ts // EPOCH_LENGTH
+    init_ts = int((time.time() - genesis_ts) / SLOT_PERIOD)
+    init_ep = int(init_ts // EPOCH_LENGTH)
 
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
@@ -148,6 +148,11 @@ async def run_node(
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
+
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(tsr_node.initialize())
+            tg.create_task(start_node(tsr_node))
+
     except KeyboardInterrupt:
         logger.info(
             "JAM node shutting down gracefully",
@@ -168,8 +173,6 @@ async def run_node(
         settings.clear()
 
         raise
-
-session_name = "jam_test"
 
 def run_node_process(
     genesis_path: str,
@@ -193,10 +196,6 @@ def run_node_process(
         is_validator
     ))
 
-    async with asyncio.TaskGroup() as tg:
-        tg.create_task(tsr_node.initialize())
-        tg.create_task(start_node(tsr_node))
-
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
@@ -216,7 +215,7 @@ async def test_connection():
     p_bob.start()
 
     # KEEP TEST ALIVE FOR SOME TIME
-    await asyncio.sleep(40)
+    await asyncio.sleep(20)
 
 
     print("END OF TEST")

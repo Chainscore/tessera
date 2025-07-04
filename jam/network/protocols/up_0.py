@@ -29,9 +29,20 @@ class Leaf:
     header_hash: HeaderHash
     time_slot: TimeSlot
 
-Leaves = TypedVector[Leaf]
+    def __repr__(self):
+        return f"Leaf(header_hash={self.header_hash.hex()[:16]}... , slot={int(self.time_slot)})"
 
-Final = Leaf
+class Leaves(TypedVector[Leaf]):
+    def __repr__(self):
+        preview_count = 3
+        items = ', '.join(repr(leaf) for leaf in self[:preview_count])
+        if len(self) > preview_count:
+            items += f", ... + {len(self) - preview_count} more"
+        return f"Leaves([{items}])"
+
+class Final(Leaf):
+    def __repr__(self):
+        return f"Final(header_hash={self.header_hash.hex()[:16]}... , slot={int(self.time_slot)})"
 
 @structure
 class Handshake:
@@ -150,6 +161,31 @@ class BlockAnnouncement(NetworkProtocol):
                     error_type=type(e).__name__
                 )
 
+        for builder in node.builder_conn:
+            try:
+                up_stream = node.builder_conn[builder]
+                ann_len = U32(len(message))
+
+                builder.stream_and_keep_open(ann_len.encode(), up_stream)
+                builder.stream_and_keep_open(message, up_stream)
+                announced_count += 1
+
+                logger.debug(
+                    "Block announced to builder.",
+                    node_name=node.name,
+                    peer=builder.peer,
+                    stream_id=up_stream,
+                    block_slot=int(data.header.slot)
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to announce block to builder",
+                    node_name=node.name,
+                    peer=builder.peer,
+                    error=str(e),
+                    error_type=type(e).__name__
+                )
+
         logger.info(
             "Block announcement completed",
             node_name=node.name,
@@ -161,7 +197,8 @@ class BlockAnnouncement(NetworkProtocol):
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercepting & Process new blocks from peers."""
         buffer = server.stream_buffer[stream_id]
-        peer = server.peer 
+        peer = server.peer
+        node = server.node
 
         logger.info(
             "Intercepting UP0 stream",
@@ -169,7 +206,15 @@ class BlockAnnouncement(NetworkProtocol):
             stream_id=stream_id,
         )
 
-        up_stream, _ = server.node.peer_conn[peer]
+        if peer == "BUILDER":
+            logger.warning("Cannot receive any announcement from builder")
+            return
+
+        up_stream, conn = node.peer_conn[peer]
+        if node.is_builder and not server.peer_handshake:
+            up_stream = stream_id
+            node.peer_conn[peer] = stream_id, conn
+
         if stream_id == up_stream:
             # Handle handshake message
             if not server.peer_handshake:
@@ -202,11 +247,14 @@ class BlockAnnouncement(NetworkProtocol):
                         interface=server.interface
                     )
 
+                    if node.is_builder:
+                        node.peer_conn[peer] = stream_id, server
+
                     server.stream_buffer[stream_id] = self._prefix.encode()
                     server.peer_handshake = True
                     
                     # Start synchornization
-                    asyncio.create_task(self.synchronise(h, server.node, peer=peer))
+                    asyncio.create_task(self.synchronise(h, node, peer=peer))
 
             # Handle announcement
             else:

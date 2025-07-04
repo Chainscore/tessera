@@ -67,6 +67,8 @@ class Node:
     peers: list[Peer]
     peer_map: Dict[bytes, Peer] = {}
     peer_conn: Dict[Peer, Tuple[int, QuicProtocol]] = {}
+    builder_conn: Dict[QuicProtocol, int] = {}
+    max_builders: int
 
     # Server
     server: QuicServer
@@ -91,13 +93,17 @@ class Node:
         self.port = port
         self.validator_data = validator_data
 
+        self.max_builders = 20
+
         # Peers
         self.peers = peers
         self.peer_map = {}
         self.peer_conn = {}
+        self.builder_conn = {}
 
         self.is_builder = is_builder
         self.is_validator = is_validator
+
         for peer in self.peers:
             ek = peer.data.ed25519.encode()
             self.peer_map[ek] = peer
@@ -258,7 +264,7 @@ class Node:
                 client = cast(QuicProtocol, client)
 
                 logger.info(
-                    f"🤝 ({self.name}) Connection to {str(peer)} established ✅"
+                    f"🤝 Connection to {str(peer)} established ✅"
                 )
 
                 stream_id = -1
@@ -292,11 +298,12 @@ class Node:
                 logger.info(f"⚠️ ({self.name}) Skipping self {str(self)}")
                 return
 
-            # TODO: Abstract out builder connections
-            # if int(peer.port) == 40001:
-            #     logger.info(f"⚠️ ({self.name}) Skipping builder {str(peer)}")
-            #     return
+            if self.is_builder:
+                # Directly connect to peer
+                await self.quic_connect(peer)
+                return
 
+            # Fetch initiator
             init = self.get_initiator(self.ed_key, peer.ed_key)
             if init == self.ed_key:
                 await self.quic_connect(peer)

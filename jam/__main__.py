@@ -9,6 +9,7 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
 
 from jam.logging import setup_logging, logger
+from jam.network.base.certificate import generate_san
 from jam.utils.chainspec import chain_config
 from jam.settings import setup_setting
 
@@ -98,7 +99,7 @@ async def main(
 
         peers = [
             Peer(
-                id=bytes.decode(val.metadata.name, 'utf-8'),
+                id=generate_san(val.ed25519),
                 data=val
             )
             for val in state.kappa

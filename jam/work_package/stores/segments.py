@@ -21,7 +21,6 @@ class SegmentsDA(DA):
         self.db = db
 
     def put(self, root: ExportsRoot, segments: ProvedSegments) -> None:
-        print("storing segs with root", root.hex())
         try:
             key = self.prefix + root.encode()
             self.db.put(key, segments.encode())
@@ -29,7 +28,6 @@ class SegmentsDA(DA):
             print("raised error", e)
 
     def get(self, root: ExportsRoot) -> Tuple[Segments, Segments]:
-        print("getting segs with root", root.hex())
         key = self.prefix + root.encode()
         data = self.db.get(key)
 
