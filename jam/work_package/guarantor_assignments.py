@@ -21,11 +21,11 @@ def permute(e, t) -> TypedVector[U32]:
 
     return rotation(c, n)
 
-def guarantor_assignments(eta2, tau, kappa):
-    n_c = permute(eta2, tau)
+def guarantor_assignments(state):
+    n_c = permute(state.eta[2], state.tau)
 
     validator_keys = []
-    for i in kappa:
+    for i in state.kappa:
         validator_keys.append(i.ed25519)
 
     mapping = {}
@@ -35,7 +35,5 @@ def guarantor_assignments(eta2, tau, kappa):
         if key not in mapping:
             mapping[key] = set()
         mapping[key].add(value)
-
-    mapping = {k: mapping[k] for k in sorted(mapping.keys())}
 
     return mapping

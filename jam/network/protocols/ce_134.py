@@ -97,9 +97,7 @@ class WorkPackageSharing(NetworkProtocol):
 
         from jam.state.state import state
         logger.info("Tau", tau=state.tau)
-        mapping = guarantor_assignments(state.eta[2], state.tau, state.kappa)[ci]
-
-        print("mapping", mapping)
+        mapping = guarantor_assignments(state)[ci]
 
         logger.info(
             "Transmitting work package bundle to guarantors",
@@ -112,10 +110,11 @@ class WorkPackageSharing(NetworkProtocol):
         )
 
         transmitted_count = 0
+        responses = []
         # TODO: Use Actual Guarantors Connections
         tasks = []
-        for peer in node.peer_conn:
-            try:
+        try:
+            for peer in node.peer_conn:
                 if peer.ed_key in mapping:
                     logger.debug("Sending bundle to", port=peer.port)
                     client = node.peer_conn[peer][1]
@@ -144,24 +143,26 @@ class WorkPackageSharing(NetworkProtocol):
                         core_index=int(data.core_segment.core_index)
                     )
 
-                    # responses.append(res)
-            except Exception as e:
-                logger.error(
-                    "Failed to transmit work package bundle to guarantor",
-                    node_name=node.name,
-                    error=str(e),
-                    error_type=type(e).__name__
-                )
-        print("current validator index", node.validator_index)
-        responses = await asyncio.gather(*tasks)
+            if transmitted_count > 2:
+                raise ValueError("Trying to transmit work package bundle to more than 2 guarantors")
 
-        logger.info(
-            "Work package bundle transmission completed",
-            node_name=node.name,
-            transmitted_to=transmitted_count,
-            total_guarantors=len(node.peer_conn),
-            core_index=int(data.core_segment.core_index)
-        )
+            responses = await asyncio.gather(*tasks)
+
+            logger.info(
+                "Work package bundle transmission completed",
+                node_name=node.name,
+                transmitted_to=transmitted_count,
+                total_guarantors=len(node.peer_conn),
+                core_index=int(data.core_segment.core_index)
+            )
+
+        except Exception as e:
+            logger.error(
+                "Failed to transmit work package bundle to guarantor",
+                node_name=node.name,
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
         return responses
 

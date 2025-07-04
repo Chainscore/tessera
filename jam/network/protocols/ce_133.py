@@ -74,7 +74,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
         from jam.state.state import state
         logger.info("Tau", tau=state.tau)
-        mapping = guarantor_assignments(state.eta[2], state.tau, state.kappa)[ci]
+        mapping = guarantor_assignments(state)[ci]
 
         logger.info(
             "Transmitting work package to guarantors",
@@ -90,10 +90,9 @@ class WorkPackageSubmission(NetworkProtocol):
         # TODO: Use Particular Validators' Connections
 
         responses = TypedVector[OptBool]([])
-        for peer in node.peer_conn:
-            try:
+        try:
+            for peer in node.peer_conn:
                 if peer.ed_key in mapping:
-                # if peer.port == 40000:
                     logger.info("Sending package to", port=peer.port)
                     client = node.peer_conn[peer][1]
                     transmitted_count += 1
@@ -124,13 +123,16 @@ class WorkPackageSubmission(NetworkProtocol):
 
                     break
 
-            except Exception as e:
-                logger.error(
-                    "Failed to transmit work package to guarantor",
-                    node_name=node.name,
-                    error=str(e),
-                    error_type=type(e).__name__
-                )
+            if transmitted_count == 0:
+                raise NetworkingError(Code.NO_PEER_CONN)
+
+        except Exception as e:
+            logger.error(
+                "Failed to transmit work package to guarantor",
+                node_name=node.name,
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
         logger.info(
             "Work package transmission completed",

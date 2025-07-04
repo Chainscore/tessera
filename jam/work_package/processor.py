@@ -1,6 +1,7 @@
 import asyncio
 from math import ceil
 from typing import Tuple
+import time
 
 from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, U16, U64, TypedVector, U32
 
@@ -54,6 +55,7 @@ from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
 from jam.work_package.validator import Validator
 
 from jam.network.node import Node
+from jam.utils.constants import SLOT_PERIOD, GENESIS_TS
 
 # Module-specific logger
 logger = get_logger("in_core")
@@ -499,11 +501,11 @@ class Processor:
         logger.info("✅ Received responses: %s", responses)
 
         from jam.network.protocols.ce_134 import OptCred
-        for response in responses:
+        for (response, validator_index) in responses:
             if response != OptCred(Null):
                 cred = response.unwrap()
                 if cred.work_report_hash == wr_hash:
-                    guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=cred.ed25519_signature)
+                    guarantee = ValidatorSignature(validator_index=validator_index, signature=cred.ed25519_signature)
                     guarantees.append(guarantee)
 
         # Distribute Guaranteed WR to Validators CE135
@@ -530,7 +532,9 @@ class Processor:
             from jam.network.protocols.ce_135 import GuaranteedWR
             CE135 = WorkReportDistribution()
             # TODO: Fix timeslot
-            gwr = GuaranteedWR(report=wr, slot=TimeSlot(0), signatures=guarantees)
+            time_slot = TimeSlot((time.time() - GENESIS_TS) // SLOT_PERIOD)
+
+            gwr = GuaranteedWR(report=wr, slot=time_slot, signatures=guarantees)
             r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
 
