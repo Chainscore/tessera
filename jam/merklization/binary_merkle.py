@@ -7,8 +7,8 @@ from tsrkit_types.integers import Uint
 from tsrkit_types.sequences import Vector
 
 from jam.types.protocol.crypto import Hash, OpaqueHash
-from jam.config.chainspec import chain_config
-from jam.config.logging import logger
+from jam.utils.chainspec import chain_config
+from jam.logging import logger
 
 
 ChoicedHash = Choice[Bytes, Bytes[32]]
@@ -321,8 +321,8 @@ class BMRFunctions:
         start += 1
         if index >= mid:
             length = Uint(nodes - mid)
-            idx = Uint(index - mid)
-            child_hash = self.reconstruct_root(idx, justification, length, start, leaf)
+            index = Uint(index - mid)
+            child_hash = self.reconstruct_root(index, justification, length, start, leaf)
             return hash_fn(self._NODE_PREFIX + sibling + child_hash)
         else:
             length = Uint(nodes - mid)
@@ -336,7 +336,7 @@ class BMRFunctions:
             index: Uint,
             justification: TypedVector[Bytes],
             hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b,
-    ) -> OpaqueHash:
+    ) -> bool:
         """
             Merkle Proof Verification Function for Well-Balanced Tree (not provided in GP)
         Args:

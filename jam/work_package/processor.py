@@ -368,7 +368,7 @@ class Processor:
 
             # Access DA
             d3l = settings.d3l
-            audits = settings.audit
+            audits = settings.audit_da
 
             # Store Exported Segments
             seg_da = SegmentsDA(d3l)
@@ -489,7 +489,7 @@ class Processor:
         # Sign the Guarantee
         sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
-        og_guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=sign)
+        og_guarantee = ValidatorSignature(validator_index=ValidatorIndex(self.node.validator_index), signature=sign)
 
         # Check majority & Build guarantees:
         guarantees = ValidatorSignatures([og_guarantee])

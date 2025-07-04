@@ -17,7 +17,7 @@ from jam.work_package.stores.segments import SegmentShardsDA
 
 from jam.types.protocol.crypto import Hash
 from jam.merklization import BMRFunctions
-from jam.config.chainspec import chain_config
+from jam.utils.chainspec import chain_config
 
 @structure
 class Query:
