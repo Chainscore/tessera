@@ -2,6 +2,7 @@
 from typing import List
 
 from structlog import get_logger
+from jam.types.protocol.crypto import Hash
 from tsrkit_types import TypedVector
 
 from jam.preimages import preimages
@@ -41,6 +42,7 @@ class ExtrinsicStore:
         Process an incoming report gurantee
         """
         # Find if it already exists in eg, if so, update the signatures(add new ones); ignore old ones 
+        logger.info("Storing Report Guarantee", report=report_g.to_json(), hash=Hash.blake2b(report_g.encode()).hex()[:16]+"...")
         index = -1
         for i, g in enumerate(self.eg):
             if g.report == report_g.report:

@@ -32,9 +32,6 @@ async def wp_producer(node: Node, db: RockStore):
         db (RockStore): The database to store the genesis timestamp
     """
 
-    # Record genesis timestamp in seconds
-    genesis_ts = time()
-
     C133 = WorkPackageSubmission()
 
     wp_iter = 0
@@ -43,7 +40,7 @@ async def wp_producer(node: Node, db: RockStore):
         "Starting work package producer",
         node_name=node.name,
         is_builder=node.is_builder,
-        genesis_timestamp=genesis_ts
+        genesis_timestamp=GENESIS_TS
     )
 
     while True:
@@ -56,12 +53,11 @@ async def wp_producer(node: Node, db: RockStore):
                 iteration=wp_iter
             )
             await asyncio.sleep(6)
-            genesis_ts = time()
             continue
 
         # Get state from db
         from jam.state.state import state
-        current_timeslot = (time() - genesis_ts) // 6
+        current_timeslot = (time() - GENESIS_TS) // 6
 
         # Get current timeslot
         ts_epoch_index = floor(current_timeslot % EPOCH_LENGTH)
@@ -171,5 +167,5 @@ async def wp_producer(node: Node, db: RockStore):
             )
 
         # Sleep for remaining time of the timeslot
-        await asyncio.sleep(6 - (time() - genesis_ts) % 6)
+        await asyncio.sleep(6 - (time() - GENESIS_TS) % 6)
         wp_iter += 1

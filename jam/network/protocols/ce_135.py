@@ -95,7 +95,7 @@ class WorkReportDistribution(NetworkProtocol):
 
         # Save extrinsic
         from jam.consensus.ext_store import ext_store
-        ext_store.process_guarantee(data.guaranteed_wr)
+        ext_store.import_rg(data.guaranteed_wr)
 
         # Send Acknowledgement
         ack = self._prefix.encode()

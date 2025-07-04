@@ -104,7 +104,7 @@ class WorkPackageSharing(NetworkProtocol):
         # TODO: Use Actual Guarantors Connections
         for peer in node.peer_conn:
             try:
-                if int(peer.port) == 40002:
+                if int(peer.port) == 40001:
                     logger.debug("Sending bundle to 40002")
                     client = node.peer_conn[peer][1]
 
@@ -213,7 +213,7 @@ class WorkPackageSharing(NetworkProtocol):
                 server.stream_and_keep_open(len_a, stream_id)
                 server.stream_and_close(msg_a, stream_id)
 
-            write_benchmarks_to_txt("benchmarks/guarantee.txt")
+            # write_benchmarks_to_txt("benchmarks/guarantee.txt")
 
             logger.debug(
                 "Report credential sent to OG guarantor",

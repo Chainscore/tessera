@@ -1,7 +1,7 @@
 import asyncio
 from math import ceil
 from typing import Tuple
-
+import time
 from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, U16, U64, TypedVector, U32
 
 from jam.utils.chainspec import chain_config
@@ -10,7 +10,7 @@ from jam.logging import get_logger
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
 
-from jam.types.block.extrinsics.guarantees import ValidatorSignatures, ValidatorSignature
+from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSignatures, ValidatorSignature
 
 from jam.types.protocol.core import CoreIndex, Gas, TimeSlot, ExportsRoot, ValidatorIndex
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
@@ -40,7 +40,7 @@ from jam.types.work.execution import (
 
 from jam.utils.benchmark import benchmark
 
-from jam.utils.constants import BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE
+from jam.utils.constants import BASIC_ERASURE_SIZE, GENESIS_TS, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 
@@ -507,7 +507,7 @@ class Processor:
                     guarantees.append(guarantee)
 
         # Distribute Guaranteed WR to Validators CE135
-        logger.info(f"Distributing Work Report to other validators..")
+        logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
         if len(guarantees) > 1:
 
             d3l = settings.d3l
@@ -527,10 +527,9 @@ class Processor:
 
             # TODO: Save Assurers Mapping
 
-            from jam.network.protocols.ce_135 import GuaranteedWR
             CE135 = WorkReportDistribution()
             # TODO: Fix timeslot
-            gwr = GuaranteedWR(report=wr, slot=TimeSlot(0), signatures=guarantees)
+            gwr = ReportGuarantee(report=wr, slot=TimeSlot(time.time() - GENESIS_TS // 6), signatures=guarantees)
             r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
 
