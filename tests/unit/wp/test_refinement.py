@@ -1,28 +1,33 @@
+from asyncio import CancelledError
+from typing import cast
+
+import pytest
 import asyncio
+import signal
 import json
+import shutil
+
+from multiprocessing import Process
+
 import logging
 import os
 import time
 
-from asyncio import CancelledError
 from dotenv import load_dotenv
 from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
+from tsrkit_types.integers import U16, Uint
 
-from jam.logging import setup_logging, logger
+from jam.logging import setup_logging
 from jam.network.base.certificate import generate_san
 from jam.utils.chainspec import chain_config
-from jam.settings import setup_setting
 
-from jam.consensus.bp_engine import BlockProducer
 from jam.consensus.grandpa.finality import Finality
+from jam.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
 
-from jam.operations import Builder
 from jam.operations.utils.state_update import update_state
-
 from jam.state.state import setup_state
 from jam.types.protocol.crypto import BlsPublic
 from jam.types.block import Block
@@ -31,26 +36,124 @@ from jam.types.protocol.validators import (
     ValidatorData,
     ValidatorMetadata,
 )
-from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
 
+from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
+from jam.logging import get_logger
+from jam.work_package.processor import Processor
+from tests.unit.wp.types import RefineVectors, RefineVector
 
-async def main(
+CLIENTS = [
+    {
+        "port": 40007,
+        "role": "VALIDATOR",
+        "theme": "matrix",
+        "genesis": True
+    },
+]
+
+# Logger for WP Production
+logger = get_logger("in_core")
+
+async def start_node(node: Node):
+    """Define Node tasks"""
+
+    with open("vectors/combined/combined-001.json", "r") as f:
+        data = json.load(f)
+        refine_vectors = RefineVectors.from_json(data)
+
+    try:
+        processor = Processor(node)
+        for i, vector in enumerate(refine_vectors):
+            vector = cast(RefineVector, vector)
+            wr, wr_hash = processor.process(vector.work_package, vector.core_index, vector.extrinsics)
+
+            assert wr == vector.work_rep and wr_hash == vector.rep_hash
+            print("ASSERTION SUCCESSFUL", i+1)
+    except Exception as e:
+        raise e
+
+def run_node_process(
     genesis_path: str,
     env: str,
     start_genesis: bool,
     theme: str,
     is_builder: bool,
     is_validator: bool,
-) -> None:
-    # ---------- SETUP LOGGING ----------
-    genesis_ts = GENESIS_TS         # Actual Genesis time for JAM Common Era
-    init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
-    init_ep = int(init_ts // EPOCH_LENGTH)
+):
+    # Handle clean termination
+    def handle_sigterm(signum, frame):
+        exit(0)
+    signal.signal(signal.SIGTERM, handle_sigterm)
 
+    asyncio.run(run_node(
+        genesis_path,
+        env,
+        start_genesis,
+        theme,
+        is_builder,
+        is_validator
+    ))
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_refinement():
+    print("START OF TEST")
+
+    processes = []
+
+    for client in CLIENTS:
+        env_path = f"envs/{client['port']}.env"
+        is_validator = client["role"] == "VALIDATOR"
+        is_builder = client["role"] == "BUILDER"
+
+        dir_path = f"/data/{client['port']}"
+
+        if os.path.exists(dir_path):
+            shutil.rmtree(dir_path)
+            print(f"REMOVED DIR: {dir_path}")
+
+        p = Process(
+            target=run_node_process,
+            args=("", env_path, client["genesis"], client["theme"], is_builder, is_validator)
+        )
+        processes.append(p)
+
+    print("STARTING PROCESSES...")
+    for p in processes:
+        p.start()
+
+    print("ALL PROCESSES STARTED")
+
+    # KEEP TEST ALIVE FOR SOME TIME
+    await asyncio.sleep(5)
+
+    print("TERMINATING PROCESSES")
+    for p in processes:
+        p.terminate()
+    for p in processes:
+        p.join()
+
+    print("END OF TEST")
+
+
+async def run_node(
+    genesis_path: str,
+    env: str,
+    start_genesis: bool,
+    theme: str,
+    is_builder: bool,
+    is_validator: bool
+):
+    """Main fn to start the node"""
+    # ---------- SETUP LOGGING ----------
+    genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
+    init_ts = int((time.time() - genesis_ts) / SLOT_PERIOD)
+    init_ep = int(init_ts // EPOCH_LENGTH)
 
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
-    load_dotenv(env,override=True)
+    load_dotenv(env, override=True)
 
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
@@ -95,9 +198,6 @@ async def main(
         state.store.disable_cache()
         update_state(state)
 
-        # Genesis specs
-        dev_spec = json.load(open(genesis_path))
-
         peers = [
             Peer(
                 id=generate_san(val.ed25519),
@@ -108,6 +208,7 @@ async def main(
         ]
 
         ip = IPAddress.from_str(host)
+
         tsr_node = Node(
             node_name=name,
             host=str(host),
@@ -128,36 +229,22 @@ async def main(
             is_validator=is_validator,
         )
 
-        block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
+        block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db)
 
-        try:
-            async with asyncio.TaskGroup() as tg:
-                tg.create_task(tsr_node.initialize())
-                # tg.create_task(sync(state))
-                if tsr_node.is_builder:
-                    tg.create_task(Builder(tsr_node, settings).run())
-                else:
-                    tg.create_task(BlockProducer(tsr_node, main_db).run())
-        except Exception as e:
-            raise e
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(tsr_node.initialize())
+            tg.create_task(start_node(tsr_node))
 
-    except CancelledError:
+    except CancelledError as e:
         logger.info(
             "JAM node shutting down gracefully",
             node_name=name,
+            err=e,
             port=port,
             reason="keyboard_interrupt"
         )
-
-        # FOR SAVING TEST VECTORS
-        # print("CANCELLED")
-        # from jam.utils.benchmark import write_json
-        # from jam.operations.builder import vectors
-        # write_json("vectors/combined", vectors.to_json())
-
         settings.clear()
 
     except KeyboardInterrupt:
@@ -176,6 +263,7 @@ async def main(
             error=str(e)[:200],
             error_type=type(e).__name__
         )
+
         # Close db connections
         settings.clear()
 
