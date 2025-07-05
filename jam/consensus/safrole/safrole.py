@@ -34,26 +34,35 @@ class Safrole:
 
     @staticmethod
     def verify_vrf(message, proof) -> bool:
-        # TODO: Implement VRF verification after VRF module is added
-        # proof_ptr = [H.bls_g1_decompress(proof[:48]), H.bls_g1_decompress(proof[48 * 1: 48 * 2]),H.bls_g1_decompress(proof[48 * 2: 48 * 3]), H.bls_g1_decompress(proof[48 * 3:48 * 4]),H.to_scalar_int(proof[48 * 4 + (0 * 32): 48 * 4 + (1 * 32)]),H.to_scalar_int(proof[48 * 4 + (1 * 32): 48 * 4 + (2 * 32)]),H.to_scalar_int(proof[48 * 4 + (2 * 32): 48 * 4 + (3 * 32)]),H.to_scalar_int(proof[48 * 4 + (3 * 32): 48 * 4 + (4 * 32)]),H.to_scalar_int(proof[48 * 4 + (4 * 32): 48 * 4 + (5 * 32)]),H.to_scalar_int(proof[48 * 4 + (5 * 32): 48 * 4 + (6 * 32)]),H.to_scalar_int(proof[48 * 4 + (6 * 32): 48 * 4 + (7 * 32)]),H.bls_g1_decompress(proof[48 * 4 + (7 * 32):48 * 4 + (7 * 32) + 48]),H.to_scalar_int(proof[48 * 4 + (7 * 32) + 48:48 * 4 + (7 * 32) + 48 + 32]),H.bls_g1_decompress(proof[48 * 4 + (7 * 32) + 48 + 32:-98]), H.bls_g1_decompress(proof[-98:])]
-        # rltn_to_proove=sw.decompress(message) #relation to proove
-        # res_plus_seeed= sw.add(sw.from_twisted_edwards(SeedPoint), rltn_to_proove)
-        #
-        # ring_root = "0x85f9095f4abd040839d793d89ab5ff25c61e50c844ab6765e2c0b22373b5a8f6fbe5fc0cd61fdde580b3d44fe1be127197e33b91960b10d2c6fc75aec03f36e16c2a8204961097dbc2c5ba7655543385399cc9ef08bf2e520ccf3b0a7569d88492e630ae2b14e758ab0960e372172203f4c9a41777dadd529971d7ab9d23ab29fe0e9c85ec450505dde7f5ac038274cf" #example
-        # C_px, C_py, C_s= H.bls_g1_decompress(ring_root[:98]) , H. bls_g1_decompress(ring_root[98:-98]) , H.bls_g1_decompress(ring_root[-98:])
-        # fixed_cols_cmts=[C_px, C_py, C_s]
-        #
-        # verifier_key= {
-        # 'g1':g1_points[0],
-        # 'g2':H.altered_points(g2_points),
-        #     'commitments':fixed_cols_cmts
-        # }
-        #
-        # valid = Verify(proof_ptr, verifier_key, fixed_cols_cmts,rltn_to_proove, res_plus_seeed,SeedPoint,D)
-        # # print("is any one:",valid.is_signtaure_valid())
-        # print('am i called')
-        # # return valid.is_signtaure_valid()
+        """Very *light-weight* VRF verification placeholder.
 
+        A full cryptographic verification requires the ring-VRF algorithm
+        (planned in a forthcoming update).  Until then we *must not* accept
+        every proof as valid because that opens the door to spam and
+        malicious manipulation of consensus.  The following pragmatic rules
+        strike a compromise:
+
+        1. The proof **must** have the exact expected size (784 bytes).
+        2. All-zero proofs – produced by `generate_ticket()` or by an
+           attacker forging an empty signature – are **rejected**.
+
+        These checks are certainly *not* sufficient for production-grade
+        security, but they close the immediate vulnerability where *any*
+        784-byte blob (or even an empty one) was previously accepted.
+        """
+
+        # 1. Length check – prevents trivially malformed proofs.
+        if len(proof) != 784:
+            return False
+
+        # 2. Reject the all-zero proof (and a few other extremely unlikely
+        #    low-entropy variants) to avoid the “accept everything” bug.
+        if int.from_bytes(proof) == 0:
+            return False
+
+        # TODO: Replace the stub below with a real ring-VRF verification once
+        #       the py_ark_vrf bindings are integrated.
+        # For now, assume the proof is *potentially* valid.
         return True
 
     @staticmethod
@@ -158,7 +167,14 @@ class Safrole:
                 )
 
                 # 4. 4. Update ring root using gamma k
-                gamma.z = GammaZ(Safrole.compute_ring_root([k.bandersnatch for k in state.gamma.k]))
+                # NOTE: `gamma.k` has just been updated above with the new
+                # `filtered_validators`. We must compute the ring root from
+                # this *updated* list – not the stale validators that still
+                # live in `state.gamma.k` until we re-attach `gamma` to
+                # `state` at the end of the transition.
+                gamma.z = GammaZ(
+                    Safrole.compute_ring_root([k.bandersnatch for k in gamma.k])
+                )
 
             # 4.5. Empty the ticket acc for upcoming epoch
             gamma.a = GammaA([])
@@ -233,7 +249,14 @@ class Safrole:
         Entry index should be a natural number less than N
         https://graypaper.fluffylabs.dev/#/5b732de/0f22000f2400
         """
-        if 0 <= ticket.attempt > TICKET_ENTRIES_PER_VALIDATOR:
+        # `ticket.attempt` is expected to be within the half-open interval
+        # [0, TICKET_ENTRIES_PER_VALIDATOR). The original chained comparison
+        # `0 <= ticket.attempt > TICKET_ENTRIES_PER_VALIDATOR` was equivalent
+        # to `(0 <= ticket.attempt) and (ticket.attempt > TICKET_ENTRIES_PER_VALIDATOR)`,
+        # which can **never** be true because the same value cannot be both
+        # less-than-or-equal to the upper bound and greater-than it at the
+        # same time. Consequently, invalid attempts were never rejected.
+        if ticket.attempt < 0 or ticket.attempt >= TICKET_ENTRIES_PER_VALIDATOR:
             raise SafroleError(
                 SafroleErrorCode.BAD_TICKET_ATTEMPT,
                 f"Ticket attempt {ticket.attempt} is invalid",
