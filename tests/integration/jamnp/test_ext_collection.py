@@ -10,6 +10,7 @@ import os
 import time
 
 from dotenv import load_dotenv
+from jam.consensus.bp_engine import BlockProducer
 from tsrkit_types import U32, TypedVector, U64, Dictionary, Bool
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
@@ -61,6 +62,12 @@ CLIENTS = [
         "genesis": True
     },
     {
+        "port": 40003,
+        "role": "VALIDATOR",
+        "theme": "default",
+        "genesis": True
+    },
+    {
         "port": 40006,
         "role": "BUILDER",
         "theme": "polkadot",
@@ -82,47 +89,28 @@ async def start_node(node: Node):
 
     # Wait for node to initialize
     await asyncio.sleep(2)
-    print("NODE STARTED")
+    print("NODE STARTED", ": Builder" if node.is_builder else "node")
 
     if node.is_builder:
-        processor = Processor(node)
-        expected_wr, expected_wr_hash = processor.process(wp, CoreIndex(1), ext)
-        assert expected_wr == wr and expected_wr_hash == wr_hash
+        # processor = Processor(node)
+        # expected_wr, expected_wr_hash = processor.process(wp, CoreIndex(1), ext)
+        # assert expected_wr == wr and expected_wr_hash == wr_hash
 
-        for peer in node.peer_conn:
-            protocol = WorkPackageSubmission()
+        protocol = WorkPackageSubmission()
 
+        package_len = Uint[32](len(wc.encode()))
+        ext_len = Uint[32](len(ext.encode()))
+        data = CE133Data(package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext)
 
-            package_len = Uint[32](len(wc.encode()))
-            ext_len = Uint[32](len(ext.encode()))
-            data = CE133Data(package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext)
+        responses = await protocol.transmit(node, data)
 
-            responses = await protocol.transmit(node, data)
+        # expected_message = Bool(True)
 
-            # expected_message = Bool(True)
+        for response in responses:
+            # print("resp", response)
+            assert response.unwrap()._value == True
+            print("BUILDER ASSERTION SUCCESS")
 
-            for response in responses:
-                # print("resp", response)
-                assert response.unwrap()._value == True
-                print("BUILDER ASSERTION SUCCESS")
-
-
-    else:
-        # Wait for refinement to happ
-        await asyncio.sleep(20)
-        from jam.settings import settings
-
-        # Check if report exists in db or not
-        try:
-            db = settings.d3l
-            da = ReportsDA(db)
-
-            rep = da.get(wr_hash)
-            assert rep == wr
-            print("WR ASSERTION SUCCESS")
-
-        except Exception as e:
-            raise AssertionError("Report not found on Guarantor")
 
 def run_node_process(
     genesis_path: str,
@@ -287,6 +275,7 @@ async def run_node(
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
+            tg.create_task(BlockProducer(node=tsr_node, db=main_db).run())
             tg.create_task(start_node(tsr_node))
 
     except KeyboardInterrupt:

@@ -492,7 +492,7 @@ class Processor:
         og_guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=sign)
 
         # Check majority & Build guarantees:
-        guarantees = ValidatorSignatures([og_guarantee])
+        guarantees = [og_guarantee]
 
         # Working fix
         responses = await self.transmit_task
@@ -503,8 +503,13 @@ class Processor:
             if response != OptCred(Null):
                 cred = response.unwrap()
                 if cred.work_report_hash == wr_hash:
-                    guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=cred.ed25519_signature)
+                    guarantee = ValidatorSignature(
+                        validator_index=ValidatorIndex(0), 
+                        signature=cred.ed25519_signature
+                    )
                     guarantees.append(guarantee)
+        # Sort them guarantees
+        guarantees = ValidatorSignatures(sorted(guarantees, key = lambda g: g.validator_index))
 
         # Distribute Guaranteed WR to Validators CE135
         logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
@@ -529,7 +534,11 @@ class Processor:
 
             CE135 = WorkReportDistribution()
             # TODO: Fix timeslot
-            gwr = ReportGuarantee(report=wr, slot=TimeSlot(time.time() - GENESIS_TS // 6), signatures=guarantees)
+            gwr = ReportGuarantee(
+                report=wr, 
+                slot=TimeSlot(time.time() - GENESIS_TS // 6), 
+                signatures=guarantees
+            )
             r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
 

@@ -104,7 +104,7 @@ class WorkReportDistribution(NetworkProtocol):
         logger.info("Sent acknowledgement back to guarantor")
 
         logger.info("Fetching assigned shard")
-        asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
+        # asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
 
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:

@@ -82,7 +82,7 @@ class ShardDistributionProtocol(NetworkProtocol):
 
         for peer in node.peer_conn:
             try:
-                if int(peer.port) == 40002:
+                if int(peer.port) == 40001:
                     logger.debug("Requesting shard from", peer=str(peer))
                     client = node.peer_conn[peer][1]
 

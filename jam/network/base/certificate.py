@@ -40,7 +40,7 @@ def generate_san(pubkey: bytes) -> str:
     n, _ = Uint[256].decode_from(pubkey)
     return "e" + b(n, 52)
 
-def generate_keys(port: int):
+def generate_keys(port: int) -> str:
     """
     Generate keys for a node running on a given port
         - Goes to /seeds/keys.json to read the secret key
@@ -54,6 +54,8 @@ def generate_keys(port: int):
     Returns:
         str: SAN of the certificate
     """
+    if port == 0:
+        return ""
     from jam.settings import settings 
     seed = settings.seed
     # Create the private key from seed and

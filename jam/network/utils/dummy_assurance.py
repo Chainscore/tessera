@@ -3,15 +3,14 @@ from math import floor
 
 from sympy.physics.units import current
 
-from jam.storage.db.kv import KVStore
 from jam.state.state import State
 from jam.types.protocol.crypto import Ed25519Signature
-from jam.types.extrinsics.assurances import AvailBitField
+from jam.types.block.extrinsics.assurances import AvailBitField
 from jam.types.work.package import OpaqueHash
 from jam.utils.constants import EPOCH_LENGTH
 
-from tests.dummy.utils import create_dummy_bytes32, create_dummy_bytes64, create_dummy_bytes
-from jam.types.extrinsics.assurances import Assurance
+from jam.utils.dummy.utils import create_dummy_bytes32, create_dummy_bytes64, create_dummy_bytes
+from jam.types.block.extrinsics.assurances import AvailAssurance
 from jam.network.node import Node
 from time import time
 from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data

@@ -1,7 +1,7 @@
 import json
 from typing import Type
 from tsrkit_types import Dictionary
-from jam.consensus.ext_store import ext_store
+from jam.operations.ext_store import ext_store
 from jam.consensus.grandpa.finality import Finality
 from jam.error import JamError
 from jam.merklization import BMRFunctions
