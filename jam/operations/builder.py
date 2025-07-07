@@ -98,8 +98,8 @@ class Builder:
                 # write_json("vectors/packages", wp.to_json())
                 # write_json("vectors/reports", wr.to_json())
 
-                vector = RefineVector(wp, CoreIndex(1), ext, wr, wr_hash)
-                vectors.append(vector)
+                # vector = RefineVector(wp, CoreIndex(1), ext, wr, wr_hash)
+                # vectors.append(vector)
 
                 package_len = Uint[32](len(wc.encode()))
                 ext_len = Uint[32](len(ext.encode()))
