@@ -258,6 +258,7 @@ class Node:
                     *args, node=self, **kwargs
                 ),
                 session_ticket_handler=session_ticket_store.add,
+                # local_port=int(peer.port)
             ) as client:
 
                 # Save peer connection

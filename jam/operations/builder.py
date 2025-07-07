@@ -89,14 +89,14 @@ class Builder:
                 wc = WorkPackageCore(wp, CoreIndex(1))
                 ext = Extrinsics([])
 
-                # SAVE TEST VECTORS
-                # BUILD REPORT
-                from jam.utils.benchmark import write_json
-                from jam.work_package.processor import Processor
-                processor = Processor(node)
-                wr, wr_hash = processor.process(wp, CoreIndex(1), ext)
-                write_json("vectors/packages", wp.to_json())
-                write_json("vectors/reports", wr.to_json())
+                # # SAVE TEST VECTORS
+                # # BUILD REPORT
+                # from jam.utils.benchmark import write_json
+                # from jam.work_package.processor import Processor
+                # processor = Processor(node)
+                # wr, wr_hash = processor.process(wp, CoreIndex(1), ext)
+                # write_json("vectors/packages", wp.to_json())
+                # write_json("vectors/reports", wr.to_json())
 
                 vector = RefineVector(wp, CoreIndex(1), ext, wr, wr_hash)
                 vectors.append(vector)
