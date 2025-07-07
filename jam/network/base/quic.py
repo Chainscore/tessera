@@ -129,6 +129,7 @@ class QuicProtocol(QuicConnectionProtocol):
 
             logger.debug(
                 "Message transmitted, waiting for response",
+                peer=self.peer,
                 stream_id=stream_id
             )
             return await asyncio.shield(waiter)
@@ -165,6 +166,8 @@ class QuicProtocol(QuicConnectionProtocol):
             if node.is_validator and event.alpn_protocol == node_alpn:
                 peer = self.fetch_peer()
                 if peer:
+                    if peer not in node.peer_conn:
+                        self.node.peer_conn[peer] = None, self
                     logger.info(
                         f"🔗 Handshake completed with {peer}.",
                         interface=self.interface,
@@ -224,6 +227,8 @@ class QuicProtocol(QuicConnectionProtocol):
                 )
                 self._quic.close(error_code=0xA, reason_phrase=f"Malicious node tried to connect.")
 
+            print("CONN", self.node.peer_conn, self.peer)
+
         # elif isinstance(event, ConnectionIdIssued):
         #     logger.debug(f"🔗 Connection Id issued: {event.connection_id}",
         #     interface=self.interface
@@ -242,6 +247,7 @@ class QuicProtocol(QuicConnectionProtocol):
 
             logger.warning(
                 f"🔗 Stream reset.",
+                stream_id=stream_id,
                 error_code=event.error_code,
                 interface=self.interface
             )
@@ -255,6 +261,7 @@ class QuicProtocol(QuicConnectionProtocol):
 
             logger.warning(
                 f"🔗 Stream reception stopped.",
+                stream_id=stream_id,
                 error_code=event.error_code,
                 interface=self.interface
             )
@@ -262,9 +269,12 @@ class QuicProtocol(QuicConnectionProtocol):
         # Handle Connection Terminated Event
         elif isinstance(event, ConnectionTerminated):
             self._close_pending = True
+            print("CONN 1", self.node.peer_conn, self.peer)
+
             if self.peer in self.node.peer_conn:
                 logger.debug(f"Removing {self.peer} from connections.")
                 del self.node.peer_conn[self.peer]
+                print("CONN 2", self.node.peer_conn, self.peer)
 
             logger.warning(
                 f"❌ Connection with {self.peer} terminated.",

@@ -66,7 +66,7 @@ class Node:
     # Peers & Connections
     peers: list[Peer]
     peer_map: Dict[bytes, Peer] = {}
-    peer_conn: Dict[Peer, Tuple[int, QuicProtocol]] = {}
+    peer_conn: Dict[Peer, Tuple[int | None, QuicProtocol]] = {}
     builder_conn: Dict[QuicProtocol, int] = {}
     max_builders: int
 

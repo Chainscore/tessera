@@ -149,14 +149,14 @@ async def main(
             "JAM node shutting down gracefully",
             node_name=name,
             port=port,
-            reason="keyboard_interrupt"
+            reason="cancelled_tasks"
         )
 
         # FOR SAVING TEST VECTORS
-        print("CANCELLED")
-        from jam.utils.benchmark import write_json
-        from jam.operations.builder import vectors
-        write_json("vectors/combined", vectors.to_json())
+        # print("CANCELLED")
+        # from jam.utils.benchmark import write_json
+        # from jam.operations.builder import vectors
+        # write_json("vectors/combined", vectors.to_json())
 
         settings.clear()
 
