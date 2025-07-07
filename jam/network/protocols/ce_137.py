@@ -14,7 +14,7 @@ from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
 from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex, ShardKey
 
-from jam.work_package.stores.audits import AuditShardsDA
+from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
 from jam.types.protocol.crypto import Hash
@@ -138,9 +138,8 @@ class ShardDistributionProtocol(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             # TODO: Process received erasure root & shard index
-            query = data.query
-            erasure_root = query.erasure_root
-            shard_index = query.shard_index
+            erasure_root = data.query.erasure_root
+            shard_index = data.query.shard_index
 
             d3l = settings.d3l
             audit = settings.audit_da
@@ -175,6 +174,9 @@ class ShardDistributionProtocol(NetworkProtocol):
                 s.append(Bytes(shards_key.encode()))
 
             justification = Justification(bmrfunctions.trace_fn(values=s, index=shard_index).unwrap())
+
+            justification_da = JustificationsDA(audit)
+            justification_da.put(erasure_root, justification)
 
             # Return requested shards
             msg_a = bundle_shard.encode()

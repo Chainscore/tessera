@@ -1,3 +1,4 @@
+import asyncio
 from typing import cast, Tuple
 
 from tsrkit_types import Uint, structure, TypedVector, Bytes
@@ -9,12 +10,14 @@ from jam.network.protocols.ce_137 import CE137Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 from jam.types.work.manifest import Segment, Justification
-from jam.types.work.shard import SegmentsShard, ShardIndex, BundleShard
+from jam.types.work.shard import SegmentsShard, ShardIndex, BundleShard, ShardKey
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
+from jam.merklization import BMRFunctions
+from jam.types.protocol.crypto import Hash
 
 
 CE138Data = CE137Data
@@ -63,10 +66,10 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         logger.info(f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer")
 
-        responses = TypedVector([])
-        for peer in node.peer_conn:
-            if int(peer.port) == 40003:
-                logger.info("requesting audit shard from 40003")
+        tasks = []
+        try:
+            for peer in node.peer_conn:
+                logger.info("Requesting audit shard from peer", port=peer.port)
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
@@ -77,11 +80,22 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
                 # Send Messages with their lengths
                 client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                responses.append(data)
+                task = asyncio.create_task(res)
+                tasks.append(task)
 
-        return responses
+            responses = await asyncio.gather(*tasks)
+
+            if responses is not None:
+                return responses
+
+        except Exception as e:
+            logger.error(
+                "Failed to request audit shard.",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
@@ -96,25 +110,37 @@ class AuditShardRequestProtocol(NetworkProtocol):
         if not data.is_valid:
             raise NetworkingError(Code.INVALID_DATA)
 
-        query = data.query
+        erasure_root = data.query.erasure_root
+        shard_index = data.query.shard_index
 
         logger.info("Processing")
         # TODO: Process received erasure code & shard index
 
         d3l = settings.d3l
-        audit = settings.audit
+        audit = settings.audit_da
 
-        audits_da = AuditShardsDA(audit)
+        # Fetch Segments Shard
         ss_da = SegmentShardsDA(d3l)
-        justification_da = JustificationsDA(audit)
+        ss_dict = ss_da.get(erasure_root)
 
         # Fetch Bundle Shard
         audits_da = AuditShardsDA(audit)
-        bs_dict = audits_da.get(query.erasure_root)
-        bundle_shard = bs_dict[query.shard_index]
+        bs_dict = audits_da.get(erasure_root)
+        bundle_shard = bs_dict[shard_index]
 
-        # TODO: Fetch Justifications
-        justification = Justification([])
+        # Fetch Justifications
+        justification_da = JustificationsDA(audit)
+        justification = justification_da.get(erasure_root)
+
+        bmrfunctions = BMRFunctions()
+        segment_shard = SegmentsShard(ss_dict[shard_index].shard)
+        segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
+        bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
+
+        shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+        s = Bytes(shards_key.encode())
+
+        justification.append(s)
 
         # Return requested shards
         msg_a = bundle_shard.encode()
@@ -140,9 +166,6 @@ class AuditShardRequestProtocol(NetworkProtocol):
                     raise NetworkingError(Code.INVALID_DATA)
 
             logger.info("Data received on Auditor Node")
-
-            # TODO: verify justification
-            # TODO: save the justification for CE139/140 and proceed further with data
 
             logger.info("Received bundle shard")
             return data.bundle_shard, data.justification
