@@ -1,44 +1,22 @@
 import pytest
 import asyncio
-import signal
 import shutil
 
 from multiprocessing import Process
 
-import logging
 import os
-import time
 
-from dotenv import load_dotenv
 from tsrkit_types import U32, TypedVector, U64, Dictionary, Bool
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
 
-from jam.logging import setup_logging
-from jam.network.base.certificate import generate_san
 from jam.types import WorkReport, WorkPackage, Authorizer, RefineContext, ImportSpec, ExtrinsicSpec, WorkItem, \
     OpaqueHash, WorkPackageSpec, WorkResult, WorkExecResult, WorkReportHash, Hash, HeaderHash, StateRoot, BeefyRoot, \
     WorkPackageHash, ErasureRoot, ExportsRoot
 from jam.types.work import RefineLoad
-from jam.utils.chainspec import chain_config
 
-from jam.consensus.grandpa.finality import Finality
-from jam.settings import setup_setting
-
-from jam.network.peer import Peer
 from jam.network.node import Node
 
-from jam.operations.utils.state_update import update_state
-from jam.state.state import setup_state, State
-from jam.types.protocol.crypto import BlsPublic
-from jam.types.block import Block
-from jam.types.protocol.validators import (
-    IPAddress,
-    ValidatorData,
-    ValidatorMetadata,
-)
-
-from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.types.work.manifest import Extrinsics
 from jam.logging import get_logger
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data, OptBool
@@ -46,6 +24,7 @@ from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex
 from jam.work_package.processor import Processor
 from jam.work_package.stores.reports import ReportsDA
+from tests.integration.jamnp.utils.run_node import run_node_process
 
 CLIENTS = [
     {
@@ -71,7 +50,7 @@ wr_hash = WorkReportHash(b'\x18is\xa2\xd8\x8e\x15\xbd5H\xc6\xd3\xe3\xed\x87\xd6?
 wc = WorkPackageCore(wp, CoreIndex(1))
 ext = Extrinsics([])
 
-async def start_node(node: Node):
+async def node_tasks(node: Node):
     """Define Node tasks"""
 
     # Wait for node to initialize
@@ -95,7 +74,6 @@ async def start_node(node: Node):
             assert response.unwrap()._value == True
             print("BUILDER ASSERTION SUCCESS")
 
-
     else:
         # Wait for refinement to happen
         await asyncio.sleep(10)
@@ -112,29 +90,6 @@ async def start_node(node: Node):
 
         except Exception as e:
             raise AssertionError("Report not found on Guarantor")
-
-def run_node_process(
-    genesis_path: str,
-    env: str,
-    start_genesis: bool,
-    theme: str,
-    is_builder: bool,
-    is_validator: bool,
-):
-    # Handle clean termination
-    def handle_sigterm(signum, frame):
-        exit(0)
-    signal.signal(signal.SIGTERM, handle_sigterm)
-
-    asyncio.run(run_node(
-        genesis_path,
-        env,
-        start_genesis,
-        theme,
-        is_builder,
-        is_validator
-    ))
-
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
@@ -156,7 +111,7 @@ async def test_connection():
 
         p = Process(
             target=run_node_process,
-            args=("", env_path, client["genesis"], client["theme"], is_builder, is_validator)
+            args=("", env_path, client["genesis"], client["theme"], is_builder, is_validator, node_tasks)
         )
         processes.append(p)
 
@@ -176,4 +131,3 @@ async def test_connection():
         p.join()
 
     print("END OF TEST")
-

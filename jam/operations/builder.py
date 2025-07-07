@@ -16,7 +16,7 @@ from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
-from tests.unit.wp.types import RefineVectors
+from tests.unit.wp.types import RefineVectors, RefineVector
 
 # Logger for WP Production
 logger = get_logger("in_core")
@@ -90,16 +90,16 @@ class Builder:
                 ext = Extrinsics([])
 
                 # SAVE TEST VECTORS
-                # # BUILD REPORT
-                # from jam.utils.benchmark import write_json
-                # from jam.work_package.processor import Processor
-                # processor = Processor(node)
-                # wr, wr_hash = processor.process(wp, CoreIndex(1), ext)
-                # write_json("vectors/packages", wp.to_json())
-                # write_json("vectors/reports", wr.to_json())
-                #
-                # vector = RefineVector(wp, CoreIndex(1), ext, wr, wr_hash)
-                # vectors.append(vector)
+                # BUILD REPORT
+                from jam.utils.benchmark import write_json
+                from jam.work_package.processor import Processor
+                processor = Processor(node)
+                wr, wr_hash = processor.process(wp, CoreIndex(1), ext)
+                write_json("vectors/packages", wp.to_json())
+                write_json("vectors/reports", wr.to_json())
+
+                vector = RefineVector(wp, CoreIndex(1), ext, wr, wr_hash)
+                vectors.append(vector)
 
                 package_len = Uint[32](len(wc.encode()))
                 ext_len = Uint[32](len(ext.encode()))

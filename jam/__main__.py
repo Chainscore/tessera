@@ -153,10 +153,10 @@ async def main(
         )
 
         # FOR SAVING TEST VECTORS
-        # print("CANCELLED")
-        # from jam.utils.benchmark import write_json
-        # from jam.operations.builder import vectors
-        # write_json("vectors/combined", vectors.to_json())
+        print("CANCELLED")
+        from jam.utils.benchmark import write_json
+        from jam.operations.builder import vectors
+        write_json("vectors/combined", vectors.to_json())
 
         settings.clear()
 

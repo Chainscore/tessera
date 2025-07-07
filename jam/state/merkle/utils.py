@@ -49,7 +49,7 @@ def encode_leaf(key: Bytes, value: Bytes) -> Bytes[64]:
         # Store key and value
         val_bits = value.to_bits() + [False] * (256 - len(value.to_bits()))
         # Rest is already zeroed
-        node_bits = [True, False] + Bytes(Uint[1](len(value)).encode()).to_bits()[2:] + key_bits + val_bits
+        node_bits = [True, False] + Bytes(Uint[8](len(value)).encode()).to_bits()[2:] + key_bits + val_bits
         return Bytes[64].from_bits(node_bits)
     else:
         # Regular leaf - second bit is 1
