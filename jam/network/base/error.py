@@ -9,3 +9,4 @@ class NetworkingErrorCode(Enum):
     NO_PEER = "Peer information not available."
     INVALID_DATA = "Buffer length & Message length mismatch."
     BAD_RESPONSE = "Error parsing response."
+    NO_PEER_CONN = "Peer not connected"

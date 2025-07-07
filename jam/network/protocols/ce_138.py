@@ -65,8 +65,8 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         responses = TypedVector([])
         for peer in node.peer_conn:
-            if int(peer.port) == 30336:
-                logger.info("requesting audit shard from 30336")
+            if int(peer.port) == 40003:
+                logger.info("requesting audit shard from 40003")
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix

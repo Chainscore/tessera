@@ -77,8 +77,8 @@ class SegmentShardRequestBase(NetworkProtocol):
         logger.info(f"Sending segment shard request with")
 
         for peer in node.peer_conn:
-            if int(peer.port) == 30333:
-                logger.info("requesting seg shard from 30333")
+            if int(peer.port) == 40000:
+                logger.info("requesting seg shard from 40000")
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix

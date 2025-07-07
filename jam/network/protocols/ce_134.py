@@ -1,4 +1,4 @@
-from typing import cast, TYPE_CHECKING
+from typing import cast, TYPE_CHECKING, Tuple
 from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32
 
 if TYPE_CHECKING:
@@ -19,6 +19,10 @@ from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
 from jam.work_package.processor import Processor
 from jam.work_package.validator import Validator
+
+from jam.work_package.guarantor_assignments import guarantor_assignments
+import asyncio
+from jam.types.protocol.core import ValidatorIndex
 
 # Module-specific logger
 logger = get_logger("network")
@@ -89,6 +93,12 @@ class WorkPackageSharing(NetworkProtocol):
         msg_b = data.work_package_bundle.encode()
         len_b = data.bundle_len.encode()
 
+        ci = data.core_segment.core_index
+
+        from jam.state.state import state
+        logger.info("Tau", tau=state.tau)
+        mapping = guarantor_assignments(state)[ci]
+
         logger.info(
             "Transmitting work package bundle to guarantors",
             node_name=node.name,
@@ -100,12 +110,13 @@ class WorkPackageSharing(NetworkProtocol):
         )
 
         transmitted_count = 0
-        responses = TypedVector[OptCred]([])
+        responses = []
         # TODO: Use Actual Guarantors Connections
-        for peer in node.peer_conn:
-            try:
-                if int(peer.port) == 40002:
-                    logger.debug("Sending bundle to 40002")
+        tasks = []
+        try:
+            for peer in node.peer_conn:
+                if peer.ed_key in mapping:
+                    logger.debug("Sending bundle to", port=peer.port)
                     client = node.peer_conn[peer][1]
 
                     # Send Protocol Prefix
@@ -114,36 +125,44 @@ class WorkPackageSharing(NetworkProtocol):
                     # Append prefix to stream buffer so that we know the stream for handling response
                     client.stream_buffer[stream_id] = self._prefix.encode()
 
+                    transmitted_count += 1
+
                     # Send Messages with their lengths
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
                     client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                     client.stream_and_keep_open(message=len_b, stream_id=stream_id)
-                    res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
-
-                    transmitted_count += 1
+                    res = client.close_and_wait(message=msg_b, stream_id=stream_id)
+                    task = asyncio.create_task(res)
+                    tasks.append(task)
 
                     logger.debug(
                         "Work package bundle transmitted to guarantor",
                         node_name=node.name,
                         stream_id=stream_id,
+                        port=peer.port,
                         core_index=int(data.core_segment.core_index)
                     )
 
-                    responses.append(res)
-            except Exception as e:
-                logger.error(
-                    "Failed to transmit work package bundle to guarantor",
-                    node_name=node.name,
-                    error=str(e),
-                    error_type=type(e).__name__
-                )
-        logger.info(
-            "Work package bundle transmission completed",
-            node_name=node.name,
-            transmitted_to=transmitted_count,
-            total_guarantors=len(node.peer_conn),
-            core_index=int(data.core_segment.core_index)
-        )
+            if transmitted_count > 2:
+                raise ValueError("Trying to transmit work package bundle to more than 2 guarantors")
+
+            responses = await asyncio.gather(*tasks)
+
+            logger.info(
+                "Work package bundle transmission completed",
+                node_name=node.name,
+                transmitted_to=transmitted_count,
+                total_guarantors=len(node.peer_conn),
+                core_index=int(data.core_segment.core_index)
+            )
+
+        except Exception as e:
+            logger.error(
+                "Failed to transmit work package bundle to guarantor",
+                node_name=node.name,
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
         return responses
 
@@ -217,6 +236,7 @@ class WorkPackageSharing(NetworkProtocol):
 
             logger.debug(
                 "Report credential sent to OG guarantor",
+                from_guarantor=server.node.port,
                 stream_id=stream_id,
                 credential_size=len(cred.encode())
             )
@@ -237,7 +257,7 @@ class WorkPackageSharing(NetworkProtocol):
                 error_type=type(e).__name__
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptCred:
+    def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[OptCred, ValidatorIndex]:
         """Intercept validated Work Report from guarantors"""
         buffer = client.stream_buffer[stream_id]
 
@@ -267,7 +287,7 @@ class WorkPackageSharing(NetworkProtocol):
                 stream_id=stream_id,
                 work_report_hash=data.cred.work_report_hash.hex()[:16] + "..."
             )
-            return OptCred(data.cred)
+            return OptCred(data.cred), ValidatorIndex(client.peer.peer_index)
 
         except Exception as e:
             logger.error(

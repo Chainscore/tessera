@@ -15,6 +15,8 @@ from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
 from jam.work_package.processor import Processor
 
+from jam.work_package.guarantor_assignments import guarantor_assignments
+
 # Module-specific logger
 logger = get_logger("network")
 
@@ -68,6 +70,12 @@ class WorkPackageSubmission(NetworkProtocol):
         msg_b = data.extrinsics.encode()
         len_b = data.extrinsics_len.encode()
 
+        ci = data.package_data.core_index
+
+        from jam.state.state import state
+        logger.info("Tau", tau=state.tau)
+        mapping = guarantor_assignments(state)[ci]
+
         logger.info(
             "Transmitting work package to guarantors",
             node_name=node.name,
@@ -82,43 +90,49 @@ class WorkPackageSubmission(NetworkProtocol):
         # TODO: Use Particular Validators' Connections
 
         responses = TypedVector[OptBool]([])
-        for peer in node.peer_conn:
-            try:
-                logger.debug("Sending package", peer=str(peer))
-                client = node.peer_conn[peer][1]
-                transmitted_count += 1
+        try:
+            for peer in node.peer_conn:
+                if peer.ed_key in mapping:
+                    logger.info("Sending package to", port=peer.port)
+                    client = node.peer_conn[peer][1]
+                    transmitted_count += 1
 
-                # Send Protocol Prefix
-                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                    # Send Protocol Prefix
+                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                # Append prefix to stream buffer so that we know the stream for handling response
-                client.stream_buffer[stream_id] = self._prefix.encode()
+                    # Append prefix to stream buffer so that we know the stream for handling response
+                    client.stream_buffer[stream_id] = self._prefix.encode()
 
-                # Send Messages with their lengths
-                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
-                client.stream_and_keep_open(message=len_b, stream_id=stream_id)
-                res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
+                    # Send Messages with their lengths
+                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                    client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
+                    client.stream_and_keep_open(message=len_b, stream_id=stream_id)
+                    res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
 
-                if not res:
-                    responses.append(OptBool(Null))
-                else:
-                    responses.append(res)
+                    if not res:
+                        responses.append(OptBool(Null))
+                    else:
+                        responses.append(res)
 
-                logger.debug(
-                    "Work package transmitted to guarantor",
-                    node_name=node.name,
-                    stream_id=stream_id,
-                    core_index=int(data.package_data.core_index)
-                )
+                    logger.debug(
+                        "Work package transmitted to guarantor",
+                        node_name=node.name,
+                        stream_id=stream_id,
+                        core_index=int(data.package_data.core_index)
+                    )
 
-            except Exception as e:
-                logger.error(
-                    "Failed to transmit work package to guarantor",
-                    node_name=node.name,
-                    error=str(e),
-                    error_type=type(e).__name__
-                )
+                    break
+
+            if transmitted_count == 0:
+                raise NetworkingError(Code.NO_PEER_CONN)
+
+        except Exception as e:
+            logger.error(
+                "Failed to transmit work package to guarantor",
+                node_name=node.name,
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
         logger.info(
             "Work package transmission completed",
