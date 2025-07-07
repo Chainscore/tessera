@@ -1,6 +1,8 @@
 from typing import cast, Tuple
+import asyncio
 
 from tsrkit_types import structure, Uint, Null, TypedVector, Bytes
+from jam.types.work.manifest import Assurers
 
 from jam.logging import logger
 
@@ -12,7 +14,7 @@ from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
 from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex, ShardKey
 
-from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
+from jam.work_package.stores.audits import AuditShardsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
 from jam.types.protocol.crypto import Hash
@@ -76,7 +78,7 @@ class ShardDistributionProtocol(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE137
 
-    async def transmit(self, node: Node, data: CE137Data):
+    async def transmit(self, node: Node, data: CE137Data, assurers: Assurers = None):
         """Transmit Erasure-Root and Shard Index from Assurer (client) to Guarantor (server)"""
 
         msg_a = data.query.encode()
@@ -84,9 +86,10 @@ class ShardDistributionProtocol(NetworkProtocol):
 
         logger.info(f"Requesting shard from {len(node.peer_conn)} guarantors")
 
-        for peer in node.peer_conn:
-            try:
-                if int(peer.port) == 40002:
+        tasks = []
+        try:
+            for peer in node.peer_conn:
+                if Uint[16](peer.peer_index) in assurers:
                     logger.debug("Requesting shard from", peer=str(peer))
                     client = node.peer_conn[peer][1]
 
@@ -98,18 +101,22 @@ class ShardDistributionProtocol(NetworkProtocol):
 
                     # Send Messages with their lengths
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    # res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    res = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    task = asyncio.create_task(res)
+                    tasks.append(task)
 
-                    if res is not None:
-                        return res
+            responses = await asyncio.gather(*tasks)
 
-            except Exception as e:
-                logger.error(
-                    "Failed to request shard.",
-                    peer=str(peer),
-                    error=str(e),
-                    error_type=type(e).__name__
-                )
+            if responses is not None:
+                return responses
+
+        except Exception as e:
+            logger.error(
+                "Failed to request shard.",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
@@ -132,24 +139,24 @@ class ShardDistributionProtocol(NetworkProtocol):
 
             # TODO: Process received erasure root & shard index
             query = data.query
+            erasure_root = query.erasure_root
+            shard_index = query.shard_index
 
             d3l = settings.d3l
             audit = settings.audit_da
 
-            justification_da = JustificationsDA(audit)
-
             # Fetch Bundle Shard
             audits_da = AuditShardsDA(audit)
-            bs_dict = audits_da.get(query.erasure_root)
-            bundle_shard = BundleShard(bs_dict[query.shard_index])
+            bs_dict = audits_da.get(erasure_root)
+            bundle_shard = BundleShard(bs_dict[shard_index])
 
             # Fetch Segments Shard
             ss_da = SegmentShardsDA(d3l)
-            ss_dict = ss_da.get(query.erasure_root)
-            if query.shard_index not in ss_dict:
+            ss_dict = ss_da.get(erasure_root)
+            if shard_index not in ss_dict:
                 raise "Shard not found"
 
-            segments_shard = SegmentsShard(ss_dict[query.shard_index].shard)
+            segments_shard = SegmentsShard(ss_dict[shard_index].shard)
 
             # TODO: Build Justifications
             bundle_shard_indices = bs_dict.keys()
@@ -167,7 +174,7 @@ class ShardDistributionProtocol(NetworkProtocol):
                 shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                 s.append(Bytes(shards_key.encode()))
 
-            justification = Justification(bmrfunctions.trace_fn(values=s, index=query.shard_index).unwrap())
+            justification = Justification(bmrfunctions.trace_fn(values=s, index=shard_index).unwrap())
 
             # Return requested shards
             msg_a = bundle_shard.encode()

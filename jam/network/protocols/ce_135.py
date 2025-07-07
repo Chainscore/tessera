@@ -11,9 +11,10 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.types.block.extrinsics.guarantees import ValidatorSignatures
 from jam.types.protocol.core import ValidatorIndex, TimeSlot
 from jam.types.protocol.crypto import Hash
+from jam.types.work.manifest import Assurers
 from jam.types.work.report import WorkReport
 
-from jam.work_package.stores.audits import AuditShardsDA
+from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
@@ -70,21 +71,20 @@ class WorkReportDistribution(NetworkProtocol):
 
         responses = TypedVector[OptBool]([])
         for peer in node.peer_conn:
-            if int(peer.port) == 40003:
-                logger.debug("Sending report to 40003")
-                client = node.peer_conn[peer][1]
+            logger.debug("Sending report to:", port=node.port)
+            client = node.peer_conn[peer][1]
 
-                # Send Protocol Prefix
-                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+            # Send Protocol Prefix
+            stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                # Append prefix to stream buffer so that we know the stream for handling response
-                client.stream_buffer[stream_id] = self._prefix.encode()
+            # Append prefix to stream buffer so that we know the stream for handling response
+            client.stream_buffer[stream_id] = self._prefix.encode()
 
-                # Send Messages with their lengths
-                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+            # Send Messages with their lengths
+            client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+            data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                responses.append(data)
+            responses.append(data)
 
         return responses
 
@@ -129,65 +129,74 @@ class WorkReportDistribution(NetworkProtocol):
         slot = data.slot
         signatures = data.signatures
 
-        report = data.report
-        er_root = report.package_spec.erasure_root
+        assurers = Assurers([])
+        for i in signatures:
+            assurers.append(i.validator_index)
 
-        shard_index = node.get_shard_index(report.core_index)
+        if node.validator_index not in assurers:
+            report = data.report
+            er_root = report.package_spec.erasure_root
 
-        from jam.network.protocols.ce_137 import ShardDistributionProtocol, CE137Data, Query
-        CE137 = ShardDistributionProtocol()
+            shard_index = node.get_shard_index(report.core_index)
 
-        query = Query(shard_index=shard_index, erasure_root=er_root)
-        data = CE137Data(len=U32(len(query.encode())), query=query)
+            from jam.network.protocols.ce_137 import ShardDistributionProtocol, CE137Data, Query
+            CE137 = ShardDistributionProtocol()
 
-        logger.debug("Requesting Shard", shard_index=shard_index, erasure_root=er_root)
-        shard = await CE137.transmit(node=node, data=data)
+            query = Query(shard_index=shard_index, erasure_root=er_root)
+            data = CE137Data(len=U32(len(query.encode())), query=query)
 
-        # Save Shard
-        if shard is not None:
-            bmrfunctions = BMRFunctions()
+            logger.debug("Requesting Shard", shard_index=shard_index, erasure_root=er_root)
+            shards = await CE137.transmit(node=node, data=data, assurers=assurers)
 
-            bundle_shard = shard[0]
-            segments_shard = shard[1]
-            justification = shard[2]
+            for shard in shards:
+                # Save Shard
+                if shard is not None:
+                    bmrfunctions = BMRFunctions()
 
-            bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
-            segments_shard_root = bmrfunctions.wb_merkle_fn(values=segments_shard)
+                    bundle_shard = shard[0]
+                    segments_shard = shard[1]
+                    justification = shard[2]
 
-            shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+                    bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
+                    segments_shard_root = bmrfunctions.wb_merkle_fn(values=segments_shard)
 
-            s = Bytes(shards_key.encode())
+                    shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
 
-            verification = bmrfunctions.verify_wb_merkle(leaf=s, index=shard_index, justification=justification, erasure_root=er_root)
+                    s = Bytes(shards_key.encode())
 
-            if verification:
-                # Store Bundle Shard
-                audits = settings.audit_da
-                bs_da = AuditShardsDA(audits)
-                bs_da.put(er_root, shard_index, shard[0])
+                    verification = bmrfunctions.verify_wb_merkle(leaf=s, index=shard_index, justification=justification, erasure_root=er_root)
 
-                # Store Segments Shard
-                d3l = settings.d3l
-                ss_da = SegmentShardsDA(d3l)
-                ss_da.put(er_root, shard_index, shard[1])
+                    if verification:
+                        # Store Bundle Shard
+                        audits = settings.audit_da
+                        bs_da = AuditShardsDA(audits)
+                        bs_da.put(er_root, shard_index, shard[0])
 
-                # Distribute Assurance
-                # TODO: Fix Assurances Distribution
-                from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
-                CE141 = AssuranceDistribution()
+                        # Store Segments Shard
+                        d3l = settings.d3l
+                        ss_da = SegmentShardsDA(d3l)
+                        ss_da.put(er_root, shard_index, shard[1])
 
-                from jam.network.utils.dummy_assurance import create_dummy_assurances
-                assurance = create_dummy_assurances()
-                data = CE141Data(assurance)
-                ack = await CE141.transmit(node=node, data=data)
+                        # store justification
+                        justification_da = JustificationsDA(audits)
+                        justification_da.put(er_root, justification)
 
-                # Save Report
-                rep_da = ReportsDA(d3l)
-                wr_hash = Hash.blake2b(report.encode())
-                rep_da.put(wr_hash, report)
+                        # Distribute Assurance
+                        # TODO: Fix Assurances Distribution
+                        from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
+                        CE141 = AssuranceDistribution()
+
+                        from jam.network.utils.dummy_assurance import create_dummy_assurances
+                        assurance = create_dummy_assurances()
+                        data = CE141Data(assurance)
+                        ack = await CE141.transmit(node=node, data=data)
+
+                        # Save Report
+                        rep_da = ReportsDA(d3l)
+                        wr_hash = Hash.blake2b(report.encode())
+                        rep_da.put(wr_hash, report)
 
 
-                logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
+                        logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
 
-            else:
-                ...
+                        break
