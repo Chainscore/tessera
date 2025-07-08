@@ -45,7 +45,7 @@ class Builder:
         wp_iter = 0
 
         while True:
-            curr_ts = int((time() - GENESIS_TS) // SLOT_PERIOD)
+            curr_ts = time_slot
             curr_ep = int(curr_ts // EPOCH_LENGTH)
 
             # TODO: Remove hard-coded transmission. Use desired guarantors' connections.

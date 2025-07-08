@@ -21,3 +21,13 @@ class AvailAssurance:
 
 
 AssurancesExtrinsic = TypedVector[AvailAssurance]
+
+
+@structure
+class AvailAssuranceNetwork:
+    """Availability assurance structure."""
+    anchor: OpaqueHash
+    bitfield: AvailBitField
+    signature: Ed25519Signature
+
+AssurancesExtrinsic_network = TypedVector[AvailAssuranceNetwork]

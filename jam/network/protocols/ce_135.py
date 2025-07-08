@@ -152,12 +152,15 @@ class WorkReportDistribution(NetworkProtocol):
             d3l = settings.d3l
             ss_da = SegmentShardsDA(d3l)
             ss_da.put(er_root, shard_index, shard[1])
-            
-            assr_collector.record_shard(int(report.core_index))
+
+            # give assurance for this core
+            from jam.operations.assr_collector import assr_collector
+            assr_collector.record_shard_assr(report.core_index)
 
             # Save Report
             rep_da = ReportsDA(d3l)
             wr_hash = Hash.blake2b(report.encode())
             rep_da.put(wr_hash, report)
+
 
             logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
