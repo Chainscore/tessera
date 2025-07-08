@@ -1,5 +1,6 @@
 import asyncio
 from typing import cast
+from jam.operations import assr_collector
 from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
 
 from jam.logging import logger
@@ -151,21 +152,12 @@ class WorkReportDistribution(NetworkProtocol):
             d3l = settings.d3l
             ss_da = SegmentShardsDA(d3l)
             ss_da.put(er_root, shard_index, shard[1])
-
-            # Distribute Assurance
-            # TODO: Fix Assurances Distribution
-            from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
-            CE141 = AssuranceDistribution()
-
-            from jam.network.utils.dummy_assurance import create_dummy_assurances
-            assurance = create_dummy_assurances()
-            data = CE141Data(assurance)
-            ack = await CE141.transmit(node=node, data=data)
+            
+            assr_collector.record_shard(int(report.core_index))
 
             # Save Report
             rep_da = ReportsDA(d3l)
             wr_hash = Hash.blake2b(report.encode())
             rep_da.put(wr_hash, report)
-
 
             logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
