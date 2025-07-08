@@ -296,5 +296,8 @@ class Bundler:
 
         bundle = WorkPackageBundle(p, all_ext, all_imp, all_jfn)
 
+        with open("bundle.txt", "a") as f:
+            print(bundle, file=f)
+
         logger.info("Compiling bundle..")
         return bundle

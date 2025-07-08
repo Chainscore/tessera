@@ -1,9 +1,15 @@
 from typing import List, Optional
+
+from docutils.frontend import validate_url_trailing_slash
 from tsrkit_types import TypedVector
+from tsrkit_types.bytes import Bytes
 from jam.ring_vrf.curve.specs.bandersnatch import Bandersnatch_TE_Curve, BandersnatchPoint
+from jam.ring_vrf.curve.specs.ed25519 import Ed25519_TE_Curve, Ed25519Point
 from jam.ring_vrf.ietf.ietf import IETF_VRF
-from jam.types.work.package import WorkPackage
 from jam.types.work.report import WorkReport
+from jam.types.protocol.core import ValidatorIndex
+
+public_key = Bytes[32]
 
 def power_set(input_list: TypedVector, length: Optional[int] = None) -> TypedVector[TypedVector]:
     """
@@ -31,29 +37,16 @@ def power_set(input_list: TypedVector, length: Optional[int] = None) -> TypedVec
     return power_set_result
 
 
-# def F(work_report: WorkReport) -> bytes:
-#     """
-#     F(w) function: will fetch wp encoding and
-#     reconstructing the Erasure Coded Chunks (Through Erasure coding's Merkle root)
-#     refer equ 17.17
-#     """
-#     # TODO: Do as per comment.
-#     # NOTE: Currently its a dummy
-#     return work_report.encode()
+def signature_pvt(key: Bytes[32], context: Bytes, message:bytes=b"") :
 
-
-def bandersnatch_y(key: bytes):
-    entropy_yield_vrf_signature = key
+    key = int.from_bytes(key)
     vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-    bandersnatch_proof = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(entropy_yield_vrf_signature))[:32]
-    return bandersnatch_proof
-
-def bandersnatch_f(key,context,message:bytes=b""):
-    vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-    output_point, proof=  vrf.prove(alpha=message, secret_key=key,  additional_data=context, salt=b"")
+    # Vrf2 = IETF_VRF(Ed25519_TE_Curve, Ed25519Point)
+    output_point, proof = vrf.prove(alpha=message, secret_key=key,  additional_data=context, salt=b"")
     op_bt_str= output_point.point_to_string()
-
-    proof_bt_str= proof[0].to_bytes()+ proof[1].to_bytes()
+    proof_bt_str= proof[0].to_bytes(32, 'little')+ proof[1].to_bytes(32, 'little')
     signature= op_bt_str + proof_bt_str
+
     return signature
+
 

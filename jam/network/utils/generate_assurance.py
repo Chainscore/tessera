@@ -1,32 +1,32 @@
 from sympy.physics.optics import rayleigh2waist
 from tsrkit_types import structure, TypedVector, U32, U8
+from jam.logging import get_logger
 
+from jam import chain_config
 from jam.types.work.shard import ShardIndex
-from jam.config.chainspec import chain_config
 from jam.types.protocol.core import ValidatorIndex
 from jam.utils import constants
 from jam.network.node import Node
 from jam.work_package.stores.audits import AuditShardsDA
 from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentShardsDA
-from jam.config.settings import settings
 from jam.types.protocol.crypto import Hash
-from jam.config.logging import logger
 from jam.network.protocols.ce_135 import GuaranteedWR
-from jam.types.block.extrinsics.assurances import AvailAssurance
+from jam.types.block.extrinsics.assurances import AvailAssuranceNetwork
 from jam.types.protocol.crypto import Ed25519Signature
 
+
+logger = get_logger("in_core")
 
 @structure
 class Generate_Assurance:
 
-
-    async def generate_assurance(self, report: GuaranteedWR, node: Node) -> AvailAssurance :
-
+    async def generate_assurance(self, report: GuaranteedWR, node: Node) -> AvailAssuranceNetwork :
         """ Here we use shard distributions """
+        from jam.settings import settings
+
 
         slot = report.slot
-
         validator_index = ValidatorIndex(4)
 
         erasure_root = report.report.package_spec.erasure_root

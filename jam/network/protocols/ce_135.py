@@ -1,6 +1,6 @@
 import asyncio
 from typing import cast
-from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
+from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure, Bytes
 
 from jam.logging import logger
 
@@ -10,7 +10,7 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 from jam.types.block.extrinsics.guarantees import ValidatorSignatures
 from jam.types.protocol.core import ValidatorIndex, TimeSlot
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.work.report import WorkReport
 
 from jam.work_package.stores.audits import AuditShardsDA
@@ -139,6 +139,15 @@ class WorkReportDistribution(NetworkProtocol):
         logger.debug("Requesting Shard", shard_index=shard_index, erasure_root=er_root)
         shard = await CE137.transmit(node=node, data=data)
 
+        from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
+        from jam.types.block.extrinsics.assurances import AvailAssuranceNetwork, AvailBitField
+        from tsrkit_types.bits import Bits
+
+        CE141 = AssuranceDistribution()
+
+        anchor_hash : OpaqueHash = Bytes.fromhex("5c743dbc514284b2ea57798787c5a155ef9d7ac1e9499ec65910a7a3d65897b7"),
+        bitfield : AvailBitField  = AvailBitField([])
+
         # Save Shard
         if shard is not None:
             # Store Bundle Shard
@@ -152,14 +161,15 @@ class WorkReportDistribution(NetworkProtocol):
             ss_da.put(er_root, shard_index, shard[1])
 
             # Distribute Assurance
-            # TODO: Fix Assurances Distribution
-            # from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
-            # CE141 = AssuranceDistribution()
-            #
-            # from jam.network.utils.dummy_assurance import create_dummy_assurances
-            # assurance = create_dummy_assurances()
-            # data = CE141Data(assurance)
-            # ack = await CE141.transmit(node=node, data=data)
+            bit = Bits[1]
+            assurance = AvailAssuranceNetwork(
+                anchor=  OpaqueHash,
+                bitfield = bitfield.append(bit),
+                signature = b'\x89\x11\x7f!\x1dsc\x08\xb5\xd9\xc0\xf6\xbd\x0c\xe4\xc5\x01\xaaV\x90u\x05m\r\x00\x14{\xcbAH\xbb\xd0\xfb\xfa\xfc\xb85!\xa3\xdc\xd8z\xfd6E\xeff\x8e\xe2\xb2\xe8\xe0\xac\x0b\rK\xd2\xdbwO\x8aD\xfb\x17x\t\xbd9\xa4\x88\xa6\x88:d\x97\x11\x8eU\x98cD\xe6\x97s\n\x8dH\x16\x9f\x83\xd7jY\xd9F\x00'
+            )
+
+            data = CE141Data(assurance)
+            ack = await CE141.transmit(node=node, data=data)
 
             # Save Report
             rep_da = ReportsDA(d3l)
@@ -168,3 +178,13 @@ class WorkReportDistribution(NetworkProtocol):
 
 
             logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
+
+        else:
+            bit = Bits[0]
+            assurance = AvailAssuranceNetwork(
+                anchor=OpaqueHash,
+                bitfield=bitfield.append(bit),
+                signature= b'\x89\x11\x7f!\x1dsc\x08\xb5\xd9\xc0\xf6\xbd\x0c\xe4\xc5\x01\xaaV\x90u\x05m\r\x00\x14{\xcbAH\xbb\xd0\xfb\xfa\xfc\xb85!\xa3\xdc\xd8z\xfd6E\xeff\x8e\xe2\xb2\xe8\xe0\xac\x0b\rK\xd2\xdbwO\x8aD\xfb\x17x\t\xbd9\xa4\x88\xa6\x88:d\x97\x11\x8eU\x98cD\xe6\x97s\n\x8dH\x16\x9f\x83\xd7jY\xd9F\x00'
+            )
+            data = CE141Data(assurance)
+            ack = await CE141.transmit(node=node, data=data)

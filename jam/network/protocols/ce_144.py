@@ -1,6 +1,7 @@
 from venv import logger
-
 from typing import cast, TYPE_CHECKING
+
+from click import clear
 
 if TYPE_CHECKING:
     from jam.network.node import Node
@@ -10,19 +11,15 @@ from jam.network.base.quic import QuicProtocol
 from jam.types.protocol.core import CoreIndex, ValidatorIndex
 from tsrkit_types import U8, Vector
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, BandersnatchVrfSignature, HeaderHash
-# from jam.config.logging import logger
 from typing import cast
-from jam.work_package.processor import Processor
 from jam.network.protocols.ce_138 import CE138Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from typing import List, Tuple
-from jam.work_package.processor import Processor
-
+from typing import Tuple
 
 
 @structure
 class Announcement:
-    assigned_report: List[Tuple[CoreIndex, WorkReportHash]]
+    assigned_report: TypedVector[Tuple[CoreIndex, WorkReportHash]]
     ed25519_signature: Ed25519Signature
 
 @structure
@@ -48,7 +45,7 @@ class Transmit:
 @structure
 class CE144data:
     len_a: Uint[32]
-    transmit : Transmit
+    tranche_announcement : Transmit
     len_b : Uint[32]
     def __init__(self, tranche):
         if tranche == 0:
@@ -111,6 +108,8 @@ class AuditAnnouncement(NetworkProtocol):
                 logger.info("sending announcement to other validators")
                 client = node.peer_conn[peer][1]
                 stream_id = client.stream_and_keep_open(message=stream_a)
+                client.stream_and_keep_open(message=mes_a)
+                client.stream_and_keep_open(message=len_a)
                 data = await client.stream_and_close(message=stream_b, stream_id=stream_id)
                 responses.append(data)
 
