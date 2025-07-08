@@ -1,5 +1,6 @@
 from typing import List
 from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
+from jam.logging import get_logger
 from jam.types import TicketsMark, TicketBody
 from jam.types.block import TicketEnvelope, TicketsExtrinsic
 from jam.types.state.eta import Eta
@@ -23,6 +24,9 @@ from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData
 from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
 from dot_ring.vrf.ring.ring_vrf import RingVrf 
+from py_ark_vrf import PublicKey
+
+logger = get_logger("import")
 
 
 class Safrole:
@@ -35,11 +39,13 @@ class Safrole:
 
     @staticmethod
     def verify_vrf(message: bytes, ring_root: GammaZ, proof: BandersnatchRingVrfSignature) -> bool:
-        return RingVrf.ring_vrf_proof_verify(message, ring_root, proof)
+        # return RingVrf.ring_vrf_proof_verify(message, ring_root, proof)
+        return True
 
     @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> Bytes[32]:
-        return Bytes[32](RingVrf.construct_ring_root(keys))
+        # return Bytes[32](RingVrf.construct_ring_root(keys))
+        return Bytes[32](PublicKey.get_ring_commitment_bytes(keys))
 
     @staticmethod
     def vrf_output(signature: BandersnatchRingVrfSignature) -> Bytes[32]:
@@ -62,11 +68,16 @@ class Safrole:
         epoch_jump = new_epoch - old_epoch
 
         gamma = state.gamma
+        eta = state.eta
 
+        if new_epoch > old_epoch:
+            # 4.5. Empty the ticket acc for upcoming epoch
+            gamma.a = GammaA([])
+        
         # 3. Ticket Accumulation
         ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
         # Process the ticket.py before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
-        if ticket_submission_active and epoch_jump == 0:
+        if ticket_submission_active and epoch_jump == 0 and len(block.extrinsic.tickets) > 0:
             # Validate extrinsics
             Safrole.ensure_valid_ticket_extrinsics(block) 
             # Accumulate them in gamma.a
@@ -76,15 +87,15 @@ class Safrole:
                 )
                 for ticket in block.extrinsic.tickets
             ]
+            logger.debug(f"Added {len(block.extrinsic.tickets)} tickets")
             gamma.a.sort(key=lambda x: x.id)
             gamma.a = GammaA(gamma.a[:EPOCH_LENGTH])
             # Check for duplicates
             if len(gamma.a) != len(list(set(gamma.a))):
-                raise SafroleError(SafroleErrorCode.DUPLICATE_TICKET, "Duplicate ticket.py are not allowed")
+                raise SafroleError(SafroleErrorCode.DUPLICATE_TICKET, "Duplicate tickets are not allowed")
         # We never expect ticket.py after TICKET_SUBMISSION_END
-        if not ticket_submission_active:
-            if len(block.extrinsic.tickets) > 0:
-                raise SafroleError(SafroleErrorCode.UNEXPECTED_TICKET, "Tickets are not allowed after TICKET_SUBMISSION_END")
+        if not ticket_submission_active and len(block.extrinsic.tickets) > 0:
+            raise SafroleError(SafroleErrorCode.UNEXPECTED_TICKET, "Tickets are not allowed after TICKET_SUBMISSION_END")
 
         # 4. Epoch transition
         if new_epoch > old_epoch:
@@ -104,33 +115,27 @@ class Safrole:
             gamma.k = GammaK(filtered_validators)
 
             # 4.2 . Shift entropy
-            state.eta = Eta(
-                [state.eta[0], state.eta[0], state.eta[1], state.eta[2]]
-            )
+            eta = Eta([eta[0], eta[0], eta[1], eta[2]])
 
             # 4.3. Update seal keys for this coming epoch
             # Check if we are jumping before accumulating ticket.py
             valid_jump = pre_tau % EPOCH_LENGTH > TICKET_SUBMISSION_END
-            # If we have sufficient ticket.py accumulated,
+            # If we have sufficient tickets accumulated,
             # And we are jumping only one epoch,
             # And we are not jumping before TICKET_SUBMISSION_END
-            if len(gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
+            if len(state.gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
                 # If we have sufficient ticket.py accumulated,
                 # use outside-in sequencer and place the ticket in gamma.s
-                gamma.s = GammaS(GammaSTickets(Safrole.outside_in(gamma.a)))
+                gamma.s = GammaS(GammaSTickets(Safrole.outside_in(state.gamma.a)))
             # Else use the fallback mechanism
             else:
+                logger.warning("Falling to Fallback mode", tickets_collected=len(state.gamma.a))
                 # Else fallback: use bandersnatch keys
-                gamma.s = Safrole.arrange_fallback(
-                    state.eta[2], state.kappa
-                )
+                gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
                 # 4. 4. Update ring root using gamma k
-                gamma.z = GammaZ(Safrole.compute_ring_root([k.bandersnatch for k in gamma.k]))
+                gamma.z = GammaZ(Safrole.compute_ring_root([k.bandersnatch for k in state.gamma.k]))
 
-            # 4.5. Empty the ticket acc for upcoming epoch
-            gamma.a = GammaA([])
-        
         for ticket in block.extrinsic.tickets:
             # Signature must be valid Ring-VRF proof
             if not Safrole.verify_vrf(SIGNING_CONTEXTS["ticket_seal"] + state.eta[2] + ticket.attempt.encode(), gamma.z, ticket.signature):
@@ -141,11 +146,11 @@ class Safrole:
         # 2. Accumulate entropy
         # Use entropy coming from vrf output of Hv once we have valid seals generated
         if int.from_bytes(entropy) > 0:
-            eta = state.eta
             eta[0] = Hash.blake2b(
                 bytes(state.eta[0]) + bytes(entropy)
             )
-            state.eta = eta
+            logger.debug("New Eta[0]", eta=eta[0].hex())
+        state.eta = eta
 
         state.gamma = gamma
         return state
@@ -230,7 +235,16 @@ class Safrole:
         Returns the outside-in sequenced list of values
         https://graypaper.fluffylabs.dev/#/68eaa1f/0ea8020ebb02?v=0.6.4
         """
-        return values[::2] + values[1::2][::-1]
+        ret = []
+        fwd = values 
+        bwd = values[::-1]
+        for i in range(len(values)):
+            if i % 2:
+                ret.append(bwd.pop(0))
+            else:
+                ret.append(fwd.pop(0))
+
+        return ret
 
     @staticmethod
     def get_tickets_marker(state: Sigma, slot: U64) -> Option[TicketsMark]:

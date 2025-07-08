@@ -12,14 +12,15 @@ class AssuranceCollector:
     def record_shard_assr(self, core_index: int):
         self._collected[core_index] = True 
     
-    async def run(self, time_slot: int) -> bytes:
-        # TODO: Check structure
+    async def run(self, time_slot: int):
         from jam.settings import settings
         signr = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private).sign(
             Bytes.from_bits(self._collected)
         )
+        # TODO: Construct & Transmit Ea 
         print("Operator for assr collector", time_slot, signr.hex())
-    
+        self.clear()
+
     def clear(self):
         self._collected = [False] * CORE_COUNT
 

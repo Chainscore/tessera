@@ -21,7 +21,7 @@ class Finality:
 
     @classmethod
     def finalise(cls, header_hash: HeaderHash, kv: RockStore):
-        asyncio.create_task(ws_broker.publish("final", {"" : header_hash}))
+        # asyncio.create_task(ws_broker.publish("final", {"" : header_hash}))
         logger.debug("Finalised block", header_hash=header_hash.hex())
         kv.put(cls.FINAL_KEY, header_hash.encode())
 
