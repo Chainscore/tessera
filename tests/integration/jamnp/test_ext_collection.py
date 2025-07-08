@@ -10,7 +10,8 @@ import os
 import time
 
 from dotenv import load_dotenv
-from jam.consensus.bp_engine import BlockProducer
+from jam.operations.bp_engine import BlockProducer
+from jam.operations.operator import operate
 from tsrkit_types import U32, TypedVector, U64, Dictionary, Bool
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
@@ -275,7 +276,7 @@ async def run_node(
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            tg.create_task(BlockProducer(node=tsr_node, db=main_db).run())
+            tg.create_task(operate(is_builder))
             tg.create_task(start_node(tsr_node))
 
     except KeyboardInterrupt:

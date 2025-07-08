@@ -95,7 +95,7 @@ class WorkReportDistribution(NetworkProtocol):
             raise NetworkingError(Code.INVALID_DATA)
 
         # Save extrinsic
-        from jam.consensus.ext_store import ext_store
+        from jam.operations.ext_store import ext_store
         ext_store.import_rg(data.guaranteed_wr)
 
         # Send Acknowledgement

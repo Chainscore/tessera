@@ -30,28 +30,17 @@ class Builder:
         node (Node): The network node for communications
         settings (Settings): Settings related to node
     """
-
-    node: Node
-    settings: Settings
-
-    def __init__(self, node: Node, settings: Settings):
-        self.node = node
-        self.settings = settings
-
-        logger.info(
-            "Work Package producer initialized",
-            node_name=node.name,
-            is_builder=node.is_builder,
-        )
-
-    async def run(self):
+    
+    @classmethod
+    async def run(cls, time_slot: int):
         """
         Starts the WP producer engine in asyncio loop.
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
+        from jam.settings import settings
+        from jam.network.node import node
 
         CE133 = WorkPackageSubmission()
-        node = self.node
 
         wp_iter = 0
 
@@ -82,7 +71,7 @@ class Builder:
             )
 
             if node.is_builder:
-                wp = self._build_package(wp_iter)
+                wp = cls._build_package(wp_iter)
 
                 wc = WorkPackageCore(wp, CoreIndex(1))
                 ext = Extrinsics([])
@@ -93,7 +82,6 @@ class Builder:
 
                 logger.info(
                     "Producing work package",
-                    node_name=node.name,
                     iteration=wp_iter,
                     core_index=1,
                     extrinsics_count=0,

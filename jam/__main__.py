@@ -105,7 +105,7 @@ async def main(
             # RPC 
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
-            tg.create_task(operate())
+            tg.create_task(operate(is_builder))
 
     except KeyboardInterrupt:
         logger.info(

@@ -1,18 +1,27 @@
 import asyncio
 import time
 from typing import Callable, List, Tuple
+
+from jam.logging import get_logger
+from jam.operations.builder import Builder
+
 from .assr_collector import assr_collector
 from .bp_engine import BlockProducer
 from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS 
 
 
-dispatch_fns: List[Tuple[int, NodeDispatcher]] = [
-    (0, BlockProducer),
-    # (0, Builder),
-    (2, None), # audit
-    (4, assr_collector), # transmit assurances
-]
+logger = get_logger("nodeops")
+
+def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
+    if is_bd:
+        return [(0, Builder)]
+    
+    return [
+        (0, BlockProducer),
+        (2, None), # audit
+        (4, assr_collector), # transmit assurances
+    ]
 
 
 async def schedule_run(sch_ts: int, runner: NodeDispatcher, *args) -> None:
@@ -20,7 +29,7 @@ async def schedule_run(sch_ts: int, runner: NodeDispatcher, *args) -> None:
     await runner.run(*args)
 
 
-async def operate():
+async def operate(is_builder):
     """
     Starts a never ending 6-sec loop
     """
@@ -33,9 +42,9 @@ async def operate():
         curr_time = time.time()
         if curr_time < ts_start_time:
             await asyncio.sleep(ts_start_time - curr_time)
-        print("Started TS", ts, int(time.time())) 
+        logger.debug("Node operations started", time_slot=ts) 
         # Schedule tasks to run immediately
-        for dispatch in dispatch_fns:
+        for dispatch in dispatch_fns(is_builder):
             (task_ts, runner) = dispatch
             if runner: asyncio.create_task(schedule_run(task_ts, runner, ts))
 
