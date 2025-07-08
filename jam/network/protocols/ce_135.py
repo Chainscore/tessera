@@ -1,5 +1,6 @@
 import asyncio
 from typing import cast
+from jam.operations import assr_collector
 from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
 
 from jam.logging import logger
