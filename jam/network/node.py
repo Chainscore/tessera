@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.logging import get_logger
 
-from jam.types.protocol.validators import ValidatorData
+from jam.types.protocol.validators import ValidatorData, ValidatorsData
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import Ed25519Public
 from jam.types.work.shard import ShardIndex
@@ -382,3 +382,11 @@ class Node:
         for peer in self.peer_conn:
             _, conn = self.peer_conn[peer]
             conn.close(reason_phrase=f"Closing node {self.__id}")
+
+node = Node("god", "0.0.0.0", 0, ValidatorsData.decode(bytes(10000)), [], False, False)
+
+def setup_node(name, port, peers, is_val = True, is_bd = False, host="0.0.0.0") -> Node:
+    global node
+    from jam.settings import settings
+    node = Node(name, host, port, settings.val, peers, is_bd, is_val)
+    return node

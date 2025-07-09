@@ -96,7 +96,7 @@ class WorkPackageSharing(NetworkProtocol):
         ci = data.core_segment.core_index
 
         from jam.state.state import state
-        logger.info("Tau", tau=state.tau)
+        logger.debug("Tau", tau=state.tau)
         mapping = guarantor_assignments(state)[ci]
 
         logger.info(
@@ -115,6 +115,9 @@ class WorkPackageSharing(NetworkProtocol):
         tasks = []
         try:
             for peer in node.peer_conn:
+                if int(peer.port) != 40001:
+                    continue
+
                 if peer.ed_key in mapping:
                     logger.debug("Sending bundle to", port=peer.port)
                     client = node.peer_conn[peer][1]
@@ -232,7 +235,7 @@ class WorkPackageSharing(NetworkProtocol):
                 server.stream_and_keep_open(len_a, stream_id)
                 server.stream_and_close(msg_a, stream_id)
 
-            write_benchmarks_to_txt("benchmarks/guarantee.txt")
+            # write_benchmarks_to_txt("benchmarks/guarantee.txt")
 
             logger.debug(
                 "Report credential sent to OG guarantor",

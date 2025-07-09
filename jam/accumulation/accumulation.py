@@ -338,7 +338,14 @@ class Accumulation:
                         )
                     )
 
-        posterior_state, transfers, optional_hash, gas, preimage = PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=p).execute()
+        posterior_state, transfers, optional_hash, gas, preimage = PsiA(
+            u=initial_state, 
+            t=timeslot, 
+            s=service_id, 
+            g=g, 
+            o=p
+        ).execute()
+        
         return posterior_state, transfers, optional_hash, gas, preimage
 
     @staticmethod

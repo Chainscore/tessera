@@ -48,6 +48,7 @@ class PsiA(InvocationProtocol):
             16: (AccumulateFunctions, {}),                                                                  # yield_ (Updates context[x]_hash)
             18: (GeneralFunctions, {                                                                        # fetch (Updates context[x]_hash)
                 "package": None,
+                # TODO: This should be posterier
                 "entropy": state.eta[0],
                 "trace": None,
                 "item_index": None,
@@ -70,7 +71,7 @@ class PsiA(InvocationProtocol):
                 meta_n_code[1],
                 5,
                 int(self.gas),
-                Uint(self.timeslot).encode() + Uint(self.service_id).encode() + self.operandTuples.encode(),
+                Uint(self.timeslot).encode() + Uint(self.service_id).encode() + Uint(len(self.operandTuples)).encode(),
                 self.dispatch,
                 self.context,
             )

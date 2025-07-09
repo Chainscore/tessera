@@ -4,21 +4,18 @@ from time import time
 
 from tsrkit_types import Bytes, U16, Uint
 
-from jam.state.state import State
 from jam.execution.pvm.code import Code
-from jam.state.accounts import AccountMetadata
 from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
 from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
 from jam.types.work.manifest import Extrinsics
-from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
+from jam.utils.constants import EPOCH_LENGTH, GENESIS_TS
 from jam.network.node import Node
 from jam.logging import get_logger
 from rockstore import RockStore
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
-from jam.types.protocol.core import CoreIndex, Gas, Balance, BlobLength, ServiceId, SegmentRoot
+from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
 
 # Logger for WP Production
 logger = get_logger("in_core")
@@ -32,9 +29,6 @@ async def wp_producer(node: Node, db: RockStore):
         db (RockStore): The database to store the genesis timestamp
     """
 
-    # Record genesis timestamp in seconds
-    genesis_ts = time()
-
     C133 = WorkPackageSubmission()
 
     wp_iter = 0
@@ -43,7 +37,7 @@ async def wp_producer(node: Node, db: RockStore):
         "Starting work package producer",
         node_name=node.name,
         is_builder=node.is_builder,
-        genesis_timestamp=genesis_ts
+        genesis_timestamp=GENESIS_TS
     )
 
     while True:
@@ -56,12 +50,11 @@ async def wp_producer(node: Node, db: RockStore):
                 iteration=wp_iter
             )
             await asyncio.sleep(6)
-            genesis_ts = time()
             continue
 
         # Get state from db
         from jam.state.state import state
-        current_timeslot = (time() - genesis_ts) // 6
+        current_timeslot = (time() - GENESIS_TS) // 6
 
         # Get current timeslot
         ts_epoch_index = floor(current_timeslot % EPOCH_LENGTH)
@@ -126,8 +119,6 @@ async def wp_producer(node: Node, db: RockStore):
             else:  # wp_iter % 4 == 3
                 import_specs = [import_spec1, import_spec2]
 
-            # import_specs = [import_spec2]
-
             wi = WorkItem(
                 service=wi_service,
                 code_hash=wi_code_hash,
@@ -173,7 +164,5 @@ async def wp_producer(node: Node, db: RockStore):
             )
 
         # Sleep for remaining time of the timeslot
-        await asyncio.sleep(6 - (time() - genesis_ts) % 6)
+        await asyncio.sleep(6 - (time() - GENESIS_TS) % 6)
         wp_iter += 1
-
-        # break

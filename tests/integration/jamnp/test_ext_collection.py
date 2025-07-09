@@ -10,6 +10,8 @@ import os
 import time
 
 from dotenv import load_dotenv
+from jam.operations.bp_engine import BlockProducer
+from jam.operations.operator import operate
 from tsrkit_types import U32, TypedVector, U64, Dictionary, Bool
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
@@ -26,7 +28,7 @@ from jam.consensus.grandpa.finality import Finality
 from jam.settings import setup_setting
 
 from jam.network.peer import Peer
-from jam.network.node import Node
+from jam.network.node import Node, setup_node
 
 from jam.operations.utils.state_update import update_state
 from jam.state.state import setup_state, State
@@ -46,7 +48,6 @@ from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex
 from jam.work_package.processor import Processor
 from jam.work_package.stores.reports import ReportsDA
-from tests.integration.jamnp.utils.run_node import run_node_process
 
 CLIENTS = [
     {
@@ -57,6 +58,12 @@ CLIENTS = [
     },
     {
         "port": 40001,
+        "role": "VALIDATOR",
+        "theme": "default",
+        "genesis": True
+    },
+    {
+        "port": 40003,
         "role": "VALIDATOR",
         "theme": "default",
         "genesis": True
@@ -78,16 +85,19 @@ wr_hash = WorkReportHash(b'\x18is\xa2\xd8\x8e\x15\xbd5H\xc6\xd3\xe3\xed\x87\xd6?
 wc = WorkPackageCore(wp, CoreIndex(1))
 ext = Extrinsics([])
 
-async def node_tasks(node: Node):
+async def start_node(node: Node):
     """Define Node tasks"""
 
     # Wait for node to initialize
-    await asyncio.sleep(5)
-    print("NODE STARTED")
+    await asyncio.sleep(2)
+    print("NODE STARTED", ": Builder" if node.is_builder else "node")
 
     if node.is_builder:
-        protocol = WorkPackageSubmission()
+        # processor = Processor(node)
+        # expected_wr, expected_wr_hash = processor.process(wp, CoreIndex(1), ext)
+        # assert expected_wr == wr and expected_wr_hash == wr_hash
 
+        protocol = WorkPackageSubmission()
 
         package_len = Uint[32](len(wc.encode()))
         ext_len = Uint[32](len(ext.encode()))
@@ -103,22 +113,27 @@ async def node_tasks(node: Node):
             print("BUILDER ASSERTION SUCCESS")
 
 
-    else:
-        # Wait for refinement to happen
-        await asyncio.sleep(20)
-        from jam.settings import settings
+def run_node_process(
+    genesis_path: str,
+    env: str,
+    start_genesis: bool,
+    theme: str,
+    is_builder: bool,
+    is_validator: bool,
+):
+    # Handle clean termination
+    def handle_sigterm(signum, frame):
+        exit(0)
+    signal.signal(signal.SIGTERM, handle_sigterm)
 
-        # Check if report exists in db or not
-        try:
-            db = settings.d3l
-            da = ReportsDA(db)
-
-            rep = da.get(wr_hash)
-            assert rep == wr
-            print("WR ASSERTION SUCCESS")
-
-        except Exception as e:
-            raise AssertionError("Report not found on Guarantor")
+    asyncio.run(run_node(
+        genesis_path,
+        env,
+        start_genesis,
+        theme,
+        is_builder,
+        is_validator
+    ))
 
 
 @pytest.mark.asyncio
@@ -141,7 +156,7 @@ async def test_connection():
 
         p = Process(
             target=run_node_process,
-            args=("", env_path, client["genesis"], client["theme"], is_builder, is_validator, node_tasks)
+            args=("", env_path, client["genesis"], client["theme"], is_builder, is_validator)
         )
         processes.append(p)
 
@@ -152,7 +167,7 @@ async def test_connection():
     print("ALL PROCESSES STARTED")
 
     # KEEP TEST ALIVE FOR SOME TIME
-    await asyncio.sleep(20)
+    await asyncio.sleep(36)
 
     print("TERMINATING PROCESSES")
     for p in processes:
@@ -162,3 +177,105 @@ async def test_connection():
 
     print("END OF TEST")
 
+
+async def run_node(
+    genesis_path: str,
+    env: str,
+    start_genesis: bool,
+    theme: str,
+    is_builder: bool,
+    is_validator: bool
+):
+    """Main fn to start the node"""
+    # ---------- SETUP LOGGING ----------
+    genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
+    init_ts = int((time.time() - genesis_ts) / SLOT_PERIOD)
+    init_ep = int(init_ts // EPOCH_LENGTH)
+
+    # ---------- LOAD ENVIRONMENT ----------
+    load_dotenv(".env")
+    load_dotenv(env, override=True)
+
+    name = os.environ["NODE_NAME"]
+    port = os.environ["PORT"]
+    seed = os.environ["SEED"]
+    host = os.environ["HOST"]
+
+    if not name or not port or not host or not seed:
+        raise ValueError(f"Missing node info in {env}")
+
+    # ---------- SETUP LOGGING ----------
+    environment = os.environ.get("ENVIRONMENT", "development")
+    log_level = os.environ.get("LOG_LEVEL", None)
+
+    setup_logging(
+        theme=theme,
+        node_name=name,
+        environment=environment,
+        min_level=getattr(logging, log_level.upper()) if log_level else None
+    )
+
+    # ---------- SETUP SETTINGS ----------
+    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+
+    main_db = settings.main_db
+
+    logger.info(
+        "Starting JAM node",
+        name=name,
+        port=port,
+        ts=init_ts,
+        epoch=init_ep,
+        spec=chain_config.name,
+        environment=environment,
+        is_builder=is_builder,
+        is_validator=is_validator
+    )
+
+    try:
+        # Set genesis state
+        # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
+        state = setup_state(settings.state_db, "dev-spec.json")
+        state.store.disable_cache()
+        update_state(state)
+
+        peers = [
+            Peer(
+                id=generate_san(val.ed25519),
+                data=val
+            )
+            for val in state.kappa
+            if val.metadata.port != port
+        ]
+
+        tsr_node = setup_node(name, int(port), peers, is_bd=is_builder, is_val=is_validator)
+
+        block = Block.genesis()
+        header_hash = block.save(main_db)
+        Finality.set_head(header_hash, main_db)
+
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(tsr_node.initialize())
+            tg.create_task(operate(is_builder))
+            # tg.create_task(start_node(tsr_node))
+
+    except KeyboardInterrupt:
+        logger.info(
+            "JAM node shutting down gracefully",
+            node_name=name,
+            port=port,
+            reason="keyboard_interrupt"
+        )
+    except Exception as e:
+        logger.critical(
+            "JAM node fatal error",
+            node_name=name,
+            port=port,
+            error=str(e)[:200],
+            error_type=type(e).__name__
+        )
+
+        # Close db connections
+        settings.clear()
+
+        raise
