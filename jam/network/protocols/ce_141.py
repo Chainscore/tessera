@@ -63,6 +63,7 @@ class AssuranceDistribution(NetworkProtocol):
         responses = TypedVector([])
 
         for peer in node.peer_conn:
+            print("ASSURER TRANSMIT RUN", node.name, peer.port)
 
             client = node.peer_conn[peer][1]
 

@@ -1,4 +1,6 @@
-from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
+import time
+
+from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, GENESIS_TS
 from jam.utils.shuffle import shuffle
 from tsrkit_types import TypedVector, U32
 from math import floor
@@ -22,7 +24,10 @@ def permute(e, t) -> TypedVector[U32]:
     return rotation(c, n)
 
 def guarantor_assignments(state):
-    n_c = permute(state.eta[2], state.tau)
+    ts = (time.time() - GENESIS_TS) // 6
+    n_c = permute(state.eta[2], ts)
+    print("TS", ts)
+    # n_c = permute(state.eta[2], state.tau)
 
     validator_keys = []
     for i in state.kappa:
@@ -35,5 +40,5 @@ def guarantor_assignments(state):
         if key not in mapping:
             mapping[key] = set()
         mapping[key].add(value)
-
+    print("MAPPING FN", mapping, (time.time() - GENESIS_TS) // 6, state.tau)
     return mapping

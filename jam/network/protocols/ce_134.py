@@ -1,5 +1,8 @@
+import time
 from typing import cast, TYPE_CHECKING, Tuple
 from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32
+
+from jam.utils.constants import GENESIS_TS
 
 if TYPE_CHECKING:
     from jam.network.node import Node
@@ -98,6 +101,8 @@ class WorkPackageSharing(NetworkProtocol):
         from jam.state.state import state
         logger.debug("Tau", tau=state.tau)
         mapping = guarantor_assignments(state)[ci]
+        print("MAPPING 134", mapping, (time.time() - GENESIS_TS) // 6, state.tau)
+
 
         logger.info(
             "Transmitting work package bundle to guarantors",

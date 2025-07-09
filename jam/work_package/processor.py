@@ -508,10 +508,13 @@ class Processor:
                         validator_index=validator_index,
                         signature=cred.ed25519_signature
                     )
+                    print("REC GUARANTEE", guarantee)
                     guarantees.append(guarantee)
 
         # Sort them guarantees
+
         guarantees = ValidatorSignatures(sorted(guarantees, key = lambda g: g.validator_index))
+        print("GUARANTEES BUILT", guarantees)
         # Distribute Guaranteed WR to Validators CE135
         logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
         if len(guarantees) > 1:

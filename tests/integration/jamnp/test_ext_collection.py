@@ -267,7 +267,7 @@ async def run_node(
             if val.metadata.port != port
         ]
 
-        tsr_node = setup_node(name, int(port), peers, is_bd=is_builder, is_val=is_validator)
+        tsr_node = setup_node(name, int(port), peers, is_bd=is_builder, is_val=is_validator, host="127.0.0.1")
 
         block = Block.genesis()
         header_hash = block.save(main_db)

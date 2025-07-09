@@ -43,6 +43,7 @@ async def main(
     port = os.environ["PORT"]
     seed = os.environ["SEED"]
     host = os.environ["HOST"]
+    logger.info("SET HOST", host=host)
 
     if not name or not port or not host or not seed:
         raise ValueError(f"Missing node info in {env}")
