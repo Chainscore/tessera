@@ -20,6 +20,7 @@ from jam.work_package.stores.segments import SegmentShardsDA
 from jam.types.protocol.crypto import Hash
 from jam.merklization import BMRFunctions
 from jam.utils.chainspec import chain_config
+from jam.utils.gather import gather_with_exceptions
 
 @structure
 class Query:
@@ -86,7 +87,7 @@ class ShardDistributionProtocol(NetworkProtocol):
 
         logger.info(f"Requesting shard from {len(node.peer_conn)} guarantors")
 
-        tasks = []
+        tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
                 if Uint[16](peer.peer_index) in assurers:
@@ -106,7 +107,7 @@ class ShardDistributionProtocol(NetworkProtocol):
                     task = asyncio.create_task(res)
                     tasks.append(task)
 
-            responses = await asyncio.gather(*tasks)
+            responses = await gather_with_exceptions(tasks)
 
             if responses is not None:
                 return responses
@@ -176,7 +177,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             justification = Justification(bmrfunctions.trace_fn(values=s, index=shard_index).unwrap())
 
             justification_da = JustificationsDA(audit)
-            justification_da.put(erasure_root, justification)
+            justification_da.put(erasure_root, shard_index, justification)
 
             # Return requested shards
             msg_a = bundle_shard.encode()

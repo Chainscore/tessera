@@ -23,6 +23,7 @@ from jam.work_package.validator import Validator
 from jam.work_package.guarantor_assignments import guarantor_assignments
 import asyncio
 from jam.types.protocol.core import ValidatorIndex
+from jam.utils.gather import gather_with_exceptions
 
 # Module-specific logger
 logger = get_logger("network")
@@ -112,7 +113,7 @@ class WorkPackageSharing(NetworkProtocol):
         transmitted_count = 0
         responses = []
         # TODO: Use Actual Guarantors Connections
-        tasks = []
+        tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
                 if peer.ed_key in mapping:
@@ -146,7 +147,7 @@ class WorkPackageSharing(NetworkProtocol):
             if transmitted_count > 2:
                 raise ValueError("Trying to transmit work package bundle to more than 2 guarantors")
 
-            responses = await asyncio.gather(*tasks)
+            responses = await gather_with_exceptions(tasks)
 
             logger.info(
                 "Work package bundle transmission completed",

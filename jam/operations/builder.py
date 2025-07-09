@@ -101,11 +101,20 @@ class Builder:
                 )
 
                 responses = await CE133.transmit(node, data)
-                logger.debug(
-                    "Work package transmitted",
-                    node_name=node.name,
-                    iteration=wp_iter
-                )
+
+                if len(responses) == 1:
+                    wp_iter += 1
+                    logger.debug(
+                        "Work package transmitted",
+                        node_name=node.name,
+                        iteration=wp_iter
+                    )
+                else:
+                    logger.debug(
+                        "No work package transmitted",
+                        node_name=node.name,
+                        iteration=wp_iter
+                    )
 
             else:
                 logger.debug(
@@ -116,7 +125,7 @@ class Builder:
 
             # Sleep for remaining time of the timeslot
             await asyncio.sleep(SLOT_PERIOD - (time() - GENESIS_TS) % SLOT_PERIOD)
-            wp_iter += 1
+            # wp_iter += 1
 
     @staticmethod
     def _build_package(wp_iter: int) -> WorkPackage:

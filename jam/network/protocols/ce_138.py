@@ -1,7 +1,7 @@
 import asyncio
 from typing import cast, Tuple
 
-from tsrkit_types import Uint, structure, TypedVector, Bytes
+from tsrkit_types import Uint, structure, TypedVector, Bytes, Null
 
 from jam.logging import logger
 
@@ -18,6 +18,7 @@ from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 from jam.merklization import BMRFunctions
 from jam.types.protocol.crypto import Hash
+from jam.utils.gather import gather_with_exceptions
 
 
 CE138Data = CE137Data
@@ -66,7 +67,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         logger.info(f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer")
 
-        tasks = []
+        tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
                 logger.info("Requesting audit shard from peer", port=peer.port)
@@ -85,7 +86,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
                 task = asyncio.create_task(res)
                 tasks.append(task)
 
-            responses = await asyncio.gather(*tasks)
+            responses = await gather_with_exceptions(tasks)
 
             if responses is not None:
                 return responses
@@ -107,51 +108,67 @@ class AuditShardRequestProtocol(NetworkProtocol):
         data, offset = CE138Data.decode_from(buffer[1:])
         data = cast(CE138Data, data)
 
-        if not data.is_valid:
-            raise NetworkingError(Code.INVALID_DATA)
+        try:
+            if not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
 
-        erasure_root = data.query.erasure_root
-        shard_index = data.query.shard_index
+            erasure_root = data.query.erasure_root
+            shard_index = data.query.shard_index
 
-        logger.info("Processing")
-        # TODO: Process received erasure code & shard index
+            logger.info("Processing")
+            # TODO: Process received erasure code & shard index
 
-        d3l = settings.d3l
-        audit = settings.audit_da
+            d3l = settings.d3l
+            audit = settings.audit_da
 
-        # Fetch Segments Shard
-        ss_da = SegmentShardsDA(d3l)
-        ss_dict = ss_da.get(erasure_root)
+            # Fetch Segments Shard
+            ss_da = SegmentShardsDA(d3l)
+            ss_dict = ss_da.get(erasure_root)
 
-        # Fetch Bundle Shard
-        audits_da = AuditShardsDA(audit)
-        bs_dict = audits_da.get(erasure_root)
-        bundle_shard = bs_dict[shard_index]
+            # Fetch Bundle Shard
+            audits_da = AuditShardsDA(audit)
+            bs_dict = audits_da.get(erasure_root)
+            if shard_index not in bs_dict.keys():
+                raise ValueError("Bundle shard not found")
+            bundle_shard = bs_dict[shard_index]
 
-        # Fetch Justifications
-        justification_da = JustificationsDA(audit)
-        justification = justification_da.get(erasure_root)
+            # Fetch Justifications
+            justification_da = JustificationsDA(audit)
+            justification = justification_da.get(erasure_root, shard_index)
 
-        bmrfunctions = BMRFunctions()
-        segment_shard = SegmentsShard(ss_dict[shard_index].shard)
-        segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
-        bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
+            bmrfunctions = BMRFunctions()
+            segment_shard = SegmentsShard(ss_dict[shard_index].shard)
+            segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
+            bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
 
-        shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
-        s = Bytes(shards_key.encode())
+            shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+            s = Bytes(shards_key.encode())
 
-        justification.append(s)
+            justification.append(s)
 
-        # Return requested shards
-        msg_a = bundle_shard.encode()
-        len_a = Uint[32](len(msg_a)).encode()
-        msg_b = justification.encode()
-        len_b = Uint[32](len(msg_a)).encode()
+            # Return requested shards
+            msg_a = bundle_shard.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+            msg_b = justification.encode()
+            len_b = Uint[32](len(msg_b)).encode()
 
-        server.stream_and_keep_open(len_a, stream_id)
-        server.stream_and_keep_open(msg_a, stream_id)
-        server.stream_and_keep_open(len_b, stream_id)
-        server.stream_and_close(msg_b, stream_id)
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_keep_open(msg_a, stream_id)
+            server.stream_and_keep_open(len_b, stream_id)
+            server.stream_and_close(msg_b, stream_id)
+
+        except Exception as e:
+            msg_a = b''.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+
+            # Send response
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_close(msg_a, stream_id)
+            logger.error(
+                "Failed to find audit shard.",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[BundleShard, Justification] | None:
@@ -163,7 +180,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
             data = cast(CE138Response, data)
 
             if not data or not data.is_valid:
-                    raise NetworkingError(Code.INVALID_DATA)
+                raise NetworkingError(Code.INVALID_DATA)
 
             logger.info("Data received on Auditor Node")
 

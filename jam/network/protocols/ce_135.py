@@ -20,6 +20,7 @@ from jam.work_package.stores.segments import SegmentShardsDA
 
 from jam.merklization import BMRFunctions
 from jam.types.work.shard import ShardKey
+from jam.utils.gather import gather_with_exceptions
 
 @structure
 class GuaranteedWR:
@@ -69,24 +70,35 @@ class WorkReportDistribution(NetworkProtocol):
         logger.info(f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators")
         # TODO: Use All Validators Connections
 
-        responses = TypedVector[OptBool]([])
-        for peer in node.peer_conn:
-            logger.debug("Sending report to:", port=node.port)
-            client = node.peer_conn[peer][1]
+        tasks = TypedVector([])
+        try:
+            for peer in node.peer_conn:
+                logger.debug("Sending report to:", port=peer.port)
+                client = node.peer_conn[peer][1]
 
-            # Send Protocol Prefix
-            stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-            # Append prefix to stream buffer so that we know the stream for handling response
-            client.stream_buffer[stream_id] = self._prefix.encode()
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
 
-            # Send Messages with their lengths
-            client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-            data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                task = asyncio.create_task(res)
+                tasks.append(task)
 
-            responses.append(data)
+            responses = TypedVector[OptBool](await gather_with_exceptions(tasks))
 
-        return responses
+            if responses is not None:
+                return responses
+
+        except Exception as e:
+            logger.error(
+                "Failed to distribute report.",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Work Report on Validator (server)"""
@@ -179,7 +191,7 @@ class WorkReportDistribution(NetworkProtocol):
 
                         # store justification
                         justification_da = JustificationsDA(audits)
-                        justification_da.put(er_root, justification)
+                        justification_da.put(er_root, shard_index, justification)
 
                         # Distribute Assurance
                         # TODO: Fix Assurances Distribution
