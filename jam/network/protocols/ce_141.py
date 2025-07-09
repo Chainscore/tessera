@@ -106,6 +106,7 @@ class AssuranceDistribution(NetworkProtocol):
             signature= assurance.ed25519_signature
         )
 
+        logger.error("RECEIVED ASSURANCE", peer=server.peer, assurance=assurance_extrinsic.to_json())
         ext_store.import_assr(assurance_extrinsic)
 
         # Return acknowledgment to Builder

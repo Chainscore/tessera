@@ -38,7 +38,7 @@ class Builder:
 
         CE133 = WorkPackageSubmission()
 
-        wp_iter = time_slot % 4
+        wp_iter = 0
 
         curr_ts = time_slot
         curr_ep = int(curr_ts // EPOCH_LENGTH)

@@ -156,7 +156,7 @@ def run_node_process(
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_connection():
+async def test_connection(db_path):
     print("START OF TEST")
 
     processes = []
@@ -166,11 +166,12 @@ async def test_connection():
         is_validator = client["role"] == "VALIDATOR"
         is_builder = client["role"] == "BUILDER"
 
-        dir_path = f"/data/{client['port']}"
+        # dir_path = f"/data/{client['port']}"
+        dir_path=f"{db_path}/{client['port']}"
 
-        if os.path.exists(dir_path):
-            shutil.rmtree(dir_path)
-            print(f"REMOVED DIR: {dir_path}")
+        # if os.path.exists(dir_path):
+        #     shutil.rmtree(dir_path)
+        #     print(f"REMOVED DIR: {dir_path}")
 
         p = Process(
             target=run_node_process,

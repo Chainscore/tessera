@@ -537,7 +537,7 @@ class Processor:
             # TODO: Fix timeslot
             gwr = ReportGuarantee(
                 report=wr,
-                slot=TimeSlot(time.time() - GENESIS_TS // SLOT_PERIOD),
+                slot=TimeSlot((time.time() - GENESIS_TS) // SLOT_PERIOD),
                 signatures=guarantees
             )
             r_len = U32(len(gwr.encode()))

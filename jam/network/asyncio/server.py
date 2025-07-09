@@ -212,9 +212,9 @@ async def serve(
                 stream_handler=stream_handler,
             ),
             # reuse_address=True,
-            # reuse_port=True,
-            sock=sock,
-            # local_addr=(host, port),
+            reuse_port=True,
+            # sock=sock,
+            local_addr=(host, port),
         )
         print("SERVER CREATED")
     except Exception as e:

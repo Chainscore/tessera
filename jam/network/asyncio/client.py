@@ -75,18 +75,18 @@ async def connect(
     )
 
     # explicitly enable IPv4/IPv6 dual stack
-    # sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-    # completed = False
-    # try:
-    #     sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-    #     sock.bind((local_host, local_port, 0, 0))
-    #     completed = True
-    # except Exception as e:
-    #     sock.close()
-    #     print("ERROR CLIENT SOCKET BINDING", e)
-    # finally:
-    #     if not completed:
-    #         sock.close()
+    sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+    completed = False
+    try:
+        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        sock.bind((local_host, local_port, 0, 0))
+        completed = True
+    except Exception as e:
+        sock.close()
+        print("ERROR CLIENT SOCKET BINDING", e)
+    finally:
+        if not completed:
+            sock.close()
 
     print("SOCK CLIENT", sock)
     # connect

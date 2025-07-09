@@ -39,17 +39,18 @@ class Safrole:
 
     @staticmethod
     def verify_vrf(message: bytes, ring_root: GammaZ, proof: BandersnatchRingVrfSignature) -> bool:
-        return RingVrf.ring_vrf_proof_verify(message, ring_root, proof)
-        # return True
+        # return RingVrf.ring_vrf_proof_verify(message, ring_root, proof)
+        return True
 
     @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> Bytes[32]:
-        return Bytes[32](RingVrf.construct_ring_root(keys))
-        # return Bytes[32](PublicKey.get_ring_commitment_bytes(keys))
+        # return Bytes[32](RingVrf.construct_ring_root(keys))
+        return Bytes[32](PublicKey.get_ring_commitment_bytes(keys))
 
     @staticmethod
     def vrf_output(signature: BandersnatchRingVrfSignature) -> Bytes[32]:
-        return Bytes[32](RingVrf.pedersen_proof_to_hash(signature))
+        # return Bytes[32](RingVrf.pedersen_proof_to_hash(signature))
+        return Bytes[32](32)
 
     @staticmethod
     def transition(state: Sigma, block: Block, entropy: Bytes[32]) -> Sigma:

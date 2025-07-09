@@ -4,6 +4,7 @@ from jam.consensus.safrole.safrole import Safrole
 from jam.disputes.disputes import Disputes
 from jam.network.protocols.up_0 import BlockAnnouncement
 from jam.state.state import State
+from jam.types import AssurancesExtrinsic
 from jam.types.block import (
     Block, 
     Header,
@@ -53,10 +54,10 @@ class BlockProducer(NodeDispatcher):
             if author_key == node.validator_data.bandersnatch:
                 logger.debug("🧑‍🍳Authoring block - our turn", ts=time_slot, epoch=(time_slot//SLOT_PERIOD))
                 block = cls._produce_block(state, TimeSlot(time_slot))
-                state.transition(block)
+                state._force_transition(block)
                 # Announce
                 await up0.transmit(node, block)
-                logger.info("⛏️ Block produced & announced", curr_timeslot=int(time_slot), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...")
+                logger.error("⛏️ Block produced & announced", curr_timeslot=int(time_slot), block_hash=Hash.blake2b(block.header.encode()).hex()[:16] + "...", wr_len=len(block.extrinsic.guarantees), as_len=len(block.extrinsic.assurances))
             else:
                 logger.debug("⏭️ Not our turn to author - skipping", curr_timeslot=int(time_slot), epoch=(time_slot//SLOT_PERIOD), expected_author=author_key.hex()[:16] + "...")
         else:
@@ -79,7 +80,7 @@ class BlockProducer(NodeDispatcher):
                 break 
         ep = ext_store.ep 
         et = TicketsExtrinsic(ext_store.et[:MAX_TICKETS_PER_EXTRINSIC])
-        ea = ext_store.ea 
+        ea = AssurancesExtrinsic(sorted(ext_store.ea, key=lambda a:a.validator_index))
         extrinsic = Extrinsic(et, ep, eg, ea, ext_store.ed)
 
         parent_block = Finality.load_latest(settings.main_db)

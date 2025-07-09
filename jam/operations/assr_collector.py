@@ -3,6 +3,7 @@ import asyncio
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jam.logging import get_logger
 from jam.network.protocols.ce_141 import AssuranceDistribution
+from jam.types import Hash
 from jam.types.block.extrinsics.assurances import AvailBitField
 from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.utils.constants import CORE_COUNT
@@ -27,17 +28,22 @@ class AssuranceCollector:
     async def run(self, time_slot: int):
         from jam.settings import settings
         from jam.network.node import node
-        signr = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private).sign(
-            Bytes.from_bits(self._collected)
-        )
+        pref = Bytes('jam_available', 'utf-8')
+
+
 
         from jam.network.protocols.ce_141 import CE141Data,AssuranceDistribution
         from jam.consensus.grandpa.finality import Finality
-        
+
         try:
             latest_block = Finality.load_latest(kv=settings.main_db)
             header_hash = latest_block.header.hash()
             # TODO: Construct & Transmit Ea
+            sign_data = header_hash.encode() + Bytes.from_bits(self._collected)
+
+            signr = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private).sign(
+                pref + Hash.blake2b(sign_data)
+            )
             CE141 = AssuranceDistribution()
             assurance = Assurance(
                 anchor_hash=HeaderHash(header_hash),

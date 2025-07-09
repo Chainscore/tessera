@@ -262,7 +262,7 @@ class Node:
                 ),
                 # wait_connected=False,
                 session_ticket_handler=session_ticket_store.add,
-                local_port=int(self.port),
+                # local_port=int(self.port),
                 sock=sock
             ) as client:
 
@@ -339,22 +339,24 @@ class Node:
         # Create Socket Connection
         # explicitly enable IPv4/IPv6 dual stack
         local_host = "::"
-        sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-        completed = False
-        try:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
-            sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-            sock.bind((local_host, self.port, 0, 0))
-            completed = True
-            logger.info("Bound to socket successfully!")
+        # sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        # completed = False
+        # try:
+        #     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+        #     sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        #     sock.bind((local_host, self.port, 0, 0))
+        #     completed = True
+        #     logger.info("Bound to socket successfully!")
+        #
+        # except Exception as e:
+        #     logger.error("Unable to bind with socket", err = e)
+        #
+        # finally:
+        #     if not completed:
+        #         logger.error("Unable to bind with socket. Closing socket")
+        #         sock.close()
 
-        except Exception as e:
-            logger.error("Unable to bind with socket", err = e)
-
-        finally:
-            if not completed:
-                logger.error("Unable to bind with socket. Closing socket")
-                sock.close()
+        sock = None
 
         # sock = None
         try:
