@@ -5,6 +5,7 @@ from typing import cast
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.types import ValidatorIndex
 from jam.types.block.extrinsics.assurances import AvailAssurance, AvailBitField
 from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -14,7 +15,7 @@ logger = get_logger("network")
 
 @structure
 class Assurance:
-    header_hash: HeaderHash
+    anchor_hash: HeaderHash
     bitfield: AvailBitField
     ed25519_signature: Ed25519Signature
 
@@ -58,8 +59,7 @@ class AssuranceDistribution(NetworkProtocol):
         msg = data.assurance.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting assurance of HH {data.assurance.header_hash.hex()} to {len(node.peer_conn)}  validators")
-
+        logger.info(f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node.peer_conn)}  validators")
         responses = TypedVector([])
 
         for peer in node.peer_conn:
@@ -97,10 +97,10 @@ class AssuranceDistribution(NetworkProtocol):
             raise NetworkingError(Code.INVALID_DATA)
 
         assurance = data.assurance
-        vi = server.peer.peer_index
+        vi = ValidatorIndex(server.peer.peer_index)
 
         assurance_extrinsic = AvailAssurance(
-            anchor = assurance.header_hash,
+            anchor = assurance.anchor_hash,
             bitfield = assurance.bitfield,
             validator_index = vi,
             signature= assurance.ed25519_signature
