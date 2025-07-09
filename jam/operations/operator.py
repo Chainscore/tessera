@@ -42,7 +42,7 @@ async def operate(is_builder):
         curr_time = time.time()
         if curr_time < ts_start_time:
             await asyncio.sleep(ts_start_time - curr_time)
-        logger.debug("Node operations started", time_slot=ts) 
+        logger.debug("Node operations started for a new timeslot", time_slot=ts) 
         # Schedule tasks to run immediately
         for dispatch in dispatch_fns(is_builder):
             (task_ts, runner) = dispatch

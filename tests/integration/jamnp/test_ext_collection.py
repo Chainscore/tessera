@@ -28,7 +28,7 @@ from jam.consensus.grandpa.finality import Finality
 from jam.settings import setup_setting
 
 from jam.network.peer import Peer
-from jam.network.node import Node
+from jam.network.node import Node, setup_node
 
 from jam.operations.utils.state_update import update_state
 from jam.state.state import setup_state, State
@@ -248,27 +248,7 @@ async def run_node(
             if val.metadata.port != port
         ]
 
-        ip = IPAddress.from_str(host)
-
-        tsr_node = Node(
-            node_name=name,
-            host=str(host),
-            port=int(port),
-            peers=peers,
-            validator_data=ValidatorData(
-                settings.bandersnatch_public,
-                settings.ed25519_public,
-                BlsPublic(bytes(144)),
-                ValidatorMetadata(
-                    name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2 ** 16 - 1),
-                    host=ip,
-                    port=U16(port),
-                ),
-            ),
-            is_builder=is_builder,
-            is_validator=is_validator,
-        )
+        tsr_node = setup_node(name, int(port), peers, is_bd=is_builder, is_val=is_validator)
 
         block = Block.genesis()
         header_hash = block.save(main_db)
@@ -277,7 +257,7 @@ async def run_node(
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
             tg.create_task(operate(is_builder))
-            tg.create_task(start_node(tsr_node))
+            # tg.create_task(start_node(tsr_node))
 
     except KeyboardInterrupt:
         logger.info(

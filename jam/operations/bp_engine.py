@@ -10,7 +10,6 @@ from jam.types.block import (
     TicketsExtrinsic,
     GuaranteesExtrinsic,
 )
-from jam.network.node import node
 from jam.types.block.extrinsics.extrinsic import Extrinsic
 from jam.types.block.extrinsics.disputes import Culprits, Faults, Verdicts
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
@@ -36,7 +35,7 @@ class BlockProducer(NodeDispatcher):
         Starts the block producer engine in asyncio loop. 
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
-
+        from jam.network.node import node
         up0 = BlockAnnouncement()
 
         # TODO: If our validator is not in Kappa - skip block production till end of current epoch

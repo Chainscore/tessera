@@ -76,8 +76,8 @@ class Safrole:
         
         # 3. Ticket Accumulation
         ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
-        # Process the ticket.py before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
-        if ticket_submission_active and epoch_jump == 0 and len(block.extrinsic.tickets) > 0:
+        # Process the tickets before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
+        if ticket_submission_active and len(block.extrinsic.tickets) > 0:
             # Validate extrinsics
             Safrole.ensure_valid_ticket_extrinsics(block) 
             # Accumulate them in gamma.a
@@ -151,7 +151,8 @@ class Safrole:
             )
             logger.debug("New Eta[0]", eta=eta[0].hex())
         state.eta = eta
-
+        
+        print("Setting gamma.a", gamma.a.encode(), len(block.extrinsic.tickets))
         state.gamma = gamma
         return state
 
@@ -226,7 +227,8 @@ class Safrole:
             # Add entropy to encoded4(i)
             hashed = Hash.blake2b(bytes(entropy) + U32(i).encode())
             index, _ = U32.decode_from(bytes(Bytes(hashed[:4])))
-            fallback.append(validators[int(index) % len(validators)].bandersnatch)
+            val_key = validators[int(index) % len(validators)].bandersnatch
+            fallback.append(val_key)
         return GammaS(GammaSFallback(fallback))
     
     @staticmethod

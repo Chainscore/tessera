@@ -40,7 +40,6 @@ class Finality:
     @classmethod
     def load_latest(cls, kv: RockStore):
         latest_hh = kv.get(cls.LATEST_KEY)
-        
         if not latest_hh:
             latest_hh = bytes(32)
         return Block.load(latest_hh, kv)

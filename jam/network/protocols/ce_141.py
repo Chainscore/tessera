@@ -1,10 +1,10 @@
+from jam.operations.ext_store import ext_store
 from tsrkit_types import structure, TypedVector, U8, Uint, U32
 from jam.logging import get_logger
 from typing import cast
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.settings import settings
 from jam.types.block.extrinsics.assurances import AvailAssurance, AvailBitField
 from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -58,11 +58,12 @@ class AssuranceDistribution(NetworkProtocol):
         msg = data.assurance.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting assurance of Work-Report to {len(node.peer_conn)}  validators")
+        logger.info(f"Transmitting assurance of HH {data.assurance.header_hash.hex()} to {len(node.peer_conn)}  validators")
 
         responses = TypedVector([])
 
         for peer in node.peer_conn:
+
             client = node.peer_conn[peer][1]
 
             # Send Protocol Prefix
@@ -80,13 +81,9 @@ class AssuranceDistribution(NetworkProtocol):
 
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-
-        from jam.storage.stores import assurance_store
-
-        node = server.node
         buffer = server.stream_buffer[stream_id]
 
-        logger.debud(
+        logger.debug(
             "Received assurance",
             stream_id=stream_id,
             buffer_size=len(buffer[1:])
@@ -109,7 +106,7 @@ class AssuranceDistribution(NetworkProtocol):
             signature= assurance.ed25519_signature
         )
 
-        assurance_store.push(settings.main_db, assurance_extrinsic)
+        ext_store.import_assr(assurance_extrinsic)
 
         # Return acknowledgment to Builder
         ack = b""
