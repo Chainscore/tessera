@@ -122,6 +122,12 @@ class State:
         from jam.settings import settings
         self.store.save_n_clear_cache(header_hash, settings.main_db)
 
+    
+    def _force_transition(self, block: Block):
+        # 1. Push auth hash of every WR to self.alpha[0:1]
+        return self.transition(block)
+
+
     def transition(self, block: Block):
         """
         Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
