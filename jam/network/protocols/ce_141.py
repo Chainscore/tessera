@@ -20,8 +20,8 @@ class Assurance:
 
 @structure
 class CE141Data:
-    assurance: Assurance
     len: U32
+    assurance: Assurance
 
     @property
     def is_valid(self):
