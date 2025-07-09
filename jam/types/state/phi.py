@@ -4,10 +4,15 @@ from jam.utils.constants import CORE_COUNT, MAX_AUTH_QUEUE_ITEMS
 
 AuthorizerHash = OpaqueHash
 
-AuthorizationQueue = TypedArray[AuthorizerHash, MAX_AUTH_QUEUE_ITEMS]
+class AuthorizationQueue(TypedArray[AuthorizerHash, MAX_AUTH_QUEUE_ITEMS]):
+    ...
 
-Phi = TypedArray[AuthorizationQueue, CORE_COUNT]
+# State key: 2
+class Phi(TypedArray[AuthorizationQueue, CORE_COUNT]):
+    ...
 
-AuthorizationVector = TypedVector[AuthorizerHash]
+class AuthorizationVector(TypedVector[AuthorizerHash]):
+    ...
 
-PhiVector = TypedVector[AuthorizationVector]
+class PhiVector(TypedVector[AuthorizationVector]):
+    ...

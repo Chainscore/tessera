@@ -90,6 +90,7 @@ class AllServiceStats(Dictionary[ServiceId, ServiceStat, "id", "record"]):
 
     ...
 
+# State key: 13
 @structure
 class Pi:
     """Pi"""
