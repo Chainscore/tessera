@@ -311,15 +311,17 @@ class BlockAnnouncement(NetworkProtocol):
             dir=Direction.DesInc,
             max_blocks=U32(1)
         )
-        blocks = await BlockRequest().transmit(
-            node, 
+        responses = await BlockRequest().transmit(
+            node,
             CE128Data(
                 len=U32(len(query.encode())),
                 query=query
             ),
             [conn for _peer, conn in node.peer_conn.items() if _peer == peer]
         )
-        for block in blocks:
+
+        blocks = responses[0]
+        for block in reversed(blocks):
             if block:
                 state.transition(block)
                 logger.debug("Imported block", slot=block.header.slot)
@@ -347,10 +349,12 @@ class BlockAnnouncement(NetworkProtocol):
 
         logger.info("Requesting Blocks to Sync", num=data_req.query.max_blocks)
 
-        blocks_to_import = await BlockRequest().transmit(node, data_req, [conn for _peer, conn in node.peer_conn.items() if _peer == peer])
+        responses = await BlockRequest().transmit(node, data_req, [conn for _peer, conn in node.peer_conn.items() if _peer == peer])
+
+        blocks_to_import = responses[0]
         logger.debug(f"Received {len(blocks_to_import)} blocks. Importing...")
 
-        print("BLOCKS TO IMPORT", len(blocks_to_import), blocks_to_import)
+        logger.debug("Blocks to import", cnt=len(blocks_to_import))
 
         for block in reversed(blocks_to_import):
             if block:

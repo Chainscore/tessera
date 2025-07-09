@@ -48,7 +48,6 @@ class CE128Response:
 
     @property
     def is_valid(self):
-        print("VALIDITY", len(self.blocks.encode()), self.len)
         if len(self.blocks.encode()) == self.len:
             return True
         return False
@@ -86,8 +85,6 @@ class BlockRequest(NetworkProtocol):
 
         transmitted_count = 0
         responses = []
-        print("MAX BLOCKS", query.max_blocks)
-        FixedBlocks = TypedArray[Block,10]
 
         if peer_conns is None:
             peer_conns = list(node.peer_conn.values())
@@ -106,14 +103,6 @@ class BlockRequest(NetworkProtocol):
                 data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
 
                 transmitted_count += 1
-
-                # print("HERE", data)
-                # try:
-                #     print("HERE 1")
-                #     resp = FixedBlocks.decode(data)
-                #     print("RESP", resp)
-                # except Exception as e:
-                #     print("PARSE ERR", e)
                 responses.append(data)
 
                 logger.debug(
@@ -184,7 +173,7 @@ class BlockRequest(NetworkProtocol):
                 )
 
             # Get all header hashes in between
-            all_blocks = TypedVector[Block]([])
+            all_blocks = []
             hh = data.header  
             while hh != HeaderHash(32) and len(all_blocks) != int(data.max_blocks):
                 _block = Block.decode(settings.main_db.get(Block.get_storage_key_block(hh)))
@@ -194,8 +183,11 @@ class BlockRequest(NetworkProtocol):
                 else:
                     logger.error("Block not found against recorded header_hash", header_hash=hh, timeslot=data.header.slot)
 
-            blocks_enc = all_blocks.encode()
-            server.stream_and_close(stream_id=stream_id, message=self._prefix.encode() + blocks_enc)
+            blocks_enc = TypedArray[Block, data.max_blocks](all_blocks).encode()
+            len_enc = U32(len(blocks_enc))
+
+            server.stream_and_keep_open(stream_id=stream_id, message=len_enc.encode())
+            server.stream_and_close(stream_id=stream_id, message=blocks_enc)
 
             logger.info(
                 "Blocks request completed successfully. Closed stream",
@@ -223,34 +215,32 @@ class BlockRequest(NetworkProtocol):
         )
 
         try:
-            # print("buff",buffer.hex())
-            data = CE128Response.decode(buffer[1:])
+            # data = CE128Response.decode(buffer[1:])
+
             length = U32.decode(buffer[1:5])
             block_buf = buffer[5:5+length]
+            buf_len = len(block_buf)
+
+            if not block_buf or not buf_len == length:
+                raise NetworkingError(Code.INVALID_DATA)
 
             offset = 0
-            buf_len = len((buffer[5:]))
-
-            blocks = []
+            cnt = 0
+            blocks = Blocks([])
             while offset < buf_len:
                 block, off = Block.decode_from(block_buf, offset)
                 offset += off
-                # print("bl ", off, block)
                 blocks.append(block)
+                cnt += 1
+                logger.debug(
+                    "Parsed Block",
+                    cnt=cnt,
+                    stream_id=stream_id,
+                    peer=client.peer
+                )
 
-            # print("BLOCKS", blocks)
-            print("len", length)
-            # return Blocks.decode(buffer[5:5+length])
+            return blocks
 
-            # return buffer[5:5+length]
-            data = cast(CE128Response, data)
-
-            if not data or not data.is_valid:
-                raise NetworkingError(Code.INVALID_DATA)
-
-            return bytes.fromhex(buffer.hex())
-            # return data.blocks
         except Exception as e:
-            print("ERROR", e)
-            logger.error(Code.BAD_RESPONSE)
-            return None
+            logger.error(Code.BAD_RESPONSE ,err=e)
+            return Blocks([])

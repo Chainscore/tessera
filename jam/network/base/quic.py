@@ -340,7 +340,7 @@ class QuicProtocol(QuicConnectionProtocol):
                 try:
                     # Map the request to its corresponding CE protocol function
                     ce_protocol = ProtocolMap.get_protocol(prefix)()
-                    logger.debug(f"CE PROTOCOL TRIGGERED",prefix=prefix, protocol=type(ce_protocol).__name__)
+                    logger.debug(f"CE PROTOCOL TRIGGERED", peer=self.peer , prefix=prefix, protocol=type(ce_protocol).__name__)
                     if (stream_id in self.waiter) and (self.waiter[stream_id] is not None):
                         logger.debug("Intercepting Response.", protocol=prefix, stream_id=stream_id)
                         res = ce_protocol.res_intercept(stream_id, self)
@@ -351,7 +351,7 @@ class QuicProtocol(QuicConnectionProtocol):
                         waiter.set_result(res)
 
                     else:
-                        logger.debug("Intercepting Request.", protocol=prefix, stream_id=stream_id)
+                        logger.debug("Intercepting Request.", peer=self.peer, protocol=prefix, stream_id=stream_id)
                         ce_protocol.req_intercept(stream_id, self)
 
                     # Clear buffer
@@ -382,7 +382,7 @@ class QuicProtocol(QuicConnectionProtocol):
                         if len(data) == 4:
                             return
                         up_protocol = ProtocolMap.get_protocol(prefix)()
-                        logger.debug(f"UP PROTOCOL TRIGGERED",prefix=prefix, protocol=type(up_protocol).__name__)
+                        logger.debug(f"UP PROTOCOL TRIGGERED", peer=self.peer, prefix=prefix, protocol=type(up_protocol).__name__)
                         up_protocol.req_intercept(stream_id, self)
 
                     except Exception as e:

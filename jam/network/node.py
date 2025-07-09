@@ -1,8 +1,7 @@
 import asyncio
 import ssl
+import socket
 
-from aioquic.asyncio import serve, connect
-from aioquic.asyncio.server import QuicServer
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.connection import QuicConnection
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -16,6 +15,8 @@ from jam.types.work.shard import ShardIndex
 
 from typing import Dict, cast, Tuple, Optional
 
+from .asyncio.client import connect
+from .asyncio.server import QuicServer, serve
 from .base.quic import QuicProtocol
 from jam.network.base.certificate import generate_keys
 from jam.network.base.protocol import PrefixType
@@ -213,7 +214,7 @@ class Node:
 
         return config
 
-    async def run_server(self):
+    async def run_server(self, sock = None):
         """
         Function to initialize server connection of the node.
         """
@@ -229,14 +230,16 @@ class Node:
             create_protocol=lambda *args, **kwargs: QuicProtocol(
                 *args, node=self, **kwargs
             ),
+            retry=True,
             session_ticket_fetcher=session_ticket_store.pop,
             session_ticket_handler=session_ticket_store.add,
+            sock=sock
         )
 
         # Save server connection
         self.server = server
 
-    async def quic_connect(self, peer: Peer, delay: int = 0):
+    async def quic_connect(self, peer: Peer, sock = None, delay: int = 0):
         session_ticket_store = SessionTicketStore(self.port)
         if delay:
             logger.warning(f"Connection to {peer} delayed for {delay}s")
@@ -257,8 +260,10 @@ class Node:
                 create_protocol=lambda *args, **kwargs: QuicProtocol(
                     *args, node=self, **kwargs
                 ),
+                # wait_connected=False,
                 session_ticket_handler=session_ticket_store.add,
-                # local_port=int(peer.port)
+                local_port=int(self.port),
+                sock=sock
             ) as client:
 
                 # Save peer connection
@@ -288,7 +293,7 @@ class Node:
         except Exception as e:
             logger.error(f"Connection to {peer} failed: {e}")
 
-    async def connect_peer(self, peer: Peer):
+    async def connect_peer(self, peer: Peer, sock = None):
         """
         Function to connect the node to a peer.
         """
@@ -307,36 +312,59 @@ class Node:
             # Fetch initiator
             init = self.get_initiator(self.ed_key, peer.ed_key)
             if init == self.ed_key:
-                await self.quic_connect(peer)
+                await self.quic_connect(peer, sock)
             else:
                 # Try connection after 6 seconds, meanwhile continue forward with other connections
-                await self.quic_connect(peer, INIT_DELAY)
+                await self.quic_connect(peer, sock, INIT_DELAY)
 
         except asyncio.CancelledError:
             logger.info(f"🔴 ({self.name}) Connection with {str(peer)} cancelled")
         except Exception as e:
             logger.warning(f"⚠️ ({self.name}) Failed to connect to {peer}: {e}")
 
-    async def run_client(self):
+    async def run_client(self, sock = None):
         """
         Function to initialize client connections of the node.
         """
         tasks = []
         for peer in self.peers:
-            tasks.append(asyncio.create_task(self.connect_peer(peer)))
+            tasks.append(asyncio.create_task(self.connect_peer(peer, sock)))
         await asyncio.gather(*tasks)
 
     async def initialize(self):
         """
         Function to fully initialize a node.
         """
+
+        # Create Socket Connection
+        # explicitly enable IPv4/IPv6 dual stack
+        local_host = "::"
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        completed = False
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+            sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+            sock.bind((local_host, self.port, 0, 0))
+            completed = True
+            logger.info("Bound to socket successfully!")
+
+        except Exception as e:
+            logger.error("Unable to bind with socket", err = e)
+
+        finally:
+            if not completed:
+                logger.error("Unable to bind with socket. Closing socket")
+                sock.close()
+
+        # sock = None
         try:
             if self.is_builder:
                 logger.info(f"🚀 ({self.name}) Starting builder on {str(self)}")
 
+
             if not self.is_builder:
                 logger.info(f"🚀 ({self.name}) Starting server on {str(self)}")
-                await self.run_server()
+                await self.run_server(sock)
 
                 # Give server time to fully initialize
                 await asyncio.sleep(1)
@@ -344,11 +372,11 @@ class Node:
             logger.info(
                 f"🔄 ({self.name}) Opening connections to {len(self.peers)} peers..."
             )
-            await self.run_client()
+            await self.run_client(sock)
 
             logger.info(f"🚀 {self} initialized successfully!")
         except Exception as e:
-            logger.critical(f"🚀 {self} failed to initialize!")
+            logger.critical(f"🚀 {self} failed to initialize!", err=e)
 
     def shutdown(self):
         for peer in self.peer_conn:
