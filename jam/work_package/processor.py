@@ -405,9 +405,6 @@ class Processor:
             with benchmark("Report compiled"):
                 report = self.build_report(bundle, core, sr_lookup)
 
-            with open("work_report.txt", "a") as f:
-                print(report, file=f)
-
             wr_hash = Hash.blake2b(report.encode())
             logger.info(f"Generated Work Report with hash {wr_hash}")
 

@@ -25,7 +25,6 @@ from jam.network.node import Node
 # TODO: signature_pvt function in utils changes according to the
 
 
-
 @dataclass
 class AuditingAndJudgement:
 
@@ -35,7 +34,7 @@ class AuditingAndJudgement:
         self.node: Node
 
     @staticmethod
-    def report_to_be_audit(available_reports : List[Option[WorkReport]], pending_report: Rho) -> List[Option[WorkReport]]:      #---------------------------------
+    def report_to_be_audit(available_reports : List[Option[WorkReport]], pending_report: Rho) -> List[Option[WorkReport]]:
         """
         Function Q define in Eq. 17.1 and 17.2
         This function define the sequence of work_report which required to audit(Q)
@@ -159,7 +158,7 @@ class AuditingAndJudgement:
             return False
 
 
-    def judgment_process(self, r: WorkReport,  refine: Bool, ed25519_public: Bytes[32]) -> Bytes[96]:
+    def judgment_process(self, r: WorkReport, refine: Bool, ed25519_public: Bytes[32]) -> Bytes[96]:
         """
         Equations: 17.18
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f6f011f9801?v=0.7.0
@@ -180,19 +179,11 @@ class AuditingAndJudgement:
         Equation: 17.19, 17.20
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1fa9011fd301?v=0.7.0
         """
+
+
+
+
         # condition 1 => on that core all the judgment should be true and A_n(r) ⊂ J_T(r
         # condition 2 => if in tranche all the judgment of the validator should be > 2/3
 
 
-
-        # Here we check each report and created a list of audited reports
-
-
-
-    # def judgment(self, q:TypedVector[Option[WorkReport]], node: Node, header: Header):
-    #
-    #     assigned_report = self.vrs_func(entropy_source="f7caffd3498473b08ab9de28ba3bd76d94f3fe47acc96e6e0111dfe301ba4d0bc7b3a95ebf21a76fb76102c13fdf9947c6c243d71b9893fae0b9adf94aa83f0a81b4566c15c796a79a4e124971130cba959c03066efba2161334cedc0d02151a", bandersnatch_key=node.ed_pvt_key, pre_report= q)
-    #     announcement = self.validator_announcement_statement(assign_report=assigned_report, header=header, ed25519_public=node.ed_key, tranche=Uint(0))
-    #     judgment : set[bool] = set()
-    #
-    #     return judgment
