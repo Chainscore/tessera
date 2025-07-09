@@ -48,11 +48,11 @@ class BlockProducer(NodeDispatcher):
         gamma_s = state.gamma.s.unwrap()
 
         if isinstance(gamma_s, GammaSFallback):
-            author_key = gamma_s[time_slot]
+            author_key = gamma_s[time_slot % EPOCH_LENGTH]
 
             if author_key == node.validator_data.bandersnatch:
                 logger.debug("🧑‍🍳Authoring block - our turn", ts=time_slot, epoch=(time_slot//SLOT_PERIOD))
-                block = cls._produce_block(state, time_slot)
+                block = cls._produce_block(state, TimeSlot(time_slot))
                 state.transition(block)
                 # Announce
                 await up0.transmit(node, block)
@@ -89,12 +89,12 @@ class BlockProducer(NodeDispatcher):
             header=Header(
                 parent=parent_hash,
                 parent_state_root=state.root,
-                extrinsic_hash=self.hash_extrinsic(extrinsic),
+                extrinsic_hash=cls.hash_extrinsic(extrinsic),
                 slot=curr_ts,
                 epoch_mark=Safrole.get_epoch_marker(state, curr_ts),
                 tickets_mark=Safrole.get_tickets_marker(state, curr_ts),
                 offenders_mark=Disputes.get_offenders_mark(extrinsic.disputes),
-                author_index=self.get_author_index(state),
+                author_index=cls.get_author_index(state),
                 entropy_source=BandersnatchVrfSignature(create_dummy_bytes(96)),
                 seal=BandersnatchVrfSignature(create_dummy_bytes(96))
             ),
@@ -108,6 +108,7 @@ class BlockProducer(NodeDispatcher):
         """
         Get block producer's author index from the state
         """
+        from jam.network.node import node
         for i, validator in enumerate(state.kappa):
             if validator.bandersnatch == node.validator_data.bandersnatch:
                return ValidatorIndex(i)
