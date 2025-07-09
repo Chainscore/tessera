@@ -63,7 +63,25 @@ CLIENTS = [
         "genesis": True
     },
     {
+        "port": 40002,
+        "role": "VALIDATOR",
+        "theme": "default",
+        "genesis": True
+    },
+    {
         "port": 40003,
+        "role": "VALIDATOR",
+        "theme": "default",
+        "genesis": True
+    },
+    {
+        "port": 40004,
+        "role": "VALIDATOR",
+        "theme": "default",
+        "genesis": True
+    },
+    {
+        "port": 40005,
         "role": "VALIDATOR",
         "theme": "default",
         "genesis": True
@@ -253,7 +271,7 @@ async def run_node(
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
-
+        Finality.finalise(header_hash, main_db)
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
             tg.create_task(operate(is_builder))

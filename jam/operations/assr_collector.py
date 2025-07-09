@@ -40,7 +40,7 @@ class AssuranceCollector:
             # TODO: Construct & Transmit Ea
             CE141 = AssuranceDistribution()
             assurance = Assurance(
-                header_hash=HeaderHash(header_hash),
+                anchor_hash=HeaderHash(header_hash),
                 bitfield=AvailBitField(self._collected),
                 ed25519_signature=Ed25519Signature(signr)
             )

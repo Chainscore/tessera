@@ -279,7 +279,7 @@ class Accumulation:
                 partial_state, work_reports, privileged_services, service, timeslot
             )
             gas_consumed.append((service,_gas_consumed))
-            if _output_hash.unwrap() != Null:
+            if _output_hash and _output_hash.unwrap() != Null:
                 outputs.add((service, _output_hash.unwrap()))
             transfers.extend(_transfers)
             collected_preimages.update(_preimages)

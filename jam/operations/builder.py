@@ -16,12 +16,9 @@ from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
-from tests.unit.wp.types import RefineVectors, RefineVector
 
 # Logger for WP Production
 logger = get_logger("in_core")
-
-vectors = RefineVectors([])
 
 class Builder:
     """
@@ -41,80 +38,55 @@ class Builder:
 
         CE133 = WorkPackageSubmission()
 
-        wp_iter = 0
+        wp_iter = time_slot % 4
 
-        global vectors
-        while True:
-            curr_ts = time_slot
-            curr_ep = int(curr_ts // EPOCH_LENGTH)
+        curr_ts = time_slot
+        curr_ep = int(curr_ts // EPOCH_LENGTH)
 
-            # TODO: Remove hard-coded transmission. Use desired guarantors' connections.
-            if len(node.peer_conn) == 0:
-                logger.debug(
-                    "Network not initialized - skipping work package production",
-                    node_name=node.name,
-                    iteration=wp_iter
-                )
-                await asyncio.sleep(SLOT_PERIOD)
-                continue
-
-            # Get state from db
-            from jam.state.state import state
-
+        # TODO: Remove hard-coded transmission. Use desired guarantors' connections.
+        if len(node.peer_conn) == 0:
             logger.debug(
-                "Work package production cycle",
+                "Network not initialized - skipping work package production",
                 node_name=node.name,
-                iteration=wp_iter,
-                curr_timeslot=curr_ts,
-                curr_epoch=curr_ep,
-                gamma_mode=state.gamma.s._choice_key
+                iteration=wp_iter
             )
-            if node.is_builder:
-                wp = cls._build_package(wp_iter)
-                wc = WorkPackageCore(wp, CoreIndex(1))
-                ext = Extrinsics([])
+            return
 
-                # # SAVE TEST VECTORS
-                # # BUILD REPORT
-                # from jam.utils.benchmark import write_json
-                # from jam.work_package.processor import Processor
-                # processor = Processor(node)
-                # wr, wr_hash = processor.process(wp, CoreIndex(1), ext)
-                # write_json("vectors/packages", wp.to_json())
-                # write_json("vectors/reports", wr.to_json())
+        # Get state from db
+        from jam.state.state import state
 
-                # vector = RefineVector(wp, CoreIndex(1), ext, wr, wr_hash)
-                # vectors.append(vector)
+        logger.debug(
+            "Work package production cycle",
+            node_name=node.name,
+            iteration=wp_iter,
+            curr_timeslot=curr_ts,
+            curr_epoch=curr_ep,
+            gamma_mode=state.gamma.s._choice_key
+        )
 
-                package_len = Uint[32](len(wc.encode()))
-                ext_len = Uint[32](len(ext.encode()))
-                data = CE133Data(package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext)
+        wp = cls._build_package(wp_iter)
 
-                logger.info(
-                    "Producing work package",
-                    iteration=wp_iter,
-                    core_index=1,
-                    extrinsics_count=0,
-                    curr_timeslot=curr_ts
-                )
+        wc = WorkPackageCore(wp, CoreIndex(1))
+        ext = Extrinsics([])
 
-                responses = await CE133.transmit(node, data)
-                logger.debug(
-                    "Work package transmitted",
-                    node_name=node.name,
-                    iteration=wp_iter
-                )
+        package_len = Uint[32](len(wc.encode()))
+        ext_len = Uint[32](len(ext.encode()))
+        data = CE133Data(package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext)
 
-            else:
-                logger.debug(
-                    "Node is not builder - skipping work package production",
-                    node_name=node.name,
-                    iteration=wp_iter
-                )
+        logger.info(
+            "Producing work package",
+            iteration=wp_iter,
+            core_index=1,
+            extrinsics_count=0,
+            curr_timeslot=curr_ts
+        )
 
-            # Sleep for remaining time of the timeslot
-            await asyncio.sleep(SLOT_PERIOD - (time() - GENESIS_TS) % SLOT_PERIOD)
-            wp_iter += 1
+        responses = await CE133.transmit(node, data)
+        logger.debug(
+            "Work package transmitted",
+            node_name=node.name,
+            iteration=wp_iter
+        )
 
     @staticmethod
     def _build_package(wp_iter: int) -> WorkPackage:

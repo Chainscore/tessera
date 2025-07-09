@@ -1,3 +1,4 @@
+from re import M
 from typing import Any, Optional, List
 
 from jam.logging import get_logger
@@ -13,11 +14,7 @@ from jam.types.state.delta import Delta
 from jam.types.work import WorkItem
 from jam.types.work import WorkPackage
 from jam.utils.constants import (
-    ADDITIONAL_BALANCE_PER_ITEM, SLOT_PERIOD, MAX_AUTH_QUEUE_ITEMS, ROTATION_PERIOD, MAX_ACCUMULATION_ENTRIES, EXTRINSIC_COUNT,
-    UNAVAILABLE_WORK_EXPIRY, VALIDATOR_COUNT, MAX_AUTH_CODE_SIZE, MAX_ENCODED_WORK_PACKAGE_SIZE, MAX_SERVICE_CODE_SIZE, BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_IMPORT_ITEM,
-    ERASURE_PIECES_PER_SEGMENT, MAX_WORK_REPORT_SIZE, TRANSFER_MEMO_SIZE, MAX_EXPORT_ITEM, CORE_COUNT, PREIMAGE_EVICTION_TIMESLOTS, EPOCH_LENGTH, ACCUMULATION_GAS,
-    IS_AUTHORIZED_GAS, REFINE_GAS, TOTAL_GAS, RECENT_HISTORY_SIZE, MAX_WORK_ITEMS, MAX_DEPENDENCIES, LOOKUP_ANCHOR_MAX_AGE,
-    MAX_AUTH_POOL_ITEMS, ADDITIONAL_BALANCE_PER_OCTET, BASIC_MINIMUM_BALANCE, TICKET_SUBMISSION_END,
+    B_I, B_L, B_S, C, D, E, G_A, G_I, G_R, G_T, H, I, J, K, L, N, O, P, Q, R, T, U, V, W_A, W_B, W_C, W_E, W_M, W_P, W_R, W_T, W_X, Y,
 )
 
 # Module-specific logger
@@ -41,13 +38,13 @@ class GeneralFunctions(INVF):
     @staticmethod
     @INVF.register(1, gas_cost=10)
     def lookup(
-            gas: Gas,
-            registers: list,
-            memory: Memory,
-            context: Optional[Any],
-            service_data: AccountData,
-            service_index: ServiceId,
-            accounts: Delta
+        gas: Gas,
+        registers: list,
+        memory: Memory,
+        context: Optional[Any],
+        service_data: AccountData,
+        service_index: ServiceId,
+        accounts: Delta
     ):
         lookup_key = registers[7]
         hash_addr = registers[8]
@@ -108,19 +105,19 @@ class GeneralFunctions(INVF):
     @staticmethod
     @INVF.register(host_call=18, gas_cost=10)
     def fetch(
-            gas: Gas,
-            registers: list,
-            memory: Memory,
-            context: Optional[Any],
-            package: Optional[WorkPackage],
-            entropy: Optional[OpaqueHash],
-            trace: Optional[Bytes],
-            item_index: int,
-            import_segments: Optional[List],
-            extrinsics: Optional[List],
-            o: Optional[List],
-            t: Optional[List]
-        ):
+        gas: Gas,
+        registers: list,
+        memory: Memory,
+        context: Optional[Any],
+        package: Optional[WorkPackage],
+        entropy: Optional[OpaqueHash],
+        trace: Optional[Bytes],
+        item_index: int,
+        import_segments: Optional[List],
+        extrinsics: Optional[List],
+        o: Optional[List],
+        t: Optional[List]
+    ):
         fetch_type = registers[10]
         
         logger.debug("Host call: fetch", fetch_type=fetch_type, item_index=item_index)
@@ -131,20 +128,18 @@ class GeneralFunctions(INVF):
         v = None
         if w10 == 0:
             v = (
-                U64(ADDITIONAL_BALANCE_PER_ITEM).encode() + U64(ADDITIONAL_BALANCE_PER_OCTET).encode() + 
-                U64(BASIC_MINIMUM_BALANCE).encode() + U16(CORE_COUNT).encode() +
-                U32(PREIMAGE_EVICTION_TIMESLOTS).encode() + U32(EPOCH_LENGTH).encode() + 
-                U64(ACCUMULATION_GAS).encode() + U64(IS_AUTHORIZED_GAS).encode() +
-                U64(REFINE_GAS).encode() + U64(TOTAL_GAS).encode() + U16(RECENT_HISTORY_SIZE).encode() + 
-                U16(MAX_WORK_ITEMS).encode() + U16(MAX_DEPENDENCIES).encode() +
-                U32(LOOKUP_ANCHOR_MAX_AGE).encode() + U16(MAX_AUTH_POOL_ITEMS).encode() + 
-                U16(SLOT_PERIOD).encode() + U16(MAX_AUTH_QUEUE_ITEMS).encode() +
-                U16(ROTATION_PERIOD).encode() + U16(EXTRINSIC_COUNT).encode() + U16(UNAVAILABLE_WORK_EXPIRY).encode() +
-                U16(VALIDATOR_COUNT).encode() + U32(MAX_AUTH_CODE_SIZE).encode() + U32(MAX_ENCODED_WORK_PACKAGE_SIZE).encode() + 
-                U32(MAX_SERVICE_CODE_SIZE).encode() + U32(BASIC_ERASURE_SIZE).encode() + 
-                U32(MAX_IMPORT_ITEM).encode() + U32(ERASURE_PIECES_PER_SEGMENT).encode() +
-                U32(MAX_WORK_REPORT_SIZE).encode() + U32(TRANSFER_MEMO_SIZE).encode() + U32(MAX_EXPORT_ITEM).encode() + U32(TICKET_SUBMISSION_END).encode()
+                U64(B_I).encode() + U64(B_L).encode() + U64(B_S).encode() + U16(C).encode() + 
+                U32(D).encode() + U32(E).encode() + U64(G_A).encode() + U64(G_I).encode() + 
+                U64(G_R).encode() + U64(G_T).encode() + 
+                U16(H).encode() + U16(I).encode() + U16(J).encode() + U16(K).encode() + 
+                U32(L).encode() + U16(N).encode() + U16(O).encode() + U16(P).encode() + 
+                U16(Q).encode() + U16(R).encode() + U16(T).encode() + U16(U).encode() + 
+                U16(V).encode() + U32(W_A).encode() + U32(W_B).encode() + 
+                U32(W_C).encode() + U32(W_E).encode() +
+                U32(W_M).encode() + U32(W_P).encode() + 
+                U32(W_R).encode() + U32(W_T).encode() + U32(W_X).encode() + U32(Y).encode()
             )
+            
             logger.debug("Fetch: returning system constants")
         elif w10 == 1 and entropy is not None:
             v = entropy
@@ -329,7 +324,7 @@ class GeneralFunctions(INVF):
 
         a = service_data.storage
 
-        curr_value = a[k]
+        curr_value = a.get(k)
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
         if vz == 0:
             a.__delitem__(k)
@@ -393,6 +388,7 @@ class GeneralFunctions(INVF):
         o = registers[8]
 
         if t is not None:
+            print("t.service", t.service.balance)
             m = bytes(t.service.code_hash) + Uint(t.service.balance).encode() + Uint(t.service.t).encode() + Uint(t.service.gas_limit).encode() + Uint(t.service.min_gas).encode() + Uint(t.service.num_o).encode() + Uint(t.service.num_i).encode()
 
             if memory.is_accessible(o, len(m), True):

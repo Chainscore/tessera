@@ -512,7 +512,6 @@ class Processor:
 
         # Sort them guarantees
         guarantees = ValidatorSignatures(sorted(guarantees, key = lambda g: g.validator_index))
-
         # Distribute Guaranteed WR to Validators CE135
         logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
         if len(guarantees) > 1:
