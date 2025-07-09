@@ -138,7 +138,6 @@ class ShardDistributionProtocol(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            # TODO: Process received erasure root & shard index
             erasure_root = data.query.erasure_root
             shard_index = data.query.shard_index
 
@@ -158,7 +157,6 @@ class ShardDistributionProtocol(NetworkProtocol):
 
             segments_shard = SegmentsShard(ss_dict[shard_index].shard)
 
-            # TODO: Build Justifications
             bundle_shard_indices = bs_dict.keys()
             segment_shard_indices = ss_dict.keys()
 
@@ -222,9 +220,6 @@ class ShardDistributionProtocol(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             logger.info("Data received on Assurer Node")
-
-            # TODO: verify justification
-            # TODO: save the justification for CE139/140 and proceed further with data
 
             return data.bundle_shard, data.segments_shard, data.justification
 

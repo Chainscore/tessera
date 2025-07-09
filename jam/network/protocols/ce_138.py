@@ -115,9 +115,6 @@ class AuditShardRequestProtocol(NetworkProtocol):
             erasure_root = data.query.erasure_root
             shard_index = data.query.shard_index
 
-            logger.info("Processing")
-            # TODO: Process received erasure code & shard index
-
             d3l = settings.d3l
             audit = settings.audit_da
 
@@ -136,13 +133,11 @@ class AuditShardRequestProtocol(NetworkProtocol):
             justification_da = JustificationsDA(audit)
             justification = justification_da.get(erasure_root, shard_index)
 
+            # build segment shard root
             bmrfunctions = BMRFunctions()
             segment_shard = SegmentsShard(ss_dict[shard_index].shard)
             segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
-            bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
-
-            shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
-            s = Bytes(shards_key.encode())
+            s = Bytes(segments_shard_root.encode())
 
             justification.append(s)
 

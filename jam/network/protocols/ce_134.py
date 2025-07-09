@@ -97,7 +97,7 @@ class WorkPackageSharing(NetworkProtocol):
         ci = data.core_segment.core_index
 
         from jam.state.state import state
-        logger.info("Tau", tau=state.tau)
+        logger.debug("Tau", tau=state.tau)
         mapping = guarantor_assignments(state)[ci]
 
         logger.info(
@@ -112,7 +112,6 @@ class WorkPackageSharing(NetworkProtocol):
 
         transmitted_count = 0
         responses = []
-        # TODO: Use Actual Guarantors Connections
         tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
@@ -138,7 +137,6 @@ class WorkPackageSharing(NetworkProtocol):
 
                     logger.debug(
                         "Work package bundle transmitted to guarantor",
-                        node_name=node.name,
                         stream_id=stream_id,
                         port=peer.port,
                         core_index=int(data.core_segment.core_index)
@@ -151,7 +149,6 @@ class WorkPackageSharing(NetworkProtocol):
 
             logger.info(
                 "Work package bundle transmission completed",
-                node_name=node.name,
                 transmitted_to=transmitted_count,
                 total_guarantors=len(node.peer_conn),
                 core_index=int(data.core_segment.core_index)
@@ -160,7 +157,6 @@ class WorkPackageSharing(NetworkProtocol):
         except Exception as e:
             logger.error(
                 "Failed to transmit work package bundle to guarantor",
-                node_name=node.name,
                 error=str(e),
                 error_type=type(e).__name__
             )
@@ -281,7 +277,6 @@ class WorkPackageSharing(NetworkProtocol):
                 signature_length=len(data.cred.work_report_hash)
             )
 
-            # TODO: Save Work Report & Check Majority & Distribute
             logger.info("Distributing this Work Report after achieving majority")
             logger.debug(
                 "Report credential processed",

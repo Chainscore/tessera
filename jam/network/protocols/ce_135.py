@@ -68,7 +68,6 @@ class WorkReportDistribution(NetworkProtocol):
         len_a = data.len.encode()
 
         logger.info(f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators")
-        # TODO: Use All Validators Connections
 
         tasks = TypedVector([])
         try:
@@ -87,6 +86,11 @@ class WorkReportDistribution(NetworkProtocol):
                 res = client.close_and_wait(message=msg_a, stream_id=stream_id)
                 task = asyncio.create_task(res)
                 tasks.append(task)
+                logger.debug(
+                    "Report transmitted to validator",
+                    stream_id=stream_id,
+                    port=peer.port,
+                )
 
             responses = TypedVector[OptBool](await gather_with_exceptions(tasks))
 
@@ -158,57 +162,65 @@ class WorkReportDistribution(NetworkProtocol):
             data = CE137Data(len=U32(len(query.encode())), query=query)
 
             logger.debug("Requesting Shard", shard_index=shard_index, erasure_root=er_root)
-            shards = await CE137.transmit(node=node, data=data, assurers=assurers)
 
-            for shard in shards:
-                # Save Shard
-                if shard is not None:
-                    bmrfunctions = BMRFunctions()
+            try:
+                responses = await CE137.transmit(node=node, data=data, assurers=assurers)
+                for shard in responses:
+                    # Save Shard
+                    if shard is not None:
+                        bmrfunctions = BMRFunctions()
 
-                    bundle_shard = shard[0]
-                    segments_shard = shard[1]
-                    justification = shard[2]
+                        bundle_shard = shard[0]
+                        segments_shard = shard[1]
+                        justification = shard[2]
 
-                    bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
-                    segments_shard_root = bmrfunctions.wb_merkle_fn(values=segments_shard)
+                        # creating leaf
+                        bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
+                        segments_shard_root = bmrfunctions.wb_merkle_fn(values=segments_shard)
+                        shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+                        s = Bytes(shards_key.encode())
 
-                    shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+                        # verifying justification
+                        verification = bmrfunctions.verify_wb_merkle(leaf=s, index=shard_index, justification=justification, erasure_root=er_root)
 
-                    s = Bytes(shards_key.encode())
+                        # if verification == True save shards, justification and break out of loop else move to shards provided by other guarantors
+                        if verification:
+                            # Store Bundle Shard
+                            audits = settings.audit_da
+                            bs_da = AuditShardsDA(audits)
+                            bs_da.put(er_root, shard_index, shard[0])
 
-                    verification = bmrfunctions.verify_wb_merkle(leaf=s, index=shard_index, justification=justification, erasure_root=er_root)
+                            # Store Segments Shard
+                            d3l = settings.d3l
+                            ss_da = SegmentShardsDA(d3l)
+                            ss_da.put(er_root, shard_index, shard[1])
 
-                    if verification:
-                        # Store Bundle Shard
-                        audits = settings.audit_da
-                        bs_da = AuditShardsDA(audits)
-                        bs_da.put(er_root, shard_index, shard[0])
+                            # store justification
+                            justification_da = JustificationsDA(audits)
+                            justification_da.put(er_root, shard_index, justification)
 
-                        # Store Segments Shard
-                        d3l = settings.d3l
-                        ss_da = SegmentShardsDA(d3l)
-                        ss_da.put(er_root, shard_index, shard[1])
+                            # Distribute Assurance
+                            # TODO: Fix Assurances Distribution
+                            from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
+                            CE141 = AssuranceDistribution()
 
-                        # store justification
-                        justification_da = JustificationsDA(audits)
-                        justification_da.put(er_root, shard_index, justification)
+                            from jam.network.utils.dummy_assurance import create_dummy_assurances
+                            assurance = create_dummy_assurances()
+                            data = CE141Data(assurance)
+                            ack = await CE141.transmit(node=node, data=data)
 
-                        # Distribute Assurance
-                        # TODO: Fix Assurances Distribution
-                        from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
-                        CE141 = AssuranceDistribution()
-
-                        from jam.network.utils.dummy_assurance import create_dummy_assurances
-                        assurance = create_dummy_assurances()
-                        data = CE141Data(assurance)
-                        ack = await CE141.transmit(node=node, data=data)
-
-                        # Save Report
-                        rep_da = ReportsDA(d3l)
-                        wr_hash = Hash.blake2b(report.encode())
-                        rep_da.put(wr_hash, report)
+                            # Save Report
+                            rep_da = ReportsDA(d3l)
+                            wr_hash = Hash.blake2b(report.encode())
+                            rep_da.put(wr_hash, report)
 
 
-                        logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
+                            logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
 
-                        break
+                            break
+            except Exception as e:
+                logger.error(
+                    "Failed to request shards using ce_137",
+                    error=str(e),
+                    error_type=type(e).__name__
+                )
