@@ -11,7 +11,7 @@ from jam.logging import get_logger
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
 
-from jam.types.block.extrinsics.guarantees import ValidatorSignatures, ValidatorSignature
+from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSignatures, ValidatorSignature
 
 from jam.types.protocol.core import CoreIndex, Gas, TimeSlot, ExportsRoot, ValidatorIndex
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
@@ -41,7 +41,7 @@ from jam.types.work.execution import (
 
 from jam.utils.benchmark import benchmark
 
-from jam.utils.constants import BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE
+from jam.utils.constants import BASIC_ERASURE_SIZE, GENESIS_TS, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE, SLOT_PERIOD
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 
@@ -55,7 +55,6 @@ from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
 from jam.work_package.validator import Validator
 
 from jam.network.node import Node
-from jam.utils.constants import SLOT_PERIOD, GENESIS_TS
 
 # Module-specific logger
 logger = get_logger("in_core")
@@ -494,7 +493,7 @@ class Processor:
         og_guarantee = ValidatorSignature(validator_index=ValidatorIndex(self.node.validator_index), signature=sign)
 
         # Check majority & Build guarantees:
-        guarantees = ValidatorSignatures([og_guarantee])
+        guarantees = [og_guarantee]
 
         # Working fix
         responses = await self.transmit_task
@@ -505,11 +504,19 @@ class Processor:
             if response != OptCred(Null):
                 cred = response.unwrap()
                 if cred.work_report_hash == wr_hash:
-                    guarantee = ValidatorSignature(validator_index=validator_index, signature=cred.ed25519_signature)
+                    guarantee = ValidatorSignature(
+                        validator_index=validator_index,
+                        signature=cred.ed25519_signature
+                    )
+                    print("REC GUARANTEE", guarantee)
                     guarantees.append(guarantee)
 
+        # Sort them guarantees
+
+        guarantees = ValidatorSignatures(sorted(guarantees, key = lambda g: g.validator_index))
+        print("GUARANTEES BUILT", guarantees)
         # Distribute Guaranteed WR to Validators CE135
-        logger.info(f"Distributing Work Report to other validators..")
+        logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
         if len(guarantees) > 1:
 
             d3l = settings.d3l
@@ -529,12 +536,13 @@ class Processor:
 
             # TODO: Save Assurers Mapping
 
-            from jam.network.protocols.ce_135 import GuaranteedWR
             CE135 = WorkReportDistribution()
             # TODO: Fix timeslot
-            time_slot = TimeSlot((time.time() - GENESIS_TS) // SLOT_PERIOD)
-
-            gwr = GuaranteedWR(report=wr, slot=time_slot, signatures=guarantees)
+            gwr = ReportGuarantee(
+                report=wr,
+                slot=TimeSlot((time.time() - GENESIS_TS) // SLOT_PERIOD),
+                signatures=guarantees
+            )
             r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
 

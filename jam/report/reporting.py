@@ -116,6 +116,8 @@ class Reporting:
             # --------- not-authorized -----------------
             # https://graypaper.fluffylabs.dev/#/85129da/15ea0015f700?v=0.6.3
             # Ensure authorizer hash is present in core's Authorizer Pool
+            print("STATE CHECK", report.authorizer_hash, state.alpha[report.core_index])
+
             if report.authorizer_hash not in state.alpha[int(report.core_index)]:
                 raise ReportingError(
                     ReportingErrorCode.CORE_UNAUTHORIZED,

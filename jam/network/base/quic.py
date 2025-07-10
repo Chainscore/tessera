@@ -129,6 +129,7 @@ class QuicProtocol(QuicConnectionProtocol):
 
             logger.debug(
                 "Message transmitted, waiting for response",
+                peer=self.peer,
                 stream_id=stream_id
             )
             return await asyncio.shield(waiter)
@@ -165,6 +166,8 @@ class QuicProtocol(QuicConnectionProtocol):
             if node.is_validator and event.alpn_protocol == node_alpn:
                 peer = self.fetch_peer()
                 if peer:
+                    if peer not in node.peer_conn:
+                        self.node.peer_conn[peer] = None, self
                     logger.info(
                         f"🔗 Handshake completed with {peer}.",
                         interface=self.interface,
@@ -224,6 +227,8 @@ class QuicProtocol(QuicConnectionProtocol):
                 )
                 self._quic.close(error_code=0xA, reason_phrase=f"Malicious node tried to connect.")
 
+            print("CONN", self.node.peer_conn, self.peer)
+
         # elif isinstance(event, ConnectionIdIssued):
         #     logger.debug(f"🔗 Connection Id issued: {event.connection_id}",
         #     interface=self.interface
@@ -242,6 +247,7 @@ class QuicProtocol(QuicConnectionProtocol):
 
             logger.warning(
                 f"🔗 Stream reset.",
+                stream_id=stream_id,
                 error_code=event.error_code,
                 interface=self.interface
             )
@@ -255,6 +261,7 @@ class QuicProtocol(QuicConnectionProtocol):
 
             logger.warning(
                 f"🔗 Stream reception stopped.",
+                stream_id=stream_id,
                 error_code=event.error_code,
                 interface=self.interface
             )
@@ -262,9 +269,12 @@ class QuicProtocol(QuicConnectionProtocol):
         # Handle Connection Terminated Event
         elif isinstance(event, ConnectionTerminated):
             self._close_pending = True
+            print("CONN 1", self.node.peer_conn, self.peer)
+
             if self.peer in self.node.peer_conn:
                 logger.debug(f"Removing {self.peer} from connections.")
                 del self.node.peer_conn[self.peer]
+                print("CONN 2", self.node.peer_conn, self.peer)
 
             logger.warning(
                 f"❌ Connection with {self.peer} terminated.",
@@ -330,7 +340,7 @@ class QuicProtocol(QuicConnectionProtocol):
                 try:
                     # Map the request to its corresponding CE protocol function
                     ce_protocol = ProtocolMap.get_protocol(prefix)()
-                    logger.debug(f"CE PROTOCOL TRIGGERED",prefix=prefix, protocol=type(ce_protocol).__name__)
+                    logger.debug(f"CE PROTOCOL TRIGGERED", peer=self.peer , prefix=prefix, protocol=type(ce_protocol).__name__)
                     if (stream_id in self.waiter) and (self.waiter[stream_id] is not None):
                         logger.debug("Intercepting Response.", protocol=prefix, stream_id=stream_id)
                         res = ce_protocol.res_intercept(stream_id, self)
@@ -341,7 +351,7 @@ class QuicProtocol(QuicConnectionProtocol):
                         waiter.set_result(res)
 
                     else:
-                        logger.debug("Intercepting Request.", protocol=prefix, stream_id=stream_id)
+                        logger.debug("Intercepting Request.", peer=self.peer, protocol=prefix, stream_id=stream_id)
                         ce_protocol.req_intercept(stream_id, self)
 
                     # Clear buffer
@@ -372,7 +382,7 @@ class QuicProtocol(QuicConnectionProtocol):
                         if len(data) == 4:
                             return
                         up_protocol = ProtocolMap.get_protocol(prefix)()
-                        logger.debug(f"UP PROTOCOL TRIGGERED",prefix=prefix, protocol=type(up_protocol).__name__)
+                        logger.debug(f"UP PROTOCOL TRIGGERED", peer=self.peer, prefix=prefix, protocol=type(up_protocol).__name__)
                         up_protocol.req_intercept(stream_id, self)
 
                     except Exception as e:

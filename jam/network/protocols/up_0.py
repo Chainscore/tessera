@@ -12,7 +12,7 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 
 from jam.network.peer import Peer
-from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
+from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction, Query
 from jam.types.block import Block, Header, header
 
 if TYPE_CHECKING:
@@ -306,18 +306,25 @@ class BlockAnnouncement(NetworkProtocol):
         from jam.state.state import state 
 
         logger.info("Fetching block to import", slot=header.slot)
-        blocks = await BlockRequest().transmit(
-            node, 
+        query = Query(
+            header=HeaderHash(header.hash()),
+            dir=Direction.DesInc,
+            max_blocks=U32(1)
+        )
+        responses = await BlockRequest().transmit(
+            node,
             CE128Data(
-                header=HeaderHash(header.hash()), 
-                dir=Direction.DesInc, 
-                max_blocks=U32(1)
+                len=U32(len(query.encode())),
+                query=query
             ),
             [conn for _peer, conn in node.peer_conn.items() if _peer == peer]
         )
-        for block in blocks[0]:
-            state.transition(block)
-            logger.debug("Imported block", slot=block.header.slot)
+
+        blocks = responses[0]
+        for block in reversed(blocks):
+            if block:
+                state._force_transition(block)
+                logger.debug("Imported block", slot=block.header.slot)
 
 
     @classmethod
@@ -328,21 +335,31 @@ class BlockAnnouncement(NetworkProtocol):
         # (h.final.slot - state.tau) 
         if h.final.time_slot <= state.tau:
             return
-        
-        data_req = CE128Data(
-            header=HeaderHash(h.final.header_hash), 
-            dir=Direction.DesInc, 
+
+        query = Query(
+            header=HeaderHash(h.final.header_hash),
+            dir=Direction.DesInc,
             max_blocks=U32(h.final.time_slot - state.tau)
         )
 
-        logger.info("Requesting Blocks to Sync", num=data_req.max_blocks)
+        data_req = CE128Data(
+            len=U32(len(query.encode())),
+            query=query
+        )
 
-        blocks_to_import = (await BlockRequest().transmit(node, data_req, [conn for _peer, conn in node.peer_conn.items() if _peer == peer]))[0]
+        logger.info("Requesting Blocks to Sync", num=data_req.query.max_blocks)
+
+        responses = await BlockRequest().transmit(node, data_req, [conn for _peer, conn in node.peer_conn.items() if _peer == peer])
+
+        blocks_to_import = responses[0]
         logger.debug(f"Received {len(blocks_to_import)} blocks. Importing...")
 
-        for block in reversed(blocks_to_import): 
-            state.transition(block)
-            logger.debug("Imported block", header_hash=block.header.hash().hex(), slot=block.header.slot)
+        logger.debug("Blocks to import", cnt=len(blocks_to_import))
+
+        for block in reversed(blocks_to_import):
+            if block:
+                state._force_transition(block)
+                logger.debug("Imported block", header_hash=block.header.hash().hex(), slot=block.header.slot)
            
         logger.info("Sync complete!", state_root=state.root)
         return 

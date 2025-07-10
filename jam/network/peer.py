@@ -22,11 +22,11 @@ class Peer:
 
     @property
     def host(self):
-        return self.data.metadata.host
+        return str(self.data.metadata.host)
 
     @property
     def port(self):
-        return self.data.metadata.port
+        return int(self.data.metadata.port)
 
     @property
     def ed_key(self):

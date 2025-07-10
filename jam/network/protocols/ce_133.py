@@ -1,6 +1,6 @@
 from typing import cast
 from tsrkit_types import Null, structure, Uint, Bool, TypedVector, Option
-
+import time
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -12,6 +12,7 @@ from jam.types.work.manifest import Extrinsics
 from jam.types.work.package import WorkPackage
 
 from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
+from jam.utils.constants import GENESIS_TS
 
 from jam.work_package.processor import Processor
 
@@ -75,6 +76,7 @@ class WorkPackageSubmission(NetworkProtocol):
         from jam.state.state import state
         logger.debug("Tau", tau=state.tau)
         mapping = guarantor_assignments(state)[ci]
+        print("MAPPING 133", mapping, (time.time() - GENESIS_TS) // 6, state.tau)
 
         logger.info(
             "Transmitting work package to guarantors",
@@ -89,6 +91,9 @@ class WorkPackageSubmission(NetworkProtocol):
         responses = TypedVector[OptBool]([])
         try:
             for peer in node.peer_conn:
+                # if peer.port != 40000:
+                #     continue
+
                 if peer.ed_key in mapping:
                     logger.info("Sending package to", port=peer.port)
                     client = node.peer_conn[peer][1]
@@ -171,7 +176,7 @@ class WorkPackageSubmission(NetworkProtocol):
             with benchmark(f"Work Package processed"):
                 wr, wr_hash = processor.process(wp, ci, data.extrinsics)
 
-            write_benchmarks_to_txt("benchmarks/refinement.txt")
+            # write_benchmaks_to_txt("benchmarks/refinement.txt")
 
             logger.info(
                 "Work package processed successfully",

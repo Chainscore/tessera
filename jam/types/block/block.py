@@ -27,7 +27,7 @@ class Block:
         return Block(header=create_dummy_header(), extrinsic=create_dummy_extrinsics(n_et, n_ep, n_ea, n_eg, n_ed))
     
     @staticmethod
-    def genesis(path = "genesis.json") -> "Block":
+    def genesis(path = "dev-spec.json") -> "Block":
         return Block(header=Header.genesis(path), extrinsic=Extrinsic.empty())
 
     def load_parent(self, db: RockStore) -> "Block":

@@ -1,5 +1,8 @@
+import time
 from typing import cast, TYPE_CHECKING, Tuple
 from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32
+
+from jam.utils.constants import GENESIS_TS
 
 if TYPE_CHECKING:
     from jam.network.node import Node
@@ -99,6 +102,8 @@ class WorkPackageSharing(NetworkProtocol):
         from jam.state.state import state
         logger.debug("Tau", tau=state.tau)
         mapping = guarantor_assignments(state)[ci]
+        print("MAPPING 134", mapping, (time.time() - GENESIS_TS) // 6, state.tau)
+
 
         logger.info(
             "Transmitting work package bundle to guarantors",
@@ -115,6 +120,9 @@ class WorkPackageSharing(NetworkProtocol):
         tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
+                if int(peer.port) != 40001:
+                    continue
+
                 if peer.ed_key in mapping:
                     logger.debug("Sending bundle to", port=peer.port)
                     client = node.peer_conn[peer][1]
@@ -229,7 +237,7 @@ class WorkPackageSharing(NetworkProtocol):
                 server.stream_and_keep_open(len_a, stream_id)
                 server.stream_and_close(msg_a, stream_id)
 
-            write_benchmarks_to_txt("benchmarks/guarantee.txt")
+            # write_benchmarks_to_txt("benchmarks/guarantee.txt")
 
             logger.debug(
                 "Report credential sent to OG guarantor",

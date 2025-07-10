@@ -13,7 +13,7 @@ from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
 def update_state(state: State):
     pc = bytes(
         [0, 0, 22, 124, 121, 81, 25, 1, 7, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1, 50, 0, 69, 147,
-         18])
+     18])
 
     c0_authorized_code = [0, 0, 21, 124, 121, 81, 9, 6, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1, 50,
                           0,

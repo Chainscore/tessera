@@ -57,6 +57,7 @@ azure_logs/
 
 mydb/
 db/
+vectors/
 
 # Ignore all folders in /seeds, but not the keys.json
 /seeds/*

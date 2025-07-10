@@ -20,10 +20,10 @@ class OperandTuple:
     h: WorkPackageHash
     e: ExportsRoot
     a: OpaqueHash
-    o: Bytes
     y: OpaqueHash
-    g: Gas
-    d: WorkExecResult
+    g: Uint
+    d: WorkExecResult 
+    o: Bytes
 
 
 class OperandTuples(TypedVector[OperandTuple]):

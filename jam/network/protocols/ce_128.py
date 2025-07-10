@@ -1,10 +1,10 @@
 from typing import List, cast, TYPE_CHECKING
 
-from tsrkit_types import TypedVector, Enum
+from tsrkit_types import TypedVector, Enum, TypedArray
 
 from jam.logging import get_logger
 from jam.consensus.grandpa.finality import Finality
-from jam.network.base.error import NetworkingErrorCode
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.quic import QuicProtocol
 from jam.types import HeaderHash, Block, TimeSlot
 
@@ -23,10 +23,35 @@ class Direction(Enum):
     DesInc = 1
 
 @structure
-class CE128Data:
+class Query:
     header: HeaderHash
     dir: Direction
     max_blocks: U32
+
+@structure
+class CE128Data:
+    len: U32
+    query: Query
+
+    @property
+    def is_valid(self):
+        if len(self.query.encode()) == self.len:
+            return True
+        return False
+
+Blocks = TypedVector[Block]
+
+@structure
+class CE128Response:
+    len: U32
+    blocks: Blocks
+
+    @property
+    def is_valid(self):
+        if len(self.blocks.encode()) == self.len:
+            return True
+        return False
+
 
 class BlockRequest(NetworkProtocol):
     """
@@ -50,10 +75,12 @@ class BlockRequest(NetworkProtocol):
     async def transmit(self, node: "Node", data: CE128Data, peer_conns: List | None = None):
         """Transmit Block Request"""
 
-        stream_data = data.encode()
+        query = data.query
+        msg_a = query.encode()
+        len_a = data.len.encode()
 
         logger.info(
-            "Transmitting block request to node", num=len(peer_conns or node.peer_conn), header_hash=data.header, direction=data.dir, max_blocks=data.max_blocks,
+            "Transmitting block request to node", num=len(peer_conns or node.peer_conn), header_hash=query.header, direction=query.dir, max_blocks=query.max_blocks,
         )
 
         transmitted_count = 0
@@ -65,8 +92,15 @@ class BlockRequest(NetworkProtocol):
             _, client = peer
 
             try:
+                # Send Protocol Prefix
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
-                data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
+
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
+
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
 
                 transmitted_count += 1
                 responses.append(data)
@@ -97,7 +131,7 @@ class BlockRequest(NetworkProtocol):
         buffer = server.stream_buffer[stream_id][1:]
 
         try:
-            from jam.settings import settings; 
+            from jam.settings import settings
             logger.debug(
                 "Received block request",
                 stream_id=stream_id,
@@ -105,7 +139,13 @@ class BlockRequest(NetworkProtocol):
             )
 
             data, offset = CE128Data.decode_from(buffer)
+
             data = cast(CE128Data, data)
+
+            if not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
+
+            data = data.query
 
             logger.info(
                 "Processing block request", stream_id=stream_id,
@@ -133,7 +173,7 @@ class BlockRequest(NetworkProtocol):
                 )
 
             # Get all header hashes in between
-            all_blocks = TypedVector[Block]([])
+            all_blocks = []
             hh = data.header  
             while hh != HeaderHash(32) and len(all_blocks) != int(data.max_blocks):
                 _block = Block.decode(settings.main_db.get(Block.get_storage_key_block(hh)))
@@ -141,10 +181,13 @@ class BlockRequest(NetworkProtocol):
                     all_blocks.append(_block)
                     hh = _block.header.parent
                 else:
-                    logger.error("Block not found against recorded header_hash", header_hash=_header_hash, timeslot=ts)
+                    logger.error("Block not found against recorded header_hash", header_hash=hh, timeslot=data.header.slot)
 
-            blocks_enc = all_blocks.encode()
-            server.stream_and_close(stream_id=stream_id, message=self._prefix.encode() + blocks_enc)
+            blocks_enc = TypedArray[Block, data.max_blocks](all_blocks).encode()
+            len_enc = U32(len(blocks_enc))
+
+            server.stream_and_keep_open(stream_id=stream_id, message=len_enc.encode())
+            server.stream_and_close(stream_id=stream_id, message=blocks_enc)
 
             logger.info(
                 "Blocks request completed successfully. Closed stream",
@@ -172,8 +215,32 @@ class BlockRequest(NetworkProtocol):
         )
 
         try:
-            data = TypedVector[Block].decode(buffer[1:])
-            return data 
+            # data = CE128Response.decode(buffer[1:])
+
+            length = U32.decode(buffer[1:5])
+            block_buf = buffer[5:5+length]
+            buf_len = len(block_buf)
+
+            if not block_buf or not buf_len == length:
+                raise NetworkingError(Code.INVALID_DATA)
+
+            offset = 0
+            cnt = 0
+            blocks = Blocks([])
+            while offset < buf_len:
+                block, off = Block.decode_from(block_buf, offset)
+                offset += off
+                blocks.append(block)
+                cnt += 1
+                logger.debug(
+                    "Parsed Block",
+                    cnt=cnt,
+                    stream_id=stream_id,
+                    peer=client.peer
+                )
+
+            return blocks
+
         except Exception as e:
-            logger.error(NetworkingErrorCode.BAD_RESPONSE)
-            return None
+            logger.error(Code.BAD_RESPONSE ,err=e)
+            return Blocks([])

@@ -90,6 +90,9 @@ class ShardDistributionProtocol(NetworkProtocol):
         tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
+                # if int(peer.port) != 40001:
+                #     continue
+
                 if Uint[16](peer.peer_index) in assurers:
                     logger.debug("Requesting shard from", peer=str(peer))
                     client = node.peer_conn[peer][1]
