@@ -149,8 +149,8 @@ class WorkReportDistribution(NetworkProtocol):
         for i in signatures:
             assurers.append(i.validator_index)
 
+        report = data.report
         if node.validator_index not in assurers:
-            report = data.report
             er_root = report.package_spec.erasure_root
 
             shard_index = node.get_shard_index(report.core_index)
@@ -199,7 +199,7 @@ class WorkReportDistribution(NetworkProtocol):
                             justification_da = JustificationsDA(audits)
                             justification_da.put(er_root, shard_index, justification)
 
-                            # give assurance for this core
+                            # give assurance for this core & this validator
                             from jam.operations.assr_collector import assr_collector
                             assr_collector.record_shard_assr(report.core_index)
 
@@ -218,3 +218,7 @@ class WorkReportDistribution(NetworkProtocol):
                     error=str(e),
                     error_type=type(e).__name__
                 )
+        else:
+            # give assurance for this core & this validator
+            from jam.operations.assr_collector import assr_collector
+            assr_collector.record_shard_assr(report.core_index)

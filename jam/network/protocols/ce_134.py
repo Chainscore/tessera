@@ -120,9 +120,6 @@ class WorkPackageSharing(NetworkProtocol):
         tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
-                if int(peer.port) != 40001:
-                    continue
-
                 if peer.ed_key in mapping:
                     logger.debug("Sending bundle to", port=peer.port)
                     client = node.peer_conn[peer][1]

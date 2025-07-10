@@ -546,4 +546,8 @@ class Processor:
             r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
 
+            # give assurance for this core & this validator
+            from jam.operations.assr_collector import assr_collector
+            assr_collector.record_shard_assr(wr.core_index)
+
             acks = await CE135.transmit(node=self.node, data=data)
