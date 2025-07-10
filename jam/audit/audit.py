@@ -24,6 +24,7 @@ from jam.network.node import Node
 # TODO: EQUATION: 17.10 has xn = E({ E2 (c) ⌢ H(r) ∣ (r, c) ∈ an })
 # TODO: signature_pvt function in utils changes according to the
 
+OptionWRList=TypedVector[Option[WorkReport]]
 
 @dataclass
 class AuditingAndJudgement:
@@ -34,7 +35,7 @@ class AuditingAndJudgement:
         self.node: Node
 
     @staticmethod
-    def report_to_be_audit(available_reports: Rho, pending_report: Rho) -> List[Option[WorkReport]]:
+    def report_to_be_audit(available_reports: Rho, pending_report: Rho) -> OptionWRList:
         """
         Function Q define in Eq. 17.1 and 17.2
         This function define the sequence of work_report which required to audit(Q)
@@ -50,7 +51,7 @@ class AuditingAndJudgement:
             Array of Work Reports to be Audit
         """
 
-        pre_audit_report = List[Option[WorkReport]]([])
+        pre_audit_report:OptionWRList = OptionWRList([])
 
         for i, (report, slot) in enumerate(pending_report):
             if report in available_reports:
@@ -78,7 +79,7 @@ class AuditingAndJudgement:
 
         return signature
 
-    def verifiable_random_selection(self, entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_report: List[Option[WorkReport]]) -> List[Tuple[CoreIndex, WorkReport]]:
+    def verifiable_random_selection(self, entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_report: OptionWRList) -> List[Tuple[CoreIndex, WorkReport]]:
         """
         Equation: 17.5, 17.6
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e0a011e5601?v=0.7.0
@@ -174,7 +175,7 @@ class AuditingAndJudgement:
         return signature
 
 
-    def audited_report(self, pre_audit: List[Option[WorkReport]]) -> TypedVector[Option[WorkReport]]:
+    def audited_report(self, pre_audit: OptionWRList) -> OptionWRList:
         """
         Equation: 17.19, 17.20
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1fa9011fd301?v=0.7.0
@@ -185,5 +186,3 @@ class AuditingAndJudgement:
 
         # condition 1 => on that core all the judgment should be true and A_n(r) ⊂ J_T(r
         # condition 2 => if in tranche all the judgment of the validator should be > 2/3
-
-
