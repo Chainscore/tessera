@@ -41,7 +41,9 @@ class ValidatorMetadata:
     @classmethod
     def from_json(cls, hex_data) -> "ValidatorMetadata":
         return cls.decode(Bytes.from_json(hex_data))
-
+    
+    def to_json(self) -> str:
+        return self.encode().hex()
 
 @structure
 class ValidatorData:

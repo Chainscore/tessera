@@ -1,5 +1,8 @@
+import time
 from typing import cast, TYPE_CHECKING, Tuple
 from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32
+
+from jam.utils.constants import GENESIS_TS
 
 if TYPE_CHECKING:
     from jam.network.node import Node
@@ -23,6 +26,7 @@ from jam.work_package.validator import Validator
 from jam.work_package.guarantor_assignments import guarantor_assignments
 import asyncio
 from jam.types.protocol.core import ValidatorIndex
+from jam.utils.gather import gather_with_exceptions
 
 # Module-specific logger
 logger = get_logger("network")
@@ -98,6 +102,8 @@ class WorkPackageSharing(NetworkProtocol):
         from jam.state.state import state
         logger.debug("Tau", tau=state.tau)
         mapping = guarantor_assignments(state)[ci]
+        print("MAPPING 134", mapping, (time.time() - GENESIS_TS) // 6, state.tau)
+
 
         logger.info(
             "Transmitting work package bundle to guarantors",
@@ -111,12 +117,11 @@ class WorkPackageSharing(NetworkProtocol):
 
         transmitted_count = 0
         responses = []
-        # TODO: Use Actual Guarantors Connections
-        tasks = []
+        tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
-                if int(peer.port) != 40001:
-                    continue
+                # if int(peer.port) != 40001:
+                #     continue
 
                 if peer.ed_key in mapping:
                     logger.debug("Sending bundle to", port=peer.port)
@@ -140,7 +145,6 @@ class WorkPackageSharing(NetworkProtocol):
 
                     logger.debug(
                         "Work package bundle transmitted to guarantor",
-                        node_name=node.name,
                         stream_id=stream_id,
                         port=peer.port,
                         core_index=int(data.core_segment.core_index)
@@ -149,11 +153,10 @@ class WorkPackageSharing(NetworkProtocol):
             if transmitted_count > 2:
                 raise ValueError("Trying to transmit work package bundle to more than 2 guarantors")
 
-            responses = await asyncio.gather(*tasks)
+            responses = await gather_with_exceptions(tasks)
 
             logger.info(
                 "Work package bundle transmission completed",
-                node_name=node.name,
                 transmitted_to=transmitted_count,
                 total_guarantors=len(node.peer_conn),
                 core_index=int(data.core_segment.core_index)
@@ -162,7 +165,6 @@ class WorkPackageSharing(NetworkProtocol):
         except Exception as e:
             logger.error(
                 "Failed to transmit work package bundle to guarantor",
-                node_name=node.name,
                 error=str(e),
                 error_type=type(e).__name__
             )
@@ -283,7 +285,6 @@ class WorkPackageSharing(NetworkProtocol):
                 signature_length=len(data.cred.work_report_hash)
             )
 
-            # TODO: Save Work Report & Check Majority & Distribute
             logger.info("Distributing this Work Report after achieving majority")
             logger.debug(
                 "Report credential processed",

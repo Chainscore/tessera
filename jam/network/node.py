@@ -262,7 +262,7 @@ class Node:
                 ),
                 # wait_connected=False,
                 session_ticket_handler=session_ticket_store.add,
-                local_port=int(self.port),
+                # local_port=int(self.port),
                 sock=sock
             ) as client:
 
@@ -300,6 +300,7 @@ class Node:
 
         try:
             # Skip self
+            # logger.info(f"⚠️ ({self.name}) host: {self.host}, port: {self.port}, {str(peer)}", hostcomp=(str(peer.host) == self.host), portcomp=(int(peer.port) == self.port))
             if str(peer.host) == self.host and int(peer.port) == self.port:
                 logger.info(f"⚠️ ({self.name}) Skipping self {str(self)}")
                 return
@@ -339,22 +340,24 @@ class Node:
         # Create Socket Connection
         # explicitly enable IPv4/IPv6 dual stack
         local_host = "::"
-        sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-        completed = False
-        try:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
-            sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-            sock.bind((local_host, self.port, 0, 0))
-            completed = True
-            logger.info("Bound to socket successfully!")
+        # sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        # completed = False
+        # try:
+        #     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+        #     sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        #     sock.bind((local_host, self.port, 0, 0))
+        #     completed = True
+        #     logger.info("Bound to socket successfully!")
+        #
+        # except Exception as e:
+        #     logger.error("Unable to bind with socket", err = e)
+        #
+        # finally:
+        #     if not completed:
+        #         logger.error("Unable to bind with socket. Closing socket")
+        #         sock.close()
 
-        except Exception as e:
-            logger.error("Unable to bind with socket", err = e)
-
-        finally:
-            if not completed:
-                logger.error("Unable to bind with socket. Closing socket")
-                sock.close()
+        sock = None
 
         # sock = None
         try:
@@ -383,9 +386,9 @@ class Node:
             _, conn = self.peer_conn[peer]
             conn.close(reason_phrase=f"Closing node {self.__id}")
 
-node = Node("god", "0.0.0.0", 0, ValidatorsData.decode(bytes(10000)), [], False, False)
+node = Node("god", "127.0.0.1", 0, ValidatorsData.decode(bytes(10000)), [], False, False)
 
-def setup_node(name, port, peers, is_val = True, is_bd = False, host="0.0.0.0") -> Node:
+def setup_node(name, port, peers, is_val = True, is_bd = False, host="127.0.0.1") -> Node:
     global node
     from jam.settings import settings
     node = Node(name, host, port, settings.val, peers, is_bd, is_val)

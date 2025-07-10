@@ -21,6 +21,7 @@ from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 from jam.merklization import BMRFunctions
 from jam.types.work.shard import ShardKey
+from jam.utils.gather import gather_with_exceptions
 
 @structure
 class CE135Data:
@@ -63,27 +64,41 @@ class WorkReportDistribution(NetworkProtocol):
         len_a = data.len.encode()
 
         logger.info(f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators")
-        # TODO: Use All Validators Connections
 
-        # TODO: Error Handling
-        responses = TypedVector[OptBool]([])
-        for peer in node.peer_conn:
-            logger.debug("Sending report to:", port=node.port)
-            client = node.peer_conn[peer][1]
+        tasks = TypedVector([])
+        try:
+            for peer in node.peer_conn:
+                logger.debug("Sending report to:", port=peer.port)
+                client = node.peer_conn[peer][1]
 
-            # Send Protocol Prefix
-            stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-            # Append prefix to stream buffer so that we know the stream for handling response
-            client.stream_buffer[stream_id] = self._prefix.encode()
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
 
-            # Send Messages with their lengths
-            client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-            data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                task = asyncio.create_task(res)
+                tasks.append(task)
+                logger.debug(
+                    "Report transmitted to validator",
+                    stream_id=stream_id,
+                    port=peer.port,
+                )
 
-            responses.append(data)
+            responses = TypedVector[OptBool](await gather_with_exceptions(tasks))
 
-        return responses
+            if responses is not None:
+                return responses
+
+        except Exception as e:
+            logger.error(
+                "Failed to distribute report.",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Work Report on Validator (server)"""
@@ -134,8 +149,8 @@ class WorkReportDistribution(NetworkProtocol):
         for i in signatures:
             assurers.append(i.validator_index)
 
+        report = data.report
         if node.validator_index not in assurers:
-            report = data.report
             er_root = report.package_spec.erasure_root
 
             shard_index = node.get_shard_index(report.core_index)
@@ -147,51 +162,63 @@ class WorkReportDistribution(NetworkProtocol):
             data = CE137Data(len=U32(len(query.encode())), query=query)
 
             logger.debug("Requesting Shard", shard_index=shard_index, erasure_root=er_root)
-            responses = await CE137.transmit(node=node, data=data, assurers=assurers)
 
-            for shard in responses:
-                # Save Shard
-                if shard is not None:
-                    bmrfunctions = BMRFunctions()
+            try:
+                responses = await CE137.transmit(node=node, data=data, assurers=assurers)
+                for shard in responses:
+                    # Save Shard
+                    if shard is not None:
+                        bmrfunctions = BMRFunctions()
 
-                    bundle_shard = shard[0]
-                    segments_shard = shard[1]
-                    justification = shard[2]
+                        bundle_shard = shard[0]
+                        segments_shard = shard[1]
+                        justification = shard[2]
 
-                    bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
-                    segments_shard_root = bmrfunctions.wb_merkle_fn(values=segments_shard)
+                        # creating leaf
+                        bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
+                        segments_shard_root = bmrfunctions.wb_merkle_fn(values=segments_shard)
+                        shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+                        s = Bytes(shards_key.encode())
 
-                    shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+                        # verifying justification
+                        verification = bmrfunctions.verify_wb_merkle(leaf=s, index=shard_index, justification=justification, erasure_root=er_root)
 
-                    s = Bytes(shards_key.encode())
+                        # if verification == True save shards, justification and break out of loop else move to shards provided by other guarantors
+                        if verification:
+                            # Store Bundle Shard
+                            audits = settings.audit_da
+                            bs_da = AuditShardsDA(audits)
+                            bs_da.put(er_root, shard_index, shard[0])
 
-                    verification = bmrfunctions.verify_wb_merkle(leaf=s, index=shard_index, justification=justification, erasure_root=er_root)
+                            # Store Segments Shard
+                            d3l = settings.d3l
+                            ss_da = SegmentShardsDA(d3l)
+                            ss_da.put(er_root, shard_index, shard[1])
 
-                    if verification:
-                        # Store Bundle Shard
-                        audits = settings.audit_da
-                        bs_da = AuditShardsDA(audits)
-                        bs_da.put(er_root, shard_index, shard[0])
+                            # store justification
+                            justification_da = JustificationsDA(audits)
+                            justification_da.put(er_root, shard_index, justification)
 
-                        # Store Segments Shard
-                        d3l = settings.d3l
-                        ss_da = SegmentShardsDA(d3l)
-                        ss_da.put(er_root, shard_index, shard[1])
+                            # give assurance for this core & this validator
+                            from jam.operations.assr_collector import assr_collector
+                            assr_collector.record_shard_assr(report.core_index)
 
-                        # store justification
-                        justification_da = JustificationsDA(audits)
-                        justification_da.put(er_root, justification)
-
-                        # give assurance for this core
-                        from jam.operations.assr_collector import assr_collector
-                        assr_collector.record_shard_assr(report.core_index)
-
-                        # Save Report
-                        rep_da = ReportsDA(d3l)
-                        wr_hash = Hash.blake2b(report.encode())
-                        rep_da.put(wr_hash, report)
+                            # Save Report
+                            rep_da = ReportsDA(d3l)
+                            wr_hash = Hash.blake2b(report.encode())
+                            rep_da.put(wr_hash, report)
 
 
-                        logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
+                            logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
 
-                        break
+                            break
+            except Exception as e:
+                logger.error(
+                    "Failed to request shards using ce_137",
+                    error=str(e),
+                    error_type=type(e).__name__
+                )
+        else:
+            # give assurance for this core & this validator
+            from jam.operations.assr_collector import assr_collector
+            assr_collector.record_shard_assr(report.core_index)

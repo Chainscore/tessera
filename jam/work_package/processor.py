@@ -509,11 +509,13 @@ class Processor:
                         validator_index=validator_index,
                         signature=cred.ed25519_signature
                     )
+                    print("REC GUARANTEE", guarantee)
                     guarantees.append(guarantee)
 
         # Sort them guarantees
-        guarantees = ValidatorSignatures(sorted(guarantees, key = lambda g: g.validator_index))
 
+        guarantees = ValidatorSignatures(sorted(guarantees, key = lambda g: g.validator_index))
+        print("GUARANTEES BUILT", guarantees)
         # Distribute Guaranteed WR to Validators CE135
         logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
         if len(guarantees) > 1:
@@ -539,10 +541,14 @@ class Processor:
             # TODO: Fix timeslot
             gwr = ReportGuarantee(
                 report=wr,
-                slot=TimeSlot(time.time() - GENESIS_TS // SLOT_PERIOD),
+                slot=TimeSlot((time.time() - GENESIS_TS) // SLOT_PERIOD),
                 signatures=guarantees
             )
             r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
+
+            # give assurance for this core & this validator
+            from jam.operations.assr_collector import assr_collector
+            assr_collector.record_shard_assr(wr.core_index)
 
             acks = await CE135.transmit(node=self.node, data=data)

@@ -1,5 +1,3 @@
-import asyncio
-
 from jam.operations.ext_store import ext_store
 from tsrkit_types import structure, TypedVector, U8, Uint, U32
 from jam.logging import get_logger
@@ -7,7 +5,7 @@ from typing import cast
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.settings import settings
+from jam.types import ValidatorIndex
 from jam.types.block.extrinsics.assurances import AvailAssurance, AvailBitField
 from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -17,14 +15,14 @@ logger = get_logger("network")
 
 @structure
 class Assurance:
-    header_hash: HeaderHash
+    anchor_hash: HeaderHash
     bitfield: AvailBitField
     ed25519_signature: Ed25519Signature
 
 @structure
 class CE141Data:
-    assurance: Assurance
     len: U32
+    assurance: Assurance
 
     @property
     def is_valid(self):
@@ -61,11 +59,11 @@ class AssuranceDistribution(NetworkProtocol):
         msg = data.assurance.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting assurance of HH {data.assurance.header_hash.hex()} to {len(node.peer_conn)}  validators")
-
+        logger.info(f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node.peer_conn)}  validators")
         responses = TypedVector([])
 
         for peer in node.peer_conn:
+            print("ASSURER TRANSMIT RUN", node.name, peer.port)
 
             client = node.peer_conn[peer][1]
 
@@ -84,8 +82,6 @@ class AssuranceDistribution(NetworkProtocol):
 
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-
-
         buffer = server.stream_buffer[stream_id]
 
         logger.debug(
@@ -102,15 +98,16 @@ class AssuranceDistribution(NetworkProtocol):
             raise NetworkingError(Code.INVALID_DATA)
 
         assurance = data.assurance
-        vi = server.peer.peer_index
+        vi = ValidatorIndex(server.peer.peer_index)
 
         assurance_extrinsic = AvailAssurance(
-            anchor = assurance.header_hash,
+            anchor = assurance.anchor_hash,
             bitfield = assurance.bitfield,
             validator_index = vi,
             signature= assurance.ed25519_signature
         )
 
+        logger.error("RECEIVED ASSURANCE", peer=server.peer, assurance=assurance_extrinsic.to_json())
         ext_store.import_assr(assurance_extrinsic)
 
         # Return acknowledgment to Builder
@@ -123,8 +120,6 @@ class AssuranceDistribution(NetworkProtocol):
             ack_size=len(ack)
         )
 
-        asyncio.create_task(self.audit_announcement())
-
     def res_intercept(self, stream_id: int, client: QuicProtocol):
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
@@ -136,6 +131,3 @@ class AssuranceDistribution(NetworkProtocol):
             return True
 
         return False
-
-
-

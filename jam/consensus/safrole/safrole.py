@@ -49,7 +49,8 @@ class Safrole:
 
     @staticmethod
     def vrf_output(signature: BandersnatchRingVrfSignature) -> Bytes[32]:
-        return Bytes[32](RingVrf.pedersen_proof_to_hash(signature))
+        # return Bytes[32](RingVrf.pedersen_proof_to_hash(signature))
+        return Bytes[32](32)
 
     @staticmethod
     def transition(state: Sigma, block: Block, entropy: Bytes[32]) -> Sigma:

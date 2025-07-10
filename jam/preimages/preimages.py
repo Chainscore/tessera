@@ -1,5 +1,5 @@
 from copy import deepcopy
-
+from tsrkit_types import Bytes
 from jam.preimages.errors import PreimageError, PreimageErrorEnum
 from jam.types.state.delta import LookupTable
 from jam.types.state.sigma import Sigma
@@ -45,18 +45,13 @@ class Preimages:
             # Add the preimage to the account
             account = state.delta[preimage.requester]
             hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(hashed_blob, BlobLength(len(preimage.blob)))
+            lookup_key = LookupTable(Bytes[32](hashed_blob), BlobLength(len(preimage.blob)))
 
             account.preimages[hashed_blob] = preimage.blob
             metadata = account.lookup[lookup_key]
             metadata.append(block.header.slot)
             account.lookup[lookup_key] = metadata
-            if preimage.blob is not None:
-                if preimage.requester not in state.pi.services:
-                    state.pi.services[preimage.requester] = ServiceStat.empty()
-                curr_service_stat = state.pi.services[preimage.requester]
-                curr_service_stat.provided_count += 1
-                curr_service_stat.provided_size += len(preimage.blob)
+            
         return state
 
     @staticmethod

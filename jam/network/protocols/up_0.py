@@ -323,7 +323,7 @@ class BlockAnnouncement(NetworkProtocol):
         blocks = responses[0]
         for block in reversed(blocks):
             if block:
-                state.transition(block)
+                state._force_transition(block)
                 logger.debug("Imported block", slot=block.header.slot)
 
 
@@ -358,7 +358,7 @@ class BlockAnnouncement(NetworkProtocol):
 
         for block in reversed(blocks_to_import):
             if block:
-                state.transition(block)
+                state._force_transition(block)
                 logger.debug("Imported block", header_hash=block.header.hash().hex(), slot=block.header.slot)
            
         logger.info("Sync complete!", state_root=state.root)

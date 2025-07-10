@@ -1,6 +1,6 @@
 from typing import cast
 from tsrkit_types import Null, structure, Uint, Bool, TypedVector, Option
-
+import time
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -12,6 +12,7 @@ from jam.types.work.manifest import Extrinsics
 from jam.types.work.package import WorkPackage
 
 from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
+from jam.utils.constants import GENESIS_TS
 
 from jam.work_package.processor import Processor
 
@@ -75,10 +76,10 @@ class WorkPackageSubmission(NetworkProtocol):
         from jam.state.state import state
         logger.debug("Tau", tau=state.tau)
         mapping = guarantor_assignments(state)[ci]
+        print("MAPPING 133", mapping, (time.time() - GENESIS_TS) // 6, state.tau)
 
         logger.info(
             "Transmitting work package to guarantors",
-            node_name=node.name,
             core_index=int(data.package_data.core_index),
             guarantor_count=len(node.peer_conn),
             stream_a_size=data.package_len,
@@ -87,8 +88,6 @@ class WorkPackageSubmission(NetworkProtocol):
         )
 
         transmitted_count = 0
-        # TODO: Use Particular Validators' Connections
-
         responses = TypedVector[OptBool]([])
         try:
             for peer in node.peer_conn:
@@ -119,7 +118,6 @@ class WorkPackageSubmission(NetworkProtocol):
 
                     logger.debug(
                         "Work package transmitted to guarantor",
-                        node_name=node.name,
                         stream_id=stream_id,
                         core_index=int(data.package_data.core_index)
                     )
@@ -132,14 +130,12 @@ class WorkPackageSubmission(NetworkProtocol):
         except Exception as e:
             logger.error(
                 "Failed to transmit work package to guarantor",
-                node_name=node.name,
                 error=str(e),
                 error_type=type(e).__name__
             )
 
         logger.info(
             "Work package transmission completed",
-            node_name=node.name,
             transmitted_to=transmitted_count,
             total_guarantors=len(node.peer_conn),
             core_index=int(data.package_data.core_index)

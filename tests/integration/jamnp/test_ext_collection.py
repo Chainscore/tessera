@@ -63,7 +63,25 @@ CLIENTS = [
         "genesis": True
     },
     {
+        "port": 40002,
+        "role": "VALIDATOR",
+        "theme": "default",
+        "genesis": True
+    },
+    {
         "port": 40003,
+        "role": "VALIDATOR",
+        "theme": "default",
+        "genesis": True
+    },
+    {
+        "port": 40004,
+        "role": "VALIDATOR",
+        "theme": "default",
+        "genesis": True
+    },
+    {
+        "port": 40005,
         "role": "VALIDATOR",
         "theme": "default",
         "genesis": True
@@ -138,7 +156,7 @@ def run_node_process(
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_connection():
+async def test_connection(db_path):
     print("START OF TEST")
 
     processes = []
@@ -148,11 +166,12 @@ async def test_connection():
         is_validator = client["role"] == "VALIDATOR"
         is_builder = client["role"] == "BUILDER"
 
-        dir_path = f"/data/{client['port']}"
+        # dir_path = f"/data/{client['port']}"
+        dir_path=f"{db_path}/{client['port']}"
 
-        if os.path.exists(dir_path):
-            shutil.rmtree(dir_path)
-            print(f"REMOVED DIR: {dir_path}")
+        # if os.path.exists(dir_path):
+        #     shutil.rmtree(dir_path)
+        #     print(f"REMOVED DIR: {dir_path}")
 
         p = Process(
             target=run_node_process,
@@ -248,12 +267,12 @@ async def run_node(
             if val.metadata.port != port
         ]
 
-        tsr_node = setup_node(name, int(port), peers, is_bd=is_builder, is_val=is_validator)
+        tsr_node = setup_node(name, int(port), peers, is_bd=is_builder, is_val=is_validator, host="127.0.0.1")
 
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
-
+        Finality.finalise(header_hash, main_db)
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
             tg.create_task(operate(is_builder))
