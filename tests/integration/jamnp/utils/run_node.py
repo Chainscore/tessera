@@ -115,10 +115,7 @@ async def run_node(
         update_state(state)
 
         peers = [
-            Peer(
-                id=generate_san(val.ed25519),
-                data=val
-            )
+            Peer(data=val)
             for val in state.kappa
             if val.metadata.port != port
         ]

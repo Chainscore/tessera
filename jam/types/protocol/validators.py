@@ -54,6 +54,9 @@ class ValidatorData:
     bls: BlsPublic
     metadata: ValidatorMetadata
 
+    def __repr__(self):
+        return f"Validator(host={str(self.metadata.host)}, port={int(self.metadata.port)})"
+
 
 """Fixed-size array of validator data with size VALIDATOR_COUNT."""
 ValidatorsData = TypedArray[ValidatorData, VALIDATOR_COUNT]
