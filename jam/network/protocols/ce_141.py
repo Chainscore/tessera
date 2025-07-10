@@ -1,3 +1,5 @@
+import asyncio
+
 from jam.operations.ext_store import ext_store
 from tsrkit_types import structure, TypedVector, U8, Uint, U32
 from jam.logging import get_logger
@@ -5,6 +7,7 @@ from typing import cast
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.settings import settings
 from jam.types.block.extrinsics.assurances import AvailAssurance, AvailBitField
 from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -81,6 +84,8 @@ class AssuranceDistribution(NetworkProtocol):
 
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
+
+
         buffer = server.stream_buffer[stream_id]
 
         logger.debug(
@@ -118,6 +123,8 @@ class AssuranceDistribution(NetworkProtocol):
             ack_size=len(ack)
         )
 
+        asyncio.create_task(self.audit_announcement())
+
     def res_intercept(self, stream_id: int, client: QuicProtocol):
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
@@ -129,3 +136,6 @@ class AssuranceDistribution(NetworkProtocol):
             return True
 
         return False
+
+
+

@@ -64,6 +64,8 @@ class Processor:
     node: Node
     merkle: BMRFunctions
     def __init__(self, node: Node):
+        from jam.settings import settings
+        self.settings = settings
         self.merkle = BMRFunctions()
         self.node = node
         self.transmit_task = None
@@ -266,7 +268,7 @@ class Processor:
             s: Availability specifier
         """
         from jam.erasure_coding.erasure_code import ErasureCode
-        from jam.settings import settings
+        settings = self.settings
 
         try:
             # Work Bundle Length, l
@@ -397,8 +399,7 @@ class Processor:
             raise
 
     def process_bundle(self, core: CoreIndex, bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup) -> Tuple[WorkReport, WorkReportHash]:
-        from jam.settings import settings
-
+        settings = self.settings
         try:
             # Generate Report
             logger.info("Building Work Report..")
@@ -407,6 +408,7 @@ class Processor:
 
             wr_hash = Hash.blake2b(report.encode())
             logger.info(f"Generated Work Report with hash {wr_hash}")
+
 
             # Access DA
             d3l = settings.d3l
@@ -461,7 +463,6 @@ class Processor:
         with benchmark("bundle processed"):
             wr, wr_hash = self.process_bundle(core, bundle, lookup)
 
-
         # Build Guarantee
         logger.info(f"Building guarantees..")
         with benchmark("guarantees signed"):
@@ -479,8 +480,8 @@ class Processor:
         """
         Utility Async function for receiving guarantees and processing it.
         """
+        settings = self.settings
         from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
-        from jam.settings import settings
 
         ed25519_key = self.node.ed_pvt_key
 

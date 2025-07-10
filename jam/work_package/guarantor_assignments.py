@@ -36,4 +36,9 @@ def guarantor_assignments(state):
             mapping[key] = set()
         mapping[key].add(value)
 
-    return mapping
+    return
+
+
+# print(guarantor_assignments(state=))
+
+# print()
