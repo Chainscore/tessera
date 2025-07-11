@@ -8,7 +8,7 @@ from jam.state.state import setup_state
 from rockstore import RockStore
 
 from jam.audit.tranche_engine import TrancheEngine
-from jam.audit.tranche import Tranche, TrancheState, JudgmentRecord
+from jam.audit.tranche import Tranche, TrancheState, AuditRecord
 from jam.types.work.report import WorkReportHash
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.dictionary import Dictionary
@@ -29,9 +29,9 @@ def create_test_tranche_state() -> TrancheState:
 
     unaudited_list = TypedVector[WorkReportHash]([wr1, wr2])
 
-    judgments = Dictionary[WorkReportHash, JudgmentRecord]({
-        wr1: JudgmentRecord.dummy(),
-        wr2: JudgmentRecord.dummy()
+    judgments = Dictionary[WorkReportHash, AuditRecord]({
+        wr1: AuditRecord.dummy(),
+        wr2: AuditRecord.dummy()
     })
 
     valid_set = TypedVector[WorkReportHash]([])

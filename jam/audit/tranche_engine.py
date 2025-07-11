@@ -11,7 +11,7 @@ from jam.types.protocol.crypto import Hash
 from jam.logging import get_logger
 from rockstore import RockStore
 
-from jam.audit.tranche import Tranche, TrancheState, JudgmentRecord
+from jam.audit.tranche import Tranche, TrancheState, AuditRecord
 from jam.types.work.report import WorkReportHash
 
 logger = get_logger("tranche_engine")
@@ -35,7 +35,7 @@ class TrancheEngine:
             new_unaudited:TypedVector[WorkReportHash] = TypedVector[WorkReportHash]([])
 
             for wr in ts.unaudited_list:
-                record: JudgmentRecord = ts.judgments.get(wr, JudgmentRecord.empty())
+                record: AuditRecord = ts.judgments.get(wr, AuditRecord.empty())
 
                 true_count = len(record.true_votes)
                 false_count = len(record.false_votes)

@@ -186,4 +186,3 @@ def vrs_func(entropy_source: BandersnatchVrfSignature, bandersnatch_key: Banders
 #     judgment : set[bool] = set()
 #
 #     return judgment
-

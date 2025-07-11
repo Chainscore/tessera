@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from os import stat
 from typing import List, Tuple
 
 from tsrkit_types import Null, TypedVector, Bytes, Uint, Option, U8, Bool
+from tsrkit_types.choice import Optional
 
 from jam.types.protocol.core import CoreIndex, TimeSlot
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
@@ -29,9 +31,9 @@ OptionWRList=TypedVector[Option[WorkReport]]
 @dataclass
 class AuditingAndJudgement:
 
-    node: Node
+    # node: Node
     def __init__(self):
-        self.vrf = VRF
+        # self.vrf = VRF
         self.node: Node
 
     @staticmethod
@@ -62,7 +64,7 @@ class AuditingAndJudgement:
         return pre_audit_report
 
     @staticmethod
-    def vrf_signature_bandersnatch(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, tranche_index: U8 = None, w_r: WorkReport = None ) -> Bytes[96]:
+    def vrf_signature_bandersnatch(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, tranche_index: Uint = Uint(0), w_r: Optional[WorkReport] = None ) -> Bytes[96]:
         """
         Equation: 17.3, 17.4
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1ec1001e0001?v=0.7.0
@@ -72,7 +74,7 @@ class AuditingAndJudgement:
         entropy_vrf_proof = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(entropy_source.encode()))[:32]
         random_quantity = Bytes(SIGNING_CONTEXTS["audit"]) + entropy_vrf_proof
 
-        if tranche_index is not Null and tranche_index > 0 and w_r is not Null:
+        if tranche_index > 0 and w_r is not Null:
             random_quantity += Bytes(Hash.blake2b(w_r.encode())) + Bytes(tranche_index)
 
         signature = signature_pvt(key=bandersnatch_key, context=random_quantity)
@@ -115,7 +117,7 @@ class AuditingAndJudgement:
         Equation: 17.8
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e79011e8601?v=0.7.0
         """
-        tranche_index =  (CURRENT_TIME() - (SLOT_PERIOD * int(header_slot))) // AUDIT_PERIOD
+        tranche_index =  (CURRENT_TIME() - (SLOT_PERIOD * (header_slot))) // AUDIT_PERIOD
         return tranche_index
 
     @staticmethod
@@ -140,24 +142,26 @@ class AuditingAndJudgement:
 
         return validator_announcement_set
 
-    def refine(self, c: CoreIndex, r: WorkReport) -> bool:
-        """
-        Equation: 17.17
-        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f2f011f6c01?v=0.7.0
-        """
-        from jam.work_package.processor import Processor
+    # def refine(self, c: CoreIndex, r: WorkReport) -> bool:
+    #     """
+    #     Equation: 17.17
+    #     Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f2f011f6c01?v=0.7.0
+    #     """
+    #     from jam.work_package.processor import Processor
 
-        # construct Work package Bundle using protocol => CE138
-        bundle = WorkPackageBundle()
+    #     # construct Work package Bundle using protocol => CE138
+    #     bundle = WorkPackageBundle()
 
-        processor = Processor(self.node)
-        w_r, wr_hash = processor.process_bundle(core=c, bundle=bundle, sr_lookup={})
+    #     processor = Processor(self.node)
+    #     w_r, wr_hash = processor.process_bundle(core=c, bundle=bundle, sr_lookup={})
 
-        if wr_hash == r:
-            return True
-        else:
-            return False
-
+    #     if wr_hash == r:
+    #         return True
+    #     else:
+    #         return False
+    @staticmethod
+    def dummy_refine(c: CoreIndex, r: WorkReport)->bool:
+        return True
 
     def judgment_process(self, r: WorkReport, refine: Bool, ed25519_public: Bytes[32]) -> Bytes[96]:
         """

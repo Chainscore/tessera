@@ -13,26 +13,26 @@ from tsrkit_types.integers import Uint
 SignatureList=TypedVector[Bytes]
 
 @structure
-class JudgmentRecord:
+class AuditRecord:
     true_votes: SignatureList #J_t(wr)(t)
     false_votes: SignatureList # J_f(wr)(t)
     announces: SignatureList #A_n
 
     @staticmethod
-    def dummy()-> "JudgmentRecord":
+    def dummy()-> "AuditRecord":
         true_votes:SignatureList=SignatureList([Bytes(0),Bytes(1)])
         false_votes:SignatureList=SignatureList([])
         announces:SignatureList=SignatureList([Bytes(0),Bytes(1),Bytes(2),Bytes(3),Bytes(4),Bytes(5)])
-        return JudgmentRecord(true_votes=true_votes,false_votes=false_votes,announces=announces)
+        return AuditRecord(true_votes=true_votes,false_votes=false_votes,announces=announces)
 
     @staticmethod
-    def empty()->"JudgmentRecord":
-        return JudgmentRecord(true_votes=SignatureList([]),false_votes=SignatureList([]),announces=SignatureList([]))
+    def empty()->"AuditRecord":
+        return AuditRecord(true_votes=SignatureList([]),false_votes=SignatureList([]),announces=SignatureList([]))
 
 @structure
 class TrancheState:
     unaudited_list: TypedVector[WorkReportHash] #Q ->[wr1,2,3,4]->[]
-    judgments: Dictionary[WorkReportHash, JudgmentRecord] # {WR:J,S}
+    judgments: Dictionary[WorkReportHash, AuditRecord] # {WR:J,S}
     valid_set: TypedVector[WorkReportHash] # Already validated_wrs [wr,1,2,3,4]
     invalid_set: TypedVector[WorkReportHash] # Already invalid_wrs
 
@@ -40,7 +40,7 @@ class TrancheState:
     def empty()->"TrancheState":
         return TrancheState(
             unaudited_list=TypedVector[WorkReportHash]([]),
-            judgments=Dictionary[WorkReportHash, JudgmentRecord]({}),
+            judgments=Dictionary[WorkReportHash, AuditRecord]({}),
             valid_set=TypedVector[WorkReportHash]([]),
             invalid_set=TypedVector[WorkReportHash]([])
         )
@@ -48,7 +48,7 @@ class TrancheState:
     # def add_wr(self, wrs: WorkReportHash):
     #     for wr in wrs
     #         if wr not in self.judgments:
-    #             self.judgments[wr] = JudgmentRecord()
+    #             self.judgments[wr] = AuditRecord()
     #         if wr not in self.unaudited_list:
     #             self.unaudited_list.append(wr)
 
