@@ -19,6 +19,7 @@ from jam.types.work.report import WorkReport
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentShardsDA
+from jam.work_package.stores.mappings import ReportHashAssurerMap, ErasureAssurerMap
 from jam.merklization import BMRFunctions
 from jam.types.work.shard import ShardKey
 from jam.utils.gather import gather_with_exceptions
@@ -116,6 +117,20 @@ class WorkReportDistribution(NetworkProtocol):
         from jam.operations.ext_store import ext_store
         ext_store.import_rg(data.guaranteed_wr)
 
+        # save assurers
+        assurers = Assurers([])
+        for i in data.guaranteed_wr.signatures:
+            assurers.append(i.validator_index)
+
+        from jam.settings import settings
+        # report hash to assurers mapping
+        wr_da = ReportHashAssurerMap(settings.d3l)
+        wr_da.put(data.guaranteed_wr.report, assurers)
+
+        # erasure root to report hash & assurers mapping
+        er_da = ErasureAssurerMap(settings.d3l)
+        er_da.put(data.guaranteed_wr.report, assurers)
+
         # Send Acknowledgement
         ack = self._prefix.encode()
         server.stream_and_close(ack, stream_id)
@@ -123,7 +138,7 @@ class WorkReportDistribution(NetworkProtocol):
         logger.info("Sent acknowledgement back to guarantor")
 
         logger.info("Fetching assigned shard")
-        asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
+        asyncio.create_task(self._req_shard(data.guaranteed_wr, node, assurers))
 
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
@@ -139,15 +154,11 @@ class WorkReportDistribution(NetworkProtocol):
         return OptBool(Null)
 
     @staticmethod
-    async def _req_shard(data: ReportGuarantee, node: Node):
+    async def _req_shard(data: ReportGuarantee, node: Node, assurers: Assurers):
         from jam.settings import settings
 
         slot = data.slot
         signatures = data.signatures
-
-        assurers = Assurers([])
-        for i in signatures:
-            assurers.append(i.validator_index)
 
         report = data.report
         if node.validator_index not in assurers:
