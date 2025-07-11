@@ -10,14 +10,12 @@ import os
 import time
 
 from dotenv import load_dotenv
-from jam.operations.bp_engine import BlockProducer
 from jam.operations.operator import operate
 from tsrkit_types import U32, TypedVector, U64, Dictionary, Bool
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
 
 from jam.logging import setup_logging
-from jam.network.base.certificate import generate_san
 from jam.types import WorkReport, WorkPackage, Authorizer, RefineContext, ImportSpec, ExtrinsicSpec, WorkItem, \
     OpaqueHash, WorkPackageSpec, WorkResult, WorkExecResult, WorkReportHash, Hash, HeaderHash, StateRoot, BeefyRoot, \
     WorkPackageHash, ErasureRoot, ExportsRoot
@@ -32,22 +30,13 @@ from jam.network.node import Node, setup_node
 
 from jam.operations.utils.state_update import update_state
 from jam.state.state import setup_state, State
-from jam.types.protocol.crypto import BlsPublic
 from jam.types.block import Block
-from jam.types.protocol.validators import (
-    IPAddress,
-    ValidatorData,
-    ValidatorMetadata,
-)
-
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.types.work.manifest import Extrinsics
 from jam.logging import get_logger
-from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data, OptBool
+from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex
-from jam.work_package.processor import Processor
-from jam.work_package.stores.reports import ReportsDA
 
 CLIENTS = [
     {
@@ -65,31 +54,31 @@ CLIENTS = [
     {
         "port": 40002,
         "role": "VALIDATOR",
-        "theme": "default",
+        "theme": "polkadot",
         "genesis": True
     },
     {
         "port": 40003,
         "role": "VALIDATOR",
-        "theme": "default",
+        "theme": "solarized",
         "genesis": True
     },
     {
         "port": 40004,
         "role": "VALIDATOR",
-        "theme": "default",
+        "theme": "monokai",
         "genesis": True
     },
     {
         "port": 40005,
         "role": "VALIDATOR",
-        "theme": "default",
+        "theme": "noir",
         "genesis": True
     },
     {
         "port": 40006,
         "role": "BUILDER",
-        "theme": "polkadot",
+        "theme": "matrix",
         "genesis": True
     },
 ]
@@ -259,10 +248,7 @@ async def run_node(
         update_state(state)
 
         peers = [
-            Peer(
-                id=generate_san(val.ed25519),
-                data=val
-            )
+            Peer(data=val)
             for val in state.kappa
             if val.metadata.port != port
         ]

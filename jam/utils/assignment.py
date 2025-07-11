@@ -22,6 +22,8 @@ def assign_guarantors(slot: TimeSlot = None, epoch = 0):
         Mapping of core index to its assigned guarantor
     """
 
+    vc = VALIDATOR_COUNT
+
     # ------ Fetch State --------
     if slot :
         from jam.settings import settings
@@ -32,14 +34,19 @@ def assign_guarantors(slot: TimeSlot = None, epoch = 0):
 
     else:
         from jam.state.state import state
+        slot = state.tau
 
     # ------- Validators ---------
-    validators: TypedVector[U32] = TypedVector[U32]([U32(i) for i in range(VALIDATOR_COUNT)])
+    if len(state.kappa) < VALIDATOR_COUNT:
+        print(f"FOUND {len(state.kappa)} VALIDATORS : LESS THAN {VALIDATOR_COUNT}")
+        vc = len(state.kappa)
+
+    validators: TypedVector[U32] = TypedVector[U32]([U32(i) for i in range(vc)])
 
     # ------- Unassigned Cores -------
     validator_assign: TypedVector[U32] = TypedVector[U32]([])
-    for i in range(VALIDATOR_COUNT):
-        val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
+    for i in range(vc):
+        val_core = floor((CORE_COUNT * i) / vc)
         validator_assign.append(U32(val_core))
 
     # ------- Epoch Entropy -------
@@ -60,7 +67,7 @@ def assign_guarantors(slot: TimeSlot = None, epoch = 0):
 
     # ------- Create Mapping ---------
     mapping = {}
-    for i in range(VALIDATOR_COUNT):
+    for i in range(vc):
         key = core_assign[i]
         value = validators[i]
         if key not in mapping:
@@ -74,6 +81,22 @@ def assign_guarantors(slot: TimeSlot = None, epoch = 0):
     values = deque(values)
     values.rotate(-rotation_phase)
 
-    mapping = {keys[i]: (values[i], validator_set[i]) for i in range(VALIDATOR_COUNT)}
+    # assignment = {
+    #     core: set((vi, validator_set[vi]) for vi in values[core])
+    #     for core in keys
+    # }
+    # return assignment
 
-    return mapping
+    index_map = {}
+    val_map = {}
+
+    for core in keys:
+        for vi in values[core]:
+            if core not in index_map:
+                index_map[core] = []
+                val_map[core] = []
+
+            index_map[core].append(vi)
+            val_map[core].append(validator_set[vi])
+
+    return val_map, index_map
