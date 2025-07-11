@@ -1,20 +1,16 @@
 import asyncio
 from typing import cast
-from jam.operations import assr_collector
 from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure, Bytes
 
 from jam.logging import logger
 
-from jam.storage.stores import guarantee_store
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSignatures
-from jam.types.protocol.core import ValidatorIndex, TimeSlot
+from jam.types.block.extrinsics.guarantees import ReportGuarantee
 from jam.types.protocol.crypto import Hash
 from jam.types.work.manifest import Assurers
-from jam.types.work.report import WorkReport
 
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.reports import ReportsDA
@@ -58,17 +54,17 @@ class WorkReportDistribution(NetworkProtocol):
         self._prefix = PrefixType.CE135
 
     async def transmit(self, node: Node, data: CE135Data):
-        """Transmit Work Report from Guarantor (client) to Validator (server)"""
+        """Transmit Work Report from Guarantor to Other Validators"""
 
         msg_a = data.guaranteed_wr.encode()
         len_a = data.len.encode()
 
         logger.info(f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators")
 
-        tasks = TypedVector([])
+        tasks = []
         try:
             for peer in node.peer_conn:
-                logger.debug("Sending report to:", port=peer.port)
+                logger.debug("Transmitting report", peer=peer)
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
@@ -101,34 +97,51 @@ class WorkReportDistribution(NetworkProtocol):
             )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """Intercept & Process Work Report on Validator (server)"""
+        """Intercept & Process Work Report on Validator"""
+
         node = server.node
         buffer = server.stream_buffer[stream_id]
 
-        logger.info("Received Work Report")
-        data = CE135Data.decode(buffer[1:])
-        data = cast(CE135Data, data)
+        try:
+            logger.info("Received Work Report")
+            data = CE135Data.decode(buffer[1:])
+            data = cast(CE135Data, data)
 
-        if not data.is_valid:
-            raise NetworkingError(Code.INVALID_DATA)
+            if not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
 
-        # Save extrinsic
-        from jam.operations.ext_store import ext_store
-        ext_store.import_rg(data.guaranteed_wr)
+            # Save extrinsic
+            from jam.operations.ext_store import ext_store
+            ext_store.import_rg(data.guaranteed_wr)
 
-        # Send Acknowledgement
-        ack = self._prefix.encode()
-        server.stream_and_close(ack, stream_id)
+            # Send Acknowledgement
+            ack = self._prefix.encode()
+            server.stream_and_close(ack, stream_id)
 
-        logger.info("Sent acknowledgement back to guarantor")
+            logger.info("Sent acknowledgement back to guarantor")
 
-        logger.info("Fetching assigned shard")
-        asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
+            logger.debug("Fetching assigned shard")
+            asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
+
+        except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
+            logger.error(
+                "Error processing report",
+                guarantor=server.peer,
+                stream_id=stream_id,
+                buffer_size=len(buffer),
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
         """Intercept Acknowledgement"""
+
         buffer = client.stream_buffer[stream_id]
+
         if buffer[1:] == b"":
             logger.info(
                 f"Guaranteed Report received on Guarantor Node.",

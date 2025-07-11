@@ -6,6 +6,7 @@ from jam.logging import get_logger
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.network.peer import Peer
 
 from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
@@ -17,6 +18,7 @@ from jam.utils.constants import GENESIS_TS
 from jam.work_package.processor import Processor
 
 from jam.work_package.guarantor_assignments import guarantor_assignments
+from jam.utils.assignment import assign_guarantors
 
 # Module-specific logger
 logger = get_logger("network")
@@ -75,76 +77,81 @@ class WorkPackageSubmission(NetworkProtocol):
 
         from jam.state.state import state
         logger.debug("Tau", tau=state.tau)
-        mapping = guarantor_assignments(state)[ci]
+
+        # Fetch guarantors mapping
+        mapping = assign_guarantors()
+
+        guarantors = mapping[ci]
+        peers = [Peer(val) for i, val in guarantors]
+
+        # TODO: Remove this
+        # mapping = guarantor_assignments(state)[ci]
         print("MAPPING 133", mapping, (time.time() - GENESIS_TS) // 6, state.tau)
 
         logger.info(
-            "Transmitting work package to guarantors",
-            core_index=int(data.package_data.core_index),
-            guarantor_count=len(node.peer_conn),
+            "Trying transmitting work package",
+            core=ci,
+            guarantors=peers,
             stream_a_size=data.package_len,
             stream_b_size=data.extrinsics_len,
             extrinsics_count=len(data.extrinsics)
         )
 
-        transmitted_count = 0
-        responses = TypedVector[OptBool]([])
-        try:
-            for peer in node.peer_conn:
+        transmitted_to = None
+        res = None
+
+        for peer in peers:
+            try:
                 # if peer.port != 40000:
                 #     continue
 
-                if peer.ed_key in mapping:
-                    logger.info("Sending package to", port=peer.port)
-                    client = node.peer_conn[peer][1]
-                    transmitted_count += 1
+                logger.info("Transmitting package", peer=peer)
+                client = node.peer_conn[peer][1]
 
-                    # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                    # Append prefix to stream buffer so that we know the stream for handling response
-                    client.stream_buffer[stream_id] = self._prefix.encode()
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
 
-                    # Send Messages with their lengths
-                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
-                    client.stream_and_keep_open(message=len_b, stream_id=stream_id)
-                    res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
+                client.stream_and_keep_open(message=len_b, stream_id=stream_id)
+                res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
 
-                    if not res:
-                        responses.append(OptBool(Null))
-                    else:
-                        responses.append(res)
+                logger.debug(
+                    "Work package transmitted",
+                    stream_id=stream_id,
+                    core=ci,
+                    guarantor=peer
+                )
 
-                    logger.debug(
-                        "Work package transmitted to guarantor",
-                        stream_id=stream_id,
-                        core_index=int(data.package_data.core_index)
-                    )
+                transmitted_to = peer
+                break
 
-                    break
+            except Exception as e:
+                logger.warning(
+                    "Work package transmission failed",
+                    guarantor=peer,
+                    error=str(e),
+                    error_type=type(e).__name__
+                )
 
-            if transmitted_count == 0:
-                raise NetworkingError(Code.NO_PEER_CONN)
-
-        except Exception as e:
-            logger.error(
-                "Failed to transmit work package to guarantor",
-                error=str(e),
-                error_type=type(e).__name__
+        if not transmitted_to:
+            raise NetworkingError(Code.NO_PEER_CONN)
+        else:
+            logger.info(
+                "Work package transmission completed",
+                transmitted_to=transmitted_to,
+                core=ci,
             )
 
-        logger.info(
-            "Work package transmission completed",
-            transmitted_to=transmitted_count,
-            total_guarantors=len(node.peer_conn),
-            core_index=int(data.package_data.core_index)
-        )
-
-        return responses
+        return res
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Work Package on Guarantor (server)"""
+
         buffer = server.stream_buffer[stream_id]
 
         try:
@@ -154,7 +161,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 buffer_size=len(buffer)
             )
 
-            data, offset = CE133Data.decode_from(buffer[1:])
+            data = CE133Data.decode(buffer[1:])
             data = cast(CE133Data, data)
 
             if not data.is_valid:
@@ -168,19 +175,17 @@ class WorkPackageSubmission(NetworkProtocol):
                 stream_id=stream_id,
                 core_index=int(ci),
                 extrinsics_count=len(data.extrinsics),
-                work_package_hash=hash(str(wp))  # Simple hash for logging
+                wp_hash=hash(str(wp))
             )
 
             # Start Refinement Process
             processor = Processor(server.node)
-            with benchmark(f"Work Package processed"):
-                wr, wr_hash = processor.process(wp, ci, data.extrinsics)
-
-            # write_benchmaks_to_txt("benchmarks/refinement.txt")
+            wr, wr_hash = processor.process(wp, ci, data.extrinsics)
 
             logger.info(
                 "Work package processed successfully",
                 stream_id=stream_id,
+                wr_hash=wr_hash,
                 core_index=int(ci)
             )
 
@@ -195,6 +200,9 @@ class WorkPackageSubmission(NetworkProtocol):
             )
 
         except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
             logger.error(
                 "Error processing work package submission",
                 stream_id=stream_id,
@@ -205,6 +213,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
         """Intercept Acknowledgement"""
+
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
             logger.info(

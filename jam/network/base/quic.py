@@ -78,6 +78,9 @@ class QuicProtocol(QuicConnectionProtocol):
                 )
                 self._quic.close(error_code=0xA, reason_phrase="Peer's certificate not present.")
 
+    def stop_stream(self, stream_id: int, error_code: int):
+        self._quic.stop_stream(stream_id, error_code)
+
     def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
         """function for streaming data without end stream (FIN) bit."""
         if self._close_pending:
