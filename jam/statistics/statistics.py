@@ -1,6 +1,8 @@
+import asyncio
 import math
 from typing import List
 
+from jam.api.rpc.broker import broker
 from jam.types import AllValidatorStats, Sigma, Block, WorkReport
 from jam.types.state.pi import ServiceStat
 from jam.utils.constants import EPOCH_LENGTH, SEGMENT_SIZE
@@ -97,5 +99,8 @@ class Statistics:
         pi.services = pi_service
 
         state.pi = pi
+
+        #websocket broadcast for statistics
+        asyncio.create_task(broker.publish("subscribeStatistics", [list(pi.encode())]))
 
         return state

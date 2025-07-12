@@ -1,13 +1,18 @@
 import asyncio
+import json
+from jam.api.rpc.broker import broker
 from jam.api.rpc.api_handlers import dispatch_api_call
 from jam.api.rpc.utils import RpcRequest
 from jam.api.rpc.websocket import ws_receive, ws_broker
 from jam.logging import get_logger
 from quart import Quart, websocket, jsonify, request
+import jam.consensus.grandpa.finality as finality
 
 logger = get_logger("rpc")
 
 rpc = Quart(__name__)
+
+logger.info( "RPC server is starting up" )
 
 @rpc.route("/rpc", methods=["POST"])
 async def rpc_handler():
@@ -35,40 +40,12 @@ async def rpc_handler():
 
 @rpc.websocket("/ws")
 async def ws():
-    topic = await websocket.receive()  # e.g., client sends: "news"
-    task = asyncio.ensure_future(ws_receive())
-    try:
-        async for message in ws_broker.subscribe(topic):
-            await websocket.send(f"[{topic}] {message}")
-    finally:
-        task.cancel()
-        await task
+    # 1) client sends topic name, e.g. "news"
+    topic = await websocket.receive()
+    # 2) now push every message for that topic, forever
+    async for msg in broker.subscribe(topic):
+        # wrap & JSON-serialize
+        # await websocket.send(json.dumps({"topic": topic, "data": msg}))
+        await websocket.send(json.dumps(msg))
 
 
-# TODO - Cleanup - remove this upon ws testing
-# # Start the splitter in the background
-# @rpc.before_serving
-# async def startup():
-#     rpc.sub_stats = asyncio.create_task(splitter.subscribe_statistics())
-#     rpc.sub_service_data = asyncio.create_task(splitter.subscribe_service_data())
-#     rpc.sub_service_val = asyncio.create_task(splitter.subscribe_service_value())
-#     rpc.sub_service_preimage = asyncio.create_task(splitter.subscribe_service_preimage())
-#     rpc.sub_service_request = asyncio.create_task(splitter.subscribe_service_request())
-#     rpc.sub_best_block = asyncio.create_task(splitter.subscribe_best_block())
-#     rpc.sub_fin_block = asyncio.create_task(splitter.subscribe_finalized_block())
-#
-# # Clean up the task when shutting down
-# @rpc.after_serving
-# async def shutdown():
-#     rpc.sub_stats.cancel()
-#     rpc.sub_stats.cancel()
-#     rpc.sub_service_data.cancel()
-#     rpc.sub_service_val.cancel()
-#     rpc.sub_service_preimage.cancel()
-#     rpc.sub_service_request.cancel()
-#     rpc.sub_best_block.cancel()
-#     rpc.sub_fin_block.cancel()
-#     # try:
-#     #     await rpc.splitter_task
-#     # except asyncio.CancelledError:
-#     #     pass

@@ -30,7 +30,10 @@ from jam.types.protocol.validators import (
     ValidatorMetadata,
 )
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
-
+from jam.api.rpc.app import rpc
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
+from jam.api.rpc.app import rpc
 
 async def main(
     genesis_path: str,
@@ -131,13 +134,26 @@ async def main(
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db)
 
+#       RPC/WebSocket server setup
+        rpc_port = int(os.environ.get("RPC_PORT", 5000))
+        rpc_config = Config()
+        rpc_config.bind         = [f"{host}:{port}"]
+        rpc_config.debug        = True
+        rpc_config.use_reloader = False
+
+        logger.info(
+            "📡 Starting RPC/WebSocket server",
+            host=host, port=rpc_port
+        )
+
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            tg.create_task(ws_app.run(debug=True, host="0.0.0.0", port=5001))
             if tsr_node.is_builder:
                 tg.create_task(Builder(tsr_node, settings).run())
             else:
                 tg.create_task(BlockProducer(tsr_node, main_db).run())
+            #using the Hypercorn server to serve the RPC API
+            tg.create_task(serve(rpc, rpc_config))
 
     except KeyboardInterrupt:
         logger.info(

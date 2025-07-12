@@ -2,7 +2,6 @@ import asyncio
 from quart import websocket
 from collections import defaultdict
 from typing import Any, AsyncGenerator, Dict, Set
-import asyncio
 
 class Broker:
     def __init__(self) -> None:
@@ -24,6 +23,5 @@ class Broker:
 async def ws_receive() -> None:
     while True:
         topic = await websocket.receive()
-        print(f"Received message: {topic}")
 
 ws_broker = Broker()

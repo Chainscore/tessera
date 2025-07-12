@@ -1,4 +1,4 @@
-import json
+import json 
 from typing import Type
 from tsrkit_types import Dictionary
 from jam.consensus.grandpa.finality import Finality
@@ -230,10 +230,9 @@ class State:
         except JamError as jam_e:
             logger.error("Invalid block", error=jam_e, hh=block.header.hash().hex(), slot=block.header.slot)
             self.store.clear()
-        
         self._lock = False
         return
-
+    
 state = State(None)
 
 def set_state(new_state: State):

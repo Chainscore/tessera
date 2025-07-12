@@ -1,4 +1,6 @@
+import asyncio
 from typing import Tuple
+from jam.api.rpc.broker import broker
 from jam.execution.utils import decode_code_hash
 from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
@@ -21,6 +23,10 @@ def make_account_prop(field):
         if data is None:
             return
         meta = AccountMetadata.decode(data)
+
+        #websocket broadcast for service data
+        asyncio.create_task(broker.publish("subscribeServiceData", {"Blob": list(data)}))
+
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()
         self.store.put(k, v)
@@ -143,7 +149,7 @@ class StorageView:
         self.store = store
 
     def __getitem__(self, key: Bytes[32]):
-        data = self.store.get(bytes(construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23]))))
+        data = self.store.get(bytes(construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23]))))        
         return Bytes(data) if data else data
 
     def __setitem__(self, key: Bytes[32], value: Bytes):
@@ -156,6 +162,9 @@ class StorageView:
             meta_view.num_o = meta_view.num_o + len(value) + 32
         else:
             meta_view.num_o =meta_view.num_o + len(value) - len(curr_data)
+
+        #websocket broadcast for service value
+        asyncio.create_task(broker.publish("subscribeServiceValue", {"Blob": curr_data }))
 
         self.store.put(key, value)
 
@@ -182,6 +191,11 @@ class PreImageView:
         k = construct_state_key((self.id, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24]))
         self.store.put(k, value)
 
+        #websocket broadcast for service preimage
+        asyncio.create_task(broker.publish("subscribeServicePreimage", {"Blob": list(k) }))
+
+
+
     def __delitem__(self, key: Bytes[32]):
         storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24]))
         self.store.delete(storage_key)
@@ -205,6 +219,10 @@ class TimestampsView:
         if curr_data is None:
             meta_view.num_i = meta_view.num_i + 2
             meta_view.num_o = meta_view.num_o + key.length + 81
+
+        #websocket broadcast for service value
+        asyncio.create_task(broker.publish("subscribeServiceRequest", {"Slots": curr_data }))
+
 
         self.store.put(storage_key, v)
 
