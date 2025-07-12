@@ -45,24 +45,23 @@ class Program(Codable):
         self.jump_table = jump_table
         self.instruction_set = instruction_set
         self.offset_bitmask = offset_bitmask
-        
+
         # Pre-compute and cache frequently accessed values
         self._offset_bitmask_len = len(self.offset_bitmask)
         self._extended_bitmask = self.offset_bitmask + [True] * 10  # Compute once
         self._extended_bitmask_len = len(self._extended_bitmask)
         self._jump_table_len = len(self.jump_table)
         self._jump_table_max_addr = self._jump_table_len * PVM_ADDR_ALIGNMENT
-        
+
         # Pre-compute skip values for all positions to eliminate runtime calculation
         self._skip_cache: Dict[int, int] = {}
         self._precompute_skip_values()
-        
+
         # Build basic blocks using cached skip values
         basic_blocks = [0]
         for n in range(len(self.instruction_set)):
-            if (
-                    self.offset_bitmask[n] and
-                    inst_map.is_terminating(self.instruction_set[n])
+            if self.offset_bitmask[n] and inst_map.is_terminating(
+                self.instruction_set[n]
             ):
                 basic_blocks.append(n + 1 + self._skip_cache.get(n, 0))
         self.basic_blocks = basic_blocks
@@ -72,12 +71,12 @@ class Program(Codable):
     def _precompute_skip_values(self):
         """Pre-compute skip values for all positions to eliminate runtime overhead."""
         for i in range(self._offset_bitmask_len):
-            skip_value = self._extended_bitmask_len 
+            skip_value = self._extended_bitmask_len
             for j in range(i + 1, self._extended_bitmask_len):
                 if self._extended_bitmask[j]:
                     skip_value = j - i - 1
                     break
-            
+
             self._skip_cache[i] = min(24, skip_value)
 
     def skip(self, pc) -> int:
@@ -91,10 +90,7 @@ class Program(Codable):
         return self._skip_cache.get(pc, 0)
 
     def branch(
-        self,
-        counter: int,
-        branch: int,
-        condition: bool
+        self, counter: int, branch: int, condition: bool
     ) -> Tuple[ExecutionStatus, int]:
         if not condition:
             return CONTINUE, counter
@@ -102,21 +98,18 @@ class Program(Codable):
             raise PvmError(PANIC)
         return CONTINUE, branch
 
-    def djump(
-        self, 
-        counter: int,
-        a: int
-    ) -> Tuple[ExecutionStatus, int]:
+    def djump(self, counter: int, a: int) -> Tuple[ExecutionStatus, int]:
         if a == 2**32 - 2**16:
             return HALT, counter
         elif (
-            a == 0 or
-            a > self._jump_table_max_addr or
-            a % PVM_ADDR_ALIGNMENT != 0 or
-            self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1] not in self._basic_blocks_set
+            a == 0
+            or a > self._jump_table_max_addr
+            or a % PVM_ADDR_ALIGNMENT != 0
+            or self.jump_table[floor(a // PVM_ADDR_ALIGNMENT) - 1]
+            not in self._basic_blocks_set
         ):
             raise PvmError(PANIC)
-        return CONTINUE, self.jump_table[floor(a//PVM_ADDR_ALIGNMENT) - 1]
+        return CONTINUE, self.jump_table[floor(a // PVM_ADDR_ALIGNMENT) - 1]
 
     def encode_size(self) -> int:
         """Encode the size of the program.
@@ -148,16 +141,16 @@ class Program(Codable):
         current_offset += size
         size = Uint[8](self.z).encode_into(buffer, current_offset)
         current_offset += size
-        size = Uint(len(self.instruction_set)).encode_into(
-            buffer, current_offset
-        )
+        size = Uint(len(self.instruction_set)).encode_into(buffer, current_offset)
         current_offset += size
         for jump in self.jump_table:
             size = Uint[self.z * 8](jump).encode_into(buffer, current_offset)
             current_offset += size
 
-        buffer[current_offset:current_offset+len(self.instruction_set)] = self.instruction_set
-        current_offset+=len(self.instruction_set)
+        buffer[current_offset : current_offset + len(self.instruction_set)] = (
+            self.instruction_set
+        )
+        current_offset += len(self.instruction_set)
         size = Bits[len(self.instruction_set), "lsb"](self.offset_bitmask).encode_into(
             buffer, current_offset
         )
@@ -201,12 +194,10 @@ class Program(Codable):
             current_offset += size
             j.append(int(val))
 
-        c = buffer[current_offset:current_offset+c_len]
+        c = buffer[current_offset : current_offset + c_len]
         current_offset += c_len
 
-        offset_bitmask, size = Bits[c_len, "lsb"].decode_from(
-            buffer, current_offset
-        )
+        offset_bitmask, size = Bits[c_len, "lsb"].decode_from(buffer, current_offset)
         bytes_read += size
         current_offset += size
 
@@ -227,6 +218,11 @@ class Program(Codable):
 
     def __repr__(self):
         return f"Program(z={self.z}, jump_table={self.jump_table}, instruction_set={self.instruction_set}, offset_bitmask={self.offset_bitmask})"
-    
+
     def __eq__(self, other):
-        return self.z == other.z and self.jump_table == other.jump_table and self.instruction_set == other.instruction_set and self.offset_bitmask == other.offset_bitmask
+        return (
+            self.z == other.z
+            and self.jump_table == other.jump_table
+            and self.instruction_set == other.instruction_set
+            and self.offset_bitmask == other.offset_bitmask
+        )

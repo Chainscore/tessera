@@ -5,18 +5,16 @@ import os
 import time
 
 from dotenv import load_dotenv
-from jam.operations.operator import operate
-from jam.api.rpc.app import rpc 
+from jam.operations import operate
 from jam.logging import setup_logging, logger
 from jam.network.base.certificate import generate_san
 from jam.utils.chainspec import chain_config
 from jam.settings import setup_setting
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
 from jam.network.peer import Peer
 from jam.network.node import setup_node
-from jam.operations.utils.state_update import update_state
 from jam.state.state import setup_state
-from jam.types.block import Block
+from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
 
 
@@ -29,14 +27,13 @@ async def main(
     is_validator: bool,
 ) -> None:
     # ---------- SETUP LOGGING ----------
-    genesis_ts = GENESIS_TS         # Actual Genesis time for JAM Common Era
+    genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
     init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
     init_ep = int(init_ts // EPOCH_LENGTH)
 
-
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
-    load_dotenv(env,override=True)
+    load_dotenv(env, override=True)
 
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
@@ -54,17 +51,23 @@ async def main(
         theme=theme,
         node_name=name,
         environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None
+        min_level=getattr(logging, log_level.upper()) if log_level else None,
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+    settings = setup_setting(
+        name=name, port=int(port), seed=int(seed), data_path="data/"
+    )
 
     main_db = settings.main_db
 
     logger.info(
-        "Starting JAM node", name=name, port=port,
-        ts=init_ts, epoch=init_ep, spec=chain_config.name,
+        "Starting JAM node",
+        name=name,
+        port=port,
+        ts=init_ts,
+        epoch=init_ep,
+        spec=chain_config.name,
     )
 
     try:
@@ -74,35 +77,29 @@ async def main(
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
-        update_state(state)
 
         # ----------- SETUP NETWORKING ------------
         peers = [
-            Peer(
-                id=generate_san(val.ed25519),
-                data=val
-            )
+            Peer(id=generate_san(val.ed25519), data=val)
             for val in state.kappa
             if val.metadata.port != port
         ]
 
         tsr_node = setup_node(
-            name, port, peers, host=str(host),
-            is_bd=is_builder, is_val=is_validator 
+            name, port, peers, host=str(host), is_bd=is_builder, is_val=is_validator
         )
-        
+
         # ------------ SET GENESIS BLOCK ------------
         block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db)
-        
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
             # Networking - Block Imports, WP Processing, etc
             tg.create_task(tsr_node.initialize())
-            # RPC 
+            # RPC
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
             tg.create_task(operate(is_builder))
@@ -112,7 +109,7 @@ async def main(
             "JAM node shutting down gracefully",
             node_name=name,
             port=port,
-            reason="keyboard_interrupt"
+            reason="keyboard_interrupt",
         )
     except Exception as e:
         logger.critical(
@@ -120,7 +117,7 @@ async def main(
             node_name=name,
             port=port,
             error=str(e)[:200],
-            error_type=type(e).__name__
+            error_type=type(e).__name__,
         )
         # Close db connections
         settings.clear()

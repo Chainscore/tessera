@@ -7,6 +7,7 @@ from jam.types.protocol.crypto import BandersnatchPublic, Ed25519Public, BlsPubl
 from jam.utils.constants import VALIDATOR_COUNT
 from tsrkit_types.bytes import Bytes
 
+
 class IPAddress(TypedArray[U8, 4]):
     def __str__(self):
         return ".".join(str(int(octet)) for octet in self)
@@ -21,14 +22,16 @@ class IPAddress(TypedArray[U8, 4]):
 
         return cls(octets)
 
+
 @structure
 class ValidatorMetadata:
     """Validator metadata structure Byte-Array(128)"""
+
     # NOTE - Could define fns to parse metadata into a more useful format
-    name: Bytes[10]     # 10 Bytes
+    name: Bytes[10]  # 10 Bytes
     protocol: Uint[16]  # 2 Bytes
-    host: IPAddress     # 4 Bytes
-    port: Uint[16]      # 2 Bytes
+    host: IPAddress  # 4 Bytes
+    port: Uint[16]  # 2 Bytes
     buffer: Bytes[110] = field(metadata={"default": Bytes[110](110)})
 
     @property
@@ -41,9 +44,10 @@ class ValidatorMetadata:
     @classmethod
     def from_json(cls, hex_data) -> "ValidatorMetadata":
         return cls.decode(Bytes.from_json(hex_data))
-    
+
     def to_json(self) -> str:
         return self.encode().hex()
+
 
 @structure
 class ValidatorData:

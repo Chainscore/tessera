@@ -13,8 +13,10 @@ from jam.network.protocols.up_0 import BlockAnnouncement
 from jam.network.protocols.ce_137 import ShardDistributionProtocol
 from jam.network.protocols.ce_138 import AuditShardRequestProtocol
 
+
 class ProtocolMap:
     """mapping for all the protocols"""
+
     ALL_PROTOCOLS = {
         PrefixType.UP0: BlockAnnouncement,
         PrefixType.CE128: BlockRequest,
@@ -32,7 +34,7 @@ class ProtocolMap:
         PrefixType.CE140: SegmentShardRequestWithJustifications,
         PrefixType.CE141: AssuranceDistribution,
         PrefixType.CE145: JudgmentPublication,
-        PrefixType.CE201: GhostProtocol
+        PrefixType.CE201: GhostProtocol,
     }
 
     @classmethod

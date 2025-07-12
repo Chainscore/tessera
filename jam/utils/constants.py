@@ -1,4 +1,5 @@
 """Constants for the JAM protocol as defined in the specification."""
+
 from jam.utils.chainspec import chain_config
 
 # ───────────────────────────────────────
@@ -27,10 +28,10 @@ C = CORE_COUNT
 
 # E — Length of an epoch, in timeslots.
 EPOCH_LENGTH = chain_config.epoch_duration
-E = EPOCH_LENGTH 
+E = EPOCH_LENGTH
 
 # D — Timeslot count after which an unreferenced preimage may be expunged.
-PREIMAGE_EVICTION_TIMESLOTS = 32 # TODO: 32 * EPOCH_LENGTH
+PREIMAGE_EVICTION_TIMESLOTS = 32  # TODO: 32 * EPOCH_LENGTH
 D = PREIMAGE_EVICTION_TIMESLOTS
 
 # F — Audit bias factor; expected # of additional validators who will audit due to prior no-show.
@@ -114,7 +115,7 @@ MAX_AUTH_CODE_SIZE = 64_000
 W_A = MAX_AUTH_CODE_SIZE
 
 # W_B — Max encoded size of a work-package (extrinsics + imports), in octets.
-MAX_ENCODED_WORK_PACKAGE_SIZE = 12 * (2 ** 20)  # 12 * 2^20 octets
+MAX_ENCODED_WORK_PACKAGE_SIZE = 12 * (2**20)  # 12 * 2^20 octets
 W_B = MAX_ENCODED_WORK_PACKAGE_SIZE
 
 # W_C — Max size of service code, in octets.
@@ -151,16 +152,16 @@ W_X = MAX_EXPORT_ITEM
 
 # X — Context strings for signing.
 SIGNING_CONTEXTS = {
-    "available": b"jam_available",         # Ed25519 Availability assurances
-    "beefy": b"jam_beefy",                 # BLS MMR commitments
-    "entropy": b"jam_entropy",             # On-chain entropy randomness
-    "fallback_seal": b"jam_fallback_seal", # Bandersnatch fallback block seal
-    "guarantee": b"jam_guarantee",         # Ed25519 Guarantee statements
-    "announce": b"jam_announce",           # Ed25519 Audit announcements
-    "ticket_seal": b"jam_ticket_seal",     # RingVRF ticket gen / sealing
-    "audit": b"jam_audit",                 # Bandersnatch Audit selection entropy
-    "valid": b"jam_valid",                 # Ed25519 valid work-report judgments
-    "invalid": b"jam_invalid",             # Ed25519 invalid work-report judgments
+    "available": b"jam_available",  # Ed25519 Availability assurances
+    "beefy": b"jam_beefy",  # BLS MMR commitments
+    "entropy": b"jam_entropy",  # On-chain entropy randomness
+    "fallback_seal": b"jam_fallback_seal",  # Bandersnatch fallback block seal
+    "guarantee": b"jam_guarantee",  # Ed25519 Guarantee statements
+    "announce": b"jam_announce",  # Ed25519 Audit announcements
+    "ticket_seal": b"jam_ticket_seal",  # RingVRF ticket gen / sealing
+    "audit": b"jam_audit",  # Bandersnatch Audit selection entropy
+    "valid": b"jam_valid",  # Ed25519 valid work-report judgments
+    "invalid": b"jam_invalid",  # Ed25519 invalid work-report judgments
 }
 
 # Y — Number of slots into an epoch where ticket submission ends.
@@ -171,13 +172,13 @@ Y = TICKET_SUBMISSION_END
 PVM_ADDR_ALIGNMENT = 2
 
 # Z_I — PVM program init input data size. See A.7
-PVM_INIT_DATA_SIZE = 2 ** 24
+PVM_INIT_DATA_SIZE = 2**24
 
 # Z_P — PVM memory page size. See equation 4.24
-PVM_MEMORY_PAGE_SIZE = 2 ** 12
+PVM_MEMORY_PAGE_SIZE = 2**12
 
 # Z_Z — PVM init zone size. See A.7
-PVM_INIT_ZONE_SIZE = 2 ** 16
+PVM_INIT_ZONE_SIZE = 2**16
 
 # Z_R — Number of registers in the standard PVM
 REGISTER_COUNT = 13
@@ -186,4 +187,4 @@ REGISTER_COUNT = 13
 # ======= #
 VALIDATORS_SUPER_MAJORITY = 1 + 2 * VALIDATOR_COUNT // 3
 VALIDATORS_WONKY = VALIDATOR_COUNT // 3
-GENESIS_TS = 1735732800 # January 1, 2025 12:00 UTC
+GENESIS_TS = 1735732800  # January 1, 2025 12:00 UTC

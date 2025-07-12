@@ -3,6 +3,7 @@ from rockstore import RockStore
 from jam.types.work.report import WorkReport, WorkReportHash
 from jam.work_package.store import DA
 
+
 class ReportsDA(DA):
     """
     Reports DA Stores all the reports compiled / received by a node
@@ -12,7 +13,7 @@ class ReportsDA(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("WREP", 'utf-8')
+        self.prefix = bytes("WREP", "utf-8")
         self.db = db
 
     def put(self, wr_hash: WorkReportHash, report: WorkReport) -> None:

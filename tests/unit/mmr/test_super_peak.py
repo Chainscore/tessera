@@ -1,6 +1,5 @@
-from jam.merklization import MMRFunctions
-from tsrkit_types.null import Null
-from tsrkit_types.sequences import TypedVector
+from jam.utils.merkle import MMRFunctions
+from tsrkit_types import Null, TypedVector
 from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.protocol.merkle import MMR, OptionHash
 

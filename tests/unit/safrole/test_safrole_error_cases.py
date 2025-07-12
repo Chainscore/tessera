@@ -1,6 +1,6 @@
 import pytest
-from jam.consensus.safrole.errors import SafroleError, SafroleErrorCode
-from jam.consensus.safrole.safrole import Safrole
+from jam.state.transitions import SafroleError, SafroleErrorCode
+from jam.state.transitions import Safrole
 from jam.types.state.eta import Eta
 from tsrkit_types.integers import U32
 from jam.types.state.kappa import Kappa

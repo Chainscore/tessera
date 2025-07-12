@@ -1,19 +1,14 @@
-import asyncio
 from typing import cast
-from jam.operations import assr_collector
 from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
 
 from jam.logging import logger
 
-from jam.storage.stores import guarantee_store
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSignatures
-from jam.types.protocol.core import ValidatorIndex, TimeSlot
+from jam.block.extrinsics.guarantees import ReportGuarantee
 from jam.types.protocol.crypto import Hash
-from jam.types.work.report import WorkReport
 
 from jam.work_package.stores.audits import AuditShardsDA
 from jam.work_package.stores.reports import ReportsDA
@@ -33,6 +28,7 @@ class CE135Data:
 
 
 OptBool = Option[Bool]
+
 
 class WorkReportDistribution(NetworkProtocol):
     """
@@ -60,7 +56,9 @@ class WorkReportDistribution(NetworkProtocol):
         msg_a = data.guaranteed_wr.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators")
+        logger.info(
+            f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators"
+        )
         # TODO: Use All Validators Connections
 
         responses = TypedVector[OptBool]([])
@@ -96,6 +94,7 @@ class WorkReportDistribution(NetworkProtocol):
 
         # Save extrinsic
         from jam.operations.ext_store import ext_store
+
         ext_store.import_rg(data.guaranteed_wr)
 
         # Send Acknowledgement
@@ -107,14 +106,12 @@ class WorkReportDistribution(NetworkProtocol):
         logger.info("Fetching assigned shard")
         # asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
 
-
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
             logger.info(
-                f"Guaranteed Report received on Guarantor Node.",
-                stream_id=stream_id
+                f"Guaranteed Report received on Guarantor Node.", stream_id=stream_id
             )
             return OptBool(True)
 
@@ -132,7 +129,12 @@ class WorkReportDistribution(NetworkProtocol):
 
         shard_index = node.get_shard_index(report.core_index)
 
-        from jam.network.protocols.ce_137 import ShardDistributionProtocol, CE137Data, Query
+        from jam.network.protocols.ce_137 import (
+            ShardDistributionProtocol,
+            CE137Data,
+            Query,
+        )
+
         CE137 = ShardDistributionProtocol()
 
         query = Query(shard_index=shard_index, erasure_root=er_root)
@@ -155,12 +157,12 @@ class WorkReportDistribution(NetworkProtocol):
 
             # give assurance for this core
             from jam.operations.assr_collector import assr_collector
+
             assr_collector.record_shard_assr(report.core_index)
 
             # Save Report
             rep_da = ReportsDA(d3l)
             wr_hash = Hash.blake2b(report.encode())
             rep_da.put(wr_hash, report)
-
 
             logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")

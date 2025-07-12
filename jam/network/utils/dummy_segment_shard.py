@@ -17,13 +17,15 @@ from tests.dummy.utils import create_dummy_bytes32, create_dummy_bytes12
 from jam.types.base.integers.fixed import U16
 from jam.types.base.integers.general import Int
 
+
 def create_dummy_segment_shard() -> ShardRequest:
     return ShardRequest(
         erasure_root=create_dummy_bytes32(),
-        shard_Index= U16(1),
-        length= Int(2),
-        seg_indexes= SegmentIndexes([Int(2), Int(3)])
+        shard_Index=U16(1),
+        length=Int(2),
+        seg_indexes=SegmentIndexes([Int(2), Int(3)]),
     )
+
 
 async def segment_shard_request(node: Node, db: KVStore):
 
@@ -35,7 +37,9 @@ async def segment_shard_request(node: Node, db: KVStore):
         print("time in segment shard protocol")
 
         if not node.is_initialized:
-            logger.info(f"🔄 ({node.name}) Network is not initialized, skipping segment shard request")
+            logger.info(
+                f"🔄 ({node.name}) Network is not initialized, skipping segment shard request"
+            )
             await asyncio.sleep(6)
             genesis_ts = time()
             continue

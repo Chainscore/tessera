@@ -3,12 +3,13 @@ from pathlib import Path
 
 from tsrkit_types import Bytes
 
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
 from jam.state.state import State
 from jam.state.utils import construct_state_key
-from jam.types import TimeSlot, HeaderHash, Block, ServiceId, AccountData
+from jam.types import TimeSlot, HeaderHash, ServiceId, AccountData
 from jam.utils.dummy.dummy_block import create_dummy_block
 from jam.settings import setup_setting
+from jam.block.block import Block
 
 def get_gen_state(db_path):
 	# Load genesis state

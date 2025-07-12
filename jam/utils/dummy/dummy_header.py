@@ -1,6 +1,6 @@
 from tsrkit_types import Option
 
-from jam.types import TicketsMark, EpochMark
+from jam.block.header import TicketsMark, EpochMark
 from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.crypto import (
     HeaderHash,
@@ -8,8 +8,8 @@ from jam.types.protocol.crypto import (
     OpaqueHash,
     BandersnatchVrfSignature,
 )
-from tsrkit_types.null import Null
-from jam.types.block.header import (
+from tsrkit_types import Null
+from jam.block.header import (
     Header,
     OffendersMark,
 )
@@ -23,8 +23,8 @@ def create_dummy_header() -> Header:
         parent_state_root=StateRoot(create_dummy_bytes32()),
         extrinsic_hash=OpaqueHash(create_dummy_bytes32()),
         slot=TimeSlot(0),
-        epoch_mark=Option[EpochMark](Null),
-        tickets_mark=Option[TicketsMark](Null),
+        epoch_mark=EpochMark(Null),
+        tickets_mark=TicketsMark(Null),
         offenders_mark=OffendersMark([]),
         entropy_source=BandersnatchVrfSignature(create_dummy_bytes(96)),
         author_index=ValidatorIndex(0),

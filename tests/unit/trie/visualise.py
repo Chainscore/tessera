@@ -1,6 +1,6 @@
 from tsrkit_types import Bytes
 
-from jam.state.merkle.merkle import StateTrie
+from jam.utils.trie.merkle import StateTrie
 
 def visualize_trie(trie: StateTrie) -> str:
     """Visualize the trie as a tree structure in ASCII art."""

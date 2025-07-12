@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from jam.state.merkle import StateTrie
+from jam.utils.trie.merkle import StateTrie
 from tsrkit_types.bytes import Bytes
 
 

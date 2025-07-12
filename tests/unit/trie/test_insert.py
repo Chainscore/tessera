@@ -1,5 +1,5 @@
-from jam.state.merkle.merkle import StateTrie
-from jam.state.merkle.utils import ZERO_HASH
+from jam.utils.trie.merkle import StateTrie
+from jam.utils.trie.utils import ZERO_HASH
 from tsrkit_types.bytes import Bytes
 from jam.utils.byte_utils import ByteUtils
 from jam.utils.dummy.utils import create_dummy_bytes

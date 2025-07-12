@@ -7,4 +7,12 @@ from jam.network.protocols.ce_139 import SegmentShardRequest
 from jam.network.protocols.ce_140 import SegmentShardRequestWithJustifications
 
 
-__all__ = ["BlockAnnouncement", "WorkReportDistribution", "WorkReportRequest", "WorkPackageSubmission", "WorkPackageSharing", "SegmentShardRequest", "SegmentShardRequestWithJustifications"]
+__all__ = [
+    "BlockAnnouncement",
+    "WorkReportDistribution",
+    "WorkReportRequest",
+    "WorkPackageSubmission",
+    "WorkPackageSharing",
+    "SegmentShardRequest",
+    "SegmentShardRequestWithJustifications",
+]

@@ -9,19 +9,18 @@ from multiprocessing import Process
 from tsrkit_types import U32
 from dotenv import load_dotenv
 from jam.logging import setup_logging, logger
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
 from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
-from jam.network.protocols.up_0 import Final
 from jam.settings import setup_setting
 from jam.network.peer import Peer
 from jam.network.node import Node
-from jam.operations.utils.state_update import update_state
-from jam.state.state import setup_state, State
-from jam.types.block import Block
+# from jam.operations.utils.state_update import update_state
+from jam.state.state import setup_state
+from jam.block import Block
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
-from jam.consensus.bp_engine import BlockProducer
+from jam.operations.handlers.bp_engine import BlockProducer
 
 clients = [40000, 40001]
 
@@ -94,7 +93,7 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
     # Set genesis state
     # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
     state = setup_state(settings.state_db, "dev-spec.json")
-    update_state(state)
+    # # update_state(state)
 
     peers = [
         Peer(

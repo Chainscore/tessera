@@ -1,14 +1,14 @@
-from jam.consensus.safrole.safrole import Safrole
+from jam.state.transitions import Safrole
 from jam.types.state.eta import Eta
 from jam.state.state import State
 from tsrkit_types.integers import U32
-from jam.types.block import Block
+from jam.block import Block
 from jam.types.state.kappa import Kappa
 from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
-from jam.types.block import TicketsExtrinsic
+from jam.block import TicketsExtrinsic
 from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.utils.dummy.dummy_state import create_dummy_state

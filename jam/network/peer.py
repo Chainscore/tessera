@@ -1,5 +1,6 @@
 from jam.types.protocol.validators import ValidatorData
 
+
 class Peer:
     """
     Represents a peer in the network
@@ -7,6 +8,7 @@ class Peer:
         id (str): Subject Alternative Name of the peer
         data (ValidatorData): Validator Data
     """
+
     id: str
     data: ValidatorData
 
@@ -14,7 +16,7 @@ class Peer:
     def peer_index(self):
         from jam.state.state import state
 
-        for i,val in enumerate(state.kappa):
+        for i, val in enumerate(state.kappa):
             if val.bandersnatch == self.data.bandersnatch:
                 return i
 

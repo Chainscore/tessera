@@ -263,9 +263,7 @@ class Node:
                 # Save peer connection
                 client = cast(QuicProtocol, client)
 
-                logger.info(
-                    f"🤝 Connection to {str(peer)} established ✅"
-                )
+                logger.info(f"🤝 Connection to {str(peer)} established ✅")
 
                 stream_id = -1
                 if not self.is_builder:
@@ -354,10 +352,13 @@ class Node:
             _, conn = self.peer_conn[peer]
             conn.close(reason_phrase=f"Closing node {self.__id}")
 
+
 node = Node("god", "0.0.0.0", 0, ValidatorsData.decode(bytes(10000)), [], False, False)
 
-def setup_node(name, port, peers, is_val = True, is_bd = False, host="0.0.0.0") -> Node:
+
+def setup_node(name, port, peers, is_val=True, is_bd=False, host="0.0.0.0") -> Node:
     global node
     from jam.settings import settings
+
     node = Node(name, host, port, settings.val, peers, is_bd, is_val)
     return node

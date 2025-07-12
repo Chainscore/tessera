@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from jam.state.merkle.merkle import StateTrie
+from jam.utils.trie.merkle import StateTrie
 from tsrkit_types.bytes import Bytes
 
 

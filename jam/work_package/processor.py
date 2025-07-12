@@ -2,7 +2,7 @@ import asyncio
 from math import ceil
 from typing import Tuple
 import time
-from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, U16, U64, TypedVector, U32
+from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32
 
 from jam.utils.chainspec import chain_config
 from jam.logging import get_logger
@@ -10,9 +10,19 @@ from jam.logging import get_logger
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
 
-from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSignatures, ValidatorSignature
+from jam.block.extrinsics.guarantees import (
+    ReportGuarantee,
+    ValidatorSignatures,
+    ValidatorSignature,
+)
 
-from jam.types.protocol.core import CoreIndex, Gas, TimeSlot, ExportsRoot, ValidatorIndex
+from jam.types.protocol.core import (
+    CoreIndex,
+    Gas,
+    TimeSlot,
+    ExportsRoot,
+    ValidatorIndex,
+)
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
 
 from jam.types.work import WorkReport, SegmentRootLookup, WorkPackageSpec, WorkResults
@@ -23,28 +33,36 @@ from jam.types.work.manifest import (
     Segment,
     MultiSegments,
     Extrinsics,
-    ProvedSegments, SegmentIndex
+    ProvedSegments,
+    SegmentIndex,
 )
 from jam.types.work.shard import (
     BundleShardHashes,
     SegmentsShards,
     SegmentsShard,
     SegmentsShardRoots,
-    ShardKey, BundleShard, ShardIndex, SegmentShard, BundleShardsDict, SegShardsDict, SegShardDict
+    ShardKey,
+    BundleShard,
+    ShardIndex,
+    SegmentShard,
+    BundleShardsDict,
+    SegShardsDict,
+    SegShardDict,
 )
-from jam.types.work.execution import (
-    WorkResult,
-    WorkExecResult,
-    RefineLoad
-)
+from jam.types.work.execution import WorkResult, WorkExecResult, RefineLoad
 
 from jam.utils.benchmark import benchmark
 
-from jam.utils.constants import BASIC_ERASURE_SIZE, GENESIS_TS, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE
+from jam.utils.constants import (
+    BASIC_ERASURE_SIZE,
+    GENESIS_TS,
+    SEGMENT_SIZE,
+    MAX_WORK_REPORT_SIZE,
+)
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 
-from jam.merklization.binary_merkle import BMRFunctions
+from jam.utils.merkle import BMRFunctions
 
 
 from jam.work_package.bundler import Bundler
@@ -58,10 +76,12 @@ from jam.network.node import Node
 # Module-specific logger
 logger = get_logger("in_core")
 
+
 class Processor:
 
     node: Node
     merkle: BMRFunctions
+
     def __init__(self, node: Node):
         self.merkle = BMRFunctions()
         self.node = node
@@ -102,16 +122,18 @@ class Processor:
         Returns:
             Proofs of size same as segments
         """
-        page_count = ceil(len(segments)/64)
+        page_count = ceil(len(segments) / 64)
 
         pages: Segments = Segments([])
         for x in range(page_count):
             path = self.merkle.merkle_path_fn(values=segments, size=6, index=x)
             leaf = self.merkle.leaf_page_fn(values=segments, size=6, index=x)
             merkle_path = bytes(len(path)) + path.encode()
-            leaf =  bytes(len(leaf)) + leaf.encode()
+            leaf = bytes(len(leaf)) + leaf.encode()
 
-            segment_proof = Segment(self.zero_padding(ByteArray(merkle_path + leaf), SEGMENT_SIZE))
+            segment_proof = Segment(
+                self.zero_padding(ByteArray(merkle_path + leaf), SEGMENT_SIZE)
+            )
             pages.append(segment_proof)
 
         return pages
@@ -140,14 +162,27 @@ class Processor:
         exports_count: Uint = Uint(item.export_count)
         extrinsic_count: Uint = Uint(len(item.extrinsic))
 
-        refine_load = RefineLoad(gas_used=Uint(gas), imports=imports_count, exports=exports_count,
-                                 extrinsic_count=extrinsic_count, extrinsic_size=extrinsic_size)
+        refine_load = RefineLoad(
+            gas_used=Uint(gas),
+            imports=imports_count,
+            exports=exports_count,
+            extrinsic_count=extrinsic_count,
+            extrinsic_size=extrinsic_size,
+        )
 
-        result = WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=payload_hash,
-                          accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)
+        result = WorkResult(
+            service_id=item.service,
+            code_hash=item.code_hash,
+            payload_hash=payload_hash,
+            accumulate_gas=item.accumulate_gas_limit,
+            result=result,
+            refine_load=refine_load,
+        )
         return result
 
-    def build_report(self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup):
+    def build_report(
+        self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup
+    ):
         """
         Work Report Computation function Ξ defined in Eqn 14.11
         To be used by main guarantor
@@ -210,7 +245,6 @@ class Processor:
                     s_result += len(r.unwrap())
                     return r, u, e
 
-
             # Work Results, r
             r_list = WorkResults([])
 
@@ -219,7 +253,6 @@ class Processor:
 
             for _j in range(len(p.items)):
                 _r, _u, _e = utils_i(_j)
-
 
                 comp = self.item_to_digest(p.items[_j], _r, _u)
                 r_list.append(comp)
@@ -238,10 +271,21 @@ class Processor:
             # Availability Specification, s
             logger.info(f"Building availability specification..")
             with benchmark("specification built"):
-                specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
+                specs = self.availability_specifier(
+                    package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap
+                )
 
             logger.info(f"Compiling Report..")
-            report = WorkReport(package_spec=specs, context=p.context, core_index=Uint(c), authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Uint(g))
+            report = WorkReport(
+                package_spec=specs,
+                context=p.context,
+                core_index=Uint(c),
+                authorizer_hash=p.a,
+                auth_output=Bytes(o),
+                segment_root_lookup=sr_lookup,
+                results=r_list,
+                auth_gas_used=Uint(g),
+            )
 
             return report
 
@@ -249,8 +293,9 @@ class Processor:
             logger.error(f"Failed to build report", error=e)
             raise
 
-
-    def availability_specifier(self, package_hash: OpaqueHash, wp_bundle: bytes, export_segments: Segments) -> WorkPackageSpec:
+    def availability_specifier(
+        self, package_hash: OpaqueHash, wp_bundle: bytes, export_segments: Segments
+    ) -> WorkPackageSpec:
         """
         Availability Specification function defined in Eqn 14.16
         Creates a package specification from the package hash, work-package bundle and the sequence of exported segments
@@ -285,7 +330,9 @@ class Processor:
             logger.info(f"Building bundle shards..")
 
             with benchmark("Bundle Padded"):
-                padded_wp_bundle = self.zero_padding(ByteArray(wp_bundle), BASIC_ERASURE_SIZE)
+                padded_wp_bundle = self.zero_padding(
+                    ByteArray(wp_bundle), BASIC_ERASURE_SIZE
+                )
 
             with benchmark("Erasure Coded Bundle"):
                 bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
@@ -307,12 +354,10 @@ class Processor:
                 logger.debug("Proofs formed", count=len(proofs))
                 proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
 
-
             # Build Segment Shards
             logger.info(f"Building segment shards..")
             justified_segments: Segments = export_segments
             justified_segments.extend(proofs)
-
 
             with benchmark("Erasure coded segments"):
                 i = 0
@@ -320,7 +365,9 @@ class Processor:
                 for item in justified_segments:
                     seg_chunks = erasure_codec.encode(item.encode())
                     all_chunks.append(seg_chunks)
-                    logger.debug("Segments Shard formed", count=len(seg_chunks), segment=i)
+                    logger.debug(
+                        "Segments Shard formed", count=len(seg_chunks), segment=i
+                    )
                     i += 1
 
             with benchmark("Transposed segment shards"):
@@ -328,9 +375,11 @@ class Processor:
                     [
                         SegmentsShard(
                             [
-                                SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))
+                                SegmentShard(all_chunks[j][i])
+                                for j in range(len(all_chunks))
                             ]
-                        ) for i in range(len(all_chunks[0]))
+                        )
+                        for i in range(len(all_chunks[0]))
                     ]
                 )
 
@@ -351,8 +400,13 @@ class Processor:
                     ss_roots.append(ss_root)
 
             # Build Complete Shard Key
-            if len(ss_roots) != chain_config.num_validators or len(bs_hashes) != chain_config.num_validators:
-                raise ValueError(f"Length of both type of shards should be {chain_config.num_validators}")
+            if (
+                len(ss_roots) != chain_config.num_validators
+                or len(bs_hashes) != chain_config.num_validators
+            ):
+                raise ValueError(
+                    f"Length of both type of shards should be {chain_config.num_validators}"
+                )
 
             shards_keys = TypedVector[Bytes]([])
             for i in range(chain_config.num_validators):
@@ -388,14 +442,22 @@ class Processor:
             logger.info(f"Compiling availability specification..")
 
             with benchmark("Compiled spec"):
-                spec = WorkPackageSpec(hash=package_hash, length=Uint[32](l), erasure_root=u, exports_root=e, exports_count=Uint[16](n))
+                spec = WorkPackageSpec(
+                    hash=package_hash,
+                    length=Uint[32](l),
+                    erasure_root=u,
+                    exports_root=e,
+                    exports_count=Uint[16](n),
+                )
 
             return spec
         except Exception as e:
             logger.error("Failed to build availability specification", error=e)
             raise
 
-    def process_bundle(self, core: CoreIndex, bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup) -> Tuple[WorkReport, WorkReportHash]:
+    def process_bundle(
+        self, core: CoreIndex, bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup
+    ) -> Tuple[WorkReport, WorkReportHash]:
         from jam.settings import settings
 
         try:
@@ -422,7 +484,11 @@ class Processor:
             raise
 
     def process(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
-        from jam.network.protocols.ce_134 import CoreSegment, WorkPackageSharing, CE134Data
+        from jam.network.protocols.ce_134 import (
+            CoreSegment,
+            WorkPackageSharing,
+            CE134Data,
+        )
 
         logger.info("Validating Work Package..")
         validator = Validator()
@@ -448,7 +514,12 @@ class Processor:
         map_len = U32(len(core_segment.encode()))
         bundle_len = U32(len(bundle.encode()))
 
-        data = CE134Data(map_len=map_len, work_package_bundle=bundle, bundle_len=bundle_len, core_segment=core_segment)
+        data = CE134Data(
+            map_len=map_len,
+            work_package_bundle=bundle,
+            bundle_len=bundle_len,
+            core_segment=core_segment,
+        )
 
         loop = asyncio.get_running_loop()
         loop.set_task_factory(asyncio.eager_task_factory)
@@ -459,7 +530,6 @@ class Processor:
         # Build Report
         with benchmark("bundle processed"):
             wr, wr_hash = self.process_bundle(core, bundle, lookup)
-
 
         # Build Guarantee
         logger.info(f"Building guarantees..")
@@ -489,7 +559,9 @@ class Processor:
         # Sign the Guarantee
         sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
-        og_guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=sign)
+        og_guarantee = ValidatorSignature(
+            validator_index=ValidatorIndex(0), signature=sign
+        )
 
         # Check majority & Build guarantees:
         guarantees = [og_guarantee]
@@ -499,19 +571,24 @@ class Processor:
         logger.info("✅ Received responses: %s", responses)
 
         from jam.network.protocols.ce_134 import OptCred
+
         for response in responses:
             if response != OptCred(Null):
                 cred = response.unwrap()
                 if cred.work_report_hash == wr_hash:
                     guarantee = ValidatorSignature(
-                        validator_index=ValidatorIndex(0), 
-                        signature=cred.ed25519_signature
+                        validator_index=ValidatorIndex(0),
+                        signature=cred.ed25519_signature,
                     )
                     guarantees.append(guarantee)
         # Sort them guarantees
-        guarantees = ValidatorSignatures(sorted(guarantees, key = lambda g: g.validator_index))
+        guarantees = ValidatorSignatures(
+            sorted(guarantees, key=lambda g: g.validator_index)
+        )
         # Distribute Guaranteed WR to Validators CE135
-        logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
+        logger.info(
+            f"Distributing Work Report to other validators..", grte_len=len(guarantees)
+        )
         if len(guarantees) > 1:
 
             d3l = settings.d3l
@@ -524,7 +601,9 @@ class Processor:
             rep_da.put(wr_hash, wr)
 
             # Store Segment Root - Erasure Root Mapping
-            sr_er_da.put(root=wr.package_spec.exports_root, data=wr.package_spec.erasure_root)
+            sr_er_da.put(
+                root=wr.package_spec.exports_root, data=wr.package_spec.erasure_root
+            )
 
             # Store Package Hash - Segment Root Mapping
             map_da.put(wr)
@@ -534,9 +613,9 @@ class Processor:
             CE135 = WorkReportDistribution()
             # TODO: Fix timeslot
             gwr = ReportGuarantee(
-                report=wr, 
-                slot=TimeSlot(time.time() - GENESIS_TS // 6), 
-                signatures=guarantees
+                report=wr,
+                slot=TimeSlot(time.time() - GENESIS_TS // 6),
+                signatures=guarantees,
             )
             r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)

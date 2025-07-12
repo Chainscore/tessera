@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from jam.consensus.safrole.safrole import Safrole
+from jam.state.transitions import Safrole
 from tsrkit_types.bytes import Bytes
 from jam.types.state.eta import Eta
 from tsrkit_types.integers import U32

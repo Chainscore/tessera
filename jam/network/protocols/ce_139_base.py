@@ -16,13 +16,16 @@ from jam.types.protocol.core import ErasureRoot, ValidatorIndex
 
 SegmentIndexes = TypedVector[SegmentIndex]
 
+
 @structure
 class Query:
-    erasure_root : ErasureRoot
+    erasure_root: ErasureRoot
     shard_index: ShardIndex
-    seg_indexes : SegmentIndexes
+    seg_indexes: SegmentIndexes
+
 
 Queries = TypedVector[Query]
+
 
 @structure
 class CE139Data:
@@ -35,6 +38,7 @@ class CE139Data:
             return True
         return False
 
+
 @structure()
 class CE139Response:
     len: Uint[32]
@@ -46,6 +50,7 @@ class CE139Response:
             return True
         return False
 
+
 @structure
 class CE140Justification:
     len: Uint[32]
@@ -56,6 +61,7 @@ class CE140Justification:
         if len(self.justification.encode()) == self.len:
             return True
         return False
+
 
 CE140Data = CE139Data
 
@@ -104,9 +110,6 @@ class SegmentShardRequestBase(NetworkProtocol):
 
         return data
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
-        ...
+    def req_intercept(self, stream_id: int, server: QuicProtocol): ...
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol):
-        ...
-
+    def res_intercept(self, stream_id: int, client: QuicProtocol): ...

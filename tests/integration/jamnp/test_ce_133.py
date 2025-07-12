@@ -10,28 +10,28 @@ import os
 import time
 
 from dotenv import load_dotenv
-from tsrkit_types import U32, TypedVector, U64, Dictionary, Bool
+from tsrkit_types import U32, TypedVector, U64, Dictionary
 from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
+from tsrkit_types.integers import U16, Uint
 
 from jam.logging import setup_logging
 from jam.network.base.certificate import generate_san
 from jam.types import WorkReport, WorkPackage, Authorizer, RefineContext, ImportSpec, ExtrinsicSpec, WorkItem, \
-    OpaqueHash, WorkPackageSpec, WorkResult, WorkExecResult, WorkReportHash, Hash, HeaderHash, StateRoot, BeefyRoot, \
+    OpaqueHash, WorkPackageSpec, WorkResult, WorkExecResult, WorkReportHash, HeaderHash, StateRoot, BeefyRoot, \
     WorkPackageHash, ErasureRoot, ExportsRoot
 from jam.types.work import RefineLoad
 from jam.utils.chainspec import chain_config
 
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
 from jam.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
 
-from jam.operations.utils.state_update import update_state
-from jam.state.state import setup_state, State
+# from jam.operations.utils.state_update import update_state
+from jam.state.state import setup_state
 from jam.types.protocol.crypto import BlsPublic
-from jam.types.block import Block
+from jam.block import Block
 from jam.types.protocol.validators import (
     IPAddress,
     ValidatorData,
@@ -41,7 +41,7 @@ from jam.types.protocol.validators import (
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.types.work.manifest import Extrinsics
 from jam.logging import get_logger
-from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data, OptBool
+from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex
 from jam.work_package.processor import Processor
@@ -70,8 +70,6 @@ CLIENTS = [
 
 # Logger for WP Production
 logger = get_logger("in_core")
-
-print("uint bound", Uint._bound)
 
 wp = WorkPackage(authorization=Bytes(b'\x01'), auth_code_host=U32(42), authorizer=Authorizer(code_hash=OpaqueHash(b'\x10S&j\x87\x96\xf3\xfb\xb2\x93b3\xf7\xb0"\x18iK\x04\xe8`J\xc3\xc8\x89.AT)\xf0\xa1-'), params=Bytes(b'\x9a\xb5\xae\xec\xe7y0\xccP\x17')), context=RefineContext(anchor=HeaderHash(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), state_root=StateRoot(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), beefy_root=BeefyRoot(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), lookup_anchor=HeaderHash(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), lookup_anchor_slot=U32(0), prerequisites=TypedVector[OpaqueHash]([])), items=TypedVector[WorkItem]([WorkItem(service=U32(1), code_hash=OpaqueHash(b's\x8b\x9a\xff:\xcb\xcc\xabvnE\xcaN\xe1\x1d\x1d\xb9c\xca\xd1|\x9b\x931\xb2\xdaK\x10\xba@\xa8\x94'), payload=Bytes(b'bobaboba'), refine_gas_limit=U64(1000), accumulate_gas_limit=U64(1000), import_segments=TypedVector[ImportSpec]([]), extrinsic=TypedVector[ExtrinsicSpec]([]), export_count=U16(1))]))
 wr = WorkReport(package_spec=WorkPackageSpec(hash=WorkPackageHash(b'}\xc8\xf4d\xb3\x1fH\xa0\xe4\x9c\x1f\x96\x86\xfd\xcb\x13\xd8\xde\xee%c\xee!d\xac\x88\xefg\x8b\xdd\xf7G'), length=U32(253), erasure_root=ErasureRoot(b'4k;3U19\xea0\xf9YC\xe86\x0c\xa2\xd4p\xefmf\xfb\xa9\x03\xcb`\xefl\xd4M\xaf\x02'), exports_root=ExportsRoot(b'<\xf9\xb7\xc0\x11\xa5,\xcd[%\x13\xc6\x8c\xde#\xeb\xa2\x07Hst\xb0tt-\xa4\x13\xd9\x05&;\x91'), exports_count=U16(1)), context=RefineContext(anchor=HeaderHash(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), state_root=StateRoot(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), beefy_root=BeefyRoot(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), lookup_anchor=HeaderHash(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), lookup_anchor_slot=U32(0), prerequisites=TypedVector[OpaqueHash]([])), core_index=Uint(1), authorizer_hash=b'\x9e\xcc\x01*<\xc8\xbbzG}\xef(\xac\xfd\xb6\xe5\xb0Y\xd7\xccU9y\x98\x95,\xefY\xa9\x1a\x18\x86', auth_output=b'\x01', segment_root_lookup=Dictionary({}), results=TypedVector[WorkResult]([WorkResult(service_id=U32(1), code_hash=b's\x8b\x9a\xff:\xcb\xcc\xabvnE\xcaN\xe1\x1d\x1d\xb9c\xca\xd1|\x9b\x931\xb2\xdaK\x10\xba@\xa8\x94', payload_hash=b'\xad\x83\xe1\x97-\xd0\xa6\x04\xeb\xe9\x85|\xad\xf9\x0f\x9a\x96\xc3,\xf4|{\x82\xc8\x04\xfb\xe8=\x0e\xaa\xf0\xaf', accumulate_gas=U64(1000), result=WorkExecResult(b''), refine_load=RefineLoad(gas_used=Uint(49), imports=Uint(0), extrinsic_count=Uint(0), extrinsic_size=Uint(0), exports=Uint(1)))]), auth_gas_used=Uint(7))
@@ -250,7 +248,7 @@ async def run_node(
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, "dev-spec.json")
         state.store.disable_cache()
-        update_state(state)
+        # # update_state(state)
 
         peers = [
             Peer(

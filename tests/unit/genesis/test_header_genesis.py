@@ -1,6 +1,6 @@
 import json
 
-from jam.types.block.header import Header
+from jam.block.header import Header
 
 
 def test_genesis_header_hash():

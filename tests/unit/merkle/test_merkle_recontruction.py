@@ -1,8 +1,6 @@
-import json
 from copy import deepcopy
-from pathlib import Path
 from tsrkit_types import Bytes
-from jam.state.merkle import StateTrie
+from jam.utils.trie.merkle import StateTrie
 from tests.unit.trie.visualise import visualize_trie
 
 

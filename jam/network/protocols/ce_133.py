@@ -18,10 +18,12 @@ from jam.work_package.processor import Processor
 # Module-specific logger
 logger = get_logger("network")
 
+
 @structure
 class WorkPackageCore:
-    work_package : WorkPackage
-    core_index : CoreIndex
+    work_package: WorkPackage
+    core_index: CoreIndex
+
 
 @structure
 class CE133Data:
@@ -32,12 +34,16 @@ class CE133Data:
 
     @property
     def is_valid(self):
-        if (len(self.package_data.encode()) == self.package_len
-                and len(self.extrinsics.encode()) == self.extrinsics_len):
+        if (
+            len(self.package_data.encode()) == self.package_len
+            and len(self.extrinsics.encode()) == self.extrinsics_len
+        ):
             return True
         return False
 
+
 OptBool = Option[Bool]
+
 
 class WorkPackageSubmission(NetworkProtocol):
     """
@@ -75,7 +81,7 @@ class WorkPackageSubmission(NetworkProtocol):
             guarantor_count=len(node.peer_conn),
             stream_a_size=data.package_len,
             stream_b_size=data.extrinsics_len,
-            extrinsics_count=len(data.extrinsics)
+            extrinsics_count=len(data.extrinsics),
         )
 
         transmitted_count = 0
@@ -111,7 +117,7 @@ class WorkPackageSubmission(NetworkProtocol):
                     "Work package transmitted to guarantor",
                     node_name=node.name,
                     stream_id=stream_id,
-                    core_index=int(data.package_data.core_index)
+                    core_index=int(data.package_data.core_index),
                 )
 
             except Exception as e:
@@ -119,7 +125,7 @@ class WorkPackageSubmission(NetworkProtocol):
                     "Failed to transmit work package to guarantor",
                     node_name=node.name,
                     error=str(e),
-                    error_type=type(e).__name__
+                    error_type=type(e).__name__,
                 )
 
         logger.info(
@@ -127,7 +133,7 @@ class WorkPackageSubmission(NetworkProtocol):
             node_name=node.name,
             transmitted_to=transmitted_count,
             total_guarantors=len(node.peer_conn),
-            core_index=int(data.package_data.core_index)
+            core_index=int(data.package_data.core_index),
         )
 
         return responses
@@ -140,7 +146,7 @@ class WorkPackageSubmission(NetworkProtocol):
             logger.debug(
                 "Received work package submission",
                 stream_id=stream_id,
-                buffer_size=len(buffer)
+                buffer_size=len(buffer),
             )
 
             data, offset = CE133Data.decode_from(buffer[1:])
@@ -157,7 +163,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 stream_id=stream_id,
                 core_index=int(ci),
                 extrinsics_count=len(data.extrinsics),
-                work_package_hash=hash(str(wp))  # Simple hash for logging
+                work_package_hash=hash(str(wp)),  # Simple hash for logging
             )
 
             # Start Refinement Process
@@ -170,7 +176,7 @@ class WorkPackageSubmission(NetworkProtocol):
             logger.info(
                 "Work package processed successfully",
                 stream_id=stream_id,
-                core_index=int(ci)
+                core_index=int(ci),
             )
 
             # Return acknowledgment to Builder
@@ -180,7 +186,7 @@ class WorkPackageSubmission(NetworkProtocol):
             logger.debug(
                 "Acknowledgement sent to builder",
                 stream_id=stream_id,
-                ack_size=len(ack)
+                ack_size=len(ack),
             )
 
         except Exception as e:
@@ -189,7 +195,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
@@ -199,9 +205,8 @@ class WorkPackageSubmission(NetworkProtocol):
             logger.info(
                 "Work package acknowledgement received",
                 stream_id=stream_id,
-                buffer_size=len(buffer)
+                buffer_size=len(buffer),
             )
             return OptBool(Bool(True))
 
         return OptBool(Null)
-

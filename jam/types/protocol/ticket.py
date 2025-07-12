@@ -15,8 +15,8 @@ class TicketBody:
     attempt: TicketAttempt
 
     def __hash__(self) -> int:
-        return int.from_bytes(bytes(Hash.blake2b(bytearray(bytes(self.id)) + bytes(self.attempt))))
+        return int.from_bytes(
+            bytes(Hash.blake2b(bytearray(bytes(self.id)) + bytes(self.attempt)))
+        )
 
 
-"""Fixed-length array of ticket bodies."""
-TicketsMark = TypedArray[TicketBody, EPOCH_LENGTH]

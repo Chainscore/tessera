@@ -9,6 +9,7 @@ from jam.execution.pvm.status import ExecutionStatus, PvmError
 
 HostCallReturn = Tuple[ExecutionStatus, int, int, list, Memory, Context]
 
+
 class PsiH:
 
     @staticmethod
@@ -19,9 +20,11 @@ class PsiH:
         registers: list,
         memory: Memory,
         dispatch_fn: DispatchFunction,
-        context: Any
+        context: Any,
     ) -> HostCallReturn:
-        status, pc, remaining_gas, registers, memory = PVM.execute(program, pc, gas, registers, memory)
+        status, pc, remaining_gas, registers, memory = PVM.execute(
+            program, pc, gas, registers, memory
+        )
         if (
             status == ExecutionStatus.PANIC
             or status == ExecutionStatus.OUT_OF_GAS
@@ -32,13 +35,25 @@ class PsiH:
         elif status == ExecutionStatus.HOST:
             try:
                 status, remaining_gas, register, memory, context = dispatch_fn(
-                    int(status.value.register), remaining_gas, registers, memory, context
+                    int(status.value.register),
+                    remaining_gas,
+                    registers,
+                    memory,
+                    context,
                 )
                 if remaining_gas < 0:
                     status = ExecutionStatus.OUT_OF_GAS
 
                 if status == CONTINUE:
-                    return PsiH.execute(program, pc, remaining_gas, registers, memory, dispatch_fn, context)
+                    return PsiH.execute(
+                        program,
+                        pc,
+                        remaining_gas,
+                        registers,
+                        memory,
+                        dispatch_fn,
+                        context,
+                    )
                 return status, pc, remaining_gas, registers, memory, context
             except PvmError as e:
                 return e.code, pc, remaining_gas, registers, memory, context

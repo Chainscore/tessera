@@ -1,7 +1,7 @@
-from jam.state.merkle.merkle import StateTrie as StateMerkle
-from jam.state.merkle.utils import ZERO_HASH
+from jam.utils.trie.merkle import StateTrie as StateMerkle
+from jam.utils.trie.utils import ZERO_HASH
 from jam.state.utils import construct_state_key
-from tsrkit_types.bytes import Bytes
+from tsrkit_types import Bytes
 
 
 def test_empty_merkelize():

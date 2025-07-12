@@ -1,6 +1,6 @@
 from typing import cast, Tuple
 
-from tsrkit_types import structure, Uint, Null
+from tsrkit_types import structure, U32, Uint, Null
 
 from jam.logging import logger
 
@@ -15,14 +15,16 @@ from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
+
 @structure
 class Query:
     erasure_root: ErasureRoot
     shard_index: ShardIndex
 
+
 @structure
 class CE137Data:
-    len: Uint[32]
+    len: U32
     query: Query
 
     @property
@@ -30,6 +32,7 @@ class CE137Data:
         if len(self.query.encode()) == self.len:
             return True
         return False
+
 
 @structure
 class CE137Response:
@@ -42,28 +45,30 @@ class CE137Response:
 
     @property
     def is_valid(self):
-        if (len(self.bundle_shard.encode()) == self.bs_len
-                and len(self.segments_shard.encode()) == self.ss_len
-                and len(self.justification.encode()) == self.j_len):
+        if (
+            len(self.bundle_shard.encode()) == self.bs_len
+            and len(self.segments_shard.encode()) == self.ss_len
+            and len(self.justification.encode()) == self.j_len
+        ):
             return True
         return False
 
 
 class ShardDistributionProtocol(NetworkProtocol):
     """
-        CE 137 Protocol for shard distribution
+    CE 137 Protocol for shard distribution
 
-        Assurer -> Guarantor
+    Assurer -> Guarantor
 
-        --> Erasure-Root ++ Shard Index
-        --> FIN
-        <-- Bundle Shard
-        <-- [Segment Shard] (Should include all exported and proof segment shards with the given index)
-        <-- Justification
-        <-- FIN
+    --> Erasure-Root ++ Shard Index
+    --> FIN
+    <-- Bundle Shard
+    <-- [Segment Shard] (Should include all exported and proof segment shards with the given index)
+    <-- Justification
+    <-- FIN
 
-        Source:
-            https://docs.jamcha.in/advanced/simple-networking/spec#ce-137-shard-distribution
+    Source:
+        https://docs.jamcha.in/advanced/simple-networking/spec#ce-137-shard-distribution
     """
 
     from jam.network.node import Node
@@ -87,14 +92,18 @@ class ShardDistributionProtocol(NetworkProtocol):
                     client = node.peer_conn[peer][1]
 
                     # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                    stream_id = client.stream_and_keep_open(
+                        message=self._prefix.encode()
+                    )
 
                     # Append prefix to stream buffer so that we know the stream for handling response
                     client.stream_buffer[stream_id] = self._prefix.encode()
 
                     # Send Messages with their lengths
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    res = await client.close_and_wait(
+                        message=msg_a, stream_id=stream_id
+                    )
 
                     if res is not None:
                         return res
@@ -104,12 +113,13 @@ class ShardDistributionProtocol(NetworkProtocol):
                     "Failed to request shard.",
                     peer=str(peer),
                     error=str(e),
-                    error_type=type(e).__name__
+                    error_type=type(e).__name__,
                 )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
         from jam.settings import settings
+
         buffer = server.stream_buffer[stream_id]
 
         try:
@@ -120,7 +130,7 @@ class ShardDistributionProtocol(NetworkProtocol):
                 "Received shard request",
                 erasure_root=data.query.erasure_root,
                 shard_index=data.query.shard_index,
-                peer=server.peer
+                peer=server.peer,
             )
 
             if not data.is_valid:
@@ -178,10 +188,12 @@ class ShardDistributionProtocol(NetworkProtocol):
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
+    def res_intercept(
+        self, stream_id: int, client: QuicProtocol
+    ) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
         """Intercept Bundle Shard, [Segment Shard] and Justification"""
         buffer = client.stream_buffer[stream_id]
 

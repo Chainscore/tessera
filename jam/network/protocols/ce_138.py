@@ -19,6 +19,7 @@ from jam.work_package.stores.segments import SegmentShardsDA
 
 CE138Data = CE137Data
 
+
 @structure
 class CE138Response:
     bs_len: Uint[32]
@@ -28,25 +29,28 @@ class CE138Response:
 
     @property
     def is_valid(self):
-        if (len(self.bundle_shard.encode()) == self.bs_len
-                and len(self.justification.encode()) == self.j_len):
+        if (
+            len(self.bundle_shard.encode()) == self.bs_len
+            and len(self.justification.encode()) == self.j_len
+        ):
             return True
         return False
 
+
 class AuditShardRequestProtocol(NetworkProtocol):
     """
-        CE 138 Protocol for Audit shard request
+    CE 138 Protocol for Audit shard request
 
-        Auditor -> Assurer
+    Auditor -> Assurer
 
-        --> Erasure-Root ++ Shard Index
-        --> FIN
-        <-- Bundle Shard
-        <-- Justification
-        <-- FIN
+    --> Erasure-Root ++ Shard Index
+    --> FIN
+    <-- Bundle Shard
+    <-- Justification
+    <-- FIN
 
-        Source:
-            https://docs.jamcha.in/advanced/simple-networking/spec#ce-138-shard-distribution
+    Source:
+        https://docs.jamcha.in/advanced/simple-networking/spec#ce-138-shard-distribution
     """
 
     from jam.network.node import Node
@@ -61,7 +65,9 @@ class AuditShardRequestProtocol(NetworkProtocol):
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer")
+        logger.info(
+            f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer"
+        )
 
         responses = TypedVector([])
         for peer in node.peer_conn:
@@ -83,10 +89,10 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         return responses
 
-
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Assurer (server)"""
         from jam.settings import settings
+
         buffer = server.stream_buffer[stream_id]
 
         logger.info("Received Shard index & erasure root")
@@ -127,8 +133,9 @@ class AuditShardRequestProtocol(NetworkProtocol):
         server.stream_and_keep_open(len_b, stream_id)
         server.stream_and_close(msg_b, stream_id)
 
-
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[BundleShard, Justification] | None:
+    def res_intercept(
+        self, stream_id: int, client: QuicProtocol
+    ) -> Tuple[BundleShard, Justification] | None:
         """Intercept Bundle Shard and Justification"""
         buffer = client.stream_buffer[stream_id]
 
@@ -137,7 +144,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
             data = cast(CE138Response, data)
 
             if not data or not data.is_valid:
-                    raise NetworkingError(Code.INVALID_DATA)
+                raise NetworkingError(Code.INVALID_DATA)
 
             logger.info("Data received on Auditor Node")
 

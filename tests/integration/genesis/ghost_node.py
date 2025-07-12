@@ -1,34 +1,29 @@
 # TODO: Work in Progress
 
-import pytest
 import asyncio
 import logging
-import signal
 import os
-import subprocess
 import time
-from multiprocessing import Process
 
 from dotenv import load_dotenv
 from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
+from tsrkit_types.integers import U16, Uint
 
 from jam.logging import setup_logging, logger
 from jam.utils.chainspec import chain_config
 
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
 from jam.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
 
 from jam.consensus.bp_engine import BlockProducer
-from jam.network.protocols.ce_201 import CE201Data, GhostProtocol
-from jam.operations import Builder
+from jam.network.protocols.ce_201 import GhostProtocol
 from jam.operations.utils.state_update import update_state
-from jam.state.state import setup_state, State
+from jam.state.state import setup_state
 from jam.types.protocol.crypto import BlsPublic
-from jam.types.block import Block
+from jam.block import Block
 from jam.types.protocol.validators import (
     IPAddress,
     ValidatorData,

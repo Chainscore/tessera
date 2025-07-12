@@ -6,9 +6,8 @@ from jam.logging import get_logger
 from jam.network.protocols.ce_137 import ShardDistributionProtocol
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types import WorkPackageBundle
-
 from jam.types.work.item import WorkItem
-from jam.types.work.package import  WorkPackage
+from jam.types.work.package import WorkPackage
 from jam.types.work.manifest import (
     Segments,
     SegmentIndex,
@@ -18,29 +17,25 @@ from jam.types.work.manifest import (
     Extrinsics,
     SegmentDict,
     MultiJustifications,
-    MultiExtrinsics, Extrinsic, Segment
+    MultiExtrinsics,
+    Extrinsic,
+    Segment,
 )
-
 from jam.types.work import SegmentRootLookup
-
 from jam.types.protocol.core import SegmentRoot
 from jam.types.protocol.crypto import OpaqueHash
-
-from jam.merklization.binary_merkle import BMRFunctions
+from jam.utils.merkle import BMRFunctions
 from jam.utils.benchmark import benchmark
-
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
 from jam.types.work.shard import ShardIndex, SegmentShard
-
-from jam.erasure_coding.erasure_code import ErasureCode
-
-
+from jam.utils.erasure_coding.erasure_code import ErasureCode
 from jam.network.node import Node
 from jam.utils.chainspec import chain_config
 
 # Module-specific logger
 logger = get_logger("in_core")
+
 
 class Bundler:
     merkle: BMRFunctions
@@ -57,6 +52,7 @@ class Bundler:
     def build_lookup(self, p: WorkPackage) -> SegmentRootLookup:
         # Access DA
         from jam.settings import settings
+
         d3l = settings.d3l
 
         map_da = PackageSegmentMap(d3l)
@@ -111,13 +107,13 @@ class Bundler:
         """
         # Access DA
         from jam.settings import settings
+
         db = settings.main_db
 
         ext_da = ItemExtrinsics(db)
         ext: Extrinsics = ext_da.process_item(w, data)
 
         return ext
-
 
     def fetch_imports(self, w: WorkItem) -> Segments:
         """
@@ -134,6 +130,7 @@ class Bundler:
 
         # Access DA
         from jam.settings import settings
+
         d3l = settings.d3l
 
         imports: Segments = Segments([])
@@ -160,7 +157,7 @@ class Bundler:
             else:
                 import_map[h] = [n]
 
-        fetched_imports: Dict[Tuple[SegmentRoot,SegmentIndex], Segment] = {}
+        fetched_imports: Dict[Tuple[SegmentRoot, SegmentIndex], Segment] = {}
         # requested_shards: Dict[Tuple[SegmentRoot,SegmentIndex], Dict[ShardIndex, Tuple[Assurers, ErasureRoot]]] = {}
 
         for h, seg_indices in import_map.items():
@@ -173,15 +170,21 @@ class Bundler:
                     if s_root in seg_dict:
                         logger.debug("Cache Hit")
                         segments = seg_dict[s_root]
-                        fetched_imports[(s_root,n)] = segments[n]
+                        fetched_imports[(s_root, n)] = segments[n]
 
                     # If cache miss, check in DB, and cache it
                     else:
                         logger.debug("Cache Miss")
                         segments, _ = seg_da.get(s_root)
-                        logger.debug("Fetching segments from root", segment_root=s_root.hex())
+                        logger.debug(
+                            "Fetching segments from root", segment_root=s_root.hex()
+                        )
                         seg_dict[s_root] = segments
-                        logger.debug("Fetched segments from root", segment_root=s_root.hex(), count=len(segments))
+                        logger.debug(
+                            "Fetched segments from root",
+                            segment_root=s_root.hex(),
+                            count=len(segments),
+                        )
                         fetched_imports[(s_root, n)] = segments[n]
 
                 except KeyError as e:
@@ -210,7 +213,6 @@ class Bundler:
                         else:
                             raise KeyError("Not enough shards available")
 
-
                     except KeyError as e2:
                         logger.debug("Shard Miss")
 
@@ -219,7 +221,9 @@ class Bundler:
 
                         # TODO: Reconstruct Segment
                         # BLOCKER: Fetching is asynchronous, need to handle that properly.
-                        logger.error(f"Unable to import segment {n} of seg root {s_root}")
+                        logger.error(
+                            f"Unable to import segment {n} of seg root {s_root}"
+                        )
                         raise NotImplementedError("Shard Requesting isn't integrated")
                 except Exception as e:
                     logger.error(f"Exception occurred fetching imports ({s_root},{n})")
@@ -227,9 +231,8 @@ class Bundler:
         for spec in w.import_segments:
             h = spec.tree_root
             n = spec.index
-            segment = fetched_imports[(h,n)]
+            segment = fetched_imports[(h, n)]
             imports.append(segment)
-
 
         self.segments_lookup.append(seg_dict)
         return imports

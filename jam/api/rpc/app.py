@@ -9,6 +9,7 @@ logger = get_logger("rpc")
 
 rpc = Quart(__name__)
 
+
 @rpc.route("/rpc", methods=["POST"])
 async def rpc_handler():
     """
@@ -19,19 +20,17 @@ async def rpc_handler():
 
     try:
         result = dispatch_api_call(req.method, req.params)
-        return jsonify({
-            "jsonrpc":"2.0",
-            "id":req.id,
-            "result":result
-        } )
+        return jsonify({"jsonrpc": "2.0", "id": req.id, "result": result})
     except Exception as e:
         logger.error("Error serving API request", error=e)
-        return jsonify({
-            "jsonrpc":"2.0",
-            "id":req.id,
-            "error":{"code": -32000, "message": str(e)}
+        return jsonify(
+            {
+                "jsonrpc": "2.0",
+                "id": req.id,
+                "error": {"code": -32000, "message": str(e)},
             }
         )
+
 
 @rpc.websocket("/ws")
 async def ws():

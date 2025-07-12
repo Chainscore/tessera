@@ -1,6 +1,6 @@
 from tsrkit_types import ByteArray
 
-from jam.state.merkle import StateTrie
+from jam.utils.trie.merkle import StateTrie
 from tsrkit_types.bytes import Bytes
 
 from jam.utils.dummy.utils import create_dummy_bytes

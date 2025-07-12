@@ -1,27 +1,41 @@
 from typing import Tuple
-from jam.accumulation.types import  DeferredTransfers, OperandTuples, AccuContextX,StateContext, AccumulationContext, PreimageDict
+from jam.types.state.accumulation.types import (
+    DeferredTransfers,
+    OperandTuples,
+    AccuContextX,
+    StateContext,
+    AccumulationContext,
+    PreimageDict,
+)
 from jam.execution.host_calls.invocations.arg_invoke import PsiM
 from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.host_calls.invocations.protocol import InvocationProtocol
 from tsrkit_types.null import Null
 from tsrkit_types.integers import Uint
-from jam.types.protocol.core import Gas, ProgramCounter, ServiceId, TimeSlot
+from jam.types.protocol.core import Gas, ServiceId, TimeSlot
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.protocol.merkle import OptionHash
-from jam.execution.host_calls.invocations.functions.accumulate_fns import AccumulateFunctions, check
+from jam.execution.host_calls.invocations.functions.accumulate_fns import (
+    AccumulateFunctions,
+    check,
+)
 from jam.execution.pvm.status import ExecutionStatus
 from jam.utils.constants import MAX_SERVICE_CODE_SIZE
 
 
 class PsiA(InvocationProtocol):
 
-    def __init__(self, u: StateContext, t:TimeSlot, s:ServiceId, g:Gas, o:OperandTuples):
+    def __init__(
+        self, u: StateContext, t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples
+    ):
         self.partial_state = u
         self.timeslot = t
         self.service_id = s
         self.gas = g
         self.operandTuples = o
-        self.context = AccumulationContext(x=self.initializer_fn(s, u), y=self.initializer_fn(s, u))
+        self.context = AccumulationContext(
+            x=self.initializer_fn(s, u), y=self.initializer_fn(s, u)
+        )
 
     def table(self):
         from jam.state.state import state
@@ -29,37 +43,70 @@ class PsiA(InvocationProtocol):
         xs = self.context.x.s_index
         delta = self.context.x.partial_state.service_accounts
         return {
-            18: (GeneralFunctions, {                                                                        # fetch (Updates context[x]_hash)
-                "package": None,
-                # TODO: This should be posterier
-                "entropy": state.eta[0],
-                "trace": None,
-                "item_index": None,
-                "import_segments": None,
-                "extrinsics": None,
-                "o": self.operandTuples,
-                "t": None
-            }),
-            0: (GeneralFunctions, {}),                                                                      # gas (Returns the gas remaining)
-            1: (GeneralFunctions, {"service_data": delta[xs], "service_index": xs, "accounts": delta}),     # lookup
-            2: (GeneralFunctions, {"service_data": delta[xs], "service_index": xs, "accounts": delta}),     # read
-            3: (GeneralFunctions, {"service_data": delta[xs], "service_index": xs}),                        # write
-            4: (GeneralFunctions, {"service_index": xs, "accounts": delta}),                                # info
-            5: (AccumulateFunctions, {}),                                                                   # bless (Updates previlaged accounts)
-            6: (AccumulateFunctions, {}),                                                                   # assign (Updates authorizer_keys/Phi)
-            7: (AccumulateFunctions, {}),                                                                   # designate (Updates validator_keys/Iota)
-            8: (AccumulateFunctions, {}),                                                                   # checkpoint (Special function to update the context[y])
-            9: (AccumulateFunctions, {}),                                                                   # new (Updates the delta with a new service)
-            10: (AccumulateFunctions, {}),                                                                  # upgrade (Updates the service account)
-            11: (AccumulateFunctions, {}),                                                                  # transfer (Updates service deferred transfers & balance)
-            12: (AccumulateFunctions, {"block_timeslot": self.timeslot}),                                   # eject (Removal of service account)
-            13: (AccumulateFunctions, {}),                                                                  # query (Updates registers[7,8] wrt AccountLookup)
-            14: (AccumulateFunctions, {"block_timeslot": self.timeslot}),                                   # solicit (Updated the AccountLookup)
-            15: (AccumulateFunctions, {"block_timeslot": self.timeslot}),                                   # forget (Updates lookupTimestamp & preimage)
-            16: (AccumulateFunctions, {}),                                                                  # yield_ (Updates context[x]_hash)
-            27: (AccumulateFunctions, {}),                                                                  # provide (Updates preimage)
+            18: (
+                GeneralFunctions,
+                {  # fetch (Updates context[x]_hash)
+                    "package": None,
+                    # TODO: This should be posterier
+                    "entropy": state.eta[0],
+                    "trace": None,
+                    "item_index": None,
+                    "import_segments": None,
+                    "extrinsics": None,
+                    "o": self.operandTuples,
+                    "t": None,
+                },
+            ),
+            0: (GeneralFunctions, {}),  # gas (Returns the gas remaining)
+            1: (
+                GeneralFunctions,
+                {"service_data": delta[xs], "service_index": xs, "accounts": delta},
+            ),  # lookup
+            2: (
+                GeneralFunctions,
+                {"service_data": delta[xs], "service_index": xs, "accounts": delta},
+            ),  # read
+            3: (
+                GeneralFunctions,
+                {"service_data": delta[xs], "service_index": xs},
+            ),  # write
+            4: (GeneralFunctions, {"service_index": xs, "accounts": delta}),  # info
+            5: (AccumulateFunctions, {}),  # bless (Updates previlaged accounts)
+            6: (AccumulateFunctions, {}),  # assign (Updates authorizer_keys/Phi)
+            7: (AccumulateFunctions, {}),  # designate (Updates validator_keys/Iota)
+            8: (
+                AccumulateFunctions,
+                {},
+            ),  # checkpoint (Special function to update the context[y])
+            9: (AccumulateFunctions, {}),  # new (Updates the delta with a new service)
+            10: (AccumulateFunctions, {}),  # upgrade (Updates the service account)
+            11: (
+                AccumulateFunctions,
+                {},
+            ),  # transfer (Updates service deferred transfers & balance)
+            12: (
+                AccumulateFunctions,
+                {"block_timeslot": self.timeslot},
+            ),  # eject (Removal of service account)
+            13: (
+                AccumulateFunctions,
+                {},
+            ),  # query (Updates registers[7,8] wrt AccountLookup)
+            14: (
+                AccumulateFunctions,
+                {"block_timeslot": self.timeslot},
+            ),  # solicit (Updated the AccountLookup)
+            15: (
+                AccumulateFunctions,
+                {"block_timeslot": self.timeslot},
+            ),  # forget (Updates lookupTimestamp & preimage)
+            16: (AccumulateFunctions, {}),  # yield_ (Updates context[x]_hash)
+            27: (AccumulateFunctions, {}),  # provide (Updates preimage)
             # TODO: Add core_index
-            100: (GeneralFunctions, {"core_index": 0, "service_id": self.service_id}),  # log
+            100: (
+                GeneralFunctions,
+                {"core_index": 0, "service_id": self.service_id},
+            ),  # log
         }
 
     def execute(self):
@@ -71,7 +118,9 @@ class PsiA(InvocationProtocol):
                 meta_n_code[1],
                 5,
                 int(self.gas),
-                Uint(self.timeslot).encode() + Uint(self.service_id).encode() + Uint(len(self.operandTuples)).encode(),
+                Uint(self.timeslot).encode()
+                + Uint(self.service_id).encode()
+                + Uint(len(self.operandTuples)).encode(),
                 self.dispatch,
                 self.context,
             )
@@ -90,7 +139,18 @@ class PsiA(InvocationProtocol):
         """
         from jam.state.state import state
 
-        value = (Uint[32].decode_from(bytes(Hash.blake2b(Uint(s).encode() + state.eta[0].encode() + Uint(state.tau).encode())))[0] % (2**32 - 2**9)) + 2**8
+        value = (
+            Uint[32].decode_from(
+                bytes(
+                    Hash.blake2b(
+                        Uint(s).encode()
+                        + state.eta[0].encode()
+                        + Uint(state.tau).encode()
+                    )
+                )
+            )[0]
+            % (2**32 - 2**9)
+        ) + 2**8
         i = check(state_context, value)
         context = AccuContextX(
             s_index=s,
@@ -104,9 +164,7 @@ class PsiA(InvocationProtocol):
 
     @staticmethod
     def collapse(
-            status: ExecutionStatus | bytes,
-            gas: Gas,
-            context: AccumulationContext
+        status: ExecutionStatus | bytes, gas: Gas, context: AccumulationContext
     ) -> Tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]:
         """
         Selects X / Y depending if HALT or PvmErrorc

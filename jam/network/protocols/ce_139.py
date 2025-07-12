@@ -14,18 +14,19 @@ from jam.work_package.stores.segments import SegmentShardsDA
 
 class SegmentShardRequest(SegmentShardRequestBase):
     """
-        CE 139 Protocol for Requesting Segments Shards from Assurers
+    CE 139 Protocol for Requesting Segments Shards from Assurers
 
-        Protocol Flow:
-            Guarantor -> Assurers
+    Protocol Flow:
+        Guarantor -> Assurers
 
-            --> [Erasure-Root ++ Shard Index ++ len++[Segment Index]]
-            --> FIN
-            <-- [Segment Shard]
-            <-- FIN
-        Source:
-            https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
+        --> [Erasure-Root ++ Shard Index ++ len++[Segment Index]]
+        --> FIN
+        <-- [Segment Shard]
+        <-- FIN
+    Source:
+        https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
     """
+
     from jam.network.node import Node
 
     def __init__(self):
@@ -34,6 +35,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root, Shard Index & Segment Indices on Assurer"""
         from jam.settings import settings
+
         buffer = server.stream_buffer[stream_id]
 
         request = self.parse_request(buffer[1:])
@@ -56,7 +58,9 @@ class SegmentShardRequest(SegmentShardRequestBase):
         server.stream_and_keep_open(len_a, stream_id)
         server.stream_and_close(msg_a, stream_id)
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> SegmentsShard | None:
+    def res_intercept(
+        self, stream_id: int, client: QuicProtocol
+    ) -> SegmentsShard | None:
         """Intercept [Segment Shard]"""
         buffer = client.stream_buffer[stream_id]
 

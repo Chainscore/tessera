@@ -9,16 +9,17 @@ from jam.types.work.shard import BundleShard, ShardIndex, BundleShardsDict
 
 from jam.work_package.store import DA
 
+
 class JustificationsDA(DA):
     """
-        Justifications DA Stores all the justifications received via CE137
+    Justifications DA Stores all the justifications received via CE137
 
-        Key: Erasure Root
-        Value: Vector of hashes
-        """
+    Key: Erasure Root
+    Value: Vector of hashes
+    """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("JUST", 'utf-8')
+        self.prefix = bytes("JUST", "utf-8")
         self.db = db
 
     def put(self, er_root: ErasureRoot, data: TypedVector[OpaqueHash]) -> None:
@@ -49,14 +50,16 @@ class AuditShardsDA(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("BSHRD", 'utf-8')
+        self.prefix = bytes("BSHRD", "utf-8")
         self.db = db
 
     def put_batch(self, er_root: ErasureRoot, data: BundleShardsDict) -> None:
         key = self.prefix + er_root.encode()
         self.db.put(key, data.encode())
 
-    def put(self, er_root: ErasureRoot, shard_index: ShardIndex, shard: BundleShard) -> None:
+    def put(
+        self, er_root: ErasureRoot, shard_index: ShardIndex, shard: BundleShard
+    ) -> None:
         key = self.prefix + er_root.encode()
         data = self.db.get(key)
 

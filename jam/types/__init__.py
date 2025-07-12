@@ -17,8 +17,6 @@ from jam.types.protocol import (
     Register,
     ProgramCounter,
     RemainingGas,
-    # Epoch types
-    EpochMark,
     # Validator types
     ValidatorMetadata,
     ValidatorData,
@@ -42,10 +40,6 @@ from jam.types.protocol import (
     # Merkle types
     MMR,
     OptionHash,
-    TicketId,
-    TicketAttempt,
-    TicketBody,
-    TicketsMark
 )
 
 # Work types
@@ -67,29 +61,6 @@ from jam.types.work import (
     Segment,
     Segments,
     MultiSegments,
-)
-
-# Block types
-from jam.types.block import (
-    # Header types
-    Header,
-    OffendersMark,
-    # Block types
-    Block,
-    # Extrinsic types
-    TicketEnvelope,
-    TicketsExtrinsic,
-    Verdict,
-    Culprit,
-    Judgement,
-    DisputesExtrinsic,
-    Fault,
-    DisputesRecords,
-    ValidatorSignature,
-    ReportGuarantee,
-    GuaranteesExtrinsic,
-    PreimagesExtrinsic,
-    AssurancesExtrinsic,
 )
 
 # State types
@@ -157,8 +128,6 @@ __all__ = [
     "Register",
     "ProgramCounter",
     "RemainingGas",
-    # Epoch types
-    "EpochMark",
     # Validator types
     "ValidatorMetadata",
     "ValidatorData",
@@ -181,11 +150,7 @@ __all__ = [
     "Hash",
     # Merkle types
     "MMR",
-    "OptionHash",
-    # Block types
-    "Header",
-    "OffendersMark", 
-    "Block",
+    "OptionHash", 
     # Work types
     "RefineContext",
     "ImportSpec",
@@ -204,24 +169,6 @@ __all__ = [
     "Segment",
     "Segments",
     "MultiSegments",
-    # Extrinsic types
-    "TicketEnvelope",
-    "TicketBody",
-    "TicketsExtrinsic",
-    "TicketId",
-    "TicketAttempt",
-    "TicketsMark",
-    "Verdict",
-    "Culprit",
-    "Judgement",
-    "DisputesExtrinsic",
-    "Fault",
-    "DisputesRecords",
-    "ValidatorSignature",
-    "ReportGuarantee",
-    "GuaranteesExtrinsic",
-    "PreimagesExtrinsic",
-    "AssurancesExtrinsic",
     # State types
     "Alpha",
     "AuthorizationPool",

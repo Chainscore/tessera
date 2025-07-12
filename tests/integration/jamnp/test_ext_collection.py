@@ -10,44 +10,35 @@ import os
 import time
 
 from dotenv import load_dotenv
-from jam.operations.bp_engine import BlockProducer
 from jam.operations.operator import operate
-from tsrkit_types import U32, TypedVector, U64, Dictionary, Bool
+from tsrkit_types import U32, TypedVector, U64, Dictionary
 from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
+from tsrkit_types.integers import U16, Uint
 
 from jam.logging import setup_logging
 from jam.network.base.certificate import generate_san
 from jam.types import WorkReport, WorkPackage, Authorizer, RefineContext, ImportSpec, ExtrinsicSpec, WorkItem, \
-    OpaqueHash, WorkPackageSpec, WorkResult, WorkExecResult, WorkReportHash, Hash, HeaderHash, StateRoot, BeefyRoot, \
+    OpaqueHash, WorkPackageSpec, WorkResult, WorkExecResult, WorkReportHash, HeaderHash, StateRoot, BeefyRoot, \
     WorkPackageHash, ErasureRoot, ExportsRoot
 from jam.types.work import RefineLoad
 from jam.utils.chainspec import chain_config
 
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
 from jam.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node, setup_node
 
-from jam.operations.utils.state_update import update_state
-from jam.state.state import setup_state, State
-from jam.types.protocol.crypto import BlsPublic
-from jam.types.block import Block
-from jam.types.protocol.validators import (
-    IPAddress,
-    ValidatorData,
-    ValidatorMetadata,
-)
+# from jam.operations.utils.state_update import update_state
+from jam.state.state import setup_state
+from jam.block import Block
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.types.work.manifest import Extrinsics
 from jam.logging import get_logger
-from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data, OptBool
+from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex
-from jam.work_package.processor import Processor
-from jam.work_package.stores.reports import ReportsDA
 
 CLIENTS = [
     {
@@ -255,7 +246,7 @@ async def run_node(
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, "dev-spec.json")
         state.store.disable_cache()
-        update_state(state)
+        # # update_state(state)
 
         peers = [
             Peer(
