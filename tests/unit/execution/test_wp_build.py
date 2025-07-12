@@ -17,7 +17,7 @@ from jam.utils.dummy.dummy_package import create_dummy_package
 
 
 def test_basic_wp_building(db_path):
-    settings = setup_setting("god_mode", 3000, 2**16 - 1, db_path)
+    settings = setup_setting("data/god_mode", 3000, 2**16 - 1, db_path)
     state = setup_state(settings.main_db, GhostState.genesis())
 
     package = create_dummy_package()
@@ -84,7 +84,7 @@ def test_basic_wp_building(db_path):
 #     service = "counter"
 #     payload = b"inc"
 #     
-#     settings = setup_setting("god_mode", 3000, 2**16 - 1, db_path)
+#     settings = setup_setting("data/god_mode", 3000, 2**16 - 1, db_path)
 #     state = setup_state(settings.state_db, GhostState.genesis())
 #
 #     package = create_dummy_package()
