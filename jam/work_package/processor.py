@@ -24,7 +24,7 @@ from jam.types.work.manifest import (
     Segment,
     MultiSegments,
     Extrinsics,
-    ProvedSegments, SegmentIndex
+    ProvedSegments, SegmentIndex, Assurers
 )
 from jam.types.work.shard import (
     BundleShardHashes,
@@ -53,6 +53,7 @@ from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
 from jam.work_package.validator import Validator
 
 from jam.network.node import Node
+from jam.work_package.stores.mappings import ReportHashAssurerMap, ErasureAssurerMap
 
 # Module-specific logger
 logger = get_logger("in_core")
@@ -524,7 +525,19 @@ class Processor:
             # Store Package Hash - Segment Root Mapping
             map_da.put(wr)
 
-            # TODO: Save Assurers Mapping
+            # save assurers
+            assurers = Assurers([])
+            for i in guarantees:
+                assurers.append(i.validator_index)
+
+            from jam.settings import settings
+            wr_da = ReportHashAssurerMap(settings.d3l)
+            # report hash to assurers mapping
+            wr_da.put(wr, assurers)
+
+            # erasure root to report hash & assurers mapping
+            er_da = ErasureAssurerMap(settings.d3l)
+            er_da.put(wr, assurers)
 
             CE135 = WorkReportDistribution()
             # TODO: Fix timeslot

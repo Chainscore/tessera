@@ -42,43 +42,49 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
         from jam.settings import settings
         buffer = server.stream_buffer[stream_id]
 
-        request = self.parse_request(buffer[1:])
-        logger.info("Handling CE140 shard + justification request")
+        try:
+            request = self.parse_request(buffer[1:])
 
-        d3l = settings.d3l
-        ss_da = SegmentShardsDA(d3l)
+            d3l = settings.d3l
+            ss_da = SegmentShardsDA(d3l)
 
-        # Fetching segments...
-        shards = SegmentsShard([])
+            # Fetching segments...
+            shards = SegmentsShard([])
 
-        # TODO: Fix Justifications
-        justifications = Justifications([])
-        merkle = BMRFunctions()
+            # TODO: Fix Justifications
+            justifications = Justifications([])
+            merkle = BMRFunctions()
 
-        for query in request.queries:
-            ss_dict = ss_da.get(query.erasure_root)
-            s_dict = ss_dict[query.shard_index]
-            for index in query.seg_indexes:
-                shards.append(s_dict[index])
+            for query in request.queries:
+                ss_dict = ss_da.get(query.erasure_root)
+                s_dict = ss_dict[query.shard_index]
+                for index in query.seg_indexes:
+                    shards.append(s_dict[index])
 
 
-        # Return requested shards & justifications
-        msg_a = shards.encode()
-        len_a = Uint[32](len(msg_a)).encode()
+            # Return requested shards & justifications
+            msg_a = shards.encode()
+            len_a = Uint[32](len(msg_a)).encode()
 
-        server.stream_and_keep_open(len_a, stream_id)
-        server.stream_and_keep_open(msg_a, stream_id)
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_keep_open(msg_a, stream_id)
 
-        n = len(justifications)
-        for ind, jfn in enumerate(justifications):
-            msg_n = jfn.encode()
-            len_n = Uint[32](len(msg_n)).encode()
-            server.stream_and_keep_open(len_n, stream_id)
+            n = len(justifications)
+            for ind, jfn in enumerate(justifications):
+                msg_n = jfn.encode()
+                len_n = Uint[32](len(msg_n)).encode()
+                server.stream_and_keep_open(len_n, stream_id)
 
-            if ind == n-1:
-                server.stream_and_close(msg_n, stream_id)
-            else:
-                server.stream_and_keep_open(msg_n, stream_id)
+                if ind == n-1:
+                    server.stream_and_close(msg_n, stream_id)
+                else:
+                    server.stream_and_keep_open(msg_n, stream_id)
+        except Exception as e:
+            logger.error(
+                "Failed to request shards using ce_140",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
 
 
