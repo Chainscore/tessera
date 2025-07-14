@@ -8,7 +8,6 @@ from jam.utils.chainspec import chain_config
 
 
 class ErasureCode:
-
     def __init__(self):
         self.total_shards = chain_config.num_validators
         self.original_shards = chain_config.erasure_coding_original_shards
@@ -105,9 +104,7 @@ class ErasureCode:
             split_c.append(symbols)
 
         # transpose
-        transposed = [
-            [split_c[j][i] for j in range(len(split_c))] for i in range(len(split_c[0]))
-        ]
+        transposed = [[split_c[j][i] for j in range(len(split_c))] for i in range(len(split_c[0]))]
 
         # reed solomon decoding
         for i in transposed:

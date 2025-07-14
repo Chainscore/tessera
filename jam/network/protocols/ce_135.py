@@ -10,9 +10,9 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.block.extrinsics.guarantees import ReportGuarantee
 from jam.types.protocol.crypto import Hash
 
-from jam.work_package.stores.audits import AuditShardsDA
-from jam.work_package.stores.reports import ReportsDA
-from jam.work_package.stores.segments import SegmentShardsDA
+from jam.storage.da.audits import AuditShardsDA
+from jam.storage.da import ReportsDA
+from jam.storage.da.segments import SegmentShardsDA
 
 
 @structure
@@ -56,9 +56,7 @@ class WorkReportDistribution(NetworkProtocol):
         msg_a = data.guaranteed_wr.encode()
         len_a = data.len.encode()
 
-        logger.info(
-            f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators"
-        )
+        logger.info(f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators")
         # TODO: Use All Validators Connections
 
         responses = TypedVector[OptBool]([])
@@ -110,9 +108,7 @@ class WorkReportDistribution(NetworkProtocol):
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
-            logger.info(
-                f"Guaranteed Report received on Guarantor Node.", stream_id=stream_id
-            )
+            logger.info(f"Guaranteed Report received on Guarantor Node.", stream_id=stream_id)
             return OptBool(True)
 
         return OptBool(Null)

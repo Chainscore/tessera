@@ -172,13 +172,13 @@ class State:
 
         from jam.state.transitions.accumulation import Accumulation
         from jam.state.transitions.report import Reporting
-        from jam.state.transitions.authorization.authorization import Authorization
+        from jam.state.transitions.authorization import Authorization
         from jam.state.transitions.recent_history import RecentHistory
         from jam.state.transitions.safrole import Safrole
-        from jam.state.transitions.assurances.assurances import Assurances
+        from jam.state.transitions.assurances import Assurances
         from jam.state.transitions.disputes import Disputes
         from jam.state.transitions.preimages import Preimages
-        from jam.state.transitions.statistics.statistics import Statistics
+        from jam.state.transitions.statistics import Statistics
         from jam.settings import settings as _set
 
         try:
@@ -225,9 +225,7 @@ class State:
             _, newly_avail_wrs = Assurances.transition(self, block)
 
             # Accumulation
-            logger.debug(
-                "Processing accumulation...", newly_available_count=len(newly_avail_wrs)
-            )
+            logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
             _, commitment_map = Accumulation.transition(
                 self, block, newly_avail_wrs=newly_avail_wrs
             )
@@ -237,16 +235,9 @@ class State:
             Authorization.transition(self, block)
 
             # Recent History
-            logger.debug(
-                "Processing recent history...", commitment_count=len(commitment_map)
-            )
+            logger.debug("Processing recent history...", commitment_count=len(commitment_map))
             history_merkle = BMRFunctions().wb_merkle_fn(
-                sorted(
-                    [
-                        Bytes(comm[0].encode() + comm[1].encode())
-                        for comm in commitment_map
-                    ]
-                ),
+                sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]),
                 Hash.keccak256,
             )
             RecentHistory.transition(self, block, history_merkle)
@@ -306,9 +297,7 @@ def set_state(new_state: State):
     return state
 
 
-def setup_state(
-    state_db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"
-):
+def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"):
     logger.info(
         "Setting up state from genesis",
         genesis_type=type(genesis).__name__,

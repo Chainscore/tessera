@@ -67,9 +67,7 @@ class StateRequest(NetworkProtocol):
 
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
-                data = await client.close_and_wait(
-                    message=stream_data, stream_id=stream_id
-                )
+                data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
                 transmitted_count += 1
                 responses.append(data)
 
@@ -103,9 +101,7 @@ class StateRequest(NetworkProtocol):
         buffer = server.stream_buffer[stream_id]
 
         try:
-            logger.debug(
-                "Received state request", stream_id=stream_id, buffer_size=len(buffer)
-            )
+            logger.debug("Received state request", stream_id=stream_id, buffer_size=len(buffer))
 
             data, offset = CE129Data.decode_from(buffer)
             data = cast(CE129Data, data)
@@ -165,6 +161,4 @@ class StateRequest(NetworkProtocol):
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
 
-        logger.info(
-            "State request ack received", stream_id=stream_id, buffer_size=len(buffer)
-        )
+        logger.info("State request ack received", stream_id=stream_id, buffer_size=len(buffer))

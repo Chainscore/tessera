@@ -157,9 +157,7 @@ def verify_certificate(cert: x509.Certificate):
         san = san_extension.value.get_values_for_type(x509.general_name.DNSName)
 
         if len(san) != 1:
-            raise ValueError(
-                "Certificate must have exactly one Subject Alternative Name."
-            )
+            raise ValueError("Certificate must have exactly one Subject Alternative Name.")
 
         if san[0] != test_san:
             raise ValueError("Subject Alternative Name doesn't match with key.")

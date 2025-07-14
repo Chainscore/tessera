@@ -18,9 +18,7 @@ def benchmark(label: str):
     duration = now() - start
     slot_fraction = 6 / duration if duration > 0 else float("inf")
 
-    logger.debug(
-        f"{label} in {duration:.6f} seconds (~ 1/{int(slot_fraction)} of a slot)"
-    )
+    logger.debug(f"{label} in {duration:.6f} seconds (~ 1/{int(slot_fraction)} of a slot)")
 
     benchmark_results.append(
         {"label": label, "duration_sec": duration, "slot_fraction": slot_fraction}

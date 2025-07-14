@@ -190,10 +190,7 @@ class Disputes:
             total_votes = len(verdict.votes)
 
             # Solely valid verdict (all positive votes)
-            if (
-                positive_votes == total_votes
-                and total_votes >= VALIDATORS_SUPER_MAJORITY
-            ):
+            if positive_votes == total_votes and total_votes >= VALIDATORS_SUPER_MAJORITY:
                 # Check for at least one fault (constraint: solely valid implies ≥1 fault)
                 if fault_counts.get(verdict.target, 0) < MINIMUM_FAULTS_FOR_GOOD:
                     raise DisputesError(DisputesErrorCode.NOT_ENOUGH_FAULTS)
@@ -217,9 +214,7 @@ class Disputes:
                     bad_set.add(verdict.target)
 
             # Wonky verdict (mixed votes meeting wonky threshold)
-            elif (
-                positive_votes == VALIDATORS_WONKY
-            ):  # Condition for wonky verdict EXACTLY
+            elif positive_votes == VALIDATORS_WONKY:  # Condition for wonky verdict EXACTLY
                 if verdict.target not in state.psi.wonky:
                     wonky_set.add(verdict.target)
             else:

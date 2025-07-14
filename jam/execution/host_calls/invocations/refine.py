@@ -62,9 +62,7 @@ class PsiR(InvocationProtocol):
                     "trace": self.auth_trace,
                     "item_index": self.item_index,
                     "import_segments": self.i_segments,
-                    "extrinsics": ItemExtrinsics(settings.main_db).get_all(
-                        self.work_package
-                    ),
+                    "extrinsics": ItemExtrinsics(settings.main_db).get_all(self.work_package),
                     "o": None,
                     "t": None,
                 },

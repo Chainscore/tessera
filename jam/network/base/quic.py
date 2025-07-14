@@ -66,9 +66,7 @@ class QuicProtocol(QuicConnectionProtocol):
                         f"❌ Invalid Peer Certificate received {e}.",
                         interface=self.interface,
                     )
-                    self._quic.close(
-                        error_code=0xA, reason_phrase=f"Invalid Peer Certificate"
-                    )
+                    self._quic.close(error_code=0xA, reason_phrase=f"Invalid Peer Certificate")
 
                 pk = peer_cert.public_key()
                 peer = self.node.get_peer(pk.public_bytes_raw())
@@ -84,16 +82,10 @@ class QuicProtocol(QuicConnectionProtocol):
                     self._quic.close(error_code=0x1, reason_phrase="Unknown Peer.")
 
             if not peer_cert:
-                logger.error(
-                    f"❌ No peer certificate received", interface=self.interface
-                )
-                self._quic.close(
-                    error_code=0xA, reason_phrase="Peer's certificate not present."
-                )
+                logger.error(f"❌ No peer certificate received", interface=self.interface)
+                self._quic.close(error_code=0xA, reason_phrase="Peer's certificate not present.")
 
-    def stream_and_keep_open(
-        self, message: bytes, stream_id: Optional[int] = None
-    ) -> int:
+    def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
         """function for streaming data without end stream (FIN) bit."""
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
@@ -112,9 +104,7 @@ class QuicProtocol(QuicConnectionProtocol):
         self.transmit()
         return stream_id
 
-    def stream_and_close(
-        self, message: bytes, stream_id: int, timeout: Optional[float] = 2.0
-    ):
+    def stream_and_close(self, message: bytes, stream_id: int, timeout: Optional[float] = 2.0):
         """function for streaming data with end stream (FIN) bit. used by request interceptors."""
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
@@ -127,9 +117,7 @@ class QuicProtocol(QuicConnectionProtocol):
 
         self._quic.send_stream_data(stream_id, message, end_stream=True)
 
-    async def close_and_wait(
-        self, message: bytes, stream_id: int, timeout: Optional[float] = 2.0
-    ):
+    async def close_and_wait(self, message: bytes, stream_id: int, timeout: Optional[float] = 2.0):
         """function for streaming data with end stream (FIN) bit and waiting for response. used by request transmitters."""
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
@@ -146,9 +134,7 @@ class QuicProtocol(QuicConnectionProtocol):
             self.waiter[stream_id] = waiter
             self.transmit()
 
-            logger.debug(
-                "Message transmitted, waiting for response", stream_id=stream_id
-            )
+            logger.debug("Message transmitted, waiting for response", stream_id=stream_id)
             return await asyncio.shield(waiter)
 
         except Exception as e:
@@ -243,9 +229,7 @@ class QuicProtocol(QuicConnectionProtocol):
                     interface=self.interface,
                     alpn=event.alpn_protocol,
                 )
-                self._quic.close(
-                    error_code=0xA, reason_phrase=f"Malicious node tried to connect."
-                )
+                self._quic.close(error_code=0xA, reason_phrase=f"Malicious node tried to connect.")
 
         # elif isinstance(event, ConnectionIdIssued):
         #     logger.debug(f"🔗 Connection Id issued: {event.connection_id}",
@@ -359,9 +343,7 @@ class QuicProtocol(QuicConnectionProtocol):
                         prefix=prefix,
                         protocol=type(ce_protocol).__name__,
                     )
-                    if (stream_id in self.waiter) and (
-                        self.waiter[stream_id] is not None
-                    ):
+                    if (stream_id in self.waiter) and (self.waiter[stream_id] is not None):
                         logger.debug(
                             "Intercepting Response.",
                             protocol=prefix,

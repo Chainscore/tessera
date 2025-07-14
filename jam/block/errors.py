@@ -17,4 +17,5 @@ class BlockErrorCode(Enum):
     INCORRECT_STATE_ROOT = 11
 
 
-class BlockError(JamError): ...
+class BlockError(JamError):
+    ...

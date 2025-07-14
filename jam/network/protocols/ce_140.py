@@ -1,6 +1,6 @@
 from typing import cast, Tuple
 
-from tsrkit_types import Vector, Uint
+from tsrkit_types import Uint
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_139_base import (
@@ -15,9 +15,9 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.logging import logger
 from jam.utils.merkle import BMRFunctions
 
-from jam.types.work.shard import SegmentsShard, SegmentShard
+from jam.types.work.shard import SegmentsShard
 
-from jam.work_package.stores.segments import SegmentShardsDA
+from jam.storage.da.segments import SegmentShardsDA
 
 
 class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
@@ -37,8 +37,6 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
     Source:
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
     """
-
-    from jam.network.node import Node
 
     def __init__(self):
         super().__init__(PrefixType.CE140)

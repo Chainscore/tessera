@@ -12,7 +12,12 @@ from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
 from jam.types.protocol.ticket import TicketBody, TicketId, TicketAttempt
 from jam.utils.dummy.utils import create_dummy_bytes
-from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys, generate_ticket
+from tests.unit.safrole.data import (
+    create_block,
+    create_state,
+    create_validator_data_from_keys,
+    generate_ticket,
+)
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END
 
 
@@ -21,7 +26,7 @@ def test_ticket_accumulation():
     """Test that Safrole correctly accumulates ticket.py during the submission period"""
     # Create ticket.py
     ticket1 = TicketBody(id=TicketId(bytes([1] * 32)), attempt=TicketAttempt(0))
-    
+
     # Create initial state with a ticket already in gamma_a
     initial_state = create_state(
         tau=U32(5),  # Assume this is within ticket submission period
@@ -31,32 +36,35 @@ def test_ticket_accumulation():
         gamma_k=GammaK(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([ticket1]),
-        gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])),
-        gamma_z=GammaZ(Safrole.compute_ring_root([keys.bandersnatch for keys in create_validator_data_from_keys()])),
-        offenders=PsiO([])
+        gamma_s=GammaS(
+            GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])
+        ),
+        gamma_z=GammaZ(
+            Safrole.compute_ring_root(
+                [keys.bandersnatch for keys in create_validator_data_from_keys()]
+            )
+        ),
+        offenders=PsiO([]),
     )
-    
+
     # Create a ticket envelope for a block
     ticket_envelope = generate_ticket()
-    
+
     # Calculate slot within submission period
     slot_within_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END - 1)
-    
+
     # Mock the vrf_output function to return a predictable value
     original_vrf_output = Safrole.vrf_output
     ticket2_id = TicketId(bytes([2] * 32))
     Safrole.vrf_output = lambda _: ticket2_id
-    
+
     try:
         # Create a block with a ticket during submission period
-        new_block = create_block(
-            slot=slot_within_submission, 
-            tickets=[ticket_envelope]
-        )
-        
+        new_block = create_block(slot=slot_within_submission, tickets=[ticket_envelope])
+
         # Apply the transition
         new_state = Safrole.transition(initial_state, new_block, Bytes[32](create_dummy_bytes(32)))
-        
+
         # Check that the new ticket was accumulated
         assert len(new_state.gamma.a) == 2
         # Get the ticket bodies
@@ -80,27 +88,30 @@ def test_ticket_submission_outside_period():
         gamma_k=GammaK(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
-        gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])),
-        gamma_z=GammaZ(Safrole.compute_ring_root([keys.bandersnatch for keys in create_validator_data_from_keys()])),
-        offenders=PsiO([])
+        gamma_s=GammaS(
+            GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])
+        ),
+        gamma_z=GammaZ(
+            Safrole.compute_ring_root(
+                [keys.bandersnatch for keys in create_validator_data_from_keys()]
+            )
+        ),
+        offenders=PsiO([]),
     )
-    
+
     # Calculate a slot after submission period
     slot_after_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END + 1)
-    
+
     # Create a ticket envelope
     ticket_envelope = generate_ticket()
-    
+
     # Create a block with ticket.py after the submission period
-    new_block = create_block(
-        slot=slot_after_submission, 
-        tickets=[ticket_envelope]
-    )
-    
+    new_block = create_block(slot=slot_after_submission, tickets=[ticket_envelope])
+
     # Verify that the transition raises the expected error
     with pytest.raises(SafroleError) as excinfo:
         Safrole.transition(initial_state, new_block, Bytes[32](create_dummy_bytes(32)))
-    
+
     assert excinfo.value.code == SafroleErrorCode.UNEXPECTED_TICKET
 
 
@@ -116,38 +127,45 @@ def test_ticket_duplicate_rejection():
         gamma_k=GammaK(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
-        gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])),
-        gamma_z=GammaZ(Safrole.compute_ring_root([keys.bandersnatch for keys in create_validator_data_from_keys()])),
-        offenders=PsiO([])
+        gamma_s=GammaS(
+            GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])
+        ),
+        gamma_z=GammaZ(
+            Safrole.compute_ring_root(
+                [keys.bandersnatch for keys in create_validator_data_from_keys()]
+            )
+        ),
+        offenders=PsiO([]),
     )
-    
+
     # Create a ticket envelope
     ticket_envelope = generate_ticket()
-    
+
     # Calculate slot within submission period
     slot_within_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END - 1)
-    
+
     # Mock the vrf_output function to return the same ID for all ticket.py
     original_vrf_output = Safrole.vrf_output
     duplicate_id = TicketId(bytes([1] * 32))
     Safrole.vrf_output = lambda _: duplicate_id
-    
+
     try:
         # Create a block with duplicate ticket.py (same ID)
         duplicate_block = create_block(
-            slot=slot_within_submission, 
-            tickets=[ticket_envelope, ticket_envelope]  # Same ticket twice
+            slot=slot_within_submission,
+            tickets=[ticket_envelope, ticket_envelope],  # Same ticket twice
         )
-        
+
         # Verify that trying to apply duplicate ticket.py raises the expected error
         with pytest.raises(SafroleError) as excinfo:
             Safrole.transition(initial_state, duplicate_block, Bytes[32](bytes(32)))
-        
+
         # Check that the error message indicates duplicate ticket.py not allowed
         assert "Duplicate ticket.py are not allowed" in str(excinfo.value)
     finally:
         # Restore the original function
         Safrole.vrf_output = original_vrf_output
+
 
 @pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_ticket_sorting():
@@ -161,30 +179,36 @@ def test_ticket_sorting():
         gamma_k=GammaK(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
-        gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])),
-        gamma_z=GammaZ(Safrole.compute_ring_root([keys.bandersnatch for keys in create_validator_data_from_keys()])),
-        offenders=PsiO([])
+        gamma_s=GammaS(
+            GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])
+        ),
+        gamma_z=GammaZ(
+            Safrole.compute_ring_root(
+                [keys.bandersnatch for keys in create_validator_data_from_keys()]
+            )
+        ),
+        offenders=PsiO([]),
     )
-    
+
     # Create multiple ticket envelopes (3 distinct ticket.py)
     envelopes = [generate_ticket() for _ in range(3)]
-    
+
     # Calculate slot within submission period
     slot_within_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END - 1)
-    
+
     # Mock the vrf_output function to return ticket IDs that are guaranteed to be distinct
     original_vrf_output = Safrole.vrf_output
-    
+
     # Create IDs that are guaranteed to be different
     ticket_ids = [
         TicketId(bytes([100] * 32)),  # Using values well separated to ensure uniqueness
         TicketId(bytes([200] * 32)),
         TicketId(bytes([202] * 32)),
     ]
-    
+
     # Map each ticket envelope to a specific ID to avoid any duplicate IDs
     ticket_map = {id(envelope): ticket_ids[i] for i, envelope in enumerate(envelopes)}
-    
+
     def mock_vrf_output(signature):
         # If the signature belongs to one of our test envelopes, return the mapped ID
         for envelope in envelopes:
@@ -192,29 +216,26 @@ def test_ticket_sorting():
                 return ticket_map[id(envelope)]
         # Otherwise return a default ID
         return TicketId(bytes([50] * 32))
-    
+
     Safrole.vrf_output = mock_vrf_output
-    
+
     try:
         # Create a block with the ticket.py
-        new_block = create_block(
-            slot=slot_within_submission, 
-            tickets=envelopes
-        )
-        
+        new_block = create_block(slot=slot_within_submission, tickets=envelopes)
+
         # Apply the transition
         new_state = Safrole.transition(initial_state, new_block, Bytes[32](create_dummy_bytes(32)))
-        
+
         # Check that ticket.py were accumulated
         assert len(new_state.gamma.a) == 3
-        
+
         # Extract the IDs of accumulated ticket.py
         accumulated_ids = [ticket.id for ticket in new_state.gamma.a]
-        
+
         # Check all our ticket.py made it into the accumulator
         for ticket_id in ticket_ids:
             assert ticket_id in accumulated_ids, f"Ticket {ticket_id} should be in accumulator"
-        
+
         # Verify ticket.py are sorted by ID
         expected_order = sorted(ticket_ids)
         assert accumulated_ids == expected_order, "Tickets should be sorted by ID"

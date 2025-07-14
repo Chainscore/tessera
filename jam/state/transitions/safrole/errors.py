@@ -2,7 +2,8 @@ from tsrkit_types.enum import Enum
 from jam.error import JamError
 
 
-class SafroleError(JamError): ...
+class SafroleError(JamError):
+    ...
 
 
 class SafroleErrorCode(Enum):

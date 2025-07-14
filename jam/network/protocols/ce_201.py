@@ -48,9 +48,7 @@ class GhostProtocol(NetworkProtocol):
         msg_a = Bytes(data, "utf-8").encode()
         len_a = Uint[32](len(msg_a)).encode()
 
-        logger.info(
-            f"GHOST - Transmitting to {len(node.peer_conn)} Validators", protocol="201"
-        )
+        logger.info(f"GHOST - Transmitting to {len(node.peer_conn)} Validators", protocol="201")
 
         # TODO: Use Original Guarantor Connection
 
@@ -95,9 +93,7 @@ class GhostProtocol(NetworkProtocol):
         server.stream_and_keep_open(len_a, stream_id)
         server.stream_and_close(msg_a, stream_id)
 
-        logger.info(
-            f"📩 Processed Test Protocol query.", message=message, peer=server.peer
-        )
+        logger.info(f"📩 Processed Test Protocol query.", message=message, peer=server.peer)
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> str:
         """Intercept Test Response"""

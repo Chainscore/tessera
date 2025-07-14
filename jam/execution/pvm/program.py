@@ -60,9 +60,7 @@ class Program(Codable):
         # Build basic blocks using cached skip values
         basic_blocks = [0]
         for n in range(len(self.instruction_set)):
-            if self.offset_bitmask[n] and inst_map.is_terminating(
-                self.instruction_set[n]
-            ):
+            if self.offset_bitmask[n] and inst_map.is_terminating(self.instruction_set[n]):
                 basic_blocks.append(n + 1 + self._skip_cache.get(n, 0))
         self.basic_blocks = basic_blocks
         self.zeta = self.instruction_set + bytes(100)
@@ -89,9 +87,7 @@ class Program(Codable):
         """
         return self._skip_cache.get(pc, 0)
 
-    def branch(
-        self, counter: int, branch: int, condition: bool
-    ) -> Tuple[ExecutionStatus, int]:
+    def branch(self, counter: int, branch: int, condition: bool) -> Tuple[ExecutionStatus, int]:
         if not condition:
             return CONTINUE, counter
         elif branch not in self._basic_blocks_set:
@@ -105,8 +101,7 @@ class Program(Codable):
             a == 0
             or a > self._jump_table_max_addr
             or a % PVM_ADDR_ALIGNMENT != 0
-            or self.jump_table[floor(a // PVM_ADDR_ALIGNMENT) - 1]
-            not in self._basic_blocks_set
+            or self.jump_table[floor(a // PVM_ADDR_ALIGNMENT) - 1] not in self._basic_blocks_set
         ):
             raise PvmError(PANIC)
         return CONTINUE, self.jump_table[floor(a // PVM_ADDR_ALIGNMENT) - 1]
@@ -147,9 +142,7 @@ class Program(Codable):
             size = Uint[self.z * 8](jump).encode_into(buffer, current_offset)
             current_offset += size
 
-        buffer[current_offset : current_offset + len(self.instruction_set)] = (
-            self.instruction_set
-        )
+        buffer[current_offset : current_offset + len(self.instruction_set)] = self.instruction_set
         current_offset += len(self.instruction_set)
         size = Bits[len(self.instruction_set), "lsb"](self.offset_bitmask).encode_into(
             buffer, current_offset
@@ -158,9 +151,7 @@ class Program(Codable):
         return current_offset - offset
 
     @classmethod
-    def decode_from(
-        cls, buffer: Union[bytes, bytearray], offset: int = 0
-    ) -> Tuple["Program", int]:
+    def decode_from(cls, buffer: Union[bytes, bytearray], offset: int = 0) -> Tuple["Program", int]:
         """Decode a program from a bytes
 
         Args:

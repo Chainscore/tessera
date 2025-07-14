@@ -2,7 +2,8 @@ from tsrkit_types import Enum
 from jam.error import JamError
 
 
-class AssurancesError(JamError): ...
+class AssurancesError(JamError):
+    ...
 
 
 class AssurancesErrorCode(Enum):

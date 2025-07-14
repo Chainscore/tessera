@@ -67,7 +67,6 @@ CE140Data = CE139Data
 
 
 class SegmentShardRequestBase(NetworkProtocol):
-
     from jam.network.node import Node
 
     def __init__(self, prefix: PrefixType):
@@ -110,6 +109,8 @@ class SegmentShardRequestBase(NetworkProtocol):
 
         return data
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol): ...
+    def req_intercept(self, stream_id: int, server: QuicProtocol):
+        ...
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol): ...
+    def res_intercept(self, stream_id: int, client: QuicProtocol):
+        ...

@@ -91,8 +91,7 @@ class Assurances:
                     rho[i] = OptionalWorkReportState(Null)
                 if (
                     core_assurances[i] > super_majority
-                    or block.header.slot
-                    >= rho[i].unwrap().timeout + UNAVAILABLE_WORK_EXPIRY
+                    or block.header.slot >= rho[i].unwrap().timeout + UNAVAILABLE_WORK_EXPIRY
                 ):
                     rho[i] = OptionalWorkReportState(Null)
 
@@ -143,9 +142,7 @@ class Assurances:
     @staticmethod
     def ensure_assurances_unique(assurances: List[AvailAssurance]) -> None:
         """Ensure the assurances are unique using Python's set"""
-        if len(assurances) != len(
-            set(assurance.validator_index for assurance in assurances)
-        ):
+        if len(assurances) != len(set(assurance.validator_index for assurance in assurances)):
             raise AssurancesError(
                 AssurancesErrorCode.NOT_SORTED_OR_UNIQUE_ASSURERS,
                 "Assurances are not unique by validator index",

@@ -14,8 +14,7 @@ class Finality:
 
     Keeps track of finalised and latest header hashes, using which we can fetch its corresponding blocks
     """
-    
-    
+
     FINAL_KEY = bytes(Hash.blake2b(b"FINAL_BLOCK"))
     LATEST_KEY = bytes(Hash.blake2b(b"LATEST_BLOCK"))
 

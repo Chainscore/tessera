@@ -62,4 +62,5 @@ OUT_OF_GAS = ExecutionStatus.OUT_OF_GAS
 CONTINUE = ExecutionStatus.CONTINUE
 
 
-class PvmError(JamError): ...
+class PvmError(JamError):
+    ...

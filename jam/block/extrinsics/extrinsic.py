@@ -8,8 +8,10 @@ from jam.block.extrinsics.preimages import PreimagesExtrinsic
 from jam.block.extrinsics.guarantees import GuaranteesExtrinsic
 from jam.block.extrinsics.assurances import AssurancesExtrinsic
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Culprits, Faults, Verdicts
+
 if TYPE_CHECKING:
     from jam.block.header.header import Header
+
 
 @structure
 class Extrinsic:
@@ -50,7 +52,13 @@ class Extrinsic:
         ep = PreimagesExtrinsic(preimg_store._store[:])
         et = TicketsExtrinsic(ticket_store._store[:MAX_TICKETS_PER_EXTRINSIC])
         ea = AssurancesExtrinsic(asr_store._store)
-        return Extrinsic(tickets=et, preimages=ep, guarantees=eg, assurances=ea, disputes=DisputesExtrinsic.empty())
+        return Extrinsic(
+            tickets=et,
+            preimages=ep,
+            guarantees=eg,
+            assurances=ea,
+            disputes=DisputesExtrinsic.empty(),
+        )
 
     def clear_from_stores(self):
         """
@@ -68,7 +76,7 @@ class Extrinsic:
         return
 
     def validate(self, header: "Header"):
-        # Valid extrinsics hash 
+        # Valid extrinsics hash
         if Hash.blake2b(self.encode()) != header.extrinsic_hash:
             raise BlockError(BlockErrorCode.INCORRECT_EXTRINSIC_HASH)
         return

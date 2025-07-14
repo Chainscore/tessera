@@ -1,7 +1,7 @@
 from rockstore import RockStore
 
 from jam.types.work.report import WorkReport, WorkReportHash
-from jam.work_package.store import DA
+from jam.storage.da.store import DA
 
 
 class ReportsDA(DA):

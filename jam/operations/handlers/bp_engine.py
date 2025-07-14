@@ -26,7 +26,7 @@ class BlockProducer(NodeDispatcher):
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
         from jam.network.node import node
-        from jam.settings import settings 
+        from jam.settings import settings
         from jam.network.protocols.up_0 import BlockAnnouncement
 
         up0 = BlockAnnouncement()
@@ -43,18 +43,20 @@ class BlockProducer(NodeDispatcher):
 
         if isinstance(gamma_s, GammaSFallback):
             author_key = gamma_s[time_slot % EPOCH_LENGTH]
-        
+
             if author_key == node.validator_data.bandersnatch:
                 logger.debug(
                     "🧑‍🍳Authoring block - our turn",
                     ts=time_slot,
                     epoch=(time_slot // SLOT_PERIOD),
                 )
-                
+
                 curr_block = Finality.load_latest(settings.main_db)
                 if curr_block is None:
-                    raise ValueError(f"Latest Block not found. Node was not initiated properly. Timeslot = {time_slot}")
-                
+                    raise ValueError(
+                        f"Latest Block not found. Node was not initiated properly. Timeslot = {time_slot}"
+                    )
+
                 new_block = curr_block.produce(TimeSlot(time_slot))
 
                 state.transition(new_block)

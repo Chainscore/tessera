@@ -11,14 +11,14 @@ from dotenv import load_dotenv
 @contextmanager
 def using_node(db_path: str, port: int):
     load_dotenv(f"envs/{port}.env")
-    
+
     setting = setup_setting(
         name=getattr(os.environ, "NODE_NAME", "god"),
         port=port,
         seed=getattr(os.environ, "SEED", 2**16 - 1),
-        data_path=db_path
+        data_path=db_path,
     )
-    
+
     try:
         yield setting
     finally:
@@ -37,8 +37,8 @@ async def test_ce128_setup(db_path):
     # DataStores.configure_db_paths(db_path)
 
     a = Settings("alice", 40000, 0)
-    b = Settings("bob"  , 40001, 1)
-    
+    b = Settings("bob", 40001, 1)
+
     a_peer = Peer(id=generate_san(a.ed25519_public), data=a.val)
     b_peer = Peer(id=generate_san(b.ed25519_public), data=b.val)
 

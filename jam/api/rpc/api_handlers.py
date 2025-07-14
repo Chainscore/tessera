@@ -69,9 +69,7 @@ def service_preimage_handler(params, request_id, db):
 
 
 def service_request_handler(params: list):
-    hh, sid, pi_hash, pi_len = parse_data(
-        [HeaderHash, ServiceId, OpaqueHash, U32], params
-    )
+    hh, sid, pi_hash, pi_len = parse_data([HeaderHash, ServiceId, OpaqueHash, U32], params)
     state_at_hh = State.load(hh)
     return state_at_hh.delta[sid].lookup[LookupTable(hash=pi_hash, length=pi_len)]
 

@@ -104,9 +104,7 @@ class ItemExtrinsics:
         extr_specs = ExtrinsicSpecs([])
         wi = b""
         for ex_data in wi_data:
-            extr_specs.append(
-                ExtrinsicSpec(hash=Hash.blake2b(ex_data), len=U32(len(ex_data)))
-            )
+            extr_specs.append(ExtrinsicSpec(hash=Hash.blake2b(ex_data), len=U32(len(ex_data))))
             wi += ex_data
         return wi, extr_specs
 

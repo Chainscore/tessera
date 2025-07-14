@@ -17,7 +17,6 @@ logger = get_logger("pvm")
 
 @dataclass
 class PVM:
-
     @classmethod
     def execute(
         cls,
@@ -59,10 +58,8 @@ class PVM:
             try:
                 opcode = program.zeta[program_counter]
 
-                status, program_counter, registers, memory = (
-                    inst_map.execute_instruction(
-                        opcode, program, program_counter, registers, memory
-                    )
+                status, program_counter, registers, memory = inst_map.execute_instruction(
+                    opcode, program, program_counter, registers, memory
                 )
 
                 gas_cost = inst_map.get_gas_cost(opcode)
@@ -85,9 +82,7 @@ class PVM:
                     )
                     break
                 elif status == ExecutionStatus.HOST:
-                    logger.debug(
-                        "PVM - HOST", pc=program_counter, gas_remaining=remaining_gas
-                    )
+                    logger.debug("PVM - HOST", pc=program_counter, gas_remaining=remaining_gas)
                     break
 
             except PvmError as e:

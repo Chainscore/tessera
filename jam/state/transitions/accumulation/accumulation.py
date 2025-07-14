@@ -126,9 +126,7 @@ class Accumulation:
             return g
 
         else:
-            g_star = cls.priority_queue_fn(
-                cls.queue_edit_fn(accumulation_queue, cls.mapping_fn(g))
-            )
+            g_star = cls.priority_queue_fn(cls.queue_edit_fn(accumulation_queue, cls.mapping_fn(g)))
             g.extend(g_star)
 
             return g
@@ -197,10 +195,8 @@ class Accumulation:
 
         work_reports_start = work_reports[: index + 1]
 
-        partial_state, transfers, outputs, gas_consumed = (
-            Accumulation.parallel_accumulation(
-                partial_state, work_reports_start, services, timeslot
-            )
+        partial_state, transfers, outputs, gas_consumed = Accumulation.parallel_accumulation(
+            partial_state, work_reports_start, services, timeslot
         )
 
         work_reports_end = work_reports[index:]
@@ -209,10 +205,8 @@ class Accumulation:
             gas_star += gas
         gas_diff = gas_limit - gas_star
 
-        j, partial_state, r_transfers, r_outputs, r_gas_consumed = (
-            Accumulation.seq_accumulation(
-                gas_diff, work_reports_end, partial_state, ChiG({}), timeslot
-            )
+        j, partial_state, r_transfers, r_outputs, r_gas_consumed = Accumulation.seq_accumulation(
+            gas_diff, work_reports_end, partial_state, ChiG({}), timeslot
         )
 
         transfers.extend(r_transfers)
@@ -270,10 +264,14 @@ class Accumulation:
         collected_preimages: Set[Tuple[ServiceId, Bytes]] = set()
 
         for service in services:
-            partial_state, _transfers, _output_hash, _gas_consumed, _preimages = (
-                Accumulation.single_accumulation(
-                    partial_state, work_reports, privileged_services, service, timeslot
-                )
+            (
+                partial_state,
+                _transfers,
+                _output_hash,
+                _gas_consumed,
+                _preimages,
+            ) = Accumulation.single_accumulation(
+                partial_state, work_reports, privileged_services, service, timeslot
             )
             gas_consumed.append((service, _gas_consumed))
             if _output_hash and _output_hash.unwrap() != Null:
@@ -371,9 +369,7 @@ class Accumulation:
                 service.lookup[key_hash] = blobs
 
     @staticmethod
-    def selection_fn(
-        deferred_transfers: DeferredTransfers, delta: Delta
-    ) -> DeferredTransfers:
+    def selection_fn(deferred_transfers: DeferredTransfers, delta: Delta) -> DeferredTransfers:
         """
         Selection function R defined in Eq 12.23
         Maps a sequence of deferred transfers & a desired destination service index
@@ -473,9 +469,7 @@ class Accumulation:
         accumulatable_wr.extend(queued_reports)
 
         # Calculate available wrs queue, q, Eq 12.12
-        intermediate_queue = cls.queue_edit_fn(
-            accumulatable_wr, cls.mapping_fn(immediate_reports)
-        )
+        intermediate_queue = cls.queue_edit_fn(accumulatable_wr, cls.mapping_fn(immediate_reports))
 
         # Calculate accumulatable wrs queue, Q(q)
         accumulatable_wrs = cls.priority_queue_fn(intermediate_queue)
@@ -530,12 +524,8 @@ class Accumulation:
         for service_id in accumulation_stats.keys():
             if service_id not in pi_service:
                 pi_service[service_id] = ServiceStat.empty()
-            pi_service[service_id].accumulate_gas_used = Uint(
-                accumulation_stats[service_id][0]
-            )
-            pi_service[service_id].accumulate_count = Uint(
-                accumulation_stats[service_id][1]
-            )
+            pi_service[service_id].accumulate_gas_used = Uint(accumulation_stats[service_id][0])
+            pi_service[service_id].accumulate_count = Uint(accumulation_stats[service_id][1])
         pi.services = pi_service
         state.pi = pi
 

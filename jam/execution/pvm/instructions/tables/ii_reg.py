@@ -58,9 +58,7 @@ class InstructionsWArgs2Reg(InstructionTable):
                 gas=1,
                 is_terminating=False,
             ),
-            108: OpCode(
-                name="sign_extend_8", fn=cls.sign_extend(8), gas=1, is_terminating=False
-            ),
+            108: OpCode(name="sign_extend_8", fn=cls.sign_extend(8), gas=1, is_terminating=False),
             109: OpCode(
                 name="sign_extend_16",
                 fn=cls.sign_extend(16),
@@ -73,9 +71,7 @@ class InstructionsWArgs2Reg(InstructionTable):
                 gas=1,
                 is_terminating=False,
             ),
-            111: OpCode(
-                name="reverse_bytes", fn=cls.reverse_bytes, gas=1, is_terminating=False
-            ),
+            111: OpCode(name="reverse_bytes", fn=cls.reverse_bytes, gas=1, is_terminating=False),
         }
 
     def move_reg(self, registers: list, memory: Memory) -> OpReturn:
@@ -105,9 +101,9 @@ class InstructionsWArgs2Reg(InstructionTable):
     def leading_zero_bits(bitsize: int) -> Callable[[Any, list, Memory], OpReturn]:
         def leading_zero_bits_impl(self, registers: list, memory: Memory) -> OpReturn:
             try:
-                leading_zeroes = b(
-                    int(registers[self.ra]) % 2**bitsize, bitsize // 8
-                )[::-1].index(True)
+                leading_zeroes = b(int(registers[self.ra]) % 2**bitsize, bitsize // 8)[
+                    ::-1
+                ].index(True)
             except ValueError:
                 leading_zeroes = bitsize
             registers[self.rd] = leading_zeroes
@@ -119,9 +115,7 @@ class InstructionsWArgs2Reg(InstructionTable):
     def trailing_zero_bits(bitsize: int) -> Callable[[Any, list, Memory], OpReturn]:
         def trailing_zero_impl(self, registers: list, memory: Memory) -> OpReturn:
             try:
-                trailing_zeroes = b(
-                    registers[self.ra] % 2**bitsize, bitsize // 8
-                ).index(True)
+                trailing_zeroes = b(registers[self.ra] % 2**bitsize, bitsize // 8).index(True)
             except ValueError:
                 trailing_zeroes = bitsize
             registers[self.rd] = trailing_zeroes
@@ -132,9 +126,7 @@ class InstructionsWArgs2Reg(InstructionTable):
     @staticmethod
     def sign_extend(bitsize: int) -> Callable[[Any, list, Memory], OpReturn]:
         def sign_extend_impl(self, registers: list, memory: Memory) -> OpReturn:
-            registers[self.rd] = z_inv(
-                z(registers[self.ra] % 2**bitsize, bitsize // 8), 8
-            )
+            registers[self.rd] = z_inv(z(registers[self.ra] % 2**bitsize, bitsize // 8), 8)
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
         return sign_extend_impl

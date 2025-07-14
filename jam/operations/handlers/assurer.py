@@ -29,12 +29,12 @@ class Assurer:
         )
 
         from jam.network.protocols.ce_141 import CE141Data, AssuranceDistribution
-        from jam.finality.finality import Finality 
+        from jam.finality.finality import Finality
         from jam.network.protocols.ce_141 import Assurance
-        
+
         from jam.block.extrinsics.assurances import AvailBitField
         from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
-    
+
         try:
             latest_block = Finality.load_latest(kv=settings.main_db)
             header_hash = latest_block.header.hash()

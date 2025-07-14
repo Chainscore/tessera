@@ -66,7 +66,6 @@ class AssuranceDistribution(NetworkProtocol):
         responses = TypedVector([])
 
         for peer in node.peer_conn:
-
             client = node.peer_conn[peer][1]
 
             # Send Protocol Prefix
@@ -84,11 +83,10 @@ class AssuranceDistribution(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         from jam.block.extrinsics.assurances import asr_store
+
         buffer = server.stream_buffer[stream_id]
 
-        logger.debug(
-            "Received assurance", stream_id=stream_id, buffer_size=len(buffer[1:])
-        )
+        logger.debug("Received assurance", stream_id=stream_id, buffer_size=len(buffer[1:]))
 
         data, offset = CE141Data.decode_from(buffer[1:])
         data = cast(CE141Data, data)
@@ -112,16 +110,12 @@ class AssuranceDistribution(NetworkProtocol):
         ack = b""
         server.stream_and_close(ack, stream_id)
 
-        logger.debug(
-            "Assurance sent to other validators", stream_id=stream_id, ack_size=len(ack)
-        )
+        logger.debug("Assurance sent to other validators", stream_id=stream_id, ack_size=len(ack))
 
     def res_intercept(self, stream_id: int, client: QuicProtocol):
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
-            logger.info(
-                "Assurance ack received", stream_id=stream_id, buffer_size=len(buffer)
-            )
+            logger.info("Assurance ack received", stream_id=stream_id, buffer_size=len(buffer))
             return True
 
         return False

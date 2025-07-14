@@ -9,7 +9,7 @@ from jam.logging import logger
 
 from jam.network.base.protocol import PrefixType
 from jam.types.work.shard import SegmentsShard
-from jam.work_package.stores.segments import SegmentShardsDA
+from jam.storage.da.segments import SegmentShardsDA
 
 
 class SegmentShardRequest(SegmentShardRequestBase):
@@ -26,8 +26,6 @@ class SegmentShardRequest(SegmentShardRequestBase):
     Source:
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
     """
-
-    from jam.network.node import Node
 
     def __init__(self):
         super().__init__(PrefixType.CE139)
@@ -58,9 +56,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
         server.stream_and_keep_open(len_a, stream_id)
         server.stream_and_close(msg_a, stream_id)
 
-    def res_intercept(
-        self, stream_id: int, client: QuicProtocol
-    ) -> SegmentsShard | None:
+    def res_intercept(self, stream_id: int, client: QuicProtocol) -> SegmentsShard | None:
         """Intercept [Segment Shard]"""
         buffer = client.stream_buffer[stream_id]
 

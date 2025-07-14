@@ -1,7 +1,6 @@
 from typing import Tuple
 
 from rockstore import RockStore
-from tsrkit_types import Null
 
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import (
@@ -13,7 +12,7 @@ from jam.types.protocol.core import (
 from jam.types.work.report import WorkReport
 from jam.types.work.manifest import Assurers, ReportAssurers
 
-from jam.work_package.store import DA
+from jam.storage.da.store import DA
 
 
 class PackageSegmentMap(DA):

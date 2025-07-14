@@ -55,9 +55,7 @@ async def main(
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(
-        name=name, port=int(port), seed=int(seed), data_path="data/"
-    )
+    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
 
     main_db = settings.main_db
 

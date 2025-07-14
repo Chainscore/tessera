@@ -126,9 +126,7 @@ class AccountData:
     service: AccountMetadata = field(metadata={"default": AccountMetadata.empty()})
     storage: AccountStorage = field(metadata={"default": AccountStorage({})})
     preimages: AccountPreimages = field(metadata={"default": AccountPreimages({})})
-    lookup: AccountLookup = field(
-        metadata={"name": "lookup_meta", "default": AccountLookup({})}
-    )
+    lookup: AccountLookup = field(metadata={"name": "lookup_meta", "default": AccountLookup({})})
 
     def __post_init__(self):
         self.storage._meta = self.service
@@ -170,9 +168,7 @@ class AccountData:
         elif len(lookup_ts) == 2:
             return lookup_ts[0] <= current_ts < lookup_ts[1]
         elif len(lookup_ts) == 3:
-            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[
-                2
-            ] <= current_ts
+            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[2] <= current_ts
         else:
             raise ValueError("Invalid Timestamp data")
 

@@ -3,7 +3,7 @@ from typing import Optional
 from jam.block.errors import BlockError, BlockErrorCode
 from jam.block.extrinsics.extrinsic import Extrinsic
 from jam.block.extrinsics.tickets import TicketEnvelope
-from jam.utils.constants import EPOCH_LENGTH, SIGNING_CONTEXTS 
+from jam.utils.constants import EPOCH_LENGTH, SIGNING_CONTEXTS
 from tsrkit_types import Option, structure
 from jam.types import (
     BandersnatchVrfSignature,
@@ -14,7 +14,7 @@ from jam.types import (
     TimeSlot,
     ValidatorIndex,
 )
-from dot_ring.vrf.ring.ring_vrf import RingVrf 
+from dot_ring.vrf.ring.ring_vrf import RingVrf
 from dot_ring.vrf.ietf.ietf import IETF_VRF
 
 from .epoch_mark import EpochMark
@@ -115,38 +115,37 @@ class Header:
         7. H_r == state.root
         """
         from jam.settings import settings
-        from jam.state.state import State 
+        from jam.state.state import State
 
         state = State.load()
-       
+
         # Author check
         if self.author_index > len(state.kappa):
             raise BlockError(BlockErrorCode.INVALID_AUTHOR)
         author = state.kappa[self.author_index]
         # TODO: Verify Seal & Entropy
-        
-        # State root check 
+
+        # State root check
         if self.parent_state_root != state.root:
             raise BlockError(BlockErrorCode.INCORRECT_STATE_ROOT)
-        
-        # Marker checks  
-        is_new_epoch = self.slot // EPOCH_LENGTH == state.eta // EPOCH_LENGTH 
-        # Epoch marker 
+
+        # Marker checks
+        is_new_epoch = self.slot // EPOCH_LENGTH == state.eta // EPOCH_LENGTH
+        # Epoch marker
         if is_new_epoch and self.epoch_mark.unwrap() is None:
             raise BlockError(BlockErrorCode.EPOCH_MARKER_EMPTY)
         elif not is_new_epoch and self.epoch_mark.unwrap() is not None:
             raise BlockError(BlockErrorCode.EPOCH_MARKER_NOT_EMPTY)
-        
+
         # If we're in ticket mode
         is_ticket_mode = len(state.gamma.a) >= EPOCH_LENGTH
         if is_new_epoch and is_ticket_mode and self.tickets_mark.unwrap() is None:
             raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
         elif not is_new_epoch and self.tickets_mark.unwrap() is not None:
             raise BlockError(BlockErrorCode.TICKETS_MARK_NOT_EMPTY)
-        
+
         # Parent exists
         if settings.main_db.get(self.parent) is None:
             raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
 
-        return 
-
+        return

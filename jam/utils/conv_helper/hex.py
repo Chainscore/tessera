@@ -4,7 +4,6 @@ Bit = bool
 
 
 class HexConversion:
-
     @staticmethod
     def hex_to_bytes(hex_str: str) -> bytes:
         """Convert hex string to bytes"""

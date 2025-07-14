@@ -42,9 +42,7 @@ class Safrole:
         )
 
     @staticmethod
-    def verify_vrf(
-        message: bytes, ring_root: GammaZ, proof: BandersnatchRingVrfSignature
-    ) -> bool:
+    def verify_vrf(message: bytes, ring_root: GammaZ, proof: BandersnatchRingVrfSignature) -> bool:
         return RingVrf.ring_vrf_proof_verify(message, ring_root, proof)
         # return True
 
@@ -81,9 +79,7 @@ class Safrole:
             gamma.a = GammaA([])
 
         # 3. Ticket Accumulation
-        ticket_submission_active = (
-            block.header.slot % EPOCH_LENGTH
-        ) < TICKET_SUBMISSION_END
+        ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
         # Process the tickets before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
         # TEST: We removed jump == 0 here bc we also allow tickets to be introduced in an epoch's new slot
         if ticket_submission_active and len(block.extrinsic.tickets) > 0:
@@ -91,9 +87,7 @@ class Safrole:
             Safrole.ensure_valid_ticket_extrinsics(block)
             # Accumulate them in gamma.a
             gamma.a += [
-                TicketBody(
-                    attempt=ticket.attempt, id=Safrole.vrf_output(ticket.signature)
-                )
+                TicketBody(attempt=ticket.attempt, id=Safrole.vrf_output(ticket.signature))
                 for ticket in block.extrinsic.tickets
             ]
             gamma.a.sort(key=lambda x: x.id)
@@ -111,8 +105,6 @@ class Safrole:
                 SafroleErrorCode.UNEXPECTED_TICKET,
                 "Tickets are not allowed after TICKET_SUBMISSION_END",
             )
-
-
 
         # 4. Epoch transition
         if new_epoch > old_epoch:
@@ -153,23 +145,17 @@ class Safrole:
                 gamma.s = GammaS(GammaSTickets(outside_in(state.gamma.a)))
             # Else use the fallback mechanism
             else:
-                logger.warning(
-                    "Falling to Fallback mode", tickets_collected=len(state.gamma.a)
-                )
+                logger.warning("Falling to Fallback mode", tickets_collected=len(state.gamma.a))
                 # Else fallback: use bandersnatch keys
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
                 # 4. 4. Update ring root using gamma k
-                gamma.z = GammaZ(
-                    Safrole.compute_ring_root([k.bandersnatch for k in state.gamma.k])
-                )
+                gamma.z = GammaZ(Safrole.compute_ring_root([k.bandersnatch for k in state.gamma.k]))
 
         for ticket in block.extrinsic.tickets:
             # Signature must be valid Ring-VRF proof
             if not Safrole.verify_vrf(
-                SIGNING_CONTEXTS["ticket_seal"]
-                + state.eta[2]
-                + ticket.attempt.encode(),
+                SIGNING_CONTEXTS["ticket_seal"] + state.eta[2] + ticket.attempt.encode(),
                 gamma.z,
                 ticket.signature,
             ):
