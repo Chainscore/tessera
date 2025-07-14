@@ -14,12 +14,13 @@ from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
 from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex, ShardKey
 
-from jam.work_package.stores.audits import AuditShardsDA
+from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 
 from jam.types.protocol.crypto import Hash
 from jam.merklization import BMRFunctions
 from jam.utils.chainspec import chain_config
+from jam.utils.gather import gather_with_exceptions
 
 @structure
 class Query:
@@ -86,7 +87,7 @@ class ShardDistributionProtocol(NetworkProtocol):
 
         logger.info(f"Requesting shard from {len(node.peer_conn)} guarantors")
 
-        tasks = []
+        tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
                 # if int(peer.port) != 40001:
@@ -109,7 +110,7 @@ class ShardDistributionProtocol(NetworkProtocol):
                     task = asyncio.create_task(res)
                     tasks.append(task)
 
-            responses = await asyncio.gather(*tasks)
+            responses = await gather_with_exceptions(tasks)
 
             if responses is not None:
                 return responses
@@ -140,10 +141,8 @@ class ShardDistributionProtocol(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            # TODO: Process received erasure root & shard index
-            query = data.query
-            erasure_root = query.erasure_root
-            shard_index = query.shard_index
+            erasure_root = data.query.erasure_root
+            shard_index = data.query.shard_index
 
             d3l = settings.d3l
             audit = settings.audit_da
@@ -161,7 +160,6 @@ class ShardDistributionProtocol(NetworkProtocol):
 
             segments_shard = SegmentsShard(ss_dict[shard_index].shard)
 
-            # TODO: Build Justifications
             bundle_shard_indices = bs_dict.keys()
             segment_shard_indices = ss_dict.keys()
 
@@ -178,6 +176,9 @@ class ShardDistributionProtocol(NetworkProtocol):
                 s.append(Bytes(shards_key.encode()))
 
             justification = Justification(bmrfunctions.trace_fn(values=s, index=shard_index).unwrap())
+
+            justification_da = JustificationsDA(audit)
+            justification_da.put(erasure_root, shard_index, justification)
 
             # Return requested shards
             msg_a = bundle_shard.encode()
@@ -222,9 +223,6 @@ class ShardDistributionProtocol(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             logger.info("Data received on Assurer Node")
-
-            # TODO: verify justification
-            # TODO: save the justification for CE139/140 and proceed further with data
 
             return data.bundle_shard, data.segments_shard, data.justification
 

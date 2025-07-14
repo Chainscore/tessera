@@ -122,6 +122,23 @@ class State:
         from jam.settings import settings
         self.store.save_n_clear_cache(header_hash, settings.main_db)
 
+    
+    def _force_transition(self, block: Block):
+        # 1. Push auth hash of every WR to self.alpha[0:1]
+
+        alpha = self.alpha
+
+        for guarantee in block.extrinsic.guarantees:
+            report = guarantee.report
+            alpha[report.core_index][0] = report.authorizer_hash
+            print("STATE AFTER UPDATING ALPHA", report.core_index, alpha[report.core_index], report.authorizer_hash)
+
+        self.alpha = alpha
+        print("STATE AFTER SETTING ALPHA", self.alpha)
+
+        return self.transition(block)
+
+
     def transition(self, block: Block):
         """
         Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
@@ -213,7 +230,7 @@ class State:
 
             state.settle(header_hash)
             
-            logger.info(
+            logger.critical(
                 "Block imported!",
                 header=header_hash.hex()[:16] + "...",
                 timeslot=self.tau,
@@ -227,10 +244,10 @@ class State:
             # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
             Finality.finalise(header_hash, _set.main_db)
             
-            # ext_store.clear_on_import(block)
+            ext_store.clear_on_import(block)
         
         except JamError as jam_e:
-            logger.error("Invalid block", error=jam_e, hh=block.header.hash().hex(), slot=block.header.slot)
+            logger.critical("Invalid block", error=jam_e, hh=block.header.hash().hex(), slot=block.header.slot)
             self.store.clear()
         
         self._lock = False

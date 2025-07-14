@@ -19,13 +19,22 @@ from typing import cast
 from jam.network.protocols.ce_138 import CE138Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from typing import Tuple
+from jam.audit.audit_process import AuditProcess
+
+# Module-specific logger
+logger = get_logger("network")
 
 # Module-specific logger
 logger = get_logger("network")
 
 @structure
+class Assign:
+    core_index: CoreIndex
+    report_hash: WorkReportHash
+
+@structure
 class Announcement:
-    assigned_report: TypedVector[Tuple[CoreIndex, WorkReportHash]]
+    assigned_report: TypedVector[Assign]
     ed25519_signature: Ed25519Signature
 
 @structure
@@ -54,6 +63,7 @@ class CE144Data:
     tranche_announcement : Transmit
     len_b : Uint[32]
     evidence : FirstTrancheEvidence
+
     # ecvvidance : FirstTrancheEvidence | SubsequentTrancheEvidence
     # def __init__(self, tranche):
     #     if tranche == 0:
@@ -64,6 +74,7 @@ class CE144Data:
     @property
     def is_valid(self):
         if len(self.tranche_announcement.encode()) == self.len_a and len(self.evidence.encode()) == self.len_b:
+            print(len(self.tranche_announcement.encode()), self.len_a, len(self.evidence.encode()), self.len_b)
             return True
         return False
 
@@ -91,10 +102,11 @@ class AuditAnnouncement(NetworkProtocol):
 
     async def transmit(self, node: Node, data: CE144Data):
 
-        msg_a = data.tranche_announcement.encode()
         len_a = data.len_a.encode()
-        msg_b = data.evidence.encode()
+        msg_a = data.tranche_announcement.encode()
         len_b = data.len_b.encode()
+        msg_b = data.evidence.encode()
+
 
         logger.info(
             f"Transmitting data",
@@ -111,7 +123,9 @@ class AuditAnnouncement(NetworkProtocol):
         try:
             for peer in node.peer_conn:
 
-                logger.info(f"Transmitting Work package's announcement to {len(node.peer_conn)} validators ")
+                logger.info(f"Transmitting Work report's announcement to {len(node.peer_conn)} validators ")
+
+                logger.info(f"Transmit announcement to validator", peer=peer)
 
                 client = node.peer_conn[peer][1]
 
@@ -129,20 +143,21 @@ class AuditAnnouncement(NetworkProtocol):
                 client.stream_and_keep_open(message=len_b, stream_id=stream_id)
 
                 res =  await client.close_and_wait(message=msg_b, stream_id=stream_id)
-                task = asyncio.create_task(res)
-                tasks.append(task)
+                # task = asyncio.create_task(res)
+                responses.append(res)
 
-                responses = await gather_with_exceptions(tasks)
+                # responses = await gather_with_exceptions(tasks)
 
-                logger.info(
-                    "Transmitted announcement to validator",
+                logger.debug(
+                    "Transmitted announcement",
                     stream_id=stream_id,
                     port=peer.port,
+                    validator=peer
                 )
 
         except Exception as e:
             logger.error(
-                "failed to transmit audit announcement",
+                "failed transmission of audit announcement",
                 error=str(e),
                 error_type=type(e).__name__
             )
@@ -154,9 +169,12 @@ class AuditAnnouncement(NetworkProtocol):
 
         buffer = server.stream_buffer[stream_id]
 
-        data, offset = CE144Data.decode_from(buffer[1:])
-        data = cast(CE144Data, data)
         try:
+
+            data, offset = CE144Data.decode_from(buffer[1:])
+            data = cast(CE144Data, data)
+            print(data)
+
             logger.debug(
                 "Received announcement for auditing",
                 stream_id=stream_id,
@@ -164,22 +182,22 @@ class AuditAnnouncement(NetworkProtocol):
                 buffer_size=len(buffer[1:])
             )
 
-
             if not data.is_valid:
                 raise NetworkingError
 
-            # TODO: Extract report
-            get_report = data.tranche_announcement.announcement.work_report_hash
+            # TODO: create mapping of report-validator assignment and judgment
 
-            # TODO: Request Audit shard request
+            # TODO: Request Audit shard request using protocol- 138
             # shard_request = CE138Data()
 
             ack= b""
             server.stream_and_close(ack, stream_id)
 
+            # process = AuditProcess()
+            # # asyncio.create_task(process.judgment_process())
+
 
         except Exception as e:
-            # stop streaming
             server.stop_stream(stream_id, 1)
 
 
@@ -187,7 +205,7 @@ class AuditAnnouncement(NetworkProtocol):
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
             logger.info(
-                "Assurance ack received",
+                "Announcement acknowledge received",
                 stream_id=stream_id,
                 buffer_size=len(buffer)
             )

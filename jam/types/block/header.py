@@ -1,4 +1,6 @@
 import json
+
+from tsrkit_types import Bytes
 from tsrkit_types.option import Option
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
@@ -52,7 +54,7 @@ class Header:
             f")"
         )
 
-    def hash(self) -> bytes:
+    def hash(self) -> Bytes[32]:
         return Hash.blake2b(self.encode())
     
     @staticmethod

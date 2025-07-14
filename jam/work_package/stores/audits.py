@@ -1,11 +1,11 @@
 from typing import Tuple
-
 from rockstore import RockStore
-from tsrkit_types import TypedVector
+from tsrkit_types import TypedVector, Bytes
 
 from jam.types import OpaqueHash
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.shard import BundleShard, ShardIndex, BundleShardsDict
+from jam.types.work.manifest import Justification
 
 from jam.work_package.store import DA
 
@@ -21,22 +21,22 @@ class JustificationsDA(DA):
         self.prefix = bytes("JUST", 'utf-8')
         self.db = db
 
-    def put(self, er_root: ErasureRoot, data: TypedVector[OpaqueHash]) -> None:
-        key = self.prefix + er_root.encode()
+    def put(self, er_root: ErasureRoot, index: ShardIndex, data: Justification) -> None:
+        key = self.prefix + er_root.encode() + index.encode()
         self.db.put(key, data.encode())
 
-    def get(self, er_root: ErasureRoot) -> TypedVector[OpaqueHash]:
-        key = self.prefix + er_root.encode()
+    def get(self, er_root: ErasureRoot, index: ShardIndex) -> Justification:
+        key = self.prefix + er_root.encode() + index.encode()
         data = self.db.get(key)
 
         if data is None:
             raise KeyError("CE137 Justification not found in Audit DA")
 
-        record, _ = TypedVector[OpaqueHash].decode_from(data)
+        record, _ = Justification.decode_from(data)
         return record
 
-    def delete(self, er_root: ErasureRoot) -> None:
-        key = self.prefix + er_root.encode()
+    def delete(self, er_root: ErasureRoot, index: ShardIndex) -> None:
+        key = self.prefix + er_root.encode() + index.encode()
         self.db.delete(key)
 
 

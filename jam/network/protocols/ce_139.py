@@ -5,10 +5,12 @@ from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_139_base import SegmentShardRequestBase, CE139Response
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
+from tsrkit_types import TypedVector, Enum, TypedArray
+
 from jam.logging import logger
 
 from jam.network.base.protocol import PrefixType
-from jam.types.work.shard import SegmentsShard
+from jam.types.work.shard import SegmentsShard, SegmentShard
 from jam.work_package.stores.segments import SegmentShardsDA
 
 
@@ -42,15 +44,27 @@ class SegmentShardRequest(SegmentShardRequestBase):
         ss_da = SegmentShardsDA(d3l)
 
         # Fetching segments...
-        shards = SegmentsShard([])
+        # shards = SegmentsShard([])
+        # for query in request.queries:
+        #     ss_dict = ss_da.get(query.erasure_root)
+        #     s_dict = ss_dict[query.shard_index]
+        #     for index in query.seg_indexes:
+        #         shards.append(s_dict[index])
+
+        shards = []
         for query in request.queries:
             ss_dict = ss_da.get(query.erasure_root)
             s_dict = ss_dict[query.shard_index]
+            segments = []
             for index in query.seg_indexes:
-                shards.append(s_dict[index])
+                segments.append(s_dict[index])
+            shards.append(TypedArray[SegmentShard, query.seg_indexes](segments))
 
+        msg_a = b""
+        for shard in shards:
+            msg_a += shard.encode()
         # Return requested shards
-        msg_a = shards.encode()
+        # msg_a = shards.encode()
         len_a = Uint[32](len(msg_a)).encode()
 
         server.stream_and_keep_open(len_a, stream_id)

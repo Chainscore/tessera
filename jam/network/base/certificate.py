@@ -37,7 +37,7 @@ def generate_san(pubkey: bytes) -> str:
         return alphabet[n % 32] + b(Uint[256](n // 32), l - 1)
 
     alphabet = "abcdefghijklmnopqrstuvwxyz234567"
-    n, _ = Uint[256].decode_from(pubkey)
+    n = Uint[256].decode(pubkey)
     return "e" + b(n, 52)
 
 def generate_keys(port: int) -> str:

@@ -1,6 +1,10 @@
 import asyncio
 from typing import Optional, Tuple, List
-from tsrkit_types import Bytes, TypedVector, Null, Uint, Option, Dictionary
+
+from sympy.printing.tree import print_node
+from tsrkit_types import Bytes, TypedVector, Null, Uint, Option, structure, Dictionary, TypedArray
+from jam.utils.constants import CORE_COUNT
+
 from jam.audit.utils import signature_pvt
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.work.report import WorkReport
@@ -26,13 +30,72 @@ from jam.types.work.package import WorkPackage
 
 import json
 
-report = TypedVector[Option[WorkReport]]([])
-print(len(report))
+# report = TypedVector[Option[WorkReport]]([])
+# print(len(report))
+
+@structure
+class WorkReportState:
+    """Work report, state"""
+
+    report: WorkReport
+    timeout: TimeSlot
 
 
+OptionalWorkReportState = Option[WorkReportState]
+
+# def report_to_be_audit(available_reports: OptionalWorkReportState, pending_report: OptionalWorkReportState) -> List[Option[WorkReport]]:
+#     pre_audit_report = List[Option[WorkReport]]([])
+#
+#     print("pre_audit_report", pre_audit_report)
+#
+#     for i, (report, slot) in enumerate(pending_report):
+#         if report in available_reports:
+#             pre_audit_report.append(report)
+#         else:
+#             pre_audit_report.append(Null)
+#
+#     return pre_audit_report
+#
+# answer1 = report_to_be_audit(available_reports=, pending_report=)
 
 
-"""------------------------------- tranche condition when the  ------------------------------- """
+def find_matching_report_names( work_reports: OptionalWorkReportState, available_reports: OptionalWorkReportState
+) -> List[Optional[WorkReport]]:
+
+    """
+    Compare two lists of reports and return the names of reports that match.
+
+    A match occurs when:
+    - Both lists have a report at the same index position
+    - The report names (first element of tuple) are identical
+
+    Args:
+        work_reports: List of work reports, may contain None values
+        available_reports: List of available reports, may contain None values
+
+    Returns:
+        List of report names where matches occur, None for non-matches
+    """
+
+    matched_names = []
+
+    for i, (work_report, available_report) in enumerate(zip(work_reports, available_reports)):
+        # Check if both reports exist at this position
+        if work_report is None or available_report is None:
+            matched_names.append(None)
+            continue
+
+        # Extract report names and compare
+        work_name, work_id = work_report
+        available_name, available_id = available_report
+
+        # Add name if they match, otherwise None
+        if work_name == available_name:
+            matched_names.append(work_name)
+        else:
+            matched_names.append(None)
+
+    return matched_names
 
 
 OffendersMark = TypedVector[Ed25519Public]
@@ -52,6 +115,8 @@ header1 = Header(parent=Bytes.fromhex("5c743dbc514284b2ea57798787c5a155ef9d7ac1e
                 seal= Bytes.fromhex("31dc5b1e9423eccff9bccd6549eae8034162158000d5be9339919cc03d14046e6431c14cbb172b3aed702b9e9869904b1f39a6fe1f3e904b0fd536f13e8cac496682e1c81898e88e604904fa7c3e496f9a8771ef1102cc29d567c4aad283f7b0")
                 )
 
+# print((Hash.blake2b(header1.encode())))
+#
 optional_report : List[Option[WorkReportHash]] = ([
     Bytes.fromhex("8d94fa1e8b4a1158fce4219c5e869563e2db34356054df2bef62f6798d00f613"),
     Bytes.fromhex("de2a1700d01bde4935c2b3956dbef0641dd4cc060c2fd286e1b48a2524db8502"),
@@ -67,68 +132,73 @@ optional_report : List[Option[WorkReportHash]] = ([
 
 
 
-def validator_announcement_statement( assign_report: List[Tuple[CoreIndex, WorkReportHash]], header: Header, ed25519_public: Ed25519Public, tranche: Uint) -> set[Bytes[64]]:
-    validator_announcement_set: set[Bytes[64]] = set()
 
-    signing_context = Bytes(SIGNING_CONTEXTS["announce"])
 
-    header_hash = Bytes(Hash.blake2b(header.encode()))
 
-    context = signing_context + Bytes(tranche) + header_hash
 
-    for c, r in assign_report:
-        context = context + Bytes(c.encode() + Hash.blake2b(r.encode())).encode()
-        signature = signature_pvt(key=ed25519_public, context=context)
-        validator_announcement_set.add(signature)
-        context = signing_context + Bytes(tranche) + header_hash
 
-    return validator_announcement_set
+# def validator_announcement_statement( assign_report: List[Tuple[CoreIndex, WorkReportHash]], header: Header, ed25519_public: Ed25519Public, tranche: Uint) -> set[Bytes[64]]:
+#     validator_announcement_set: set[Bytes[64]] = set()
+#
+#     signing_context = Bytes(SIGNING_CONTEXTS["announce"])
+#
+#     header_hash = Bytes(Hash.blake2b(header.encode()))
+#
+#     context = signing_context + Bytes(tranche) + header_hash
+#
+#     for c, r in assign_report:
+#         context = context + Bytes(c.encode() + Hash.blake2b(r.encode())).encode()
+#         signature = signature_pvt(key=ed25519_public, context=context)
+#         validator_announcement_set.add(signature)
+#         context = signing_context + Bytes(tranche) + header_hash
+#
+#     return validator_announcement_set
+#
+# def vrf_signature_bandersnatch(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic) -> Bytes[96]:
+#     vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+#
+#     entropy_vrf_proof = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(entropy_source.encode()))[:32]
+#     random_quantity = Bytes(SIGNING_CONTEXTS["audit"]) + entropy_vrf_proof  # Xv + y(Hv)
+#
+#     signature = signature_pvt(key=bandersnatch_key, context=random_quantity)
+#
+#     return signature
 
-def vrf_signature_bandersnatch(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic) -> Bytes[96]:
-    vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-
-    entropy_vrf_proof = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(entropy_source.encode()))[:32]
-    random_quantity = Bytes(SIGNING_CONTEXTS["audit"]) + entropy_vrf_proof  # Xv + y(Hv)
-
-    signature = signature_pvt(key=bandersnatch_key, context=random_quantity)
-
-    return signature
-
-def vrs_func(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_report: List[Option[WorkReport]]) -> List[Tuple[CoreIndex, WorkReportHash]]:
-
-    vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-    entropy = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=bandersnatch_key)))[:32]
-
-    pre_audit_reports = pre_report
-    core_indexes = list[Tuple[CoreIndex, Option[WorkReportHash]]]([])
-    for c, w_r in enumerate(pre_audit_reports):
-        core_indexes.append((CoreIndex(c), w_r))
-
-    # ------------------------------------- audit size array and shuffle --------------------------------------------
-    array_index = TypedVector[Uint[32]]([])
-    for i in range(len(pre_audit_reports)):
-        array_index.append(Uint[32](i))
-
-    shuffle_array = shuffle(entropy, array_index)
-
-    # ------------------------------------------ updated shuffle auditing list -------------------------------------
-    lookup = dict(core_indexes)
-    updated_array: List[Tuple[Uint[16], Option[WorkReportHash]]] = [(Uint[16](i), lookup[i]) for i in shuffle_array]
-
-    # ------------------------------------------ take initial 10 values --------------------------------------------
-    # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-    shuffle_not_null = [(c, w) for (c, w) in updated_array if w is not Null][:5]
-
-    return shuffle_not_null
+# def vrs_func(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_report: List[Option[WorkReport]]) -> List[Tuple[CoreIndex, WorkReportHash]]:
+#
+#     vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+#     entropy = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=bandersnatch_key)))[:32]
+#
+#     pre_audit_reports = pre_report
+#     core_indexes = list[Tuple[CoreIndex, Option[WorkReportHash]]]([])
+#     for c, w_r in enumerate(pre_audit_reports):
+#         core_indexes.append((CoreIndex(c), w_r))
+#
+#     # ------------------------------------- audit size array and shuffle --------------------------------------------
+#     array_index = TypedVector[Uint[32]]([])
+#     for i in range(len(pre_audit_reports)):
+#         array_index.append(Uint[32](i))
+#
+#     shuffle_array = shuffle(entropy, array_index)
+#
+#     # ------------------------------------------ updated shuffle auditing list -------------------------------------
+#     lookup = dict(core_indexes)
+#     updated_array: List[Tuple[Uint[16], Option[WorkReportHash]]] = [(Uint[16](i), lookup[i]) for i in shuffle_array]
+#
+#     # ------------------------------------------ take initial 10 values --------------------------------------------
+#     # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
+#     shuffle_not_null = [(c, w) for (c, w) in updated_array if w is not Null][:5]
+#
+#     return shuffle_not_null
 
 
 # output = vrs_func(entropy_source="f7caffd3498473b08ab9de28ba3bd76d94f3fe47acc96e6e0111dfe301ba4d0bc7b3a95ebf21a76fb76102c13fdf9947c6c243d71b9893fae0b9adf94aa83f0a81b4566c15c796a79a4e124971130cba959c03066efba2161334cedc0d02151a", bandersnatch_key=Bytes.fromhex("ff71c6c03ff88adb5ed52c9681de1629a54e702fc14729f6b50d2f0a76f185b3"), pre_report=optional_report)
-# print( "final answer =>", output)
-
+# # print( "final answer =>", output)
+#
 # answer  = validator_announcement_statement(assign_report=output, header=header1, ed25519_public=Bytes.fromhex("4418fb8c85bb3985394a8c2756d3643457ce614546202a2f50b093d762499ace") ,tranche=Uint(0))
 # print(len(answer), answer)
 
-
+#
 # from jam.audit.vectors.packages import packages
 # for i in packages:
 #     print(WorkPackage.from_json(i))
@@ -186,3 +256,8 @@ def vrs_func(entropy_source: BandersnatchVrfSignature, bandersnatch_key: Banders
 #     judgment : set[bool] = set()
 #
 #     return judgment
+
+# from jam.state.state import State
+#
+# print(State)
+

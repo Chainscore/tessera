@@ -2,9 +2,10 @@ from dataclasses import dataclass
 from os import stat
 from typing import List, Tuple
 
-from tsrkit_types import Null, TypedVector, Bytes, Uint, Option, U8, Bool
-from tsrkit_types.choice import Optional
+from docutils.nodes import option
+from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, Bool, Dictionary
 
+from jam.audit.vectors.reports import reports
 from jam.types.protocol.core import CoreIndex, TimeSlot
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.work.report import WorkReport
@@ -15,29 +16,27 @@ from jam.types.protocol.crypto import Hash, BandersnatchPublic, Ed25519Public
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.types import BandersnatchVrfSignature, Ed25519Signature
 from jam.types.work.package import WorkPackage, WorkPackageBundle
+from jam.work_package.processor import Processor
 
 from jam.types.block.header import Header
-from jam.types.state.rho import Rho
+from jam.types.state.rho import OptionalWorkReportState
 
 from jam.audit.utils import signature_pvt
 
-from jam.network.node import Node
-
-# TODO: EQUATION: 17.10 has xn = E({ E2 (c) ⌢ H(r) ∣ (r, c) ∈ an })
-# TODO: signature_pvt function in utils changes according to the
+from jam.state.state import State
 
 OptionWRList=TypedVector[Option[WorkReport]]
 
-@dataclass
 class AuditingAndJudgement:
 
-    # node: Node
     def __init__(self):
-        # self.vrf = VRF
-        self.node: Node
+        from jam.settings import settings
+        self.settings = settings
+        self.vrf = VRF
+        self.state = State
 
     @staticmethod
-    def report_to_be_audit(available_reports: Rho, pending_report: Rho) -> OptionWRList:
+    def report_to_be_audit(available_reports: OptionalWorkReportState, pending_report: OptionalWorkReportState) -> List[Option[WorkReport]]:
         """
         Function Q define in Eq. 17.1 and 17.2
         This function define the sequence of work_report which required to audit(Q)
@@ -81,7 +80,7 @@ class AuditingAndJudgement:
 
         return signature
 
-    def verifiable_random_selection(self, entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_report: OptionWRList) -> List[Tuple[CoreIndex, WorkReport]]:
+    def verifiable_random_selection(self, entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_audit_report: List[Option[WorkReport]]) -> List[Tuple[CoreIndex, WorkReport]]:
         """
         Equation: 17.5, 17.6
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e0a011e5601?v=0.7.0
@@ -89,7 +88,7 @@ class AuditingAndJudgement:
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
         entropy = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(self.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=bandersnatch_key)))[:32]
 
-        pre_audit_reports = pre_report
+        pre_audit_reports = pre_audit_report
         core_indexes = list[Tuple[CoreIndex, Option[WorkReport]]]([])
         for c, w_r in enumerate(pre_audit_reports):
             core_indexes.append((CoreIndex(c), w_r))
@@ -112,7 +111,7 @@ class AuditingAndJudgement:
         return shuffle_not_null
 
     @staticmethod
-    def generate_tranche_index(header_slot: TimeSlot) -> Uint:
+    def tranche_index(header_slot: TimeSlot) -> U8:
         """
         Equation: 17.8
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e79011e8601?v=0.7.0
@@ -120,13 +119,15 @@ class AuditingAndJudgement:
         tranche_index =  (CURRENT_TIME() - (SLOT_PERIOD * (header_slot))) // AUDIT_PERIOD
         return tranche_index
 
+
     @staticmethod
-    def validator_announcement_statement(assign_report: List[Tuple[CoreIndex, WorkPackage]], header: Header,ed25519_public: Ed25519Public, tranche: Uint) -> set[Bytes[64]]:
+    def validator_announcement_statement(assign_report: List[Tuple[CoreIndex, WorkReport]], header: Header, ed25519_public: Ed25519Public, tranche: U8) -> Ed25519Signature:
         """
         Equation: 17.9, 17.10, 17.11
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1ea5011eea01?v=0.7.0
         """
-        validator_announcement_set: set[Bytes[64]] = set()
+
+        announcement = None
 
         signing_context = Bytes(SIGNING_CONTEXTS["announce"])
 
@@ -135,25 +136,33 @@ class AuditingAndJudgement:
         context = signing_context + Bytes(tranche) + header_hash
 
         for c, r in assign_report:
-            context = context + Bytes(c.encode() + Hash.blake2b(r.encode())).encode()
-            signature = signature_pvt(key=ed25519_public, context=context)
-            validator_announcement_set.add(signature)
             context = signing_context + Bytes(tranche) + header_hash
 
-        return validator_announcement_set
 
-    # def refine(self, c: CoreIndex, r: WorkReport) -> bool:
-    #     """
-    #     Equation: 17.17
-    #     Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f2f011f6c01?v=0.7.0
-    #     """
-    #     from jam.work_package.processor import Processor
+        signature = signature_pvt(key=ed25519_public, context=context)
 
-    #     # construct Work package Bundle using protocol => CE138
-    #     bundle = WorkPackageBundle()
+        return announcement
 
-    #     processor = Processor(self.node)
-    #     w_r, wr_hash = processor.process_bundle(core=c, bundle=bundle, sr_lookup={})
+    def refine(self, r: WorkReport) -> bool:
+        """
+        Equation: 17.17
+        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f2f011f6c01?v=0.7.0
+        """
+        from jam.work_package.processor import Processor
+
+        # construct Work package Bundle using protocol => CE138
+        bundle = WorkPackageBundle()
+        lookup = Dictionary({})
+
+        core_index = r.core_index
+
+        processor = Processor(self.node)
+        w_r, wr_hash = processor.process_bundle(core=core_index, bundle=bundle, sr_lookup=lookup)
+
+        if wr_hash == r:
+            return True
+        else:
+            return False
 
     #     if wr_hash == r:
     #         return True
@@ -163,7 +172,7 @@ class AuditingAndJudgement:
     def dummy_refine(c: CoreIndex, r: WorkReport)->bool:
         return True
 
-    def judgment_process(self, r: WorkReport, refine: Bool, ed25519_public: Bytes[32]) -> Bytes[96]:
+    def judgment_signature(self, r: WorkReport, refine: bool, ed25519_public: Ed25519Signature) -> Bytes[96]:
         """
         Equations: 17.18
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f6f011f9801?v=0.7.0
@@ -184,8 +193,6 @@ class AuditingAndJudgement:
         Equation: 17.19, 17.20
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1fa9011fd301?v=0.7.0
         """
-
-
 
 
         # condition 1 => on that core all the judgment should be true and A_n(r) ⊂ J_T(r
