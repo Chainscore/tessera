@@ -153,7 +153,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
             server.stream_and_close(msg_b, stream_id)
 
         except Exception as e:
-            msg_a = b''.encode()
+            msg_a = Bytes(b'').encode()
             len_a = Uint[32](len(msg_a)).encode()
 
             # Send response
