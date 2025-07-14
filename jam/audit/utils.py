@@ -42,7 +42,7 @@ def signature_pvt(key: Bytes[32], context: Bytes, message:bytes=b"") :
     key = int.from_bytes(key)
     vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
     # Vrf2 = IETF_VRF(Ed25519_TE_Curve, Ed25519Point)
-    output_point, proof = vrf.prove(alpha=message, secret_key=key,  additional_data=context, salt=b"")
+    output_point, eproof = vrf.prove(alpha=message, secret_key=key,  additional_data=context, salt=b"")
     op_bt_str= output_point.point_to_string()
     proof_bt_str= proof[0].to_bytes(32, 'little')+ proof[1].to_bytes(32, 'little')
     signature= op_bt_str + proof_bt_str

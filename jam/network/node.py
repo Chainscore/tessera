@@ -126,6 +126,10 @@ class Node:
         return self.validator_data.ed25519
 
     @property
+    def b_key(self):
+        return self.validator_data.bandersnatch
+
+    @property
     def ed_pvt_key(self) -> Ed25519PrivateKey:
         from cryptography.hazmat.backends import default_backend
         from cryptography.hazmat.primitives.serialization import load_pem_private_key
@@ -300,7 +304,7 @@ class Node:
 
         try:
             # Skip self
-            # logger.info(f"⚠️ ({self.name}) host: {self.host}, port: {self.port}, {str(peer)}", hostcomp=(str(peer.host) == self.host), portcomp=(int(peer.port) == self.port))
+            logger.info(f"⚠️ ({self.name}) host: {self.host}, {type(self.port)}, port: {self.port}, {str(peer)}", hostcomp=(str(peer.host) == self.host), portcomp=(int(peer.port) == int(self.port)))
             if str(peer.host) == self.host and int(peer.port) == self.port:
                 logger.info(f"⚠️ ({self.name}) Skipping self {str(self)}")
                 return

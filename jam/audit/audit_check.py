@@ -1,6 +1,10 @@
 import asyncio
 from typing import Optional, Tuple, List
-from tsrkit_types import Bytes, TypedVector, Null, Uint, Option, Dictionary
+
+from sympy.printing.tree import print_node
+from tsrkit_types import Bytes, TypedVector, Null, Uint, Option, structure, Dictionary, TypedArray
+from jam.utils.constants import CORE_COUNT
+
 from jam.audit.utils import signature_pvt
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.work.report import WorkReport
@@ -29,41 +33,107 @@ import json
 # report = TypedVector[Option[WorkReport]]([])
 # print(len(report))
 
+@structure
+class WorkReportState:
+    """Work report, state"""
+
+    report: WorkReport
+    timeout: TimeSlot
 
 
+OptionalWorkReportState = Option[WorkReportState]
 
-"""------------------------------- tranche condition when the  ------------------------------- """
-
-
-# OffendersMark = TypedVector[Ed25519Public]
+# def report_to_be_audit(available_reports: OptionalWorkReportState, pending_report: OptionalWorkReportState) -> List[Option[WorkReport]]:
+#     pre_audit_report = List[Option[WorkReport]]([])
 #
+#     print("pre_audit_report", pre_audit_report)
 #
-# header1 = Header(parent=Bytes.fromhex("5c743dbc514284b2ea57798787c5a155ef9d7ac1e9499ec65910a7a3d65897b7"),
-#                 parent_state_root=Bytes.fromhex("2591ebd047489f1006361a4254731466a946174af02fe1d86681d254cfd4a00b"),
-#                 extrinsic_hash=Bytes.fromhex("74a9e79d2618e0ce8720ff61811b10e045c02224a09299f04e404a9656e85c81"),
-#                 slot=TimeSlot(42),
-#                 epoch_mark=Bytes(b""),
-#                 tickets_mark= Null,
-#                 offenders_mark=OffendersMark([
-#                     Bytes[32](Bytes.fromhex("ad93247bd01307550ec7acd757ce6fb805fcf73db364063265b30a949e90d933"))
-#                 ]),
-#                 author_index = ValidatorIndex(3),
-#                 entropy_source = Bytes.fromhex("ae85d6635e9ae539d0846b911ec86a27fe000f619b78bcac8a74b77e36f6dbcf49a52360f74a0233cea0775356ab0512fafff0683df08fae3cb848122e296cbc50fed22418ea55f19e55b3c75eb8b0ec71dcae0d79823d39920bf8d6a2256c5f"),
-#                 seal= Bytes.fromhex("31dc5b1e9423eccff9bccd6549eae8034162158000d5be9339919cc03d14046e6431c14cbb172b3aed702b9e9869904b1f39a6fe1f3e904b0fd536f13e8cac496682e1c81898e88e604904fa7c3e496f9a8771ef1102cc29d567c4aad283f7b0")
-#                 )
+#     for i, (report, slot) in enumerate(pending_report):
+#         if report in available_reports:
+#             pre_audit_report.append(report)
+#         else:
+#             pre_audit_report.append(Null)
 #
-# optional_report : List[Option[WorkReportHash]] = ([
-#     Bytes.fromhex("8d94fa1e8b4a1158fce4219c5e869563e2db34356054df2bef62f6798d00f613"),
-#     Bytes.fromhex("de2a1700d01bde4935c2b3956dbef0641dd4cc060c2fd286e1b48a2524db8502"),
-#     Null,
-#     Bytes.fromhex("ca8531d192c72c575dbddb37d4afbbaa35a06d523d3a3ae99dfcd1b73d99b783"),
-#     Null,
-#     Bytes.fromhex("8f4219d15c80bbf186bc0be610c7e6536aebadca496878a534c7264f74743e99"),
-#     Null,
-#     Bytes.fromhex("78ae8779c9feb5f73a8f5187d05fb983bf2682d07af0d5655e034123847554dc"),
-#     Bytes.fromhex("f1110d84f9c3f87130ce571960b1eae063c200ef9631bf7cc6d11dfec33dd933"),
-#     Bytes.fromhex("ca574b0eedaff7a545c8d96edb95740cef59eb50bcab6ca0f33f520ae861ba25")
-# ])
+#     return pre_audit_report
+#
+# answer1 = report_to_be_audit(available_reports=, pending_report=)
+
+
+def find_matching_report_names( work_reports: OptionalWorkReportState, available_reports: OptionalWorkReportState
+) -> List[Optional[WorkReport]]:
+
+    """
+    Compare two lists of reports and return the names of reports that match.
+
+    A match occurs when:
+    - Both lists have a report at the same index position
+    - The report names (first element of tuple) are identical
+
+    Args:
+        work_reports: List of work reports, may contain None values
+        available_reports: List of available reports, may contain None values
+
+    Returns:
+        List of report names where matches occur, None for non-matches
+    """
+
+    matched_names = []
+
+    for i, (work_report, available_report) in enumerate(zip(work_reports, available_reports)):
+        # Check if both reports exist at this position
+        if work_report is None or available_report is None:
+            matched_names.append(None)
+            continue
+
+        # Extract report names and compare
+        work_name, work_id = work_report
+        available_name, available_id = available_report
+
+        # Add name if they match, otherwise None
+        if work_name == available_name:
+            matched_names.append(work_name)
+        else:
+            matched_names.append(None)
+
+    return matched_names
+
+
+OffendersMark = TypedVector[Ed25519Public]
+
+
+header1 = Header(parent=Bytes.fromhex("5c743dbc514284b2ea57798787c5a155ef9d7ac1e9499ec65910a7a3d65897b7"),
+                parent_state_root=Bytes.fromhex("2591ebd047489f1006361a4254731466a946174af02fe1d86681d254cfd4a00b"),
+                extrinsic_hash=Bytes.fromhex("74a9e79d2618e0ce8720ff61811b10e045c02224a09299f04e404a9656e85c81"),
+                slot=TimeSlot(42),
+                epoch_mark=Bytes(b""),
+                tickets_mark= Null,
+                offenders_mark=OffendersMark([
+                    Bytes[32](Bytes.fromhex("ad93247bd01307550ec7acd757ce6fb805fcf73db364063265b30a949e90d933"))
+                ]),
+                author_index = ValidatorIndex(3),
+                entropy_source = Bytes.fromhex("ae85d6635e9ae539d0846b911ec86a27fe000f619b78bcac8a74b77e36f6dbcf49a52360f74a0233cea0775356ab0512fafff0683df08fae3cb848122e296cbc50fed22418ea55f19e55b3c75eb8b0ec71dcae0d79823d39920bf8d6a2256c5f"),
+                seal= Bytes.fromhex("31dc5b1e9423eccff9bccd6549eae8034162158000d5be9339919cc03d14046e6431c14cbb172b3aed702b9e9869904b1f39a6fe1f3e904b0fd536f13e8cac496682e1c81898e88e604904fa7c3e496f9a8771ef1102cc29d567c4aad283f7b0")
+                )
+
+# print((Hash.blake2b(header1.encode())))
+#
+optional_report : List[Option[WorkReportHash]] = ([
+    Bytes.fromhex("8d94fa1e8b4a1158fce4219c5e869563e2db34356054df2bef62f6798d00f613"),
+    Bytes.fromhex("de2a1700d01bde4935c2b3956dbef0641dd4cc060c2fd286e1b48a2524db8502"),
+    Null,
+    Bytes.fromhex("ca8531d192c72c575dbddb37d4afbbaa35a06d523d3a3ae99dfcd1b73d99b783"),
+    Null,
+    Bytes.fromhex("8f4219d15c80bbf186bc0be610c7e6536aebadca496878a534c7264f74743e99"),
+    Null,
+    Bytes.fromhex("78ae8779c9feb5f73a8f5187d05fb983bf2682d07af0d5655e034123847554dc"),
+    Bytes.fromhex("f1110d84f9c3f87130ce571960b1eae063c200ef9631bf7cc6d11dfec33dd933"),
+    Bytes.fromhex("ca574b0eedaff7a545c8d96edb95740cef59eb50bcab6ca0f33f520ae861ba25")
+])
+
+
+
+
+
 
 
 
@@ -123,12 +193,12 @@ import json
 
 
 # output = vrs_func(entropy_source="f7caffd3498473b08ab9de28ba3bd76d94f3fe47acc96e6e0111dfe301ba4d0bc7b3a95ebf21a76fb76102c13fdf9947c6c243d71b9893fae0b9adf94aa83f0a81b4566c15c796a79a4e124971130cba959c03066efba2161334cedc0d02151a", bandersnatch_key=Bytes.fromhex("ff71c6c03ff88adb5ed52c9681de1629a54e702fc14729f6b50d2f0a76f185b3"), pre_report=optional_report)
-# print( "final answer =>", output)
-
+# # print( "final answer =>", output)
+#
 # answer  = validator_announcement_statement(assign_report=output, header=header1, ed25519_public=Bytes.fromhex("4418fb8c85bb3985394a8c2756d3643457ce614546202a2f50b093d762499ace") ,tranche=Uint(0))
 # print(len(answer), answer)
 
-
+#
 # from jam.audit.vectors.packages import packages
 # for i in packages:
 #     print(WorkPackage.from_json(i))
@@ -187,7 +257,7 @@ import json
 #
 #     return judgment
 
-from jam.state.state import State
-
-print(State)
+# from jam.state.state import State
+#
+# print(State)
 

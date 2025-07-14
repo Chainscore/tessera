@@ -20,6 +20,14 @@ from jam.state.state import setup_state
 from jam.types.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
 
+from jam.network.protocols.ce_144 import AuditAnnouncement
+from jam.network.protocols.ce_145 import JudgmentPublication
+
+from tests.unit.test_judgment import data144, data145
+
+CE144 = AuditAnnouncement()
+CE145 = JudgmentPublication()
+
 
 async def main(
     genesis_path: str,
@@ -86,7 +94,7 @@ async def main(
         ]
 
         tsr_node = setup_node(
-            name, port, peers, host=str(host),
+            name, int(port), peers, host=str(host),
             is_bd=is_builder, is_val=is_validator
         )
 
@@ -104,8 +112,13 @@ async def main(
             # RPC
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
-            tg.create_task(operate(is_builder))
 
+            # tg.create_task(operate(is_builder))
+            if int(tsr_node.port) == 40000:
+                await asyncio.sleep(10)
+                tg.create_task(CE144.transmit(node=tsr_node, data=data144))
+                # tg.create_task(CE145.transmit(node=tsr_node, data=data145))
+    #
     except CancelledError:
         logger.info(
             "JAM node shutting down gracefully",

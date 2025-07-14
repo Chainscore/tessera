@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 
-from tsrkit_types import Null, TypedVector, Bytes, Uint, Option, U8, Bool, Dictionary
+from docutils.nodes import option
+from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, Bool, Dictionary
 
 from jam.audit.vectors.reports import reports
 from jam.types.protocol.core import CoreIndex, TimeSlot
@@ -17,30 +18,23 @@ from jam.types.work.package import WorkPackage, WorkPackageBundle
 from jam.work_package.processor import Processor
 
 from jam.types.block.header import Header
-from jam.types.state.rho import Rho
+from jam.types.state.rho import OptionalWorkReportState
 
 from jam.audit.utils import signature_pvt
 
-from jam.network.node import Node
 from jam.state.state import State
 
 
-
-
-@dataclass
 class AuditingAndJudgement:
 
-    node: Node
-
-    def __init__(self, node: Node):
+    def __init__(self):
         from jam.settings import settings
         self.settings = settings
         self.vrf = VRF
-        self.node = node
         self.state = State
 
     @staticmethod
-    def report_to_be_audit(available_reports: Rho, pending_report: Rho) -> List[Option[WorkReport]]:
+    def report_to_be_audit(available_reports: OptionalWorkReportState, pending_report: OptionalWorkReportState) -> List[Option[WorkReport]]:
         """
         Function Q define in Eq. 17.1 and 17.2
         This function define the sequence of work_report which required to audit(Q)
@@ -115,7 +109,7 @@ class AuditingAndJudgement:
         return shuffle_not_null
 
     @staticmethod
-    def generate_tranche_index(header_slot: TimeSlot) -> U8:
+    def tranche_index(header_slot: TimeSlot) -> U8:
         """
         Equation: 17.8
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e79011e8601?v=0.7.0
@@ -125,12 +119,13 @@ class AuditingAndJudgement:
 
 
     @staticmethod
-    def validator_announcement_statement(assign_report: List[Tuple[CoreIndex, WorkReport]], header: Header, ed25519_public: Ed25519Public, tranche: U8) -> set[Bytes[64]]:
+    def validator_announcement_statement(assign_report: List[Tuple[CoreIndex, WorkReport]], header: Header, ed25519_public: Ed25519Public, tranche: U8) -> Ed25519Signature:
         """
         Equation: 17.9, 17.10, 17.11
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1ea5011eea01?v=0.7.0
         """
-        validator_announcement_set: set[Bytes[64]] = set()
+
+        announcement = None
 
         signing_context = Bytes(SIGNING_CONTEXTS["announce"])
 
@@ -139,12 +134,12 @@ class AuditingAndJudgement:
         context = signing_context + Bytes(tranche) + header_hash
 
         for c, r in assign_report:
-            context = context + Bytes(c.encode() + Hash.blake2b(r.encode())).encode()
-            signature = signature_pvt(key=ed25519_public, context=context)
-            validator_announcement_set.add(signature)
             context = signing_context + Bytes(tranche) + header_hash
 
-        return validator_announcement_set
+
+        signature = signature_pvt(key=ed25519_public, context=context)
+
+        return announcement
 
     def refine(self, r: WorkReport) -> bool:
         """
