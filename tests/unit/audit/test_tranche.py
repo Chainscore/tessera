@@ -62,16 +62,15 @@ async def test_tranche_engine():
 
         slot_index = Uint(0)
         tranche_index = Uint(0)
-
         tranche = Tranche(tranche_index=Uint(tranche_index), slot_index=Uint(slot_index))
         initial_state = create_test_tranche_state()
         tranche.save_state(db, initial_state)
 
         logger.info("✅ Initial TrancheState saved for testing.")
 
-        # Run the TrancheEngine
-        engine = TrancheEngine(db=db)
-        await engine.run(slot_index=slot_index)
+        # Run the TrancheEngine for timeslot=0
+        engine = TrancheEngine(db=db,slot=slot_index)
+        await engine.run()
 
         # Load and print final state for verification
         final_state = tranche.load_state(db)
