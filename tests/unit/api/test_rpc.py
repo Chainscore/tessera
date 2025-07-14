@@ -5,6 +5,7 @@ from pathlib import Path
 from jam.settings import setup_setting
 from jam.api.rpc.app import rpc
 from jam.state.state import setup_state, set_state, State
+from jam.state.utils import construct_state_key
 from jam.types.block import Block
 from jam.consensus.grandpa.finality import Finality
 from jam.consensus.bp_engine import BlockProducer
@@ -220,6 +221,8 @@ async def test_service_data_rpc(db_path):
    # hash of slot‐2’s block
     produce_chain(state, settings.main_db, 5)
     hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
+    service_store = state.delta[sid].service.store
+    expected_data = service_store.get(bytes(construct_state_key((255, sid))))
 
 
     # call the RPC
@@ -232,9 +235,10 @@ async def test_service_data_rpc(db_path):
     resp = await rpc.test_client().post("/rpc", json=payload)
     assert resp.status_code == 200
     data = await resp.get_json()
+    print("dataZ",data)
     assert data["jsonrpc"] == "2.0"
     assert data["id"]      == 7
-    assert data["result"]  == list(Bytes(32).hex())
+    assert data["result"]  == list(expected_data)
 
 @pytest.mark.asyncio
 async def test_service_value_rpc(db_path):

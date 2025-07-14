@@ -2,11 +2,13 @@ from typing import Callable, Type
 from tsrkit_types import U32, U8, Bytes, Codable, TypedArray
 from jam.api.rpc.utils import parse_data
 from jam.consensus.grandpa.finality import Finality
+from jam.state.accounts import Account, AccountDataView, StorageView
+from jam.state.utils import construct_state_key
 from jam.types.block.block import Block
 from jam.types.protocol.crypto import HeaderHash, OpaqueHash
 from jam.state.state import State, state
 from jam.types.protocol.core import ServiceId, TimeSlot
-from jam.types.state.delta import LookupTable
+from jam.types.state.delta import AccountMetadata, LookupTable
 
 Hash = TypedArray[U8]
 
@@ -43,12 +45,10 @@ def statistics_handler(params: list):
 
 def service_data_handler(params: list):
     hh, sid = parse_data([HeaderHash, ServiceId], params)
-    # state_at_hh = State.load(hh)
-    s = State.load(hh)
-    code_hash = s.delta[sid].service.code_hash
-    
-    return list(code_hash.encode().hex())
-    # return state_at_hh.delta[sid].service.encode()
+    state_at_hh = State.load(hh)
+    service_store = state_at_hh.delta[sid].service.store
+    service_data = service_store.get(bytes(construct_state_key((255, sid))))
+    return list(service_data)
 
 def service_value_handler(params: list):
     hh, sid, key = parse_data([HeaderHash, ServiceId, Bytes], params)
@@ -66,6 +66,7 @@ def service_request_handler(params: list):
     
     return state_at_hh.delta[sid].lookup[LookupTable(hash=pi_hash, length=pi_len)]
 
+#TODO: beefyRoot, submitPreimage, submitWorkPackage
 
 method_map: dict[str, Callable] = {
     "bestBlock": best_block_handler,

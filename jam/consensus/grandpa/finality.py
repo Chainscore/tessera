@@ -24,8 +24,8 @@ class Finality:
         logger.debug("Finalised block", header_hash=header_hash.hex())
         block = Block.load(header_hash, kv)
 
+        #websocket broadcast for FinalizedBlock
         asyncio.create_task(broker.publish("finalizedBlock", [list(header_hash), int(block.header.slot)]))
-        asyncio.create_task(broker.publish("bestBlock", [list(header_hash), int(block.header.slot)]))
     
         kv.put(cls.FINAL_KEY, header_hash.encode())
 
@@ -34,6 +34,11 @@ class Finality:
     @classmethod
     def set_head(cls, header_hash: HeaderHash, kv: RockStore):
         logger.debug("Setting header...", header_hash=header_hash.hex())
+        block = Block.load(header_hash, kv)
+
+        #websocket broadcast for bestBlock
+        asyncio.create_task(broker.publish("bestBlock", [list(header_hash), int(block.header.slot)]))
+
         kv.put(cls.LATEST_KEY, header_hash.encode())
 
     @classmethod
