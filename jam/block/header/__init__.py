@@ -1,4 +1,6 @@
-from .header import Header 
+"""Header components"""
+
+from .header import Header
 from .epoch_mark import EpochMark 
 from .offenders_mark import OffendersMark
 from .tickets_mark import TicketsMark
