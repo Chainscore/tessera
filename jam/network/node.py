@@ -300,7 +300,7 @@ class Node:
 
         try:
             # Skip self
-            logger.info(f"⚠️ ({self.name}) host: {self.host}, port: {self.port}, {str(peer)}", hostcomp=(str(peer.host) == self.host), portcomp=(int(peer.port) == self.port))
+            # logger.info(f"⚠️ ({self.name}) host: {self.host}, port: {self.port}, {str(peer)}", hostcomp=(str(peer.host) == self.host), portcomp=(int(peer.port) == self.port))
             if str(peer.host) == self.host and int(peer.port) == self.port:
                 logger.info(f"⚠️ ({self.name}) Skipping self {str(self)}")
                 return

@@ -1,3 +1,7 @@
+from tsrkit_types import TypedVector
+
+from jam.network.base.certificate import generate_san
+from jam.types import ValidatorIndex
 from jam.types.protocol.validators import ValidatorData
 
 class Peer:
@@ -16,7 +20,7 @@ class Peer:
 
         for i,val in enumerate(state.kappa):
             if val.bandersnatch == self.data.bandersnatch:
-                return i
+                return ValidatorIndex(i)
 
         raise ValueError("No peer found with matching bandersnatch key.")
 
@@ -36,8 +40,8 @@ class Peer:
     def name(self):
         return self.data.metadata.name
 
-    def __init__(self, id: str, data: ValidatorData):
-        self.id = id
+    def __init__(self, data: ValidatorData):
+        self.id = generate_san(data.ed25519)
         self.data = data
 
     def __repr__(self):

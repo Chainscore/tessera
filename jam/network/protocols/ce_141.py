@@ -63,8 +63,6 @@ class AssuranceDistribution(NetworkProtocol):
         responses = TypedVector([])
 
         for peer in node.peer_conn:
-            print("ASSURER TRANSMIT RUN", node.name, peer.port)
-
             client = node.peer_conn[peer][1]
 
             # Send Protocol Prefix
@@ -107,7 +105,7 @@ class AssuranceDistribution(NetworkProtocol):
             signature= assurance.ed25519_signature
         )
 
-        logger.error("RECEIVED ASSURANCE", peer=server.peer, assurance=assurance_extrinsic.to_json())
+        logger.info("[EXTRINSICS]: RECEIVED ASSURANCE", peer=server.peer, assurance=assurance_extrinsic.to_json())
         ext_store.import_assr(assurance_extrinsic)
 
         # Return acknowledgment to Builder

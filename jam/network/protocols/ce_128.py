@@ -79,8 +79,13 @@ class BlockRequest(NetworkProtocol):
         msg_a = query.encode()
         len_a = data.len.encode()
 
+        header_hash = query.header.hex()[:16] + "..."
         logger.info(
-            "Transmitting block request to node", num=len(peer_conns or node.peer_conn), header_hash=query.header, direction=query.dir, max_blocks=query.max_blocks,
+            "Requesting block",
+            num=len(peer_conns or node.peer_conn),
+            header_hash=header_hash,
+            direction=query.dir,
+            max_blocks=query.max_blocks,
         )
 
         transmitted_count = 0
@@ -106,21 +111,25 @@ class BlockRequest(NetworkProtocol):
                 responses.append(data)
 
                 logger.debug(
-                    "Block request transmitted to node",
-                    stream_id=stream_id
+                    "Block request transmitted",
+                    peer=peer,
+                    stream_id=stream_id,
+                    header_hash=header_hash
                 )
             except Exception as e:
                 responses.append(None)
                 logger.error(
-                    "Failed to transmit state request",
-                    node_name=node.name,
+                    "Failed to transmit block request",
                     error=str(e),
+                    peer=peer,
+                    header_hash=header_hash,
                     error_type=type(e).__name__
                 )
 
         logger.info(
             "Block request transmission completed",
             transmitted_to=transmitted_count,
+            header_hash=header_hash
         )
 
         return responses
@@ -138,18 +147,21 @@ class BlockRequest(NetworkProtocol):
                 buffer_size=len(buffer)
             )
 
-            data, offset = CE128Data.decode_from(buffer)
-
+            data = CE128Data.decode(buffer)
             data = cast(CE128Data, data)
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
             data = data.query
+            header_hash = data.header.hex()[:16] + "..."
 
             logger.info(
-                "Processing block request", stream_id=stream_id,
-                header_hash=data.header, direction=data.dir, max_blocks=data.max_blocks,
+                "Processing block request",
+                stream_id=stream_id,
+                header_hash=header_hash,
+                direction=data.dir,
+                max_blocks=data.max_blocks,
             )
 
             # TODO - Here we assume no gaps blocks, which is likely incorrect
@@ -181,7 +193,11 @@ class BlockRequest(NetworkProtocol):
                     all_blocks.append(_block)
                     hh = _block.header.parent
                 else:
-                    logger.error("Block not found against recorded header_hash", header_hash=hh, timeslot=data.header.slot)
+                    logger.error(
+                        "Block not found against recorded header_hash",
+                        header_hash=hh.hex()[:16] + "...",
+                        timeslot=data.header.slot
+                    )
 
             blocks_enc = TypedArray[Block, data.max_blocks](all_blocks).encode()
             len_enc = U32(len(blocks_enc))
@@ -204,7 +220,7 @@ class BlockRequest(NetworkProtocol):
                 error_type=type(e).__name__
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol):
+    def res_intercept(self, stream_id: int, client: QuicProtocol) -> Blocks:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
 
@@ -225,19 +241,33 @@ class BlockRequest(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             offset = 0
-            cnt = 0
             blocks = Blocks([])
             while offset < buf_len:
-                block, off = Block.decode_from(block_buf, offset)
-                offset += off
-                blocks.append(block)
-                cnt += 1
-                logger.debug(
-                    "Parsed Block",
-                    cnt=cnt,
-                    stream_id=stream_id,
-                    peer=client.peer
-                )
+                try:
+                    block, off = Block.decode_from(block_buf, offset)
+                    offset += off
+                    blocks.append(block)
+                    logger.debug(
+                        "Parsed Block",
+                        header_hash=block.header.hash().hex()[:16] + "...",
+                        stream_id=stream_id,
+                        peer=client.peer
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "Unable to parse block",
+                        stream_id=stream_id,
+                        err=str(e),
+                        error_type=type(e).__name__,
+                        peer=client.peer
+                    )
+
+            logger.debug(
+                "Blocks parsed",
+                count=len(blocks),
+                stream_id=stream_id,
+                buffer_size=len(buffer)
+            )
 
             return blocks
 

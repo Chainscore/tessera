@@ -1,35 +1,35 @@
+import asyncio
 import time
+
 from typing import cast, TYPE_CHECKING, Tuple
-from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32
-
-from jam.utils.constants import GENESIS_TS
-
-if TYPE_CHECKING:
-    from jam.network.node import Node
+from tsrkit_types import Option, Uint, structure, Null, Bytes
 
 from jam.logging import get_logger
 
+from jam.network.base.quic import QuicProtocol
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.base.quic import QuicProtocol
+from jam.network.peer import Peer
+
 from jam.storage.item_extrinsics import ItemExtrinsics
 
-from jam.types.protocol.core import CoreIndex
+from jam.types.protocol.core import ValidatorIndex, CoreIndex
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
 from jam.types.work.package import WorkPackageBundle
 from jam.types.work import SegmentRootLookup
-from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
 from jam.work_package.processor import Processor
 from jam.work_package.validator import Validator
 
-from jam.work_package.guarantor_assignments import guarantor_assignments
-import asyncio
-from jam.types.protocol.core import ValidatorIndex
+from jam.utils.assignment import assign_guarantors
 from jam.utils.gather import gather_with_exceptions
+from jam.utils.constants import GENESIS_TS
 
 # Module-specific logger
 logger = get_logger("network")
+
+if TYPE_CHECKING:
+    from jam.network.node import Node
 
 @structure
 class CoreSegment:
@@ -40,6 +40,9 @@ class CoreSegment:
 class Credential:
     work_report_hash : WorkReportHash
     ed25519_signature : Ed25519Signature
+
+    def __repr__(self):
+        return f"Credential(wr_hash={self.work_report_hash.hex()}, sign={self.ed25519_signature.hex()})"
 
 @structure
 class CE134Response:
@@ -90,7 +93,7 @@ class WorkPackageSharing(NetworkProtocol):
         self._prefix = PrefixType.CE134
 
     async def transmit(self, node: "Node", data: CE134Data):
-        """Request Work Report from Node (server)"""
+        """Request Work Report from Node"""
 
         msg_a = data.core_segment.encode()
         len_a = data.map_len.encode()
@@ -99,53 +102,57 @@ class WorkPackageSharing(NetworkProtocol):
 
         ci = data.core_segment.core_index
 
-        from jam.state.state import state
-        logger.debug("Tau", tau=state.tau)
-        mapping = guarantor_assignments(state)[ci]
-        print("MAPPING 134", mapping, (time.time() - GENESIS_TS) // 6, state.tau)
-
+        # Fetch guarantors mapping
+        mapping = assign_guarantors()
+        guarantors = mapping[0][ci]
 
         logger.info(
             "Transmitting work package bundle to guarantors",
-            node_name=node.name,
-            core_index=int(data.core_segment.core_index),
-            guarantor_count=len(node.peer_conn),
+            core=ci,
+            guarantors=guarantors,
             stream_a_size=data.map_len,
             stream_b_size=data.bundle_len,
             segment_map_length=len(data.core_segment.segment_root_map)
         )
 
-        transmitted_count = 0
+        tasks = []
         responses = []
-        tasks = TypedVector([])
+        transmitted_count = 0
+
         try:
             for peer in node.peer_conn:
-                if peer.ed_key in mapping:
-                    logger.debug("Sending bundle to", port=peer.port)
-                    client = node.peer_conn[peer][1]
+                # For hardcoded testing
+                # if peer.port != 40000:
+                #     continue
 
-                    # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                if peer.data not in guarantors:
+                    continue
 
-                    # Append prefix to stream buffer so that we know the stream for handling response
-                    client.stream_buffer[stream_id] = self._prefix.encode()
+                logger.debug("Transmitting bundle", peer=peer)
+                client = node.peer_conn[peer][1]
 
-                    transmitted_count += 1
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                    # Send Messages with their lengths
-                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
-                    client.stream_and_keep_open(message=len_b, stream_id=stream_id)
-                    res = client.close_and_wait(message=msg_b, stream_id=stream_id)
-                    task = asyncio.create_task(res)
-                    tasks.append(task)
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
 
-                    logger.debug(
-                        "Work package bundle transmitted to guarantor",
-                        stream_id=stream_id,
-                        port=peer.port,
-                        core_index=int(data.core_segment.core_index)
-                    )
+                transmitted_count += 1
+
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
+                client.stream_and_keep_open(message=len_b, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_b, stream_id=stream_id)
+                task = asyncio.create_task(res)
+                tasks.append(task)
+
+                logger.info(
+                    "Work package bundle transmitted to guarantor",
+                    stream_id=stream_id,
+                    peer=peer,
+                    core=ci
+                )
 
             if transmitted_count > 2:
                 raise ValueError("Trying to transmit work package bundle to more than 2 guarantors")
@@ -155,8 +162,8 @@ class WorkPackageSharing(NetworkProtocol):
             logger.info(
                 "Work package bundle transmission completed",
                 transmitted_to=transmitted_count,
-                total_guarantors=len(node.peer_conn),
-                core_index=int(data.core_segment.core_index)
+                guarantors=guarantors,
+                core=ci
             )
 
         except Exception as e:
@@ -169,18 +176,21 @@ class WorkPackageSharing(NetworkProtocol):
         return responses
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """Intercept Work Package Bundle & Build Work Report on Core's Guarantors (server)"""
+        """Intercept Work Package Bundle & Build Work Report on Core's Guarantors"""
+
         from jam.settings import settings
         node = server.node
         buffer = server.stream_buffer[stream_id]
 
         try:
             logger.debug(
-                "Received work package bundle from OG guarantor",
+                "Received work package bundle",
                 stream_id=stream_id,
+                peer=server.peer,
                 buffer_size=len(buffer[1:])
             )
-            data, offset = CE134Data.decode_from(buffer[1:])
+
+            data = CE134Data.decode(buffer[1:])
             data = cast(CE134Data, data)
 
             if not data.is_valid:
@@ -188,79 +198,73 @@ class WorkPackageSharing(NetworkProtocol):
 
             bundle = data.work_package_bundle
 
-            logger.info("Validating Work Package..")
+            logger.debug("Validating Work Package..")
             validator = Validator()
             validator.validate_wp(bundle.package)
 
             db = settings.main_db
-            logger.info("Storing Extrinsics..")
+            logger.debug("Storing Extrinsics..")
             extrinsics = bundle.extrinsics
             ext_da = ItemExtrinsics(db)
-            with benchmark(f"Extrinsics stored"):
-                ext_da.store_processed(extrinsics)
+            ext_da.store_processed(extrinsics)
 
-            logger.info("Building Work Report..")
             # Generating report from work package bundle
-
-            with benchmark(f"Work bundle processed"):
-                processor = Processor(node)
-                report, report_hash = processor.process_bundle(core=data.core_segment.core_index, bundle=bundle,
-                                             sr_lookup=data.core_segment.segment_root_map)
+            logger.debug("Building Work Report..")
+            processor = Processor(node)
+            wr, wr_hash = processor.process_bundle(
+                core=data.core_segment.core_index,
+                bundle=bundle,
+                sr_lookup=data.core_segment.segment_root_map
+            )
 
             ed25519_key = node.ed_pvt_key
+            pref = Bytes('jam_guarantee', 'utf-8')
 
             # Build Guarantee
-            logger.info("Building Guarantee..")
-            with benchmark(f"Guarantee built"):
-                payload =  report.core_index.encode() + report.encode()
-                guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
+            logger.debug("Building guarantee..")
+            payload =  wr.core_index.encode() + wr.encode()
+            guarantee = pref + Hash.blake2b(payload).encode()
 
             # Sign the Guarantee
-            logger.info("Signing Guarantee..")
-            with benchmark(f"Guarantee signed"):
-                sign = Ed25519Signature(ed25519_key.sign(guarantee))
+            logger.debug("Signing guarantee..")
+            sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
             # Build Credential
-            cred = Credential(work_report_hash=report_hash, ed25519_signature=sign)
+            cred = Credential(work_report_hash=wr_hash, ed25519_signature=sign)
 
             # Return Credential to OG Guarantor
+            logger.debug("Sharing guarantee..")
+            msg_a = cred.encode()
+            len_a = Uint[32](len(msg_a)).encode()
 
-            logger.info("Sharing Guarantee..")
-            with benchmark(f"Guarantee shared"):
-                msg_a = cred.encode()
-                len_a = Uint[32](len(msg_a)).encode()
+            # Send Messages with their lengths
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_close(msg_a, stream_id)
 
-                # Send Messages with their lengths
-                server.stream_and_keep_open(len_a, stream_id)
-                server.stream_and_close(msg_a, stream_id)
 
-            # write_benchmarks_to_txt("benchmarks/guarantee.txt")
-
-            logger.debug(
+            logger.info(
                 "Report credential sent to OG guarantor",
-                from_guarantor=server.node.port,
+                guarantor=server.peer,
                 stream_id=stream_id,
                 credential_size=len(cred.encode())
             )
 
         except Exception as e:
-            msg_a = Null.encode()
-            len_a = Uint[32](len(msg_a)).encode()
-
-            # Send response
-            server.stream_and_keep_open(len_a, stream_id)
-            server.stream_and_close(msg_a, stream_id)
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
 
             logger.error(
                 "Error processing work package bundle",
+                guarantor=server.peer,
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
                 error_type=type(e).__name__
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[OptCred, ValidatorIndex]:
-        """Intercept validated Work Report from guarantors"""
+    def res_intercept(self, stream_id: int, client: QuicProtocol) -> tuple[Credential | None, Peer]:
+        """Intercept Report Guarantee from guarantors"""
+
         buffer = client.stream_buffer[stream_id]
 
         try:
@@ -270,25 +274,21 @@ class WorkPackageSharing(NetworkProtocol):
                 buffer_size=len(buffer)
             )
 
-            data, offset = CE134Response.decode_from(buffer[1:])
+            data = CE134Response.decode(buffer[1:])
             data = cast(CE134Response, data)
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info(
+            logger.debug(
                 "Report credential received - checking for majority",
                 stream_id=stream_id,
-                work_report_hash=data.cred.work_report_hash.hex()[:16] + "...",
+                wr_hash=data.cred.work_report_hash.hex()[:16] + "...",
                 signature_length=len(data.cred.work_report_hash)
             )
 
-            logger.info("Distributing this Work Report after achieving majority")
-            logger.debug(
-                "Report credential processed",
-                stream_id=stream_id,
-                work_report_hash=data.cred.work_report_hash.hex()[:16] + "..."
-            )
-            return OptCred(data.cred), ValidatorIndex(client.peer.peer_index)
+            logger.info("[EXTRINSICS]: RECEIVED GUARANTEE", peer=client.peer, guarantee=data.cred)
+
+            return data.cred, client.peer
 
         except Exception as e:
             logger.error(
@@ -298,4 +298,5 @@ class WorkPackageSharing(NetworkProtocol):
                 error=str(e),
                 error_type=type(e).__name__
             )
-            return OptCred(Null)
+
+            return None, client.peer

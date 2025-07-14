@@ -131,10 +131,8 @@ class State:
         for guarantee in block.extrinsic.guarantees:
             report = guarantee.report
             alpha[report.core_index][0] = report.authorizer_hash
-            print("STATE AFTER UPDATING ALPHA", report.core_index, alpha[report.core_index], report.authorizer_hash)
 
         self.alpha = alpha
-        print("STATE AFTER SETTING ALPHA", self.alpha)
 
         return self.transition(block)
 
@@ -230,7 +228,7 @@ class State:
 
             state.settle(header_hash)
             
-            logger.critical(
+            logger.info(
                 "Block imported!",
                 header=header_hash.hex()[:16] + "...",
                 timeslot=self.tau,
