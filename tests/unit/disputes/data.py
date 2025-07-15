@@ -1,3 +1,6 @@
+from tsrkit_types import Null
+from jam.block.header.tickets_mark import TicketsMark
+from jam.block.header.epoch_mark import EpochMark
 """Common test utilities and data for disputes tests"""
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types.bytes import Bytes
@@ -5,19 +8,18 @@ from tsrkit_types.integers import U32, U8, Uint
 from tsrkit_types.bool import Bool
 from tsrkit_types.option import Option
 
-from jam.config.keys import KeysConfig
-from jam.disputes.disputes import Disputes
-from jam.types.block import Block
-from jam.types.block.extrinsics.extrinsic import Extrinsic
-from jam.types.block.extrinsics.disputes import (
+from jam.block.block import Block
+from jam.block.extrinsics.extrinsic import Extrinsic
+from jam.block.extrinsics.disputes import (
     DisputesExtrinsic, Verdicts, Culprits, Faults, 
     Verdict, Culprit, Fault, Judgement, JudgementVotes
 )
-from jam.types.block.extrinsics.tickets import TicketsExtrinsic
-from jam.types.block.extrinsics.preimages import PreimagesExtrinsic
-from jam.types.block.extrinsics.guarantees import GuaranteesExtrinsic
-from jam.types.block.extrinsics.assurances import AssurancesExtrinsic
-from jam.types.block.header import Header, OffendersMark
+from jam.block.extrinsics.tickets import TicketsExtrinsic
+from jam.block.extrinsics.preimages import PreimagesExtrinsic
+from jam.block.extrinsics.guarantees import GuaranteesExtrinsic
+from jam.block.extrinsics.assurances import AssurancesExtrinsic
+from jam.block.header import Header, OffendersMark
+from jam.settings import Settings
 from jam.types.state.sigma import Sigma
 from jam.types.state.psi import Psi, PsiG, PsiB, PsiW, PsiO
 from jam.types.state.rho import Rho, OptionalWorkReportState
@@ -29,28 +31,17 @@ from jam.types.protocol.crypto import (
 )
 from jam.types.protocol.core import ValidatorIndex, TimeSlot
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
-from jam.types import EpochMark, TicketsMark, BandersnatchVrfSignature
+from jam.types import BandersnatchVrfSignature
 from jam.utils.constants import VALIDATOR_COUNT, X
 from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32
 
 
+def deepcopy(obj):
+    return obj.__class__.from_json(obj.to_json())
+
 def create_dummy_validator_data() -> list[ValidatorData]:
     """Create dummy validator data for testing"""
-    return [
-        ValidatorData(
-            bandersnatch=BandersnatchPublic(create_dummy_bytes32()),
-            ed25519=Ed25519Public(create_dummy_bytes32()),
-            bls=BlsPublic(create_dummy_bytes(144)),
-            metadata=ValidatorMetadata(
-                name=Bytes[10](create_dummy_bytes(10)),
-                protocol=Uint[16](0),
-                host=[U8(127), U8(0), U8(0), U8(1)],
-                port=U32(8080)
-            )
-        )
-        for _ in range(VALIDATOR_COUNT)
-    ]
-
+    return [Settings(None, i).val for i in range(VALIDATOR_COUNT)]
 
 def create_test_state(
     tau: U32 = U32(0),  # Default to epoch 0
@@ -107,8 +98,8 @@ def create_test_block(disputes_extrinsic: DisputesExtrinsic = None) -> Block:
             parent_state_root=Bytes[32](create_dummy_bytes32()),
             extrinsic_hash=Bytes[32](create_dummy_bytes32()),
             slot=TimeSlot(100),
-            epoch_mark=Option[EpochMark](None),
-            tickets_mark=Option[TicketsMark](None),
+            epoch_mark=EpochMark(Null),
+            tickets_mark=TicketsMark(Null),
             offenders_mark=OffendersMark([]),
             author_index=ValidatorIndex(0),
             entropy_source=BandersnatchVrfSignature(create_dummy_bytes(784)),
@@ -122,7 +113,7 @@ def create_valid_judgement_votes(target_hash: bytes, vote_value: bool, count: in
     """Create valid judgement votes for testing"""
     votes = []
     for i in range(count):
-        keys = KeysConfig.from_seed(i)
+        keys = Settings(None, i)
         votes.append(Judgement(
             vote=Bool(vote_value),
             index=ValidatorIndex(i),
@@ -136,10 +127,10 @@ def create_sorted_culprits(target: WorkReportHash, keys: list[int]) -> list[Culp
     sorted_keys = sorted(keys)
     culprits = []
     for key in sorted_keys:
-        keys = KeysConfig.from_seed(key)
+        keys = Settings(None, key)
         culprits.append(Culprit(
             target=target,
-            key=keys.ed25519_public,
+            key=Bytes[32](keys.ed25519_public),
             signature=Ed25519Signature(Ed25519PrivateKey.from_private_bytes(keys.ed25519_private).sign(X.GUARANTEE.value + target))
         ))
     return culprits
@@ -150,11 +141,11 @@ def create_sorted_faults(target: WorkReportHash, vote: bool, keys: list[Ed25519P
     sorted_faults = sorted(keys)
     faults = []
     for key in sorted_faults:
-        keys = KeysConfig.from_seed(key)
+        keys = Settings(None, key)
         faults.append(Fault(
             target=target,
             vote=Bool(vote),
-            key=keys.ed25519_public,
+            key=Bytes[32](keys.ed25519_public),
             signature=Ed25519Signature(Ed25519PrivateKey.from_private_bytes(keys.ed25519_private).sign((X.VALID if vote else X.INVALID).value + target))
         ))
     return faults
@@ -220,5 +211,5 @@ def assert_targets_in_sets(new_state: Sigma,
     
     if offender_keys:
         for key in offender_keys:
-            k = KeysConfig.from_seed(key)
+            k = Settings(None, key)
             assert k.ed25519_public in new_state.psi.offenders

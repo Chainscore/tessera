@@ -1,11 +1,11 @@
+from jam.settings import Settings
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types.integers import U32, U8
 from tsrkit_types.bool import Bool
 
-from jam.config.keys import KeysConfig
-from jam.disputes.disputes import Disputes
-from jam.types.block.extrinsics.disputes import (
+from jam.state.transitions import Disputes
+from jam.block.extrinsics.disputes import (
     DisputesExtrinsic, Verdicts, Culprits, Faults, 
     Verdict, Culprit, Fault
 )
@@ -15,7 +15,7 @@ from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32
 
 from .data import (
     create_test_state, create_test_block, create_valid_judgement_votes,
-    create_sorted_culprits, get_state_counts,
+    create_sorted_culprits, deepcopy, get_state_counts,
     assert_state_counts, assert_targets_in_sets
 )
 
@@ -46,7 +46,7 @@ class TestBasicDisputesTransitions:
         ))
         
         # Apply transition
-        new_state = Disputes.transition(initial_state, block)
+        new_state = Disputes.transition(deepcopy(initial_state), initial_state, block)
         
         # Verify all dispute records remain unchanged
         assert new_state.psi.good == initial_state.psi.good
@@ -71,7 +71,7 @@ class TestBasicDisputesTransitions:
         )
 
         # Create at least one fault as required for good verdicts
-        key0 = KeysConfig.from_seed(0)
+        key0 = Settings(None, 0)
         fault = Fault(
             target=target_hash,
             vote=Bool(False),  # Contradicting the good verdict
@@ -87,7 +87,7 @@ class TestBasicDisputesTransitions:
 
         block = create_test_block(disputes_extrinsic)
 
-        new_state = Disputes.transition(initial_state, block)
+        new_state = Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         # Verify changes using helper functions
         assert_state_counts(initial_counts, new_state, good_delta=1, offenders_delta=1)
@@ -120,7 +120,7 @@ class TestBasicDisputesTransitions:
 
         block = create_test_block(disputes_extrinsic)
 
-        new_state = Disputes.transition(initial_state, block)
+        new_state = Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         # Verify changes using helper functions
         assert_state_counts(initial_counts, new_state, bad_delta=1, offenders_delta=2)
@@ -148,7 +148,7 @@ class TestBasicDisputesTransitions:
 
         initial_counts = get_state_counts(initial_state)
 
-        new_state = Disputes.transition(initial_state, block)
+        new_state = Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         # Verify changes using helper functions
         assert_state_counts(initial_counts, new_state, wonky_delta=1)

@@ -1,10 +1,9 @@
 import pytest
 from tsrkit_types.integers import U32
 
-from jam.config.keys import KeysConfig
-from jam.disputes.disputes import Disputes
-from jam.disputes.error import DisputesError, DisputesErrorCode
-from jam.types.block.extrinsics.disputes import (
+from jam.settings import Settings
+from jam.state.transitions import Disputes, DisputesError, DisputesErrorCode
+from jam.block.extrinsics.disputes import (
     DisputesExtrinsic, Verdicts, Culprits, Faults, 
     Verdict
 )
@@ -14,7 +13,7 @@ from jam.utils.dummy.utils import create_dummy_bytes32
 
 from .data import (
     create_test_state, create_test_block, create_valid_judgement_votes,
-    create_sorted_culprits, create_sorted_faults, create_sorted_verdicts,
+    create_sorted_culprits, create_sorted_faults, create_sorted_verdicts, deepcopy,
     get_state_counts, assert_state_counts, assert_targets_in_sets
 )
 
@@ -61,7 +60,7 @@ class TestMixedDisputesScenarios:
         
         initial_counts = get_state_counts(initial_state)
         
-        new_state = Disputes.transition(initial_state, block)
+        new_state = Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         # Verify state changes
         # +1 good (target1), +1 bad (target2), +3 offenders (2+1)
@@ -102,7 +101,7 @@ class TestMixedDisputesScenarios:
         block = create_test_block(disputes_extrinsic)
         
         with pytest.raises(DisputesError) as exc_info:
-            Disputes.transition(initial_state, block)
+            Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         # This might be caught by different validation errors depending on implementation order
         # Could be ALREADY_JUDGED or NOT_ENOUGH_FAULTS
@@ -114,7 +113,7 @@ class TestMixedDisputesScenarios:
     def test_offender_already_reported(self):
         """Test case 5c: Attempt to report already reported offender"""
         target_hash = WorkReportHash(create_dummy_bytes32())
-        offender_key = Ed25519Public(KeysConfig.from_seed(0).ed25519_public)
+        offender_key = Ed25519Public(Settings(None, 0).ed25519_public)
         
         # Create initial state with offender already reported
         initial_state = create_test_state(
@@ -135,7 +134,7 @@ class TestMixedDisputesScenarios:
         block = create_test_block(disputes_extrinsic)
         
         with pytest.raises(DisputesError) as exc_info:
-            Disputes.transition(initial_state, block)
+            Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         # This might be caught by different validation errors depending on implementation order
         # Could be OFFENDER_ALREADY_REPORTED or BAD_GUARANTOR_KEY

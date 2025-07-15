@@ -1,7 +1,7 @@
 from tsrkit_types.integers import U32
 
-from jam.disputes.disputes import Disputes
-from jam.types.block.extrinsics.disputes import (
+from jam.state.transitions import Disputes
+from jam.block.extrinsics.disputes import (
     DisputesExtrinsic, Verdicts, Culprits, Faults, Verdict
 )
 from jam.types.protocol.crypto import WorkReportHash
@@ -10,7 +10,7 @@ from jam.utils.dummy.utils import create_dummy_bytes32
 
 from .data import (
     create_test_state, create_test_block, create_valid_judgement_votes,
-    create_sorted_culprits, create_sorted_faults,
+    create_sorted_culprits, create_sorted_faults, deepcopy,
     get_state_counts, assert_state_counts, assert_targets_in_sets
 )
 
@@ -46,7 +46,7 @@ class TestProofOnlyTransitions:
         
         initial_counts = get_state_counts(initial_state)
         
-        new_state = Disputes.transition(initial_state, block)
+        new_state = Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         # Verify target added to bad set and culprit keys added to offenders
         assert_state_counts(initial_counts, new_state, bad_delta=1, offenders_delta=2)
@@ -76,7 +76,7 @@ class TestProofOnlyTransitions:
         
         initial_counts = get_state_counts(initial_state)
         
-        new_state = Disputes.transition(initial_state, block)
+        new_state = Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         # Verify fault keys added to offenders
         assert_state_counts(initial_counts, new_state, offenders_delta=2)

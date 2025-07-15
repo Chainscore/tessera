@@ -3,10 +3,9 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types.integers import U32
 from tsrkit_types.bool import Bool
 
-from jam.config.keys import KeysConfig
-from jam.disputes.disputes import Disputes
-from jam.disputes.error import DisputesError, DisputesErrorCode
-from jam.types.block.extrinsics.disputes import (
+from jam.settings import Settings
+from jam.state.transitions import Disputes, DisputesError, DisputesErrorCode
+from jam.block.extrinsics.disputes import (
     DisputesExtrinsic, Verdicts, Culprits, Faults, 
     Verdict, Fault
 )
@@ -15,7 +14,7 @@ from jam.utils.constants import VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY, X
 from jam.utils.dummy.utils import create_dummy_bytes32, create_dummy_bytes
 
 from .data import (
-    create_test_state, create_test_block, create_valid_judgement_votes
+    create_test_state, create_test_block, create_valid_judgement_votes, deepcopy
 )
 
 
@@ -43,7 +42,7 @@ class TestDisputesValidationErrors:
         
         # Mock signature verification to return False
         with pytest.raises(DisputesError) as exc_info:
-            Disputes.transition(initial_state, block)
+            Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         assert exc_info.value.code == DisputesErrorCode.BAD_SIGNATURE
     
@@ -76,7 +75,7 @@ class TestDisputesValidationErrors:
         block = create_test_block(disputes_extrinsic)
         
         with pytest.raises(DisputesError) as exc_info:
-            Disputes.transition(initial_state, block)
+            Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         assert exc_info.value.code == DisputesErrorCode.VERDICTS_NOT_SORTED_UNIQUE
     
@@ -100,7 +99,7 @@ class TestDisputesValidationErrors:
         block = create_test_block(disputes_extrinsic)
         
         with pytest.raises(DisputesError) as exc_info:
-            Disputes.transition(initial_state, block)
+            Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         assert exc_info.value.code == DisputesErrorCode.NOT_ENOUGH_FAULTS
     
@@ -124,7 +123,7 @@ class TestDisputesValidationErrors:
         block = create_test_block(disputes_extrinsic)
         
         with pytest.raises(DisputesError) as exc_info:
-            Disputes.transition(initial_state, block)
+            Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         assert exc_info.value.code == DisputesErrorCode.NOT_ENOUGH_CULPRITS
     
@@ -149,7 +148,7 @@ class TestDisputesValidationErrors:
         block = create_test_block(disputes_extrinsic)
         
         with pytest.raises(DisputesError) as exc_info:
-            Disputes.transition(initial_state, block)
+            Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         assert exc_info.value.code == DisputesErrorCode.BAD_JUDGEMENT_AGE
     
@@ -166,7 +165,7 @@ class TestDisputesValidationErrors:
         )
         
         # Create fault proof with same vote as verdict (should contradict)
-        key0 = KeysConfig.from_seed(0)
+        key0 = Settings(None, 0)
         fault = Fault(
             target=target_hash,
             vote=Bool(True),  # Same as verdict - this should be invalid
@@ -184,7 +183,7 @@ class TestDisputesValidationErrors:
         block = create_test_block(disputes_extrinsic)
         
         with pytest.raises(DisputesError) as exc_info:
-            Disputes.transition(initial_state, block)
+            Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         assert exc_info.value.code == DisputesErrorCode.FAULT_VERDICT_WRONG
     
@@ -217,6 +216,6 @@ class TestDisputesValidationErrors:
         block = create_test_block(disputes_extrinsic)
         
         with pytest.raises(DisputesError) as exc_info:
-            Disputes.transition(initial_state, block)
+            Disputes.transition(deepcopy(initial_state), initial_state, block)
 
         assert exc_info.value.code == DisputesErrorCode.BAD_VOTE_SPLIT
