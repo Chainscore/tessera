@@ -21,14 +21,14 @@ class ExtrinsicStore(Generic[T]):
 
     def store(self, ext: T):
         if ext in self._store:
-            logger.warning(
+            logger.debug(
                 "Duplicate extrinsic found",
                 ext=ext.__class__.__name__,
                 val=ext.to_json(),
             )
         else:
             if not self._validate(ext):
-                logger.warning(
+                logger.info(
                     "Invalid extrinsic found",
                     ext=ext.__class__.__name__,
                     val=ext.to_json(),
@@ -43,7 +43,7 @@ class ExtrinsicStore(Generic[T]):
                 indx = self._store.index(ext)
                 self._store.pop(indx)
             except ValueError as e:
-                logger.warning(
+                logger.debug(
                     "Extrinsic was not collected",
                     error=e,
                     ext=ext.__class__.__name__,

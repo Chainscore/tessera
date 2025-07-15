@@ -173,7 +173,6 @@ class State:
         from jam.state.transitions import Accumulation, Reporting, Authorization, RecentHistory, Safrole, Assurances, Disputes, Preimages, Statistics
         from jam.settings import settings as _set
         from jam.finality.finality import Finality
-
         try:
             header_hash = HeaderHash(block.header.hash())
             logger.info(
@@ -258,23 +257,25 @@ class State:
             logger.debug("Processing safrole...")
             vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
             Safrole.transition(pre_state, self, block, vrf_output)
+            
+            if block.validate():
+                state.settle(header_hash)
+                logger.info(
+                    "Block imported!",
+                    header=header_hash.hex()[:16] + "...",
+                    timeslot=self.tau,
+                    final_state_root=self.root.hex()[:16] + "...",
+                )
 
-            state.settle(header_hash)
+                block.save(_set.main_db)
+                # Set local chain head to produced block
+                Finality.set_head(header_hash, _set.main_db)
+                # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
+                Finality.finalise(header_hash, _set.main_db)
 
-            logger.info(
-                "Block imported!",
-                header=header_hash.hex()[:16] + "...",
-                timeslot=self.tau,
-                final_state_root=self.root.hex()[:16] + "...",
-            )
-
-            block.save(_set.main_db)
-            # Set local chain head to produced block
-            Finality.set_head(header_hash, _set.main_db)
-            # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-            Finality.finalise(header_hash, _set.main_db)
-
-            block.extrinsic.clear_from_stores()
+                block.extrinsic.clear_from_stores()            
+            else:
+                raise JamError("Block is not valid")
 
         except JamError as jam_e:
             logger.error(
@@ -283,7 +284,9 @@ class State:
                 slot=block.header.slot,
             )
             self.store.clear()
+        
 
+        
         self._lock = False
         return
 

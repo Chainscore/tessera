@@ -63,7 +63,6 @@ class AccountDataView:
 
 
 class Account:
-
     def __init__(self, id: ServiceId, store: StateStorage):
         self.id = id
         self.store = store
@@ -161,7 +160,7 @@ class DeltaView:
 
     def __contains__(self, key: ServiceId):
         return self.store.get(bytes(construct_state_key((255, key)))) is not None
-
+    
 
 class StorageView:
     def __init__(self, id: ServiceId, store: StateStorage):
@@ -177,6 +176,9 @@ class StorageView:
             )
         )
         return Bytes(data) if data else data
+    
+    def get(self, key):
+        return self.__getitem__(key)
 
     def __setitem__(self, key: Bytes[32], value: Bytes):
         # TODO - check for gas before adding, throw error if insufficient. This is supposed to be handled in relevent invocation
@@ -213,6 +215,9 @@ class PreImageView:
         data = self.store.get(construct_state_key((self.id, data)))
         return Bytes(data) if data else data
 
+    def get(self, key):
+        return self.__getitem__(key)
+
     def __setitem__(self, key: Bytes[32], value: Bytes):
         k = construct_state_key((self.id, Bytes(U32(2**32 - 2).encode()) + key[1:24]))
         self.store.put(k, value)
@@ -238,6 +243,9 @@ class TimestampsView:
         )
         data = self.store.get(storage_key)
         return Timestamps.decode(data) if data else data
+    
+    def get(self, key):
+        return self.__getitem__(key)
 
     def __setitem__(self, key: LookupTable, value: Timestamps):
         storage_key = construct_state_key(

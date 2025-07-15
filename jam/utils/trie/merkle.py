@@ -32,7 +32,7 @@ class StateTrie:
 
     def __init__(self):
         self.nodes = {}
-        self.root_hash = {}
+        self.root_hash = Bytes[32](32)
 
     def _merkelize_recursive(
         self, leaves: List[Bytes[64]], bit_index: int

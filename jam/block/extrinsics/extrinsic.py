@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+from tsrkit_types import Bytes, Uint
 from jam.block.errors import BlockError, BlockErrorCode
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import CORE_COUNT, MAX_TICKETS_PER_EXTRINSIC
@@ -31,6 +32,16 @@ class Extrinsic:
             disputes=DisputesExtrinsic(
                 verdicts=Verdicts([]), culprits=Culprits([]), faults=Faults([])
             ),
+        )
+
+    def hash(self) -> Bytes[32]:
+        gr = Uint(len(self.guarantees)).encode() + b"".join([Hash.blake2b(g.report.encode()) + g.slot.encode() + g.signatures.encode() for g in self.guarantees])
+        return Hash.blake2b(
+                bytes(Hash.blake2b(self.tickets.encode())) +
+                bytes(Hash.blake2b(self.preimages.encode())) +
+                bytes(Hash.blake2b(gr)) + 
+                bytes(Hash.blake2b(self.assurances.encode())) +
+                bytes(Hash.blake2b(self.disputes.encode()))
         )
 
     @classmethod
@@ -67,8 +78,8 @@ class Extrinsic:
         # TODO: Handle disputes
         return
 
-    def validate(self, header: "Header"):
+    def validate(self, header: "Header") -> bool:
         # Valid extrinsics hash 
-        if Hash.blake2b(self.encode()) != header.extrinsic_hash:
+        if self.hash() != header.extrinsic_hash:
             raise BlockError(BlockErrorCode.INCORRECT_EXTRINSIC_HASH)
-        return
+        return True

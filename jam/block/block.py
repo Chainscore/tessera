@@ -93,6 +93,9 @@ class Block:
 
         # Return the HeaderHash
         return HeaderHash(hh)
+    
+    def validate(self) -> bool:
+        return self.header.validate() and self.extrinsic.validate(self.header)
 
     def produce(self, time_slot: TimeSlot):
         from jam.settings import settings
@@ -103,9 +106,6 @@ class Block:
         # Produce a new header from previous header 
         header = parent_block.header.produce(time_slot, extrinsic, None)
         
-        header.validate()
-        extrinsic.validate(header)
-
         block = Block(header=header, extrinsic=extrinsic)
 
         return block

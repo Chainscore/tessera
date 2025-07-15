@@ -113,7 +113,7 @@ class StateStorage:
 
     def clear(self):
         self._updates = {}
-
+    
     def put(self, key_bytes: bytes, value_bytes: bytes, sync: bool = False):
         if self._cache_mode:
             self._updates[key_bytes] = value_bytes

@@ -29,22 +29,13 @@ from jam.types.protocol.crypto import (
 )
 from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData
-# from dot_ring.vrf.ring.ring_vrf import RingVrf
+from dot_ring.vrf.ring.ring_vrf import RingVrf
 from py_ark_vrf import verify_ring, get_ring_root, vrf_output
 
 logger = get_logger("import")
 
 
-class Safrole:
-    @staticmethod
-    def generate_ticket(attempt: int) -> TicketEnvelope:
-        from jam.settings import settings
-
-        return TicketEnvelope(
-            attempt=U32(0),
-            signature=BandersnatchRingVrfSignature(bytes(784)),
-        )
-
+class Safrole: 
     @staticmethod
     def verify_vrf(
         message: bytes, ring_root: bytes, gamma_k: list[bytes], proof: BandersnatchRingVrfSignature
