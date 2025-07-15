@@ -1,6 +1,6 @@
 from typing import Dict
 
-from jam.config.keys import KeysConfig
+from jam.settings import Settings
 from jam.types.protocol.ticket import TicketBody
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
@@ -106,18 +106,13 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["beta"] = Beta([block for _ in range(3)])
 
     # Create dummy validator data
-    key_set = [KeysConfig.from_seed(i) for i in range(VALIDATOR_COUNT)]
+    key_set = [Settings(data_path=None, seed=i) for i in range(VALIDATOR_COUNT)]
     dummy_validator_data = [
         ValidatorData(
             bandersnatch=BandersnatchPublic(key.bandersnatch_public),
             ed25519=Ed25519Public(key.ed25519_public),
             bls=BlsPublic(create_dummy_bytes(144)),
-            metadata=ValidatorMetadata(
-                name=Bytes(10),
-                protocol=Uint[16](2**16 - 1),
-                host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
-                port=U16(0),
-            ),
+            metadata=ValidatorMetadata.from_json(bytes(128).hex()),
         )
         for key in key_set
     ]

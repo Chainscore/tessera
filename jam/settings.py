@@ -1,3 +1,4 @@
+from py_ark_vrf import public_from_le_secret
 from typing import Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PrivateKey,
@@ -8,7 +9,7 @@ from jam.types.protocol.crypto import BlsPublic, Hash
 from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata
 from rockstore import RockStore
 import random
-import py_ark_vrf as vrf
+from py_ark_vrf import secret_from_seed, public_from_le_secret
 
 
 class Settings:
@@ -30,24 +31,12 @@ class Settings:
 
     # Key Store
     seed: Bytes[32]
+
+    ed25519_public: Bytes[32]
     ed25519_private: Bytes[32]
+
+    bandersnatch_public: Bytes[32]
     bandersnatch_private: Bytes[32]
-
-    @property
-    def bandersnatch_public(self) -> Bytes[32]:
-        if not self.bandersnatch_private:
-            raise ValueError("Keys not set")
-        secret_key = vrf.SecretKey(self.bandersnatch_private)
-        return Bytes[32](secret_key.public().to_bytes())
-
-    @property
-    def ed25519_public(self) -> Bytes[32]:
-        if not self.ed25519_private:
-            raise ValueError("Keys not set")
-        ed25519_public: Ed25519PublicKey = Ed25519PrivateKey.from_private_bytes(
-            self.ed25519_private
-        ).public_key()
-        return Bytes[32](ed25519_public.public_bytes_raw())
 
     def __init__(
         self,
@@ -86,9 +75,18 @@ class Settings:
             self.ed25519_private = Hash.blake2b(
                 Bytes(b"jam_val_key_ed25519") + self.seed
             )
+            self.ed25519_public = Bytes[32](
+                Ed25519PrivateKey
+                    .from_private_bytes(self.ed25519_private)
+                    .public_key()
+                    .public_bytes_raw()
+            )
             self.bandersnatch_private = Hash.blake2b(
                 Bytes(b"jam_val_key_bandersnatch") + self.seed
             )
+            self.bandersnatch_public = Bytes[32](public_from_le_secret(self.bandersnatch_private))
+
+
 
     @property
     def main_db(self) -> RockStore:
@@ -143,7 +141,7 @@ class Settings:
             ed25519=self.ed25519_public,
             bls=BlsPublic(144),
             metadata=ValidatorMetadata(
-                name=Bytes[10](b"alice"),
+                name=Bytes[10](b"alice_____"),
                 protocol=Uint[16](0),
                 host=IPAddress.from_json([0, 0, 0, 0]),
                 port=Uint[16](40000),

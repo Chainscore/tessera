@@ -1,8 +1,8 @@
-from copy import deepcopy
-
+from py_ark_vrf import vrf_output
 import pytest
 from tsrkit_types.bytes import Bytes
-
+from jam.operations.handlers.conductor import Conductor
+from jam.settings import setup_setting
 from jam.state.transitions import SafroleError, SafroleErrorCode
 from jam.state.transitions import Safrole
 from jam.types.state.eta import Eta
@@ -14,11 +14,10 @@ from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
 from jam.types.protocol.ticket import TicketBody, TicketId, TicketAttempt
 from jam.utils.dummy.utils import create_dummy_bytes
-from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
+from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys, deepcopy
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END
 
 
-@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_timekeeping():
     """Test that Safrole correctly updates the timeslot (tau)"""
     # Create initial state
@@ -48,13 +47,12 @@ def test_safrole_timekeeping():
     new_block = create_block(slot=U32(6), tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Check that the timeslot was updated
     assert new_state.tau == U32(6)
 
 
-@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_entropy_accumulation():
     """Test that Safrole correctly accumulates entropy"""
     # Create initial state with known entropy values
@@ -77,7 +75,7 @@ def test_safrole_entropy_accumulation():
     new_block = create_block(slot=U32(6), tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     # Check that the entropy was accumulated (η'₀ = H(η₀ || VRF_output(H_v)))
     assert new_state.eta[0] != initial_state.eta[0], "Entropy should be updated"
     # Other entropy slots should remain unchanged
@@ -86,13 +84,8 @@ def test_safrole_entropy_accumulation():
     assert new_state.eta[3] == initial_state.eta[3]
 
 
-@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_ticket_accumulation():
     """Test that Safrole correctly accumulates ticket.py during the submission period"""
-    # Create ticket.py
-    ticket1 = TicketBody(id=TicketId(bytes([1] * 32)), attempt=TicketAttempt(0))
-    ticket2 = TicketBody(id=TicketId(bytes([2] * 32)), attempt=TicketAttempt(0))
-    
     # Create initial state with some ticket.py already in gamma_a
     initial_state = create_state(
         tau=U32(5),  # Assume this is within ticket submission period
@@ -101,38 +94,32 @@ def test_safrole_ticket_accumulation():
         kappa=Kappa(create_validator_data_from_keys()),
         gamma_k=GammaK(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
-        gamma_a=GammaA([ticket1]),
+        gamma_a=GammaA([]),
         gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])),
         gamma_z=GammaZ(Safrole.compute_ring_root([keys.bandersnatch for keys in create_validator_data_from_keys()])),
         offenders=PsiO([])
     )
-    
-    # Create ticket extrinsics for a block
-    ticket_envelope = Safrole.generate_ticket()  # This will create a ticket with default values
-    
+    setup_setting(None, 1) 
+   
     # Create a block with ticket during submission period
     # Assume slot 6 is within ticket submission period (less than TICKET_SUBMISSION_END)
     slot_within_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END - 1)
+    # Create ticket extrinsics for a block
+    ticket_envelope = Conductor.generate_ticket(initial_state, 0)  # This will create a ticket with default values
+    ticket_body = TicketBody(
+        id=TicketId(vrf_output(ticket_envelope.signature)),
+        attempt=ticket_envelope.attempt
+    ) 
     new_block = create_block(slot=slot_within_submission, tickets=[ticket_envelope])
     
-    # Mock the vrf_output function to return ticket2's id
-    original_vrf_output = Safrole.vrf_output
-    Safrole.vrf_output = lambda _: ticket2.id
+    # Apply the transition
+    new_state = Safrole.transition(deepcopy(initial_state), deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
-    try:
-        # Apply the transition
-        new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
-        
-        # Check that the new ticket was accumulated
-        assert len(new_state.gamma.a) == 2
-        assert ticket1 in new_state.gamma.a
-        assert ticket2 in new_state.gamma.a
-    finally:
-        # Restore the original function
-        Safrole.vrf_output = original_vrf_output
+    # Check that the new ticket was accumulated
+    assert len(new_state.gamma.a) == 1 
+    assert ticket_body in new_state.gamma.a
 
 
-@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_ticket_submission_outside_period():
     """Test that Safrole rejects ticket.py outside the submission period"""
     # Create initial state
@@ -148,21 +135,21 @@ def test_safrole_ticket_submission_outside_period():
         gamma_z=GammaZ(Safrole.compute_ring_root([keys.bandersnatch for keys in create_validator_data_from_keys()])),
         offenders=PsiO([])
     )
+    setup_setting(None, 1)
     
     # Create a block with ticket.py after the submission period
     # Calculate a slot that is after TICKET_SUBMISSION_END
     slot_after_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END + 1)
-    ticket_envelope = Safrole.generate_ticket()
+    ticket_envelope = Conductor.generate_ticket(initial_state, 0)
     new_block = create_block(slot=slot_after_submission, tickets=[ticket_envelope])
     
     # Verify that the transition raises the expected error
     with pytest.raises(SafroleError) as excinfo:
-        Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
+        Safrole.transition(deepcopy(initial_state), deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     assert excinfo.value.code == SafroleErrorCode.UNEXPECTED_TICKET
 
 
-@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_epoch_transition():
     """Test that Safrole correctly handles epoch transitions"""
     # Create validator data
@@ -188,7 +175,7 @@ def test_safrole_epoch_transition():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Verify epoch transition effects
     
@@ -210,7 +197,6 @@ def test_safrole_epoch_transition():
     assert new_state.gamma.z == initial_state.gamma.z
 
 
-@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_fallback_mode():
     """Test that Safrole correctly uses fallback seal keys when not enough ticket.py"""
     # Create validator data
@@ -236,7 +222,7 @@ def test_safrole_fallback_mode():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Check that we're using fallback seal keys (GammaSFallback)
     assert isinstance(new_state.gamma.s.unwrap(), GammaSFallback)
@@ -245,7 +231,6 @@ def test_safrole_fallback_mode():
     # The exact values would depend on implementation details of arrange_fallback
 
 
-@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_safrole_offender_filtering():
     """Test that Safrole correctly filters out offenders during epoch transitions"""
     # Create validator data
@@ -274,7 +259,7 @@ def test_safrole_offender_filtering():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Check that the offender was replaced with a null key in gamma_k
     filtered_validators = new_state.gamma.k

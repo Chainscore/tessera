@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import pytest
 
 from jam.state.transitions import Safrole
@@ -12,10 +10,10 @@ from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
 from jam.utils.dummy.utils import create_dummy_bytes
-from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
+from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys, deepcopy
 from jam.utils.constants import EPOCH_LENGTH
 
-@pytest.mark.skipif(True, reason="Ring commitment takes too long")
+
 def test_key_rotation_at_epoch_boundary():
     """Test that Safrole correctly rotates validator keys at epoch boundaries"""
     # Create validator data
@@ -41,7 +39,7 @@ def test_key_rotation_at_epoch_boundary():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Verify key rotation
     # λ' = κ (lambda becomes previous kappa)
@@ -59,7 +57,7 @@ def test_key_rotation_at_epoch_boundary():
     new_ring_root = Bytes[144](Safrole.compute_ring_root([keys.bandersnatch for keys in new_state.gamma.k]))
     assert new_state.gamma.z == new_ring_root
 
-@pytest.mark.skipif(True, reason="Ring commitment takes too long")
+
 def test_offender_filtering():
     """Test that Safrole correctly filters out offenders during epoch transitions"""
     # Create validator data
@@ -88,7 +86,7 @@ def test_offender_filtering():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Check that the offender was replaced with a null key in gamma_k
     filtered_validators = new_state.gamma.k
@@ -100,7 +98,6 @@ def test_offender_filtering():
             assert validator.bandersnatch == validators[i].bandersnatch, "Non-offenders should remain unchanged"
 
 
-@pytest.mark.skipif(True, reason="Ring commitment takes too long")
 def test_all_validators_are_offenders():
     """Test behavior when all validators are marked as offenders"""
     # Create validator data
@@ -129,7 +126,7 @@ def test_all_validators_are_offenders():
     new_block = create_block(slot=first_slot_in_next_epoch, tickets=[])
     
     # Apply the transition
-    new_state = Safrole.transition(deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
+    new_state = Safrole.transition(deepcopy(initial_state), deepcopy(initial_state), new_block, Bytes[32](create_dummy_bytes(32)))
     
     # Verify all validators in gamma_k are replaced with null keys
     for validator in new_state.gamma.k:
