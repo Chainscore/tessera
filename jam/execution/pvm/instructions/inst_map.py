@@ -5,7 +5,7 @@ This module pre-compiles all instruction handlers into a single dispatch table,
 eliminating the need for table object creation and multiple dictionary lookups.
 """
 
-from typing import Dict, Callable
+from typing import Dict, Callable, List
 from dataclasses import dataclass
 
 from jam.execution.pvm.memory import Memory
@@ -53,7 +53,7 @@ class InstTableMap:
     into a single dispatch table for efficient performance.
     """
 
-    _dispatch_table: Dict[int, InstructionHandler] = {}
+    _dispatch_table: List[InstructionHandler|None] = {}
     _gas_costs: bytes = b""
     _terminating_mask: int = 0
 
@@ -75,6 +75,7 @@ class InstTableMap:
         ]
         gas_tmp = [0] * 256
         term_mask = 0
+        self._dispatch_table = [None] * 256
         for table_class in all_tables:
             instruction_table = table_class.table()
 
@@ -109,7 +110,7 @@ class InstTableMap:
         This version completely eliminates table instance creation by using
         cached instances that are reused and updated in-place.
         """
-        handler = self._dispatch_table.get(opcode)
+        handler = self._dispatch_table[opcode]
         if handler is None:
             raise PvmError(PANIC)
 

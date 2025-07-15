@@ -1,5 +1,6 @@
 from typing import Dict
 
+from jam.config.keys import KeysConfig
 from jam.types.protocol.ticket import TicketBody
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
@@ -105,10 +106,11 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["beta"] = Beta([block for _ in range(3)])
 
     # Create dummy validator data
+    key_set = [KeysConfig.from_seed(i) for i in range(VALIDATOR_COUNT)]
     dummy_validator_data = [
         ValidatorData(
-            bandersnatch=BandersnatchPublic(create_dummy_bytes32()),
-            ed25519=Ed25519Public(create_dummy_bytes32()),
+            bandersnatch=BandersnatchPublic(key.bandersnatch_public),
+            ed25519=Ed25519Public(key.ed25519_public),
             bls=BlsPublic(create_dummy_bytes(144)),
             metadata=ValidatorMetadata(
                 name=Bytes(10),
@@ -117,7 +119,7 @@ def create_dummy_state_components() -> Dict[str, object]:
                 port=U16(0),
             ),
         )
-        for _ in range(VALIDATOR_COUNT)
+        for key in key_set
     ]
 
     # Gamma - Validator set
@@ -181,10 +183,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["phi"] = Phi([queue for _ in range(CORE_COUNT)])
 
     # Chi
-    chi_g = ChiG({ServiceId(i): Gas(100) for i in range(3)})
-    components["chi"] = Chi(
-        chi_m=ServiceId(0), chi_a=ServiceId(1), chi_v=ServiceId(2), chi_g=chi_g
-    )
+    components["chi"] = Chi(chi_m=ServiceId(0), chi_a=ServiceId(0), chi_v=ServiceId(0), chi_g=ChiG({}))
 
     # Psi
     components["psi"] = Psi(
@@ -193,54 +192,17 @@ def create_dummy_state_components() -> Dict[str, object]:
         PsiW([]),  # Empty array for wonky work reports
         PsiO([]),  # Empty array for offenders
     )
-    # components["psi"] = Psi(
-    #     PsiG([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-    #     PsiB([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-    #     PsiW([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-    #     PsiO([Ed25519Public(create_dummy_bytes32()) for _ in range(3)]),
-    # )
 
     # Pi
-    all_validator_stats = AllValidatorStats(
-        [
-            ValidatorStat(
-                blocks=Uint(1),
-                tickets=Uint(1),
-                pre_images=Uint(1),
-                pre_images_size=Uint(1),
-                guarantees=Uint(1),
-                assurances=Uint(1),
-            )
-            for _ in range(VALIDATOR_COUNT)
-        ]
-    )
-    all_core_stats = AllCoreStats(
-        [
-            CoreStat(
-                gas_used=Uint(1),
-                imports=Uint(1),
-                extrinsic_count=Uint(1),
-                extrinsic_size=Uint(1),
-                exports=Uint(1),
-                bundle_size=Uint(1),
-                da_load=Uint(1),
-                popularity=Uint(1),
-            )
-            for _ in range(CORE_COUNT)
-        ]
-    )
-    all_service_stats = AllServiceStats()
-
     components["pi"] = Pi(
-        vals_current=all_validator_stats,
-        vals_last=all_validator_stats,
-        cores=all_core_stats,
-        services=all_service_stats,
+        vals_current=AllValidatorStats.empty(),
+        vals_last=AllValidatorStats.empty(),
+        cores=AllCoreStats.empty(),
+        services=AllServiceStats({})
     )
 
     # Nu and Xi
     components["nu"] = Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
-
     components["xi"] = Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)])
 
     return components

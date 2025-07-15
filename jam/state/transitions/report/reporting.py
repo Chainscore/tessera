@@ -11,20 +11,9 @@ from jam.types.state.sigma import Sigma
 from jam.block import Block
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.work import WorkReport
-from jam.utils.constants import (
-    ACCUMULATION_GAS,
-    MAX_DEPENDENCIES,
-    SIGNING_CONTEXTS,
-    LOOKUP_ANCHOR_MAX_AGE,
-)
-from jam.state.transitions.report.error import ReportingError, ReportingErrorCode
-from jam.utils.constants import (
-    VALIDATOR_COUNT,
-    CORE_COUNT,
-    EPOCH_LENGTH,
-    ROTATION_PERIOD,
-    MAX_WORK_REPORT_SIZE,
-)
+from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, LOOKUP_ANCHOR_MAX_AGE, X
+from jam.report.error import ReportingError, ReportingErrorCode
+from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, MAX_WORK_REPORT_SIZE
 from math import floor
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
@@ -372,8 +361,7 @@ class Reporting:
                 try:
                     Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
                         bytes(signature),
-                        SIGNING_CONTEXTS["guarantee"]
-                        + bytes(Hash.blake2b(x.report.encode())),
+                        X.GUARANTEE + bytes(Hash.blake2b(x.report.encode()))
                     )
                 except InvalidSignature:
                     raise ReportingError(

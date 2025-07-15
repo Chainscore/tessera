@@ -14,7 +14,7 @@ from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, Hash, OpaqueHash
 from jam.types.work import WorkReports
 from jam.utils.constants import (
-    SIGNING_CONTEXTS,
+    X,
     UNAVAILABLE_WORK_EXPIRY,
     VALIDATOR_COUNT,
 )
@@ -111,7 +111,7 @@ class Assurances:
         try:
             Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
                 bytes(signature),
-                SIGNING_CONTEXTS["available"]
+                X.AVAILABLE.value
                 + bytes(Hash.blake2b(bytes(parent) + bitfield.encode())),
             )
         except InvalidSignature:
