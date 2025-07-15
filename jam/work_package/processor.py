@@ -491,12 +491,12 @@ class Processor:
         logger.debug("✅ Received guarantees", cnt=len(responses), guarantees=responses)
 
         from jam.network.protocols.ce_134 import OptCred
-        for (response, validator_index) in responses:
+        for (response, peer) in responses:
             if response != OptCred(Null):
-                cred = response.unwrap()
+                cred = response
                 if cred.work_report_hash == wr_hash:
                     guarantee = ValidatorSignature(
-                        validator_index=validator_index,
+                        validator_index=peer.peer_index,
                         signature=cred.ed25519_signature
                     )
                     guarantees.append(guarantee)
