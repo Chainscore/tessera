@@ -1,5 +1,5 @@
 from dataclasses import field
-from typing import Union, Tuple
+from typing import Self, Union, Tuple
 
 from tsrkit_types import Bytes
 
@@ -98,7 +98,13 @@ class LookupTable:
         return int.from_bytes(Hash.blake2b(self.length.encode() + self.hash.encode()))
 
     def to_json(self):
-        return str(Hash.blake2b(self.length.encode() + self.hash.encode()))
+        return self.encode().hex()
+    
+    @classmethod
+    def from_json(cls, data: dict|str) -> Self:
+        if isinstance(data, dict):
+            return cls(Bytes[32].from_json(data["hash"]), BlobLength(data["length"]))
+        return cls.decode(bytes.fromhex(data))
 
 
 class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):

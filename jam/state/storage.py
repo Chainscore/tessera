@@ -60,7 +60,8 @@ class StateStorage:
 
         latest_block = Finality.load_latest(kv)
         if latest_block is None:
-            raise JamError("LoadUpdates: Not is not yet initialized")
+            return {}
+            # raise JamError("LoadUpdates: Not is not yet initialized")
         
         curr_head = latest_block.header.parent
 

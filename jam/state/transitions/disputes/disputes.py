@@ -56,7 +56,7 @@ class Disputes:
         return False
 
     @staticmethod
-    def transition(state: Sigma, block: Block) -> Sigma:
+    def transition(pre_state: Sigma, state: Sigma, block: Block) -> Sigma:
         # 1. Disputes Transition
 
         # Get Disputes Extrinsic format

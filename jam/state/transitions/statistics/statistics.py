@@ -5,12 +5,13 @@ from jam.block.block import Block
 from jam.types import AllValidatorStats, Sigma, WorkReport
 from jam.types.state.pi import ServiceStat
 from jam.utils.constants import EPOCH_LENGTH, SEGMENT_SIZE
-from tsrkit_types.integers import Uint
+from tsrkit_types import Uint
 
 
 class Statistics:
     @staticmethod
     def transition(
+        pre_state: Sigma,
         state: Sigma,
         block: Block,
         available_wrs: List[WorkReport],
@@ -87,17 +88,6 @@ class Statistics:
         for preimage in block.extrinsic.preimages:
             if preimage.blob is not None:
                 p.append(preimage.requester)
-
-        pi_service = pi.services
-        for preimage in block.extrinsic.preimages:
-            if preimage.blob is not None:
-                if preimage.requester not in pi_service:
-                    pi_service[preimage.requester] = ServiceStat.empty()
-                curr_service_stat = pi_service[preimage.requester]
-                curr_service_stat.provided_count += 1
-                curr_service_stat.provided_size += len(preimage.blob)
-
-        pi.services = pi_service
 
         state.pi = pi
 

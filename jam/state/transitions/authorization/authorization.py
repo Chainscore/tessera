@@ -6,7 +6,7 @@ from jam.utils.constants import CORE_COUNT
 
 class Authorization:
     @staticmethod
-    def transition(state: Sigma, block: Block) -> Sigma:
+    def transition(pre_state: Sigma, state: Sigma, block: Block) -> Sigma:
         """
         Transition the state with Authorization logic.
 

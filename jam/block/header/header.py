@@ -14,13 +14,11 @@ from jam.types import (
     TimeSlot,
     ValidatorIndex,
 )
-from dot_ring.vrf.ring.ring_vrf import RingVrf 
-from dot_ring.vrf.ietf.ietf import IETF_VRF
 
 from .epoch_mark import EpochMark
 from .offenders_mark import OffendersMark
 from .tickets_mark import TicketsMark
-
+from py_ark_vrf import prove_ietf, vrf_output
 
 @structure
 class Header:
@@ -86,20 +84,17 @@ class Header:
             else SIGNING_CONTEXTS["fallback_seal"] + eta.encode()
         )
         header.seal = BandersnatchVrfSignature(
-            IETF_VRF.proof(
-                alpha=header.encode_unsigned(),
-                secret_key=settings.bandersnatch_private,
-                additional_data=context,
-                salt=b"",
+            prove_ietf(
+                settings.bandersnatch_private,
+                context,
+                header.encode_unsigned(),
             )
         )
         header.entropy_source = BandersnatchVrfSignature(
-            IETF_VRF.proof(
-                alpha=b"",
-                secret_key=settings.bandersnatch_private,
-                additional_data=SIGNING_CONTEXTS["entropy"]
-                + RingVrf.pedersen_proof_to_hash(header.seal),
-                salt=b"",
+            prove_ietf(
+                settings.bandersnatch_private,
+                SIGNING_CONTEXTS["entropy"] + vrf_output(header.seal),
+                b"",
             )
         )
 

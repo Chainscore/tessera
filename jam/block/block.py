@@ -48,9 +48,9 @@ class Block:
         """
         Load the block for the given slot from DB
         """
-        if bytes(header_hash) == bytes(32):
-            # Return genesis block
-            return Block.genesis()
+        # if bytes(header_hash) == bytes(32):
+        #     # Return genesis block
+        #     return Block.genesis()
 
         data = db.get(cls.get_storage_key_block(header_hash))
         if data is None:

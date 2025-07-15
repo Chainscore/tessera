@@ -1,6 +1,6 @@
 from typing import Dict, Set, List
 
-from tsrkit_types import Bytes
+from tsrkit_types import Bytes, Uint, Null
 
 from jam.logging import get_logger
 from jam.utils.merkle import MMRFunctions
@@ -29,8 +29,6 @@ from math import floor
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 from jam.state.transitions.report.guarantee_assignment import guarantor_assignment
-from tsrkit_types.integers import Uint
-from tsrkit_types.null import Null
 
 logger = get_logger("import")
 
@@ -39,7 +37,7 @@ class Reporting:
 
     @staticmethod
     def transition(
-        state: Sigma, block: Block, known_packages: List[OpaqueHash] = []
+        pre_state: Sigma, state: Sigma, block: Block, known_packages: List[OpaqueHash] = []
     ) -> Sigma:
         """
         Description:

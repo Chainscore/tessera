@@ -26,6 +26,7 @@ class RecentHistory:
 
     @staticmethod
     def transition(
+        pre_state: Sigma,
         state: Sigma,
         block: Block,
         accumulate_root=Bytes[32]([0] * 32),

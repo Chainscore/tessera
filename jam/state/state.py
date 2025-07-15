@@ -11,7 +11,7 @@ from jam.state.ghost import GhostState
 from jam.utils.trie.merkle import StateTrie
 from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
-from tsrkit_types import Bytes, Codable, Dictionary
+from tsrkit_types import Bytes, Codable, Dictionary, TypedVector
 from jam.types import (
     Hash,
     Alpha,
@@ -170,16 +170,9 @@ class State:
 
         self._lock = True
 
-        from jam.state.transitions.accumulation import Accumulation
-        from jam.state.transitions.report import Reporting
-        from jam.state.transitions.authorization.authorization import Authorization
-        from jam.state.transitions.recent_history import RecentHistory
-        from jam.state.transitions.safrole import Safrole
-        from jam.state.transitions.assurances.assurances import Assurances
-        from jam.state.transitions.disputes import Disputes
-        from jam.state.transitions.preimages import Preimages
-        from jam.state.transitions.statistics.statistics import Statistics
+        from jam.state.transitions import Accumulation, Reporting, Authorization, RecentHistory, Safrole, Assurances, Disputes, Preimages, Statistics
         from jam.settings import settings as _set
+        from jam.finality.finality import Finality
 
         try:
             header_hash = HeaderHash(block.header.hash())
@@ -206,6 +199,8 @@ class State:
                 self._lock = False
                 return
 
+            pre_state = self.load()
+
             beta = self.beta
             # Step 1
             if len(beta):
@@ -214,55 +209,55 @@ class State:
 
             # Disputes
             logger.debug("Processing disputes...")
-            Disputes.transition(self, block)
+            Disputes.transition(pre_state, self, block)
 
             # Reporting
             logger.debug("Processing reporting...")
-            Reporting.transition(self, block, [])
+            Reporting.transition(pre_state, self, block, [])
 
             # Assurances
             logger.debug("Processing assurances...")
-            _, newly_avail_wrs = Assurances.transition(self, block)
+            _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
 
             # Accumulation
             logger.debug(
                 "Processing accumulation...", newly_available_count=len(newly_avail_wrs)
             )
             _, commitment_map = Accumulation.transition(
-                self, block, newly_avail_wrs=newly_avail_wrs
+                pre_state, self, block, newly_avail_wrs=newly_avail_wrs
             )
 
             # Authorization
             logger.debug("Processing authorization...")
-            Authorization.transition(self, block)
+            Authorization.transition(pre_state, self, block)
 
             # Recent History
             logger.debug(
                 "Processing recent history...", commitment_count=len(commitment_map)
             )
             history_merkle = BMRFunctions().wb_merkle_fn(
-                sorted(
+                TypedVector[Bytes[32]](sorted(
                     [
                         Bytes(comm[0].encode() + comm[1].encode())
                         for comm in commitment_map
                     ]
-                ),
+                )),
                 Hash.keccak256,
             )
-            RecentHistory.transition(self, block, history_merkle)
+            RecentHistory.transition(pre_state, self, block, history_merkle)
 
             # Preimages
             logger.debug("Processing preimages...")
-            Preimages.transition(self, block)
+            Preimages.transition(pre_state, self, block)
 
             # Statistics
             logger.debug("Processing statistics...")
-            Statistics.transition(self, block, newly_avail_wrs)
+            Statistics.transition(pre_state, self, block, newly_avail_wrs)
 
             # Safrole
             logger.debug("Processing safrole...")
-            vrf_output = Safrole.vrf_output(block.header.entropy_source)
-            Safrole.transition(self, block, vrf_output)
+            vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
+            Safrole.transition(pre_state, self, block, vrf_output)
 
             state.settle(header_hash)
 
@@ -283,8 +278,7 @@ class State:
 
         except JamError as jam_e:
             logger.error(
-                "Invalid block",
-                error=jam_e,
+                "Invalid block", error=jam_e,
                 hh=block.header.hash().hex(),
                 slot=block.header.slot,
             )

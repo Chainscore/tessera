@@ -1,3 +1,4 @@
+from jam.types.state.pi import ServiceStat
 from copy import deepcopy
 from tsrkit_types import Bytes
 from jam.state.transitions.preimages.errors import PreimageError, PreimageErrorEnum
@@ -11,7 +12,7 @@ from jam.types.protocol.core import BlobLength
 
 class Preimages:
     @staticmethod
-    def transition(state: Sigma, block: Block) -> Sigma:
+    def transition(pre_state: Sigma, state: Sigma, block: Block) -> Sigma:
         """
         Transition the state with Preimages logic.
 
@@ -33,15 +34,17 @@ class Preimages:
             lookup_key = LookupTable(
                 hash=hashed_blob, length=BlobLength(len(preimage.blob))
             )
+
             if (
-                account.lookup[lookup_key] is None
-                or len(account.lookup[lookup_key]) != 0
+                account.lookup.get(lookup_key) is None
+                or len(account.lookup.get(lookup_key)) != 0
             ):
                 raise PreimageError(
                     PreimageErrorEnum.PREIMAGE_UNNEEDED,
                     "Preimage metadata does not exist",
                 )
-
+        
+        pi = state.pi 
         for preimage in block.extrinsic.preimages:
             # Add the preimage to the account
             account = state.delta[preimage.requester]
@@ -54,6 +57,12 @@ class Preimages:
             metadata = account.lookup[lookup_key]
             metadata.append(block.header.slot)
             account.lookup[lookup_key] = metadata
+            if preimage.requester not in pi.services:
+                pi.services[preimage.requester] = ServiceStat.empty()
+            curr_service_stat = pi.services[preimage.requester]
+            curr_service_stat.provided_count += 1
+            curr_service_stat.provided_size += len(preimage.blob)
+        state.pi = pi
 
         return state
 
