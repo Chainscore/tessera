@@ -15,7 +15,7 @@ from tsrkit_types import Bytes, U64, U32, Null
 from jam.block import Block
 from jam.utils.constants import (
     EPOCH_LENGTH,
-    SIGNING_CONTEXTS,
+    X, 
     TICKET_SUBMISSION_END,
     TICKET_ENTRIES_PER_VALIDATOR,
     MAX_TICKETS_PER_EXTRINSIC,
@@ -162,21 +162,17 @@ class Safrole:
                 gamma.s = GammaS(GammaSTickets(outside_in(pre_state.gamma.a)))
             # Else use the fallback mechanism
             else:
-                logger.warning(
-                    "Falling to Fallback mode", tickets_collected=len(state.gamma.a)
-                )
+                logger.warning("Falling to Fallback mode", tickets_collected=len(state.gamma.a))
                 # Else fallback: use bandersnatch keys
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
             # 4. 4. Update ring root using gamma k
-            gamma.z = GammaZ(
-                Safrole.compute_ring_root([k.bandersnatch for k in gamma.k])
-            )
+            gamma.z = GammaZ(Safrole.compute_ring_root([k.bandersnatch for k in gamma.k]))
 
         for ticket in block.extrinsic.tickets:
             # Signature must be valid Ring-VRF proof
             if not Safrole.verify_vrf(
-                SIGNING_CONTEXTS["ticket_seal"] + eta[2] + ticket.attempt.encode(),
+                X.TICKET.value + eta[2] + ticket.attempt.encode(),
                 gamma.z,
                 [k.bandersnatch for k in gamma.k],
                 ticket.signature,

@@ -1,7 +1,7 @@
 """Constants for the JAM protocol as defined in the specification."""
 from tsrkit_types import Enum
 
-from jam.config.chainspec import chain_config
+from jam.utils.chainspec import chain_config
 
 # ───────────────────────────────────────
 # Constants (I.4.4, JAM Graypaper Order)

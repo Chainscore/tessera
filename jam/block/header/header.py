@@ -3,7 +3,7 @@ from typing import Optional
 from jam.block.errors import BlockError, BlockErrorCode
 from jam.block.extrinsics.extrinsic import Extrinsic
 from jam.block.extrinsics.tickets import TicketEnvelope
-from jam.utils.constants import EPOCH_LENGTH, SIGNING_CONTEXTS 
+from jam.utils.constants import EPOCH_LENGTH, X 
 from tsrkit_types import Option, structure
 from jam.types import (
     BandersnatchVrfSignature,
@@ -79,9 +79,9 @@ class Header:
 
         # Fallback / Ticket context
         context = (
-            SIGNING_CONTEXTS["ticket_seal"] + eta.encode() + ticket.attempt.encode()
+            X.TICKET + eta.encode() + ticket.attempt.encode()
             if ticket
-            else SIGNING_CONTEXTS["fallback_seal"] + eta.encode()
+            else X.FALLBACK + eta.encode()
         )
         header.seal = BandersnatchVrfSignature(
             prove_ietf(
@@ -93,7 +93,7 @@ class Header:
         header.entropy_source = BandersnatchVrfSignature(
             prove_ietf(
                 settings.bandersnatch_private,
-                SIGNING_CONTEXTS["entropy"] + vrf_output(header.seal),
+                X.ENTROPY + vrf_output(header.seal),
                 b"",
             )
         )
