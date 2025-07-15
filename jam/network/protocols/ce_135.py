@@ -17,8 +17,11 @@ from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 from jam.work_package.stores.mappings import ReportHashAssurerMap, ErasureAssurerMap
 from jam.merklization import BMRFunctions
-from jam.types.work.shard import ShardKey
 from jam.utils.gather import gather_with_exceptions
+
+from jam.types.work.manifest import Justification
+from jam.types.work.shard import SegmentsShard, ShardKey
+from jam.utils.chainspec import chain_config
 
 @structure
 class CE135Data:
@@ -246,3 +249,42 @@ class WorkReportDistribution(NetworkProtocol):
             # give assurance for this core & this validator
             from jam.operations.assr_collector import assr_collector
             assr_collector.record_shard_assr(report.core_index)
+
+            # saving justification for shard assigned to itself
+            from jam.settings import settings
+
+            er_root = report.package_spec.erasure_root
+            shard_index = node.get_shard_index(report.core_index)
+            d3l = settings.d3l
+            audit = settings.audit_da
+
+            # Fetch Bundle Shard
+            bs_da = AuditShardsDA(audit)
+            bs_dict = bs_da.get(er_root)
+
+            # Fetch Segments Shard
+            ss_da = SegmentShardsDA(d3l)
+            ss_dict = ss_da.get(er_root)
+            if shard_index not in ss_dict:
+                raise "Shard not found"
+
+            bundle_shard_indices = bs_dict.keys()
+            segment_shard_indices = ss_dict.keys()
+
+            if len(bundle_shard_indices) != chain_config.num_validators or len(
+                    segment_shard_indices) != chain_config.num_validators:
+                raise ValueError(f"Length of both type of shards should be {chain_config.num_validators}")
+
+            bmrfunctions = BMRFunctions()
+            s = TypedVector[Bytes]([])
+            for i in range(chain_config.num_validators):
+                bundle_shard_hash = Hash.blake2b(bs_dict[i].encode())
+                segment_shard = SegmentsShard(ss_dict[i].shard)
+                segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
+                shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+                s.append(Bytes(shards_key.encode()))
+
+            justification = Justification(bmrfunctions.trace_fn(values=s, index=shard_index).unwrap())
+
+            justification_da = JustificationsDA(audit)
+            justification_da.put(er_root, shard_index, justification)
