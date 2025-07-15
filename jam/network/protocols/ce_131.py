@@ -1,3 +1,4 @@
+import asyncio
 from typing import cast
 from tsrkit_types import structure, Uint, Bool, U32
 
@@ -9,6 +10,7 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types.protocol.crypto import BandersnatchRingVrfSignature
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.utils.constants import VALIDATOR_COUNT
+from jam.network.protocols.ce_132 import SafroleTicketDistribution
 
 # Module-specific logger
 logger = get_logger("network")
@@ -57,11 +59,18 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         # TODO: select proxy validator from next epochs validator list
         signature = data.epoch_ticket.ticket.signature
 
-        proxy_validator_index = int.from_bytes(signature[-4:], 'big') % VALIDATOR_COUNT
+        proxy_validator_index = Uint.from_bytes(signature[-4:], 'big') % VALIDATOR_COUNT
 
         if proxy_validator_index == node.validator_index:
-            ...
-            # TODO: Transmit using ce_132
+
+            logger.debug(
+                "Proxy validator is equal to generator validator index, transmitting ticket using CE132",
+                node_name=node.name,
+            )
+            from jam.network.node import node
+            CE132 = SafroleTicketDistribution()
+            return await CE132.transmit(node, data)
+
         else:
             for peer in node.peer_conn:
                 if peer.peer_index == proxy_validator_index:
@@ -122,7 +131,9 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
             #TODO: verify the proof and check you are the correct proxy
 
-            #TODO: forward the ticket to all current validators
+            from jam.network.node import node
+            CE132 = SafroleTicketDistribution()
+            responses = asyncio.create_task(CE132.transmit(node, data))
 
             # Return acknowledgment to validator
             ack = b""
