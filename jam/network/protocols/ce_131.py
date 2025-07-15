@@ -29,7 +29,7 @@ class CE131Data:
             return True
         return False
 
-class SafroleTicketDistribution(NetworkProtocol):
+class SafroleTicketProxyDistribution(NetworkProtocol):
     """
     CE 131 Protocol for transmitting ticket to proxy validator
 
