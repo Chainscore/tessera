@@ -1,6 +1,6 @@
 from typing import Tuple, Dict, List
 
-from tsrkit_types import Vector
+from tsrkit_types import Vector, Uint
 
 from jam.logging import get_logger
 from jam.network.protocols.ce_137 import ShardDistributionProtocol
@@ -18,7 +18,7 @@ from jam.types.work.manifest import (
     Extrinsics,
     SegmentDict,
     MultiJustifications,
-    MultiExtrinsics, Extrinsic, Segment
+    MultiExtrinsics, Extrinsic, Segment, Assurers
 )
 
 from jam.types.work import SegmentRootLookup
@@ -28,7 +28,8 @@ from jam.types.protocol.crypto import OpaqueHash
 
 from jam.merklization.binary_merkle import BMRFunctions
 
-from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
+from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap, ErasureAssurerMap
+from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
 from jam.types.work.shard import ShardIndex, SegmentShard
 
@@ -88,10 +89,10 @@ class Bundler:
             r if r is already a segment root else Segment root from dictionary if r is a work package hash.
         """
         if self.sr_lookup is not None and r in self.sr_lookup.keys():
-            logger.debug("Lookup Hit")
+            logger.debug("Lookup Hit", wp_hash=r.hex()[:16]+"...")
             return self.sr_lookup[r]
         else:
-            logger.debug("Lookup Miss")
+            logger.debug("Lookup Miss", root=r.hex()[:16]+"...")
             return r
 
     @staticmethod
@@ -140,6 +141,8 @@ class Bundler:
         seg_da = SegmentsDA(d3l)
         sr_er_da = SegmentErasureMap(d3l)
         shards_da = SegmentShardsDA(d3l)
+        er_ar_da = ErasureAssurerMap(d3l)
+        wr_da = ReportsDA(d3l)
 
         erasure_code = ErasureCode()
 
@@ -154,16 +157,17 @@ class Bundler:
             h = spec.tree_root
             n = spec.index
 
-            if h in import_map:
-                import_map[h].append(n)
+            r = self.lookup_root(h)
+            if r in import_map:
+                import_map[r].append(n)
             else:
-                import_map[h] = [n]
+                import_map[r] = [n]
 
         fetched_imports: Dict[Tuple[SegmentRoot,SegmentIndex], Segment] = {}
         # requested_shards: Dict[Tuple[SegmentRoot,SegmentIndex], Dict[ShardIndex, Tuple[Assurers, ErasureRoot]]] = {}
 
-        for h, seg_indices in import_map.items():
-            s_root = self.lookup_root(h)
+        for s_root, seg_indices in import_map.items():
+            # s_root = self.lookup_root(h)
             logger.debug(f"Fetching segments with root {s_root}")
 
             for n in seg_indices:
@@ -174,7 +178,7 @@ class Bundler:
                         segments = seg_dict[s_root]
                         fetched_imports[(s_root,n)] = segments[n]
 
-                    # If cache miss, check in DB, and cache it
+                    # If cache miss, check in DB, and cache it..............
                     else:
                         logger.debug("Cache Miss")
                         segments, _ = seg_da.get(s_root)
@@ -188,6 +192,11 @@ class Bundler:
 
                     # Get Erasure Root
                     e_root = sr_er_da.get(s_root)
+                    wr_hash, assurers = er_ar_da.get(e_root)
+                    wr = wr_da.get(wr_hash)
+
+
+
                     try:
                         # CASE: Not enough shards available
                         # CASE: Enough shards available
@@ -261,7 +270,7 @@ class Bundler:
                     raise KeyError("Segments not found")
 
                 segments = seg_dict[s_root]
-                pages = self.merkle.merkle_path_fn(segments, 0, int(n))
+                pages = self.merkle.merkle_path_fn(segments, Uint(0), n)
                 justification = Justification(pages.unwrap())
 
                 justifications.append(justification)
@@ -279,20 +288,22 @@ class Bundler:
 
         for j, item in enumerate(p.items):
             # Fetch Imports
-            logger.debug("Fetching imports..")
+            logger.debug("Fetching imports..", work_item=j)
             imports = self.fetch_imports(item)
             all_imp.append(imports)
 
             # Fetch Justifications
-            logger.debug("Compiling justifications..")
+            logger.debug("Compiling justifications..", work_item=j)
             justifications = self.fetch_justifications(item, j)
             all_jfn.append(justifications)
 
             # Fetch Extrinsics
-            logger.debug("Processing extrinsics..")
-            if len(x) > j:
+            logger.debug("Processing extrinsics..", work_item=j)
+            if len(x) == j:
                 extrinsics = self.fetch_extrinsics(item, x[j])
                 all_ext.append(extrinsics)
+            else:
+                logger.error("Invalid extrinsics length", expected_len=len(p.items), got_len=len(x), work_item=j)
 
         logger.debug("Compiling bundle..")
         bundle = WorkPackageBundle(p, all_ext, all_imp, all_jfn)

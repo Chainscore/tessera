@@ -52,8 +52,9 @@ class StateRequest(NetworkProtocol):
 		stream_data = data.encode()
 
 		logger.info(
-			"Transmitting state request to node", node_name=node.name,
-			header_hash=data.header, start=data.start, end=data.end, max_len=data.max_size,
+			"Transmitting state request to node",
+			header_hash=data.header,
+			start=data.start, end=data.end, max_len=data.max_size,
 		)
 
 		transmitted_count = 0
@@ -69,21 +70,20 @@ class StateRequest(NetworkProtocol):
 
 				logger.debug(
 					"State request transmitted to node",
-					node_name=node.name,
+					peer=peer,
 					stream_id=stream_id
 				)
 			except Exception as e:
 				responses.append(None)
 				logger.error(
 					"Failed to transmit state request",
-					node_name=node.name,
+					peer=peer,
 					error=str(e),
 					error_type=type(e).__name__
 				)
 
 		logger.info(
 			"State request transmission completed",
-			node_name=node.name,
 			transmitted_to=transmitted_count,
 		)
 
@@ -98,6 +98,7 @@ class StateRequest(NetworkProtocol):
 		try:
 			logger.debug(
 				"Received state request",
+				peer=server.peer,
 				stream_id=stream_id,
 				buffer_size=len(buffer)
 			)
@@ -123,6 +124,7 @@ class StateRequest(NetworkProtocol):
 
 			logger.debug(
 				"Start and End boundaries shared successfully",
+				peer=server.peer,
 				stream_id=stream_id,
 				len=len(boundaries_data)
 			)
@@ -141,6 +143,7 @@ class StateRequest(NetworkProtocol):
 			logger.info(
 				"State response complete. Closed stream",
 				stream_id=stream_id,
+				peer=server.peer,
 				size=len(key_val_data)
 			)
 
@@ -148,6 +151,7 @@ class StateRequest(NetworkProtocol):
 			logger.error(
 				"Error processing state request",
 				stream_id=stream_id,
+				peer=server.peer,
 				buffer_size=len(buffer),
 				error=str(e),
 				error_type=type(e).__name__
@@ -160,6 +164,7 @@ class StateRequest(NetworkProtocol):
 		logger.info(
 			"State request ack received",
 			stream_id=stream_id,
+			peer=client.peer,
 			buffer_size=len(buffer)
 		)
 

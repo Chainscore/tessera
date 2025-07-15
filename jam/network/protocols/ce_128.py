@@ -143,6 +143,7 @@ class BlockRequest(NetworkProtocol):
             from jam.settings import settings
             logger.debug(
                 "Received block request",
+                peer=server.peer,
                 stream_id=stream_id,
                 buffer_size=len(buffer)
             )
@@ -159,6 +160,7 @@ class BlockRequest(NetworkProtocol):
             logger.info(
                 "Processing block request",
                 stream_id=stream_id,
+                peer=server.peer,
                 header_hash=header_hash,
                 direction=data.dir,
                 max_blocks=data.max_blocks,
@@ -186,11 +188,13 @@ class BlockRequest(NetworkProtocol):
 
             # Get all header hashes in between
             all_blocks = []
+            blocks_enc = b""
             hh = data.header  
-            while hh != HeaderHash(32) and len(all_blocks) != int(data.max_blocks):
+            while hh != HeaderHash(32) or len(all_blocks) != int(data.max_blocks):
                 _block = Block.decode(settings.main_db.get(Block.get_storage_key_block(hh)))
                 if _block:
                     all_blocks.append(_block)
+                    blocks_enc += _block.encode()
                     hh = _block.header.parent
                 else:
                     logger.error(
@@ -199,7 +203,6 @@ class BlockRequest(NetworkProtocol):
                         timeslot=data.header.slot
                     )
 
-            blocks_enc = TypedArray[Block, data.max_blocks](all_blocks).encode()
             len_enc = U32(len(blocks_enc))
 
             server.stream_and_keep_open(stream_id=stream_id, message=len_enc.encode())
@@ -208,13 +211,15 @@ class BlockRequest(NetworkProtocol):
             logger.info(
                 "Blocks request completed successfully. Closed stream",
                 stream_id=stream_id,
-                len=len(blocks_enc)
+                peer=server.peer,
+                blocks=len(all_blocks)
             )
 
         except Exception as e:
             logger.error(
                 "Error processing block request",
                 stream_id=stream_id,
+                peer=server.peer,
                 buffer_size=len(buffer),
                 error=str(e),
                 error_type=type(e).__name__
@@ -226,6 +231,7 @@ class BlockRequest(NetworkProtocol):
 
         logger.info(
             "Block request ack received",
+            peer=client.peer,
             stream_id=stream_id,
             buffer_size=len(buffer)
         )
