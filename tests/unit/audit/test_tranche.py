@@ -83,4 +83,11 @@ async def test_tranche_engine():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_tranche_engine())
+    # asyncio.run(test_tranche_engine())
+    with tempfile.TemporaryDirectory() as tmpdir:
+        jam.settings.setup_setting(data_path=tmpdir, seed=0)
+        db: RockStore = jam.settings.settings.main_db
+
+        # Set up JAM initial genesis state
+        setup_state(db, GhostState.genesis())
+        print("yo")

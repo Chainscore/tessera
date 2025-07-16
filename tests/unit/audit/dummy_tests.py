@@ -1,21 +1,23 @@
 import json
 import os
 from typing import Any, Dict
+import random
 
-from tsrkit_types import Bytes, Uint
-from tsrkit_types.sequences import TypedVector
-from tsrkit_types.null import Null
+os.environ["JAM_CHAIN_SPEC"] = "full"
+
+from tsrkit_types import Bytes, Null, Uint
+from tsrkit_types.option import Option
+from tsrkit_types.sequences import TypedArray, TypedVector
 
 from jam.types.protocol.core import CoreIndex, ErasureRoot, ExportsRoot, Gas, ServiceId, TimeSlot, WorkPackageHash
 from jam.types.protocol.crypto import BeefyRoot, HeaderHash, OpaqueHash, StateRoot
+from jam.types.state.rho import OptionalWorkReportState, Rho, WorkReportState
 from jam.types.work.execution import RefineContext, RefineLoad, WorkExecResult, WorkResult, WorkResults
 from jam.types.work.item import ExtrinsicSpec, ExtrinsicSpecs, ImportSpec, ImportSpecs, WorkItem
 from jam.types.work.package import Authorizer, WorkItems, WorkPackage, WorkPackageSpec
 from jam.types.work.manifest import SegmentRootLookup
-from jam.types.work.report import WorkReport
-from jam.types.state.rho import Rho, OptionalWorkReportState # Added import
-
-CORE_COUNT = 341 # Set CORE_COUNT directly for this test file
+from jam.types.work.report import WorkReport, WorkReports
+from jam.utils.constants import CORE_COUNT
 
 
 def work_package_from_json(data: Dict[str, Any]) -> WorkPackage:
@@ -138,37 +140,45 @@ def main():
     with open(file_path, 'r') as f:
         raw_data = json.load(f)
 
+    wp_dict={}
+    wr_dict={} # Consists of wr_hash to workPackages
+    # Corrected dummy_rho initialization
+    dummy_rho = Rho([OptionalWorkReportState(None) for _ in range(CORE_COUNT)])
+
+    # print(dummy_rho)
+    available_wrs=WorkReports([])
     if raw_data:
         # --- Process WorkPackage --- #
-        package_json = raw_data[1]['work_package']
-        work_package_obj = work_package_from_json(package_json)
-        print("Successfully created WorkPackage object from index [1].")
-        try:
-            encoded_package = work_package_obj.encode()
-            print(f"Successfully encoded WorkPackage object. Length: {len(encoded_package)} bytes")
-        except Exception as e:
-            print(f"Failed to encode WorkPackage object: {e}")
+        for package in raw_data:
+            package_json = package['work_package']
+            random_core=random.randrange(0, CORE_COUNT+1)
+            work_package_obj = work_package_from_json(package_json)
+            try:
+                encoded_package = work_package_obj.encode().hex()
+                wp_dict[encoded_package] = work_package_obj
+            except Exception as e:
+                print(f"Failed to encode WorkPackage object: {e}")
 
-        print("-" * 20)
 
-        # --- Process WorkReport --- #
-        report_json = raw_data[1]['work_rep']
-        work_report_obj = work_report_from_json(report_json)
-        print("Successfully created WorkReport object from index [1].")
-        try:
-            encoded_report = work_report_obj.encode()
-            print(f"Successfully encoded WorkReport object. Length: {len(encoded_report)} bytes")
-        except Exception as e:
-            print(f"Failed to encode WorkReport object: {e}")
+            # --- Process WorkReport --- #
+            report_json = package['work_rep']
+            report_json['core_index']=CoreIndex(random_core)
+            work_report_obj = work_report_from_json(report_json)
+            try:
+                encoded_report = work_report_obj.encode().hex()
+                wr_dict[encoded_report] = work_package_obj
+                available_wrs.append(work_report_obj)
+                # Corrected assignment to dummy_rho
+                dummy_rho[random_core]=OptionalWorkReportState(WorkReportState(
+                    report=work_report_obj,
+                    timeout=TimeSlot(20)))
+            except Exception as e:
+                print(f"Failed to encode WorkReport object: {e}")
 
-        print("-" * 20)
+    for index in enumerate(dummy_rho):
+        if index:
+            print(index)
 
-        # --- Create dummy_rho --- #
-        try:
-            dummy_rho = Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)])
-            print(f"Successfully created dummy_rho object of type {type(dummy_rho)} with {len(dummy_rho)} elements.")
-        except Exception as e:
-            print(f"Failed to create dummy_rho object: {e}")
 
 if __name__ == "__main__":
     main()

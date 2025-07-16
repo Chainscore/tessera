@@ -6,7 +6,7 @@ from tsrkit_types.sequences import TypedVector
 from tsrkit_types.dictionary import Dictionary
 
 
-from jam.state.state import State
+# from jam.state.state import State
 from jam.utils.constants import AUDIT_PERIOD, VALIDATOR_COUNT
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import Hash
@@ -19,10 +19,9 @@ from jam.types.work.report import WorkReportHash
 logger = get_logger("tranche_engine")
 
 class TrancheEngine:
-    def __init__(self, db: RockStore, slot: TimeSlot,state:State):
+    def __init__(self, db: RockStore, slot: TimeSlot):
            self.db = db
            self.slot = slot
-           self.state = state
            # in-RAM cache: tranche_index → TrancheState
            self._cache: Dictionary[Uint, TrancheState] = Dictionary[Uint, TrancheState]({})
            # make sure tranche #0 is seeded
