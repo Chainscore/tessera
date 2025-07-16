@@ -3,7 +3,6 @@ from collections import deque
 
 from tsrkit_types import TypedVector, U32
 
-from jam.state.state import State
 from jam.types import Block, TimeSlot
 
 from jam.utils.shuffle import shuffle
@@ -23,6 +22,8 @@ def assign_guarantors(slot: TimeSlot = None, epoch = 0):
     """
 
     # ------ Fetch State --------
+    from jam.state.state import State
+
     if slot :
         from jam.settings import settings
 

@@ -3,7 +3,6 @@ import tempfile
 
 import jam.settings
 from jam.state.ghost import GhostState
-from jam.state.state import setup_state
 
 from rockstore import RockStore
 
@@ -85,6 +84,8 @@ async def test_tranche_engine():
 if __name__ == "__main__":
     # asyncio.run(test_tranche_engine())
     with tempfile.TemporaryDirectory() as tmpdir:
+        from jam.state.state import setup_state
+
         jam.settings.setup_setting(data_path=tmpdir, seed=0)
         db: RockStore = jam.settings.settings.main_db
 
