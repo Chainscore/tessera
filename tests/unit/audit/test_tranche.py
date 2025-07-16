@@ -14,14 +14,10 @@ from tsrkit_types.sequences import TypedVector
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.integers import Uint
 
-<<<<<<< HEAD
 from jam.logging import get_logger
-=======
 from datetime import datetime
 
-from jam.logging import get_logger
 from jam.utils.constants import AUDIT_PERIOD
->>>>>>> tests/tranche
 
 logger = get_logger("tranche_test")
 
@@ -36,15 +32,9 @@ def create_test_tranche_state() -> TrancheState:
 
     unaudited_list = TypedVector[WorkReportHash]([wr1, wr2])
 
-<<<<<<< HEAD
-    judgments = Dictionary[WorkReportHash, AuditRecord]({
-        wr1: AuditRecord.dummy(),
-        wr2: AuditRecord.dummy()
-=======
     judgments = Dictionary[WorkReportHash, JudgmentRecord]({
         wr1: JudgmentRecord.dummy(),
         wr2: JudgmentRecord.dummy()
->>>>>>> tests/tranche
     })
 
     valid_set = TypedVector[WorkReportHash]([])
@@ -65,35 +55,6 @@ async def test_tranche_engine():
     - Runs TrancheEngine
     - Prints final state for verification
     """
-
-<<<<<<< HEAD
-    with tempfile.TemporaryDirectory() as tmpdir:
-        jam.settings.setup_setting(data_path=tmpdir, seed=0)
-        db: RockStore = jam.settings.settings.main_db
-
-        # Set up JAM initial genesis state
-        setup_state(db, GhostState.genesis())
-
-        slot_index = Uint(0)
-        tranche_index = Uint(0)
-        tranche = Tranche(tranche_index=Uint(tranche_index), slot_index=Uint(slot_index))
-        initial_state = create_test_tranche_state()
-        tranche.save_state(db, initial_state)
-
-        logger.info("✅ Initial TrancheState saved for testing.")
-
-        # Run the TrancheEngine for timeslot=0
-        engine = TrancheEngine(db=db,slot=slot_index)
-        await engine.run()
-
-        # Load and print final state for verification
-        final_state = tranche.load_state(db)
-
-        print("\n✅ Final TrancheState after TrancheEngine run:")
-        print(f"Valid WRs: {[wr.hex()[:16] for wr in final_state.valid_set]}")
-        print(f"Invalid WRs: {[wr.hex()[:16] for wr in final_state.invalid_set]}")
-        print(f"Remaining unaudited WRs: {[wr.hex()[:16] for wr in final_state.unaudited_list]}")
-=======
 
     slot_index = Uint(0)
     tranche_index = Uint(0)
@@ -121,22 +82,9 @@ async def test_tranche_engine():
     print(f"Valid WRs: {[wr.hex()[:16] for wr in final_state.valid_set]}")
     print(f"Invalid WRs: {[wr.hex()[:16] for wr in final_state.invalid_set]}")
     print(f"Remaining unaudited WRs: {[wr.hex()[:16] for wr in final_state.unaudited_list]}")
->>>>>>> tests/tranche
 
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-    # asyncio.run(test_tranche_engine())
-    with tempfile.TemporaryDirectory() as tmpdir:
-        from jam.state.state import setup_state
 
-        jam.settings.setup_setting(data_path=tmpdir, seed=0)
-        db: RockStore = jam.settings.settings.main_db
-
-        # Set up JAM initial genesis state
-        setup_state(db, GhostState.genesis())
-        print("yo")
-=======
     asyncio.run(test_tranche_engine())
->>>>>>> tests/tranche
