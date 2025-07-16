@@ -76,4 +76,4 @@ logs/
 packets/
 
 # Ignore polkajam binary
-polkajam/
+polkajam

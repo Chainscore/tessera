@@ -94,6 +94,10 @@ class BlockAnnouncement(NetworkProtocol):
         except Exception as e:
             logger.error(f"Error occurred while loading final block {e}")
             final_block = Block.genesis()
+        
+        if not final_block:
+            logger.error("No final block found, using genesis block.")
+            final_block = Block.genesis()
 
         header_hash = Hash.blake2b(final_block.header.encode())
         block_slot = final_block.header.slot

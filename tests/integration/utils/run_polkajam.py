@@ -12,7 +12,8 @@ async def run_pj_command(node_id: int):
     global proc
     print("file", __file__)
     binary_path = str(Path(__file__).parents[3] / "polkajam")
-    command = f"exec {binary_path}/polkajam run --dev-validator {node_id} -t"
+    envs = "" # "RUST_LOG=quinn_proto=trace"
+    command = f"export {envs} && exec {binary_path}/polkajam run --dev-validator {node_id} -t"
     try:
         proc = await asyncio.create_subprocess_shell(
             command,

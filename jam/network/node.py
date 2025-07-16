@@ -1,4 +1,6 @@
+from aioquic.asyncio.protocol import QuicConnectionProtocol
 import asyncio
+import socket
 import ssl
 
 from aioquic.asyncio import serve, connect
@@ -230,48 +232,95 @@ class Node:
         self.server = server
 
     async def quic_connect(self, peer: Peer, delay: int = 0):
+        print("trying to connect")
         session_ticket_store = SessionTicketStore(self.port)
         if delay:
             logger.warning(f"Connection to {peer} delayed for {delay}s")
             await asyncio.sleep(delay)
 
-        if peer in self.peer_conn:
-            logger.info(f"Connection already established.")
-            return
+        # if peer in self.peer_conn:
+        #     logger.info(f"Connection already established.")
+        #     return
 
+        # try:
+        #     logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC...")
+        #     async with connect(
+        #         str(peer.host),
+        #         int(peer.port),
+        #         configuration=self.quic_config(peer=peer),
+        #         create_protocol=lambda *args, **kwargs: QuicProtocol(*args, node=self, **kwargs),
+        #         session_ticket_handler=session_ticket_store.add,
+        #     ) as client:
+        #         # Save peer connection
+        #         client = cast(QuicProtocol, client)
+        #
+        #         logger.info(f"🤝 Connection to {str(peer)} established ✅")
+        #
+        #         stream_id = -1
+        #         if not self.is_builder:
+        #             stream_id = client._quic.get_next_available_stream_id()
+        #
+        #             from jam.network.protocols.up_0 import BlockAnnouncement
+        #
+        #             pref = PrefixType.UP0.encode()
+        #             client.stream_buffer[stream_id] = pref
+        #             client.stream_and_keep_open(pref, stream_id)
+        #             BlockAnnouncement.handshake(stream_id, client)
+        #
+        #         self.peer_conn[peer] = stream_id, client
+        #         self.is_initialized = True
+        #
+        #         # Wait indefinitely - the connection will be managed by the context manager
+        #         await asyncio.Future()
+        #
+        # except Exception as e:
+        #     logger.error(f"Connection to {peer} failed: {e}")
+        local_host = "::"
+
+        host = str(peer.port)
+        port = int(peer.port)
+        print("getting infos")
+
+        # lookup remote address
+
+        loop = asyncio.get_running_loop()
+        infos = await loop.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
+        print("infos", infos)
+        addr = infos[0][4]
+        if len(addr) == 2:
+            addr = ("::ffff:" + addr[0], addr[1], 0, 0)
+
+        # prepare QUIC connection
+        configuration = QuicConfiguration(is_client=True)
+        if configuration.server_name is None:
+            configuration.server_name = host
+        connection = QuicConnection(
+            configuration=configuration,
+            session_ticket_handler=session_ticket_store.add,
+            token_handler=None,
+        )
+
+        print("creating protocol")
+
+        # connect
+        protocol = self.server._create_protocol(connection, stream_handler=None),
+        protocol = cast(QuicConnectionProtocol, protocol)
+        print("protocol created", protocol)
         try:
+            wait_connected = True
+            print(f"Connecting to {str(peer)}")
+            protocol.connect(addr, transmit=wait_connected)
             logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC...")
-            async with connect(
-                str(peer.host),
-                int(peer.port),
-                configuration=self.quic_config(peer=peer),
-                create_protocol=lambda *args, **kwargs: QuicProtocol(*args, node=self, **kwargs),
-                session_ticket_handler=session_ticket_store.add,
-            ) as client:
-                # Save peer connection
-                client = cast(QuicProtocol, client)
+            if wait_connected:
+                await protocol.wait_connected()
+            logger.info(f"🤝 Connection to {str(peer)} established ✅")
+            #
+            # self.peer_conn[peer] =  protocol
+        finally:
+            protocol.close()
+            await protocol.wait_closed()
 
-                logger.info(f"🤝 Connection to {str(peer)} established ✅")
-
-                stream_id = -1
-                if not self.is_builder:
-                    stream_id = client._quic.get_next_available_stream_id()
-
-                    from jam.network.protocols.up_0 import BlockAnnouncement
-
-                    pref = PrefixType.UP0.encode()
-                    client.stream_buffer[stream_id] = pref
-                    client.stream_and_keep_open(pref, stream_id)
-                    BlockAnnouncement.handshake(stream_id, client)
-
-                self.peer_conn[peer] = stream_id, client
-                self.is_initialized = True
-
-                # Wait indefinitely - the connection will be managed by the context manager
-                await asyncio.Future()
-
-        except Exception as e:
-            logger.error(f"Connection to {peer} failed: {e}")
 
     async def connect_peer(self, peer: Peer):
         """
