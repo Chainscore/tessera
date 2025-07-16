@@ -13,26 +13,26 @@ from tsrkit_types.integers import Uint
 SignatureList=TypedVector[Bytes]
 
 @structure
-class AuditRecord:
+class JudgmentRecord:
     true_votes: SignatureList #J_t(wr)(t)
     false_votes: SignatureList # J_f(wr)(t)
     announces: SignatureList #A_n
 
     @staticmethod
-    def dummy()-> "AuditRecord":
-        true_votes:SignatureList=SignatureList([Bytes(0),Bytes(1)])
+    def dummy()-> "JudgmentRecord":
+        true_votes:SignatureList=SignatureList([Bytes(0),Bytes(1),Bytes(2),Bytes(3)])
         false_votes:SignatureList=SignatureList([])
         announces:SignatureList=SignatureList([Bytes(0),Bytes(1),Bytes(2),Bytes(3),Bytes(4),Bytes(5)])
-        return AuditRecord(true_votes=true_votes,false_votes=false_votes,announces=announces)
+        return JudgmentRecord(true_votes=true_votes,false_votes=false_votes,announces=announces)
 
     @staticmethod
-    def empty()->"AuditRecord":
-        return AuditRecord(true_votes=SignatureList([]),false_votes=SignatureList([]),announces=SignatureList([]))
+    def empty()->"JudgmentRecord":
+        return JudgmentRecord(true_votes=SignatureList([]),false_votes=SignatureList([]),announces=SignatureList([]))
 
 @structure
 class TrancheState:
     unaudited_list: TypedVector[WorkReportHash] #Q ->[wr1,2,3,4]->[]
-    judgments: Dictionary[WorkReportHash, AuditRecord] # {WR:J,S}
+    judgments: Dictionary[WorkReportHash, JudgmentRecord] # {WR:J,S}
     valid_set: TypedVector[WorkReportHash] # Already validated_wrs [wr,1,2,3,4]
     invalid_set: TypedVector[WorkReportHash] # Already invalid_wrs
 
@@ -40,32 +40,10 @@ class TrancheState:
     def empty()->"TrancheState":
         return TrancheState(
             unaudited_list=TypedVector[WorkReportHash]([]),
-            judgments=Dictionary[WorkReportHash, AuditRecord]({}),
+            judgments=Dictionary[WorkReportHash, JudgmentRecord]({}),
             valid_set=TypedVector[WorkReportHash]([]),
             invalid_set=TypedVector[WorkReportHash]([])
         )
-
-    # def add_wr(self, wrs: WorkReportHash):
-    #     for wr in wrs
-    #         if wr not in self.judgments:
-    #             self.judgments[wr] = AuditRecord()
-    #         if wr not in self.unaudited_list:
-    #             self.unaudited_list.append(wr)
-
-    # def add_valid_wr(self,wrs:TypedVector[WorkReportHash]):
-    #     self.valid_set.extend(wrs)
-    #     self.unaudited_list.remove(wrs)
-
-    # def record_announcement(self, wr: WorkReportHash, judgment: Bytes):
-    #     self.add_wr(wr)
-    #     self.judgments[wr].announces.append(judgment)
-
-    # def record_judgment(self, wr: WorkReportHash, judgment: Bytes, is_true: bool):
-    #     self.add_wr(wr)
-    #     if is_true:
-    #         self.judgments[wr].true_votes.append(judgment)
-    #     else:
-    #         self.judgments[wr].false_votes.append(judgment)
 
 @structure
 # @dataclass
@@ -73,24 +51,22 @@ class Tranche:
     tranche_index: Uint
     slot_index: Uint
 
-    def db_key(self) -> Bytes:
-        """
-        Returns a consistent DB key: Tranche.encode()
-        """
-        return self.encode()
+class TrancheStore:
+    def __init__(self):
+        self._tranche_store={}
 
-    def save_state(self, db: RockStore, tranche_state: TrancheState):
-        """
-        Stores the TrancheState encoded under Tranche.encode() key.
-        """
-        db.put(self.db_key(), tranche_state.encode())
+    def save(self, tranche: "Tranche", state: "TrancheState"):
+        """Store TrancheState under its tranche key automatically."""
+        key = tranche.encode()
+        value = state.encode()
+        self._tranche_store[key]= value
 
-    def load_state(self, db: RockStore) :
-        """
-        Loads the TrancheState encoded under Tranche.encode() key.
-        """
-        raw = db.get(self.db_key())
-        if raw:
-            return TrancheState.decode(raw)
-        else:
-            return TrancheState.empty()  # Return empty state if not found
+    def load(self, tranche: "Tranche") -> "TrancheState":
+        """Retrieve and decode a TrancheState by Tranche object."""
+        raw = self._tranche_store.get(tranche.encode())
+        return TrancheState.decode(raw) if raw else TrancheState.empty()
+
+    def delete(self, tranche: "Tranche"):
+        key = tranche.encode()
+        if key in self._tranche_store:
+            del self._tranche_store[key]

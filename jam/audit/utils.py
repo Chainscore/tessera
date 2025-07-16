@@ -48,5 +48,3 @@ def signature_pvt(key: Bytes[32], context: Bytes, message:bytes=b"") :
     signature= op_bt_str + proof_bt_str
 
     return signature
-
-
