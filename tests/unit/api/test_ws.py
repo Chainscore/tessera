@@ -1,22 +1,35 @@
 from pathlib import Path
+import statistics
 import pytest
 import asyncio
 import json
 
 from tsrkit_types import U32, Bytes
 from jam.consensus.bp_engine import BlockProducer
+from jam.execution.pvm.code import Code
 from jam.network.node import Node
+from jam.operations.utils.state_update import update_state
 from jam.settings import setup_setting
+from jam.state import accounts
+from jam.state.accounts import Account
 from jam.state.state import State, set_state, setup_state
+from jam.state.utils import construct_state_key
+from jam.statistics.statistics import Statistics
 from jam.types.block import Block
 from jam.consensus.grandpa.finality import Finality
 from jam.api.rpc.app import rpc
 from jam.api.rpc.broker import broker
 from jam.types.protocol.core import ServiceId, TimeSlot
 from jam.types.protocol.crypto import HeaderHash, Hash
-from jam.types.state.delta import AccountData, LookupTable, Timestamps
+from jam.types.state import delta
+from jam.types.state.delta import AccountData, AccountMetadata, Delta, LookupTable, Timestamps
 from jam.utils.dummy.dummy_block import create_dummy_block
 from jam.utils.dummy.utils import create_dummy_bytes
+
+from jam.types.protocol.core import Gas, Balance, BlobLength, ServiceId
+from jam.types.protocol.crypto import Hash
+
+from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
 
 # Refred this : https://quart.palletsprojects.com/en/latest/how_to_guides/websockets/
 
@@ -30,22 +43,22 @@ def get_gen_state(db_path):
     return state, setting
 
 def produce_chain(state, db, length, starting_parent=None):
+    """
+    Execute `length` dummy blocks onto `db`, each with consecutive
+    TimeSlot(0), TimeSlot(1), …
+    Returns the HeaderHash of the last block.
+    """
     parent = starting_parent or HeaderHash([0] * 32)
     last_hh = None
     for i in range(length):
-        blk = create_dummy_block()
+        blk = Block.genesis()
         blk.header.parent = parent
         blk.header.slot   = TimeSlot(i)
         hh = HeaderHash(blk.header.hash())
         state.transition(blk)
-        state.settle(hh)
-        blk.save(db)
-        Finality.set_head(hh, db)
-        Finality.finalise(hh, db)
         parent = hh
         last_hh = hh
     return last_hh
-
 
 @pytest.mark.asyncio
 async def test_ws_finalized_block(db_path):
@@ -71,9 +84,8 @@ async def test_ws_finalized_block(db_path):
             # won't work without this sleep
             await asyncio.sleep(0.01)
 
-            # publish exactly the same payload your HTTP RPC would return
-            await broker.publish("finalizedBlock", expected)
-
+            #make call to the finality function to test ws implementation
+            Finality.finalise(hh, settings.main_db)
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
             assert data == expected
@@ -86,27 +98,20 @@ async def test_ws_best_block(db_path):
 
     block = Block.genesis()
     hh    = block.save(settings.main_db)
-    Finality.finalise(hh, settings.main_db)
+    Finality.finalise(hh, settings.main_db)    
     Finality.set_head(hh, settings.main_db)
 
-    # produce one more block
-    b1 = BlockProducer(
-        node=Node("", "", 0, settings.val, [], False, False),
-        db=settings.main_db
-    )._produce_block(state, TimeSlot(1))
-    state.transition(b1)
+    expected = [ list(block.header.hash()), int(block.header.slot) ]
 
-    expected = [ list(b1.header.hash()), int(b1.header.slot) ]
-
-    # ——— now open a WS & subscribe ———
+    #  open a WS & subscribe to the function
     async with rpc.test_client() as client:
         async with client.websocket("/ws") as ws:
             await ws.send("bestBlock")
 
             await asyncio.sleep(0.01)
 
-            await broker.publish("bestBlock", expected)
-
+            #make call to the finality set head function to test ws implementation
+            Finality.set_head(hh, settings.main_db)
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
 
@@ -119,109 +124,108 @@ async def test_ws_statistics(db_path):
     Mirror the HTTP `test_statistics` but over WebSocket:
       – build a 5-block chain,
     """
-    state, settings = get_gen_state(db_path)
-    db = settings.main_db
-    produce_chain(state, db, 5)
-    hh2 = db.get(Block.get_storage_key_slot(TimeSlot(2)))
-
-    expected = [((State.load(hh2).pi).encode()).hex()]
+ 
     async with rpc.test_client() as client:
         async with client.websocket("/ws") as ws:
             # subscribe to statistics
             await ws.send("subscribeStatistics")
 
             await asyncio.sleep(0.01)
+            state, settings = get_gen_state(db_path)
+            db = settings.main_db
+            produce_chain(state, db, 5)
+            
+            hh2 = db.get(Block.get_storage_key_slot(TimeSlot(2)))
 
-            await broker.publish("subscribeStatistics", expected)
+            expected = [list((State.load(hh2).pi).encode())]
 
-            raw = await asyncio.wait_for(ws.receive(), timeout=5)
+            raw = await asyncio.wait_for(ws.receive(), timeout=10)
             data = json.loads(raw)
             assert data == expected
 
 @pytest.mark.asyncio
 async def test_ws_service_data(db_path):
-    state, settings = get_gen_state(db_path)
-    db = settings.main_db
-
-    sid = ServiceId(100)
-    state.delta[sid] = AccountData()
-    assert state.delta[sid].service.code_hash == Bytes(32)
-
-    produce_chain(state, db, 5)
-    hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
-
-    expected = [Bytes(32).hex()]
+    
 
     async with rpc.test_client() as client:
         async with client.websocket("/ws") as ws:
             await ws.send("subscribeServiceData")
             await asyncio.sleep(0.01)
-            await broker.publish("subscribeServiceData", expected)
+            
+            # await broker.publish("subscribeServiceData", expected)
+            state, settings = get_gen_state(db_path)
+            db = settings.main_db
+    
+            update_state(state)
+            state_delta_store = state.delta[ServiceId(42)].service.store
+            expected = state_delta_store.get(bytes(construct_state_key((255, ServiceId(42)))))
+            meta_expected = AccountMetadata.decode(expected)
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-
-            assert data == expected
+            assert data == [list(meta_expected.encode())]
 
 @pytest.mark.asyncio
 async def test_ws_service_value(db_path):
-    state, settings = get_gen_state(db_path)
-    set_state(state)
-    db = settings.main_db
-
-    data = create_dummy_bytes(100)
-    sid = ServiceId(1)
-    state.delta[sid] = AccountData()
-    key   = Bytes[32]([0xA] * 32)
-    value = Bytes[32]([0xB] * 32)
-    state.delta[sid].storage[key] = value
-
-    produce_chain(state, db, 5)
-    hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
-
-    expected = [value.hex()]
-
+    
     async with rpc.test_client() as client:
         async with client.websocket("/ws") as ws:
             await ws.send("subscribeServiceValue")
             await asyncio.sleep(0.01)
-            await broker.publish("subscribeServiceValue", expected)
+            
+            state, settings = get_gen_state(db_path)
+            set_state(state)
+            db = settings.main_db
+
+            data = create_dummy_bytes(100)
+            sid = ServiceId(100)
+            state.delta[sid] = AccountData()
+            key = Bytes[32].fromhex("a3dc3bed1b0727caf428961bed11c9998ae2476d8a97fad203171b628363d9a2")
+            value = Bytes[32]([0xB] * 32)
+            state.delta[sid].storage[key] = value   
+            produce_chain(state, db, 5)
+            hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
+
+            state_delta_store = state.delta[ServiceId(1)].service.store
+            expected = [state.delta[sid].storage[key].hex()]
+
+            expected = [list(value.hex())]
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-
             assert data == expected
 
 @pytest.mark.asyncio
 async def test_ws_service_preimage(db_path):
-    state, settings = get_gen_state(db_path)
-    set_state(state)
-    db = settings.main_db
-
-    sid = ServiceId(9)
-    state.delta[sid] = AccountData()
-    blob = b"hello, there!"
-    hsh  = blob  
-    state.delta[sid].preimages[hsh] = blob
-
-    produce_chain(state, db, 5)
-    hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
-
-    expected = blob.hex()
-
+    
     async with rpc.test_client() as client:
         async with client.websocket("/ws") as ws:
             await ws.send("subscribeServicePreimage")
             await asyncio.sleep(0.01)
-            await broker.publish("subscribeServicePreimage", expected)
+
+            state, settings = get_gen_state(db_path)
+            set_state(state)
+            db = settings.main_db
+
+            sid = ServiceId(2)
+            state.delta[sid] = AccountData()
+            blob = b"hello, there!"
+            hsh  = blob  
+            state.delta[sid].preimages[hsh] = blob
+
+            produce_chain(state, db, 5)
+            hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
+            state_at_hh = State.load(hh)
+            expected = list(state_at_hh.delta[sid].preimages[hsh])
+            # await broker.publish("subscribeServicePreimage", expected)
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-
-            assert data == expected
+            assert data == [expected]
 
 @pytest.mark.asyncio
 async def test_ws_service_request(db_path):
+
     state, settings = get_gen_state(db_path)
     set_state(state)
     db = settings.main_db

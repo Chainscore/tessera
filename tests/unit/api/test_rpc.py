@@ -37,15 +37,11 @@ def produce_chain(state, db, length, starting_parent=None):
     parent = starting_parent or HeaderHash([0] * 32)
     last_hh = None
     for i in range(length):
-        blk = create_dummy_block()
+        blk = Block.genesis()
         blk.header.parent = parent
         blk.header.slot   = TimeSlot(i)
         hh = HeaderHash(blk.header.hash())
         state.transition(blk)
-        state.settle(hh)
-        blk.save(db)
-        Finality.set_head(hh, db)
-        Finality.finalise(hh, db)
         parent = hh
         last_hh = hh
     return last_hh
@@ -148,21 +144,7 @@ async def test_state_root(db_path):
     state, settings = get_gen_state(db_path)
     db = settings.main_db
 
-    parent = HeaderHash([0] * 32)
-    for i in range(5):
-        block = create_dummy_block()
-        block.header.parent = parent
-        block.header.slot   = TimeSlot(i)
-
-        bh = HeaderHash(block.header.hash())
-        state.transition(block)
-        state.settle(bh)         
-        block.save(db)
-        Finality.set_head(bh, db)
-        Finality.finalise(bh, db)
-
-        parent = bh
-
+    produce_chain(state, settings.main_db, 5)
     # hash of slot‐4’s block
     hh4 = db.get(Block.get_storage_key_slot(TimeSlot(2)))
 
@@ -213,17 +195,28 @@ async def test_service_data_rpc(db_path):
     db = settings.main_db
 
     # Make updates
-    sid = ServiceId(100)
+    sid = ServiceId(2)
     state.delta[sid] = AccountData()
 
     assert state.delta[sid].service.code_hash == Bytes(32)
 
    # hash of slot‐2’s block
-    produce_chain(state, settings.main_db, 5)
+    parent = HeaderHash([0] * 32)
+    for i in range(5):
+        blk = create_dummy_block()
+        blk.header.parent = parent
+        blk.header.slot   = TimeSlot(i)
+        hh = HeaderHash(blk.header.hash())
+        state.transition(blk)
+        state.settle(hh)
+        blk.save(db)
+        Finality.set_head(hh, db)
+        Finality.finalise(hh, db)
+        parent = hh
+
     hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
     service_store = state.delta[sid].service.store
     expected_data = service_store.get(bytes(construct_state_key((255, sid))))
-
 
     # call the RPC
     payload = {
@@ -235,7 +228,6 @@ async def test_service_data_rpc(db_path):
     resp = await rpc.test_client().post("/rpc", json=payload)
     assert resp.status_code == 200
     data = await resp.get_json()
-    print("dataZ",data)
     assert data["jsonrpc"] == "2.0"
     assert data["id"]      == 7
     assert data["result"]  == list(expected_data)

@@ -13,7 +13,7 @@ from tsrkit_types.integers import U32
 
 def make_account_prop(field):
     def getter(self):
-        data = self.store.get(bytes(construct_state_key((255, self.id))))
+        data = self.store.get(bytes(construct_state_key((255, self.id)))) 
         if data is None:
             return None
         meta = AccountMetadata.decode(data)
@@ -24,11 +24,12 @@ def make_account_prop(field):
             return
         meta = AccountMetadata.decode(data)
 
-        #websocket broadcast for service data
-        asyncio.create_task(broker.publish("subscribeServiceData", {"Blob": list(data)}))
 
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()
+        #websocket broadcast for service data
+        asyncio.create_task(broker.publish("subscribeServiceData", [list(meta.encode())]))
+       
         self.store.put(k, v)
     return property(getter, setter)
 
@@ -149,7 +150,7 @@ class StorageView:
         self.store = store
 
     def __getitem__(self, key: Bytes[32]):
-        data = self.store.get(bytes(construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23]))))        
+        data = self.store.get(bytes(construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23])))) 
         return Bytes(data) if data else data
 
     def __setitem__(self, key: Bytes[32], value: Bytes):
@@ -163,12 +164,9 @@ class StorageView:
         else:
             meta_view.num_o =meta_view.num_o + len(value) - len(curr_data)
             #websocket broadcast for service value
-            asyncio.create_task(broker.publish("subscribeServiceValue", [list(curr_data)]))
-
-
-        
 
         self.store.put(key, value)
+        asyncio.create_task(broker.publish("subscribeServiceValue", [list(value.hex())]))
 
     def __delitem__(self, key: Bytes[32]):
         curr_value = self[key]
@@ -198,7 +196,7 @@ class PreImageView:
         self.store.put(k, value)
 
         #websocket broadcast for service preimage
-        asyncio.create_task(broker.publish("subscribeServicePreimage", [list(k)]))
+        asyncio.create_task(broker.publish("subscribeServicePreimage", [list(value)]))
 
 
 

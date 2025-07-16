@@ -67,6 +67,22 @@ def service_request_handler(params: list):
     return state_at_hh.delta[sid].lookup[LookupTable(hash=pi_hash, length=pi_len)]
 
 #TODO: beefyRoot, submitPreimage, submitWorkPackage
+def beefy_root_handler(params: list):
+    hh = parse_data([HeaderHash], params)
+    state_at_hh = State.load(hh)
+    
+    return []
+
+def submit_preimage_handler(params: list):
+    core_index = parse_data([U32], params)
+    
+    return []
+
+def submit_work_package_handler(params: list):
+    hh, sid = parse_data([HeaderHash, ServiceId], params)
+    state_at_hh = State.load(hh)
+    
+    return []
 
 method_map: dict[str, Callable] = {
     "bestBlock": best_block_handler,
@@ -78,6 +94,9 @@ method_map: dict[str, Callable] = {
     "serviceValue" : service_value_handler,
     "servicePreimage" : service_preimage_handler,
     "serviceRequest" : service_request_handler,
+    "beefyRoot" : beefy_root_handler,
+    "submitPreimage" : submit_preimage_handler,
+    "submitWorkPackage": submit_work_package_handler,
 }
 
 def dispatch_api_call(method: str, params: list):
