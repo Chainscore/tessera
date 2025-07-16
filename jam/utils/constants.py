@@ -1,4 +1,5 @@
 """Constants for the JAM protocol as defined in the specification."""
+
 from tsrkit_types import Enum
 
 from jam.utils.chainspec import chain_config
@@ -151,18 +152,20 @@ W_T = TRANSFER_MEMO_SIZE
 MAX_EXPORT_ITEM = 3072
 W_X = MAX_EXPORT_ITEM
 
+
 # X — Context strings for signing.
 class X(Enum):
-    AVAILABLE = b"jam_available"         # Ed25519 Availability assurances
-    BEEFY = b"jam_beefy"                 # BLS MMR commitments
-    ENTROPY = b"jam_entropy"             # On-chain entropy randomness
-    FALLBACK = b"jam_fallback_seal" # Bandersnatch fallback block seal
-    GUARANTEE = b"jam_guarantee"         # Ed25519 Guarantee statements
-    ANNOUNCE = b"jam_announce"           # Ed25519 Audit announcements
-    TICKET = b"jam_ticket_seal"     # RingVRF ticket gen / sealing
-    AUDIT = b"jam_audit"                 # Bandersnatch Audit selection entropy
-    VALID = b"jam_valid"                 # Ed25519 valid work-report judgments
-    INVALID = b"jam_invalid"             # Ed25519 invalid work-report judgments
+    AVAILABLE = b"jam_available"  # Ed25519 Availability assurances
+    BEEFY = b"jam_beefy"  # BLS MMR commitments
+    ENTROPY = b"jam_entropy"  # On-chain entropy randomness
+    FALLBACK = b"jam_fallback_seal"  # Bandersnatch fallback block seal
+    GUARANTEE = b"jam_guarantee"  # Ed25519 Guarantee statements
+    ANNOUNCE = b"jam_announce"  # Ed25519 Audit announcements
+    TICKET = b"jam_ticket_seal"  # RingVRF ticket gen / sealing
+    AUDIT = b"jam_audit"  # Bandersnatch Audit selection entropy
+    VALID = b"jam_valid"  # Ed25519 valid work-report judgments
+    INVALID = b"jam_invalid"  # Ed25519 invalid work-report judgments
+
 
 # Y — Number of slots into an epoch where ticket submission ends.
 TICKET_SUBMISSION_END = chain_config.ticket_submission_end

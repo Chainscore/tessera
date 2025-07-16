@@ -176,9 +176,7 @@ class Bundler:
                     else:
                         logger.debug("Cache Miss")
                         segments, _ = seg_da.get(s_root)
-                        logger.debug(
-                            "Fetching segments from root", segment_root=s_root.hex()
-                        )
+                        logger.debug("Fetching segments from root", segment_root=s_root.hex())
                         seg_dict[s_root] = segments
                         logger.debug(
                             "Fetched segments from root",
@@ -221,9 +219,7 @@ class Bundler:
 
                         # TODO: Reconstruct Segment
                         # BLOCKER: Fetching is asynchronous, need to handle that properly.
-                        logger.error(
-                            f"Unable to import segment {n} of seg root {s_root}"
-                        )
+                        logger.error(f"Unable to import segment {n} of seg root {s_root}")
                         raise NotImplementedError("Shard Requesting isn't integrated")
                 except Exception as e:
                     logger.error(f"Exception occurred fetching imports ({s_root},{n})")

@@ -24,31 +24,21 @@ class InstructionsWArgs2Reg1Offset(InstructionTable):
     def vx(self) -> int:
         start = self.counter + 2
         end = start + self.lx
-        return self.counter + z(
-            int.from_bytes(self.program.zeta[start:end], "little"), self.lx
-        )
+        return self.counter + z(int.from_bytes(self.program.zeta[start:end], "little"), self.lx)
 
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            170: OpCode(
-                name="branch_eq", fn=cls.branch("eq"), gas=1, is_terminating=True
-            ),
-            171: OpCode(
-                name="branch_ne", fn=cls.branch("ne"), gas=1, is_terminating=True
-            ),
-            172: OpCode(
-                name="branch_lt_u", fn=cls.branch("lt"), gas=1, is_terminating=True
-            ),
+            170: OpCode(name="branch_eq", fn=cls.branch("eq"), gas=1, is_terminating=True),
+            171: OpCode(name="branch_ne", fn=cls.branch("ne"), gas=1, is_terminating=True),
+            172: OpCode(name="branch_lt_u", fn=cls.branch("lt"), gas=1, is_terminating=True),
             173: OpCode(
                 name="branch_lt_s",
                 fn=cls.branch("lt", True),
                 gas=1,
                 is_terminating=True,
             ),
-            174: OpCode(
-                name="branch_ge_u", fn=cls.branch("ge"), gas=1, is_terminating=True
-            ),
+            174: OpCode(name="branch_ge_u", fn=cls.branch("ge"), gas=1, is_terminating=True),
             175: OpCode(
                 name="branch_ge_s",
                 fn=cls.branch("ge", True),
@@ -63,9 +53,7 @@ class InstructionsWArgs2Reg1Offset(InstructionTable):
 
             a = z(registers[self.ra], 8) if signed else registers[self.ra]
             b = z(registers[self.rb], 8) if signed else registers[self.rb]
-            status, counter = self.program.branch(
-                self.counter, self.vx, compare(a, b, op)
-            )
+            status, counter = self.program.branch(self.counter, self.vx, compare(a, b, op))
             if status == CONTINUE and counter != self.counter:
                 return status, counter, registers, memory
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory

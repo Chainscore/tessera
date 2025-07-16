@@ -31,27 +31,20 @@ class Preimages:
             account = state.delta[preimage.requester]
             # If the preimage to add does not have lookup metadata, throw unneeded error
             hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(
-                hash=hashed_blob, length=BlobLength(len(preimage.blob))
-            )
+            lookup_key = LookupTable(hash=hashed_blob, length=BlobLength(len(preimage.blob)))
 
-            if (
-                account.lookup.get(lookup_key) is None
-                or len(account.lookup.get(lookup_key)) != 0
-            ):
+            if account.lookup.get(lookup_key) is None or len(account.lookup.get(lookup_key)) != 0:
                 raise PreimageError(
                     PreimageErrorEnum.PREIMAGE_UNNEEDED,
                     "Preimage metadata does not exist",
                 )
-        
-        pi = state.pi 
+
+        pi = state.pi
         for preimage in block.extrinsic.preimages:
             # Add the preimage to the account
             account = state.delta[preimage.requester]
             hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(
-                Bytes[32](hashed_blob), BlobLength(len(preimage.blob))
-            )
+            lookup_key = LookupTable(Bytes[32](hashed_blob), BlobLength(len(preimage.blob)))
 
             account.preimages[hashed_blob] = preimage.blob
             metadata = account.lookup[lookup_key]

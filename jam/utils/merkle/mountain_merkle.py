@@ -153,6 +153,4 @@ class MMRFunctions:
 
         else:
             val = self.super_peak(MMR(h[:-1]), False)
-            return Hash.keccak256(
-                self._PEAK_PREFIX + bytes(val) + bytes(h[-1].unwrap())
-            )
+            return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(h[-1].unwrap()))

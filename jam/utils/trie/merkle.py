@@ -68,9 +68,7 @@ class StateTrie:
 
         # Build subtrees
         left_hash, left_encoded = self._merkelize_recursive(left_items, bit_index + 1)
-        right_hash, right_encoded = self._merkelize_recursive(
-            right_items, bit_index + 1
-        )
+        right_hash, right_encoded = self._merkelize_recursive(right_items, bit_index + 1)
 
         # Encode current branch
         encoded_branch = encode_branch(left_hash, right_hash)
@@ -84,9 +82,7 @@ class StateTrie:
         )
         return node_hash, encoded_branch
 
-    def merkelize(
-        self, state_dict: Dict[Bytes, Bytes]
-    ) -> Tuple[NodeHash, Dict[NodeHash, Node]]:
+    def merkelize(self, state_dict: Dict[Bytes, Bytes]) -> Tuple[NodeHash, Dict[NodeHash, Node]]:
         """
         Implements the state Merklization (per D.2)
         https://graypaper.fluffylabs.dev/#/68eaa1f/39e200393301?v=0.6.4
@@ -196,10 +192,7 @@ class StateTrie:
             else:
                 to_checkout = self.nodes[key_in_ques].right
 
-            if (
-                int.from_bytes(to_checkout) == 0
-                or self.nodes[to_checkout].type == NodeType.EMPTY
-            ):
+            if int.from_bytes(to_checkout) == 0 or self.nodes[to_checkout].type == NodeType.EMPTY:
                 break
 
             key_in_ques = to_checkout
@@ -220,9 +213,7 @@ class StateTrie:
             return ZERO_HASH  # empty trie – nothing to do
 
         key_bits = key.to_bits()
-        new_root, removed = self._delete_recursive(
-            self.root_hash, key_bits, bit_index=0
-        )
+        new_root, removed = self._delete_recursive(self.root_hash, key_bits, bit_index=0)
 
         # If nothing was removed we keep the existing root hash.
         self.root_hash = new_root if removed else self.root_hash
@@ -251,14 +242,10 @@ class StateTrie:
 
         # Recurse into the selected child
         if go_right:
-            new_right_hash, removed = self._delete_recursive(
-                node.right, key_bits, bit_index + 1
-            )
+            new_right_hash, removed = self._delete_recursive(node.right, key_bits, bit_index + 1)
             new_left_hash = node.left
         else:
-            new_left_hash, removed = self._delete_recursive(
-                node.left, key_bits, bit_index + 1
-            )
+            new_left_hash, removed = self._delete_recursive(node.left, key_bits, bit_index + 1)
             new_right_hash = node.right
 
         # No change below – fast-path out

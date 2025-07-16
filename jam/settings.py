@@ -72,52 +72,37 @@ class Settings:
 
         if seed is not None:
             self.seed = Bytes[32](b"".join([U32(seed).encode()] * 8))
-            self.ed25519_private = Hash.blake2b(
-                Bytes(b"jam_val_key_ed25519") + self.seed
-            )
+            self.ed25519_private = Hash.blake2b(Bytes(b"jam_val_key_ed25519") + self.seed)
             self.ed25519_public = Bytes[32](
-                Ed25519PrivateKey
-                    .from_private_bytes(self.ed25519_private)
-                    .public_key()
-                    .public_bytes_raw()
+                Ed25519PrivateKey.from_private_bytes(self.ed25519_private)
+                .public_key()
+                .public_bytes_raw()
             )
-            self.bandersnatch_private = Hash.blake2b(
-                Bytes(b"jam_val_key_bandersnatch") + self.seed
-            )
+            self.bandersnatch_private = Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed)
             self.bandersnatch_public = Bytes[32](public_from_le_secret(self.bandersnatch_private))
-
-
 
     @property
     def main_db(self) -> RockStore:
         if not self._main_db:
-            raise ValueError(
-                "DB Paths are not set, call configure_db_paths before this."
-            )
+            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
         return self._main_db
 
     @property
     def audit_da(self) -> RockStore:
         if not self._audit_db:
-            raise ValueError(
-                "DB Paths are not set, call configure_db_paths before this."
-            )
+            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
         return self._audit_db
 
     @property
     def d3l(self) -> RockStore:
         if not self._d3l:
-            raise ValueError(
-                "DB Paths are not set, call configure_db_paths before this."
-            )
+            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
         return self._d3l
 
     @property
     def state_db(self) -> RockStore:
         if not self._state_db:
-            raise ValueError(
-                "DB Paths are not set, call configure_db_paths before this."
-            )
+            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
         return self._state_db
 
     def clear(self):

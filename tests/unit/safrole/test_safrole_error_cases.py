@@ -10,7 +10,12 @@ from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
 from tsrkit_types.bytes import Bytes
 from jam.utils.dummy.utils import create_dummy_bytes
-from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys, deepcopy
+from tests.unit.safrole.data import (
+    create_block,
+    create_state,
+    create_validator_data_from_keys,
+    deepcopy,
+)
 
 
 def test_slot_regression_error():
@@ -24,18 +29,29 @@ def test_slot_regression_error():
         gamma_k=GammaK(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
-        gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])),
-        gamma_z=GammaZ(Safrole.compute_ring_root([keys.bandersnatch for keys in create_validator_data_from_keys()])),
-        offenders=PsiO([])
+        gamma_s=GammaS(
+            GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])
+        ),
+        gamma_z=GammaZ(
+            Safrole.compute_ring_root(
+                [keys.bandersnatch for keys in create_validator_data_from_keys()]
+            )
+        ),
+        offenders=PsiO([]),
     )
-    
+
     # Create block with a previous slot
     regression_block = create_block(slot=U32(9), tickets=[])
-    
+
     # Verify that the transition raises an error
     with pytest.raises(SafroleError) as excinfo:
-        Safrole.transition(deepcopy(initial_state), initial_state, regression_block, entropy=Bytes[32](create_dummy_bytes(32)))
-    
+        Safrole.transition(
+            deepcopy(initial_state),
+            initial_state,
+            regression_block,
+            entropy=Bytes[32](create_dummy_bytes(32)),
+        )
+
     assert excinfo.value.code == SafroleErrorCode.BAD_SLOT
 
 
@@ -50,20 +66,28 @@ def test_invalid_seal_signature():
         gamma_k=GammaK(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
-        gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])),
-        gamma_z=GammaZ(Safrole.compute_ring_root([keys.bandersnatch for keys in create_validator_data_from_keys()])),
-        offenders=PsiO([])
+        gamma_s=GammaS(
+            GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])
+        ),
+        gamma_z=GammaZ(
+            Safrole.compute_ring_root(
+                [keys.bandersnatch for keys in create_validator_data_from_keys()]
+            )
+        ),
+        offenders=PsiO([]),
     )
-    
+
     # Create block with invalid seal
-    invalid_seal_block = create_block(
-        slot=U32(6), 
-        tickets=[]
-    )
-    
+    invalid_seal_block = create_block(slot=U32(6), tickets=[])
+
     # Verify that the transition raises an error
     # TODO: Uncomment this once the signatures are implemented
     # with pytest.raises(SafroleError) as excinfo:
-    Safrole.transition(deepcopy(initial_state), initial_state, invalid_seal_block, Bytes[32](create_dummy_bytes(32)))
+    Safrole.transition(
+        deepcopy(initial_state),
+        initial_state,
+        invalid_seal_block,
+        Bytes[32](create_dummy_bytes(32)),
+    )
     # TODO: Uncomment this once the signatures are implemented
     # assert excinfo.value.code == SafroleErrorCode.BAD_TICKET_PROOF

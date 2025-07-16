@@ -5,9 +5,11 @@ from jam.utils.util_fns import outside_in
 from tsrkit_types import U64, TypedArray, Option, Null
 from jam.types.state.sigma import Sigma
 
+
 class TicketsMarkData(TypedArray[TicketBody, EPOCH_LENGTH]): ...
 
-class TicketsMark(Option[TicketsMarkData]): 
+
+class TicketsMark(Option[TicketsMarkData]):
     """Fixed-length array of ticket bodies."""
 
     @classmethod

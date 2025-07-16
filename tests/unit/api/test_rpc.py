@@ -46,7 +46,7 @@ from jam.types.protocol.core import TimeSlot
 #     block = Block.from_random()
 #     Finality.finalise(block.header.slot, temp_db)
 #     block.save(temp_db)
-#     
+#
 #     # Load the finalized block to check the finality
 #     finalized_block = Finality.load_final(temp_db)
 #     # Simulate the finalized block handler
@@ -69,7 +69,7 @@ from jam.types.protocol.core import TimeSlot
 #
 # @pytest.mark.asyncio
 # async def test_parent_block(test_client, temp_db):
-#     
+#
 #     setup_state(GhostState.genesis(), temp_db)
 #     from jam.state.state import state as updated_state
 #
@@ -79,13 +79,13 @@ from jam.types.protocol.core import TimeSlot
 #     block_1 = producer._produce_block(updated_state, TimeSlot(1))
 #     block_1.save(temp_db)
 #     updated_state.tau = TimeSlot(1)
-#     
+#
 #    #second block
 #     block_2 = producer._produce_block(updated_state, TimeSlot(2))
 #     block_2.save(temp_db)
 #     updated_state.tau = TimeSlot(2)
 #
-#   
+#
 #     # Simulate the parent block handler
 #     payload = {
 #         "method": "parent",
@@ -107,7 +107,7 @@ from jam.types.protocol.core import TimeSlot
 #
 # @pytest.mark.asyncio
 # async def test_state_root(test_client, temp_db):
-#     
+#
 #     setup_state(GhostState.genesis(), temp_db)
 #     from jam.state.state import state as updated_state
 #     block = Block.from_random()
@@ -199,7 +199,7 @@ from jam.types.protocol.core import TimeSlot
 # @pytest.mark.asyncio
 # async def test_service_value(test_client, temp_db):
 #     from jam.state.state import state
-#     
+#
 #     dummy_account = AccountData(
 #         code_hash=ServiceCodeHash(b'\x00' * 32),
 #         balance=Balance(1000),
@@ -225,7 +225,7 @@ from jam.types.protocol.core import TimeSlot
 #
 #     # Retrieve the value
 #     retrieved = bytes(storage[key])
-#     
+#
 #     # Simulate the service value handler
 #     payload = {
 #         "method": "serviceValue",
@@ -259,7 +259,7 @@ from jam.types.protocol.core import TimeSlot
 #         num_i=Ai(2)
 #     )
 #     service_id = ServiceId(42)
-#     state.delta[service_id] = dummy_account 
+#     state.delta[service_id] = dummy_account
 #
 #     block = Block.from_random()
 #
@@ -275,7 +275,7 @@ from jam.types.protocol.core import TimeSlot
 #
 #     # Retrieve the value
 #     retrieved = bytes(preimage[key])
-#     
+#
 #     # Simulate the service preimage handler
 #     payload = {
 #         "method": "servicePreimage",
@@ -312,7 +312,7 @@ from jam.types.protocol.core import TimeSlot
 #
 #     block = Block.from_random()
 #
-#  
+#
 #     timestamps = TimestampsView(service_id, temp_db, state.TRIE)
 #     hash_bytes = ByteArray32(b'\x01' * 32)
 #     length = 2
@@ -334,7 +334,7 @@ from jam.types.protocol.core import TimeSlot
 #         },
 #         "id": 3
 #     }
-#     
+#
 #     response = await test_client.post("/rpc", json=payload)
 #     assert response.status_code == 200
 #     data = await response.get_json()

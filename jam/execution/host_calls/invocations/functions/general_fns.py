@@ -65,9 +65,7 @@ class GeneralFunctions(INVF):
 
     @staticmethod
     @INVF.register(0, gas_cost=10)
-    def gas(
-        gas: Gas, registers: list, memory: Memory, context: Context
-    ) -> DispatchNormalReturn:
+    def gas(gas: Gas, registers: list, memory: Memory, context: Context) -> DispatchNormalReturn:
         logger.debug("Host call: gas", gas_remaining=gas, gas_value_returned=gas)
         registers[7] = gas
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
@@ -222,9 +220,7 @@ class GeneralFunctions(INVF):
             logger.debug("Fetch: returning extrinsic data", w11=w11, w12=w12)
         elif w10 == 4 and item_index is not None and w11 < len(extrinsics[item_index]):
             v = extrinsics[item_index][w11]
-            logger.debug(
-                "Fetch: returning item extrinsic", item_index=item_index, w11=w11
-            )
+            logger.debug("Fetch: returning item extrinsic", item_index=item_index, w11=w11)
         elif (
             w10 == 5
             and item_index is not None
@@ -233,15 +229,9 @@ class GeneralFunctions(INVF):
         ):
             v = import_segments[w11][w12]
             logger.debug("Fetch: returning import segment", w11=w11, w12=w12)
-        elif (
-            w10 == 6
-            and item_index is not None
-            and w11 < len(import_segments[item_index])
-        ):
+        elif w10 == 6 and item_index is not None and w11 < len(import_segments[item_index]):
             v = import_segments[item_index][w11]
-            logger.debug(
-                "Fetch: returning item import segment", item_index=item_index, w11=w11
-            )
+            logger.debug("Fetch: returning item import segment", item_index=item_index, w11=w11)
         elif package is not None:
 
             def s_cap(w: WorkItem):
@@ -272,9 +262,7 @@ class GeneralFunctions(INVF):
                 v = Uint(len(package.items)).encode()
                 for item in package.items:
                     v += s_cap(item)
-                logger.debug(
-                    "Fetch: returning all item summaries", item_count=len(package.items)
-                )
+                logger.debug("Fetch: returning all item summaries", item_count=len(package.items))
             elif w10 == 12 and w11 < len(package.items):
                 v = s_cap(package.items[w11])
                 logger.debug("Fetch: returning item summary", item_index=w11)
@@ -444,9 +432,7 @@ class GeneralFunctions(INVF):
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
         if vz == 0:
             a.__delitem__(k)
-            logger.debug(
-                "Host call write: storage key deleted", storage_key=k.hex()[:16] + "..."
-            )
+            logger.debug("Host call write: storage key deleted", storage_key=k.hex()[:16] + "...")
         else:
             if not memory.is_accessible(vo, vz):
                 logger.error(
@@ -465,9 +451,7 @@ class GeneralFunctions(INVF):
             except PvmError:
                 # TODO - Handle ONLY storage full
                 registers[7] = HostStatus.FULL.value
-                logger.warning(
-                    "Host call write: storage full", storage_key=k.hex()[:16] + "..."
-                )
+                logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
                 return CONTINUE, gas, registers, memory, service_data
 
         registers[7] = storage_len
@@ -529,9 +513,7 @@ class GeneralFunctions(INVF):
                 raise PvmError(PANIC)
         else:
             registers[7] = HostStatus.NONE.value
-            logger.debug(
-                "Host call info: service not found", target_service=target_service
-            )
+            logger.debug("Host call info: service not found", target_service=target_service)
 
         return CONTINUE, gas, registers, memory, context
 

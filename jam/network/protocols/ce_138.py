@@ -65,9 +65,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
-        logger.info(
-            f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer"
-        )
+        logger.info(f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer")
 
         responses = TypedVector([])
         for peer in node.peer_conn:

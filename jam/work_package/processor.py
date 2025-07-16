@@ -131,9 +131,7 @@ class Processor:
             merkle_path = bytes(len(path)) + path.encode()
             leaf = bytes(len(leaf)) + leaf.encode()
 
-            segment_proof = Segment(
-                self.zero_padding(ByteArray(merkle_path + leaf), SEGMENT_SIZE)
-            )
+            segment_proof = Segment(self.zero_padding(ByteArray(merkle_path + leaf), SEGMENT_SIZE))
             pages.append(segment_proof)
 
         return pages
@@ -180,9 +178,7 @@ class Processor:
         )
         return result
 
-    def build_report(
-        self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup
-    ):
+    def build_report(self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup):
         """
         Work Report Computation function Ξ defined in Eqn 14.11
         To be used by main guarantor
@@ -330,9 +326,7 @@ class Processor:
             logger.info(f"Building bundle shards..")
 
             with benchmark("Bundle Padded"):
-                padded_wp_bundle = self.zero_padding(
-                    ByteArray(wp_bundle), BASIC_ERASURE_SIZE
-                )
+                padded_wp_bundle = self.zero_padding(ByteArray(wp_bundle), BASIC_ERASURE_SIZE)
 
             with benchmark("Erasure Coded Bundle"):
                 bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
@@ -365,19 +359,14 @@ class Processor:
                 for item in justified_segments:
                     seg_chunks = erasure_codec.encode(item.encode())
                     all_chunks.append(seg_chunks)
-                    logger.debug(
-                        "Segments Shard formed", count=len(seg_chunks), segment=i
-                    )
+                    logger.debug("Segments Shard formed", count=len(seg_chunks), segment=i)
                     i += 1
 
             with benchmark("Transposed segment shards"):
                 segments_shards = SegmentsShards(
                     [
                         SegmentsShard(
-                            [
-                                SegmentShard(all_chunks[j][i])
-                                for j in range(len(all_chunks))
-                            ]
+                            [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
                         )
                         for i in range(len(all_chunks[0]))
                     ]
@@ -559,9 +548,7 @@ class Processor:
         # Sign the Guarantee
         sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
-        og_guarantee = ValidatorSignature(
-            validator_index=ValidatorIndex(0), signature=sign
-        )
+        og_guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=sign)
 
         # Check majority & Build guarantees:
         guarantees = [og_guarantee]
@@ -582,13 +569,9 @@ class Processor:
                     )
                     guarantees.append(guarantee)
         # Sort them guarantees
-        guarantees = ValidatorSignatures(
-            sorted(guarantees, key=lambda g: g.validator_index)
-        )
+        guarantees = ValidatorSignatures(sorted(guarantees, key=lambda g: g.validator_index))
         # Distribute Guaranteed WR to Validators CE135
-        logger.info(
-            f"Distributing Work Report to other validators..", grte_len=len(guarantees)
-        )
+        logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
         if len(guarantees) > 1:
 
             d3l = settings.d3l
@@ -601,9 +584,7 @@ class Processor:
             rep_da.put(wr_hash, wr)
 
             # Store Segment Root - Erasure Root Mapping
-            sr_er_da.put(
-                root=wr.package_spec.exports_root, data=wr.package_spec.erasure_root
-            )
+            sr_er_da.put(root=wr.package_spec.exports_root, data=wr.package_spec.erasure_root)
 
             # Store Package Hash - Segment Root Mapping
             map_da.put(wr)

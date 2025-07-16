@@ -300,9 +300,7 @@ class BlockAnnouncement(NetworkProtocol):
 
         else:
             logger.error(f"{server.interface}: ❌ Different UP Stream.")
-            server._quic.close(
-                error_code=0x4, reason_phrase="Multiple UP streams are not allowed."
-            )
+            server._quic.close(error_code=0x4, reason_phrase="Multiple UP streams are not allowed.")
             return
 
     def res_intercept(self, stream_id: int, client: QuicProtocol):

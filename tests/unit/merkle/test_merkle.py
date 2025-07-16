@@ -7,7 +7,7 @@ from tsrkit_types import Bytes
 def test_empty_merkelize():
     """Test merkelizing empty state"""
     merkle = StateMerkle()
-    root,_ = merkle.merkelize({})
+    root, _ = merkle.merkelize({})
     assert root == ZERO_HASH
     assert len(merkle.get_nodes()) == 0
 
@@ -78,7 +78,7 @@ def test_deterministic_merkelize():
     }
 
     # Insert in different orders
-    root1 , _= merkle1.merkelize(state)
+    root1, _ = merkle1.merkelize(state)
 
     reversed_state = dict(reversed(list(state.items())))
     root2, _ = merkle2.merkelize(reversed_state)

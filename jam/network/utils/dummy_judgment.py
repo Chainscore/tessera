@@ -95,9 +95,7 @@ async def publish_judgment(node, judgment: Judgment):
         return
 
     if not node.is_validator:
-        logger.warning(
-            "Node is not a validator - cannot publish judgments", node_name=node.name
-        )
+        logger.warning("Node is not a validator - cannot publish judgments", node_name=node.name)
         return
 
     logger.info(
@@ -280,9 +278,7 @@ async def judgment_producer(node):
         await asyncio.sleep(30)  # 30 seconds between judgments
 
 
-def create_sample_judgments(
-    node_name: str = "test_node", count: int = 5
-) -> List[Judgment]:
+def create_sample_judgments(node_name: str = "test_node", count: int = 5) -> List[Judgment]:
     """Create a variety of sample judgments for testing."""
 
     judgments = []
@@ -366,9 +362,7 @@ async def simulate_negative_judgment_scenario(node):
     from jam.network.node import Node
 
     if not isinstance(node, Node):
-        logger.error(
-            "Invalid node type provided to simulate_negative_judgment_scenario"
-        )
+        logger.error("Invalid node type provided to simulate_negative_judgment_scenario")
         return
 
     logger.info("Simulating negative judgment scenario", node_name=node.name)

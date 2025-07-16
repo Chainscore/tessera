@@ -14,9 +14,7 @@ ShardIndex = Uint[16]
 # SegmentShard = Bytes[SEGMENT_SIZE / chain_config.recovery_threshold] # Single Segment Shard 12 Bytes for full spec
 SegmentShard = Bytes  # Single Segment Shard
 SegmentsShard = TypedVector[SegmentShard]  # Vector of Segment Shard
-SegmentsShards = TypedVector[
-    SegmentsShard
-]  # Vector of Vector of Segment Shard (Matrix)
+SegmentsShards = TypedVector[SegmentsShard]  # Vector of Vector of Segment Shard (Matrix)
 
 # Segments Shard Root
 SegmentsShardRoot = OpaqueHash  # Root of SegmentsShard (Vector of Segment Shard)
@@ -24,9 +22,7 @@ SegmentsShardRoots = TypedVector[SegmentsShardRoot]
 
 
 # Segments Shards Storage Dictionaries
-class SegShardDict(
-    Dictionary[SegmentIndex, SegmentShard, "seg_index", "segment_shard"]
-):
+class SegShardDict(Dictionary[SegmentIndex, SegmentShard, "seg_index", "segment_shard"]):
 
     @property
     def shard(self) -> SegmentsShard:
@@ -38,9 +34,7 @@ class SegShardDict(
         return s
 
 
-class SegShardsDict(
-    Dictionary[ShardIndex, SegShardDict, "shard_index", "seg_shard_dict"]
-):
+class SegShardsDict(Dictionary[ShardIndex, SegShardDict, "shard_index", "seg_shard_dict"]):
 
     @property
     def shards(self) -> SegmentsShards:
@@ -94,9 +88,7 @@ BundleShardHashes = TypedVector[BundleShardHash]
 
 
 # Bundle Shards Storage Dictionary
-class BundleShardsDict(
-    Dictionary[ShardIndex, BundleShard, "shard_index", "bundle_shard"]
-):
+class BundleShardsDict(Dictionary[ShardIndex, BundleShard, "shard_index", "bundle_shard"]):
 
     @property
     def shards(self) -> BundleShards:

@@ -86,9 +86,7 @@ class GhostState(Sigma):
                     construct_state_key(
                         (
                             i,
-                            Bytes(
-                                j.length.encode() + bytes(Hash.blake2b(j.hash))[2:25]
-                            ),
+                            Bytes(j.length.encode() + bytes(Hash.blake2b(j.hash))[2:25]),
                         )
                     )
                 ] = Bytes(self.delta[i].lookup[j].encode())
@@ -159,9 +157,7 @@ class GhostState(Sigma):
 
             # Then find all services (first byte is 255, rest is service id)
             elif int(key[0]) == 255:
-                service_id = int.from_bytes(
-                    bytes(Bytes([key[1], key[3], key[5], key[7]]))
-                )
+                service_id = int.from_bytes(bytes(Bytes([key[1], key[3], key[5], key[7]])))
                 total_offset = 0
                 ac, offset = OpaqueHash.decode_from(bytes(value), total_offset)
                 total_offset += offset
@@ -229,6 +225,7 @@ class GhostState(Sigma):
     def genesis(genesis_path="genesis.json") -> "GhostState":
         """Generate the genesis state"""
         from jam.state.transitions.safrole.safrole import Safrole
+
         gen = json.load(open(genesis_path))
         peers = ValidatorsData.from_json(gen["peers"])
         fallback = Safrole.arrange_fallback(Bytes[32](bytes(32)), peers)
@@ -236,9 +233,7 @@ class GhostState(Sigma):
         return GhostState(
             alpha=Alpha.from_json(gen["state"]["auth_pool"]),
             beta=Beta([]),
-            gamma=Gamma(
-                a=GammaA([]), k=GammaK(peers), s=fallback, z=GammaZ(bytes(144))
-            ),
+            gamma=Gamma(a=GammaA([]), k=GammaK(peers), s=fallback, z=GammaZ(bytes(144))),
             delta=Delta.from_json(gen["state"]["accounts"]),
             eta=Eta.from_json(gen["state"]["entropy"]),
             iota=Iota(peers),
@@ -278,14 +273,9 @@ class GhostState(Sigma):
             state_key = construct_state_key(i)
             data[state_key] = Bytes(db.get(bytes(state_key)))
         for key in keys:
-            if (
-                int.from_bytes(bytes(Bytes([key[0], key[2], key[4], key[6]])))
-                not in service_ids
-            ):
+            if int.from_bytes(bytes(Bytes([key[0], key[2], key[4], key[6]]))) not in service_ids:
                 service_ids.add(
-                    ServiceId(
-                        int.from_bytes(bytes(Bytes([key[0], key[2], key[4], key[6]])))
-                    )
+                    ServiceId(int.from_bytes(bytes(Bytes([key[0], key[2], key[4], key[6]]))))
                 )
             data[key] = Bytes(db.get(bytes(key)))
         for service_id in service_ids:

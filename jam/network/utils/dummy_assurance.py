@@ -31,9 +31,7 @@ async def assurance_distribution(node: Node, db: KVStore):
     assurance_iter = 0
     while True:
         if not node.is_initialized:
-            logger.info(
-                f"🔄 ({node.name}) Network is not initialized, skipping assurance"
-            )
+            logger.info(f"🔄 ({node.name}) Network is not initialized, skipping assurance")
             await asyncio.sleep(6)
             genesis_ts = time()
             continue

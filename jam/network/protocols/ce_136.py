@@ -129,9 +129,7 @@ class WorkReportRequest(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info(
-                f"Requested Report received.", peer=client.peer, stream_id=stream_id
-            )
+            logger.info(f"Requested Report received.", peer=client.peer, stream_id=stream_id)
 
             # TODO: Save Work Report
 

@@ -152,9 +152,7 @@ class JudgmentPublication(NetworkProtocol):
 
                 # Send length and judgment data
                 client.stream_and_keep_open(message=len_data, stream_id=stream_id)
-                response = await client.close_and_wait(
-                    message=msg_data, stream_id=stream_id
-                )
+                response = await client.close_and_wait(message=msg_data, stream_id=stream_id)
 
                 responses.append(response)
                 published_count += 1
@@ -323,9 +321,7 @@ class JudgmentPublication(NetworkProtocol):
     #     # For now, always return True
     #     return True
 
-    async def _fetch_and_store_work_report(
-        self, node: "Node", wr_hash: WorkReportHash, wr_storage
-    ):
+    async def _fetch_and_store_work_report(self, node: "Node", wr_hash: WorkReportHash, wr_storage):
         """Fetch work report via CE_136 and store it"""
         work_report = await self._fetch_work_report_via_ce136(node, wr_hash)
         if work_report:
@@ -382,9 +378,7 @@ class JudgmentPublication(NetworkProtocol):
             )
             return None
 
-    async def _handle_invalid_judgment(
-        self, node: "Node", judgment: Judgment, work_report
-    ):
+    async def _handle_invalid_judgment(self, node: "Node", judgment: Judgment, work_report):
         """
         Handle invalid judgment: broadcast to successors + neighbors + audit WR if not already
         """
@@ -407,9 +401,7 @@ class JudgmentPublication(NetworkProtocol):
             )
 
             # Audit work report (always returns valid for now)
-            our_validity = self._audit_work_report(
-                work_report, judgment.work_report_hash
-            )
+            our_validity = self._audit_work_report(work_report, judgment.work_report_hash)
 
             # Create our own judgment
             our_judgment = await self._create_own_judgment(
@@ -423,9 +415,7 @@ class JudgmentPublication(NetworkProtocol):
                 )
                 await self.transmit(node, our_ce145_data)
 
-    async def _broadcast_to_successors_and_neighbors(
-        self, node: "Node", judgment: Judgment
-    ):
+    async def _broadcast_to_successors_and_neighbors(self, node: "Node", judgment: Judgment):
         """Broadcast invalid judgment to successors and neighbors"""
         logger.info(
             "Broadcasting invalid judgment to successors and neighbors",
@@ -526,9 +516,7 @@ class JudgmentPublication(NetworkProtocol):
                 work_report_hash=work_report_hash.hex()[:16] + "...",
             )
 
-            work_report = await self._fetch_work_report_via_ce136(
-                node, work_report_hash
-            )
+            work_report = await self._fetch_work_report_via_ce136(node, work_report_hash)
 
             if work_report:
                 # Store for future use
@@ -590,9 +578,7 @@ class JudgmentPublication(NetworkProtocol):
         """Create auditor's judgment with proper signature"""
 
         # Create signature (dummy implementation)
-        dummy_sig = (
-            b"auditor_judgment_sig_" + f"{validator_index:04d}".encode() + b"0" * 40
-        )
+        dummy_sig = b"auditor_judgment_sig_" + f"{validator_index:04d}".encode() + b"0" * 40
         signature = Ed25519Signature(dummy_sig[:64])
 
         judgment = Judgment(
@@ -622,9 +608,7 @@ class JudgmentPublication(NetworkProtocol):
         )
 
         # Create signature (dummy implementation)
-        dummy_sig = (
-            b"no_wr_judgment_sig_" + f"{validator_index:04d}".encode() + b"0" * 40
-        )
+        dummy_sig = b"no_wr_judgment_sig_" + f"{validator_index:04d}".encode() + b"0" * 40
         signature = Ed25519Signature(dummy_sig[:64])
 
         judgment = Judgment(
@@ -708,9 +692,7 @@ class JudgmentPublication(NetworkProtocol):
         buffer = client.stream_buffer[stream_id]
 
         if buffer[1:] == b"":
-            logger.info(
-                "Judgment publication acknowledgment received", stream_id=stream_id
-            )
+            logger.info("Judgment publication acknowledgment received", stream_id=stream_id)
         else:
             logger.warning(
                 "Unexpected response to judgment publication",

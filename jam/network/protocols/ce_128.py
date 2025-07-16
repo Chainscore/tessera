@@ -7,6 +7,7 @@ from jam.finality.finality import Finality
 from jam.network.base.error import NetworkingErrorCode
 from jam.network.base.quic import QuicProtocol
 from jam.types import HeaderHash
+
 if TYPE_CHECKING:
     from jam.network.node import Node
     from jam.block.block import Block
@@ -50,9 +51,7 @@ class BlockRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE128
 
-    async def transmit(
-        self, node: "Node", data: CE128Data, peer_conns: List | None = None
-    ):
+    async def transmit(self, node: "Node", data: CE128Data, peer_conns: List | None = None):
         """Transmit Block Request"""
 
         stream_data = data.encode()
@@ -75,9 +74,7 @@ class BlockRequest(NetworkProtocol):
 
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
-                data = await client.close_and_wait(
-                    message=stream_data, stream_id=stream_id
-                )
+                data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
 
                 transmitted_count += 1
                 responses.append(data)
@@ -107,9 +104,7 @@ class BlockRequest(NetworkProtocol):
         try:
             from jam.settings import settings
 
-            logger.debug(
-                "Received block request", stream_id=stream_id, buffer_size=len(buffer)
-            )
+            logger.debug("Received block request", stream_id=stream_id, buffer_size=len(buffer))
 
             data, offset = CE128Data.decode_from(buffer)
             data = cast(CE128Data, data)
@@ -150,9 +145,7 @@ class BlockRequest(NetworkProtocol):
             all_blocks = TypedVector[Block]([])
             hh = data.header
             while hh != HeaderHash(32) and len(all_blocks) != int(data.max_blocks):
-                _block = Block.decode(
-                    settings.main_db.get(Block.get_storage_key_block(hh))
-                )
+                _block = Block.decode(settings.main_db.get(Block.get_storage_key_block(hh)))
                 if _block:
                     all_blocks.append(_block)
                     hh = _block.header.parent
@@ -164,9 +157,7 @@ class BlockRequest(NetworkProtocol):
                     )
 
             blocks_enc = all_blocks.encode()
-            server.stream_and_close(
-                stream_id=stream_id, message=self._prefix.encode() + blocks_enc
-            )
+            server.stream_and_close(stream_id=stream_id, message=self._prefix.encode() + blocks_enc)
 
             logger.info(
                 "Blocks request completed successfully. Closed stream",
@@ -187,9 +178,7 @@ class BlockRequest(NetworkProtocol):
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
 
-        logger.info(
-            "Block request ack received", stream_id=stream_id, buffer_size=len(buffer)
-        )
+        logger.info("Block request ack received", stream_id=stream_id, buffer_size=len(buffer))
 
         try:
             data = TypedVector[Block].decode(buffer[1:])

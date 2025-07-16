@@ -77,9 +77,7 @@ class ByteUtils:
         return bool(value[0]) if value else False
 
     @staticmethod
-    def bitarray_to_bytes(
-        bits: List[bool], bitorder: Literal["msb", "lsb"] = "msb"
-    ) -> bytes:
+    def bitarray_to_bytes(bits: List[bool], bitorder: Literal["msb", "lsb"] = "msb") -> bytes:
         """Convert bit array to bytes
 
         Args:
@@ -158,9 +156,7 @@ class ByteUtils:
         return cls.bytes_to_hex(cls.bitarray_to_bytes(bits))
 
     @classmethod
-    def bitarray_to_int(
-        cls, bits: List[bool], bitorder: Literal["msb", "lsb"] = "msb"
-    ) -> int:
+    def bitarray_to_int(cls, bits: List[bool], bitorder: Literal["msb", "lsb"] = "msb") -> int:
         """Convert bit array to integer"""
         result = 0
         for bit in bits if bitorder == "msb" else reversed(bits):

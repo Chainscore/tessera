@@ -3,7 +3,7 @@ from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 from jam.types.protocol.crypto import HeaderHash, StateRoot
-from jam.types.protocol.merkle import MMR 
+from jam.types.protocol.merkle import MMR
 
 
 class ReportedDictionary(Dictionary[Bytes[32], Bytes[32], "hash", "exports_root"]): ...

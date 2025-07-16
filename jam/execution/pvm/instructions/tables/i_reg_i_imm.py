@@ -36,15 +36,9 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
             57: OpCode(name="load_i32", fn=cls.load_i(32), gas=1, is_terminating=False),
             58: OpCode(name="load_u64", fn=cls.load_u(64), gas=1, is_terminating=False),
             59: OpCode(name="store_u8", fn=cls.store_u(8), gas=1, is_terminating=False),
-            60: OpCode(
-                name="store_u16", fn=cls.store_u(16), gas=1, is_terminating=False
-            ),
-            61: OpCode(
-                name="store_u32", fn=cls.store_u(32), gas=1, is_terminating=False
-            ),
-            62: OpCode(
-                name="store_u64", fn=cls.store_u(64), gas=1, is_terminating=False
-            ),
+            60: OpCode(name="store_u16", fn=cls.store_u(16), gas=1, is_terminating=False),
+            61: OpCode(name="store_u32", fn=cls.store_u(32), gas=1, is_terminating=False),
+            62: OpCode(name="store_u64", fn=cls.store_u(64), gas=1, is_terminating=False),
         }
 
     def jump_ind(self, registers: list, memory: Memory) -> OpReturn:
@@ -63,9 +57,7 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
     @staticmethod
     def load_u(bitsize: int) -> Callable[[Any, list, Memory], OpReturn]:
         def load_u_impl(self, registers: list, memory: Memory) -> OpReturn:
-            registers[self.ra] = int.from_bytes(
-                memory.read(self.vx, bitsize // 8), "little"
-            )
+            registers[self.ra] = int.from_bytes(memory.read(self.vx, bitsize // 8), "little")
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
         return load_u_impl

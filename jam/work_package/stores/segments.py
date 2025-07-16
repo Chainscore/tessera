@@ -92,9 +92,7 @@ class SegmentShardsDA(DA):
         ss_dict[shard_index] = s_dict
         self.db.put(key, ss_dict.encode())
 
-    def put(
-        self, er_root: ErasureRoot, shard_index: ShardIndex, shard: SegmentsShard
-    ) -> None:
+    def put(self, er_root: ErasureRoot, shard_index: ShardIndex, shard: SegmentsShard) -> None:
         key = self.prefix + er_root.encode()
         data = self.db.get(key)
 

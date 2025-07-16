@@ -37,9 +37,7 @@ class InstructionsWArgs1Reg1Imm1Offset(InstructionTable):
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
         return {
-            80: OpCode(
-                name="load_imm_jump", fn=cls.load_imm_jump, gas=1, is_terminating=True
-            ),
+            80: OpCode(name="load_imm_jump", fn=cls.load_imm_jump, gas=1, is_terminating=True),
             81: OpCode(
                 name="branch_eq_imm",
                 fn=cls.branch_imm("eq"),

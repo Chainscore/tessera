@@ -15,7 +15,7 @@ from tsrkit_types import Bytes, U64, U32, Null
 from jam.block import Block
 from jam.utils.constants import (
     EPOCH_LENGTH,
-    X, 
+    X,
     TICKET_SUBMISSION_END,
     TICKET_ENTRIES_PER_VALIDATOR,
     MAX_TICKETS_PER_EXTRINSIC,
@@ -26,41 +26,37 @@ from jam.types.protocol.crypto import (
     BlsPublic,
     Ed25519Public,
     Hash,
+    OpaqueHash,
 )
 from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
-from jam.types.protocol.validators import ValidatorData
+from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from dot_ring.vrf.ring.ring_vrf import RingVrf
 from py_ark_vrf import verify_ring, get_ring_root, vrf_output
 
 logger = get_logger("import")
 
 
-class Safrole: 
+class Safrole:
     @staticmethod
     def verify_vrf(
         message: bytes, ring_root: bytes, gamma_k: list[bytes], proof: BandersnatchRingVrfSignature
     ) -> bool:
         # return RingVrf.ring_vrf_proof_verify(message, ring_root, proof)
-        return verify_ring(
-            message,    # Input Data 
-            proof,      # Proof 
-            gamma_k,       # Ring 
-            b""         # AD 
-        )
+        return verify_ring(message, proof, gamma_k, b"")  # Input Data  # Proof  # Ring  # AD
 
     @staticmethod
-    def compute_ring_root(keys: List[BandersnatchPublic]) -> Bytes[32]:
+    def compute_ring_root(keys: List[BandersnatchPublic]) -> GammaZ:
         # return Bytes[32](RingVrf.construct_ring_root(keys))
         # return Bytes[32](PublicKey.get_ring_commitment_bytes(keys))
         return GammaZ(get_ring_root(keys))
 
     @staticmethod
-    def get_vrf_output(signature: BandersnatchRingVrfSignature) -> Bytes[32]:
+    def get_vrf_output(signature: BandersnatchRingVrfSignature) -> OpaqueHash:
         # return Bytes[32](RingVrf.pedersen_proof_to_hash(signature))
-        return Bytes[32](vrf_output(signature)[:32])
+        return OpaqueHash(vrf_output(signature)[:32])
 
     @staticmethod
-    def transition(pre_state: Sigma, state: Sigma, block: Block, entropy: Bytes[32]) -> Sigma:
+    def transition(pre_state: Sigma, state: Sigma, block: Block, entropy: OpaqueHash) -> Sigma:
         pre_tau = state.tau
         # 1. Timekeeping
         if block.header.slot > state.tau:
@@ -83,9 +79,7 @@ class Safrole:
             gamma.a = GammaA([])
 
         # 3. Ticket Accumulation
-        ticket_submission_active = (
-            block.header.slot % EPOCH_LENGTH
-        ) < TICKET_SUBMISSION_END
+        ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
         # Process the tickets before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
         # TEST: We removed jump == 0 here bc we also allow tickets to be introduced in an epoch's new slot
         if ticket_submission_active and len(block.extrinsic.tickets) > 0:
@@ -93,9 +87,7 @@ class Safrole:
             Safrole.ensure_valid_ticket_extrinsics(block)
             # Accumulate them in gamma.a
             gamma.a += [
-                TicketBody(
-                    attempt=ticket.attempt, id=Safrole.get_vrf_output(ticket.signature)
-                )
+                TicketBody(attempt=ticket.attempt, id=Safrole.get_vrf_output(ticket.signature))
                 for ticket in block.extrinsic.tickets
             ]
             gamma.a.sort(key=lambda x: x.id)
@@ -129,7 +121,7 @@ class Safrole:
                             bandersnatch=BandersnatchPublic(32),
                             ed25519=Ed25519Public(32),
                             bls=BlsPublic(144),
-                            metadata=Bytes[128](128),
+                            metadata=ValidatorMetadata.decode(bytes(128)),
                         )
                     )
                 else:
@@ -158,7 +150,7 @@ class Safrole:
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
             # 4. 4. Update ring root using gamma k
-            gamma.z = GammaZ(Safrole.compute_ring_root([k.bandersnatch for k in gamma.k]))
+            gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in gamma.k])
 
         for ticket in block.extrinsic.tickets:
             # Signature must be valid Ring-VRF proof

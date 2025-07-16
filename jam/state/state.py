@@ -170,9 +170,20 @@ class State:
 
         self._lock = True
 
-        from jam.state.transitions import Accumulation, Reporting, Authorization, RecentHistory, Safrole, Assurances, Disputes, Preimages, Statistics
+        from jam.state.transitions import (
+            Accumulation,
+            Reporting,
+            Authorization,
+            RecentHistory,
+            Safrole,
+            Assurances,
+            Disputes,
+            Preimages,
+            Statistics,
+        )
         from jam.settings import settings as _set
         from jam.finality.finality import Finality
+
         try:
             header_hash = HeaderHash(block.header.hash())
             logger.info(
@@ -219,9 +230,7 @@ class State:
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
 
             # Accumulation
-            logger.debug(
-                "Processing accumulation...", newly_available_count=len(newly_avail_wrs)
-            )
+            logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
             _, commitment_map = Accumulation.transition(
                 pre_state, self, block, newly_avail_wrs=newly_avail_wrs
             )
@@ -231,16 +240,11 @@ class State:
             Authorization.transition(pre_state, self, block)
 
             # Recent History
-            logger.debug(
-                "Processing recent history...", commitment_count=len(commitment_map)
-            )
+            logger.debug("Processing recent history...", commitment_count=len(commitment_map))
             history_merkle = BMRFunctions().wb_merkle_fn(
-                TypedVector[Bytes[32]](sorted(
-                    [
-                        Bytes(comm[0].encode() + comm[1].encode())
-                        for comm in commitment_map
-                    ]
-                )),
+                TypedVector[Bytes[32]](
+                    sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map])
+                ),
                 Hash.keccak256,
             )
             RecentHistory.transition(pre_state, self, block, history_merkle)
@@ -257,7 +261,7 @@ class State:
             logger.debug("Processing safrole...")
             vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
             Safrole.transition(pre_state, self, block, vrf_output)
-            
+
             if block.validate():
                 state.settle(header_hash)
                 logger.info(
@@ -273,20 +277,19 @@ class State:
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                 Finality.finalise(header_hash, _set.main_db)
 
-                block.extrinsic.clear_from_stores()            
+                block.extrinsic.clear_from_stores()
             else:
                 raise JamError("Block is not valid")
 
         except JamError as jam_e:
             logger.error(
-                "Invalid block", error=jam_e,
+                "Invalid block",
+                error=jam_e,
                 hh=block.header.hash().hex(),
                 slot=block.header.slot,
             )
             self.store.clear()
-        
 
-        
         self._lock = False
         return
 
@@ -303,9 +306,7 @@ def set_state(new_state: State):
     return state
 
 
-def setup_state(
-    state_db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"
-):
+def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"):
     logger.info(
         "Setting up state from genesis",
         genesis_type=type(genesis).__name__,

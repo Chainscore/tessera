@@ -79,9 +79,7 @@ class WorkPackage:
 
     @property
     def a(self) -> OpaqueHash:
-        return Hash.blake2b(
-            self.authorizer.code_hash.encode() + self.authorizer.params.encode()
-        )
+        return Hash.blake2b(self.authorizer.code_hash.encode() + self.authorizer.params.encode())
 
     def m_c(self, delta: "Delta") -> Tuple[bytes, bytes]:
         service_data = delta[self.auth_code_host].historical_lookup(

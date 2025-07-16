@@ -160,8 +160,7 @@ class Node:
 
         vi = self.validator_index
         shard_index = ShardIndex(
-            (core_index * chain_config.recovery_threshold + vi)
-            % constants.VALIDATOR_COUNT
+            (core_index * chain_config.recovery_threshold + vi) % constants.VALIDATOR_COUNT
         )
 
         return shard_index
@@ -178,9 +177,7 @@ class Node:
             logger.debug("Peer node is connection initiator")
             return k2
 
-    def quic_config(
-        self, is_client: bool = True, peer: Optional[Peer] = None
-    ) -> QuicConfiguration:
+    def quic_config(self, is_client: bool = True, peer: Optional[Peer] = None) -> QuicConfiguration:
         """
         Utility function to build quic configuration.
         Args:
@@ -194,9 +191,7 @@ class Node:
         }
 
         config = QuicConfiguration(**properties)
-        config.load_cert_chain(
-            f"seeds/{self.port}/cert.pem", f"seeds/{self.port}/key.pem"
-        )
+        config.load_cert_chain(f"seeds/{self.port}/cert.pem", f"seeds/{self.port}/key.pem")
         config.verify_mode = ssl.CERT_NONE
 
         config.max_data = 104857600  # 100 MB
@@ -226,9 +221,7 @@ class Node:
             self.host,
             self.port,
             configuration=self.quic_config(is_client=False),
-            create_protocol=lambda *args, **kwargs: QuicProtocol(
-                *args, node=self, **kwargs
-            ),
+            create_protocol=lambda *args, **kwargs: QuicProtocol(*args, node=self, **kwargs),
             session_ticket_fetcher=session_ticket_store.pop,
             session_ticket_handler=session_ticket_store.add,
         )
@@ -247,16 +240,12 @@ class Node:
             return
 
         try:
-            logger.info(
-                f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC..."
-            )
+            logger.info(f"🔹 ({self.name}) Creating new connection to {str(peer)} via QUIC...")
             async with connect(
                 str(peer.host),
                 int(peer.port),
                 configuration=self.quic_config(peer=peer),
-                create_protocol=lambda *args, **kwargs: QuicProtocol(
-                    *args, node=self, **kwargs
-                ),
+                create_protocol=lambda *args, **kwargs: QuicProtocol(*args, node=self, **kwargs),
                 session_ticket_handler=session_ticket_store.add,
             ) as client:
 
@@ -338,9 +327,7 @@ class Node:
                 # Give server time to fully initialize
                 await asyncio.sleep(1)
 
-            logger.info(
-                f"🔄 ({self.name}) Opening connections to {len(self.peers)} peers..."
-            )
+            logger.info(f"🔄 ({self.name}) Opening connections to {len(self.peers)} peers...")
             await self.run_client()
 
             logger.info(f"🚀 {self} initialized successfully!")

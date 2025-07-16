@@ -92,18 +92,14 @@ class ShardDistributionProtocol(NetworkProtocol):
                     client = node.peer_conn[peer][1]
 
                     # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(
-                        message=self._prefix.encode()
-                    )
+                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
                     # Append prefix to stream buffer so that we know the stream for handling response
                     client.stream_buffer[stream_id] = self._prefix.encode()
 
                     # Send Messages with their lengths
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    res = await client.close_and_wait(
-                        message=msg_a, stream_id=stream_id
-                    )
+                    res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
 
                     if res is not None:
                         return res

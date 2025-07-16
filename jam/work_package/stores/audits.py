@@ -57,9 +57,7 @@ class AuditShardsDA(DA):
         key = self.prefix + er_root.encode()
         self.db.put(key, data.encode())
 
-    def put(
-        self, er_root: ErasureRoot, shard_index: ShardIndex, shard: BundleShard
-    ) -> None:
+    def put(self, er_root: ErasureRoot, shard_index: ShardIndex, shard: BundleShard) -> None:
         key = self.prefix + er_root.encode()
         data = self.db.get(key)
 

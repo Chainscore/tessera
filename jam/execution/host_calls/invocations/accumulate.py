@@ -25,17 +25,13 @@ from jam.utils.constants import MAX_SERVICE_CODE_SIZE
 
 class PsiA(InvocationProtocol):
 
-    def __init__(
-        self, u: StateContext, t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples
-    ):
+    def __init__(self, u: StateContext, t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples):
         self.partial_state = u
         self.timeslot = t
         self.service_id = s
         self.gas = g
         self.operandTuples = o
-        self.context = AccumulationContext(
-            x=self.initializer_fn(s, u), y=self.initializer_fn(s, u)
-        )
+        self.context = AccumulationContext(x=self.initializer_fn(s, u), y=self.initializer_fn(s, u))
 
     def table(self):
         from jam.state.state import state
@@ -143,9 +139,7 @@ class PsiA(InvocationProtocol):
             Uint[32].decode_from(
                 bytes(
                     Hash.blake2b(
-                        Uint(s).encode()
-                        + state.eta[0].encode()
-                        + Uint(state.tau).encode()
+                        Uint(s).encode() + state.eta[0].encode() + Uint(state.tau).encode()
                     )
                 )
             )[0]

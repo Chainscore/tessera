@@ -56,9 +56,7 @@ class WorkReportDistribution(NetworkProtocol):
         msg_a = data.guaranteed_wr.encode()
         len_a = data.len.encode()
 
-        logger.info(
-            f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators"
-        )
+        logger.info(f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators")
         # TODO: Use All Validators Connections
 
         responses = TypedVector[OptBool]([])
@@ -110,9 +108,7 @@ class WorkReportDistribution(NetworkProtocol):
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
-            logger.info(
-                f"Guaranteed Report received on Guarantor Node.", stream_id=stream_id
-            )
+            logger.info(f"Guaranteed Report received on Guarantor Node.", stream_id=stream_id)
             return OptBool(True)
 
         return OptBool(Null)

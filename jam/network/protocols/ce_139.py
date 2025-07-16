@@ -58,9 +58,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
         server.stream_and_keep_open(len_a, stream_id)
         server.stream_and_close(msg_a, stream_id)
 
-    def res_intercept(
-        self, stream_id: int, client: QuicProtocol
-    ) -> SegmentsShard | None:
+    def res_intercept(self, stream_id: int, client: QuicProtocol) -> SegmentsShard | None:
         """Intercept [Segment Shard]"""
         buffer = client.stream_buffer[stream_id]
 

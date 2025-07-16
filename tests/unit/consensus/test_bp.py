@@ -16,7 +16,7 @@ def test_block_production(db_path):
     state = State.genesis()
     os.environ["SEED"] = "1"
     genesis = Block.load(TimeSlot(0), db)
-    assert genesis is not None    
+    assert genesis is not None
     assert genesis == Block.genesis()
     with pytest.raises(ValueError):
         Block.load(TimeSlot(1), db)
@@ -27,7 +27,7 @@ def test_block_production(db_path):
     assert Block.load(TimeSlot(1), db) == block_1
     with pytest.raises(ValueError):
         Block.load(TimeSlot(2), db)
-    #second block
+    # second block
     block_2 = block_1.produce(TimeSlot(2))
     assert block_2.header.slot == TimeSlot(2)
     block_2.save(db)

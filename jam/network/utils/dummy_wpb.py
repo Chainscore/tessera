@@ -334,9 +334,7 @@ async def wp_producer(node: Node, db: RockStore):
             # TODO: Implement package transmission
 
             responses = await C133.transmit(node, data)
-            logger.debug(
-                "Work package transmitted", node_name=node.name, iteration=wp_iter
-            )
+            logger.debug("Work package transmitted", node_name=node.name, iteration=wp_iter)
 
         else:
             logger.debug(
