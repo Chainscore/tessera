@@ -71,6 +71,7 @@ class Settings:
             self._data_path = data_path
 
         if seed is not None:
+            self._seed = seed
             self.seed = Bytes[32](b"".join([U32(seed).encode()] * 8))
             self.ed25519_private = Hash.blake2b(Bytes(b"jam_val_key_ed25519") + self.seed)
             self.ed25519_public = Bytes[32](
@@ -126,10 +127,10 @@ class Settings:
             ed25519=self.ed25519_public,
             bls=BlsPublic(144),
             metadata=ValidatorMetadata(
-                name=Bytes[10](b"alice_____"),
+                name=Bytes[10](b""),
                 protocol=Uint[16](0),
                 host=IPAddress.from_json([0, 0, 0, 0]),
-                port=Uint[16](40000),
+                port=Uint[16](40000 + self._seed),
                 buffer=Bytes[110](110),
             ),
         )
