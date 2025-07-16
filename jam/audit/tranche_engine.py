@@ -11,15 +11,14 @@ from jam.types.protocol.crypto import Hash
 from jam.logging import get_logger
 from rockstore import RockStore
 
-from jam.audit.tranche import Tranche, TrancheState, JudgmentRecord
+from jam.audit.tranche import Tranche, TrancheState, JudgmentRecord, TrancheStore
 from jam.types.work.report import WorkReportHash
 
 logger = get_logger("tranche_engine")
 
 class TrancheEngine:
-    def __init__(self, db: RockStore):
-        self.db = db
-        # self.state = state
+    def __init__(self, store: TrancheStore):
+        self.store = store
 
     async def run(self, slot_index: Uint):
         """
@@ -29,7 +28,7 @@ class TrancheEngine:
 
         while True:
             tranche = Tranche(tranche_index=tranche_index - 1, slot_index=slot_index)
-            ts: TrancheState = tranche.load_state(self.db)
+            ts: TrancheState = self.store.load(tranche)
             logger.info(f"⚙️ Running tranche {tranche_index} for slot {slot_index}, auditing {len(ts.unaudited_list)} WRs, valid {len(ts.valid_set)}, invalid {len(ts.invalid_set)}")
 
             new_unaudited:TypedVector[WorkReportHash] = TypedVector[WorkReportHash]([])
@@ -52,7 +51,7 @@ class TrancheEngine:
 
             ts.unaudited_list =TypedVector[WorkReportHash](new_unaudited)
             updated_tranche=Tranche(tranche_index=tranche_index, slot_index=slot_index)
-            updated_tranche.save_state(self.db, ts)
+            self.store.save(updated_tranche, ts)
             # print("new audits",ts.unaudited_list,ts.invalid_set,ts.valid_set)
             if not new_unaudited:
                 if len(ts.invalid_set) > 0:

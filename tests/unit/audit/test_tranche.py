@@ -2,19 +2,22 @@ import asyncio
 import tempfile
 
 import jam.settings
-from jam.state.ghost import GhostState
-from jam.state.state import setup_state
+# from jam.state.ghost import GhostState
+# from jam.state.state import setup_state
 
 from rockstore import RockStore
 
 from jam.audit.tranche_engine import TrancheEngine
-from jam.audit.tranche import Tranche, TrancheState, JudgmentRecord
+from jam.audit.tranche import Tranche, TrancheState, JudgmentRecord, TrancheStore
 from jam.types.work.report import WorkReportHash
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.integers import Uint
 
+from datetime import datetime
+
 from jam.logging import get_logger
+from jam.utils.constants import AUDIT_PERIOD
 
 logger = get_logger("tranche_test")
 
@@ -53,33 +56,31 @@ async def test_tranche_engine():
     - Prints final state for verification
     """
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        jam.settings.setup_setting(data_path=tmpdir, seed=0)
-        db: RockStore = jam.settings.settings.main_db
 
-        # Set up JAM initial genesis state
-        setup_state(db, GhostState.genesis())
+    slot_index = Uint(0)
+    tranche_index = Uint(0)
 
-        slot_index = Uint(0)
-        tranche_index = Uint(0)
+    tranche = Tranche(tranche_index=Uint(tranche_index), slot_index=Uint(slot_index))
+    init_time=datetime.now()
+    initial_state = create_test_tranche_state()
+    store=TrancheStore()
+    store.save(tranche, initial_state)
 
-        tranche = Tranche(tranche_index=Uint(tranche_index), slot_index=Uint(slot_index))
-        initial_state = create_test_tranche_state()
-        tranche.save_state(db, initial_state)
+    logger.info("✅ Initial TrancheState saved for testing.")
 
-        logger.info("✅ Initial TrancheState saved for testing.")
+    # Run the TrancheEngine
+    engine = TrancheEngine(store=store)
+    await engine.run(slot_index=slot_index)
 
-        # Run the TrancheEngine
-        engine = TrancheEngine(db=db)
-        await engine.run(slot_index=slot_index)
+    # Load and print final state for verification
+    updated_tranche_index=(datetime.now()-init_time)/AUDIT_PERIOD
+    tranche = Tranche(tranche_index=Uint(updated_tranche_index), slot_index=Uint(slot_index))
+    final_state = store.load(tranche)
 
-        # Load and print final state for verification
-        final_state = tranche.load_state(db)
-
-        print("\n✅ Final TrancheState after TrancheEngine run:")
-        print(f"Valid WRs: {[wr.hex()[:16] for wr in final_state.valid_set]}")
-        print(f"Invalid WRs: {[wr.hex()[:16] for wr in final_state.invalid_set]}")
-        print(f"Remaining unaudited WRs: {[wr.hex()[:16] for wr in final_state.unaudited_list]}")
+    print("\n✅ Final TrancheState after TrancheEngine run:")
+    print(f"Valid WRs: {[wr.hex()[:16] for wr in final_state.valid_set]}")
+    print(f"Invalid WRs: {[wr.hex()[:16] for wr in final_state.invalid_set]}")
+    print(f"Remaining unaudited WRs: {[wr.hex()[:16] for wr in final_state.unaudited_list]}")
 
 
 
