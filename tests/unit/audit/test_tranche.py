@@ -4,7 +4,7 @@ import tempfile
 import jam.settings
 # from jam.state.ghost import GhostState
 # from jam.state.state import setup_state
-
+import math
 from rockstore import RockStore
 
 from jam.audit.tranche_engine import TrancheEngine
@@ -73,7 +73,9 @@ async def test_tranche_engine():
     await engine.run(slot_index=slot_index)
 
     # Load and print final state for verification
-    updated_tranche_index=(datetime.now()-init_time)/AUDIT_PERIOD
+    updated_tranche_index = math.ceil(
+        (datetime.now() - init_time).total_seconds() / AUDIT_PERIOD
+    )
     tranche = Tranche(tranche_index=Uint(updated_tranche_index), slot_index=Uint(slot_index))
     final_state = store.load(tranche)
 

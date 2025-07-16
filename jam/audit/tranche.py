@@ -20,7 +20,7 @@ class JudgmentRecord:
 
     @staticmethod
     def dummy()-> "JudgmentRecord":
-        true_votes:SignatureList=SignatureList([Bytes(0),Bytes(1)])
+        true_votes:SignatureList=SignatureList([Bytes(0),Bytes(1),Bytes(2),Bytes(3)])
         false_votes:SignatureList=SignatureList([])
         announces:SignatureList=SignatureList([Bytes(0),Bytes(1),Bytes(2),Bytes(3),Bytes(4),Bytes(5)])
         return JudgmentRecord(true_votes=true_votes,false_votes=false_votes,announces=announces)
