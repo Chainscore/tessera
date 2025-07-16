@@ -13,7 +13,7 @@ from jam.utils.constants import (
 from jam.types.work.item import WorkItem
 from jam.types.work.package import WorkPackage
 
-from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
+from jam.incore.error import WorkPackagesErrorCode, WorkPackageError
 
 
 class Validator:

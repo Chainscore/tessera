@@ -61,8 +61,8 @@ from jam.logging import get_logger
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex
-from jam.work_package.processor import Processor
-from jam.work_package.stores.reports import ReportsDA
+from jam.incore.processor import Processor
+from jam.storage.da import ReportsDA
 
 CLIENTS = [
     {"port": 40000, "role": "VALIDATOR", "theme": "matrix", "genesis": True},

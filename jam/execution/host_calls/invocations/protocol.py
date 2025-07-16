@@ -30,7 +30,8 @@ class InvocationProtocol(Protocol):
         """Starting point of execution"""
         ...
 
-    def table(self) -> Dict[int, InvocationInfo]: ...
+    def table(self) -> Dict[int, InvocationInfo]:
+        ...
 
     def dispatch(
         self, host_call: int, gas: int, registers: list, memory: Memory, x: Context

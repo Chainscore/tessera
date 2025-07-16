@@ -13,7 +13,8 @@ class MinValidatorData:
     ed25519: Ed25519Public
 
 
-class ValidatorArray(TypedArray[MinValidatorData, VALIDATOR_COUNT]): ...
+class ValidatorArray(TypedArray[MinValidatorData, VALIDATOR_COUNT]):
+    ...
 
 
 @structure
@@ -26,7 +27,6 @@ class EpochMarkData:
 
 
 class EpochMark(Option[EpochMarkData]):
-
     @classmethod
     def produce(cls, state: Sigma, slot: U64) -> Self:
         """

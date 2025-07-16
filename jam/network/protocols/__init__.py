@@ -1,3 +1,5 @@
+"""All protocols specified in JAMNP-S"""
+
 from jam.network.protocols.up_0 import BlockAnnouncement
 from jam.network.protocols.ce_133 import WorkPackageSubmission
 from jam.network.protocols.ce_134 import WorkPackageSharing

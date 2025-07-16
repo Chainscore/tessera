@@ -50,7 +50,6 @@ class InstructionsWArgs2Reg1Offset(InstructionTable):
     @staticmethod
     def branch(op: str, signed=False) -> Callable[[Any, list, Memory], OpReturn]:
         def branch_impl(self, registers: list, memory: Memory) -> OpReturn:
-
             a = z(registers[self.ra], 8) if signed else registers[self.ra]
             b = z(registers[self.rb], 8) if signed else registers[self.rb]
             status, counter = self.program.branch(self.counter, self.vx, compare(a, b, op))

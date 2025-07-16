@@ -23,7 +23,6 @@ def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
 
 
 class RecentHistory:
-
     @staticmethod
     def transition(
         pre_state: Sigma,

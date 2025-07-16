@@ -6,7 +6,8 @@ from tsrkit_types import U64, TypedArray, Option, Null
 from jam.types.state.sigma import Sigma
 
 
-class TicketsMarkData(TypedArray[TicketBody, EPOCH_LENGTH]): ...
+class TicketsMarkData(TypedArray[TicketBody, EPOCH_LENGTH]):
+    ...
 
 
 class TicketsMark(Option[TicketsMarkData]):

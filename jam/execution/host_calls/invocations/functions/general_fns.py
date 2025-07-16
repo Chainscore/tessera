@@ -62,7 +62,6 @@ logger = get_logger("host_calls")
 
 
 class GeneralFunctions(INVF):
-
     @staticmethod
     @INVF.register(0, gas_cost=10)
     def gas(gas: Gas, registers: list, memory: Memory, context: Context) -> DispatchNormalReturn:

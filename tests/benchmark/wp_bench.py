@@ -10,7 +10,7 @@ from jam.types.protocol.crypto import Hash
 from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
 from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
 from jam.network.node import Node
-from jam.work_package.processor import Processor
+from jam.incore.processor import Processor
 from tsrkit_types.integers import U16, U8, Uint
 from jam.network.peer import Peer
 from jam.settings import settings, setup_setting

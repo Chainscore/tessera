@@ -66,7 +66,6 @@ class AssuranceDistribution(NetworkProtocol):
         responses = TypedVector([])
 
         for peer in node.peer_conn:
-
             client = node.peer_conn[peer][1]
 
             # Send Protocol Prefix

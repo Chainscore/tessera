@@ -1,6 +1,6 @@
 from typing import cast, Tuple
 
-from tsrkit_types import Uint, structure, TypedVector, Bytes
+from tsrkit_types import Uint, structure, TypedVector
 
 from jam.logging import logger
 
@@ -8,13 +8,13 @@ from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_137 import CE137Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.work.manifest import Segment, Justification
-from jam.types.work.shard import SegmentsShard, ShardIndex, BundleShard
+from jam.types.work.manifest import Justification
+from jam.types.work.shard import BundleShard
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
-from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
-from jam.work_package.stores.segments import SegmentShardsDA
+from jam.storage.da.audits import AuditShardsDA, JustificationsDA
+from jam.storage.da.segments import SegmentShardsDA
 
 
 CE138Data = CE137Data

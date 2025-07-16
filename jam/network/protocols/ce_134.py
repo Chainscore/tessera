@@ -17,8 +17,8 @@ from jam.types.work.package import WorkPackageBundle
 from jam.types.work import SegmentRootLookup
 from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
-from jam.work_package.processor import Processor
-from jam.work_package.validator import Validator
+from jam.incore.processor import Processor
+from jam.incore.validator import Validator
 
 # Module-specific logger
 logger = get_logger("network")

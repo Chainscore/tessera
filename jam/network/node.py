@@ -248,7 +248,6 @@ class Node:
                 create_protocol=lambda *args, **kwargs: QuicProtocol(*args, node=self, **kwargs),
                 session_ticket_handler=session_ticket_store.add,
             ) as client:
-
                 # Save peer connection
                 client = cast(QuicProtocol, client)
 

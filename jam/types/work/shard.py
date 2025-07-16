@@ -23,7 +23,6 @@ SegmentsShardRoots = TypedVector[SegmentsShardRoot]
 
 # Segments Shards Storage Dictionaries
 class SegShardDict(Dictionary[SegmentIndex, SegmentShard, "seg_index", "segment_shard"]):
-
     @property
     def shard(self) -> SegmentsShard:
         s = SegmentsShard([])
@@ -35,7 +34,6 @@ class SegShardDict(Dictionary[SegmentIndex, SegmentShard, "seg_index", "segment_
 
 
 class SegShardsDict(Dictionary[ShardIndex, SegShardDict, "shard_index", "seg_shard_dict"]):
-
     @property
     def shards(self) -> SegmentsShards:
         ss = SegmentsShards([])
@@ -89,7 +87,6 @@ BundleShardHashes = TypedVector[BundleShardHash]
 
 # Bundle Shards Storage Dictionary
 class BundleShardsDict(Dictionary[ShardIndex, BundleShard, "shard_index", "bundle_shard"]):
-
     @property
     def shards(self) -> BundleShards:
         """returns sorted list for all the bundle shards"""

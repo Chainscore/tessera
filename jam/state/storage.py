@@ -11,7 +11,8 @@ from jam.utils.trie.merkle import StateTrie
 from jam.types import HeaderHash, Hash
 
 
-class StateUpdates(Dictionary[Bytes[31], Bytes]): ...
+class StateUpdates(Dictionary[Bytes[31], Bytes]):
+    ...
 
 
 @structure

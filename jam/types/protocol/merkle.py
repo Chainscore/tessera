@@ -9,4 +9,5 @@ class OptionHash(Option[OpaqueHash]):
         return int.from_bytes(bytes(value))
 
 
-class MMR(TypedVector[OptionHash]): ...
+class MMR(TypedVector[OptionHash]):
+    ...

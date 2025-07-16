@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from rockstore import RockStore
 from tsrkit_types import TypedVector
 
@@ -7,7 +5,7 @@ from jam.types import OpaqueHash
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.shard import BundleShard, ShardIndex, BundleShardsDict
 
-from jam.work_package.store import DA
+from jam.storage.da.store import DA
 
 
 class JustificationsDA(DA):

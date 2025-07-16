@@ -20,6 +20,7 @@ def deepcopy(state: GhostState):
     return GhostState.from_json(state.to_json())
 
 
+
 def create_block(slot: U32, tickets: list) -> Block:
     """Create a dummy block with specified parameters"""
     # Create a simple header

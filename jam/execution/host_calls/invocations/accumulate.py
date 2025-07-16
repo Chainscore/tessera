@@ -24,7 +24,6 @@ from jam.utils.constants import MAX_SERVICE_CODE_SIZE
 
 
 class PsiA(InvocationProtocol):
-
     def __init__(self, u: StateContext, t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples):
         self.partial_state = u
         self.timeslot = t

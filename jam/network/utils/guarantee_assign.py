@@ -14,7 +14,8 @@ from jam.utils.constants import (
 
 
 @decodable_vector(element_type=U32)
-class U32Vector(Vector): ...
+class U32Vector(Vector):
+    ...
 
 
 def guarantor_assignment(validators, entropy, slot):

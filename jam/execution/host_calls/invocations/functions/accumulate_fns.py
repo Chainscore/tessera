@@ -54,7 +54,6 @@ logger = get_logger("host_calls")
 
 
 class AccumulateFunctions(INVF):
-
     @staticmethod
     @INVF.register(5, gas_cost=10)
     def bless(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):

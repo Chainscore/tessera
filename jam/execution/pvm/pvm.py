@@ -18,7 +18,6 @@ logger = get_logger("pvm")
 
 @dataclass
 class PVM:
-
     @classmethod
     def execute(
         cls,

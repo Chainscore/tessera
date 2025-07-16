@@ -39,7 +39,6 @@ class RefineContext:
 
 
 class RefineFunctions(INVF):
-
     @staticmethod
     @INVF.register(17, gas_cost=10)
     def historical_lookup(
@@ -51,7 +50,6 @@ class RefineFunctions(INVF):
         delta: Delta,
         timeslot: TimeSlot,
     ):
-
         a = None
         if delta[service_id] is not None and registers[7] == 2**64 - 1:
             a = delta[service_id]
@@ -90,7 +88,7 @@ class RefineFunctions(INVF):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
         if memory.is_accessible(address=p, length=z, for_write=True):
-            from jam.work_package.processor import Processor
+            from jam.incore.processor import Processor
 
             x = Processor.zero_padding(
                 value=ByteArray(memory.read(address=p, length=z)), n=Uint(SEGMENT_SIZE)

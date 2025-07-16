@@ -60,16 +60,16 @@ from jam.utils.constants import (
     MAX_WORK_REPORT_SIZE,
 )
 
-from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
+from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap
 
 from jam.utils.merkle import BMRFunctions
 
 
-from jam.work_package.bundler import Bundler
-from jam.work_package.stores.audits import AuditShardsDA
-from jam.work_package.stores.reports import ReportsDA
-from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
-from jam.work_package.validator import Validator
+from jam.incore.bundler import Bundler
+from jam.storage.da.audits import AuditShardsDA
+from jam.storage.da import ReportsDA
+from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
+from jam.incore.validator import Validator
 
 from jam.network.node import Node
 
@@ -78,7 +78,6 @@ logger = get_logger("in_core")
 
 
 class Processor:
-
     node: Node
     merkle: BMRFunctions
 
@@ -573,7 +572,6 @@ class Processor:
         # Distribute Guaranteed WR to Validators CE135
         logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
         if len(guarantees) > 1:
-
             d3l = settings.d3l
 
             map_da = PackageSegmentMap(d3l)

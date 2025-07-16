@@ -39,7 +39,6 @@ from tsrkit_types.null import Null
 
 
 class GhostState(Sigma):
-
     def generate_root(self) -> Bytes[32]:
         """Generate the root hash of the state"""
         return StateTrie().merkelize(self.transform())[0]

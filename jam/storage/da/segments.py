@@ -5,14 +5,13 @@ from rockstore import RockStore
 from jam.types.protocol.core import ExportsRoot, ErasureRoot
 from jam.types.work.manifest import Segments, ProvedSegments, SegmentIndex
 from jam.types.work.shard import (
-    SegmentsShardRoot,
     SegmentsShard,
     SegmentShard,
     ShardIndex,
     SegShardsDict,
     SegShardDict,
 )
-from jam.work_package.store import DA
+from jam.storage.da.store import DA
 
 
 class SegmentsDA(DA):

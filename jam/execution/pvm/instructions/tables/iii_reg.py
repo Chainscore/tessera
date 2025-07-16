@@ -10,7 +10,6 @@ from jam.execution.pvm.instructions.instruction_table import InstructionTable
 
 
 class InstructionsWArgs3Reg(InstructionTable):
-
     @property
     def ra(self) -> int:
         return min(12, self.program.zeta[self.counter + 1] % 16)

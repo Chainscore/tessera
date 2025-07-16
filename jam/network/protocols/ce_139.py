@@ -9,7 +9,7 @@ from jam.logging import logger
 
 from jam.network.base.protocol import PrefixType
 from jam.types.work.shard import SegmentsShard
-from jam.work_package.stores.segments import SegmentShardsDA
+from jam.storage.da.segments import SegmentShardsDA
 
 
 class SegmentShardRequest(SegmentShardRequestBase):
@@ -26,8 +26,6 @@ class SegmentShardRequest(SegmentShardRequestBase):
     Source:
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
     """
-
-    from jam.network.node import Node
 
     def __init__(self):
         super().__init__(PrefixType.CE139)

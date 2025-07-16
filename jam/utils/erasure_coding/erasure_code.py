@@ -8,7 +8,6 @@ from jam.utils.chainspec import chain_config
 
 
 class ErasureCode:
-
     def __init__(self):
         self.total_shards = chain_config.num_validators
         self.original_shards = chain_config.erasure_coding_original_shards

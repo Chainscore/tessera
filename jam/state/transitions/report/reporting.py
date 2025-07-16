@@ -29,7 +29,6 @@ logger = get_logger("import")
 
 
 class Reporting:
-
     @staticmethod
     def transition(
         pre_state: Sigma, state: Sigma, block: Block, known_packages: List[OpaqueHash] = []

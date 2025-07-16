@@ -8,7 +8,8 @@ from jam.types.protocol.core import ValidatorIndex
 from jam.utils.constants import CORE_COUNT
 
 
-class AvailBitField(Bits[CORE_COUNT, "lsb"]): ...
+class AvailBitField(Bits[CORE_COUNT, "lsb"]):
+    ...
 
 
 @structure

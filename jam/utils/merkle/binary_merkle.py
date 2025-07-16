@@ -15,7 +15,6 @@ OpaqueHashes = TypedVector[OpaqueHash]
 
 
 class ChoicedHashes(TypedVector[ChoicedHash]):
-
     def unwrap(self) -> TypedVector[Bytes]:
         res = TypedVector[Bytes]([])
         for val in self:

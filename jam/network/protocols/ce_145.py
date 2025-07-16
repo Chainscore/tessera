@@ -1,17 +1,16 @@
 from typing import cast, TYPE_CHECKING
 
-from tsrkit_types import Uint, U8, U16, U32, structure
-from tsrkit_types.bytes import Bytes
+from tsrkit_types import Uint, U8, U16, structure
 
 from jam.logging import get_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data
 
-from jam.types.protocol.crypto import Hash, Ed25519Signature, WorkReportHash
+from jam.types.protocol.crypto import Ed25519Signature, WorkReportHash
 from jam.types.protocol.core import ValidatorIndex
 from jam.types.work.report import WorkReport
-from jam.work_package.stores.reports import ReportsDA
+from jam.storage.da import ReportsDA
 
 if TYPE_CHECKING:
     from jam.network.node import Node

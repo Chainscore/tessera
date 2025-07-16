@@ -17,6 +17,8 @@ from jam.types import (
     TimeSlot,
     ValidatorIndex,
 )
+from dot_ring.vrf.ring.ring_vrf import RingVrf
+from dot_ring.vrf.ietf.ietf import IETF_VRF
 
 from .epoch_mark import EpochMark
 from .offenders_mark import OffendersMark

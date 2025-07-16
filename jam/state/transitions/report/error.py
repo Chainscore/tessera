@@ -2,7 +2,8 @@ from jam.error import JamError
 from tsrkit_types.enum import Enum
 
 
-class ReportingError(JamError): ...
+class ReportingError(JamError):
+    ...
 
 
 class ReportingErrorCode(Enum):

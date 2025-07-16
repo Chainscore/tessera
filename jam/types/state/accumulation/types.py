@@ -26,7 +26,8 @@ class OperandTuple:
     o: Bytes
 
 
-class OperandTuples(TypedVector[OperandTuple]): ...
+class OperandTuples(TypedVector[OperandTuple]):
+    ...
 
 
 @structure
@@ -38,7 +39,8 @@ class DeferredTransfer:
     gas: Gas
 
 
-class DeferredTransfers(TypedVector[DeferredTransfer]): ...
+class DeferredTransfers(TypedVector[DeferredTransfer]):
+    ...
 
 
 @structure
@@ -53,7 +55,8 @@ class StateContext:
     privileges: Chi
 
 
-class DeferredTransfers(TypedVector[DeferredTransfer]): ...
+class DeferredTransfers(TypedVector[DeferredTransfer]):
+    ...
 
 
 PreimageDict = Set[Tuple[ServiceId, Bytes]]

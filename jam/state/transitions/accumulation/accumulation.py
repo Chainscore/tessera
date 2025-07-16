@@ -264,10 +264,14 @@ class Accumulation:
         collected_preimages: Set[Tuple[ServiceId, Bytes]] = set()
 
         for service in services:
-            partial_state, _transfers, _output_hash, _gas_consumed, _preimages = (
-                Accumulation.single_accumulation(
-                    partial_state, work_reports, privileged_services, service, timeslot
-                )
+            (
+                partial_state,
+                _transfers,
+                _output_hash,
+                _gas_consumed,
+                _preimages,
+            ) = Accumulation.single_accumulation(
+                partial_state, work_reports, privileged_services, service, timeslot
             )
             gas_consumed.append((service, _gas_consumed))
             if _output_hash and _output_hash.unwrap() != Null:

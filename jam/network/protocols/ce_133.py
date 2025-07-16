@@ -13,7 +13,7 @@ from jam.types.work.package import WorkPackage
 
 from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
-from jam.work_package.processor import Processor
+from jam.incore.processor import Processor
 
 # Module-specific logger
 logger = get_logger("network")

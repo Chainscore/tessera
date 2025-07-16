@@ -106,6 +106,9 @@ class Block:
         # Produce a new header from previous header
         header = parent_block.header.produce(time_slot, extrinsic, None)
 
+        header.validate()
+        extrinsic.validate(header)
+
         block = Block(header=header, extrinsic=extrinsic)
 
         return block
