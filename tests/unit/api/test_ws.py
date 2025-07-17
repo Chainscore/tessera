@@ -88,8 +88,9 @@ async def test_ws_finalized_block(db_path):
             Finality.finalise(hh, settings.main_db)
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-            assert data == expected
-
+            assert data["header_hash"] == expected[0]
+            assert data["slot"] == expected[1]
+            
 @pytest.mark.asyncio
 async def test_ws_best_block(db_path):
     # ——— mirror the HTTP setup for bestBlock ———
@@ -115,8 +116,8 @@ async def test_ws_best_block(db_path):
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
 
-            assert data == expected
-
+            assert data["header_hash"] == expected[0]
+            assert data["slot"] == expected[1]
 
 @pytest.mark.asyncio
 async def test_ws_statistics(db_path):
@@ -141,7 +142,7 @@ async def test_ws_statistics(db_path):
 
             raw = await asyncio.wait_for(ws.receive(), timeout=10)
             data = json.loads(raw)
-            assert data == expected
+            assert data["result"] == expected[0]
 
 @pytest.mark.asyncio
 async def test_ws_service_data(db_path):
@@ -151,19 +152,21 @@ async def test_ws_service_data(db_path):
         async with client.websocket("/ws") as ws:
             await ws.send("subscribeServiceData")
             await asyncio.sleep(0.01)
-            
+
             # await broker.publish("subscribeServiceData", expected)
             state, settings = get_gen_state(db_path)
             db = settings.main_db
     
             update_state(state)
+            await asyncio.wait_for(ws.receive(), timeout=5)
             state_delta_store = state.delta[ServiceId(42)].service.store
             expected = state_delta_store.get(bytes(construct_state_key((255, ServiceId(42)))))
             meta_expected = AccountMetadata.decode(expected)
 
+
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-            assert data == [list(meta_expected.encode())]
+            assert data["result"] == list(meta_expected.encode())
 
 @pytest.mark.asyncio
 async def test_ws_service_value(db_path):
@@ -193,7 +196,7 @@ async def test_ws_service_value(db_path):
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-            assert data == expected
+            assert data["result"] == expected[0]
 
 @pytest.mark.asyncio
 async def test_ws_service_preimage(db_path):
@@ -221,7 +224,7 @@ async def test_ws_service_preimage(db_path):
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-            assert data == [expected]
+            assert data["result"] == expected
 
 @pytest.mark.asyncio
 async def test_ws_service_request(db_path):
@@ -252,5 +255,5 @@ async def test_ws_service_request(db_path):
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-
-            assert data  == expected
+            assert int(data[0]) == int(expected[0])
+            assert int(data[1]) == int(expected[1])

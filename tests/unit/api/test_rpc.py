@@ -66,16 +66,14 @@ async def test_best_block(db_path):
         "id": 3
     }
 
-    response = await rpc.test_client().post("/rpc", json=payload)
+    response = await rpc.test_client().post("/", json=payload)
     assert response.status_code == 200
     data = await response.get_json()
 
     assert data["jsonrpc"] == "2.0"
     assert data["id"] == 3
-    assert isinstance(data["result"], list)
-    assert len(data["result"]) == 2
-    assert data["result"][0] == list(b1.header.hash())
-    assert data["result"][1] == int(b1.header.slot)
+    assert data["result"]["header_hash"] == list(b1.header.hash())
+    assert data["result"]["slot"]        == int(b1.header.slot)
 
 @pytest.mark.asyncio
 async def test_finalized_block(db_path):
@@ -97,15 +95,13 @@ async def test_finalized_block(db_path):
         "id": 3
     }
 
-    response = await rpc.test_client().post("/rpc", json=payload)
+    response = await rpc.test_client().post("/", json=payload)
     assert response.status_code == 200
     data = await response.get_json()
     assert data["jsonrpc"] == "2.0"
     assert data["id"] == 3
-    assert isinstance(data["result"], list)
-    assert len(data["result"]) == 2
-    assert data["result"][0] == list(finalized_block.header.hash())
-    assert data["result"][1] == int(finalized_block.header.slot)
+    assert data["result"]["header_hash"] == list(finalized_block.header.hash())
+    assert data["result"]["slot"] == int(finalized_block.header.slot)
 
 @pytest.mark.asyncio
 async def test_parent_block(db_path):
@@ -129,14 +125,13 @@ async def test_parent_block(db_path):
         "params": [list(b2.header.hash())], 
         "id": 3
     }
-    response = await rpc.test_client().post("/rpc", json=payload)
+    response = await rpc.test_client().post("/", json=payload)
     assert response.status_code == 200
     data = await response.get_json()
     assert data["jsonrpc"] == "2.0"
     assert data["id"] == 3
-    assert len(data["result"]) == 2
-    assert data["result"][0] == list(b1.header.hash())
-    assert data["result"][1] == int(b1.header.slot)
+    assert data["result"]["header_hash"] == list(b1.header.hash())
+    assert data["result"]["slot"] == int(b1.header.slot)
 
 @pytest.mark.asyncio
 async def test_state_root(db_path):
@@ -155,12 +150,12 @@ async def test_state_root(db_path):
         "params":  [list(hh4)],
         "id":      3
     }
-    resp = await rpc.test_client().post("/rpc", json=payload)
+    resp = await rpc.test_client().post("/", json=payload)
     assert resp.status_code == 200
     data = await resp.get_json()
     assert data["jsonrpc"] == "2.0"
     assert data["id"]      == 3
-    assert data["result"]  == list(bytes(State.load(hh4).root).hex()) 
+    assert data["result"]["header_hash"]  == list(bytes(State.load(hh4).root).hex()) 
 
 
 
@@ -182,12 +177,12 @@ async def test_statistics(db_path):
         "id":      3
     }
 
-    resp = await rpc.test_client().post("/rpc", json=payload)
+    resp = await rpc.test_client().post("/", json=payload)
     assert resp.status_code == 200
     data = await resp.get_json()
     assert data["jsonrpc"] == "2.0"
     assert data["id"]      == 3
-    assert data["result"]  == list(((State.load(hh2).pi).encode()).hex())
+    assert data["result"]["result"]  == list(((State.load(hh2).pi).encode()).hex())
 
 @pytest.mark.asyncio
 async def test_service_data_rpc(db_path):
@@ -225,12 +220,12 @@ async def test_service_data_rpc(db_path):
         "params":  [list(hh), int(sid)],
         "id":      7
     }
-    resp = await rpc.test_client().post("/rpc", json=payload)
+    resp = await rpc.test_client().post("/", json=payload)
     assert resp.status_code == 200
     data = await resp.get_json()
     assert data["jsonrpc"] == "2.0"
     assert data["id"]      == 7
-    assert data["result"]  == list(expected_data)
+    assert data["result"]["result"]  == list(expected_data)
 
 @pytest.mark.asyncio
 async def test_service_value_rpc(db_path):
@@ -261,12 +256,12 @@ async def test_service_value_rpc(db_path):
     }
 
     
-    resp = await rpc.test_client().post("/rpc", json=payload)
+    resp = await rpc.test_client().post("/", json=payload)
     data = await resp.get_json()
     assert resp.status_code == 200
     assert data["jsonrpc"] == "2.0"
     assert data["id"] == 8
-    assert data["result"] == list(str(value.hex()))
+    assert data["result"]["result"] == list(str(value.hex()))
 
 
 @pytest.mark.asyncio
@@ -292,12 +287,12 @@ async def test_service_preimage_rpc(db_path):
         "params":  [list(hh), int(sid), list(hsh)],
         "id":      9
     }
-    resp = await rpc.test_client().post("/rpc", json=payload)
+    resp = await rpc.test_client().post("/", json=payload)
     data = await resp.get_json()
     assert resp.status_code == 200
     assert data["jsonrpc"] == "2.0"
     assert data["id"] == 9
-    assert data["result"] == list(blob.hex())
+    assert data["result"]["result"] == list(blob.hex())
 
 
 @pytest.mark.asyncio
@@ -327,9 +322,9 @@ async def test_service_request_handler_rpc(db_path):
         "params":  [list(hh), int(sid), list(hash), int(len)],
         "id":      9
     }
-    resp = await rpc.test_client().post("/rpc", json=payload)
+    resp = await rpc.test_client().post("/", json=payload)
     data = await resp.get_json()
     assert resp.status_code == 200
     assert data["jsonrpc"] == "2.0"
     assert data["id"] == 9
-    assert data["result"] == [U32(1752078176), U32(1752078177)]
+    assert data["result"]["result"] == [U32(1752078176), U32(1752078177)]

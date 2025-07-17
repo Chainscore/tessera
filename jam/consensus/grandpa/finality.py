@@ -25,7 +25,7 @@ class Finality:
         block = Block.load(header_hash, kv)
 
         #websocket broadcast for FinalizedBlock
-        asyncio.create_task(broker.publish("finalizedBlock", [list(header_hash), int(block.header.slot)]))
+        asyncio.create_task(broker.publish("finalizedBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
     
         kv.put(cls.FINAL_KEY, header_hash.encode())
 
@@ -37,7 +37,7 @@ class Finality:
         block = Block.load(header_hash, kv)
 
         #websocket broadcast for bestBlock
-        asyncio.create_task(broker.publish("bestBlock", [list(header_hash), int(block.header.slot)]))
+        asyncio.create_task(broker.publish("bestBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
 
         kv.put(cls.LATEST_KEY, header_hash.encode())
 

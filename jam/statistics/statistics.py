@@ -101,6 +101,6 @@ class Statistics:
         state.pi = pi
 
         #websocket broadcast for statistics
-        asyncio.create_task(broker.publish("subscribeStatistics", [list(pi.encode())]))
+        asyncio.create_task(broker.publish("subscribeStatistics", {"result":list(pi.encode())}))
 
         return state

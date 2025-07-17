@@ -28,7 +28,7 @@ def make_account_prop(field):
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()
         #websocket broadcast for service data
-        asyncio.create_task(broker.publish("subscribeServiceData", [list(meta.encode())]))
+        asyncio.create_task(broker.publish("subscribeServiceData", {"result":list(meta.encode())}))
        
         self.store.put(k, v)
     return property(getter, setter)
@@ -166,7 +166,7 @@ class StorageView:
             #websocket broadcast for service value
 
         self.store.put(key, value)
-        asyncio.create_task(broker.publish("subscribeServiceValue", [list(value.hex())]))
+        asyncio.create_task(broker.publish("subscribeServiceValue", {"result":list(value.hex())}))
 
     def __delitem__(self, key: Bytes[32]):
         curr_value = self[key]
@@ -176,7 +176,7 @@ class StorageView:
             meta_view.num_o = meta_view.num_o - len(curr_value) - 32
         
         #websocket broadcast for service value
-        asyncio.create_task(broker.publish("subscribeServiceValue", [list(curr_value)]))
+        asyncio.create_task(broker.publish("subscribeServiceValue", {"result":list(curr_value)}))
     
         storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
         self.store.delete(storage_key)
@@ -196,14 +196,14 @@ class PreImageView:
         self.store.put(k, value)
 
         #websocket broadcast for service preimage
-        asyncio.create_task(broker.publish("subscribeServicePreimage", [list(value)]))
+        asyncio.create_task(broker.publish("subscribeServicePreimage", {"result":list(value)}))
 
 
 
     def __delitem__(self, key: Bytes[32]):
         storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24]))
         #websocket broadcast for service preimage
-        asyncio.create_task(broker.publish("subscribeServicePreimage", [list(storage_key)]))
+        asyncio.create_task(broker.publish("subscribeServicePreimage", {"result":list(storage_key)}))
         self.store.delete(storage_key)
 
 
@@ -229,7 +229,7 @@ class TimestampsView:
             meta_view.num_o = meta_view.num_o + key.length + 81
 
         #websocket broadcast for service value
-        asyncio.create_task(broker.publish("subscribeServiceRequest", [meta_view]))
+        asyncio.create_task(broker.publish("subscribeServiceRequest", {"result":meta_view}))
 
 
         self.store.put(storage_key, v)
@@ -242,6 +242,6 @@ class TimestampsView:
             meta_view.num_i = meta_view.num_i - 2
             meta_view.num_o = meta_view.num_o - key.length - 81
         #websocket broadcast for service value
-        asyncio.create_task(broker.publish("subscribeServiceRequest", [curr_data]))
+        asyncio.create_task(broker.publish("subscribeServiceRequest", {"result":curr_data}))
 
         self.store.delete(storage_key)

@@ -14,7 +14,7 @@ rpc = Quart(__name__)
 
 logger.info( "RPC server is starting up" )
 
-@rpc.route("/rpc", methods=["POST"])
+@rpc.route("/", methods=["POST"])
 async def rpc_handler():
     """
     RPC requests for different methods.
