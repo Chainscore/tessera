@@ -20,6 +20,7 @@ from jam.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
+from jam.network.base.certificate import generate_san
 
 from jam.state.state import setup_state, State
 from jam.types.protocol.crypto import BlsPublic
@@ -99,7 +100,7 @@ async def run_node(
         update_state(state)
 
         peers = [
-            Peer(id="", data=val)
+            Peer(id=generate_san(val.ed25519), data=val)
             for val in state.kappa
             if val.metadata.port != port
         ]

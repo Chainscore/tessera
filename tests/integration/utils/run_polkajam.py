@@ -26,7 +26,7 @@ async def run_pj_command(node_id: int):
                 line = await stream.readline()
                 if not line:
                     break
-                print(f"[{node_id}] {stream_name}: {line.decode().strip()}")
+                print(f"[{node_id}] {line.decode().strip()}")
 
         # Wait for the process to finish and for the loggers to finish
         await asyncio.gather(

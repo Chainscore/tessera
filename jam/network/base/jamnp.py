@@ -27,8 +27,8 @@ protocol_version = "0"
 logger = get_logger("network")
 
 
-class QuicProtocol(QuicConnectionProtocol):
-    """Quic Protocol for establishing connection with peers."""
+class JAMNP(QuicConnectionProtocol):
+    """JAMNP-spec QUIC Connection handler"""
 
     from jam.network.peer import Peer
 
@@ -157,6 +157,12 @@ class QuicProtocol(QuicConnectionProtocol):
         """function that handles all the quic events"""
 
         from jam.network.node import node_alpn, builder_alpn
+
+        logger.critical(
+            f"Received QUIC event: {type(event).__name__}",
+            interface=self.interface,
+            alpn_protocol=event.alpn_protocol if hasattr(event, 'alpn_protocol') else None,
+        )
 
         # Handle TLS Handshake
         if isinstance(event, HandshakeCompleted):
@@ -408,4 +414,3 @@ class QuicProtocol(QuicConnectionProtocol):
                             interface=self.interface,
                         )
                         self.stream_buffer[stream_id] = prefix.encode()
-            # -------------------- ----- ------ --- ------ --------------------
