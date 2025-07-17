@@ -4,7 +4,7 @@ from time import time
 from tsrkit_types.bits import Uint
 from tsrkit_types.sequences import TypedVector
 
-from jam.state.state import State
+# from jam.state.state import State
 from jam.utils.constants import AUDIT_PERIOD, VALIDATOR_COUNT
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import Hash

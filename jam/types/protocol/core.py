@@ -5,6 +5,7 @@ from jam.types.protocol.crypto import OpaqueHash
 TimeSlot = Uint[32]
 ValidatorIndex = Uint[16]
 CoreIndex = Uint[16]
+EpochIndex = Uint[32]
 Gas = Uint[64]
 RemainingGas = int
 ServiceId = Uint[32]

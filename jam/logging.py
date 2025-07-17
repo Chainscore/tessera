@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 import os
 import sys
@@ -58,7 +56,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": Colour.RED,
             "CRITICAL": Colour.MAGENTA,
         },
-        "time"  : Colour.BBLACK,
+        "time"  : Colour.BBLUE,
         "logger": Colour.BLUE,
         "node"  : Colour.BMAG,
     },
@@ -71,7 +69,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": f"{Colour.BOLD}{Colour.BBLACK}{Colour.GREEN}",
             "CRITICAL": f"{Colour.BOLD}{Colour.BGREEN}{Colour.BLACK}",
         },
-        "time": Colour.GREEN,
+        "time": Colour.BBLUE,
         "logger": Colour.GREEN,
         "node": Colour.BGREEN,
         "prefixes": ("0x", ">_", ">>", "//", "$_", "#_"),
@@ -85,7 +83,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": f"{Colour.BOLD}{Colour.BMAG}{Colour.WHITE}",
             "CRITICAL": f"{Colour.BOLD}{Colour.BWHITE}{Colour.BLACK}",
         },
-        "time": Colour.BBLACK,
+        "time": Colour.BBLUE,
         "logger": f"{Colour.BOLD}{Colour.MAGENTA}",
         "node": f"{Colour.BOLD}{Colour.BMAG}",
     },
@@ -99,7 +97,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": _fg(31),   # red
             "CRITICAL": _fg(35) # magenta
         },
-        "time": _fg(90),   # base01
+        "time": Colour.BBLUE,   # base01
         "logger": _fg(94), # cyan
         "node": _fg(96),   # base1 cyan
     },
@@ -112,7 +110,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": _fg(91),  # red
             "CRITICAL": _fg(95)# magenta
         },
-        "time": _fg(90),
+        "time": Colour.BBLUE,
         "logger": _fg(95),
         "node": _fg(92),
     },
@@ -125,7 +123,7 @@ _PALETTES: Mapping[Theme, Dict[str, str]] = {
             "ERROR": f"{Colour.BOLD}{Colour.RED}",
             "CRITICAL": f"{Colour.BOLD}{Colour.RED}{Colour.UNDER}",
         },
-        "time": Colour.BBLACK,
+        "time": Colour.BBLUE,
         "logger": Colour.BWHITE,
         "node": Colour.BRED,
     },
@@ -188,15 +186,6 @@ class ThemedRenderer(ConsoleRenderer):
         return " ".join(parts)
 
 
-# ---------- performance logging --------------------------------------------- #
-
-def add_performance_context(_, __, event_dict):
-    """Add performance-related context to log events."""
-    # Add process ID for multi-process debugging
-    event_dict["pid"] = os.getpid()
-    return event_dict
-
-
 def filter_sensitive_data(_, __, event_dict):
     """Filter out sensitive data from logs in production."""
     sensitive_keys = {"private_key", "seed", "password", "token", "secret"}
@@ -222,7 +211,7 @@ def setup_module_logging_levels():
             module_suffix = str(key[10:]).lower()  # Remove "LOG_LEVEL_" prefix
             try:
                 level = value.upper()
-                print("setting log level for", module_suffix, value.upper())
+                print("Log level for", module_suffix, value.upper())
                 module_levels[module_suffix] = value.upper()
             except AttributeError:
                 logger.warning(f"Invalid log level: {value} for module {module_suffix}")
@@ -275,14 +264,13 @@ def setup_logging(
     def add_node_context(_, __, event: Dict[str, Any]) -> Dict[str, Any]:
         if node_name:
             event["node_name"] = node_name
-        event["environment"] = environment.value
+        # event["environment"] = environment.value
         return event
 
     processors.extend([
         add_node_context,
-        add_performance_context,
+        TimeStamper(fmt="%Y-%m-%d|%H:%M:%S", utc=False),
         add_log_level,
-        TimeStamper(fmt="iso"),
     ])
     
     # Add sensitive data filtering in production
@@ -353,7 +341,7 @@ def setup_logging(
 
 def get_logger(name: str | None = None, component: str | None = None):
     """
-    Return a themed structlog logger with optional component context.
+    Return/ a themed structlog logger with optional component context.
     
     Args:
         name: Logger name (typically __name__)

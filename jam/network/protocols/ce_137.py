@@ -1,9 +1,10 @@
 from typing import cast, Tuple
+import asyncio
 
-from tsrkit_types import structure, Uint, Null
+from tsrkit_types import structure, Uint, Null, TypedVector, Bytes
+from jam.types.work.manifest import Assurers
 
 from jam.logging import logger
-from jam.settings import settings
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -11,10 +12,15 @@ from jam.network.base.quic import QuicProtocol
 
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
-from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex
+from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex, ShardKey
 
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
+
+from jam.types.protocol.crypto import Hash
+from jam.merklization import BMRFunctions
+from jam.utils.chainspec import chain_config
+from jam.utils.gather import gather_with_exceptions
 
 @structure
 class Query:
@@ -73,7 +79,7 @@ class ShardDistributionProtocol(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE137
 
-    async def transmit(self, node: Node, data: CE137Data):
+    async def transmit(self, node: Node, data: CE137Data, assurers: Assurers = None):
         """Transmit Erasure-Root and Shard Index from Assurer (client) to Guarantor (server)"""
 
         msg_a = data.query.encode()
@@ -81,9 +87,13 @@ class ShardDistributionProtocol(NetworkProtocol):
 
         logger.info(f"Requesting shard from {len(node.peer_conn)} guarantors")
 
-        for peer in node.peer_conn:
-            try:
-                if int(peer.port) == 40002:
+        tasks = TypedVector([])
+        try:
+            for peer in node.peer_conn:
+                # if int(peer.port) != 40001:
+                #     continue
+
+                if Uint[16](peer.peer_index) in assurers:
                     logger.debug("Requesting shard from", peer=str(peer))
                     client = node.peer_conn[peer][1]
 
@@ -95,21 +105,26 @@ class ShardDistributionProtocol(NetworkProtocol):
 
                     # Send Messages with their lengths
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    # res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    res = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    task = asyncio.create_task(res)
+                    tasks.append(task)
 
-                    if res is not None:
-                        return res
+            responses = await gather_with_exceptions(tasks)
 
-            except Exception as e:
-                logger.error(
-                    "Failed to request shard.",
-                    peer=str(peer),
-                    error=str(e),
-                    error_type=type(e).__name__
-                )
+            if responses is not None:
+                return responses
+
+        except Exception as e:
+            logger.error(
+                "Failed to request shard.",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
+        from jam.settings import settings
         buffer = server.stream_buffer[stream_id]
 
         try:
@@ -126,29 +141,44 @@ class ShardDistributionProtocol(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            # TODO: Process received erasure root & shard index
-            query = data.query
+            erasure_root = data.query.erasure_root
+            shard_index = data.query.shard_index
 
             d3l = settings.d3l
-            audit = settings.audit
-
-            justification_da = JustificationsDA(audit)
+            audit = settings.audit_da
 
             # Fetch Bundle Shard
             audits_da = AuditShardsDA(audit)
-            bs_dict = audits_da.get(query.erasure_root)
-            bundle_shard = BundleShard(bs_dict[query.shard_index])
+            bs_dict = audits_da.get(erasure_root)
+            bundle_shard = BundleShard(bs_dict[shard_index])
 
             # Fetch Segments Shard
             ss_da = SegmentShardsDA(d3l)
-            ss_dict = ss_da.get(query.erasure_root)
-            if query.shard_index not in ss_dict:
+            ss_dict = ss_da.get(erasure_root)
+            if shard_index not in ss_dict:
                 raise "Shard not found"
 
-            segments_shard = SegmentsShard(ss_dict[query.shard_index].shard)
+            segments_shard = SegmentsShard(ss_dict[shard_index].shard)
 
-            # TODO: Fetch Justifications
-            justification = Justification([])
+            bundle_shard_indices = bs_dict.keys()
+            segment_shard_indices = ss_dict.keys()
+
+            if len(bundle_shard_indices) != chain_config.num_validators or len(segment_shard_indices) != chain_config.num_validators:
+                raise ValueError(f"Length of both type of shards should be {chain_config.num_validators}")
+
+            bmrfunctions = BMRFunctions()
+            s = TypedVector[Bytes]([])
+            for i in range(chain_config.num_validators):
+                bundle_shard_hash = Hash.blake2b(bs_dict[i].encode())
+                segment_shard = SegmentsShard(ss_dict[i].shard)
+                segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
+                shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+                s.append(Bytes(shards_key.encode()))
+
+            justification = Justification(bmrfunctions.trace_fn(values=s, index=shard_index).unwrap())
+
+            justification_da = JustificationsDA(audit)
+            justification_da.put(erasure_root, shard_index, justification)
 
             # Return requested shards
             msg_a = bundle_shard.encode()
@@ -193,9 +223,6 @@ class ShardDistributionProtocol(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             logger.info("Data received on Assurer Node")
-
-            # TODO: verify justification
-            # TODO: save the justification for CE139/140 and proceed further with data
 
             return data.bundle_shard, data.segments_shard, data.justification
 

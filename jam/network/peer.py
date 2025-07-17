@@ -1,3 +1,6 @@
+from tsrkit_types import TypedVector
+
+from jam.network.base.certificate import generate_san
 from jam.types.protocol.validators import ValidatorData
 
 class Peer:
@@ -22,11 +25,11 @@ class Peer:
 
     @property
     def host(self):
-        return self.data.metadata.host
+        return str(self.data.metadata.host)
 
     @property
     def port(self):
-        return self.data.metadata.port
+        return int(self.data.metadata.port)
 
     @property
     def ed_key(self):
@@ -36,15 +39,15 @@ class Peer:
     def name(self):
         return self.data.metadata.name
 
-    def __init__(self, id: str, data: ValidatorData):
-        self.id = id
+    def __init__(self, data: ValidatorData):
+        self.id = generate_san(data.ed25519)
         self.data = data
 
     def __repr__(self):
-        return f"Peer(host={self.data.metadata.host}, port={self.data.metadata.port}, name={self.data.metadata.name})"
+        return f"Peer(host={self.host}, port={int(self.port)}, id=...{self.id[:4]})"
 
     def __str__(self):
-        return f"Peer({self.data.metadata.host}:{self.data.metadata.port})"
+        return f"Peer({self.host}:{int(self.port)})"
 
     def __int__(self):
-        return f"Peer({self.data.metadata.port})"
+        return f"Peer({int(self.port)})"

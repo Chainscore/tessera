@@ -41,7 +41,9 @@ class ValidatorMetadata:
     @classmethod
     def from_json(cls, hex_data) -> "ValidatorMetadata":
         return cls.decode(Bytes.from_json(hex_data))
-
+    
+    def to_json(self) -> str:
+        return self.encode().hex()
 
 @structure
 class ValidatorData:
@@ -51,6 +53,9 @@ class ValidatorData:
     ed25519: Ed25519Public
     bls: BlsPublic
     metadata: ValidatorMetadata
+
+    def __repr__(self):
+        return f"Validator(host={str(self.metadata.host)}, port={int(self.metadata.port)})"
 
 
 """Fixed-size array of validator data with size VALIDATOR_COUNT."""

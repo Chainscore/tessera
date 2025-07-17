@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
+from pydantic.networks import import_email_validator
 from tsrkit_types import U32, Uint
 
 from jam.logging import get_logger
@@ -36,10 +37,10 @@ def generate_san(pubkey: bytes) -> str:
         return alphabet[n % 32] + b(Uint[256](n // 32), l - 1)
 
     alphabet = "abcdefghijklmnopqrstuvwxyz234567"
-    n, _ = Uint[256].decode_from(pubkey)
+    n = Uint[256].decode(pubkey)
     return "e" + b(n, 52)
 
-def generate_keys(port: int):
+def generate_keys(port: int) -> str:
     """
     Generate keys for a node running on a given port
         - Goes to /seeds/keys.json to read the secret key
@@ -53,11 +54,10 @@ def generate_keys(port: int):
     Returns:
         str: SAN of the certificate
     """
-
-    seed = b"".join([U32(int(os.environ["SEED"])).encode()] * 8)
-    if len(seed) != 32:
-        raise ValueError("Seed must be exactly 32 bytes long.")
-
+    if port == 0:
+        return ""
+    from jam.settings import settings 
+    seed = settings.seed
     # Create the private key from seed and
     # Store private key in /seeds/{port}/key.pem
     # And public key in /seeds/{port}/pub_key.pem

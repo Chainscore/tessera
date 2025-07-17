@@ -23,9 +23,9 @@ class StateTrie:
     # Cache the root
     root_hash: Bytes[32]
     
-    def __init__(self):
-        self.nodes = {}
-        self.root_hash = Bytes[32]([0] * 32)
+    def __init__(self, nodes = {}, root_hash = Bytes[32](32)):
+        self.nodes = nodes 
+        self.root_hash = root_hash
 
     def _merkelize_recursive(
         self,

@@ -1,3 +1,4 @@
+import asyncio
 from typing import cast
 
 from tsrkit_types import structure, TypedVector, Uint
@@ -12,6 +13,7 @@ from jam.types.work.shard import ShardIndex, SegmentsShard
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.types.protocol.core import ErasureRoot, ValidatorIndex
+from jam.utils.gather import gather_with_exceptions
 
 
 SegmentIndexes = TypedVector[SegmentIndex]
@@ -76,9 +78,10 @@ class SegmentShardRequestBase(NetworkProtocol):
 
         logger.info(f"Sending segment shard request with")
 
-        for peer in node.peer_conn:
-            if int(peer.port) == 30333:
-                logger.info("requesting seg shard from 30333")
+        tasks = TypedVector([])
+        try:
+            for peer in node.peer_conn:
+                logger.info("Requesting seg shard from:", port=peer.port)
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
@@ -89,10 +92,21 @@ class SegmentShardRequestBase(NetworkProtocol):
 
                 # Send Messages with their lengths
                 client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                if res is not None:
-                    return res
+                task = asyncio.create_task(res)
+                tasks.append(task)
+
+            responses = await gather_with_exceptions(tasks)
+            if responses is not None:
+                return responses
+
+        except Exception as e:
+            logger.error(
+                "Failed to request shards",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
     @staticmethod
     def parse_request(buffer: bytes) -> CE139Data:

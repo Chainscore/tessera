@@ -1,17 +1,17 @@
 import asyncio
 from math import ceil
 from typing import Tuple
+import time
 
 from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, U16, U64, TypedVector, U32
 
 from jam.utils.chainspec import chain_config
 from jam.logging import get_logger
-from jam.settings import settings
 
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
 
-from jam.types.block.extrinsics.guarantees import ValidatorSignatures, ValidatorSignature
+from jam.types.block.extrinsics.guarantees import ReportGuarantee, ValidatorSignatures, ValidatorSignature
 
 from jam.types.protocol.core import CoreIndex, Gas, TimeSlot, ExportsRoot, ValidatorIndex
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
@@ -41,7 +41,7 @@ from jam.types.work.execution import (
 
 from jam.utils.benchmark import benchmark
 
-from jam.utils.constants import BASIC_ERASURE_SIZE, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE
+from jam.utils.constants import BASIC_ERASURE_SIZE, GENESIS_TS, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE, SLOT_PERIOD
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 
@@ -64,6 +64,8 @@ class Processor:
     node: Node
     merkle: BMRFunctions
     def __init__(self, node: Node):
+        from jam.settings import settings
+        self.settings = settings
         self.merkle = BMRFunctions()
         self.node = node
         self.transmit_task = None
@@ -266,6 +268,7 @@ class Processor:
             s: Availability specifier
         """
         from jam.erasure_coding.erasure_code import ErasureCode
+        settings = self.settings
 
         try:
             # Work Bundle Length, l
@@ -368,7 +371,7 @@ class Processor:
 
             # Access DA
             d3l = settings.d3l
-            audits = settings.audit
+            audits = settings.audit_da
 
             # Store Exported Segments
             seg_da = SegmentsDA(d3l)
@@ -396,6 +399,7 @@ class Processor:
             raise
 
     def process_bundle(self, core: CoreIndex, bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup) -> Tuple[WorkReport, WorkReportHash]:
+        settings = self.settings
         try:
             # Generate Report
             logger.info("Building Work Report..")
@@ -404,6 +408,7 @@ class Processor:
 
             wr_hash = Hash.blake2b(report.encode())
             logger.info(f"Generated Work Report with hash {wr_hash}")
+
 
             # Access DA
             d3l = settings.d3l
@@ -458,7 +463,6 @@ class Processor:
         with benchmark("bundle processed"):
             wr, wr_hash = self.process_bundle(core, bundle, lookup)
 
-
         # Build Guarantee
         logger.info(f"Building guarantees..")
         with benchmark("guarantees signed"):
@@ -476,6 +480,7 @@ class Processor:
         """
         Utility Async function for receiving guarantees and processing it.
         """
+        settings = self.settings
         from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
 
         ed25519_key = self.node.ed_pvt_key
@@ -486,25 +491,33 @@ class Processor:
         # Sign the Guarantee
         sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
-        og_guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=sign)
+        og_guarantee = ValidatorSignature(validator_index=ValidatorIndex(self.node.validator_index), signature=sign)
 
         # Check majority & Build guarantees:
-        guarantees = ValidatorSignatures([og_guarantee])
+        guarantees = [og_guarantee]
 
         # Working fix
         responses = await self.transmit_task
         logger.info("✅ Received responses: %s", responses)
 
         from jam.network.protocols.ce_134 import OptCred
-        for response in responses:
+        for (response, validator_index) in responses:
             if response != OptCred(Null):
                 cred = response.unwrap()
                 if cred.work_report_hash == wr_hash:
-                    guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=cred.ed25519_signature)
+                    guarantee = ValidatorSignature(
+                        validator_index=validator_index,
+                        signature=cred.ed25519_signature
+                    )
+                    print("REC GUARANTEE", guarantee)
                     guarantees.append(guarantee)
 
+        # Sort them guarantees
+
+        guarantees = ValidatorSignatures(sorted(guarantees, key = lambda g: g.validator_index))
+        print("GUARANTEES BUILT", guarantees)
         # Distribute Guaranteed WR to Validators CE135
-        logger.info(f"Distributing Work Report to other validators..")
+        logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
         if len(guarantees) > 1:
 
             d3l = settings.d3l
@@ -524,11 +537,18 @@ class Processor:
 
             # TODO: Save Assurers Mapping
 
-            from jam.network.protocols.ce_135 import GuaranteedWR
             CE135 = WorkReportDistribution()
             # TODO: Fix timeslot
-            gwr = GuaranteedWR(report=wr, slot=TimeSlot(0), signatures=guarantees)
+            gwr = ReportGuarantee(
+                report=wr,
+                slot=TimeSlot((time.time() - GENESIS_TS) // SLOT_PERIOD),
+                signatures=guarantees
+            )
             r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
+
+            # give assurance for this core & this validator
+            from jam.operations.assr_collector import assr_collector
+            assr_collector.record_shard_assr(wr.core_index)
 
             acks = await CE135.transmit(node=self.node, data=data)

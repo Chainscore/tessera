@@ -1,10 +1,10 @@
 from typing import Tuple
 from jam.execution.utils import decode_code_hash
-from jam.state.state_storage import StateStorage
+from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
 from jam.types.protocol.core import Balance, ServiceId, TimeSlot, BlobLength
 from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import AccountMetadata, LookupTable, Timestamps, AccountData
+from jam.types.state.delta import AccountMetadata, Ai, Ao, LookupTable, Timestamps, AccountData
 from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32
@@ -213,7 +213,7 @@ class TimestampsView:
         curr_data = self.store.get(storage_key)
         if curr_data is not None:
             meta_view = AccountDataView(self.id, self.store)
-            meta_view.num_i = meta_view.num_i - 2
-            meta_view.num_o = meta_view.num_o - key.length - 81
-
+            meta_view.num_i = Ai(int(meta_view.num_i) - 2)
+            meta_view.num_o = Ao(int(meta_view.num_o) - int(key.length) - 81)
+            
         self.store.delete(storage_key)

@@ -279,7 +279,7 @@ class Accumulation:
                 partial_state, work_reports, privileged_services, service, timeslot
             )
             gas_consumed.append((service,_gas_consumed))
-            if _output_hash.unwrap() != Null:
+            if _output_hash and _output_hash.unwrap() != Null:
                 outputs.add((service, _output_hash.unwrap()))
             transfers.extend(_transfers)
             collected_preimages.update(_preimages)
@@ -338,7 +338,14 @@ class Accumulation:
                         )
                     )
 
-        posterior_state, transfers, optional_hash, gas, preimage = PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=p).execute()
+        posterior_state, transfers, optional_hash, gas, preimage = PsiA(
+            u=initial_state, 
+            t=timeslot, 
+            s=service_id, 
+            g=g, 
+            o=p
+        ).execute()
+        
         return posterior_state, transfers, optional_hash, gas, preimage
 
     @staticmethod
@@ -559,7 +566,7 @@ class Accumulation:
 
         xi[EPOCH_LENGTH - 1] = cls.mapping_fn(star_work_reports)
 
-        timeslot_difference = block.header.slot - state.tau
+        timeslot_difference = int(block.header.slot) - int(state.tau)
 
         # Update Ready Queue, Nu
         nu = state.nu

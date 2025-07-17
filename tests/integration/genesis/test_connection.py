@@ -1,5 +1,3 @@
-# TODO: Work in Progress
-
 import pytest
 import asyncio
 import logging
@@ -66,8 +64,8 @@ async def run_node(
 ):
     # ---------- SETUP LOGGING ----------
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
-    init_ts = (time.time() - genesis_ts) / SLOT_PERIOD
-    init_ep = init_ts // EPOCH_LENGTH
+    init_ts = int((time.time() - genesis_ts) / SLOT_PERIOD)
+    init_ep = int(init_ts // EPOCH_LENGTH)
 
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
@@ -176,8 +174,6 @@ async def run_node(
 
         raise
 
-session_name = "jam_test"
-
 def run_node_process(
     genesis_path: str,
     env: str,
@@ -200,6 +196,7 @@ def run_node_process(
         is_validator
     ))
 
+
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_connection():
@@ -218,7 +215,7 @@ async def test_connection():
     p_bob.start()
 
     # KEEP TEST ALIVE FOR SOME TIME
-    await asyncio.sleep(40)
+    await asyncio.sleep(20)
 
 
     print("END OF TEST")

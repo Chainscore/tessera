@@ -1,23 +1,24 @@
+import asyncio
 from typing import cast, Tuple
 
-from tsrkit_types import Uint, structure, TypedVector, Bytes
+from tsrkit_types import Uint, structure, TypedVector, Bytes, Null
 
 from jam.logging import logger
-from jam.settings import settings
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_137 import CE137Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.protocol.core import ErasureRoot
-from jam.types.protocol.crypto import Hash
 from jam.types.work.manifest import Segment, Justification
-from jam.types.work.shard import SegmentsShard, ShardIndex, BundleShard
+from jam.types.work.shard import SegmentsShard, ShardIndex, BundleShard, ShardKey
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
+from jam.merklization import BMRFunctions
+from jam.types.protocol.crypto import Hash
+from jam.utils.gather import gather_with_exceptions
 
 
 CE138Data = CE137Data
@@ -66,10 +67,10 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         logger.info(f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer")
 
-        responses = TypedVector([])
-        for peer in node.peer_conn:
-            if int(peer.port) == 30336:
-                logger.info("requesting audit shard from 30336")
+        tasks = TypedVector([])
+        try:
+            for peer in node.peer_conn:
+                logger.info("Requesting audit shard from peer", port=peer.port)
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
@@ -80,54 +81,89 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
                 # Send Messages with their lengths
                 client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                responses.append(data)
+                task = asyncio.create_task(res)
+                tasks.append(task)
 
-        return responses
+            responses = await gather_with_exceptions(tasks)
+
+            if responses is not None:
+                return responses
+
+        except Exception as e:
+            logger.error(
+                "Failed to request audit shard.",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Assurer (server)"""
+        from jam.settings import settings
         buffer = server.stream_buffer[stream_id]
 
         logger.info("Received Shard index & erasure root")
         data, offset = CE138Data.decode_from(buffer[1:])
         data = cast(CE138Data, data)
 
-        if not data.is_valid:
-            raise NetworkingError(Code.INVALID_DATA)
+        try:
+            if not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
 
-        query = data.query
+            erasure_root = data.query.erasure_root
+            shard_index = data.query.shard_index
 
-        logger.info("Processing")
-        # TODO: Process received erasure code & shard index
+            d3l = settings.d3l
+            audit = settings.audit_da
 
-        d3l = settings.d3l
-        audit = settings.audit
+            # Fetch Segments Shard
+            ss_da = SegmentShardsDA(d3l)
+            ss_dict = ss_da.get(erasure_root)
 
-        audits_da = AuditShardsDA(audit)
-        ss_da = SegmentShardsDA(d3l)
-        justification_da = JustificationsDA(audit)
+            # Fetch Bundle Shard
+            audits_da = AuditShardsDA(audit)
+            bs_dict = audits_da.get(erasure_root)
+            if shard_index not in bs_dict.keys():
+                raise ValueError("Bundle shard not found")
+            bundle_shard = bs_dict[shard_index]
 
-        # Fetch Bundle Shard
-        audits_da = AuditShardsDA(audit)
-        bs_dict = audits_da.get(query.erasure_root)
-        bundle_shard = bs_dict[query.shard_index]
+            # Fetch Justifications
+            justification_da = JustificationsDA(audit)
+            justification = justification_da.get(erasure_root, shard_index)
 
-        # TODO: Fetch Justifications
-        justification = Justification([])
+            # build segment shard root
+            bmrfunctions = BMRFunctions()
+            segment_shard = SegmentsShard(ss_dict[shard_index].shard)
+            segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
+            s = Bytes(segments_shard_root.encode())
 
-        # Return requested shards
-        msg_a = bundle_shard.encode()
-        len_a = Uint[32](len(msg_a)).encode()
-        msg_b = justification.encode()
-        len_b = Uint[32](len(msg_a)).encode()
+            justification.append(s)
 
-        server.stream_and_keep_open(len_a, stream_id)
-        server.stream_and_keep_open(msg_a, stream_id)
-        server.stream_and_keep_open(len_b, stream_id)
-        server.stream_and_close(msg_b, stream_id)
+            # Return requested shards
+            msg_a = bundle_shard.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+            msg_b = justification.encode()
+            len_b = Uint[32](len(msg_b)).encode()
+
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_keep_open(msg_a, stream_id)
+            server.stream_and_keep_open(len_b, stream_id)
+            server.stream_and_close(msg_b, stream_id)
+
+        except Exception as e:
+            msg_a = b''.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+
+            # Send response
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_close(msg_a, stream_id)
+            logger.error(
+                "Failed to find audit shard.",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[BundleShard, Justification] | None:
@@ -139,12 +175,9 @@ class AuditShardRequestProtocol(NetworkProtocol):
             data = cast(CE138Response, data)
 
             if not data or not data.is_valid:
-                    raise NetworkingError(Code.INVALID_DATA)
+                raise NetworkingError(Code.INVALID_DATA)
 
             logger.info("Data received on Auditor Node")
-
-            # TODO: verify justification
-            # TODO: save the justification for CE139/140 and proceed further with data
 
             logger.info("Received bundle shard")
             return data.bundle_shard, data.justification

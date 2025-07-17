@@ -29,11 +29,22 @@ class PsiA(InvocationProtocol):
         xs = self.context.x.s_index
         delta = self.context.x.partial_state.service_accounts
         return {
+            18: (GeneralFunctions, {                                                                        # fetch (Updates context[x]_hash)
+                "package": None,
+                # TODO: This should be posterier
+                "entropy": state.eta[0],
+                "trace": None,
+                "item_index": None,
+                "import_segments": None,
+                "extrinsics": None,
+                "o": self.operandTuples,
+                "t": None
+            }),
             0: (GeneralFunctions, {}),                                                                      # gas (Returns the gas remaining)
-            1: (GeneralFunctions, {"service_data": delta[xs], "service_index": xs, "accounts": delta}), # lookup
-            2: (GeneralFunctions, {"service_data": delta[xs], "service_index": xs, "accounts": delta}), # read
-            3: (GeneralFunctions, {"service_data": delta[xs], "service_index": xs}),                          # write
-            4: (GeneralFunctions, {"service_index": xs, "accounts": delta}),                          # info
+            1: (GeneralFunctions, {"service_data": delta[xs], "service_index": xs, "accounts": delta}),     # lookup
+            2: (GeneralFunctions, {"service_data": delta[xs], "service_index": xs, "accounts": delta}),     # read
+            3: (GeneralFunctions, {"service_data": delta[xs], "service_index": xs}),                        # write
+            4: (GeneralFunctions, {"service_index": xs, "accounts": delta}),                                # info
             5: (AccumulateFunctions, {}),                                                                   # bless (Updates previlaged accounts)
             6: (AccumulateFunctions, {}),                                                                   # assign (Updates authorizer_keys/Phi)
             7: (AccumulateFunctions, {}),                                                                   # designate (Updates validator_keys/Iota)
@@ -44,19 +55,9 @@ class PsiA(InvocationProtocol):
             12: (AccumulateFunctions, {"block_timeslot": self.timeslot}),                                   # eject (Removal of service account)
             13: (AccumulateFunctions, {}),                                                                  # query (Updates registers[7,8] wrt AccountLookup)
             14: (AccumulateFunctions, {"block_timeslot": self.timeslot}),                                   # solicit (Updated the AccountLookup)
-            15: (AccumulateFunctions, {"block_timeslot": self.timeslot}),                                                                  # forget (Updates lookupTimestamp & preimage)
+            15: (AccumulateFunctions, {"block_timeslot": self.timeslot}),                                   # forget (Updates lookupTimestamp & preimage)
             16: (AccumulateFunctions, {}),                                                                  # yield_ (Updates context[x]_hash)
-            18: (GeneralFunctions, {                                                                        # fetch (Updates context[x]_hash)
-                "package": None,
-                "entropy": state.eta[0],
-                "trace": None,
-                "item_index": None,
-                "import_segments": None,
-                "extrinsics": None,
-                "o": self.operandTuples,
-                "t": None
-            }),
-            27: (AccumulateFunctions, {}),                                                                 # provide (Updates preimage)
+            27: (AccumulateFunctions, {}),                                                                  # provide (Updates preimage)
             # TODO: Add core_index
             100: (GeneralFunctions, {"core_index": 0, "service_id": self.service_id}),  # log
         }
@@ -70,7 +71,7 @@ class PsiA(InvocationProtocol):
                 meta_n_code[1],
                 5,
                 int(self.gas),
-                Uint(self.timeslot).encode() + Uint(self.service_id).encode() + self.operandTuples.encode(),
+                Uint(self.timeslot).encode() + Uint(self.service_id).encode() + Uint(len(self.operandTuples)).encode(),
                 self.dispatch,
                 self.context,
             )

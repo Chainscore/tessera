@@ -33,7 +33,7 @@ class StorageQueue:
         metadata = db.get(self.meta_key)
         if metadata is None:
             return StorageQueueMetadata(head=Uint(0), tail=Uint(0), count=Uint(0))
-        return StorageQueueMetadata.decode_from(metadata)[0]
+        return StorageQueueMetadata.decode(metadata)[0]
 
     def push(self, db: RockStore, value: bytes) -> int:
         """Push an item to the queue."""
@@ -103,8 +103,12 @@ class StorageQueue:
 
         return items
 
-    def pop(self, db: RockStore) -> bytes:
-        """Pop an item from the queue. Returns None if the queue is empty."""
+    def pop(self, db: RockStore) -> bytes|None:
+        """
+        Pop an item from the queue. Returns None if the queue is empty.
+
+        TODO - Handle duplicates
+        """
         metadata = self.metadata(db)
         value = db.get(self.item_key(int(metadata.head)))
         
@@ -122,3 +126,4 @@ class StorageQueue:
         metadata.count -= 1
         db.put(self.meta_key, metadata.encode())
         return value
+

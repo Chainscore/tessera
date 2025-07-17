@@ -4,32 +4,30 @@ import logging
 import os
 import time
 
+from asyncio import CancelledError
 from dotenv import load_dotenv
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
-
+from jam.operations.operator import operate
+from jam.api.rpc.app import rpc
 from jam.logging import setup_logging, logger
+from jam.network.base.certificate import generate_san
 from jam.utils.chainspec import chain_config
 from jam.settings import setup_setting
-
-from jam.consensus.bp_engine import BlockProducer
 from jam.consensus.grandpa.finality import Finality
-
 from jam.network.peer import Peer
-from jam.network.node import Node
-
-from jam.operations import Builder
+from jam.network.node import setup_node
 from jam.operations.utils.state_update import update_state
-
 from jam.state.state import setup_state
-from jam.types.protocol.crypto import BlsPublic
 from jam.types.block import Block
-from jam.types.protocol.validators import (
-    IPAddress,
-    ValidatorData,
-    ValidatorMetadata,
-)
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
+
+from jam.network.protocols.ce_144 import AuditAnnouncement
+from jam.network.protocols.ce_145 import JudgmentPublication
+from tests.unit.test_judgment import data144, data145
+from jam.audit.audit_process import AuditProcess
+from jam.audit.vectors.q import sample_work_reports_with_nulls
+
+CE144 = AuditAnnouncement()
+CE145 = JudgmentPublication()
 
 
 async def main(
@@ -54,6 +52,7 @@ async def main(
     port = os.environ["PORT"]
     seed = os.environ["SEED"]
     host = os.environ["HOST"]
+    logger.info("SET HOST", host=host)
 
     if not name or not port or not host or not seed:
         raise ValueError(f"Missing node info in {env}")
@@ -75,68 +74,71 @@ async def main(
     main_db = settings.main_db
 
     logger.info(
-        "Starting JAM node",
-        name=name,
-        port=port,
-        ts=init_ts,
-        epoch=init_ep,
-        spec=chain_config.name,
-        environment=environment,
-        is_builder=is_builder,
-        is_validator=is_validator
+        "Starting JAM node", name=name, port=port,
+        ts=init_ts, epoch=init_ep, spec=chain_config.name,
     )
 
     try:
+        # -------------- SETUP STATE -------------
         # Set genesis state
+        dev_spec = json.load(open(genesis_path))
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
-        state = setup_state(settings.state_db, "dev-spec.json")
+        state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
         update_state(state)
 
-        # Genesis specs
-        dev_spec = json.load(open(genesis_path))
-
+        # ----------- SETUP NETWORKING ------------
         peers = [
-            Peer(
-                id=bytes.decode(val.metadata.name, 'utf-8'),
-                data=val
-            )
+            Peer(data=val)
             for val in state.kappa
             if val.metadata.port != port
         ]
 
-        ip = IPAddress.from_str(host)
-        tsr_node = Node(
-            node_name=name,
-            host=str(host),
-            port=int(port),
-            peers=peers,
-            validator_data=ValidatorData(
-                settings.bandersnatch_public,
-                settings.ed25519_public,
-                BlsPublic(bytes(144)),
-                ValidatorMetadata(
-                    name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2 ** 16 - 1),
-                    host=ip,
-                    port=U16(port),
-                ),
-            ),
-            is_builder=is_builder,
-            is_validator=is_validator,
+        tsr_node = setup_node(
+            name, int(port), peers, host=str(host),
+            is_bd=is_builder, is_val=is_validator
         )
 
-        block = Block.genesis()
+        # ------------ SET GENESIS BLOCK ------------
+        block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
+        Finality.finalise(header_hash, main_db)
 
+
+        # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
+            # Networking - Block Imports, WP Processing, etc
             tg.create_task(tsr_node.initialize())
-            # tg.create_task(sync(state))
-            if tsr_node.is_builder:
-                tg.create_task(Builder(tsr_node, settings).run())
-            else:
-                tg.create_task(BlockProducer(tsr_node, main_db).run())
+            # RPC
+            # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
+            # Node Ops - Block Prod, Audit, Assurances, etc
+
+            # tg.create_task(operate(is_builder))
+            if int(tsr_node.port) == 40000:
+                await asyncio.sleep(5)
+                # tg.create_task(CE144.transmit(node=tsr_node, data=data144))
+                # tg.create_task(CE145.transmit(node=tsr_node, data=data145))
+                newly_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=3)
+                #
+                tg.create_task(AuditProcess.audit_process(newly_avail_wrs=newly_list))
+
+    #.
+    except CancelledError:
+        logger.info(
+            "JAM node shutting down gracefully",
+            node_name=name,
+            port=port,
+            reason="cancelled_tasks"
+        )
+
+        # FOR SAVING TEST VECTORS
+        # print("CANCELLED")
+        # from jam.utils.benchmark import write_json
+        # from jam.operations.builder import vectors
+        # write_json("vectors/combined", vectors.to_json())
+
+        settings.clear()
 
     except KeyboardInterrupt:
         logger.info(
@@ -145,6 +147,7 @@ async def main(
             port=port,
             reason="keyboard_interrupt"
         )
+
     except Exception as e:
         logger.critical(
             "JAM node fatal error",

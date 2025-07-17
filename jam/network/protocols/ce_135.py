@@ -1,39 +1,35 @@
 import asyncio
 from typing import cast
-from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
+from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure, Bytes
 
 from jam.logging import logger
-from jam.settings import settings
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.block.extrinsics.guarantees import ValidatorSignatures
-from jam.types.protocol.core import ValidatorIndex, TimeSlot
+from jam.types.block.extrinsics.guarantees import ReportGuarantee
 from jam.types.protocol.crypto import Hash
-from jam.types.work.report import WorkReport
+from jam.types.work.manifest import Assurers
 
-from jam.work_package.stores.audits import AuditShardsDA
+from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.reports import ReportsDA
 from jam.work_package.stores.segments import SegmentShardsDA
-
-@structure
-class GuaranteedWR:
-    report: WorkReport
-    slot: TimeSlot
-    signatures: ValidatorSignatures
+from jam.merklization import BMRFunctions
+from jam.types.work.shard import ShardKey
+from jam.utils.gather import gather_with_exceptions
 
 @structure
 class CE135Data:
     len: Uint[32]
-    guaranteed_wr: GuaranteedWR
+    guaranteed_wr: ReportGuarantee
 
     @property
     def is_valid(self):
         if len(self.guaranteed_wr.encode()) == self.len:
             return True
         return False
+
 
 OptBool = Option[Bool]
 
@@ -58,18 +54,17 @@ class WorkReportDistribution(NetworkProtocol):
         self._prefix = PrefixType.CE135
 
     async def transmit(self, node: Node, data: CE135Data):
-        """Transmit Work Report from Guarantor (client) to Validator (server)"""
+        """Transmit Work Report from Guarantor to Other Validators"""
 
         msg_a = data.guaranteed_wr.encode()
         len_a = data.len.encode()
 
         logger.info(f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators")
-        # TODO: Use All Validators Connections
 
-        responses = TypedVector[OptBool]([])
-        for peer in node.peer_conn:
-            if int(peer.port) == 40003:
-                logger.debug("Sending report to 40003")
+        tasks = []
+        try:
+            for peer in node.peer_conn:
+                logger.debug("Transmitting report", peer=peer)
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
@@ -80,37 +75,73 @@ class WorkReportDistribution(NetworkProtocol):
 
                 # Send Messages with their lengths
                 client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                task = asyncio.create_task(res)
+                tasks.append(task)
+                logger.debug(
+                    "Report transmitted to validator",
+                    stream_id=stream_id,
+                    port=peer.port,
+                )
 
-                responses.append(data)
+            responses = TypedVector[OptBool](await gather_with_exceptions(tasks))
 
-        return responses
+            if responses is not None:
+                return responses
+
+        except Exception as e:
+            logger.error(
+                "Failed to distribute report.",
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """Intercept & Process Work Report on Validator (server)"""
+        """Intercept & Process Work Report on Validator"""
+
         node = server.node
         buffer = server.stream_buffer[stream_id]
 
-        logger.info("Received Work Report")
-        data, offset = CE135Data.decode_from(buffer[1:])
-        data = cast(CE135Data, data)
+        try:
+            logger.info("Received Work Report")
+            data = CE135Data.decode(buffer[1:])
+            data = cast(CE135Data, data)
 
-        if not data.is_valid:
-            raise NetworkingError(Code.INVALID_DATA)
+            if not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
 
-        # Send Acknowledgement
-        ack = self._prefix.encode()
-        server.stream_and_close(ack, stream_id)
+            # Save extrinsic
+            from jam.operations.ext_store import ext_store
+            ext_store.import_rg(data.guaranteed_wr)
 
-        logger.info("Sent acknowledgement back to guarantor")
+            # Send Acknowledgement
+            ack = self._prefix.encode()
+            server.stream_and_close(ack, stream_id)
 
-        logger.info("Fetching assigned shard")
-        asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
+            logger.info("Sent acknowledgement back to guarantor")
+
+            logger.debug("Fetching assigned shard")
+            asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
+
+        except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
+            logger.error(
+                "Error processing report",
+                guarantor=server.peer,
+                stream_id=stream_id,
+                buffer_size=len(buffer),
+                error=str(e),
+                error_type=type(e).__name__
+            )
 
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
         """Intercept Acknowledgement"""
+
         buffer = client.stream_buffer[stream_id]
+
         if buffer[1:] == b"":
             logger.info(
                 f"Guaranteed Report received on Guarantor Node.",
@@ -121,50 +152,86 @@ class WorkReportDistribution(NetworkProtocol):
         return OptBool(Null)
 
     @staticmethod
-    async def _req_shard(data: GuaranteedWR, node: Node):
+    async def _req_shard(data: ReportGuarantee, node: Node):
+        from jam.settings import settings
+
         slot = data.slot
         signatures = data.signatures
 
+        assurers = Assurers([])
+        for i in signatures:
+            assurers.append(i.validator_index)
+
         report = data.report
-        er_root = report.package_spec.erasure_root
+        if node.validator_index not in assurers:
+            er_root = report.package_spec.erasure_root
 
-        shard_index = node.get_shard_index(report.core_index)
+            shard_index = node.get_shard_index(report.core_index)
 
-        from jam.network.protocols.ce_137 import ShardDistributionProtocol, CE137Data, Query
-        CE137 = ShardDistributionProtocol()
+            from jam.network.protocols.ce_137 import ShardDistributionProtocol, CE137Data, Query
+            CE137 = ShardDistributionProtocol()
 
-        query = Query(shard_index=shard_index, erasure_root=er_root)
-        data = CE137Data(len=U32(len(query.encode())), query=query)
+            query = Query(shard_index=shard_index, erasure_root=er_root)
+            data = CE137Data(len=U32(len(query.encode())), query=query)
 
-        logger.debug("Requesting Shard", shard_index=shard_index, erasure_root=er_root)
-        shard = await CE137.transmit(node=node, data=data)
+            logger.debug("Requesting Shard", shard_index=shard_index, erasure_root=er_root)
 
-        # Save Shard
-        if shard is not None:
-            # Store Bundle Shard
-            audits = settings.audit
-            bs_da = AuditShardsDA(audits)
-            bs_da.put(er_root, shard_index, shard[0])
+            try:
+                responses = await CE137.transmit(node=node, data=data, assurers=assurers)
+                for shard in responses:
+                    # Save Shard
+                    if shard is not None:
+                        bmrfunctions = BMRFunctions()
 
-            # Store Segments Shard
-            d3l = settings.d3l
-            ss_da = SegmentShardsDA(d3l)
-            ss_da.put(er_root, shard_index, shard[1])
+                        bundle_shard = shard[0]
+                        segments_shard = shard[1]
+                        justification = shard[2]
 
-            # Distribute Assurance
-            # TODO: Fix Assurances Distribution
-            from jam.network.protocols.ce_141 import AssuranceDistribution, CE141Data
-            CE141 = AssuranceDistribution()
+                        # creating leaf
+                        bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
+                        segments_shard_root = bmrfunctions.wb_merkle_fn(values=segments_shard)
+                        shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
+                        s = Bytes(shards_key.encode())
 
-            from jam.network.utils.dummy_assurance import create_dummy_assurances
-            assurance = create_dummy_assurances()
-            data = CE141Data(assurance)
-            ack = await CE141.transmit(node=node, data=data)
+                        # verifying justification
+                        verification = bmrfunctions.verify_wb_merkle(leaf=s, index=shard_index, justification=justification, erasure_root=er_root)
 
-            # Save Report
-            rep_da = ReportsDA(d3l)
-            wr_hash = Hash.blake2b(report.encode())
-            rep_da.put(wr_hash, report)
+                        # if verification == True save shards, justification and break out of loop else move to shards provided by other guarantors
+                        if verification:
+                            # Store Bundle Shard
+                            audits = settings.audit_da
+                            bs_da = AuditShardsDA(audits)
+                            bs_da.put(er_root, shard_index, shard[0])
+
+                            # Store Segments Shard
+                            d3l = settings.d3l
+                            ss_da = SegmentShardsDA(d3l)
+                            ss_da.put(er_root, shard_index, shard[1])
+
+                            # store justification
+                            justification_da = JustificationsDA(audits)
+                            justification_da.put(er_root, shard_index, justification)
+
+                            # give assurance for this core & this validator
+                            from jam.operations.assr_collector import assr_collector
+                            assr_collector.record_shard_assr(report.core_index)
+
+                            # Save Report
+                            rep_da = ReportsDA(d3l)
+                            wr_hash = Hash.blake2b(report.encode())
+                            rep_da.put(wr_hash, report)
 
 
-            logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
+                            logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
+
+                            break
+            except Exception as e:
+                logger.error(
+                    "Failed to request shards using ce_137",
+                    error=str(e),
+                    error_type=type(e).__name__
+                )
+        else:
+            # give assurance for this core & this validator
+            from jam.operations.assr_collector import assr_collector
+            assr_collector.record_shard_assr(report.core_index)

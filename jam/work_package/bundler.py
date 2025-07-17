@@ -3,7 +3,6 @@ from typing import Tuple, Dict, List
 from tsrkit_types import Vector, Bytes
 
 from jam.logging import get_logger
-from jam.settings import settings
 from jam.network.protocols.ce_137 import ShardDistributionProtocol
 from jam.storage.item_extrinsics import ItemExtrinsics
 from jam.types import WorkPackageBundle
@@ -50,6 +49,8 @@ class Bundler:
     node: Node
 
     def __init__(self, node: Node):
+        from jam.settings import settings
+        self.settings = settings
         self.merkle = BMRFunctions()
         self.sr_lookup = SegmentRootLookup({})
         self.segments_lookup = Vector([])
@@ -57,7 +58,7 @@ class Bundler:
 
     def build_lookup(self, p: WorkPackage) -> SegmentRootLookup:
         # Access DA
-        d3l = settings.d3l
+        d3l = self.settings.d3l
 
         map_da = PackageSegmentMap(d3l)
         sr_lookup = SegmentRootLookup({})
@@ -95,8 +96,7 @@ class Bundler:
             logger.debug("Lookup Miss")
             return r
 
-    @staticmethod
-    def fetch_extrinsics(w: WorkItem, data: Extrinsic) -> Extrinsics:
+    def fetch_extrinsics(self, w: WorkItem, data: Extrinsic) -> Extrinsics:
         """
         Function X defined in Eqn 14.14
         Takes Work Item & retrieves its required extrinsic data
@@ -110,7 +110,7 @@ class Bundler:
            Extrinsic data (Vector[Bytes])
         """
         # Access DA
-        db = settings.main_db
+        db = self.settings.main_db
 
         ext_da = ItemExtrinsics(db)
         ext: Extrinsics = ext_da.process_item(w, data)
@@ -132,7 +132,7 @@ class Bundler:
         """
 
         # Access DA
-        d3l = settings.d3l
+        d3l = self.settings.d3l
 
         imports: Segments = Segments([])
 
@@ -295,6 +295,9 @@ class Bundler:
                     all_ext.append(extrinsics)
 
         bundle = WorkPackageBundle(p, all_ext, all_imp, all_jfn)
+
+        with open("bundle.txt", "a") as f:
+            print(bundle, file=f)
 
         logger.info("Compiling bundle..")
         return bundle

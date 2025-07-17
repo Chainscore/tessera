@@ -210,34 +210,32 @@ class AccumulateFunctions(INVF):
         preimage_hash_addr, preimage_len = registers[7], registers[8]
         if not memory.is_accessible(preimage_hash_addr,32):
             raise PvmError(PANIC)
-        preimage_hash = memory.read(preimage_hash_addr,32)
+        
+        preimage_hash = Bytes[32](memory.read(preimage_hash_addr,32))
 
         lookup_key = LookupTable(preimage_hash, preimage_len)
         lookup_value = context.x.partial_state.service_accounts[context.x.s_index].lookup[lookup_key]
         if not lookup_value:
             registers[7] = HostStatus.NONE.value
-            return ExecutionStatus.CONTINUE, gas, registers, memory, context
-
+            registers[8] = 0
         if len(lookup_value) == 0:
             registers[7] = 0
             registers[8] = 0
-            return ExecutionStatus.CONTINUE, gas, registers, memory, context
         elif len(lookup_value) == 1:
             registers[7] = 1 + 2**32 * lookup_value[0]
             registers[8] = 0
-            return ExecutionStatus.CONTINUE, gas, registers, memory, context
         elif len(lookup_value) == 2:
             registers[7] = 2 + 2**32 * lookup_value[0]
             registers[8] = lookup_value[1]
-            return ExecutionStatus.CONTINUE, gas, registers, memory, context
         elif len(lookup_value) == 3:
             registers[7] = 3 + 2**32 * lookup_value[0]
             registers[8] = lookup_value[1] + 2**32 * lookup_value[2]
-            return ExecutionStatus.CONTINUE, gas, registers, memory, context
         else:
             logger.critical("Unexpected metadata", service=context.x.s_index, lookup=lookup_value, lookup_key=lookup_key)
             raise PvmError(PANIC)
 
+        return ExecutionStatus.CONTINUE, gas, registers, memory, context
+    
     @staticmethod
     @INVF.register(14, gas_cost=10)
     def solicit(gas: Gas, registers: list, memory: Memory, context: AccumulationContext, block_timeslot: TimeSlot):
@@ -278,27 +276,27 @@ class AccumulateFunctions(INVF):
     def forget(gas: Gas, registers: list, memory: Memory, context: AccumulationContext, block_timeslot: TimeSlot):
         preimage_hash_addr, preimage_len = registers[7], registers[8]
 
-        if not memory.is_accessible(preimage_hash_addr,32):
+        if not memory.is_accessible(preimage_hash_addr, 32, for_write=False):
             raise PvmError(PANIC)
 
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr,32))
-        
         lookup_key = LookupTable(preimage_hash, preimage_len)
         a = context.x.partial_state.service_accounts[context.x.s_index]
         lookup_value = a.lookup[lookup_key]
-        if len(a.lookup[lookup_key]) == 0 or (len(a.lookup[lookup_key]) == 2 and (a.lookup[lookup_key][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS)):
+        if len(a.lookup[lookup_key]) == 0 or (len(a.lookup[lookup_key]) == 2 and (a.lookup[lookup_key][1] < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS)):
             del a.lookup[lookup_key]
-            del a.lookup[preimage_hash]
+            del a.preimages[preimage_hash]
         elif len(a.lookup[lookup_key]) == 1:
             lookup_value.append(block_timeslot)
+            a.lookup[lookup_key] = lookup_value
         elif len(a.lookup[lookup_key]) == 3 and a.lookup[lookup_key][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS:
             lookup_value[0] = lookup_value[2]
             lookup_value[1] = block_timeslot
             lookup_value = lookup_value.pop()
+            a.lookup[lookup_key] = lookup_value
         else:
             registers[7] = HostStatus.HUH.value
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
-        a.lookup[lookup_key] = lookup_value
         registers[7] = HostStatus.OK.value
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
