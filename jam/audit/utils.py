@@ -6,8 +6,11 @@ from tsrkit_types.bytes import Bytes
 from jam.ring_vrf.curve.specs.bandersnatch import Bandersnatch_TE_Curve, BandersnatchPoint
 from jam.ring_vrf.curve.specs.ed25519 import Ed25519_TE_Curve, Ed25519Point
 from jam.ring_vrf.ietf.ietf import IETF_VRF
+from jam.types import Ed25519Signature, BandersnatchVrfSignature
 from jam.types.work.report import WorkReport
 from jam.types.protocol.core import ValidatorIndex
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
 
 public_key = Bytes[32]
 
@@ -42,11 +45,11 @@ def signature_pvt(key: Bytes[32], context: Bytes, message:bytes=b"") :
     key = int.from_bytes(key)
     vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
     # Vrf2 = IETF_VRF(Ed25519_TE_Curve, Ed25519Point)
-    output_point, eproof = vrf.prove(alpha=message, secret_key=key,  additional_data=context, salt=b"")
+    output_point, proof = vrf.prove(alpha=message, secret_key=key,  additional_data=context, salt=b"")
     op_bt_str= output_point.point_to_string()
     proof_bt_str= proof[0].to_bytes(32, 'little')+ proof[1].to_bytes(32, 'little')
     signature= op_bt_str + proof_bt_str
+    # print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",len(Bytes(signature)), len(Bytes(signature).encode()), BandersnatchVrfSignature(signature).hex(), len(BandersnatchVrfSignature(signature)), len(BandersnatchVrfSignature(signature).encode()))
 
     return signature
-
 

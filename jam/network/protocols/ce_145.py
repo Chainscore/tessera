@@ -2,8 +2,8 @@ import asyncio
 from typing import cast
 
 from typing import Any
-from tsrkit_types import structure, Null, bool, U16, Uint, TypedVector, Bits, Bool, Bytes, U8
-from jam.types.protocol.core import ValidatorIndex
+from tsrkit_types import structure, Null, bool, U16, Uint, TypedVector, Bits, Bool, Bytes, U8, U32
+from jam.types.protocol.core import ValidatorIndex, EpochIndex
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.quic import QuicProtocol
@@ -19,11 +19,11 @@ logger = get_logger("network")
 
 @structure
 class Judgment:
-    epoch_index: Uint[32]  # mention in networking =>  Epoch Index = u32 (Slot / E)
+    epoch_index: EpochIndex  # mention in networking =>  Epoch Index = u32 (Slot / E)
     validator_index: ValidatorIndex
     validity: U8
     work_report_hash: WorkReportHash
-    ed25519_signature: Ed25519Signature
+    ed25519_signature: Bytes[96]    # this will be bytes[32]
 
 @structure
 class CE145Data:
@@ -32,6 +32,8 @@ class CE145Data:
 
     @property
     def is_valid(self):
+        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+        print(len(self.judgment.encode()) , self.len_a)
         if len(self.judgment.encode()) == self.len_a:
             return True
         return False
@@ -104,6 +106,7 @@ class JudgmentPublication(NetworkProtocol):
         """ Intercept Judgment of assigned Work Reports """
 
         buffer = server.stream_buffer[stream_id]
+        print("==============",len(buffer[1:]))
 
         try:
             data, offset = CE145Data.decode_from(buffer[1:])
@@ -117,14 +120,14 @@ class JudgmentPublication(NetworkProtocol):
                 buffer_size=len(buffer[1:])
             )
 
-            # == == == == == error is heer
             if not data.is_valid:
-                raise NetworkingError
+                raise NetworkingError(Code.INVALID_DATA)
 
             ack = b""
             server.stream_and_close(ack, stream_id)
 
         except Exception as e:
+            logger.error("Encountered error while intercepting request", err=str(e), err_type=type(e).__name__, peer=server.peer, stream=stream_id)
             server.stop_stream(stream_id, 1)
 
     def res_intercept(self, stream_id: int, client: "QuicProtocol"):

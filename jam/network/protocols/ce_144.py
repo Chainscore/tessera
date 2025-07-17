@@ -72,7 +72,6 @@ class CE144Data:
     @property
     def is_valid(self):
         if len(self.tranche_announcement.encode()) == self.len_a and len(self.evidence.encode()) == self.len_b:
-            print(len(self.tranche_announcement.encode()), self.len_a, len(self.evidence.encode()), self.len_b)
             return True
         return False
 
@@ -140,10 +139,10 @@ class AuditAnnouncement(NetworkProtocol):
                 client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                 client.stream_and_keep_open(message=len_b, stream_id=stream_id)
 
+
                 res =  await client.close_and_wait(message=msg_b, stream_id=stream_id)
                 # task = asyncio.create_task(res)
                 responses.append(res)
-
                 # responses = await gather_with_exceptions(tasks)
 
                 logger.debug(
@@ -167,7 +166,6 @@ class AuditAnnouncement(NetworkProtocol):
         buffer = server.stream_buffer[stream_id]
 
         try:
-
             data, offset = CE144Data.decode_from(buffer[1:])
             data = cast(CE144Data, data)
             print(data)
@@ -180,7 +178,7 @@ class AuditAnnouncement(NetworkProtocol):
             )
 
             if not data.is_valid:
-                raise NetworkingError
+                raise NetworkingError(Code.INVALID_DATA)
 
             # TODO: create mapping of report-validator assignment and judgment
 
@@ -195,6 +193,7 @@ class AuditAnnouncement(NetworkProtocol):
 
 
         except Exception as e:
+            logger.error("Encountered error while intercepting request", err=str(e), err_type=type(e).__name__, peer=server.peer, stream=stream_id)
             server.stop_stream(stream_id, 1)
 
 
