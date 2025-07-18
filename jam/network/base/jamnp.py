@@ -1,7 +1,9 @@
 import asyncio
+from logging import StreamHandler
 from typing import Dict, Optional
 
 from aioquic.asyncio import QuicConnectionProtocol
+from aioquic.quic.connection import QuicConnection
 from aioquic.quic.events import (
     QuicEvent,
     StreamDataReceived,
@@ -19,6 +21,8 @@ from jam.logging import get_logger
 from jam.network.base.certificate import verify_certificate
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import PrefixType
+from jam.types.protocol.crypto import Ed25519Public
+from jam.types.protocol.validators import ValidatorData
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -30,60 +34,56 @@ logger = get_logger("network")
 class JAMNP(QuicConnectionProtocol):
     """JAMNP-spec QUIC Connection handler"""
 
-    from jam.network.peer import Peer
-
+    up0_stream: Optional[int] = None
+    val: ValidatorData | None = None
     stream_buffer: Dict[int, bytes] = {}
-    peer: Peer | None | str
 
-    def __init__(self, *args, node, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self, 
+        quic: QuicConnection, 
+        stream_handler: StreamHandler|None = None, 
+        val_: ValidatorData|None = None
+    ) -> None:
+        super().__init__(quic=quic, stream_handler=stream_handler)
+        self.up0_stream = None 
         self.waiter = {}
-        self.node = node
-        self.peer = None
-        self.peer_handshake = False
+        self.val = val_
         self.stream_buffer = {}
         self._close_pending = False
-        self.is_client = self._quic.configuration.is_client
-        self.interface = "CLIENT" if self.is_client else "SERVER"
+        self.is_initialized = False
+        self.handshake_completed = False 
 
-    def fetch_peer(self):
+    def verify_cert(self) -> ValidatorData|None:
         """function to fetch peer in a connection"""
+        from jam.settings import settings
 
-        if self.peer:
-            return self.peer
+        peer_cert = self._quic.tls._peer_certificate
 
-        elif self in self.node.builder_conn:
-            return "BUILDER"
+        if isinstance(peer_cert, Certificate):
+            # Verify certificate first
+            is_valid, e = verify_certificate(peer_cert)
+            if not is_valid:
+                logger.error(
+                    f"❌ Invalid Peer Certificate received {e}.",
+                )
+                self._quic.close(error_code=0xA, reason_phrase=f"Invalid Peer Certificate")
+            
+            from jam.state.state import state 
+            pk = peer_cert.public_key()
+            _, peer = state.kappa.find(Ed25519Public(pk.public_bytes_raw()))
 
-        else:
-            peer_cert = self._quic.tls._peer_certificate
+            if peer and settings.ed25519_public:
+                self.val = peer
+                return peer
+            else:
+                logger.error(
+                    f"❌ Unknown peer tried to establish contact.",
+                )
+                self._quic.close(error_code=0x1, reason_phrase="Unknown Peer.")
 
-            if isinstance(peer_cert, Certificate):
-                # Verify certificate first
-                is_valid, e = verify_certificate(peer_cert)
-                if not is_valid:
-                    logger.error(
-                        f"❌ Invalid Peer Certificate received {e}.",
-                        interface=self.interface,
-                    )
-                    self._quic.close(error_code=0xA, reason_phrase=f"Invalid Peer Certificate")
-
-                pk = peer_cert.public_key()
-                peer = self.node.get_peer(pk.public_bytes_raw())
-
-                if peer and peer.ed_key:
-                    self.peer = peer
-                    return peer
-                else:
-                    logger.error(
-                        f"❌ Unknown peer tried to establish contact.",
-                        interface=self.interface,
-                    )
-                    self._quic.close(error_code=0x1, reason_phrase="Unknown Peer.")
-
-            if not peer_cert:
-                logger.error(f"❌ No peer certificate received", interface=self.interface)
-                self._quic.close(error_code=0xA, reason_phrase="Peer's certificate not present.")
+        if not peer_cert:
+            logger.error(f"❌ No peer certificate received")
+            self._quic.close(error_code=0xA, reason_phrase="Peer's certificate not present.")
 
     def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
         """function for streaming data without end stream (FIN) bit."""
@@ -96,7 +96,6 @@ class JAMNP(QuicConnectionProtocol):
         logger.debug(
             f"📤 Sending message of size {len(message)} bytes",
             stream_id=stream_id,
-            interface=self.interface,
         )
 
         self._quic.send_stream_data(stream_id, message, end_stream=False)
@@ -112,10 +111,10 @@ class JAMNP(QuicConnectionProtocol):
         logger.debug(
             f"📤 Sending message of size {len(message)} bytes.",
             stream_id=stream_id,
-            interface=self.interface,
         )
 
         self._quic.send_stream_data(stream_id, message, end_stream=True)
+        self.transmit()
 
     async def close_and_wait(self, message: bytes, stream_id: int, timeout: Optional[float] = 2.0):
         """function for streaming data with end stream (FIN) bit and waiting for response. used by request transmitters."""
@@ -157,151 +156,102 @@ class JAMNP(QuicConnectionProtocol):
         """function that handles all the quic events"""
 
         from jam.network.node import node_alpn, builder_alpn
-
+        
+        print("EVENT RECEIVED", event)
         logger.critical(
             f"Received QUIC event: {type(event).__name__}",
-            interface=self.interface,
             alpn_protocol=event.alpn_protocol if hasattr(event, 'alpn_protocol') else None,
+            steam_id=event.stream_id if hasattr(event, 'stream_id') else None
         )
 
         # Handle TLS Handshake
         if isinstance(event, HandshakeCompleted):
-            node = self.node
 
             # Verify Certificate & fetch Peer info
-            if not node.is_initialized:
-                node.is_initialized = True
+            self.is_initialized = True
 
-            if node.is_validator and event.alpn_protocol == node_alpn:
-                peer = self.fetch_peer()
+            if event.alpn_protocol == node_alpn:
+                peer = self.verify_cert()
                 if peer:
-                    logger.info(
-                        f"🔗 Handshake completed with {peer}.",
-                        interface=self.interface,
-                        early_data=event.early_data_accepted,
-                    )
+                    logger.info(f"🔗 Handshake completed with {peer.metadata.host}:{int(peer.metadata.port)}.")
 
-            elif node.is_validator and event.alpn_protocol == builder_alpn:
-                if len(node.builder_conn) < node.max_builders:
-                    from jam.network.protocols.up_0 import BlockAnnouncement
+            # elif event.alpn_protocol == builder_alpn:
+            #     if len(node.builder_conn) < node.max_builders:
+            #         from jam.network.protocols.up_0 import BlockAnnouncement
+            #
+            #         self.peer = "BUILDER"
+            #         stream_id = self._quic.get_next_available_stream_id()
+            #
+            #         pref = PrefixType.UP0.encode()
+            #         self.stream_buffer[stream_id] = pref
+            #         self.stream_and_keep_open(pref, stream_id)
+            #         print("SENDING HANDSHAKE TO BUILDER")
+            #         BlockAnnouncement.handshake(stream_id, self)
+            #
+            #         node.builder_conn[self] = stream_id
+            #
+            #         logger.info(
+            #             f"🔗 Handshake completed with a builder.",
+            #             interface=self.interface,
+            #             builders=len(node.builder_conn),
+            #         )
+            #
+            #     else:
+            #         logger.error(
+            #             f"❌ Max builder connections already achieved!",
+            #             interface=self.interface,
+            #             builders=len(node.builder_conn),
+            #         )
+            #         self._quic.close(
+            #             error_code=0xA,
+            #             reason_phrase=f"Builder connection limit exceeded!",
+            #         )
 
-                    self.peer = "BUILDER"
-                    stream_id = self._quic.get_next_available_stream_id()
-
-                    pref = PrefixType.UP0.encode()
-                    self.stream_buffer[stream_id] = pref
-                    self.stream_and_keep_open(pref, stream_id)
-                    print("SENDING HANDSHAKE TO BUILDER")
-                    BlockAnnouncement.handshake(stream_id, self)
-
-                    node.builder_conn[self] = stream_id
-
-                    logger.info(
-                        f"🔗 Handshake completed with a builder.",
-                        interface=self.interface,
-                        builders=len(node.builder_conn),
-                    )
-
-                else:
-                    logger.error(
-                        f"❌ Max builder connections already achieved!",
-                        interface=self.interface,
-                        builders=len(node.builder_conn),
-                    )
-                    self._quic.close(
-                        error_code=0xA,
-                        reason_phrase=f"Builder connection limit exceeded!",
-                    )
-
-            elif node.is_builder:
-                try:
-                    peer = self.fetch_peer()
-                    if peer:
-                        logger.info(
-                            f"🔗 Handshake completed with {peer}.",
-                            interface="BUILDER CLIENT",
-                            early_data=event.early_data_accepted,
-                        )
-                except Exception as e:
-                    logger.error(
-                        f"Builder cannot accept any connection request.",
-                        interface=self.interface,
-                        early_data=event.early_data_accepted,
-                    )
+            # elif node.is_builder:
+            #     try:
+            #         peer = self.fetch_peer()
+            #         if peer:
+            #             logger.info(
+            #                 f"🔗 Handshake completed with {peer}.",
+            #                 interface="BUILDER CLIENT",
+            #                 early_data=event.early_data_accepted,
+            #             )
+            #     except Exception as e:
+            #         logger.error(
+            #             f"Builder cannot accept any connection request.",
+            #             interface=self.interface,
+            #             early_data=event.early_data_accepted,
+            #         )
 
             else:
                 logger.error(
                     f"❌ Unknown node tried to establish contact.",
-                    interface=self.interface,
                     alpn=event.alpn_protocol,
                 )
                 self._quic.close(error_code=0xA, reason_phrase=f"Malicious node tried to connect.")
 
-        # elif isinstance(event, ConnectionIdIssued):
-        #     logger.debug(f"🔗 Connection Id issued: {event.connection_id}",
-        #     interface=self.interface
-        #     )
-
-        # elif isinstance(event, ConnectionIdRetired):
-        #     logger.debug(f"🔗 Connection Id retired: {event.connection_id}",
-        #     interface=self.interface
-        #     )
-
         # Handle Stream Reset Event
-        elif isinstance(event, StreamReset):
+        elif isinstance(event, (StreamReset, StopSendingReceived)):
             stream_id = event.stream_id
             if stream_id in self.stream_buffer:
                 del self.stream_buffer[stream_id]
-
-            logger.warning(
-                f"🔗 Stream reset.",
-                error_code=event.error_code,
-                interface=self.interface,
-            )
-
-        # Handle Stop Sending Data Event
-        elif isinstance(event, StopSendingReceived):
-            stream_id = event.stream_id
-            if stream_id in self.stream_buffer:
-                del self.stream_buffer[stream_id]
-
-            logger.warning(
-                f"🔗 Stream reception stopped.",
-                error_code=event.error_code,
-                interface=self.interface,
-            )
-
-        # Handle Connection Terminated Event
-        elif isinstance(event, ConnectionTerminated):
-            self._close_pending = True
-            if self.peer in self.node.peer_conn:
-                logger.debug(f"Removing {self.peer} from connections.")
-                del self.node.peer_conn[self.peer]
-
-            logger.warning(
-                f"❌ Connection with {self.peer} terminated.",
-                error_code=event.error_code,
-                error=event.reason_phrase,
-                interface=self.interface,
-            )
+            logger.warning(f"🔗 Stream flushed", event_=type(event).__name__)
 
         # Handle Received Data Event
         elif isinstance(event, StreamDataReceived):
             from jam.network.base.protocol_map import ProtocolMap
 
             # Fetch peer & data
-            peer = self.fetch_peer()
             stream_id = event.stream_id
             data = event.data
 
-            if not peer:
+            if not self.val:
                 raise NetworkingError(Code.NO_PEER)
 
             logger.debug(
                 f"📩 Received data of size {len(data)} bytes.",
-                peer=peer,
+                peer=self.val,
                 stream_id=stream_id,
-                interface=self.interface,
             )
 
             # -------------------- FIRST HANDLE THE BUFFER --------------------
@@ -315,9 +265,10 @@ class JAMNP(QuicConnectionProtocol):
 
                     # Handle connection mapping for servers.
                     if prefix == PrefixType.UP0:
-                        if not self.is_client:
-                            self.node.peer_conn[peer] = (stream_id, self)
-                        return
+                        print("TODO: Create connection here")
+                        # if not self.is_client:
+                        #     self.node.peer_conn[peer] = (stream_id, self)
+                        # return
 
                 except Exception as e:
                     prefix = None
@@ -379,13 +330,12 @@ class JAMNP(QuicConnectionProtocol):
                         f"Error retrieving data from ce stream.",
                         error=str(e),
                         prefix=prefix,
-                        interface=self.interface,
                     )
 
-                    if self.is_client and self.waiter[stream_id] is not None:
-                        waiter = self.waiter[stream_id]
-                        del self.waiter[stream_id]
-                        waiter.set_result("failed to retrieve data")
+                    # if self.is_client and self.waiter[stream_id] is not None:
+                    #     waiter = self.waiter[stream_id]
+                    #     del self.waiter[stream_id]
+                    #     waiter.set_result("failed to retrieve data")
 
                     # Clear buffer
                     self.stream_buffer.pop(stream_id, None)
@@ -411,6 +361,10 @@ class JAMNP(QuicConnectionProtocol):
                             f"Error retrieving data from up stream.",
                             error=str(e),
                             prefix=prefix,
-                            interface=self.interface,
                         )
                         self.stream_buffer[stream_id] = prefix.encode()
+                        # if self.is_client and self.waiter[stream_id] is not None:
+                        #     waiter = self.waiter[stream_id]
+                        #     del self.waiter[stream_id]
+                        #     waiter.set_result("failed to retrieve data")
+

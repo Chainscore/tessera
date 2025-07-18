@@ -7,19 +7,15 @@ from tsrkit_types.struct import structure
 
 from jam.logging import get_logger
 
-from jam.network.base.quic import QuicProtocol
+from jam.network.base.jamnp import JAMNP
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
-
-from jam.network.peer import Peer
 from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
 from jam.block import Block, Header
 
-if TYPE_CHECKING:
-    from jam.network.node import Node
-
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
+from jam.types.protocol.validators import ValidatorData
 
 # Module-specific logger
 logger = get_logger("network")
@@ -80,7 +76,7 @@ class BlockAnnouncement(NetworkProtocol):
         self._prefix = PrefixType.UP0
 
     @staticmethod
-    def handshake(stream_id: int, conn: QuicProtocol):
+    def handshake(stream_id: int, conn: JAMNP):
         from jam.settings import settings
         from jam.finality.finality import Finality
         from jam.types.protocol.crypto import Hash
@@ -88,7 +84,7 @@ class BlockAnnouncement(NetworkProtocol):
         db = settings.main_db
         finality = Finality()
 
-        logger.debug("Handshake started", peer=conn.peer)
+        logger.debug("Handshake started", peer=conn.val)
         try:
             final_block = finality.load_final(db)
         except Exception as e:
@@ -114,12 +110,13 @@ class BlockAnnouncement(NetworkProtocol):
         conn.stream_and_keep_open(h_len.encode(), stream_id)
         conn.stream_and_keep_open(h, stream_id)
 
-    async def transmit(self, node: "Node", data: Block):
+    async def transmit(self, data: Block):
         """Announce Block to Peers (servers)"""
         from jam.finality.finality import Finality
         from jam.types.protocol.crypto import Hash
+        from jam.network.node import node
 
-        logger.info(f"Announcing blocks to {len(node.peer_conn)} peers.")
+        logger.info(f"Announcing blocks to {len(node._protocols)} peers.")
         from jam.settings import settings
 
         db = settings.main_db
@@ -145,20 +142,19 @@ class BlockAnnouncement(NetworkProtocol):
 
         announced_count = 0
         # TODO: Implement actual Block Propagation Grid
-        for peer in node.peer_conn:
+        for conn in node._protocols:
             try:
-                up_stream, conn = node.peer_conn[peer]
                 ann_len = U32(len(message))
 
-                conn.stream_and_keep_open(ann_len.encode(), up_stream)
-                conn.stream_and_keep_open(message, up_stream)
+                conn.stream_and_keep_open(ann_len.encode(), conn.up0_stream)
+                conn.stream_and_keep_open(message, conn.up0_stream)
                 announced_count += 1
 
                 logger.debug(
                     "Block announced to peer",
                     node_name=node.name,
                     peer=str(peer),
-                    stream_id=up_stream,
+                    stream_id=conn.up0_stream,
                     block_slot=int(data.header.slot),
                 )
             except Exception as e:
@@ -170,30 +166,30 @@ class BlockAnnouncement(NetworkProtocol):
                     error_type=type(e).__name__,
                 )
 
-        for builder in node.builder_conn:
-            try:
-                up_stream = node.builder_conn[builder]
-                ann_len = U32(len(message))
-
-                builder.stream_and_keep_open(ann_len.encode(), up_stream)
-                builder.stream_and_keep_open(message, up_stream)
-                announced_count += 1
-
-                logger.debug(
-                    "Block announced to builder.",
-                    node_name=node.name,
-                    peer=builder.peer,
-                    stream_id=up_stream,
-                    block_slot=int(data.header.slot),
-                )
-            except Exception as e:
-                logger.error(
-                    "Failed to announce block to builder",
-                    node_name=node.name,
-                    peer=builder.peer,
-                    error=str(e),
-                    error_type=type(e).__name__,
-                )
+        # for builder in node.builder_conn:
+        #     try:
+        #         up_stream = node.builder_conn[builder]
+        #         ann_len = U32(len(message))
+        #
+        #         builder.stream_and_keep_open(ann_len.encode(), up_stream)
+        #         builder.stream_and_keep_open(message, up_stream)
+        #         announced_count += 1
+        #
+        #         logger.debug(
+        #             "Block announced to builder.",
+        #             node_name=node.name,
+        #             peer=builder.peer,
+        #             stream_id=up_stream,
+        #             block_slot=int(data.header.slot),
+        #         )
+        #     except Exception as e:
+        #         logger.error(
+        #             "Failed to announce block to builder",
+        #             node_name=node.name,
+        #             peer=builder.peer,
+        #             error=str(e),
+        #             error_type=type(e).__name__,
+        #         )
 
         logger.info(
             "Block announcement completed",
@@ -203,11 +199,11 @@ class BlockAnnouncement(NetworkProtocol):
             block_slot=int(data.header.slot),
         )
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, conn: JAMNP):
         """Intercepting & Process new blocks from peers."""
-        buffer = server.stream_buffer[stream_id]
-        peer = server.peer
-        node = server.node
+        from jam.network.node import node
+        buffer = conn.stream_buffer[stream_id]
+        peer = conn.val
 
         logger.info(
             "Intercepting UP0 stream",
@@ -219,117 +215,111 @@ class BlockAnnouncement(NetworkProtocol):
             logger.warning("Cannot receive any announcement from builder")
             return
 
-        up_stream, conn = node.peer_conn[peer]
-        if node.is_builder and not server.peer_handshake:
-            up_stream = stream_id
-            node.peer_conn[peer] = stream_id, conn
+        # conn = node._protocols[peer.metadata.port]
+        # if node.is_builder and not server.peer_handshake:
+        #     up_stream = stream_id
+        #     node.peer_conn[peer] = stream_id, conn
 
-        if stream_id == up_stream:
-            # Handle handshake message
-            if not server.peer_handshake:
-                # Reverse Handshake on Server
-                if not server.is_client:
-                    logger.info(
-                        "Doing reverse handshake",
-                        peer=str(server.peer),
-                        interface=server.interface,
-                    )
-                    self.handshake(stream_id, server)
+        if stream_id != conn.up0_stream:
+            conn.up0_stream = stream_id
 
-                # Parse received Handshake
-                h_len, _ = Uint[32].decode_from(buffer[1:5])
+        # Handle handshake message
+        if not conn.handshake_completed:
+            # Reverse Handshake on Server
+            # if not server.is_client:
+            logger.info(
+                "Doing reverse handshake",
+                peer=str(conn.val)
+            )
+            self.handshake(stream_id, conn)
 
-                if len(buffer[5:]) == h_len:
-                    h, _ = Handshake.decode_from(buffer[5:])
-                    h = cast(Handshake, h)
+            # Parse received Handshake
+            h_len= Uint[32].decode(buffer[1:5])
 
-                    # TODO: Process Handshake
-                    logger.info(
-                        "Received peer handshake",
-                        stream_id=stream_id,
-                        peer=str(server.peer),
-                        handshake=h,
-                        block_slot=int(h.final.time_slot),
-                        parent_hash=h.final.header_hash.hex()[:16] + "...",
-                        buffer_size=len(buffer),
-                        interface=server.interface,
-                    )
+            if len(buffer[5:]) == h_len:
+                h = Handshake.decode(buffer[5:])
 
-                    if node.is_builder:
-                        node.peer_conn[peer] = stream_id, server
+                # TODO: Process Handshake
+                logger.info(
+                    "Received peer handshake",
+                    stream_id=stream_id,
+                    peer=str(conn.val),
+                    handshake=h,
+                    block_slot=int(h.final.time_slot),
+                    parent_hash=h.final.header_hash.hex()[:16] + "...",
+                    buffer_size=len(buffer),
+                )
 
-                    server.stream_buffer[stream_id] = self._prefix.encode()
-                    server.peer_handshake = True
+                # if node.is_builder:
+                #     node.peer_conn[peer] = stream_id, server
 
-                    # Start synchornization
-                    asyncio.create_task(self.synchronise(h, node, peer=peer))
+                conn.stream_buffer[stream_id] = self._prefix.encode()
+                conn.handshake_completed = True
 
-            # Handle announcement
-            else:
-                # Parse received Announcement
-                a_len, _ = Uint[32].decode_from(buffer[1:5])
+                # Start synchornization
+                asyncio.create_task(self.synchronise(h, conn))
 
-                if len(buffer[5:]) == a_len:
-                    a, _ = Announcement.decode_from(buffer[5:])
-                    a = cast(Announcement, a)
-
-                    logger.info(
-                        "Received block announcement",
-                        stream_id=stream_id,
-                        peer=str(server.peer),
-                        block_slot=int(a.final.time_slot),
-                        parent_hash=a.final.header_hash.hex()[:16] + "...",
-                        buffer_size=len(buffer),
-                    )
-
-                    server.stream_buffer[stream_id] = self._prefix.encode()
-
-                    # TODO: Process new block
-                    # Process new header
-                    # If it is not in our DB, request [header.slot - latest_timeslot] blocks from peer
-                    # logger.debug("Received header, requesting its full block...", slot=data.header.slot)
-
-                    asyncio.create_task(
-                        self._process_header(server.node, header=a.header, peer=peer)
-                    )
-
-                    # Process goes here
-
-                    logger.info(
-                        "Block announcement processed successfully",
-                        stream_id=stream_id,
-                        peer=str(server.peer),
-                        block_slot=int(a.final.time_slot),
-                    )
-
+        # Handle announcement
         else:
-            logger.error(f"{server.interface}: ❌ Different UP Stream.")
-            server._quic.close(error_code=0x4, reason_phrase="Multiple UP streams are not allowed.")
-            return
+            # Parse received Announcement
+            a_len = Uint[32].decode(buffer[1:5])
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol):
+            if len(buffer[5:]) == a_len:
+                a = Announcement.decode(buffer[5:])
+
+                logger.info(
+                    "Received block announcement",
+                    stream_id=stream_id,
+                    peer=str(conn.val),
+                    block_slot=int(a.final.time_slot),
+                    parent_hash=a.final.header_hash.hex()[:16] + "...",
+                    buffer_size=len(buffer),
+                )
+
+                server.stream_buffer[stream_id] = self._prefix.encode()
+
+                # TODO: Process new block
+                # Process new header
+                # If it is not in our DB, request [header.slot - latest_timeslot] blocks from peer
+                # logger.debug("Received header, requesting its full block...", slot=data.header.slot)
+
+                asyncio.create_task(self._process_header(header=a.header))
+
+                # Process goes here
+
+                logger.info(
+                    "Block announcement processed successfully",
+                    stream_id=stream_id,
+                    peer=peer,
+                    block_slot=int(a.final.time_slot),
+                )
+
+        # else:
+        #     logger.error(f"❌ Different UP Stream.")
+        #     conn._quic.close(error_code=0x4, reason_phrase="Multiple UP streams are not allowed.")
+        #     return
+
+    def res_intercept(self, stream_id: int, client):
         raise NotImplementedError("Client Intercept not available for UP protocols")
 
     @classmethod
-    async def _process_header(cls, node: "Node", header: Header, peer: Peer):
+    async def _process_header(cls, header: Header):
         from jam.state.state import state
 
         logger.info("Fetching block to import", slot=header.slot)
         blocks = await BlockRequest().transmit(
-            node,
             CE128Data(
                 header=HeaderHash(header.hash()),
                 dir=Direction.DesInc,
                 max_blocks=U32(1),
             ),
-            [conn for _peer, conn in node.peer_conn.items() if _peer == peer],
         )
         for block in blocks[0]:
             state.transition(block)
             logger.debug("Imported block", slot=block.header.slot)
 
     @classmethod
-    async def synchronise(cls, h: Handshake, node: "Node", peer: Peer):
+    async def synchronise(cls, h: Handshake, node: JAMNP):
         from jam.state.state import state
 
         # To know how many blocks to fetch
@@ -344,14 +334,7 @@ class BlockAnnouncement(NetworkProtocol):
         )
 
         logger.info("Requesting Blocks to Sync", num=data_req.max_blocks)
-
-        blocks_to_import = (
-            await BlockRequest().transmit(
-                node,
-                data_req,
-                [conn for _peer, conn in node.peer_conn.items() if _peer == peer],
-            )
-        )[0]
+        blocks_to_import = (await BlockRequest().transmit(data_req))[0]
         logger.debug(f"Received {len(blocks_to_import)} blocks. Importing...")
 
         for block in reversed(blocks_to_import):

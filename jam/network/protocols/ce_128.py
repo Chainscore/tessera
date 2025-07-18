@@ -5,12 +5,9 @@ from tsrkit_types import TypedVector, Enum
 from jam.logging import get_logger
 from jam.finality.finality import Finality
 from jam.network.base.error import NetworkingErrorCode
-from jam.network.base.quic import QuicProtocol
-from jam.types import HeaderHash
+from jam.network.base.jamnp import JAMNP
+from jam.types import HeaderHash 
 
-if TYPE_CHECKING:
-    from jam.network.node import Node
-    from jam.block.block import Block
 
 from tsrkit_types.integers import U32
 from tsrkit_types.struct import structure
@@ -51,27 +48,18 @@ class BlockRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE128
 
-    async def transmit(self, node: "Node", data: CE128Data, peer_conns: List | None = None):
+    async def transmit(self, data: CE128Data):
         """Transmit Block Request"""
+        from ..node import node 
+        if not node: return
 
         stream_data = data.encode()
-
-        logger.info(
-            "Transmitting block request to node",
-            num=len(peer_conns or node.peer_conn),
-            header_hash=data.header,
-            direction=data.dir,
-            max_blocks=data.max_blocks,
-        )
+        logger.info("Transmitting block request to node", num=len(node._protocols), max_blocks=data.max_blocks)
 
         transmitted_count = 0
         responses = []
 
-        if peer_conns is None:
-            peer_conns = list(node.peer_conn.values())
-        for peer in peer_conns:
-            _, client = peer
-
+        for client in node._protocols:
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
@@ -82,12 +70,7 @@ class BlockRequest(NetworkProtocol):
                 logger.debug("Block request transmitted to node", stream_id=stream_id)
             except Exception as e:
                 responses.append(None)
-                logger.error(
-                    "Failed to transmit state request",
-                    node_name=node.name,
-                    error=str(e),
-                    error_type=type(e).__name__,
-                )
+                logger.error("Failed to transmit state request", error=e)
 
         logger.info(
             "Block request transmission completed",
@@ -96,18 +79,17 @@ class BlockRequest(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: JAMNP):
         """Process Block Request"""
-        node = server.node
         buffer = server.stream_buffer[stream_id][1:]
 
         try:
             from jam.settings import settings
+            from jam.block.block import Block
 
             logger.debug("Received block request", stream_id=stream_id, buffer_size=len(buffer))
 
-            data, offset = CE128Data.decode_from(buffer)
-            data = cast(CE128Data, data)
+            data = CE128Data.decode(buffer)
 
             logger.info(
                 "Processing block request",
@@ -174,8 +156,10 @@ class BlockRequest(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol):
+    def res_intercept(self, stream_id: int, client: JAMNP):
         """Intercept Acknowledgement"""
+        from jam.block.block import Block
+
         buffer = client.stream_buffer[stream_id]
 
         logger.info("Block request ack received", stream_id=stream_id, buffer_size=len(buffer))

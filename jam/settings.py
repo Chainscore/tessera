@@ -5,11 +5,15 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
 )
 from tsrkit_types import U32, Bytes, Uint
+from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import BlsPublic, Hash
 from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata
 from rockstore import RockStore
 import random
 from py_ark_vrf import secret_from_seed, public_from_le_secret
+
+from jam.types.work.shard import ShardIndex
+from jam.utils.constants import VALIDATOR_COUNT
 
 
 class Settings:
@@ -134,6 +138,27 @@ class Settings:
                 buffer=Bytes[110](110),
             ),
         )
+
+    @property
+    def validator_index(self):
+        from jam.state.state import state
+
+        for i, val in enumerate(state.kappa):
+            if val.bandersnatch == self.bandersnatch_public:
+                return i
+
+        raise ValueError("No validator found with matching bandersnatch key.")
+
+    def get_shard_index(self, core_index: CoreIndex):
+        from jam.utils.chainspec import chain_config
+
+        vi = self.validator_index
+        shard_index = ShardIndex(
+            (core_index * chain_config.recovery_threshold + vi) % VALIDATOR_COUNT
+        )
+
+        return shard_index
+
 
 
 # Default setting, to be easier to differentiate

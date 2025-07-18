@@ -3,7 +3,7 @@ from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
 
 from jam.logging import logger
 
-from jam.network.base.quic import QuicProtocol
+from jam.network.base.jamnp import JAMNP
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -44,15 +44,13 @@ class WorkReportDistribution(NetworkProtocol):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-135-work-report-distribution
     """
 
-    from jam.network.node import Node
-
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE135
 
-    async def transmit(self, node: Node, data: CE135Data):
+    async def transmit(self, data: CE135Data):
         """Transmit Work Report from Guarantor (client) to Validator (server)"""
-
+        from jam.network.node import node
         msg_a = data.guaranteed_wr.encode()
         len_a = data.len.encode()
 
@@ -78,9 +76,9 @@ class WorkReportDistribution(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: JAMNP):
         """Intercept & Process Work Report on Validator (server)"""
-        node = server.node
+        from jam.network.node import node 
         buffer = server.stream_buffer[stream_id]
 
         logger.info("Received Work Report")
@@ -91,9 +89,9 @@ class WorkReportDistribution(NetworkProtocol):
             raise NetworkingError(Code.INVALID_DATA)
 
         # Save extrinsic
-        from jam.operations.ext_store import ext_store
+        from jam.block.extrinsics.guarantees import wrg_store
 
-        ext_store.import_rg(data.guaranteed_wr)
+        wrg_store.store(data.guaranteed_wr)
 
         # Send Acknowledgement
         ack = self._prefix.encode()
@@ -104,7 +102,7 @@ class WorkReportDistribution(NetworkProtocol):
         logger.info("Fetching assigned shard")
         # asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
+    def res_intercept(self, stream_id: int, client: JAMNP) -> OptBool:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
@@ -114,7 +112,7 @@ class WorkReportDistribution(NetworkProtocol):
         return OptBool(Null)
 
     @staticmethod
-    async def _req_shard(data: ReportGuarantee, node: Node):
+    async def _req_shard(data: ReportGuarantee, node: JAMNP):
         from jam.settings import settings
 
         slot = data.slot
@@ -123,7 +121,7 @@ class WorkReportDistribution(NetworkProtocol):
         report = data.report
         er_root = report.package_spec.erasure_root
 
-        shard_index = node.get_shard_index(report.core_index)
+        shard_index = settings.get_shard_index(report.core_index)
 
         from jam.network.protocols.ce_137 import (
             ShardDistributionProtocol,
@@ -152,9 +150,9 @@ class WorkReportDistribution(NetworkProtocol):
             ss_da.put(er_root, shard_index, shard[1])
 
             # give assurance for this core
-            from jam.operations.assr_collector import assr_collector
+            from jam.operations.handlers.assurer import assurer
 
-            assr_collector.record_shard_assr(report.core_index)
+            assurer.record_shard_assr(report.core_index)
 
             # Save Report
             rep_da = ReportsDA(d3l)

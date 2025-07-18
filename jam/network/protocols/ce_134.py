@@ -1,14 +1,12 @@
 from typing import cast, TYPE_CHECKING
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32
-
-if TYPE_CHECKING:
-    from jam.network.node import Node
 
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.base.quic import QuicProtocol
+from jam.network.base.jamnp import JAMNP
 from jam.storage.item_extrinsics import ItemExtrinsics
 
 from jam.types.protocol.core import CoreIndex
@@ -88,9 +86,9 @@ class WorkPackageSharing(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE134
 
-    async def transmit(self, node: "Node", data: CE134Data):
+    async def transmit(self, data: CE134Data):
         """Request Work Report from Node (server)"""
-
+        from jam.network.node import node
         msg_a = data.core_segment.encode()
         len_a = data.map_len.encode()
         msg_b = data.work_package_bundle.encode()
@@ -154,11 +152,11 @@ class WorkPackageSharing(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: JAMNP):
         """Intercept Work Package Bundle & Build Work Report on Core's Guarantors (server)"""
         from jam.settings import settings
+        from jam.network.node import node 
 
-        node = server.node
         buffer = server.stream_buffer[stream_id]
 
         try:
@@ -190,14 +188,14 @@ class WorkPackageSharing(NetworkProtocol):
             # Generating report from work package bundle
 
             with benchmark(f"Work bundle processed"):
-                processor = Processor(node)
+                processor = Processor()
                 report, report_hash = processor.process_bundle(
                     core=data.core_segment.core_index,
                     bundle=bundle,
                     sr_lookup=data.core_segment.segment_root_map,
                 )
 
-            ed25519_key = node.ed_pvt_key
+            ed25519_key = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
 
             # Build Guarantee
             logger.info("Building Guarantee..")
@@ -248,7 +246,7 @@ class WorkPackageSharing(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptCred:
+    def res_intercept(self, stream_id: int, client: JAMNP) -> OptCred:
         """Intercept validated Work Report from guarantors"""
         buffer = client.stream_buffer[stream_id]
 

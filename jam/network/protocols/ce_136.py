@@ -3,10 +3,10 @@ from typing import cast
 from tsrkit_types import Vector, Option, Null, Uint, structure
 
 from jam.logging import logger
-from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
+from jam.network.base.jamnp import JAMNP
 from jam.types.protocol.crypto import WorkReportHash
 from jam.types.work.report import WorkReport
 from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
@@ -54,27 +54,25 @@ class WorkReportRequest(NetworkProtocol):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-136-work-report-request
     """
 
-    from jam.network.node import Node
-
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE136
 
-    async def transmit(self, node: Node, data: CE136Data):
+    async def transmit(self, data: CE136Data):
         """Request Work Report from Node (server)"""
+        from jam.network.node import node 
 
         msg_a = data.work_report_hash.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Requesting Work-Report from {len(node.peer_conn)} Validators")
+        logger.info(f"Requesting Work-Report from {len(node._protocols)} Validators")
 
         # TODO: Use Original Guarantor Connection
 
         responses = Vector([])
-        for peer in node.peer_conn:
-            if int(peer.port) == 40000:
+        for client in node._protocols.values():
+            if int(client.val.metadata.port) == 40000:
                 logger.debug("Requesting report from 40000")
-                client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -90,7 +88,7 @@ class WorkReportRequest(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: JAMNP):
         """Intercept & Fetch requested Work Report on Node (server)"""
         buffer = server.stream_buffer[stream_id]
 
@@ -119,7 +117,7 @@ class WorkReportRequest(NetworkProtocol):
             peer=server.peer,
         )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptRep:
+    def res_intercept(self, stream_id: int, client: JAMNP) -> OptRep:
         """Intercept Requested Work Report"""
         buffer = client.stream_buffer[stream_id]
 

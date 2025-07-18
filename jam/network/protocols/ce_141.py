@@ -1,7 +1,7 @@
 from tsrkit_types import structure, TypedVector, U32
 from jam.logging import get_logger
 from typing import cast
-from jam.network.base.quic import QuicProtocol
+from jam.network.base.jamnp import JAMNP
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types import ValidatorIndex
 from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField
@@ -32,8 +32,6 @@ class CE141Data:
 
 
 class AssuranceDistribution(NetworkProtocol):
-    from jam.network.node import Node
-
     """
     CE-141 Assurance(Validators issue a signed statement, called an assurance) Distribution protocol enables each validator to broadcast an availability assurance for a work report.
 
@@ -54,20 +52,19 @@ class AssuranceDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE141
 
-    async def transmit(self, node: Node, data: CE141Data):
+    async def transmit(self, data: CE141Data):
         """Transmit assurance, From Assurer (client) to Validator (server)"""
+        from jam.network.node import node 
 
         msg = data.assurance.encode()
         len_a = data.len.encode()
 
         logger.info(
-            f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node.peer_conn)}  validators"
+            f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node._protocols)}  validators"
         )
         responses = TypedVector([])
 
-        for peer in node.peer_conn:
-            client = node.peer_conn[peer][1]
-
+        for client in node._protocols.values():
             # Send Protocol Prefix
             stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
@@ -81,15 +78,14 @@ class AssuranceDistribution(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: JAMNP):
         from jam.block.extrinsics.assurances import asr_store
 
         buffer = server.stream_buffer[stream_id]
 
         logger.debug("Received assurance", stream_id=stream_id, buffer_size=len(buffer[1:]))
 
-        data, offset = CE141Data.decode_from(buffer[1:])
-        data = cast(CE141Data, data)
+        data = CE141Data.decode_from(buffer[1:])
 
         if not data.is_valid:
             raise NetworkingError(Code.INVALID_DATA)
@@ -112,7 +108,7 @@ class AssuranceDistribution(NetworkProtocol):
 
         logger.debug("Assurance sent to other validators", stream_id=stream_id, ack_size=len(ack))
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol):
+    def res_intercept(self, stream_id: int, client: JAMNP):
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
             logger.info("Assurance ack received", stream_id=stream_id, buffer_size=len(buffer))

@@ -2,11 +2,10 @@ import asyncio
 from math import ceil
 from typing import Tuple
 import time
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32
-
 from jam.utils.chainspec import chain_config
 from jam.logging import get_logger
-
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
 
@@ -24,7 +23,6 @@ from jam.types.protocol.core import (
     ValidatorIndex,
 )
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
-
 from jam.types.work import WorkReport, SegmentRootLookup, WorkPackageSpec, WorkResults
 from jam.types.work.item import WorkItem
 from jam.types.work.package import WorkPackage, WorkPackageBundle
@@ -50,20 +48,15 @@ from jam.types.work.shard import (
     SegShardDict,
 )
 from jam.types.work.execution import WorkResult, WorkExecResult, RefineLoad
-
 from jam.utils.benchmark import benchmark
-
 from jam.utils.constants import (
     BASIC_ERASURE_SIZE,
     GENESIS_TS,
     SEGMENT_SIZE,
     MAX_WORK_REPORT_SIZE,
 )
-
 from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap
-
 from jam.utils.merkle import BMRFunctions
-
 
 from jam.incore.bundler import Bundler
 from jam.storage.da.audits import AuditShardsDA
@@ -71,19 +64,16 @@ from jam.storage.da import ReportsDA
 from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
 from jam.incore.validator import Validator
 
-from jam.network.node import Node
 
 # Module-specific logger
 logger = get_logger("in_core")
 
 
 class Processor:
-    node: Node
     merkle: BMRFunctions
 
-    def __init__(self, node: Node):
+    def __init__(self):
         self.merkle = BMRFunctions()
-        self.node = node
         self.transmit_task = None
 
     @staticmethod
@@ -482,7 +472,7 @@ class Processor:
         validator = Validator()
         validator.validate_wp(package)
 
-        bundler = Bundler(self.node)
+        bundler = Bundler()
 
         # Build Segment Root Lookup Dictionary
         logger.info("Building Lookup Dictionary..")
@@ -513,7 +503,7 @@ class Processor:
         loop.set_task_factory(asyncio.eager_task_factory)
 
         # Distribute Bundle, parallely
-        self.transmit_task = loop.create_task(CE134.transmit(node=self.node, data=data))
+        self.transmit_task = loop.create_task(CE134.transmit(data=data))
 
         # Build Report
         with benchmark("bundle processed"):
@@ -539,7 +529,7 @@ class Processor:
         from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
         from jam.settings import settings
 
-        ed25519_key = self.node.ed_pvt_key
+        ed25519_key = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
 
         payload = wr.core_index.encode() + wr.encode()
         guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
@@ -599,4 +589,4 @@ class Processor:
             r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
 
-            acks = await CE135.transmit(node=self.node, data=data)
+            acks = await CE135.transmit(data=data)

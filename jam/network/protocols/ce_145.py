@@ -4,16 +4,14 @@ from tsrkit_types import Uint, U8, U16, structure
 
 from jam.logging import get_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.base.quic import QuicProtocol
+from jam.network.base.jamnp import JAMNP
+from jam.network.peer import QuicPeer
 from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data
 
 from jam.types.protocol.crypto import Ed25519Signature, WorkReportHash
 from jam.types.protocol.core import ValidatorIndex
 from jam.types.work.report import WorkReport
 from jam.storage.da import ReportsDA
-
-if TYPE_CHECKING:
-    from jam.network.node import Node
 
 # Module-specific logger
 logger = get_logger("network")
@@ -106,7 +104,7 @@ class JudgmentPublication(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE145
 
-    async def transmit(self, node: "Node", data: CE145Data):
+    async def transmit(self, data: CE145Data):
         """
         Transmit judgment from Auditor (client) to Validator (server)
 
@@ -117,33 +115,31 @@ class JudgmentPublication(NetworkProtocol):
         → FIN
         → close_stream
         """
+        from jam.network.node import node 
 
         msg_data = data.judgment.encode()
         len_data = data.len.encode()
 
         logger.info(
             "Publishing judgment to validators",
-            node_name=node.name,
             epoch_index=data.judgment.epoch_index,
             validator_index=int(data.judgment.validator_index),
             validity="valid" if data.judgment.is_valid else "invalid",
             work_report_hash=data.judgment.work_report_hash.hex()[:16] + "...",
-            validator_count=len(node.peer_conn),
+            validator_count=len(node._protocols),
         )
 
         published_count = 0
         responses = []
 
         # Broadcast to all connected validator peers
-        for peer in node.peer_conn:
+        for client in node._protocols.values():
             try:
                 logger.debug(
                     "Publishing judgment to validator",
-                    peer=str(peer),
+                    peer=str(client),
                     epoch_index=data.judgment.epoch_index,
                 )
-
-                client = node.peer_conn[peer][1]
 
                 # Open CE_145_stream and send [prefix + len + judgment_payload]
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -158,8 +154,6 @@ class JudgmentPublication(NetworkProtocol):
 
                 logger.debug(
                     "Judgment published to validator",
-                    node_name=node.name,
-                    peer_endpoint=f"{peer.host}:{peer.port}",
                     stream_id=stream_id,
                     epoch_index=data.judgment.epoch_index,
                 )
@@ -167,23 +161,19 @@ class JudgmentPublication(NetworkProtocol):
             except Exception as e:
                 logger.error(
                     "Failed to publish judgment to validator",
-                    node_name=node.name,
-                    peer_endpoint=f"{peer.host}:{peer.port}",
                     error=str(e),
                 )
 
         logger.info(
             "Judgment publication completed",
-            node_name=node.name,
             published_to=published_count,
-            total_validators=len(node.peer_conn),
             epoch_index=data.judgment.epoch_index,
             validity="valid" if data.judgment.is_valid else "invalid",
         )
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: JAMNP):
         """
         Intercept & Process judgment on Validator (server)
 
@@ -320,14 +310,14 @@ class JudgmentPublication(NetworkProtocol):
     #     # For now, always return True
     #     return True
 
-    async def _fetch_and_store_work_report(self, node: "Node", wr_hash: WorkReportHash, wr_storage):
+    async def _fetch_and_store_work_report(self, node: QuicPeer, wr_hash: WorkReportHash, wr_storage):
         """Fetch work report via CE_136 and store it"""
         work_report = await self._fetch_work_report_via_ce136(node, wr_hash)
         if work_report:
             wr_storage.store_work_report(wr_hash, work_report)
         return work_report
 
-    async def _fetch_work_report_via_ce136(self, node: "Node", wr_hash: WorkReportHash):
+    async def _fetch_work_report_via_ce136(self, node: QuicPeer, wr_hash: WorkReportHash):
         """
         Fetch work report via CE_136 protocol
 
@@ -338,7 +328,6 @@ class JudgmentPublication(NetworkProtocol):
         """
         logger.info(
             "Fetching work report via CE_136",
-            node_name=node.name,
             work_report_hash=wr_hash.hex()[:16] + "...",
         )
 
@@ -355,7 +344,6 @@ class JudgmentPublication(NetworkProtocol):
             if responses and len(responses) > 0:
                 logger.info(
                     "Work report fetched successfully via CE_136",
-                    node_name=node.name,
                     work_report_hash=wr_hash.hex()[:16] + "...",
                     response_count=len(responses),
                 )
@@ -363,7 +351,6 @@ class JudgmentPublication(NetworkProtocol):
             else:
                 logger.warning(
                     "Failed to fetch work report via CE_136",
-                    node_name=node.name,
                     work_report_hash=wr_hash.hex()[:16] + "...",
                 )
                 return None
@@ -371,19 +358,17 @@ class JudgmentPublication(NetworkProtocol):
         except Exception as e:
             logger.error(
                 "Error fetching work report via CE_136",
-                node_name=node.name,
                 work_report_hash=wr_hash.hex()[:16] + "...",
                 error=str(e),
             )
             return None
 
-    async def _handle_invalid_judgment(self, node: "Node", judgment: Judgment, work_report):
+    async def _handle_invalid_judgment(self, node: QuicPeer, judgment: Judgment, work_report):
         """
         Handle invalid judgment: broadcast to successors + neighbors + audit WR if not already
         """
         logger.info(
             "Handling invalid judgment",
-            node_name=node.name,
             epoch_index=judgment.epoch_index,
             work_report_hash=judgment.work_report_hash.hex()[:16] + "...",
         )
@@ -395,7 +380,6 @@ class JudgmentPublication(NetworkProtocol):
         if work_report and self._should_audit_work_report(node, judgment):
             logger.info(
                 "Auditing work report and creating own judgment",
-                node_name=node.name,
                 epoch_index=judgment.epoch_index,
             )
 
@@ -414,19 +398,16 @@ class JudgmentPublication(NetworkProtocol):
                 )
                 await self.transmit(node, our_ce145_data)
 
-    async def _broadcast_to_successors_and_neighbors(self, node: "Node", judgment: Judgment):
+    async def _broadcast_to_successors_and_neighbors(self, node: QuicPeer, judgment: Judgment):
         """Broadcast invalid judgment to successors and neighbors"""
         logger.info(
             "Broadcasting invalid judgment to successors and neighbors",
-            node_name=node.name,
             epoch_index=judgment.epoch_index,
         )
 
         broadcast_count = 0
-        for peer in node.peer_conn:
+        for client in node._protocols:
             try:
-                client = node.peer_conn[peer][1]
-
                 # Send judgment to successor/neighbor
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 client.stream_buffer[stream_id] = self._prefix.encode()
@@ -449,20 +430,17 @@ class JudgmentPublication(NetworkProtocol):
             except Exception as e:
                 logger.error(
                     "Failed to broadcast invalid judgment",
-                    node_name=node.name,
-                    peer_endpoint=f"{peer.host}:{peer.port}",
                     error=str(e),
                 )
 
         logger.info(
             "Invalid judgment broadcast completed",
-            node_name=node.name,
             broadcast_to=broadcast_count,
         )
 
     async def auditor_create_judgment(
         self,
-        node: "Node",
+        node: QuicPeer,
         epoch_index: int,
         validator_index: int,
         work_report_hash: WorkReportHash,
@@ -491,7 +469,6 @@ class JudgmentPublication(NetworkProtocol):
 
         logger.info(
             "Auditor creating judgment",
-            node_name=node.name,
             epoch_index=epoch_index,
             validator_index=validator_index,
             work_report_hash=work_report_hash.hex()[:16] + "...",
@@ -557,7 +534,6 @@ class JudgmentPublication(NetworkProtocol):
 
         logger.info(
             "Auditor judgment created successfully",
-            node_name=node.name,
             epoch_index=epoch_index,
             validator_index=validator_index,
             validity="valid" if validity else "invalid",
@@ -568,7 +544,7 @@ class JudgmentPublication(NetworkProtocol):
 
     async def _create_auditor_judgment(
         self,
-        node: "Node",
+        node,
         epoch_index: int,
         validator_index: int,
         work_report_hash: WorkReportHash,
@@ -646,7 +622,7 @@ class JudgmentPublication(NetworkProtocol):
         return True  # Always valid for now
 
     async def _create_own_judgment(
-        self, node: "Node", epoch_index: int, wr_hash: WorkReportHash, validity: bool
+        self, node: QuicPeer, epoch_index: int, wr_hash: WorkReportHash, validity: bool
     ) -> Judgment:
         """Create our own judgment based on audit results"""
 
@@ -655,7 +631,7 @@ class JudgmentPublication(NetworkProtocol):
         signature = Ed25519Signature(dummy_sig[:64])
 
         # Derive validator index from node (simplified)
-        validator_index = ValidatorIndex(U16(hash(node.name) % 100))
+        validator_index = ValidatorIndex(U16(hash(b"") % 100))
 
         judgment = Judgment(
             epoch_index=epoch_index,
@@ -667,7 +643,6 @@ class JudgmentPublication(NetworkProtocol):
 
         logger.info(
             "Created own judgment after audit",
-            node_name=node.name,
             validator_index=int(validator_index),
             validity="valid" if validity else "invalid",
             work_report_hash=wr_hash.hex()[:16] + "...",
@@ -686,7 +661,7 @@ class JudgmentPublication(NetworkProtocol):
         )
         # TODO: Implement actual storage mechanism for block authors
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol):
+    def res_intercept(self, stream_id: int, client: JAMNP):
         """Intercept acknowledgment (FIN) from Validator"""
         buffer = client.stream_buffer[stream_id]
 

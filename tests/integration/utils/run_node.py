@@ -1,35 +1,21 @@
 from typing import Callable
 
 import asyncio
-import signal
-
+import signal 
 import logging
 import os
-import time
-
+import time 
 from dotenv import load_dotenv
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
 
 from jam.logging import setup_logging
 from jam.utils.chainspec import chain_config
 from .state_update import update_state
 
 from jam.finality.finality import Finality
-from jam.settings import setup_setting
-
-from jam.network.peer import Peer
-from jam.network.node import Node
-from jam.network.base.certificate import generate_san
-
-from jam.state.state import setup_state, State
-from jam.types.protocol.crypto import BlsPublic
+from jam.settings import setup_setting 
+from jam.network.node import start_node
+from jam.state.state import setup_state 
 from jam.block import Block
-from jam.types.protocol.validators import (
-    IPAddress,
-    ValidatorData,
-    ValidatorMetadata,
-)
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.logging import get_logger
@@ -99,40 +85,15 @@ async def run_node(
         state.store.disable_cache()
         update_state(state)
 
-        peers = [
-            Peer(id=generate_san(val.ed25519), data=val)
-            for val in state.kappa
-            if val.metadata.port != port
-        ]
-
-        ip = IPAddress.from_str(host)
-
-        tsr_node = Node(
-            node_name=name,
-            host=str(host),
-            port=int(port),
-            peers=peers,
-            validator_data=settings.val,
-            is_builder=is_builder,
-            is_validator=is_validator,
-        )
-
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
 
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(tsr_node.initialize())
+            tg.create_task(start_node(host, int(port), state.kappa))
             if node_task:
                 tg.create_task(node_task(tsr_node))
 
-    except KeyboardInterrupt:
-        logger.info(
-            "JAM node shutting down gracefully",
-            node_name=name,
-            port=port,
-            reason="keyboard_interrupt"
-        )
     except Exception as e:
         logger.critical(
             "JAM node fatal error",

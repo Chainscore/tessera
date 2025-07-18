@@ -3,7 +3,6 @@ from typing import Tuple, Dict, List
 from tsrkit_types.sequences import Vector
 
 from jam.logging import get_logger
-from jam.network.node import Node
 
 from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap
 from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
@@ -44,13 +43,11 @@ class Bundler:
     merkle: BMRFunctions
     sr_lookup: SegmentRootLookup
     segments_lookup: Vector[SegmentDict]
-    node: Node
 
-    def __init__(self, node: Node):
+    def __init__(self):
         self.merkle = BMRFunctions()
         self.sr_lookup = SegmentRootLookup({})
         self.segments_lookup = Vector([])
-        self.node = node
 
     def build_lookup(self, p: WorkPackage) -> SegmentRootLookup:
         # Access DA

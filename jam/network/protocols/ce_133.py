@@ -4,7 +4,7 @@ from tsrkit_types import Null, structure, Uint, Bool, TypedVector, Option
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from jam.network.base.quic import QuicProtocol
+from jam.network.base.jamnp import JAMNP
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.types.protocol.core import CoreIndex
@@ -60,14 +60,14 @@ class WorkPackageSubmission(NetworkProtocol):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-133-work-package-submission
     """
 
-    from jam.network.node import Node
-
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE133
 
-    async def transmit(self, node: Node, data: CE133Data):
+    async def transmit(self, data: CE133Data):
         """Transmit Work Package from Builder (client) to Guarantor (server)"""
+        from jam.network.node import node 
+        if not node: return TypedVector[OptBool]([]) 
 
         msg_a = data.package_data.encode()
         len_a = data.package_len.encode()
@@ -76,9 +76,8 @@ class WorkPackageSubmission(NetworkProtocol):
 
         logger.info(
             "Transmitting work package to guarantors",
-            node_name=node.name,
             core_index=int(data.package_data.core_index),
-            guarantor_count=len(node.peer_conn),
+            guarantor_count=len(node._protocols),
             stream_a_size=data.package_len,
             stream_b_size=data.extrinsics_len,
             extrinsics_count=len(data.extrinsics),
@@ -88,12 +87,11 @@ class WorkPackageSubmission(NetworkProtocol):
         # TODO: Use Particular Validators' Connections
 
         responses = TypedVector[OptBool]([])
-        for peer in node.peer_conn:
+        for _, client in node._protocols.items():
             try:
-                if peer.port != 40000:
+                if client.val.metadata.port != 40000:
                     continue
                 logger.debug("Sending package", peer=str(peer))
-                client = node.peer_conn[peer][1]
                 transmitted_count += 1
 
                 # Send Protocol Prefix
@@ -115,7 +113,6 @@ class WorkPackageSubmission(NetworkProtocol):
 
                 logger.debug(
                     "Work package transmitted to guarantor",
-                    node_name=node.name,
                     stream_id=stream_id,
                     core_index=int(data.package_data.core_index),
                 )
@@ -123,14 +120,12 @@ class WorkPackageSubmission(NetworkProtocol):
             except Exception as e:
                 logger.error(
                     "Failed to transmit work package to guarantor",
-                    node_name=node.name,
                     error=str(e),
                     error_type=type(e).__name__,
                 )
 
         logger.info(
             "Work package transmission completed",
-            node_name=node.name,
             transmitted_to=transmitted_count,
             total_guarantors=len(node.peer_conn),
             core_index=int(data.package_data.core_index),
@@ -138,7 +133,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: JAMNP):
         """Intercept & Process Work Package on Guarantor (server)"""
         buffer = server.stream_buffer[stream_id]
 
@@ -198,7 +193,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
+    def res_intercept(self, stream_id: int, client: JAMNP) -> OptBool:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
