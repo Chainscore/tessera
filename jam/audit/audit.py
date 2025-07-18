@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, Bool, Dictionary
 
-from jam.audit.vectors.reports import reports
+# from jam.audit.vectors.reports import reports
 from jam.types.protocol.core import CoreIndex, TimeSlot
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.work.report import WorkReport
@@ -33,13 +33,12 @@ logger = get_logger("in_core")
 class AuditingAndJudgement:
 
     node: Node
-
     def __init__(self, node: Node):
         self.vrf = VRF
         self.node = node
 
     @staticmethod
-    def report_to_be_audit(pending_wrs: OptionalWorkReportState, newly_avail_wrs: List[Option[WorkReport]]) -> List[Option[WorkReport]]:
+    def report_to_be_audit(pending_wrs: List[Option[WorkReport]], newly_avail_wrs: List[Option[WorkReport]]) -> List[Option[WorkReport]]:
         """
         This functions as a mapping of core index to a work-report pending which has just become available, or ∅ if no report became available on the core.
 
@@ -56,14 +55,26 @@ class AuditingAndJudgement:
 
         pre_audit_report : List[Option[WorkReport]]= []
 
-        for i, report in enumerate(pending_wrs):
-            if report is not Null:
-                if report in newly_avail_wrs:
-                    pre_audit_report.append(report["report"])
+        # for i, report in enumerate(pending_wrs):
+        #     if report is not Null:
+        #         if report in newly_avail_wrs:
+        #             pre_audit_report.append(report["report"])
+        #         else:
+        #             pre_audit_report.append(Null)
+        #     else:
+        #         pre_audit_report.append(Null)
+        #
+        for i in range(len(pending_wrs)):
+            value1 = pending_wrs[i]
+            value2 = newly_avail_wrs[i]
+
+            if value1 is Null:
+                pre_audit_report.append(Null)
+            else:
+                if value1 == value2:
+                    pre_audit_report.append(value1)
                 else:
                     pre_audit_report.append(Null)
-            else:
-                pre_audit_report.append(Null)
 
         return pre_audit_report
 
@@ -191,23 +202,23 @@ class AuditingAndJudgement:
 
         processor = Processor(node=self.node)
         w_r, wr_hash = processor.process(package=p, core=c, extrinsics=e)
-        print(w_r)
-        print("PROCESS HASH =>", type(wr_hash), wr_hash.hex())
-        print("GIVEN HASH=>", type(r_hash), r_hash.hex())
-        print("ER ROOT", w_r.package_spec.erasure_root.hex(), wr.package_spec.erasure_root.hex())
-        print("SEG ROOT", w_r.package_spec.exports_root.hex(), wr.package_spec.exports_root.hex())
-        print("Package hash", w_r.package_spec.hash.hex(), wr.package_spec.hash.hex())
-        print("RESULTS", w_r.results == wr.results)
-        print("OTH ", w_r.auth_output == wr.auth_output)
+        # print(w_r)
+        # print("PROCESS HASH =>", type(wr_hash), wr_hash.hex())
+        # print("GIVEN HASH=>", type(r_hash), r_hash.hex())
+        # print("ER ROOT", w_r.package_spec.erasure_root.hex(), wr.package_spec.erasure_root.hex())
+        # print("SEG ROOT", w_r.package_spec.exports_root.hex(), wr.package_spec.exports_root.hex())
+        # print("Package hash", w_r.package_spec.hash.hex(), wr.package_spec.hash.hex())
+        # print("RESULTS", w_r.results == wr.results)
+        # print("OTH ", w_r.auth_output == wr.auth_output)
 
-        try:
-            from deepdiff import DeepDiff
-            value_diff = DeepDiff(wr.to_json(), w_r.to_json(), significant_digits=0, verbose_level=2)
-            assert value_diff == {}, f"\nValue Diff: {value_diff.pretty()}"
-            # for got, expected in zip(w_r, wr):
-            assert w_r == wr
-        except AssertionError as e:
-            print(f"ERROR ASSERTING: {e}")
+        # try:
+        #     from deepdiff import DeepDiff
+        #     value_diff = DeepDiff(wr.to_json(), w_r.to_json(), significant_digits=0, verbose_level=2)
+        #     assert value_diff == {}, f"\nValue Diff: {value_diff.pretty()}"
+        #     # for got, expected in zip(w_r, wr):
+        #     assert w_r == wr
+        # except AssertionError as e:
+        #     print(f"ERROR ASSERTING: {e}")
         if wr_hash == r_hash:
             return True
         else:

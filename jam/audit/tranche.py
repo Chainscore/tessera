@@ -7,7 +7,7 @@ from tsrkit_types.sequences import TypedVector
 from tsrkit_types import structure
 from tsrkit_types.dictionary import Dictionary
 
-from jam.types.work.report import WorkReportHash
+from jam.types.work.report import WorkReport, WorkReportHash
 from tsrkit_types.integers import Uint
 
 SignatureList=TypedVector[Bytes]
@@ -20,8 +20,8 @@ class JudgmentRecord:
 
     @staticmethod
     def dummy()-> "JudgmentRecord":
-        true_votes:SignatureList=SignatureList([Bytes(0),Bytes(1),Bytes(2),Bytes(3)])
-        false_votes:SignatureList=SignatureList([])
+        true_votes:SignatureList=SignatureList([])
+        false_votes:SignatureList=SignatureList([Bytes(0),Bytes(1),Bytes(2),Bytes(3)])
         announces:SignatureList=SignatureList([Bytes(0),Bytes(1),Bytes(2),Bytes(3),Bytes(4),Bytes(5)])
         return JudgmentRecord(true_votes=true_votes,false_votes=false_votes,announces=announces)
 
@@ -31,18 +31,18 @@ class JudgmentRecord:
 
 @structure
 class TrancheState:
-    unaudited_list: TypedVector[WorkReportHash] #Q ->[wr1,2,3,4]->[]
-    judgments: Dictionary[WorkReportHash, JudgmentRecord] # {WR:J,S}
-    valid_set: TypedVector[WorkReportHash] # Already validated_wrs [wr,1,2,3,4]
-    invalid_set: TypedVector[WorkReportHash] # Already invalid_wrs
+    unaudited_list: TypedVector[WorkReport] #Q ->[wr1,2,3,4]->[]
+    judgments: Dictionary[WorkReport, JudgmentRecord] # {WR:J,S}
+    valid_set: TypedVector[WorkReport] # Already validated_wrs [wr,1,2,3,4]
+    invalid_set: TypedVector[WorkReport] # Already invalid_wrs
 
     @staticmethod
     def empty()->"TrancheState":
         return TrancheState(
-            unaudited_list=TypedVector[WorkReportHash]([]),
-            judgments=Dictionary[WorkReportHash, JudgmentRecord]({}),
-            valid_set=TypedVector[WorkReportHash]([]),
-            invalid_set=TypedVector[WorkReportHash]([])
+            unaudited_list=TypedVector[WorkReport]([]),
+            judgments=Dictionary[WorkReport, JudgmentRecord]({}),
+            valid_set=TypedVector[WorkReport]([]),
+            invalid_set=TypedVector[WorkReport]([])
         )
 
 @structure

@@ -4,7 +4,7 @@ from time import time
 from tsrkit_types.bits import Uint
 from tsrkit_types.sequences import TypedVector
 
-# from jam.state.state import State
+from jam.types.block.extrinsics.disputes import Culprits, Faults, Verdicts
 from jam.utils.constants import AUDIT_PERIOD, VALIDATOR_COUNT
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import Hash
@@ -27,6 +27,8 @@ class TrancheEngine:
         tranche_index = Uint(1)
 
         while True:
+            from jam.operations.ext_store import ext_store
+
             tranche = Tranche(tranche_index=tranche_index - 1, slot_index=slot_index)
             ts: TrancheState = self.store.load(tranche)
             logger.info(f"⚙️ Running tranche {tranche_index} for slot {slot_index}, auditing {len(ts.unaudited_list)} WRs, valid {len(ts.valid_set)}, invalid {len(ts.invalid_set)}")
@@ -44,6 +46,10 @@ class TrancheEngine:
                 if false_count == 0 and true_count >= VALIDATOR_COUNT * 2 // 3 or len(record.announces)==len(record.true_votes):
                     ts.valid_set.append(wr)
                 elif false_count >= VALIDATOR_COUNT * 1 // 3:
+                    verdicts:Verdicts=Verdicts([])
+                    culprits: Culprits = Culprits([])
+                    faults:Faults=Faults([])
+                    ext_store.import_disp(verdicts,culprits,faults)
                     ts.invalid_set.append(wr)
                 else:
                     new_unaudited.append(wr)

@@ -170,6 +170,8 @@ class AuditAnnouncement(NetworkProtocol):
             data = cast(CE144Data, data)
             print(data)
 
+            print("##########################################################",server.node.validator_index)
+
             logger.debug(
                 "Received announcement for auditing",
                 stream_id=stream_id,

@@ -31,7 +31,7 @@ def create_test_tranche_state() -> TrancheState:
     wr2 = WorkReportHash(b"wr2_hash_32_bytes______00000000")
 
     unaudited_list = TypedVector[WorkReportHash]([wr1, wr2])
-
+    print("Unaudited Work Reports:", unaudited_list)
     judgments = Dictionary[WorkReportHash, JudgmentRecord]({
         wr1: JudgmentRecord.dummy(),
         wr2: JudgmentRecord.dummy()
@@ -83,8 +83,6 @@ async def test_tranche_engine():
     print(f"Valid WRs: {[wr.hex()[:16] for wr in final_state.valid_set]}")
     print(f"Invalid WRs: {[wr.hex()[:16] for wr in final_state.invalid_set]}")
     print(f"Remaining unaudited WRs: {[wr.hex()[:16] for wr in final_state.unaudited_list]}")
-
-
 
 if __name__ == "__main__":
     asyncio.run(test_tranche_engine())
