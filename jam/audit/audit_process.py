@@ -69,8 +69,10 @@ class AuditProcess:
 
             logger.info(f"Checking assign report length {len(reports)} for each validator")
 
-
-            asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports))
+            # data=[]
+            task=asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports))
+            data = await task
+            print("data Bhaii------------------", data)
             asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports))
 
 
@@ -148,6 +150,9 @@ class AuditProcess:
             responses = await CE144.transmit(node=node, data=data)
 
             logger.debug(f"Assign Work Reports announcement transmitted successfully")
+
+            # return responses
+
 
         except Exception as e:
             logger.error(

@@ -168,9 +168,9 @@ class AuditAnnouncement(NetworkProtocol):
         try:
             data, offset = CE144Data.decode_from(buffer[1:])
             data = cast(CE144Data, data)
-            print(data)
+            print("#############################################",data.tranche_announcement.announcement)
 
-            print("##########################################################",server.node.validator_index)
+            # print("##########################################################",server.node.validator_index)
 
             logger.debug(
                 "Received announcement for auditing",
