@@ -1,6 +1,6 @@
 import asyncio
 from typing import cast
-from tsrkit_types import structure, Uint, Bool, U32
+from tsrkit_types import structure, Uint, Bool, U32, U8
 
 from jam.logging import get_logger
 
@@ -10,7 +10,9 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types.protocol.crypto import BandersnatchRingVrfSignature
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.utils.constants import VALIDATOR_COUNT
-from jam.network.protocols.ce_132 import SafroleTicketDistribution
+from jam.network.protocols.ce_132 import SafroleTicketDistribution, CE132Data
+from py_ark_vrf import verify_ring
+from jam.utils.constants import X
 
 # Module-specific logger
 logger = get_logger("network")
@@ -22,12 +24,12 @@ class EpochTicket:
 
 @structure
 class CE131Data:
-    epoch_ticket_len: Uint[32]
+    epoch_ticket_len: U32
     epoch_ticket: EpochTicket
 
     @property
     def is_valid(self):
-        if len(self.epoch_ticket.encode()) == self.epoch_ticket_len:
+        if U32(len(self.epoch_ticket.encode())) == self.epoch_ticket_len:
             return True
         return False
 
@@ -53,29 +55,37 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
     async def transmit(self, node: Node, data: CE131Data):
         """Transmit Safrole ticket from Validator to Proxy validator"""
-        msg_a = data.epoch_ticket_len.encode()
-        len_a = data.epoch_ticket.encode()
+        len_a = data.epoch_ticket_len.encode()
+        msg_a = data.epoch_ticket.encode()
+
+        # calculate validator index
+        signature = data.epoch_ticket.ticket.signature
+        proxy_validator_index = Uint.from_bytes(signature[-4:], 'big') % VALIDATOR_COUNT
+        print(Uint.from_bytes(signature[-4:], 'big'))
+        print("Proxy validator", proxy_validator_index)
 
         # TODO: select proxy validator from next epochs validator list
-        signature = data.epoch_ticket.ticket.signature
+        # select validator from next epochs validator list using index
+        from jam.state.state import state
+        proxy_validator = state.gamma.k[proxy_validator_index]
 
-        proxy_validator_index = Uint.from_bytes(signature[-4:], 'big') % VALIDATOR_COUNT
+        print("Proxy validator port", proxy_validator.metadata.port)
 
-        if proxy_validator_index == node.validator_index:
-
+        if int(proxy_validator.metadata.port) == int(node.port):
             logger.debug(
-                "Proxy validator is equal to generator validator index, transmitting ticket using CE132",
+                "Proxy validator is same as generator validator, transmitting ticket using CE132",
                 node_name=node.name,
             )
             from jam.network.node import node
             CE132 = SafroleTicketDistribution()
+            data = CE132Data(epoch_ticket_len=data.epoch_ticket_len, epoch_ticket=data.epoch_ticket)
             return await CE132.transmit(node, data)
 
         else:
             for peer in node.peer_conn:
-                if peer.peer_index == proxy_validator_index:
+                if int(proxy_validator.metadata.port) == int(peer.port) and int(peer.port) != 40000:
                     try:
-                        logger.debug("Sending safrol ticket", peer=str(peer))
+                        logger.debug("Sending safrol ticket", peer=str(peer), peer_name=str(peer.name))
                         client = node.peer_conn[peer][1]
 
                         # Send Protocol Prefix
@@ -86,7 +96,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
                         # Send Messages with their lengths
                         client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                        res = await client.stream_and_close(message=msg_a, stream_id=stream_id)
+                        res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
 
                         logger.debug(
                             "Ticket transmitted to proxy validator",
@@ -103,14 +113,12 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                             error=str(e),
                             error_type=type(e).__name__,
                         )
-                        return None
 
             logger.info(
                 "Ticket transmission completed",
                 node_name=node.name,
                 total_guarantors=len(node.peer_conn),
             )
-
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process ticket"""
@@ -131,13 +139,35 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
             #TODO: verify the proof and check you are the correct proxy
 
-            from jam.network.node import node
-            CE132 = SafroleTicketDistribution()
-            responses = asyncio.create_task(CE132.transmit(node, data))
+            # calculate validator index
+            signature = data.epoch_ticket.ticket.signature
+            proxy_validator_index = Uint.from_bytes(signature[-4:], 'big') % VALIDATOR_COUNT
+            from jam.state.state import state
+            proxy_validator = state.gamma.k[proxy_validator_index]
+
+            eta = state.eta[2]
+            vals = [k.bandersnatch for k in state.gamma.k]
+            attempt = U8(data.epoch_ticket.ticket.attempt)
+            ad = b''
+
+            verification = verify_ring(
+                X.TICKET.value + eta + bytes([attempt]),
+                data.epoch_ticket.ticket.signature,
+                vals,
+                ad
+            )
+            print("verification", verification)
+            # check if you are supposed to be a proxy
+            if int(proxy_validator.metadata.port) == int(server.node.port) and verification:
+                from jam.network.node import node
+                CE132 = SafroleTicketDistribution()
+                data = CE132Data(epoch_ticket_len=data.epoch_ticket_len, epoch_ticket=data.epoch_ticket)
+                responses = asyncio.create_task(CE132.transmit(node, data))
 
             # Return acknowledgment to validator
             ack = b""
             server.stream_and_close(ack, stream_id)
+
 
         except Exception as e:
             logger.error(

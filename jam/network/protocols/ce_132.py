@@ -1,17 +1,32 @@
 from typing import cast
-from tsrkit_types import Bool
+from tsrkit_types import structure, Uint, Bool, U32
 
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.protocols.ce_131 import CE131Data
+from jam.block.extrinsics.tickets import TicketEnvelope
+import asyncio
 
 # Module-specific logger
 logger = get_logger("network")
 
-CE132Data = CE131Data
+@structure
+class EpochTicket:
+    epoch_index: U32
+    ticket: TicketEnvelope
+
+@structure
+class CE132Data:
+    epoch_ticket_len: U32
+    epoch_ticket: EpochTicket
+
+    @property
+    def is_valid(self):
+        if len(self.epoch_ticket.encode()) == self.epoch_ticket_len:
+            return True
+        return False
 
 class SafroleTicketDistribution(NetworkProtocol):
     """
@@ -35,40 +50,43 @@ class SafroleTicketDistribution(NetworkProtocol):
 
     async def transmit(self, node: Node, data: CE132Data):
         """Transmit Safrole ticket from Validator to validator"""
-        msg_a = data.epoch_ticket_len.encode()
-        len_a = data.epoch_ticket.encode()
+        len_a = data.epoch_ticket_len.encode()
+        msg_a = data.epoch_ticket.encode()
 
+        tasks = []
         for peer in node.peer_conn:
-            try:
-                logger.debug("Sending safrol ticket", peer=str(peer))
-                client = node.peer_conn[peer][1]
+            if int(peer.port) != int(node.port):
+                try:
+                    logger.debug("Sending safrol ticket", peer=str(peer))
+                    client = node.peer_conn[peer][1]
 
-                # Send Protocol Prefix
-                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                    # Send Protocol Prefix
+                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                # Append prefix to stream buffer so that we know the stream for handling response
-                client.stream_buffer[stream_id] = self._prefix.encode()
+                    # Append prefix to stream buffer so that we know the stream for handling response
+                    client.stream_buffer[stream_id] = self._prefix.encode()
 
-                # Send Messages with their lengths
-                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                res = await client.stream_and_close(message=msg_a, stream_id=stream_id)
+                    # Send Messages with their lengths
+                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                    task = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    tasks.append(task)
 
-                logger.debug(
-                    "Ticket transmitted to validator",
-                    node_name=node.name,
-                    stream_id=stream_id,
-                )
+                    logger.debug(
+                        "Ticket transmitted to validator",
+                        node_name=node.name,
+                        stream_id=stream_id,
+                    )
 
-                return res
+                except Exception as e:
+                    logger.error(
+                        "Failed to transmit ticket to validator",
+                        node_name=node.name,
+                        error=str(e),
+                        error_type=type(e).__name__,
+                    )
+        res = await asyncio.gather(*tasks)
 
-            except Exception as e:
-                logger.error(
-                    "Failed to transmit ticket to validator",
-                    node_name=node.name,
-                    error=str(e),
-                    error_type=type(e).__name__,
-                )
-                return None
+        print(res)
 
         logger.info(
             "Ticket transmission completed",
@@ -95,6 +113,7 @@ class SafroleTicketDistribution(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             # TODO: process ticket
+            print(data)
 
             # Return acknowledgment to validator
             ack = b""

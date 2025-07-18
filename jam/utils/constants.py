@@ -76,7 +76,7 @@ LOOKUP_ANCHOR_MAX_AGE = 14_400
 L = LOOKUP_ANCHOR_MAX_AGE
 
 # N — Ticket entries per validator.
-TICKET_ENTRIES_PER_VALIDATOR = 2
+TICKET_ENTRIES_PER_VALIDATOR = chain_config.tickets_per_validator
 N = TICKET_ENTRIES_PER_VALIDATOR
 
 # O — Max number of items in the authorizations pool.
