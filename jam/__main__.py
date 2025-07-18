@@ -76,7 +76,6 @@ async def main(
     settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
 
     main_db = settings.main_db
-
     logger.info(
         "Starting JAM node",
         name=name,
@@ -94,10 +93,17 @@ async def main(
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, "dev-spec.json")
         state.store.disable_cache()
-        update_state(state)
+
 
         # Genesis specs
         dev_spec = json.load(open(genesis_path))
+        
+        block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
+        header_hash = block.save(main_db)
+        Finality.set_head(header_hash, main_db)
+        Finality.finalise(header_hash, main_db)
+
+        update_state(state)
 
         peers = [
             Peer(
@@ -129,11 +135,7 @@ async def main(
             is_validator=is_validator,
         )
 
-        block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
-        header_hash = block.save(main_db)
-        Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db)
-
+      
 #       RPC/WebSocket server setup
         rpc_port = int(os.environ.get("RPC_PORT", 5000))
         rpc_config = Config()

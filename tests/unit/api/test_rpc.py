@@ -117,7 +117,7 @@ async def test_parent_block(db_path):
     state.transition(b1)
     b2 = BlockProducer(node=Node("", "", 0, settings.val, [], False, False), db=settings.main_db)._produce_block(state, TimeSlot(2))
     state.transition(b2)
-
+    
     # Simulate the parent block handler
     payload = {
         "method": "parent",
@@ -136,10 +136,18 @@ async def test_parent_block(db_path):
 @pytest.mark.asyncio
 async def test_state_root(db_path):
     #setup: get a State 
-    state, settings = get_gen_state(db_path)
+    settings = setup_setting(db_path, None)
+    state = setup_state(settings.state_db)
     db = settings.main_db
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+            
 
-    produce_chain(state, settings.main_db, 5)
+    # churn 5 blocks (slots 1–5)
+    produce_chain(state, settings.main_db, length=5)
+
     # hash of slot‐4’s block
     hh4 = db.get(Block.get_storage_key_slot(TimeSlot(2)))
 
@@ -162,12 +170,18 @@ async def test_state_root(db_path):
 @pytest.mark.asyncio
 async def test_statistics(db_path):
 
-    state, settings = get_gen_state(db_path)
+    settings = setup_setting(db_path, None)
+    state = setup_state(settings.state_db)
     db = settings.main_db
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+            
 
-    
-    # hash of slot‐2’s block
-    produce_chain(state, settings.main_db, 5)
+    # churn 5 blocks (slots 1–5)
+    produce_chain(state, settings.main_db, length=5)
+
     hh2 = db.get(Block.get_storage_key_slot(TimeSlot(2)))
     # Call the RPC
     payload = {
@@ -229,10 +243,16 @@ async def test_service_data_rpc(db_path):
 
 @pytest.mark.asyncio
 async def test_service_value_rpc(db_path):
-    state, settings = get_gen_state(db_path)
-    set_state(state)
+    settings = setup_setting(db_path, None)
+    state = setup_state(settings.state_db)
     db = settings.main_db
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+            
 
+ 
     # pick a service and store a value under some key
     data = create_dummy_bytes(100)
 
@@ -243,8 +263,7 @@ async def test_service_value_rpc(db_path):
     state.delta[sid].storage[key] = value
     
 
-    # hash of slot‐2’s block
-    produce_chain(state, settings.main_db, 5)
+    produce_chain(state, settings.main_db, length=5)
     hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
 
 
@@ -266,9 +285,13 @@ async def test_service_value_rpc(db_path):
 
 @pytest.mark.asyncio
 async def test_service_preimage_rpc(db_path):
-    state, settings = get_gen_state(db_path)
-    set_state(state)
+    settings = setup_setting(db_path, None)
+    state = setup_state(settings.state_db)
     db = settings.main_db
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
 
     sid = ServiceId(9)
     state.delta[sid] = AccountData()
@@ -297,7 +320,14 @@ async def test_service_preimage_rpc(db_path):
 
 @pytest.mark.asyncio
 async def test_service_request_handler_rpc(db_path):
-    state, settings = get_gen_state(db_path)
+    settings = setup_setting(db_path, None)
+    state = setup_state(settings.state_db)
+    db = settings.main_db
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+   
     set_state(state)
     db = settings.main_db
 

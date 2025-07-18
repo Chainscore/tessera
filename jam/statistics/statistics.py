@@ -3,6 +3,7 @@ import math
 from typing import List
 
 from jam.api.rpc.broker import broker
+from jam.consensus.grandpa.finality import Finality
 from jam.types import AllValidatorStats, Sigma, Block, WorkReport
 from jam.types.state.pi import ServiceStat
 from jam.utils.constants import EPOCH_LENGTH, SEGMENT_SIZE
@@ -101,6 +102,8 @@ class Statistics:
         state.pi = pi
 
         #websocket broadcast for statistics
-        asyncio.create_task(broker.publish("subscribeStatistics", {"result":list(pi.encode())}))
+        from jam.settings import settings
+        final = Finality.load_final(settings.main_db)
+        asyncio.create_task(broker.publish("subscribeStatistics", {"header_hash":list(final.header.hash()),"slot": int(final.header.slot), "value":list(pi.encode())}))
 
         return state
