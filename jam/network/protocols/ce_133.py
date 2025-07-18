@@ -18,7 +18,7 @@ from jam.utils.constants import GENESIS_TS
 from jam.work_package.processor import Processor
 
 from jam.work_package.guarantor_assignments import guarantor_assignments
-from jam.utils.assignment import assign_guarantors
+# from jam.utils.assignment import assign_guarantors
 
 # Module-specific logger
 logger = get_logger("network")
@@ -224,4 +224,3 @@ class WorkPackageSubmission(NetworkProtocol):
             return OptBool(Bool(True))
 
         return OptBool(Null)
-

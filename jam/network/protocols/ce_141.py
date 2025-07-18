@@ -45,7 +45,7 @@ class AssuranceDistribution(NetworkProtocol):
         --> Assurance
         --> FIN
         <-- FIN
-        
+
     Source:
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-141-assurance-distribution
 
@@ -121,11 +121,6 @@ class AssuranceDistribution(NetworkProtocol):
             stream_id=stream_id,
             ack_size=len(ack)
         )
-
-        process = AuditProcess(server.node)
-
-        # Here each node processing for assignment
-        asyncio.create_task(process.audit_process())
 
     def res_intercept(self, stream_id: int, client: QuicProtocol):
         buffer = client.stream_buffer[stream_id]

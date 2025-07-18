@@ -28,7 +28,7 @@ from jam.work_package.guarantor_assignments import guarantor_assignments
 import asyncio
 from jam.types.protocol.core import ValidatorIndex
 from jam.utils.gather import gather_with_exceptions
-from jam.utils.assignment import assign_guarantors
+# from jam.utils.assignment import assign_guarantors
 
 # Module-specific logger
 logger = get_logger("network")
