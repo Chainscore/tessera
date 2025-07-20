@@ -72,7 +72,6 @@ class ExtrinsicStore:
         """
         Process an incoming assurance 
         """
-        print("Received assurance")
         if assr in self.ea:
             logger.error("Duplicate Assurance found", assurance=assr.to_json())
             return 

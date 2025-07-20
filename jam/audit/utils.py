@@ -10,6 +10,11 @@ from jam.types import Ed25519Signature, BandersnatchVrfSignature
 from jam.types.work.report import WorkReport
 from jam.types.protocol.core import ValidatorIndex
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from jam.types.protocol.core import CoreIndex, ValidatorIndex
+from jam.types.work.shard import ShardIndex
+
+from jam.utils import constants
+from jam.utils.chainspec import chain_config
 
 
 public_key = Bytes[32]
@@ -40,7 +45,7 @@ def power_set(input_list: TypedVector, length: Optional[int] = None) -> TypedVec
     return power_set_result
 
 
-def signature_pvt(key: Bytes[32], context: Bytes, message:bytes=b"") :
+def sign_bandersnatch(key: Bytes[32], context: Bytes, message:bytes=b"") :
 
     key = int.from_bytes(key)
     vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
@@ -52,4 +57,28 @@ def signature_pvt(key: Bytes[32], context: Bytes, message:bytes=b"") :
     # print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",len(Bytes(signature)), len(Bytes(signature).encode()), BandersnatchVrfSignature(signature).hex(), len(BandersnatchVrfSignature(signature)), len(BandersnatchVrfSignature(signature).encode()))
 
     return signature
+
+
+
+# vi = (si - CI * t) % validators
+def get_vi(shard_index: ShardIndex, core_index: CoreIndex):
+
+    validator_index = ValidatorIndex(
+        (shard_index - core_index * chain_config.recovery_threshold)
+        % constants.VALIDATOR_COUNT
+    )
+
+    return validator_index
+
+# si = (CI * t + vi) % validators
+def get_si(validator_index: ValidatorIndex, core_index: CoreIndex):
+
+    shard_index = ShardIndex(
+        (core_index * chain_config.recovery_threshold + validator_index)
+        % constants.VALIDATOR_COUNT
+    )
+
+    return shard_index
+
+
 

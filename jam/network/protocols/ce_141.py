@@ -66,8 +66,6 @@ class AssuranceDistribution(NetworkProtocol):
         responses = TypedVector([])
 
         for peer in node.peer_conn:
-            print("ASSURER TRANSMIT RUN", node.name, peer.port)
-
             client = node.peer_conn[peer][1]
 
             # Send Protocol Prefix
@@ -109,7 +107,7 @@ class AssuranceDistribution(NetworkProtocol):
             signature= assurance.ed25519_signature
         )
 
-        logger.error("RECEIVED ASSURANCE", peer=server.peer, assurance=assurance_extrinsic.to_json())
+        logger.info("[EXTRINSICS]: RECEIVED ASSURANCE", peer=server.peer, assurance=assurance_extrinsic.to_json())
         ext_store.import_assr(assurance_extrinsic)
 
         # Return acknowledgment to Builder
@@ -122,10 +120,6 @@ class AssuranceDistribution(NetworkProtocol):
             ack_size=len(ack)
         )
 
-        process = AuditProcess(server.node)
-
-        # Here each node processing for assignment
-        asyncio.create_task(process.audit_process())
 
     def res_intercept(self, stream_id: int, client: QuicProtocol):
         buffer = client.stream_buffer[stream_id]

@@ -21,7 +21,8 @@ from jam.types.protocol.crypto import Hash
 from jam.utils.gather import gather_with_exceptions
 
 
-CE138Data = CE137Data
+class CE138Data(CE137Data):
+    ...
 
 @structure
 class CE138Response:
@@ -108,6 +109,8 @@ class AuditShardRequestProtocol(NetworkProtocol):
         data, offset = CE138Data.decode_from(buffer[1:])
         data = cast(CE138Data, data)
 
+        print("Recieved data", data)
+
         try:
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
@@ -121,6 +124,8 @@ class AuditShardRequestProtocol(NetworkProtocol):
             # Fetch Segments Shard
             ss_da = SegmentShardsDA(d3l)
             ss_dict = ss_da.get(erasure_root)
+
+            print("segment shard", ss_dict[shard_index])
 
             # Fetch Bundle Shard
             audits_da = AuditShardsDA(audit)
@@ -141,6 +146,8 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
             justification.append(s)
 
+            print("bundle shard", bundle_shard)
+
             # Return requested shards
             msg_a = bundle_shard.encode()
             len_a = Uint[32](len(msg_a)).encode()
@@ -153,12 +160,16 @@ class AuditShardRequestProtocol(NetworkProtocol):
             server.stream_and_close(msg_b, stream_id)
 
         except Exception as e:
-            msg_a = b''.encode()
+            msg_a = Bytes(b'').encode()
             len_a = Uint[32](len(msg_a)).encode()
+            msg_b = Bytes(b'').encode()
+            len_b = Uint[32](len(msg_a)).encode()
 
             # Send response
             server.stream_and_keep_open(len_a, stream_id)
-            server.stream_and_close(msg_a, stream_id)
+            server.stream_and_keep_open(msg_a, stream_id)
+            server.stream_and_keep_open(len_b, stream_id)
+            server.stream_and_close(msg_b, stream_id)
             logger.error(
                 "Failed to find audit shard.",
                 error=str(e),
@@ -183,5 +194,5 @@ class AuditShardRequestProtocol(NetworkProtocol):
             return data.bundle_shard, data.justification
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE)
+            logger.error(Code.BAD_RESPONSE, error=e)
             return None

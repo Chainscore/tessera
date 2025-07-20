@@ -71,6 +71,7 @@ class CE144Data:
 
     @property
     def is_valid(self):
+        print("###############",len(self.tranche_announcement.encode()) , self.len_a ,  len(self.evidence.encode()),  self.len_b)
         if len(self.tranche_announcement.encode()) == self.len_a and len(self.evidence.encode()) == self.len_b:
             return True
         return False
@@ -105,13 +106,13 @@ class AuditAnnouncement(NetworkProtocol):
         msg_b = data.evidence.encode()
 
 
-        logger.info(
-            f"Transmitting data",
-            announcement=data.tranche_announcement.announcement,
-            evidence=data.evidence.bandersnatch_signature,
-            stream_a_size=data.len_a,
-            stream_b_size=data.len_b,
-        )
+        # logger.info(
+        #     f"Transmitting data",
+        #     announcement=data.tranche_announcement.announcement,
+        #     evidence=data.evidence.bandersnatch_signature,
+        #     stream_a_size=data.len_a,
+        #     stream_b_size=data.len_b,
+        # )
 
         tasks = []
         responses = []
@@ -168,7 +169,7 @@ class AuditAnnouncement(NetworkProtocol):
         try:
             data, offset = CE144Data.decode_from(buffer[1:])
             data = cast(CE144Data, data)
-            print(data)
+            # print("=================================================",data.tranche_announcement.announcement)
 
             logger.debug(
                 "Received announcement for auditing",
@@ -188,8 +189,9 @@ class AuditAnnouncement(NetworkProtocol):
             ack= b""
             server.stream_and_close(ack, stream_id)
 
-            # process = AuditProcess()
-            # # asyncio.create_task(process.judgment_process())
+            # TODO: create mapping of report-validator assignment and judgment
+
+            # TODO: Request Audit shard request using protocol- 138
 
 
         except Exception as e:

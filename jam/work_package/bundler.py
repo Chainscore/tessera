@@ -1,6 +1,6 @@
 from typing import Tuple, Dict, List
 
-from tsrkit_types import Vector, Bytes
+from tsrkit_types import Vector
 
 from jam.logging import get_logger
 from jam.network.protocols.ce_137 import ShardDistributionProtocol
@@ -27,7 +27,6 @@ from jam.types.protocol.core import SegmentRoot
 from jam.types.protocol.crypto import OpaqueHash
 
 from jam.merklization.binary_merkle import BMRFunctions
-from jam.utils.benchmark import benchmark
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
@@ -49,8 +48,6 @@ class Bundler:
     node: Node
 
     def __init__(self, node: Node):
-        from jam.settings import settings
-        self.settings = settings
         self.merkle = BMRFunctions()
         self.sr_lookup = SegmentRootLookup({})
         self.segments_lookup = Vector([])
@@ -58,7 +55,8 @@ class Bundler:
 
     def build_lookup(self, p: WorkPackage) -> SegmentRootLookup:
         # Access DA
-        d3l = self.settings.d3l
+        from jam.settings import settings
+        d3l = settings.d3l
 
         map_da = PackageSegmentMap(d3l)
         sr_lookup = SegmentRootLookup({})
@@ -96,7 +94,8 @@ class Bundler:
             logger.debug("Lookup Miss")
             return r
 
-    def fetch_extrinsics(self, w: WorkItem, data: Extrinsic) -> Extrinsics:
+    @staticmethod
+    def fetch_extrinsics(w: WorkItem, data: Extrinsic) -> Extrinsics:
         """
         Function X defined in Eqn 14.14
         Takes Work Item & retrieves its required extrinsic data
@@ -110,7 +109,8 @@ class Bundler:
            Extrinsic data (Vector[Bytes])
         """
         # Access DA
-        db = self.settings.main_db
+        from jam.settings import settings
+        db = settings.main_db
 
         ext_da = ItemExtrinsics(db)
         ext: Extrinsics = ext_da.process_item(w, data)
@@ -132,7 +132,8 @@ class Bundler:
         """
 
         # Access DA
-        d3l = self.settings.d3l
+        from jam.settings import settings
+        d3l = settings.d3l
 
         imports: Segments = Segments([])
 
@@ -163,7 +164,7 @@ class Bundler:
 
         for h, seg_indices in import_map.items():
             s_root = self.lookup_root(h)
-            logger.info(f"Fetching segments with root {s_root}")
+            logger.debug(f"Fetching segments with root {s_root}")
 
             for n in seg_indices:
                 try:
@@ -183,8 +184,7 @@ class Bundler:
                         fetched_imports[(s_root, n)] = segments[n]
 
                 except KeyError as e:
-                    logger.warn(f"Warning! {e}")
-                    logger.warn("Looking for segment shards in DA!")
+                    logger.warning("Looking for segment shards in DA!", err=str(e))
 
                     # Get Erasure Root
                     e_root = sr_er_da.get(s_root)
@@ -255,7 +255,7 @@ class Bundler:
                 n = spec.index
 
                 s_root = self.lookup_root(r)
-                logger.info(f"Compiling justification for root {s_root}")
+                logger.debug(f"Compiling justification for root {s_root}")
 
                 if s_root not in seg_dict:
                     raise KeyError("Segments not found")
@@ -279,25 +279,22 @@ class Bundler:
 
         for j, item in enumerate(p.items):
             # Fetch Imports
-            with benchmark("Fetched imports"):
-                imports = self.fetch_imports(item)
+            logger.debug("Fetching imports..")
+            imports = self.fetch_imports(item)
             all_imp.append(imports)
 
             # Fetch Justifications
-            with benchmark("Compiling justifications"):
-                justifications = self.fetch_justifications(item, j)
+            logger.debug("Compiling justifications..")
+            justifications = self.fetch_justifications(item, j)
             all_jfn.append(justifications)
 
             # Fetch Extrinsics
-            with benchmark("Processing extrinsics"):
-                if len(x) > j:
-                    extrinsics = self.fetch_extrinsics(item, x[j])
-                    all_ext.append(extrinsics)
+            logger.debug("Processing extrinsics..")
+            if len(x) > j:
+                extrinsics = self.fetch_extrinsics(item, x[j])
+                all_ext.append(extrinsics)
 
+        logger.debug("Compiling bundle..")
         bundle = WorkPackageBundle(p, all_ext, all_imp, all_jfn)
 
-        with open("bundle.txt", "a") as f:
-            print(bundle, file=f)
-
-        logger.info("Compiling bundle..")
         return bundle

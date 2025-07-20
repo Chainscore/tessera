@@ -1,12 +1,14 @@
 from typing import List, Tuple
 
-from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, Bool, Dictionary
+from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, Bool, Dictionary, U32
 
 from jam.audit.vectors.reports import reports
+from jam.network.protocols.ce_137 import CE137Data
+from jam.settings import settings
 from jam.types.protocol.core import CoreIndex, TimeSlot
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.work.report import WorkReport
-from jam.utils.constants import CURRENT_TIME, SLOT_PERIOD, AUDIT_PERIOD, SIGNING_CONTEXTS
+from jam.utils.constants import CURRENT_TIME, SLOT_PERIOD, AUDIT_PERIOD, SIGNING_CONTEXTS, VALIDATOR_COUNT
 from jam.ring_vrf.vrf import VRF
 from jam.utils.shuffle import shuffle
 from jam.types.protocol.crypto import Hash, BandersnatchPublic, Ed25519Public
@@ -17,12 +19,11 @@ from jam.types.work.report import WorkReportHash
 from jam.work_package.processor import Processor
 
 from jam.types.block.header import Header
-from jam.types.state.rho import OptionalWorkReportState
+from jam.types.state.rho import OptionalWorkReportState, Rho
 from jam.logging import get_logger
-from jam.audit.utils import signature_pvt
+from jam.audit.utils import sign_bandersnatch,
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from jam.network.node import Node
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey, Ed25519PrivateKey
 from jam.types.work.manifest import Extrinsics
 
 # Module-specifier logger
@@ -32,15 +33,13 @@ logger = get_logger("in_core")
 
 class AuditingAndJudgement:
 
-    node: Node
-
-    def __init__(self, node: Node):
+    def __init__(self):
         self.vrf = VRF
-        self.node = node
 
     @staticmethod
-    def report_to_be_audit(pending_wrs: OptionalWorkReportState, newly_avail_wrs: List[Option[WorkReport]]) -> List[Option[WorkReport]]:
+    def report_to_be_audit(pending_wrs: List[Option[WorkReport]], newly_avail_wrs: List[Option[WorkReport]]) -> List[Option[WorkReport]]:
         """
+        Equation: 17.1, 17.2
         This functions as a mapping of core index to a work-report pending which has just become available, or ∅ if no report became available on the core.
 
         Args:
@@ -56,79 +55,101 @@ class AuditingAndJudgement:
 
         pre_audit_report : List[Option[WorkReport]]= []
 
-        for i, report in enumerate(pending_wrs):
-            if report is not Null:
-                if report in newly_avail_wrs:
-                    pre_audit_report.append(report["report"])
-                else:
-                    pre_audit_report.append(Null)
-            else:
-                pre_audit_report.append(Null)
-
-        return pre_audit_report
-
-        # for i in range(len(pending_wrs)):
-        #     value1 = pending_wrs[i]
-        #     value2 = newly_avail_wrs[i]
-        #
-        #     if value1 is None:
-        #         pre_audit_report.append(Null)
-        #     else:
-        #         if value1 == value2:
-        #             pre_audit_report.append(value1)
+        # for i, report in enumerate(pending_wrs):
+        #     if report is not Null:
+        #         if report in newly_avail_wrs[i]:
+        #             pre_audit_report.append(report["report"])
         #         else:
         #             pre_audit_report.append(Null)
+        #     else:
+        #         pre_audit_report.append(Null)
 
+        for i in range(len(pending_wrs)):
+            value1 = pending_wrs[i]
+            value2 = newly_avail_wrs[i]
+
+            if value1 is None:
+                pre_audit_report.append(Null)
+            else:
+                if value1 == value2:
+                    pre_audit_report.append(value1)
+                else:
+                    pre_audit_report.append(Null)
 
         return pre_audit_report
 
     @staticmethod
-    def vrf_signature_bandersnatch(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, tranche_index: U8 = None, w_r: WorkReport = None ) -> Bytes[96]:
+    def vrf_signature_bandersnatch(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, tranche_index: U8 = None, w_r: WorkReport = None) -> BandersnatchVrfSignature:
         """
         Equation: 17.3, 17.4
+        This function create a random quantity to get entropy for shuffling.
+
+        Args:
+            entropy_source: Header's entropy-yielding vrf signature H_v
+            bandersnatch_key: Validator(Node) bandersnatch key
+            tranche_index: Current tranche index
+            w_r: Work Report
+
+        Return:
+            Valid Bandersnatch Signature
+
+
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1ec1001e0001?v=0.7.0
         """
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
 
         entropy_vrf_proof = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(entropy_source.encode()))[:32]
-        context = Bytes(SIGNING_CONTEXTS["audit"]) + entropy_vrf_proof
+        context = SIGNING_CONTEXTS["audit"] + entropy_vrf_proof
 
         # if tranche_index is not Null and tranche_index > 0 and w_r is not Null:
-        #     random_quantity += Bytes(Hash.blake2b(w_r.encode())) + Bytes(tranche_index)
+        #     context += Bytes(Hash.blake2b(w_r.encode())) + Bytes(tranche_index)
 
-        signature = signature_pvt(key=bandersnatch_key, context=context)
+        signature = sign_bandersnatch(key=bandersnatch_key, context=context)
 
         return signature
 
-    def verifiable_random_selection(self, entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_audit_report: List[Option[WorkReport]]) -> List[Tuple[CoreIndex, WorkReport]]:
+    @classmethod
+    def verifiable_random_selection(cls, entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, pre_audit_report: List[Option[WorkReport]]) -> List[Tuple[CoreIndex, WorkReport]]:
         """
         Equation: 17.5, 17.6
+        Here in this function we just take q(report_to_be_audit function above) , shuffled it and get initial 10 Work Reports assign to validator.
+
+        Args:
+            entropy_source:
+            bandersnatch_key:
+            pre_audit_report:
+
+        Return:
+            Random initial 10 not Null Work Reports
+
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e0a011e5601?v=0.7.0
         """
+
         vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-        entropy = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(self.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=bandersnatch_key)))[:32]
+        entropy = vrf.proof_to_hash(BandersnatchPoint.encode_to_curve(cls.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=bandersnatch_key, tranche_index=None)))[:32]
 
-        pre_audit_reports = pre_audit_report
-        core_indexes = list[Tuple[CoreIndex, Option[WorkReport]]]([])
-        for c, w_r in enumerate(pre_audit_reports):
-            core_indexes.append((CoreIndex(c), w_r))
+        # ---------------------------- mapping q's reports as tuple[CoreIndex, Option[WorkReport]] ---------------------
+        core_report = list[Tuple[CoreIndex, Option[WorkReport]]]([])
+        for c, w_r in enumerate(pre_audit_report):
+            core_report.append((CoreIndex(c), w_r))
 
-        # return core_indexes
-        # ------------------------------------- audit size array and shuffle --------------------------------------------
+        return core_report
+
+        # ---------------------------------- Array same as size of core_report and shuffle -----------------------------
         array_index = TypedVector[Uint[32]]([])
-        for i in range(len(pre_audit_reports)):
+        for i in range(len(pre_audit_report)):
             array_index.append(Uint[32](i))
 
+        # ------------------------- shuffle function that shuffle array based on entropy (for randomness) --------------
         shuffle_array = shuffle(entropy, array_index)
 
-        # ------------------------------------------ updated shuffle auditing list -------------------------------------
-        lookup = dict(core_indexes)
-        updated_array : List[tuple[core_indexes, Option[WorkReport]]] = [(CoreIndex(i), lookup[i]) for i in shuffle_array]
+        # ---------------------------------------- updated shuffle auditing list ---------------------------------------
+        lookup = dict(core_report)
+        updated_array = [(CoreIndex(i), lookup[i]) for i in shuffle_array]
 
-        # return updated_array
-        # ------------------------------------------ take initial 10 values --------------------------------------------
+        # ------------------------------------------ take initial 10 reports -------------------------------------------
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-        shuffle_not_null  = [(c, w) for (c, w) in updated_array if w is not Null][:10]
+        shuffle_not_null : List[Tuple[CoreIndex, WorkReport]] = [(c, w) for (c, w) in updated_array if w is not Null][:3]
 
         return shuffle_not_null
 
@@ -136,18 +157,39 @@ class AuditingAndJudgement:
     def tranche_index(header_slot: TimeSlot) -> U8:
         """
         Equation: 17.8
-        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e79011e8601?v=0.7.0
+        This function calculated the tranches based on the timeslot, Current time
+
+        Args:
+            Block's Timeslot
+
+        Return:
+            Current Tranches index
+
+        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e74011e8401?v=0.7.0
         """
+
         tranche_index =  (CURRENT_TIME() - (SLOT_PERIOD * int(header_slot))) // AUDIT_PERIOD
         return tranche_index
 
-
     @staticmethod
-    def validator_announcement_statement(assign_report: List[Tuple[CoreIndex, WorkReport]], header: Header, ed25519_public: Ed25519Public, tranche: U8) -> Ed25519Signature:
+    def validator_announcement_statement(assign_report: List[Tuple[CoreIndex, WorkReport]], header: Header, tranche: U8) -> Ed25519Signature:
         """
-        Equation: 17.9, 17.10, 17.11
-        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1ea5011eea01?v=0.7.0
+        Equations: 17.9, 17.10, 17.11
+        This function create Announcement Statement (Valid Ed25519 Signature) is published and distributed to all other Validators Signature.
+
+        Args:
+            assign_report: Assigned Reports to the validator
+            header: latest Block's Header
+            tranche: Current tranche index
+
+        Returns:
+            valid Ed25519 Signature
+
+        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e9e011eec01?v=0.7.0
         """
+
+        from jam.settings import settings
+        from jam.network.node import node
 
         sign_announcement = None
 
@@ -155,82 +197,130 @@ class AuditingAndJudgement:
 
         header_hash = Bytes(Hash.blake2b(header.encode()))
 
-        report_encode = b""
-
-        set_value : set = set()
+        set_value: set[Bytes] = set()
 
         for c, r in assign_report:
             report_encode = Bytes(c.encode() + Hash.blake2b(r.encode()))
             set_value.add(report_encode)
-            report_encode = b""
 
-        set_encode = Bytes(b"")
+        set_encode = Bytes()
 
         for item in set_value:
             set_encode = item.encode() + set_encode
 
 
-        context = signing_context + Bytes(tranche) + set_encode + header_hash
+        message = signing_context + Bytes(tranche) + set_encode + header_hash
+        #
+        # ed25519_pvt = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
+        #
+        # signature = Ed25519Signature(ed25519_pvt.sign(message))
 
-        sign_announcement = signature_pvt(key=ed25519_public, context=context)
+        signature = sign_bandersnatch(key=node.ed_key, context=Bytes(message))
+        # print("22222222222222222222222222222222222222222222222222")
+        # print("SSSSIGGNNAAATTTUUUURREEE", len(BandersnatchVrfSignature(signature).encode()), BandersnatchVrfSignature(signature).hex())
 
-        return Ed25519Signature(sign_announcement)
+        return Ed25519Signature(signature)
 
-    def refine(self, p: WorkPackage, c: CoreIndex, e:Extrinsics, r_hash: WorkReportHash, wr: WorkReport) -> bool:
+        # return signature
+
+    @staticmethod
+    async def audit_refine(p: WorkPackage, c: CoreIndex, e:Extrinsics, wr: WorkReport) -> bool:
         """
         Equation: 17.17
+        Here we Build whole Work Package bundle and refine it, which gives Work Report amd Report Hash, later check with given work report and return bool value.
+
+        Args:
+            p:
+            c:
+            e;
+            wr:
+
+        Return:
+            Boolean value , Ture or False
+
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f2f011f6c01?v=0.7.0
         """
+
+        from jam.network.node import node
         from jam.work_package.processor import Processor
 
+        # TODO: construct Work package Bundle using protocol => CE138
+        # TODO: Condition check after building package => 1. W_p hash with Wr->spec->hash, 2.import Segments, 3. Export segments, 4. Extrinsic
+        # TODO: Final Report hashes values and return True and False
 
-        # construct Work package Bundle using protocol => CE138
-        # bundle = WorkPackageBundle()
-        # lookup = Dictionary({})
+
+        from jam.network.protocols.ce_138 import CE138Data, AuditShardRequestProtocol
+        from jam.network.protocols.ce_137 import Query
+        from jam.types.protocol.core import ErasureRoot
+        from jam.network.node import node
+        from jam.types.work.shard import  ShardIndex, ShardKey
+        from jam.utils.chainspec import chain_config
 
 
-        processor = Processor(node=self.node)
+        CE138 = AuditShardRequestProtocol()
+
+        for peer in node.peer_conn:
+
+            erasure_root = ErasureRoot(wr.package_spec.erasure_root)
+
+            index = (wr.core_index * chain_config.recovery_threshold + peer.peer_index) % VALIDATOR_COUNT
+            shard_index = ShardIndex(index)
+
+            print("ERASURE ROOT, INDEX,  =>", erasure_root, index)
+
+
+
+
+            query = Query(erasure_root=erasure_root, shard_index=shard_index)
+            data = CE138Data(len=U32(len(query.encode())), query=query)
+            print("AUDIT REQUESTED SHARED FOR =>>", data)
+            data = await CE138.transmit(node=node, data=data, core_index=wr.core_index)
+            print("RECEIVED SHARD HERE WE RECEIVEVD =>", data)
+
+        # for i in range(6):
+        #     shard_index = ShardIndex(i)
+        #     print("ERASURE ROOT, INDEX,  =>", erasure_root, i)
+        #     query = Query(erasure_root=erasure_root, shard_index=shard_index)
+        #     data = CE138Data(len=U32(len(query.encode())), query=query)
+        #     print("AUDIT REQUESTED SHARED FOR =>>", data)
+        #     data = await CE138.transmit(node=node, data=data)
+        #     print("RECEIVED SHARD HERE WE RECEIVEVD =>", data)
+        #
+        processor = Processor(node=node)
         w_r, wr_hash = processor.process(package=p, core=c, extrinsics=e)
-        print(w_r)
-        print("PROCESS HASH =>", type(wr_hash), wr_hash.hex())
-        print("GIVEN HASH=>", type(r_hash), r_hash.hex())
-        print("ER ROOT", w_r.package_spec.erasure_root.hex(), wr.package_spec.erasure_root.hex())
-        print("SEG ROOT", w_r.package_spec.exports_root.hex(), wr.package_spec.exports_root.hex())
-        print("Package hash", w_r.package_spec.hash.hex(), wr.package_spec.hash.hex())
-        print("RESULTS", w_r.results == wr.results)
-        print("OTH ", w_r.auth_output == wr.auth_output)
 
-        try:
-            from deepdiff import DeepDiff
-            value_diff = DeepDiff(wr.to_json(), w_r.to_json(), significant_digits=0, verbose_level=2)
-            assert value_diff == {}, f"\nValue Diff: {value_diff.pretty()}"
-            # for got, expected in zip(w_r, wr):
-            assert w_r == wr
-        except AssertionError as e:
-            print(f"ERROR ASSERTING: {e}")
+        r_hash = Hash.blake2b(wr.encode())
+
         if wr_hash == r_hash:
             return True
         else:
             return False
 
-
-    def judgment_signature(self, r: WorkReport, refine: bool, ed25519_public: Ed25519Signature) -> Bytes[96]:
+    @staticmethod
+    def judgment_signature( r: WorkReport, refine: bool) -> Bytes[96]:
         """
         Equations: 17.18
-        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f6f011f9801?v=0.7.0
-        """
-        context = Bytes(b"")
+        This function just build the ed25519 signature(Judgment Signature) for the particular work report.
 
-        # print("YHA TAK BHI CHAL GYA ")
+
+        Args:
+            r:
+            refine:
+
+        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f6f011f9801?v=0.7.0
+
+        """
+        from jam.network.node import node
 
         if refine:
-            context = SIGNING_CONTEXTS["valid"] + Hash.blake2b(r.encode())
+            message = SIGNING_CONTEXTS["valid"] + Hash.blake2b(r.encode())
         else:
-            context = SIGNING_CONTEXTS["invalid"] + Hash.blake2b(r.encode())
+            message = SIGNING_CONTEXTS["invalid"] + Hash.blake2b(r.encode())
 
-        signature = signature_pvt(key=ed25519_public, context=Bytes(context))
-        # print("22222222222222222222222222222222222222222222222222")
-        # print("SSSSIGGNNAAATTTUUUURREEE", len(BandersnatchVrfSignature(signature).encode()), BandersnatchVrfSignature(signature).hex())
+        # ed25519_pvt = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
+        # signature = Ed25519Signature(ed25519_pvt.sign(message))
+
+        signature = sign_bandersnatch(key=node.ed_key, context=Bytes(message))
 
         return BandersnatchVrfSignature(signature)
 

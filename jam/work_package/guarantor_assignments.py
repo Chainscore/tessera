@@ -36,7 +36,7 @@ def guarantor_assignments(state):
     mapping = {}
     for i in range(len(n_c)):
         key = n_c[i]
-        value = validator_keys[i]
+        value = validator_keys[i].hex()
         if key not in mapping:
             mapping[key] = set()
         mapping[key].add(value)

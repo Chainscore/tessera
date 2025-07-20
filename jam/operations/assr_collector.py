@@ -32,7 +32,6 @@ class AssuranceCollector:
 
 
 
-        print("ASSURER COLLECTOR RUN", node.name)
         from jam.network.protocols.ce_141 import CE141Data,AssuranceDistribution
         from jam.consensus.grandpa.finality import Finality
 

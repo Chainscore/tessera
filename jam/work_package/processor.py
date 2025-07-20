@@ -3,7 +3,7 @@ from math import ceil
 from typing import Tuple
 import time
 
-from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, U16, U64, TypedVector, U32
+from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32
 
 from jam.utils.chainspec import chain_config
 from jam.logging import get_logger
@@ -24,7 +24,7 @@ from jam.types.work.manifest import (
     Segment,
     MultiSegments,
     Extrinsics,
-    ProvedSegments, SegmentIndex
+    ProvedSegments, SegmentIndex, Assurers
 )
 from jam.types.work.shard import (
     BundleShardHashes,
@@ -38,8 +38,6 @@ from jam.types.work.execution import (
     WorkExecResult,
     RefineLoad
 )
-
-from jam.utils.benchmark import benchmark
 
 from jam.utils.constants import BASIC_ERASURE_SIZE, GENESIS_TS, SEGMENT_SIZE, MAX_WORK_REPORT_SIZE, SLOT_PERIOD
 
@@ -55,6 +53,7 @@ from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
 from jam.work_package.validator import Validator
 
 from jam.network.node import Node
+from jam.work_package.stores.mappings import ReportHashAssurerMap, ErasureAssurerMap
 
 # Module-specific logger
 logger = get_logger("in_core")
@@ -64,8 +63,6 @@ class Processor:
     node: Node
     merkle: BMRFunctions
     def __init__(self, node: Node):
-        from jam.settings import settings
-        self.settings = settings
         self.merkle = BMRFunctions()
         self.node = node
         self.transmit_task = None
@@ -109,8 +106,8 @@ class Processor:
 
         pages: Segments = Segments([])
         for x in range(page_count):
-            path = self.merkle.merkle_path_fn(values=segments, size=6, index=x)
-            leaf = self.merkle.leaf_page_fn(values=segments, size=6, index=x)
+            path = self.merkle.merkle_path_fn(values=segments, size=Uint(6), index=Uint(x))
+            leaf = self.merkle.leaf_page_fn(values=segments, size=Uint(6), index=Uint(x))
             merkle_path = bytes(len(path)) + path.encode()
             leaf =  bytes(len(leaf)) + leaf.encode()
 
@@ -133,6 +130,7 @@ class Processor:
         Returns:
             Work Digest
         """
+
         extrinsic_size: Uint = Uint(0)
         for i in item.extrinsic:
             extrinsic_size = extrinsic_size + Uint(i.len)
@@ -164,16 +162,18 @@ class Processor:
         Returns:
             Work Report
         """
+
         try:
             # Work Package, p
             p = b.package
 
             # ------------------------------------------ IS AUTH INVOCATION ------------------------------------------
-            logger.info(f"Checking authorization..")
             # Auth Output o & Gas g
-            with benchmark("auth check done"):
-                o, g = PsiI(p, c).execute()
+            logger.debug(f"Checking authorization..")
+            o, g = PsiI(p, c).execute()
             # ------------------------------------------ -- ---- ---------- ------------------------------------------
+
+
             s_result = 0
 
             def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
@@ -193,10 +193,10 @@ class Processor:
                     l += p.items[i].export_count
 
                 # ------------------------------------------ REFINE INVOCATION ------------------------------------------
-                logger.info(f"Refining Work Item {j}..")
-                with benchmark(f"Refined Work Item {j}"):
-                    r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
+                logger.debug(f"Refining Work Item {j}..")
+                r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
                 # ------------------------------------------ ----------------- ------------------------------------------
+
 
                 segment = Segment([U8(0)] * SEGMENT_SIZE)
                 segment_count = w.export_count
@@ -212,7 +212,6 @@ class Processor:
                 else:
                     s_result += len(r.unwrap())
                     return r, u, e
-
 
             # Work Results, r
             r_list = WorkResults([])
@@ -236,15 +235,16 @@ class Processor:
             for segments in e_list:
                 e_bar_cap.extend(segments)
 
-            logger.info(f"Exported {len(e_bar_cap)} Segments!")
+            logger.debug(f"Exported {len(e_bar_cap)} Segments!")
 
             # Availability Specification, s
-            logger.info(f"Building availability specification..")
-            with benchmark("specification built"):
-                specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
+            logger.debug(f"Building availability specification..")
+            specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
 
-            logger.info(f"Compiling Report..")
-            report = WorkReport(package_spec=specs, context=p.context, core_index=Uint(c), authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Uint(g))
+            logger.debug(f"Compiling Report..")
+            report = WorkReport(package_spec=specs, context=p.context, core_index=Uint(c),
+                                authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup,
+                                results=r_list, auth_gas_used=Uint(g))
 
             return report
 
@@ -267,8 +267,9 @@ class Processor:
         Returns:
             s: Availability specifier
         """
+
         from jam.erasure_coding.erasure_code import ErasureCode
-        settings = self.settings
+        from jam.settings import settings
 
         try:
             # Work Bundle Length, l
@@ -276,7 +277,7 @@ class Processor:
 
             # Segment Root, e
             e = ExportsRoot(self.merkle.cd_merkle_fn(export_segments))
-            logger.info(f"Exports Root calculated - {e.hex()} {e}")
+            logger.debug(f"Exports Root calculated - {e.hex()}", wp_hash=package_hash.hex()[:16] + "...")
 
             # Segments Count, n
             n = len(export_segments)
@@ -285,73 +286,66 @@ class Processor:
             erasure_codec = ErasureCode()
 
             # Build Bundle Shards
-            logger.info(f"Building bundle shards..")
+            logger.debug(f"Building bundle shards..")
+            padded_wp_bundle = self.zero_padding(ByteArray(wp_bundle), BASIC_ERASURE_SIZE)
 
-            with benchmark("Bundle Padded"):
-                padded_wp_bundle = self.zero_padding(ByteArray(wp_bundle), BASIC_ERASURE_SIZE)
-
-            with benchmark("Erasure Coded Bundle"):
-                bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
-                logger.debug("Bundle Shards formed", count=len(bundle_shards))
+            bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
+            logger.debug("Bundle Shards formed", count=len(bundle_shards))
 
             bs_hashes = BundleShardHashes([])
             bs_dict = BundleShardsDict({})
 
-            with benchmark("Processed bundle chunks"):
-                for si, bs in enumerate(bundle_shards):
-                    bs_hash = Hash.blake2b(BundleShard(bs).encode())
-                    shard_index = ShardIndex(si)
-                    bundle_shard = BundleShard(bs)
-                    bs_dict[shard_index] = bundle_shard
-                    bs_hashes.append(bs_hash)
+            for si, bs in enumerate(bundle_shards):
+                bs_hash = Hash.blake2b(BundleShard(bs).encode())
+                shard_index = ShardIndex(si)
+                bundle_shard = BundleShard(bs)
+                bs_dict[shard_index] = bundle_shard
+                bs_hashes.append(bs_hash)
 
-            with benchmark("Built proofs"):
-                proofs = self.paged_proof(export_segments)
-                logger.debug("Proofs formed", count=len(proofs))
-                proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
+            proofs = self.paged_proof(export_segments)
+
+            logger.debug("Proofs formed", count=len(proofs))
+            proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
 
 
             # Build Segment Shards
-            logger.info(f"Building segment shards..")
+            logger.debug(f"Building segment shards..")
             justified_segments: Segments = export_segments
             justified_segments.extend(proofs)
 
 
-            with benchmark("Erasure coded segments"):
-                i = 0
-                all_chunks = []
-                for item in justified_segments:
-                    seg_chunks = erasure_codec.encode(item.encode())
-                    all_chunks.append(seg_chunks)
-                    logger.debug("Segments Shard formed", count=len(seg_chunks), segment=i)
-                    i += 1
+            i = 0
+            all_chunks = []
+            for item in justified_segments:
+                seg_chunks = erasure_codec.encode(item.encode())
+                all_chunks.append(seg_chunks)
+                logger.debug("Segments Shard formed", count=len(seg_chunks), segment=i)
+                i += 1
 
-            with benchmark("Transposed segment shards"):
-                segments_shards = SegmentsShards(
-                    [
-                        SegmentsShard(
-                            [
-                                SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))
-                            ]
-                        ) for i in range(len(all_chunks[0]))
-                    ]
-                )
+            segments_shards = SegmentsShards(
+                [
+                    SegmentsShard(
+                        [
+                            SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))
+                        ]
+                    ) for i in range(len(all_chunks[0]))
+                ]
+            )
 
             ss_roots = SegmentsShardRoots([])
             ss_dict = SegShardsDict({})
 
-            with benchmark("Processed segment chunks"):
-                for si, ss in enumerate(segments_shards):
-                    shard_index = ShardIndex(si)
-                    s_dict = SegShardDict({})
+            for si, ss in enumerate(segments_shards):
+                shard_index = ShardIndex(si)
+                s_dict = SegShardDict({})
 
-                    for sgi, s in enumerate(ss):
-                        segment_index = SegmentIndex(sgi)
-                        s_dict[segment_index] = SegmentShard(s)
+                for sgi, s in enumerate(ss):
+                    segment_index = SegmentIndex(sgi)
+                    s_dict[segment_index] = SegmentShard(s)
 
-                    ss_root = self.merkle.wb_merkle_fn(ss)
-                    ss_dict[shard_index] = s_dict
-                    ss_roots.append(ss_root)
+                ss_root = self.merkle.wb_merkle_fn(ss)
+                ss_dict[shard_index] = s_dict
+                ss_roots.append(ss_root)
 
             # Build Complete Shard Key
             if len(ss_roots) != chain_config.num_validators or len(bs_hashes) != chain_config.num_validators:
@@ -363,11 +357,10 @@ class Processor:
                 shards_keys.append(Bytes(shards_key.encode()))
 
             # Erasure Root
-            with benchmark("Calculated erasure root"):
-                u = self.merkle.wb_merkle_fn(shards_keys)
-            logger.info(f"Erasure Root calculated - {u.hex()} {u}")
+            u = self.merkle.wb_merkle_fn(shards_keys)
+            logger.info(f"Erasure Root calculated - {u.hex()}", wp_hash=package_hash.hex()[:16] + "...")
 
-            logger.info(f"Updating DA..")
+            logger.debug(f"Updating DA..")
 
             # Access DA
             d3l = settings.d3l
@@ -375,23 +368,22 @@ class Processor:
 
             # Store Exported Segments
             seg_da = SegmentsDA(d3l)
-            with benchmark("Stored segments with proof"):
-                seg_da.put(e, proved_segments)
+            seg_da.put(e, proved_segments)
+            logger.debug("Stored segments")
+
 
             # Store Bundle Shards
             audits_da = AuditShardsDA(audits)
-            with benchmark("Stored bundle shards"):
-                audits_da.put_batch(u, bs_dict)
+            audits_da.put_batch(u, bs_dict)
+            logger.debug("Stored bundle shards")
 
             # Store Segment Shards
             s_shards_da = SegmentShardsDA(d3l)
-            with benchmark("Stored segment shards"):
-                s_shards_da.put_batch(u, ss_dict)
+            s_shards_da.put_batch(u, ss_dict)
+            logger.debug("Stored segment shards")
 
-            logger.info(f"Compiling availability specification..")
-
-            with benchmark("Compiled spec"):
-                spec = WorkPackageSpec(hash=package_hash, length=Uint[32](l), erasure_root=u, exports_root=e, exports_count=Uint[16](n))
+            spec = WorkPackageSpec(hash=package_hash, length=Uint[32](l), erasure_root=u, exports_root=e, exports_count=Uint[16](n))
+            logger.info(f"Compiled availability specification", erasure_root=u.hex(), exports_root=e.hex())
 
             return spec
         except Exception as e:
@@ -399,16 +391,16 @@ class Processor:
             raise
 
     def process_bundle(self, core: CoreIndex, bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup) -> Tuple[WorkReport, WorkReportHash]:
-        settings = self.settings
+        from jam.settings import settings
+
+        wp_hash = bundle.package.hash()
         try:
             # Generate Report
-            logger.info("Building Work Report..")
-            with benchmark("Report compiled"):
-                report = self.build_report(bundle, core, sr_lookup)
+            logger.debug("Building Work Report..")
+            report = self.build_report(bundle, core, sr_lookup)
 
             wr_hash = Hash.blake2b(report.encode())
-            logger.info(f"Generated Work Report with hash {wr_hash}")
-
+            logger.info(f"Report compiled", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex())
 
             # Access DA
             d3l = settings.d3l
@@ -416,63 +408,61 @@ class Processor:
             # Store Report
             reports_da = ReportsDA(d3l)
             reports_da.put(wr_hash, report)
-            logger.info(f"Stored Work Report with hash {wr_hash}")
+            logger.debug(f"Stored work report", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex())
 
             return report, wr_hash
 
         except Exception as e:
-            logger.error("Failed to process bundle", error=e)
+            logger.error("Failed to process bundle", error=e, wp_hash=wp_hash.hex(), error_type = type(e).__name__)
             raise
 
     def process(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
         from jam.network.protocols.ce_134 import CoreSegment, WorkPackageSharing, CE134Data
 
-        logger.info("Validating Work Package..")
+        logger.debug("Validating work package..")
         validator = Validator()
         validator.validate_wp(package)
 
         bundler = Bundler(self.node)
 
         # Build Segment Root Lookup Dictionary
-        logger.info("Building Lookup Dictionary..")
-        with benchmark("lookup built"):
-            lookup = bundler.build_lookup(package)
+        logger.debug("Building lookup dictionary..")
+        lookup = bundler.build_lookup(package)
 
         # Build Work Package Bundle
-        logger.info("Building Work Package Bundle..")
-        with benchmark("bundle built"):
-            bundle = bundler.build_bundle(package, extrinsics)
+        logger.debug("Building work package bundle..")
+        bundle = bundler.build_bundle(package, extrinsics)
 
-        # Distribute Bundle to other Guarantors CE134
-        CE134 = WorkPackageSharing()
-
-        core_segment = CoreSegment(core_index=core, segment_root_map=lookup)
-
-        map_len = U32(len(core_segment.encode()))
-        bundle_len = U32(len(bundle.encode()))
-
-        data = CE134Data(map_len=map_len, work_package_bundle=bundle, bundle_len=bundle_len, core_segment=core_segment)
-
-        loop = asyncio.get_running_loop()
-        loop.set_task_factory(asyncio.eager_task_factory)
-
-        # Distribute Bundle, parallely
-        self.transmit_task = loop.create_task(CE134.transmit(node=self.node, data=data))
+        # # Distribute Bundle to other Guarantors CE134
+        # CE134 = WorkPackageSharing()
+        #
+        # core_segment = CoreSegment(core_index=core, segment_root_map=lookup)
+        #
+        # map_len = U32(len(core_segment.encode()))
+        # bundle_len = U32(len(bundle.encode()))
+        #
+        # data = CE134Data(map_len=map_len, work_package_bundle=bundle, bundle_len=bundle_len, core_segment=core_segment)
+        #
+        # loop = asyncio.get_running_loop()
+        # loop.set_task_factory(asyncio.eager_task_factory)
+        #
+        # # Distribute Bundle, parallely
+        # self.transmit_task = loop.create_task(CE134.transmit(node=self.node, data=data))
 
         # Build Report
-        with benchmark("bundle processed"):
-            wr, wr_hash = self.process_bundle(core, bundle, lookup)
+        logger.debug("Compiling report..")
+        wr, wr_hash = self.process_bundle(core, bundle, lookup)
 
-        # Build Guarantee
-        logger.info(f"Building guarantees..")
-        with benchmark("guarantees signed"):
-            try:
-                # Wait for guarantees and process them
-                asyncio.create_task(self.process_guarantees(wr, wr_hash))
-            except asyncio.TimeoutError:
-                logger.error("Timeout waiting for async transmit result")
-            except Exception as e:
-                logger.error(f"Error waiting for async transmit result: {e}")
+
+        # # Build Guarantee
+        # logger.debug(f"Building guarantees..")
+        # try:
+        #     # Wait for guarantees and process them
+        #     asyncio.create_task(self.process_guarantees(wr, wr_hash))
+        # except asyncio.TimeoutError:
+        #     logger.error("Timeout waiting for async transmit result")
+        # except Exception as e:
+        #     logger.error(f"Error waiting for async transmit result: {e}")
 
         return wr, wr_hash
 
@@ -480,8 +470,8 @@ class Processor:
         """
         Utility Async function for receiving guarantees and processing it.
         """
-        settings = self.settings
         from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
+        from jam.settings import settings
 
         ed25519_key = self.node.ed_pvt_key
 
@@ -498,26 +488,26 @@ class Processor:
 
         # Working fix
         responses = await self.transmit_task
-        logger.info("✅ Received responses: %s", responses)
+        logger.debug("✅ Received guarantees", cnt=len(responses), guarantees=responses)
 
         from jam.network.protocols.ce_134 import OptCred
-        for (response, validator_index) in responses:
+        for (response, peer) in responses:
             if response != OptCred(Null):
-                cred = response.unwrap()
+                cred = response
                 if cred.work_report_hash == wr_hash:
                     guarantee = ValidatorSignature(
-                        validator_index=validator_index,
+                        validator_index=peer.peer_index,
                         signature=cred.ed25519_signature
                     )
-                    print("REC GUARANTEE", guarantee)
                     guarantees.append(guarantee)
 
         # Sort them guarantees
 
         guarantees = ValidatorSignatures(sorted(guarantees, key = lambda g: g.validator_index))
-        print("GUARANTEES BUILT", guarantees)
+
         # Distribute Guaranteed WR to Validators CE135
         logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
+
         if len(guarantees) > 1:
 
             d3l = settings.d3l
@@ -535,7 +525,19 @@ class Processor:
             # Store Package Hash - Segment Root Mapping
             map_da.put(wr)
 
-            # TODO: Save Assurers Mapping
+            # save assurers
+            assurers = Assurers([])
+            for i in guarantees:
+                assurers.append(i.validator_index)
+
+            from jam.settings import settings
+            wr_da = ReportHashAssurerMap(settings.d3l)
+            # report hash to assurers mapping
+            wr_da.put(wr, assurers)
+
+            # erasure root to report hash & assurers mapping
+            er_da = ErasureAssurerMap(settings.d3l)
+            er_da.put(wr, assurers)
 
             CE135 = WorkReportDistribution()
             # TODO: Fix timeslot
