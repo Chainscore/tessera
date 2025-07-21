@@ -199,26 +199,24 @@ class NodeConnection(QuicConnectionProtocol):
             # i.e. whenever client initiates connection or starts new protocol.
             # Add prefix to the buffer
             prefix = U8.decode(data[0:1])
-            if stream_id not in self.stream_buffer:
-                self.stream_buffer[stream_id] = b""
-            self.stream_buffer[stream_id] += data
-
             logger.debug(
-                f"📩 Received data of size {len(data)} bytes.", 
-                peer=self.ed25519_public.hex(), 
-                stream_id=stream_id,
+                f"📥 Received data on stream {stream_id}",
                 prefix=prefix,
-                end=event.end_stream,
-                buf_len=len(self.stream_buffer[stream_id]),
-                data_len=len(data),
+                stream_id=stream_id,
+                data_len=len(data)
             )
-
 
             if (self.up0_stream is None and prefix == PrefixType.UP0) or event.stream_id == self.up0_stream:
                 self.up0_stream = stream_id 
                 from jam.network.protocols.up_0 import BlockAnnouncement 
-                BlockAnnouncement().req_intercept(stream_id, self)
+                BlockAnnouncement().req_intercept(stream_id, self, data)
                 return
+            
+            if stream_id not in self.stream_buffer:
+                self.stream_buffer[stream_id] = b""
+            self.stream_buffer[stream_id] += data
+
+
             if not event.end_stream:
                 return           
             try:

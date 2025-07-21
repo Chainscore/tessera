@@ -32,7 +32,7 @@ class Leaf:
 
 class Leaves(TypedVector[Leaf]):
     def __repr__(self):
-        preview_count = 3
+        preview_count = 100000
         items = ", ".join(repr(leaf) for leaf in self[:preview_count])
         if len(self) > preview_count:
             items += f", ... + {len(self) - preview_count} more"
@@ -194,10 +194,9 @@ class BlockAnnouncement(NetworkProtocol):
             block_slot=int(data.header.slot),
         )
 
-    def req_intercept(self, stream_id: int, conn: NodeConnection):
+    def req_intercept(self, stream_id: int, conn: NodeConnection, data: bytes):
         """Intercepting & Process new blocks from peers."""
-        buffer = conn.stream_buffer[stream_id]
-        logger.info("Intercepting UP0 stream", len=len(buffer), stream_id=stream_id)
+        logger.info("Intercepting UP0 stream", len=len(data), stream_id=stream_id)
 
         # conn = node._protocols[peer.metadata.port]
         # if node.is_builder and not server.peer_handshake:
@@ -218,67 +217,41 @@ class BlockAnnouncement(NetworkProtocol):
 
         if not conn.received_handshake:
             # Parse received Handshake
-            h_len= U32.decode(conn.stream_buffer[stream_id][1:5])
-
-            if len(buffer[5:]) == h_len:
-                h = Handshake.decode(conn.stream_buffer[stream_id][5:])
-
-                # TODO: Process Handshake
-                logger.info(
-                    "Received peer handshake",
-                    stream_id=stream_id,
-                    handshake=h,
-                    block_slot=int(h.final.time_slot),
-                    parent_hash=h.final.header_hash.hex()[:16] + "...",
-                    buffer_size=len(buffer),
+            h_len= U32.decode(data[1:5])
+            if len(data[5:]) != h_len:
+                logger.error(
+                    "Received Handshake with incorrect length",
+                    expected_length=h_len,
+                    received_length=len(data[5:]),
                 )
+                return 
 
-                conn.received_handshake = True
-                del conn.stream_buffer[stream_id]
+            h = Handshake.decode(data[5:])
 
-                # Start synchornization
-                asyncio.create_task(self.synchronise(h, conn))
+            # TODO: Process Handshake
+            logger.info(
+                "Received peer handshake",
+                stream_id=stream_id,
+                handshake=h,
+                block_slot=int(h.final.time_slot),
+                parent_hash=h.final.header_hash.hex()[:16] + "...",
+            )
+
+            conn.received_handshake = True
+
+            # Start synchornization
+            # asyncio.create_task(self.synchronise(h, conn))
 
         # Handle announcement
         else:
-            # Parse received Announcement
-            a_len = Uint[32].decode(buffer[1:5])
-
-            print(f"Block Announcement Length: {a_len} | Buffer Length: {len(buffer[5:])}")
-
-            if len(buffer[5:]) == 72:
-                a = Announcement.decode(buffer[5:])
-
-                logger.info(
-                    "Received block announcement",
-                    stream_id=stream_id,
-                    block_slot=int(a.final.time_slot),
-                    parent_hash=a.final.header_hash.hex()[:16] + "...",
-                    buffer_size=len(buffer),
-                )
-
-                del conn.stream_buffer[stream_id] 
-
-                # TODO: Process new block
-                # Process new header
-                # If it is not in our DB, request [header.slot - latest_timeslot] blocks from peer
-                # logger.debug("Received header, requesting its full block...", slot=data.header.slot)
-
-                asyncio.create_task(self._process_header(header=a.header))
-
-                # Process goes here
-
-                logger.info(
-                    "Block announcement processed successfully",
-                    stream_id=stream_id,
-                    peer=peer,
-                    block_slot=int(a.final.time_slot),
-                )
-
-        # else:
-        #     logger.error(f"❌ Different UP Stream.")
-        #     conn._quic.close(error_code=0x4, reason_phrase="Multiple UP streams are not allowed.")
-        #     return
+            anc = Announcement.decode(data[4:])
+            asyncio.create_task(self._process_header(header=anc.header))
+            # Process goes here
+            logger.info(
+                "Block announcement processed successfully",
+                stream_id=stream_id,
+                block_slot=int(anc.final.time_slot),
+            )
 
     def res_intercept(self, stream_id: int, client):
         raise NotImplementedError("Client Intercept not available for UP protocols")

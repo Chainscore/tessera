@@ -162,7 +162,8 @@ class WorkPackageSubmission(NetworkProtocol):
             )
 
             # Start Refinement Process
-            processor = Processor(server.node)
+            processor = Processor()
+            
             with benchmark(f"Work Package processed"):
                 wr, wr_hash = processor.process(wp, ci, data.extrinsics)
 
