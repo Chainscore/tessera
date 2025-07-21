@@ -12,6 +12,8 @@ from jam.types.work.manifest import Extrinsics
 from jam.types.work.shard import  ShardIndex
 from jam.work_package.bundler import Bundler
 from jam.work_package.validator import Validator
+
+from jam.types.work.report import WorkReport, WorkReportHash
 from jam.logging import get_logger
 
 
@@ -55,39 +57,41 @@ def sign_bandersnatch(key: Bytes[32], context: Bytes, message:bytes=b"") :
     op_bt_str= output_point.point_to_string()
     proof_bt_str= proof[0].to_bytes(32, 'little')+ proof[1].to_bytes(32, 'little')
     signature= op_bt_str + proof_bt_str
+
     return signature
 
 
-
 # vi = (si - CI * t) % validators
-def get_vi(shard_index: ShardIndex, core_index: CoreIndex):
+def get_vi(shard_index: ShardIndex, core_index: CoreIndex) -> ValidatorIndex:
 
     validator_index = ValidatorIndex(
-        (shard_index - core_index * chain_config.recovery_threshold)
-        % constants.VALIDATOR_COUNT
+        (shard_index - core_index * chain_config.recovery_threshold) % constants.VALIDATOR_COUNT
     )
 
     return validator_index
 
 # si = (CI * t + vi) % validators
-def get_si(validator_index: ValidatorIndex, core_index: CoreIndex):
+def get_si(validator_index: ValidatorIndex, core_index: CoreIndex) -> ShardIndex:
 
     shard_index = ShardIndex(
-        (core_index * chain_config.recovery_threshold + validator_index)
-        % constants.VALIDATOR_COUNT
+        (core_index * chain_config.recovery_threshold + validator_index) % constants.VALIDATOR_COUNT
     )
 
     return shard_index
 
 
-def audit_refine(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
-    from jam.network.protocols.ce_134 import CoreSegment, WorkPackageSharing, CE134Data
+def audit_refine( package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
+    """ This function for perform refine logic for specifically Auditing."""
+    from jam.network.node import node
+    from jam.work_package.processor import Processor
+
+    process = Processor(node=node)
 
     logger.debug("Validating work package..")
     validator = Validator()
     validator.validate_wp(package)
 
-    bundler = Bundler(self.node)
+    bundler = Bundler(node)
 
     # Build Segment Root Lookup Dictionary
     logger.debug("Building lookup dictionary..")
@@ -99,6 +103,6 @@ def audit_refine(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrin
 
     # Build Report
     logger.debug("Compiling report..")
-    wr, wr_hash = self.process_bundle(core, bundle, lookup)
+    wr, wr_hash = process.process_bundle(core, bundle, lookup)
 
     return wr, wr_hash

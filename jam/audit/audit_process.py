@@ -2,20 +2,16 @@ import asyncio
 import math
 from typing import List, Tuple
 
-from sympy.logic.inference import valid
-from tsrkit_types import structure, U8, Bytes, U32, TypedVector, Option, Bool
+from tsrkit_types import structure, U8, U32, TypedVector, Option
 
 from jam.types import Hash, BandersnatchVrfSignature, ValidatorIndex
 from jam.types.protocol.core import CoreIndex, EpochIndex
 
-from jam.audit.audit import AuditingAndJudgement
 from jam.consensus.grandpa.finality import Finality
 
-from jam.types.work.report import WorkReport, WorkReportHash
+from jam.types.work.report import WorkReportHash
 from jam.logging import get_logger
-from jam.network.node import Node
 from jam.utils.constants import EPOCH_LENGTH
-from jam.work_package.processor import Processor
 from jam.audit.vectors.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
 from tests.unit.wp.types import RefineVectors, RefineVector, WorkReport
 
@@ -37,12 +33,12 @@ class AuditProcess:
 
         audit = AuditingAndJudgement()
 
-        # ---------------------- Rho initial state ( pending wor reports)
-        logger.info(f"current block header hash")
+        # ---------------------- Rho initial state ( pending wor reports) -----------------------------
+        logger.info(f"Current Block header hash")
         # latest_block = Finality.load_latest(kv=settings.main_db)
         # header_hash = latest_block.header.hash()
 
-        logger.info(f"get rho pending state")
+        logger.info(f"Get rho pending state (Initial state)")
         # pending_rho_ = state.load(header_hash=header_hash).rho
 
 
@@ -58,7 +54,6 @@ class AuditProcess:
             logger.info(f"Get reports list which about to be audit")
 
             p_a_r = audit.report_to_be_audit(pending_wrs=final_list, newly_avail_wrs=newly_avail_wrs)
-            print("##############",len(p_a_r) )
 
             # assignment report for auditing to validators
             logger.info(f"Work report assignment for auditing")
@@ -68,11 +63,16 @@ class AuditProcess:
             logger.info(f"Checking assign report length {len(reports)} for each validator")
 
 
-            # asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports))
+            asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports))
             asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports))
 
         except Exception as e:
-            logger.error(f"failed to report assignment", error=e)
+            logger.error(
+                "Failed to report assignment",
+                error=str(e),
+                err_type=type(e).__name__,
+                exc_info = True
+            )
             raise
 
 
@@ -176,8 +176,6 @@ class AuditProcess:
 
                 wr_hash = Hash.blake2b(r.encode())
 
-                logger.info(f"fetch BUNDLE, CORE_INDEX, EXTRINSICS  with the respective work reports")
-
                 package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json",  rep_hash=wr_hash)
 
                 # print("=================================", "package =>", package, "core =>", core, "extrinsic =>", extrinsic)
@@ -185,7 +183,7 @@ class AuditProcess:
                 result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=node.validator_index)
                 print("RESULTS", result)
 
-                judgment_sign = audit.judgment_signature(r=r, refine=result)
+                judgment_sign = audit.judgment_signature(wr=r, refine=result)
                 # print("jUDGMENT SIGNATURE", len(judgment_sign.encode()), judgment_sign)
 
 

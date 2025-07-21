@@ -1,16 +1,13 @@
-import asyncio
 from typing import cast
+from tsrkit_types import structure, Uint, U8
+from urllib3.poolmanager import pool_classes_by_scheme
 
-from typing import Any
-from tsrkit_types import structure, Null, bool, U16, Uint, TypedVector, Bits, Bool, Bytes, U8, U32
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.quic import QuicProtocol
 from jam.logging import get_logger
-
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
-from jam.utils.gather import gather_with_exceptions
+from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -19,11 +16,11 @@ logger = get_logger("network")
 
 @structure
 class Judgment:
-    epoch_index: EpochIndex  # mention in networking =>  Epoch Index = u32 (Slot / E)
+    epoch_index: EpochIndex
     validator_index: ValidatorIndex
     validity: U8
     work_report_hash: WorkReportHash
-    ed25519_signature: Bytes[96]    # this will be bytes[32]
+    ed25519_signature: Ed25519Signature
 
 @structure
 class CE145Data:
@@ -36,8 +33,21 @@ class CE145Data:
             return True
         return False
 
-
 class JudgmentPublication(NetworkProtocol):
+    """
+    CE 145 (Judgement Publication) protocol for sharing Judgment to other Auditors
+
+    Protocol Flow:
+        Auditor -> Auditor
+
+        --> Epoch_index ++ Validator_Index ++ Validity ++ Work_Report_Hash ++ Ed25519_Signature
+        --> FIN
+        <-- FIN
+
+    sources:
+        https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-145-judgment-publication
+
+    """
 
     from jam.network.node import Node
 
@@ -46,25 +56,25 @@ class JudgmentPublication(NetworkProtocol):
         self._prefix = PrefixType.CE145
 
     async def transmit(self, node: Node, data: CE145Data):
-        """ Announcement of a judgment for the particular work report"""
+        """ Transmit Judgments for the particular Work Report to other Auditors"""
 
         len_a = data.len_a.encode()
         msg_a = data.judgment.encode()
 
-        # logger.info(
-        #     f"Transmitting Work-report judgement",
-        #     len=data.len_a,
-        #     judgment=len(data.judgment.encode())
-        # )
+        logger.info(
+            f"Transmitting Work-report judgement",
+            judgment=len(data.judgment.encode()),
+            len_a=data.len_a
+        )
 
         tasks = []
         responses = []
         transmitted_count = 0
 
         try:
+            logger.info(f"Transmitting Judgment to {len(node.peer_conn)} validators")
 
             for peer in node.peer_conn:
-                logger.info(f"Transmitting Judgment announcement to {len(node.peer_conn)} validators ")
 
                 client = node.peer_conn[peer][1]
 
@@ -80,20 +90,18 @@ class JudgmentPublication(NetworkProtocol):
                 client.stream_and_keep_open(message=len_a, stream_id=stream_id)
 
                 res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
-                # task = asyncio.create_task(res)
                 responses.append(res)
 
-                # responses = await gather_with_exceptions(tasks)
-
-                logger.info(
-                    "judgment transmit to validator",
+                logger.debug(
+                    "Judgment transmitted",
                     stream_id=stream_id,
-                    port=peer.port
+                    port=peer.port,
+                    validator = peer
                 )
 
         except Exception as e:
             logger.error(
-                "failed to transmit judgment to other validators",
+                "Failed to transmitting Judgment",
                 error=str(e),
                 error_type=type(e).__name__
             )
@@ -101,21 +109,20 @@ class JudgmentPublication(NetworkProtocol):
         return responses
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """ Intercept Judgment of assigned Work Reports """
+        """ Intercept individual Judgment from other Auditors for their assigned Work Reports """
 
         buffer = server.stream_buffer[stream_id]
 
         try:
             data, offset = CE145Data.decode_from(buffer[1:])
             data = cast(CE145Data, data)
-            print(data)
 
-            # logger.debug(
-            #     f"Received judgment from the validator {data.judgment.validator_index}",
-            #     stream_id=stream_id,
-            #     peer=server.peer,
-            #     buffer_size=len(buffer[1:])
-            # )
+            logger.debug(
+                "Received Judgment from other Auditors",
+                stream_id=stream_id,
+                peer=server.peer,
+                buffer_size=len(buffer[1:])
+            )
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
@@ -124,10 +131,19 @@ class JudgmentPublication(NetworkProtocol):
             server.stream_and_close(ack, stream_id)
 
         except Exception as e:
-            logger.error("Encountered error while intercepting request", err=str(e), err_type=type(e).__name__, peer=server.peer, stream=stream_id)
+            # Stop Streaming
             server.stop_stream(stream_id, 1)
 
+            logger.error(
+                "Error while intercepting Judgement'",
+                auditor=server.peer,
+                stream_id=stream_id,
+                error=str(e),
+                err_type=type(e).__name__
+            )
+
     def res_intercept(self, stream_id: int, client: "QuicProtocol"):
+        """ Intercept judgment Acknowledgement """
         buffer = client.stream_buffer[stream_id]
 
         if buffer[1:] == b"":
@@ -137,4 +153,5 @@ class JudgmentPublication(NetworkProtocol):
                 buffer_size=len(buffer)
             )
             return True
+
         return False

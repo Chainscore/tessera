@@ -1,35 +1,26 @@
-from platform import processor
 from typing import List, Tuple
 
-from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, Bool, Dictionary, U32
-
-from jam.audit.vectors.reports import reports
-from jam.network.protocols.ce_137 import CE137Data
-from jam.settings import settings
+from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, U32
 from jam.types.protocol.core import CoreIndex, TimeSlot,ValidatorIndex
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.work.report import WorkReport
 from jam.utils.constants import CURRENT_TIME, SLOT_PERIOD, AUDIT_PERIOD, SIGNING_CONTEXTS, VALIDATOR_COUNT
 from jam.ring_vrf.vrf import VRF
 from jam.utils.shuffle import shuffle
-from jam.types.protocol.crypto import Hash, BandersnatchPublic, Ed25519Public
+from jam.types.protocol.crypto import Hash, BandersnatchPublic
 from jam.ring_vrf.ietf.ietf import IETF_VRF
 from jam.types import BandersnatchVrfSignature, Ed25519Signature
-from jam.types.work.package import WorkPackage, WorkPackageBundle
-from jam.types.work.report import WorkReportHash
-from jam.work_package.processor import Processor
+from jam.types.work.package import WorkPackage
 
 from jam.types.block.header import Header
-from jam.types.state.rho import OptionalWorkReportState, Rho
+# from jam.types.state.rho import OptionalWorkReportState, Rho
 from jam.logging import get_logger
-from jam.audit.utils import sign_bandersnatch, get_si, get_vi
+from jam.audit.utils import sign_bandersnatch, get_si, get_vi, audit_refine
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey, Ed25519PrivateKey
 from jam.types.work.manifest import Extrinsics
+
 from tests.unit.safrole.data import validators
 from jam.audit.utils import audit_refine
-
-
 
 # Module-specifier logger
 logger = get_logger("in_core")
@@ -221,8 +212,6 @@ class AuditingAndJudgement:
         # signature = Ed25519Signature(ed25519_pvt.sign(message))
 
         signature = sign_bandersnatch(key=node.ed_key, context=Bytes(message))
-        # print("22222222222222222222222222222222222222222222222222")
-        # print("SSSSIGGNNAAATTTUUUURREEE", len(BandersnatchVrfSignature(signature).encode()), BandersnatchVrfSignature(signature).hex())
 
         return Ed25519Signature(signature)
 
@@ -248,7 +237,6 @@ class AuditingAndJudgement:
         """
 
         from jam.network.node import node
-        from jam.work_package.processor import Processor
 
         # TODO: construct Work package Bundle using protocol => CE138
         # TODO: Condition check after building package => 1. W_p hash with Wr->spec->hash, 2.import Segments, 3. Export segments, 4. Extrinsic
@@ -262,7 +250,7 @@ class AuditingAndJudgement:
         from jam.utils.chainspec import chain_config
 
         CE138 = AuditShardRequestProtocol()
-        process = Processor(node=node)
+        # process = Processor(node=node)
         erasure_root = ErasureRoot(wr.package_spec.erasure_root)
 
         # For this node shard index and validator index information is:
@@ -285,17 +273,7 @@ class AuditingAndJudgement:
                 print("RECEIVED SHARD HERE WE RECEIVEVD =>", data)
 
 
-        # for i in range(6):
-        #     shard_index = ShardIndex(i)
-        #     print("ERASURE ROOT, INDEX,  =>", erasure_root, i)
-        #     query = Query(erasure_root=erasure_root, shard_index=shard_index)
-        #     data = CE138Data(len=U32(len(query.encode())), query=query)
-        #     print("AUDIT REQUESTED SHARED FOR =>>", data)
-        #     data = await CE138.transmit(node=node, data=data)
-        #     print("RECEIVED SHARD HERE WE RECEIVEVD =>", data)
-
-
-        w_r, wr_hash = process.process(package=p, core=c, extrinsics=e)
+        w_r, wr_hash = audit_refine(package=p, core=c, extrinsics=e)
 
         r_hash = Hash.blake2b(wr.encode())
 
@@ -305,15 +283,14 @@ class AuditingAndJudgement:
             return False
 
     @staticmethod
-    def judgment_signature( r: WorkReport, refine: bool) -> Bytes[96]:
+    def judgment_signature( wr: WorkReport, refine: bool) -> Bytes[96]:
         """
         Equations: 17.18
         This function just build the ed25519 signature(Judgment Signature) for the particular work report.
 
-
         Args:
-            r:
-            refine:
+            wr: Work Report
+            refine: Boolean valaue (True/False)
 
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f6f011f9801?v=0.7.0
 
@@ -321,9 +298,9 @@ class AuditingAndJudgement:
         from jam.network.node import node
 
         if refine:
-            message = SIGNING_CONTEXTS["valid"] + Hash.blake2b(r.encode())
+            message = SIGNING_CONTEXTS["valid"] + Hash.blake2b(wr.encode())
         else:
-            message = SIGNING_CONTEXTS["invalid"] + Hash.blake2b(r.encode())
+            message = SIGNING_CONTEXTS["invalid"] + Hash.blake2b(wr.encode())
 
         # ed25519_pvt = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
         # signature = Ed25519Signature(ed25519_pvt.sign(message))
