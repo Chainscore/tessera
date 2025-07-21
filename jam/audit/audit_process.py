@@ -16,7 +16,7 @@ from jam.logging import get_logger
 from jam.network.node import Node
 from jam.utils.constants import EPOCH_LENGTH
 from jam.work_package.processor import Processor
-from jam.audit.vectors.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
+from jam.audit.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
 from tests.unit.wp.types import RefineVectors, RefineVector, WorkReport
 
 

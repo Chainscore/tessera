@@ -3,7 +3,6 @@ from typing import List, Tuple
 
 from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, Bool, Dictionary, U32
 
-from jam.audit.vectors.reports import reports
 from jam.network.protocols.ce_137 import CE137Data
 from jam.settings import settings
 from jam.types.protocol.core import CoreIndex, TimeSlot,ValidatorIndex
@@ -221,8 +220,6 @@ class AuditingAndJudgement:
         # signature = Ed25519Signature(ed25519_pvt.sign(message))
 
         signature = sign_bandersnatch(key=node.ed_key, context=Bytes(message))
-        # print("22222222222222222222222222222222222222222222222222")
-        # print("SSSSIGGNNAAATTTUUUURREEE", len(BandersnatchVrfSignature(signature).encode()), BandersnatchVrfSignature(signature).hex())
 
         return Ed25519Signature(signature)
 
