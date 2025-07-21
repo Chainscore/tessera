@@ -4,8 +4,16 @@ import base64
 from datetime import datetime, timedelta, timezone
 
 from cryptography import x509
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption, PublicFormat
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
+)
+from cryptography.hazmat.primitives.serialization import (
+    Encoding,
+    PrivateFormat,
+    NoEncryption,
+    PublicFormat,
+)
 from pydantic.networks import import_email_validator
 from tsrkit_types import U32, Uint
 
@@ -18,8 +26,10 @@ logger = get_logger("network")
 ASN1_PREFIX = bytes.fromhex("302e020100300506032b657004220420")
 ZERO_SEED = b"\x00" * 32
 
+
 def base32_encode(data):
     return base64.b32encode(data).decode("utf-8").lower().replace("=", "")
+
 
 def generate_san(pubkey: bytes) -> str:
     """
@@ -40,7 +50,8 @@ def generate_san(pubkey: bytes) -> str:
     n, _ = Uint[256].decode_from(pubkey)
     return "e" + b(n, 52)
 
-def generate_keys(port: int):
+
+def generate_keys(port: int) -> str:
     """
     Generate keys for a node running on a given port
         - Goes to /seeds/keys.json to read the secret key
@@ -54,20 +65,23 @@ def generate_keys(port: int):
     Returns:
         str: SAN of the certificate
     """
-    from jam.settings import settings 
+    if port == 0:
+        return ""
+    from jam.settings import settings
+
     seed = settings.seed
     # Create the private key from seed and
     # Store private key in /seeds/{port}/key.pem
     # And public key in /seeds/{port}/pub_key.pem
 
     # JIP-5 Sync
-    ed25519_secret = Hash.blake2b(bytes("jam_val_key_ed25519", 'utf-8') + seed)
+    ed25519_secret = Hash.blake2b(bytes("jam_val_key_ed25519", "utf-8") + seed)
     private_key = Ed25519PrivateKey.from_private_bytes(bytes(ed25519_secret))
 
     private_key_pem = private_key.private_bytes(
         encoding=Encoding.PEM,
         format=PrivateFormat.PKCS8,
-        encryption_algorithm=NoEncryption()
+        encryption_algorithm=NoEncryption(),
     )
 
     # If seeds/{port} doesn't exist, create it
@@ -80,8 +94,7 @@ def generate_keys(port: int):
     public_key = private_key.public_key()
 
     public_key_pem = public_key.public_bytes(
-        encoding=Encoding.PEM,
-        format=PublicFormat.SubjectPublicKeyInfo
+        encoding=Encoding.PEM, format=PublicFormat.SubjectPublicKeyInfo
     )
 
     # If seeds/{port}/pub_key.pem doesn't exist, create it
@@ -98,9 +111,9 @@ def generate_keys(port: int):
     valid_from = datetime.now(timezone.utc)
     valid_to = valid_from + timedelta(days=365)
 
-    subject = issuer = x509.Name([
-        x509.NameAttribute(x509.NameOID.COMMON_NAME, "JAM Client Ed25519 Cert")
-    ])
+    subject = issuer = x509.Name(
+        [x509.NameAttribute(x509.NameOID.COMMON_NAME, "JAM Client Ed25519 Cert")]
+    )
 
     cert_builder = (
         x509.CertificateBuilder()
@@ -110,10 +123,7 @@ def generate_keys(port: int):
         .serial_number(x509.random_serial_number())
         .not_valid_before(valid_from)
         .not_valid_after(valid_to)
-        .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName(san)]),
-            critical=False
-        )
+        .add_extension(x509.SubjectAlternativeName([x509.DNSName(san)]), critical=False)
     )
 
     certificate = cert_builder.sign(private_key=private_key, algorithm=None)
@@ -122,6 +132,7 @@ def generate_keys(port: int):
         f.write(certificate.public_bytes(Encoding.PEM))
 
     return san
+
 
 def verify_certificate(cert: x509.Certificate):
     try:
@@ -140,7 +151,9 @@ def verify_certificate(cert: x509.Certificate):
 
         test_san = generate_san(pk.public_bytes_raw())
 
-        san_extension = cert.extensions.get_extension_for_oid(x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+        san_extension = cert.extensions.get_extension_for_oid(
+            x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+        )
         san = san_extension.value.get_values_for_type(x509.general_name.DNSName)
 
         if len(san) != 1:

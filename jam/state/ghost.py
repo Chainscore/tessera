@@ -18,36 +18,42 @@ from jam.types.state.xi import Xi
 from jam.types.state.beta import Beta
 from jam.types.state.phi import Phi
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ
-from jam.types.state.delta import Delta, AccountData, Timestamps, AccountLookup, AccountPreimages, AccountStorage
+from jam.types.state.delta import (
+    Delta,
+    AccountData,
+    Timestamps,
+    AccountLookup,
+    AccountPreimages,
+    AccountStorage,
+)
 from jam.types.state.sigma import Sigma
 from jam.types.work import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH
 from jam.state.utils import construct_state_key
 from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.types.protocol.core import Balance, Gas, ServiceId
-from jam.state.merkle import StateTrie
-from jam.consensus.safrole.safrole import Safrole
+from jam.utils.trie.merkle import StateTrie
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32
 from tsrkit_types.null import Null
 
 
 class GhostState(Sigma):
-
     def generate_root(self) -> Bytes[32]:
         """Generate the root hash of the state"""
         return StateTrie().merkelize(self.transform())[0]
 
     @staticmethod
-    def from_random(seed = 0) -> "GhostState":
+    def from_random(seed=0) -> "GhostState":
         from jam.utils.dummy.dummy_state_comp import create_dummy_state_components
+
         return GhostState(**create_dummy_state_components())
 
     def transform(self) -> dict:
         """
-            Transform the state into a dictionary as defined in D.2
-            Returns:
-                dict: A dictionary representation of the state in this format: {bytes -> Bytes}
+        Transform the state into a dictionary as defined in D.2
+        Returns:
+            dict: A dictionary representation of the state in this format: {bytes -> Bytes}
         """
         services, service_storage, service_preimages, service_lookup = {}, {}, {}, {}
         for i in self.delta:
@@ -67,21 +73,22 @@ class GhostState(Sigma):
 
             for j in self.delta[i].storage:
                 service_storage[
-                    construct_state_key(
-                        (i, Bytes(U32(2**32 - 1).encode()) + j[0:23])
-                    )
+                    construct_state_key((i, Bytes(U32(2**32 - 1).encode()) + j[0:23]))
                 ] = self.delta[i].storage[j]
             for j in self.delta[i].preimages:
                 service_preimages[
-                    construct_state_key(
-                        (i, Bytes(U32(2**32 - 2).encode()) + j[1:24])
-                    )
+                    construct_state_key((i, Bytes(U32(2**32 - 2).encode()) + j[1:24]))
                 ] = Bytes(self.delta[i].preimages[j])
 
             for j in self.delta[i].lookup:
-                service_lookup[construct_state_key((i, Bytes(j.length.encode() + bytes(Hash.blake2b(j.hash))[2:25])))] = Bytes(
-                    self.delta[i].lookup[j].encode()
-                )
+                service_lookup[
+                    construct_state_key(
+                        (
+                            i,
+                            Bytes(j.length.encode() + bytes(Hash.blake2b(j.hash))[2:25]),
+                        )
+                    )
+                ] = Bytes(self.delta[i].lookup[j].encode())
 
         return {
             construct_state_key(1): Bytes(self.alpha.encode()),
@@ -149,9 +156,7 @@ class GhostState(Sigma):
 
             # Then find all services (first byte is 255, rest is service id)
             elif int(key[0]) == 255:
-                service_id = int.from_bytes(
-                    bytes(Bytes([key[1], key[3], key[5], key[7]]))
-                )
+                service_id = int.from_bytes(bytes(Bytes([key[1], key[3], key[5], key[7]])))
                 total_offset = 0
                 ac, offset = OpaqueHash.decode_from(bytes(value), total_offset)
                 total_offset += offset
@@ -216,8 +221,10 @@ class GhostState(Sigma):
         )
 
     @staticmethod
-    def genesis(genesis_path = "genesis.json") -> "GhostState":
+    def genesis(genesis_path="genesis.json") -> "GhostState":
         """Generate the genesis state"""
+        from jam.state.transitions.safrole.safrole import Safrole
+
         gen = json.load(open(genesis_path))
         peers = ValidatorsData.from_json(gen["peers"])
         fallback = Safrole.arrange_fallback(Bytes[32](bytes(32)), peers)
@@ -234,19 +241,22 @@ class GhostState(Sigma):
             rho=Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]),
             tau=Tau(0),
             phi=Phi.from_json(gen["state"]["auth_queue"]),
-            chi=Chi(chi_m=ServiceId(0), chi_a=ServiceId(0), chi_v=ServiceId(0), chi_g=ChiG({})),
+            chi=Chi(
+                chi_m=ServiceId(0),
+                chi_a=ServiceId(0),
+                chi_v=ServiceId(0),
+                chi_g=ChiG({}),
+            ),
             psi=Psi(good=PsiG([]), bad=PsiB([]), wonky=PsiW([]), offenders=PsiO([])),
             pi=Pi(
                 vals_current=AllValidatorStats.empty(),
                 vals_last=AllValidatorStats.empty(),
                 cores=AllCoreStats.empty(),
-                services=AllServiceStats({})
+                services=AllServiceStats({}),
             ),
             nu=Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)]),
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
-
-
 
     def save(self, db: RockStore):
         data = self.transform()
@@ -262,12 +272,10 @@ class GhostState(Sigma):
             state_key = construct_state_key(i)
             data[state_key] = Bytes(db.get(bytes(state_key)))
         for key in keys:
-            if int.from_bytes(
-                    bytes(Bytes([key[0], key[2], key[4], key[6]]))
-            ) not in service_ids:
-                service_ids.add(ServiceId(int.from_bytes(
-                    bytes(Bytes([key[0], key[2], key[4], key[6]]))
-                )))
+            if int.from_bytes(bytes(Bytes([key[0], key[2], key[4], key[6]]))) not in service_ids:
+                service_ids.add(
+                    ServiceId(int.from_bytes(bytes(Bytes([key[0], key[2], key[4], key[6]]))))
+                )
             data[key] = Bytes(db.get(bytes(key)))
         for service_id in service_ids:
             service_key = construct_state_key((255, service_id))

@@ -6,8 +6,19 @@ from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
 from jam.types.protocol.core import Balance, ServiceId, TimeSlot, BlobLength
 from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import AccountMetadata, LookupTable, Timestamps, AccountData
-from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
+from jam.types.state.delta import (
+    AccountMetadata,
+    Ai,
+    Ao,
+    LookupTable,
+    Timestamps,
+    AccountData,
+)
+from jam.utils.constants import (
+    BASIC_MINIMUM_BALANCE,
+    ADDITIONAL_BALANCE_PER_ITEM,
+    ADDITIONAL_BALANCE_PER_OCTET,
+)
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32
 from jam.consensus.grandpa.finality import Finality
@@ -19,6 +30,7 @@ def make_account_prop(field):
             return None
         meta = AccountMetadata.decode(data)
         return getattr(meta, field)
+
     def setter(self, value):
         data = self.store.get(bytes(construct_state_key((255, self.id))))
         if data is None:
@@ -33,6 +45,7 @@ def make_account_prop(field):
         asyncio.create_task(broker.publish("subscribeServiceData", list(meta.encode())))
        
         self.store.put(k, v)
+
     return property(getter, setter)
 
 
@@ -41,29 +54,34 @@ class AccountDataView:
         self.id = id
         self.store = store
 
-    code_hash = make_account_prop('code_hash')
-    balance = make_account_prop('balance')
-    gas_limit = make_account_prop('gas_limit')  # min_item_gas
-    min_gas = make_account_prop('min_gas')  # min_memo_gas
-    num_o = make_account_prop('num_o')
-    num_i = make_account_prop('num_i')
+    code_hash = make_account_prop("code_hash")
+    balance = make_account_prop("balance")
+    gas_limit = make_account_prop("gas_limit")  # min_item_gas
+    min_gas = make_account_prop("min_gas")  # min_memo_gas
+    num_o = make_account_prop("num_o")
+    num_i = make_account_prop("num_i")
 
     @property
     def t(self):
         return Balance(
-            BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
+            BASIC_MINIMUM_BALANCE
+            + ADDITIONAL_BALANCE_PER_ITEM * self.num_i
+            + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
         )
 
 
 class Account:
-
     def __init__(self, id: ServiceId, store: StateStorage):
         self.id = id
         self.store = store
 
     @property
     def t(self):
-        return Balance(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.service.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.service.num_o)
+        return Balance(
+            BASIC_MINIMUM_BALANCE
+            + ADDITIONAL_BALANCE_PER_ITEM * self.service.num_i
+            + ADDITIONAL_BALANCE_PER_OCTET * self.service.num_o
+        )
 
     @property
     def service(self):
@@ -71,7 +89,10 @@ class Account:
 
     @service.setter
     def service(self, value: AccountMetadata):
-        storage_key, encoded_val = bytes(construct_state_key((255, self.id))), value.encode()
+        storage_key, encoded_val = (
+            bytes(construct_state_key((255, self.id))),
+            value.encode(),
+        )
         self.store.put(storage_key, encoded_val)
 
     @property
@@ -93,14 +114,14 @@ class Account:
         """
         https://graypaper.fluffylabs.dev/#/cc517d7/11c70011e000?v=0.6.5
         """
-        if (
-                self.preimages[preimage_hash] is not None and
-                self.is_preimage_valid(
-                    self.lookup[
-                        LookupTable(hash=preimage_hash, length=BlobLength(len(self.preimages[preimage_hash])))
-                    ],
-                    timeslot
+        if self.preimages[preimage_hash] is not None and self.is_preimage_valid(
+            self.lookup[
+                LookupTable(
+                    hash=preimage_hash,
+                    length=BlobLength(len(self.preimages[preimage_hash])),
                 )
+            ],
+            timeslot,
         ):
             return self.preimages[preimage_hash]
         else:
@@ -136,7 +157,7 @@ class DeltaView:
     def __setitem__(self, key: ServiceId, value: AccountData):
         account = Account(id=key, store=self.store)
         account.service = value.service
-        for k,v in value.preimages:
+        for k, v in value.preimages:
             account.preimages[k] = v
         for k, v in value.storage:
             account.storage[k] = v
@@ -145,6 +166,7 @@ class DeltaView:
 
     def __contains__(self, key: ServiceId):
         return self.store.get(bytes(construct_state_key((255, key)))) is not None
+
 
 class StorageView:
     def __init__(self, id: ServiceId, store: StateStorage):
@@ -155,9 +177,12 @@ class StorageView:
         data = self.store.get(bytes(construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23])))) 
         return Bytes(data) if data else data
 
+    def get(self, key):
+        return self.__getitem__(key)
+
     def __setitem__(self, key: Bytes[32], value: Bytes):
         # TODO - check for gas before adding, throw error if insufficient. This is supposed to be handled in relevent invocation
-        key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
+        key = construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23]))
         curr_data = self.store.get(bytes(key))
         meta_view = AccountDataView(self.id, self.store)
         if curr_data is None:
@@ -185,6 +210,7 @@ class StorageView:
         storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
         self.store.delete(storage_key)
 
+
 class PreImageView:
     def __init__(self, id: ServiceId, store: StateStorage):
         self.id = id
@@ -195,8 +221,11 @@ class PreImageView:
         data = self.store.get(construct_state_key((self.id, data)))
         return Bytes(data) if data else data
 
+    def get(self, key):
+        return self.__getitem__(key)
+
     def __setitem__(self, key: Bytes[32], value: Bytes):
-        k = construct_state_key((self.id, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24]))
+        k = construct_state_key((self.id, Bytes(U32(2**32 - 2).encode()) + key[1:24]))
         self.store.put(k, value)
 
         # Publishes updates of the service preimage. On every setitem, the value is broadcasted to all subscribers
@@ -219,12 +248,25 @@ class TimestampsView:
         self.store = store
 
     def __getitem__(self, key: LookupTable):
-        storage_key = construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))
+        storage_key = construct_state_key(
+            (
+                self.id,
+                Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25],
+            )
+        )
         data = self.store.get(storage_key)
         return Timestamps.decode(data) if data else data
 
+    def get(self, key):
+        return self.__getitem__(key)
+
     def __setitem__(self, key: LookupTable, value: Timestamps):
-        storage_key = construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))
+        storage_key = construct_state_key(
+            (
+                self.id,
+                Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25],
+            )
+        )
         v = value.encode()
 
         curr_data = self.store.get(storage_key)
@@ -240,7 +282,12 @@ class TimestampsView:
         self.store.put(storage_key, v)
 
     def __delitem__(self, key: LookupTable):
-        storage_key = construct_state_key((self.id, Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25]))
+        storage_key = construct_state_key(
+            (
+                self.id,
+                Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25],
+            )
+        )
         curr_data = self.store.get(storage_key)
         if curr_data is not None:
             meta_view = AccountDataView(self.id, self.store)

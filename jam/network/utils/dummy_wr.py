@@ -29,20 +29,20 @@ async def work_report_producer(node: Node, db: RockStore):
     ReportProtocol = WorkReportDistribution()
 
     report_iter = 0
-    
+
     logger.info(
         "Starting work report producer",
         node_name=node.name,
         is_builder=node.is_builder,
-        genesis_timestamp=genesis_ts
+        genesis_timestamp=genesis_ts,
     )
-    
+
     while True:
         if not node.is_initialized:
             logger.debug(
                 "Network not initialized - skipping work report production",
                 node_name=node.name,
-                iteration=report_iter
+                iteration=report_iter,
             )
             await asyncio.sleep(6)
             genesis_ts = time()
@@ -58,7 +58,7 @@ async def work_report_producer(node: Node, db: RockStore):
             iteration=report_iter,
             current_timeslot=current_timeslot,
             epoch_index=ts_epoch_index,
-            gamma_mode=state.gamma.s.get_key()
+            gamma_mode=state.gamma.s.get_key(),
         )
 
         if not node.is_validator:
@@ -70,22 +70,22 @@ async def work_report_producer(node: Node, db: RockStore):
                 node_name=node.name,
                 iteration=report_iter,
                 current_timeslot=current_timeslot,
-                core_index=int(report.core_index)
+                core_index=int(report.core_index),
             )
 
             ReportProtocol.transmit(node, report_data)
-            
+
             logger.debug(
                 "Work report transmitted",
                 node_name=node.name,
                 iteration=report_iter,
-                core_index=int(report.core_index)
+                core_index=int(report.core_index),
             )
         else:
             logger.debug(
                 "Node is builder - skipping work report production",
                 node_name=node.name,
-                iteration=report_iter
+                iteration=report_iter,
             )
 
         await asyncio.sleep(6 - (time() - genesis_ts) % 6)

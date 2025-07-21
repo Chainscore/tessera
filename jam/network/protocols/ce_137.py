@@ -1,29 +1,30 @@
 from typing import cast, Tuple
 
-from tsrkit_types import structure, Uint, Null
+from tsrkit_types import structure, U32, Uint, Null
 
 from jam.logging import logger
-from jam.settings import settings
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from jam.network.base.quic import QuicProtocol
+from jam.network.connection import NodeConnection
 
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
 from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex
 
-from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
-from jam.work_package.stores.segments import SegmentShardsDA
+from jam.storage.da.audits import AuditShardsDA, JustificationsDA
+from jam.storage.da.segments import SegmentShardsDA
+
 
 @structure
 class Query:
     erasure_root: ErasureRoot
     shard_index: ShardIndex
 
+
 @structure
 class CE137Data:
-    len: Uint[32]
+    len: U32
     query: Query
 
     @property
@@ -31,6 +32,7 @@ class CE137Data:
         if len(self.query.encode()) == self.len:
             return True
         return False
+
 
 @structure
 class CE137Response:
@@ -43,49 +45,49 @@ class CE137Response:
 
     @property
     def is_valid(self):
-        if (len(self.bundle_shard.encode()) == self.bs_len
-                and len(self.segments_shard.encode()) == self.ss_len
-                and len(self.justification.encode()) == self.j_len):
+        if (
+            len(self.bundle_shard.encode()) == self.bs_len
+            and len(self.segments_shard.encode()) == self.ss_len
+            and len(self.justification.encode()) == self.j_len
+        ):
             return True
         return False
 
 
 class ShardDistributionProtocol(NetworkProtocol):
     """
-        CE 137 Protocol for shard distribution
+    CE 137 Protocol for shard distribution
 
-        Assurer -> Guarantor
+    Assurer -> Guarantor
 
-        --> Erasure-Root ++ Shard Index
-        --> FIN
-        <-- Bundle Shard
-        <-- [Segment Shard] (Should include all exported and proof segment shards with the given index)
-        <-- Justification
-        <-- FIN
+    --> Erasure-Root ++ Shard Index
+    --> FIN
+    <-- Bundle Shard
+    <-- [Segment Shard] (Should include all exported and proof segment shards with the given index)
+    <-- Justification
+    <-- FIN
 
-        Source:
-            https://docs.jamcha.in/advanced/simple-networking/spec#ce-137-shard-distribution
+    Source:
+        https://docs.jamcha.in/advanced/simple-networking/spec#ce-137-shard-distribution
     """
-
-    from jam.network.node import Node
 
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE137
 
-    async def transmit(self, node: Node, data: CE137Data):
+    async def transmit(self, data: CE137Data):
         """Transmit Erasure-Root and Shard Index from Assurer (client) to Guarantor (server)"""
+        from jam.network.start import node 
 
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Requesting shard from {len(node.peer_conn)} guarantors")
+        logger.info(f"Requesting shard from {len(node.connection_ids)} guarantors")
 
-        for peer in node.peer_conn:
+        for client in node.connection_ids.values():
             try:
-                if int(peer.port) == 40002:
-                    logger.debug("Requesting shard from", peer=str(peer))
-                    client = node.peer_conn[peer][1]
+                if int(client.val.metadata.port) == 40001:
+                    logger.debug("Requesting shard from", peer=str(client))
 
                     # Send Protocol Prefix
                     stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -105,22 +107,23 @@ class ShardDistributionProtocol(NetworkProtocol):
                     "Failed to request shard.",
                     peer=str(peer),
                     error=str(e),
-                    error_type=type(e).__name__
+                    error_type=type(e).__name__,
                 )
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
+        from jam.settings import settings
+
         buffer = server.stream_buffer[stream_id]
 
         try:
-            data, offset = CE137Data.decode_from(buffer[1:])
-            data = cast(CE137Data, data)
+            data = CE137Data.decode(buffer[1:])
 
             logger.info(
                 "Received shard request",
                 erasure_root=data.query.erasure_root,
                 shard_index=data.query.shard_index,
-                peer=server.peer
+                peer=server.peer,
             )
 
             if not data.is_valid:
@@ -130,7 +133,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             query = data.query
 
             d3l = settings.d3l
-            audit = settings.audit
+            audit = settings.audit_da
 
             justification_da = JustificationsDA(audit)
 
@@ -178,10 +181,12 @@ class ShardDistributionProtocol(NetworkProtocol):
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
+    def res_intercept(
+        self, stream_id: int, client: NodeConnection
+    ) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
         """Intercept Bundle Shard, [Segment Shard] and Justification"""
         buffer = client.stream_buffer[stream_id]
 

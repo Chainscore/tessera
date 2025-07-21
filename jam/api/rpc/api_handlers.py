@@ -1,5 +1,5 @@
-from typing import Callable, Type
-from tsrkit_types import U32, U8, Bytes, Codable, TypedArray
+from typing import Callable
+from tsrkit_types import U32, U8, Bytes, TypedArray
 from jam.api.rpc.utils import parse_data
 from jam.consensus.grandpa.finality import Finality
 from jam.state.accounts import Account, AccountDataView, StorageView
@@ -12,15 +12,18 @@ from jam.types.state.delta import AccountMetadata, LookupTable
 
 Hash = TypedArray[U8]
 
-# RPC API Handlers 
+
+# RPC API Handlers
 def best_block_handler(params: list):
     from jam.settings import settings
+
     best = Finality.load_latest(settings.main_db)
     return { "header_hash" : list(best.header.hash()), 
              "slot": int(best.header.slot) }
 
 def finalized_block_handler(params: list):
     from jam.settings import settings
+
     final = Finality.load_final(settings.main_db)
     return { "header_hash": list(final.header.hash()), 
              "slot": int(final.header.slot) }
@@ -37,12 +40,13 @@ def parent_block_handler(params: list):
             "slot": int(parent.header.slot)}
 
 def state_root_handler(params: list):
-    hh, = parse_data([HeaderHash], params)    
+    (hh,) = parse_data([HeaderHash], params)
     state_at_hh = state.load(hh)
     return  {"header_hash": list(bytes(state_at_hh.root).hex())} 
 
+
 def statistics_handler(params: list):
-    hh, = parse_data([HeaderHash], params)
+    (hh,) = parse_data([HeaderHash], params)
     state_at_hh = State.load(hh)
     return  {"result": list(bytes(state_at_hh.pi.encode()).hex())}
 
@@ -101,6 +105,7 @@ method_map: dict[str, Callable] = {
     "submitPreimage" : submit_preimage_handler,
     "submitWorkPackage": submit_work_package_handler,
 }
+
 
 def dispatch_api_call(method: str, params: list):
     if method not in method_map:

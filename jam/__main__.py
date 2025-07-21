@@ -3,32 +3,15 @@ import json
 import logging
 import os
 import time
-
 from dotenv import load_dotenv
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
-
+from jam.operations import operate
 from jam.logging import setup_logging, logger
 from jam.utils.chainspec import chain_config
 from jam.settings import setup_setting
-
-from jam.consensus.bp_engine import BlockProducer
-from jam.consensus.grandpa.finality import Finality
-
-from jam.network.peer import Peer
-from jam.network.node import Node
-
-from jam.operations import Builder
-from jam.operations.utils.state_update import update_state
-
+from jam.finality.finality import Finality
+from jam.network.start import start_node
 from jam.state.state import setup_state
-from jam.types.protocol.crypto import BlsPublic
-from jam.types.block import Block
-from jam.types.protocol.validators import (
-    IPAddress,
-    ValidatorData,
-    ValidatorMetadata,
-)
+from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
 from jam.api.rpc.app import rpc
 from hypercorn.asyncio import serve
@@ -44,14 +27,13 @@ async def main(
     is_validator: bool,
 ) -> None:
     # ---------- SETUP LOGGING ----------
-    genesis_ts = GENESIS_TS         # Actual Genesis time for JAM Common Era
+    genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
     init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
     init_ep = int(init_ts // EPOCH_LENGTH)
 
-
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
-    load_dotenv(env,override=True)
+    load_dotenv(env, override=True)
 
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
@@ -69,7 +51,7 @@ async def main(
         theme=theme,
         node_name=name,
         environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None
+        min_level=getattr(logging, log_level.upper()) if log_level else None,
     )
 
     # ---------- SETUP SETTINGS ----------
@@ -83,15 +65,14 @@ async def main(
         ts=init_ts,
         epoch=init_ep,
         spec=chain_config.name,
-        environment=environment,
-        is_builder=is_builder,
-        is_validator=is_validator
     )
 
     try:
+        # -------------- SETUP STATE -------------
         # Set genesis state
+        dev_spec = json.load(open(genesis_path))
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
-        state = setup_state(settings.state_db, "dev-spec.json")
+        state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
 
 
@@ -148,6 +129,7 @@ async def main(
             host=host, port=rpc_port
         )
 
+        # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
             if tsr_node.is_builder:
@@ -165,14 +147,6 @@ async def main(
             reason="keyboard_interrupt"
         )
     except Exception as e:
-        logger.critical(
-            "JAM node fatal error",
-            node_name=name,
-            port=port,
-            error=str(e)[:200],
-            error_type=type(e).__name__
-        )
+        logger.critical("Fatal error", e=e, error_type=type(e).__name__)
         # Close db connections
         settings.clear()
-
-        raise

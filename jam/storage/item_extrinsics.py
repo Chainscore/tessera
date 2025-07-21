@@ -14,6 +14,7 @@ from jam.types.work.manifest import MultiExtrinsics, Extrinsic, Extrinsics
 
 class ItemExtrinsics:
     """Place to store and get extrinsics that are received along with Work Package"""
+
     DB: RockStore
 
     def __init__(self, db: RockStore):
@@ -28,7 +29,7 @@ class ItemExtrinsics:
         for extrinsic in item.extrinsic:
             if offset + extrinsic.len > len(data):
                 raise ValueError("Invalid WP: Extrinsic data mismatch")
-            value = data[offset: offset + extrinsic.len]
+            value = data[offset : offset + extrinsic.len]
             if Hash.blake2b(value) != extrinsic.hash:
                 raise ValueError("Invalid WP: Extrinsic data mismatch")
             offset += int(extrinsic.len)
@@ -68,7 +69,7 @@ class ItemExtrinsics:
             data ([Bytes]): Extrinsic data we receive with WP, seperated by Work Item
 
         Raises:
-            ValueError: If the extrinsic passed (to store) is invalid - i.e hashes/length dont match 
+            ValueError: If the extrinsic passed (to store) is invalid - i.e hashes/length dont match
         """
         to_store = {}
         # Validation process
@@ -76,20 +77,19 @@ class ItemExtrinsics:
             offset = 0
             item_x_encoded = data[i]
             for extrinsic in item.extrinsic:
-                if offset+extrinsic.len > len(item_x_encoded):
+                if offset + extrinsic.len > len(item_x_encoded):
                     raise ValueError("Invalid WP: Extrinsic data mismatch")
-                value = item_x_encoded[offset: offset+extrinsic.len]
+                value = item_x_encoded[offset : offset + extrinsic.len]
                 if Hash.blake2b(value) != extrinsic.hash:
                     raise ValueError("Invalid WP: Extrinsic data mismatch")
                 offset += int(extrinsic.len)
                 to_store[extrinsic.hash] = value
             if offset != len(item_x_encoded):
                 raise ValueError("Invalid WP: Extrinsic data mismatch")
-        
+
         # Storing data
         for key, value in to_store.items():
             self.DB.put(bytes(key), bytes(value))
-
 
     @staticmethod
     def encode(wi_data: List[Bytes]) -> Tuple[Bytes, ExtrinsicSpecs]:
@@ -108,7 +108,6 @@ class ItemExtrinsics:
             wi += ex_data
         return wi, extr_specs
 
-
     def get(self, extrinsic_hash: Bytes[32]) -> bytes:
         """Gets the relevent extrinsic, assuming we already know its hash (as its stored in WI)
 
@@ -120,7 +119,6 @@ class ItemExtrinsics:
             Bytes
         """
         return self.DB.get(bytes(extrinsic_hash))
-
 
     def get_all(self, wp: WorkPackage) -> List[List[bytes]]:
         result = []

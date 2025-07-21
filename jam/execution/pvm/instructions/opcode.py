@@ -5,6 +5,7 @@ from jam.execution.pvm.status import ExecutionStatus
 
 OpReturn = Tuple[ExecutionStatus, Any, list, Memory]
 
+
 @dataclass
 class OpCode:
     name: str

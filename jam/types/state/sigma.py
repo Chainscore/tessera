@@ -1,6 +1,23 @@
 from tsrkit_types.struct import structure
 
-from . import Alpha, Phi, Beta, Eta, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Nu, Xi, Gamma, Delta
+from . import (
+    Alpha,
+    Phi,
+    Beta,
+    Eta,
+    Pi,
+    Psi,
+    Kappa,
+    Lambda_,
+    Rho,
+    Tau,
+    Chi,
+    Iota,
+    Nu,
+    Xi,
+    Gamma,
+    Delta,
+)
 
 
 @structure

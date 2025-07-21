@@ -1,4 +1,3 @@
-
 from typing import List, Literal, Optional, Sequence, Union
 
 
@@ -18,15 +17,18 @@ class BitArrayConversion:
             for j in range(min(8, len(bits) - i)):
                 if bits[i + j]:
                     if bitorder == "msb":
-                        byte |= (1 << (7 - j))  # MSB first
+                        byte |= 1 << (7 - j)  # MSB first
                     else:
-                        byte |= (1 << j)  # LSB first
+                        byte |= 1 << j  # LSB first
             result.append(byte)
         return bytes(result)
 
     @staticmethod
-    def bytes_to_bitarray(value: bytes, bitorder: Literal["msb", "lsb"] = "msb", target_length: int | None = None) -> \
-    List[bool]:
+    def bytes_to_bitarray(
+        value: bytes,
+        bitorder: Literal["msb", "lsb"] = "msb",
+        target_length: int | None = None,
+    ) -> List[bool]:
         """Convert bytes to bit array
 
         Args:

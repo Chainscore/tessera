@@ -2,14 +2,21 @@ from math import floor
 from collections import deque
 
 from jam.types.base.integers import U32
-from jam.types.base.sequences.vector import  decodable_vector, Vector
+from jam.types.base.sequences.vector import decodable_vector, Vector
 
 from jam.utils.shuffle import shuffle
-from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
+from jam.utils.constants import (
+    VALIDATOR_COUNT,
+    CORE_COUNT,
+    EPOCH_LENGTH,
+    ROTATION_PERIOD,
+)
 
 
 @decodable_vector(element_type=U32)
-class U32Vector(Vector): ...
+class U32Vector(Vector):
+    ...
+
 
 def guarantor_assignment(validators, entropy, slot):
     """
@@ -38,8 +45,6 @@ def guarantor_assignment(validators, entropy, slot):
     # <------------- Entropy for current epoch ------------------>
     epoch_entropy = eta[2]
 
-
-
     # ------- shuffle validator with respect to the given entropy -------
     core_assign = shuffle(epoch_entropy.encode().hex(), validator_assign)
 
@@ -52,7 +57,6 @@ def guarantor_assignment(validators, entropy, slot):
             mapping[key] = set()
         mapping[key].add(value)
     mapping = {k: mapping[k] for k in sorted(mapping.keys())}
-
 
     # rotation phase (number of rotation between cores)
     work_report_slot = report_slot
