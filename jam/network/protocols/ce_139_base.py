@@ -7,7 +7,12 @@ from jam.logging import logger
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.work.manifest import SegmentIndex, Justification, Justifications, Assurers
+from jam.types.work.manifest import (
+    SegmentIndex,
+    Justification,
+    Justifications,
+    Assurers,
+)
 from jam.types.work.shard import ShardIndex, SegmentsShard
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -18,13 +23,16 @@ from jam.utils.gather import gather_with_exceptions
 
 SegmentIndexes = TypedVector[SegmentIndex]
 
+
 @structure
 class Query:
-    erasure_root : ErasureRoot
+    erasure_root: ErasureRoot
     shard_index: ShardIndex
-    seg_indexes : SegmentIndexes
+    seg_indexes: SegmentIndexes
+
 
 Queries = TypedVector[Query]
+
 
 @structure
 class CE139Data:
@@ -37,6 +45,7 @@ class CE139Data:
             return True
         return False
 
+
 @structure()
 class CE139Response:
     len: Uint[32]
@@ -47,6 +56,7 @@ class CE139Response:
         if len(self.s_shards.encode()) == self.len:
             return True
         return False
+
 
 @structure
 class CE140Justification:
@@ -59,11 +69,11 @@ class CE140Justification:
             return True
         return False
 
+
 CE140Data = CE139Data
 
 
 class SegmentShardRequestBase(NetworkProtocol):
-
     from jam.network.node import Node
 
     def __init__(self, prefix: PrefixType):
@@ -106,9 +116,7 @@ class SegmentShardRequestBase(NetworkProtocol):
 
         except Exception as e:
             logger.error(
-                "Failed to request shards",
-                error=str(e),
-                error_type=type(e).__name__
+                "Failed to request shards", error=str(e), error_type=type(e).__name__
             )
 
     @staticmethod
@@ -126,4 +134,3 @@ class SegmentShardRequestBase(NetworkProtocol):
 
     def res_intercept(self, stream_id: int, client: QuicProtocol):
         ...
-

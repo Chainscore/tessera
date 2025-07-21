@@ -33,6 +33,7 @@ ExtrinsicSpecs = TypedVector[ExtrinsicSpec]
 @structure
 class WorkItem:
     """Work item structure."""
+
     # s
     service: ServiceId
     # h
@@ -48,4 +49,4 @@ class WorkItem:
     # x
     extrinsic: ExtrinsicSpecs
     # e
-    export_count: Uint[16] 
+    export_count: Uint[16]

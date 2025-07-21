@@ -10,4 +10,3 @@ class DA(ABC):
 
     def close(self):
         self.db.close()
-

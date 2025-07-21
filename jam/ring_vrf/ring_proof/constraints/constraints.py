@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 # from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
 from jam.ring_vrf.ring_proof.constants import SeedPoint
 from dataclasses import dataclass, field
@@ -19,9 +20,12 @@ from jam.ring_vrf.ring_proof.polynomial.ops import (
     poly_evaluate,
     lagrange_basis_polynomial,
 )
+
+
 def _to_radix4(vec: Sequence[int]) -> List[int]:
-    """Convert a radix‑2 evaluation vector to radix‑4 """
+    """Convert a radix‑2 evaluation vector to radix‑4"""
     return [poly_evaluate(vec, x, S_PRIME) for x in D_2048]
+
 
 _NOT_LAST = vect_sub(D_2048, pow(OMEGA, 508, S_PRIME), S_PRIME)
 
@@ -43,7 +47,8 @@ def _shift(vec: Sequence[int]) -> List[int]:
 @dataclass(slots=True)
 class RingConstraintBuilder:
     """Compute c₁ₓ … c₇ₓ evaluation vectors from column evaluations."""
-    Result_plus_Seed:Any
+
+    Result_plus_Seed: Any
     # radix‑2 evaluation vectors coming from Column objects
     px: Sequence[int]
     py: Sequence[int]
@@ -65,19 +70,20 @@ class RingConstraintBuilder:
     _accy4: List[int] = field(init=False, repr=False)
     _accip4: List[int] = field(init=False, repr=False)
 
-
     def __post_init__(self):
-        self._px4    = _to_radix4(self.px)
-        self._py4    = _to_radix4(self.py)
-        self._s4     = _to_radix4(self.s)
-        self._b4     = _to_radix4(self.b)
-        self._accx4  = _to_radix4(self.acc_x)
-        self._accy4  = _to_radix4(self.acc_y)
+        self._px4 = _to_radix4(self.px)
+        self._py4 = _to_radix4(self.py)
+        self._s4 = _to_radix4(self.s)
+        self._b4 = _to_radix4(self.b)
+        self._accx4 = _to_radix4(self.acc_x)
+        self._accy4 = _to_radix4(self.acc_y)
         self._accip4 = _to_radix4(self.acc_ip)
 
     # convenient classmethod for Column builders
     @classmethod
-    def from_columns(cls, columns: Mapping[str, Sequence[int]]) -> "RingConstraintBuilder":
+    def from_columns(
+        cls, columns: Mapping[str, Sequence[int]]
+    ) -> "RingConstraintBuilder":
         return cls(
             acc_ip=columns["accip"],
             b=columns["b"],
@@ -87,7 +93,6 @@ class RingConstraintBuilder:
             px=columns["Px"],
             py=columns["Py"],
         )
-
 
     def compute(self) -> Dict[str, List[int]]:
         return {
@@ -142,7 +147,9 @@ class RingConstraintBuilder:
             vect_mul(
                 bx,
                 vect_sub(
-                    vect_mul(accx_m_px, vect_add(accy_w, self._accy4, S_PRIME), S_PRIME),
+                    vect_mul(
+                        accx_m_px, vect_add(accy_w, self._accy4, S_PRIME), S_PRIME
+                    ),
                     vect_mul(py_m_accy, accx_w_m_accx, S_PRIME),
                     S_PRIME,
                 ),
@@ -167,7 +174,7 @@ class RingConstraintBuilder:
         if "c5x" in self._cache:
             return [self._cache["c5x"], self._cache["c6x"]]
         # seed_x, seed_y = sw.from_twisted_edwards(SeedPoint)
-        seed_x, seed_y= SeedPoint
+        seed_x, seed_y = SeedPoint
 
         # print("seed_here",(seed_x, seed_y))
 
@@ -199,5 +206,6 @@ class RingConstraintBuilder:
         )
         self._cache["c7x"] = c7x
         return c7x
+
 
 __all__ = ["RingConstraintBuilder"]

@@ -1,4 +1,3 @@
-
 from typing import List
 
 from structlog import get_logger
@@ -8,7 +7,12 @@ from tsrkit_types import TypedVector
 from jam.preimages import preimages
 from jam.types.block.block import Block
 from jam.types.block.extrinsics.assurances import AssurancesExtrinsic, AvailAssurance
-from jam.types.block.extrinsics.disputes import Culprits, DisputesExtrinsic, Faults, Verdicts
+from jam.types.block.extrinsics.disputes import (
+    Culprits,
+    DisputesExtrinsic,
+    Faults,
+    Verdicts,
+)
 from jam.types.block.extrinsics.guarantees import GuaranteesExtrinsic, ReportGuarantee
 from jam.types.block.extrinsics.preimages import Preimage, PreimagesExtrinsic
 from jam.types.block.extrinsics.tickets import TicketEnvelope
@@ -17,8 +21,10 @@ from jam.types.protocol.core import TimeSlot
 
 logger = get_logger("network")
 
+
 class ExtrinsicStore:
     """Persistent store for extrinsics"""
+
     eg: GuaranteesExtrinsic
     ep: PreimagesExtrinsic
     et: TypedVector[TicketEnvelope]
@@ -31,9 +37,7 @@ class ExtrinsicStore:
         self.et = TypedVector[PreimagesExtrinsic]([])
         self.ea = AssurancesExtrinsic([])
         self.ed = DisputesExtrinsic(
-            verdicts = Verdicts([]),
-            culprits = Culprits([]),
-            faults = Faults([])
+            verdicts=Verdicts([]), culprits=Culprits([]), faults=Faults([])
         )
 
     # ----- EG ----- #
@@ -42,7 +46,11 @@ class ExtrinsicStore:
         Process an incoming report gurantee
         """
         # Find if it already exists in eg, if so, update the signatures(add new ones); ignore old ones
-        logger.info("Storing Report Guarantee", report=report_g.to_json(), hash=Hash.blake2b(report_g.encode()).hex()[:16]+"...")
+        logger.info(
+            "Storing Report Guarantee",
+            report=report_g.to_json(),
+            hash=Hash.blake2b(report_g.encode()).hex()[:16] + "...",
+        )
         index = -1
         for i, g in enumerate(self.eg):
             if g.report == report_g.report:
@@ -66,7 +74,6 @@ class ExtrinsicStore:
         if index == -1:
             logger.warning("Work Report was not collected", report=report_g)
 
-
     # ----- EA ----- #
     def import_assr(self, assr: AvailAssurance):
         """
@@ -82,7 +89,9 @@ class ExtrinsicStore:
             indx = self.ea.index(assr)
             self.ea.pop(indx)
         except ValueError as e:
-            logger.warning("Assurance was not collected", error=e, assurance=assr.to_json())
+            logger.warning(
+                "Assurance was not collected", error=e, assurance=assr.to_json()
+            )
             return
 
     # ----- ET ----- #
@@ -104,7 +113,7 @@ class ExtrinsicStore:
             return
 
     #  ----- ED ----- #
-    def import_disp(self, verdicts:Verdicts,culprits:Culprits,faulters:Faults):
+    def import_disp(self, verdicts: Verdicts, culprits: Culprits, faulters: Faults):
         """
         Process an incoming ticket
         """
@@ -121,7 +130,7 @@ class ExtrinsicStore:
         self.ed.culprits.append(culprits)
         self.ed.faults.append(faulters)
 
-    def em_disp(self, verdicts:Verdicts, culprits:Culprits, faulters:Faults):
+    def em_disp(self, verdicts: Verdicts, culprits: Culprits, faulters: Faults):
         try:
             verd_index = self.ed.verdicts.index(verdicts)
             self.ed.verdicts.pop(verd_index)
@@ -148,9 +157,10 @@ class ExtrinsicStore:
             indx = self.ep.index(pimg)
             self.ep.pop(indx)
         except ValueError as e:
-            logger.warning("Preimage was not collected", error=e, preimage=pimg.to_json())
+            logger.warning(
+                "Preimage was not collected", error=e, preimage=pimg.to_json()
+            )
             return
-
 
     def clear_on_import(self, block: Block):
         # Remove Preimages
@@ -168,5 +178,6 @@ class ExtrinsicStore:
         # TODO: Remove disputes
 
         return
+
 
 ext_store = ExtrinsicStore()

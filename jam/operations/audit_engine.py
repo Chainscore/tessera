@@ -10,12 +10,18 @@ from tsrkit_types.bits import Uint
 from jam.network.node import node
 from jam.types.work.report import WorkReport
 from jam.utils.constants import SLOT_PERIOD, GENESIS_TS
-from jam.audit.tranche import EncodedWR, JudgmentRecord, Tranche, TrancheState, TrancheStore
-
+from jam.audit.tranche import (
+    EncodedWR,
+    JudgmentRecord,
+    Tranche,
+    TrancheState,
+    TrancheStore,
+)
 
 
 # Logger for Auditing module
 logger = get_logger("audit")
+
 
 class AuditEngine(NodeDispatcher):
     """
@@ -32,22 +38,27 @@ class AuditEngine(NodeDispatcher):
             logger.debug("Network not initialized – skipping audit")
             return
 
-        raw_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
-        unaudited_list=TypedVector[WorkReport]([wr for wr in raw_list if wr is not None])
+        raw_list = sample_work_reports_with_nulls(
+            "jam/combine.json", total_items=10, null_count=0
+        )
+        unaudited_list = TypedVector[WorkReport](
+            [wr for wr in raw_list if wr is not None]
+        )
 
         valid_set = TypedVector[WorkReport]([])
         invalid_set = TypedVector[WorkReport]([])
         judgments = Dictionary[EncodedWR, JudgmentRecord]({})
-        initTranche=Tranche(slot_index=Uint[32](time_slot),tranche_index=Uint[32](0))
-        tranche_state=TrancheState(
+        initTranche = Tranche(slot_index=Uint[32](time_slot), tranche_index=Uint[32](0))
+        tranche_state = TrancheState(
             unaudited_list=unaudited_list,
             judgments=judgments,
             valid_set=valid_set,
-            invalid_set=invalid_set)
+            invalid_set=invalid_set,
+        )
 
         # Build a store for this slot's audit tranches
         store = TrancheStore()
-        store.save(initTranche,tranche_state)
+        store.save(initTranche, tranche_state)
 
         # Instantiate the core tranche engine
         engine = TrancheEngine(store)

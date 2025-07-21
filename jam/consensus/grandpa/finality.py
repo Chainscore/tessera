@@ -8,6 +8,7 @@ from jam.types.protocol.crypto import Hash, HeaderHash
 
 logger = get_logger("grandpa")
 
+
 class Finality:
     """
     Instant finality

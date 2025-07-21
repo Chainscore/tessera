@@ -12,8 +12,9 @@ from jam.types import (
     StateRoot,
     OpaqueHash,
     EpochMark,
-    TimeSlot, ValidatorIndex,
-    TicketsMark
+    TimeSlot,
+    ValidatorIndex,
+    TicketsMark,
 )
 
 
@@ -56,7 +57,7 @@ class Header:
 
     def hash(self) -> Bytes[32]:
         return Hash.blake2b(self.encode())
-    
+
     @staticmethod
-    def genesis(path = "dev-spec.json") -> "Header":
+    def genesis(path="dev-spec.json") -> "Header":
         return Header.decode(bytes.fromhex(json.load(open(path))["genesis_header"]))

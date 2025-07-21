@@ -12,6 +12,7 @@ from jam.utils.dummy.dummy_header import create_dummy_header
 
 logger = get_logger("author")
 
+
 @structure
 class Block:
     """Block structure."""
@@ -20,14 +21,17 @@ class Block:
     extrinsic: Extrinsic
 
     @staticmethod
-    def from_random(seed: int = 0, n_et = 3, n_ep = 3, n_ea = 3, n_eg = 3, n_ed = 2) -> "Block":
+    def from_random(seed: int = 0, n_et=3, n_ep=3, n_ea=3, n_eg=3, n_ed=2) -> "Block":
         """
         Create a random block
         """
-        return Block(header=create_dummy_header(), extrinsic=create_dummy_extrinsics(n_et, n_ep, n_ea, n_eg, n_ed))
-    
+        return Block(
+            header=create_dummy_header(),
+            extrinsic=create_dummy_extrinsics(n_et, n_ep, n_ea, n_eg, n_ed),
+        )
+
     @staticmethod
-    def genesis(path = "dev-spec.json") -> "Block":
+    def genesis(path="dev-spec.json") -> "Block":
         return Block(header=Header.genesis(path), extrinsic=Extrinsic.empty())
 
     def load_parent(self, db: RockStore) -> "Block":
@@ -44,7 +48,7 @@ class Block:
         if bytes(header_hash) == bytes(32):
             # Return genesis block
             raise ValueError("Reached end of the chain")
-        
+
         data = db.get(cls.get_storage_key_block(header_hash))
         if data is None:
             raise ValueError("No block found header hash: ", header_hash.hex())
@@ -70,7 +74,12 @@ class Block:
         """
         block_encoded = self.encode()
         hh = self.header.hash()
-        logger.debug("💾 Saving block", header_hash=hh.hex(), slot=self.header.slot, len=len(block_encoded))
+        logger.debug(
+            "💾 Saving block",
+            header_hash=hh.hex(),
+            slot=self.header.slot,
+            len=len(block_encoded),
+        )
 
         # HeaderHash -> Block
         hh_key = self.get_storage_key_block(self.header.hash())

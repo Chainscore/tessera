@@ -37,7 +37,7 @@ class Utils:
 
         return value
 
-    def paged_proof(self, segments: Segments ) -> Segments:
+    def paged_proof(self, segments: Segments) -> Segments:
         """
         Page Proof function P defined in Eqn 14.11
         Compiles Justifications for exported segments
@@ -51,17 +51,21 @@ class Utils:
         """
 
         from jam.merklization.binary_merkle import BMRFunctions
+
         merklizer = BMRFunctions()
 
         subtree_depth = 6
-        page_size = 2 ** subtree_depth
+        page_size = 2**subtree_depth
         page_count = ceil(len(segments) / page_size)
-
 
         pages: Segments = Segments([])
         for x in range(page_count):
-            trace = merklizer.subtree_path(values=segments, page_depth=subtree_depth, index=x).unwrap32()
-            leaves = merklizer.subtree_leaves(values=segments, page_depth=subtree_depth, index=x)
+            trace = merklizer.subtree_path(
+                values=segments, page_depth=subtree_depth, index=x
+            ).unwrap32()
+            leaves = merklizer.subtree_leaves(
+                values=segments, page_depth=subtree_depth, index=x
+            )
 
             proof = trace.encode() + leaves.encode()
             proof_segment = Segment(self.zero_padding(ByteArray(proof), SEGMENT_SIZE))
@@ -80,7 +84,9 @@ class Utils:
 
         return trace, leaves
 
-    def verify_page(self, page: Segment, page_index: int, expected_root: OpaqueHash) -> bool:
+    def verify_page(
+        self, page: Segment, page_index: int, expected_root: OpaqueHash
+    ) -> bool:
         """Function to verify a merkle proof"""
 
         merklizer = BMRFunctions()
@@ -91,7 +97,9 @@ class Utils:
 
         return root == expected_root
 
-    def zero_depth_proof(self, proof: Segment, segment_index: int) -> tuple[Segment, OpaqueHashes]:
+    def zero_depth_proof(
+        self, proof: Segment, segment_index: int
+    ) -> tuple[Segment, OpaqueHashes]:
         """
         Function to convert proof of depth 6 into a proof of depth 0
 
@@ -105,7 +113,7 @@ class Utils:
         merklizer = BMRFunctions()
 
         subtree_depth = 6
-        page_size = 2 ** subtree_depth
+        page_size = 2**subtree_depth
 
         sub_page_index = segment_index % page_size
 

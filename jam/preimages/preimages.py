@@ -31,7 +31,9 @@ class Preimages:
             account = state.delta[preimage.requester]
             # If the preimage to add does not have lookup metadata, throw unneeded error
             hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(hash=hashed_blob, length=BlobLength(len(preimage.blob)))
+            lookup_key = LookupTable(
+                hash=hashed_blob, length=BlobLength(len(preimage.blob))
+            )
             if (
                 account.lookup[lookup_key] is None
                 or len(account.lookup[lookup_key]) != 0
@@ -45,13 +47,15 @@ class Preimages:
             # Add the preimage to the account
             account = state.delta[preimage.requester]
             hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(Bytes[32](hashed_blob), BlobLength(len(preimage.blob)))
+            lookup_key = LookupTable(
+                Bytes[32](hashed_blob), BlobLength(len(preimage.blob))
+            )
 
             account.preimages[hashed_blob] = preimage.blob
             metadata = account.lookup[lookup_key]
             metadata.append(block.header.slot)
             account.lookup[lookup_key] = metadata
-            
+
         return state
 
     @staticmethod

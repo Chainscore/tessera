@@ -11,8 +11,8 @@ from tsrkit_types import Bytes, U32
 from typing import List
 
 
-
 logger = get_logger("nodeops")
+
 
 class AssuranceCollector:
     _collected: List[bool]
@@ -20,19 +20,17 @@ class AssuranceCollector:
     def __init__(self) -> None:
         self._collected = [False] * CORE_COUNT
 
-
     def record_shard_assr(self, core_index: int):
-        self._collected[core_index] = True 
+        self._collected[core_index] = True
         logger.debug("Recorded shard for core", core_index=core_index)
-    
+
     async def run(self, time_slot: int):
         from jam.settings import settings
         from jam.network.node import node
-        pref = Bytes('jam_available', 'utf-8')
 
+        pref = Bytes("jam_available", "utf-8")
 
-
-        from jam.network.protocols.ce_141 import CE141Data,AssuranceDistribution
+        from jam.network.protocols.ce_141 import CE141Data, AssuranceDistribution
         from jam.consensus.grandpa.finality import Finality
 
         try:
@@ -48,12 +46,9 @@ class AssuranceCollector:
             assurance = Assurance(
                 anchor_hash=HeaderHash(header_hash),
                 bitfield=AvailBitField(self._collected),
-                ed25519_signature=Ed25519Signature(signr)
+                ed25519_signature=Ed25519Signature(signr),
             )
-            data = CE141Data(
-                assurance=assurance,
-                len=U32(len(assurance.encode()))
-            )
+            data = CE141Data(assurance=assurance, len=U32(len(assurance.encode())))
             asyncio.create_task(CE141.transmit(node=node, data=data))
         except Exception as e:
             logger.error("Failed to record assurance", time_slot=time_slot)

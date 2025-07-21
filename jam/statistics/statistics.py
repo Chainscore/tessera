@@ -69,7 +69,9 @@ class Statistics:
         for report in available_wrs:
             if report is not None:
                 core_index = report.core_index
-                pi_core[int(core_index)].da_load = Uint(report.package_spec.length) + Uint(
+                pi_core[int(core_index)].da_load = Uint(
+                    report.package_spec.length
+                ) + Uint(
                     SEGMENT_SIZE
                     * math.ceil(report.package_spec.exports_count * 65 / 64)
                 )

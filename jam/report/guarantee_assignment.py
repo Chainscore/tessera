@@ -3,14 +3,20 @@ from typing import Dict, List
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.integers import U32
 from jam.types.protocol.core import CoreIndex
-from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
+from jam.utils.constants import (
+    VALIDATOR_COUNT,
+    CORE_COUNT,
+    EPOCH_LENGTH,
+    ROTATION_PERIOD,
+)
 from math import floor
 from jam.utils.shuffle import shuffle
 from collections import deque
 
 
-def guarantor_assignment(eta,  kappa, lambda_, gamma_k, block_slot, report_slot, tau) -> Dict[CoreIndex, List]:
-
+def guarantor_assignment(
+    eta, kappa, lambda_, gamma_k, block_slot, report_slot, tau
+) -> Dict[CoreIndex, List]:
     """
     Description:
         In this given function take some entropy according to epoch and slot and create mapping between core and validator.
@@ -48,20 +54,24 @@ def guarantor_assignment(eta,  kappa, lambda_, gamma_k, block_slot, report_slot,
 
     # <------------- Entropy for current epoch ------------------>
     epoch_entropy = None
-    validator_keys  = []
+    validator_keys = []
     if report_slot == block_slot:
         epoch_entropy = eta2_post
         for i in kappa_post:
             validator_keys.append(i.ed25519)
 
     # <------------- Entropy for previous rotation in same epoc ------------------>
-    if report_slot != block_slot and floor((int(block_slot) - ROTATION_PERIOD) / EPOCH_LENGTH) == floor(int(block_slot) / EPOCH_LENGTH):
+    if report_slot != block_slot and floor(
+        (int(block_slot) - ROTATION_PERIOD) / EPOCH_LENGTH
+    ) == floor(int(block_slot) / EPOCH_LENGTH):
         epoch_entropy = eta2_post
         for i in kappa_post:
             validator_keys.append(i.ed25519)
 
     # <------------- Entropy for previous rotation but in last epoch ------------------>
-    if report_slot != block_slot and floor((int(block_slot) - ROTATION_PERIOD) / EPOCH_LENGTH) != floor(int(block_slot) / EPOCH_LENGTH):
+    if report_slot != block_slot and floor(
+        (int(block_slot) - ROTATION_PERIOD) / EPOCH_LENGTH
+    ) != floor(int(block_slot) / EPOCH_LENGTH):
         epoch_entropy = eta3_post
         for i in lambda_post:
             validator_keys.append(i.ed25519)

@@ -13,9 +13,9 @@ def serialize(obj: Any) -> bytes:
     if isinstance(obj, int):
         byte_len = (obj.bit_length() + 7) // 8
         if byte_len <= 32:
-            return obj.to_bytes(32, 'little')
+            return obj.to_bytes(32, "little")
         elif byte_len <= 48:
-            return obj.to_bytes(48, 'big')
+            return obj.to_bytes(48, "big")
         else:
             raise ValueError("Integer too large to serialize in 48 bytes")
 
@@ -27,7 +27,7 @@ def serialize(obj: Any) -> bytes:
         else:
             x, y = obj
             # Uncompressed: serialize x, y, and flag
-            flag = b'\x80' if y > (S_PRIME - 1) // 2 else b'\x00'
+            flag = b"\x80" if y > (S_PRIME - 1) // 2 else b"\x00"
             return serialize(x) + serialize(y) + flag
 
     elif isinstance(obj, list):
@@ -40,17 +40,17 @@ def serialize(obj: Any) -> bytes:
     elif isinstance(obj, dict):
         # Handle dictionary (like verifier key)
         result = b""
-        if 'g1' in obj and 'g2' in obj:
+        if "g1" in obj and "g2" in obj:
             # Serialize g1 point
-            result += serialize(obj['g1'])
+            result += serialize(obj["g1"])
             # Handle g2 as a list
-            g2_list = obj['g2']
+            g2_list = obj["g2"]
             for g2_item in g2_list:
                 result += serialize(g2_item)
 
         # Add commitments if present
-        if 'commitments' in obj:
-            commitments = obj['commitments']
+        if "commitments" in obj:
+            commitments = obj["commitments"]
             for commitment in commitments:
                 result += serialize(commitment)
 

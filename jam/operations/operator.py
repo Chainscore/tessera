@@ -14,14 +14,15 @@ from jam.utils.constants import GENESIS_TS
 
 logger = get_logger("nodeops")
 
+
 def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
     if is_bd:
         return [(0, Builder)]
 
     return [
         (0, BlockProducer),
-        (2, AuditEngine), # audit
-        (4, assr_collector), # transmit assurances
+        (2, AuditEngine),  # audit
+        (4, assr_collector),  # transmit assurances
     ]
 
 
@@ -47,7 +48,8 @@ async def operate(is_builder):
         # Schedule tasks to run immediately
         for dispatch in dispatch_fns(is_builder):
             (task_ts, runner) = dispatch
-            if runner: asyncio.create_task(schedule_run(task_ts, runner, ts))
+            if runner:
+                asyncio.create_task(schedule_run(task_ts, runner, ts))
 
         # Move on to next timeslot and sleep
         ts += 1

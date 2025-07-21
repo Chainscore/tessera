@@ -4,6 +4,7 @@ from jam.types.work.report import WorkReport
 
 from jam.work_package.store import DA
 
+
 class AssurancesDA(DA):
     """
     Assurance DA Stores all the assurance
@@ -12,8 +13,9 @@ class AssurancesDA(DA):
     Value: Assurance (Header Hash (Anchor) + Bitfield + Ed25519 Signature)
 
     """
-    def __init__(self, db : RockStore):
-        self.prefix = bytes("ASUR", 'utf-8')
+
+    def __init__(self, db: RockStore):
+        self.prefix = bytes("ASUR", "utf-8")
         self.db = db
 
     # TODO: Fix Assurance Type Later
@@ -21,13 +23,13 @@ class AssurancesDA(DA):
         key = self.prefix + report.core_index.encode()
         self.db.put(key, assurance.encode())
 
-    def get(self, report : WorkReport):
-        key =  self.prefix + report.core_index.encode()
+    def get(self, report: WorkReport):
+        key = self.prefix + report.core_index.encode()
         data = self.db.get(key)
 
         if data is None:
             raise KeyError("Assurance not found in DA")
 
-    def __delete__(self, report : WorkReport) -> None:
+    def __delete__(self, report: WorkReport) -> None:
         key = self.prefix + report.core_index.encode()
         self.db.delete(key)

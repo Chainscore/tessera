@@ -4,7 +4,14 @@ from rockstore import RockStore
 
 from jam.types.protocol.core import ExportsRoot, ErasureRoot
 from jam.types.work.manifest import Segments, ProvedSegments, SegmentIndex
-from jam.types.work.shard import SegmentsShardRoot, SegmentsShard, SegmentShard, ShardIndex, SegShardsDict, SegShardDict
+from jam.types.work.shard import (
+    SegmentsShardRoot,
+    SegmentsShard,
+    SegmentShard,
+    ShardIndex,
+    SegShardsDict,
+    SegShardDict,
+)
 from jam.work_package.store import DA
 
 
@@ -17,7 +24,7 @@ class SegmentsDA(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("SEGS", 'utf-8')
+        self.prefix = bytes("SEGS", "utf-8")
         self.db = db
 
     def put(self, root: ExportsRoot, segments: ProvedSegments) -> None:
@@ -54,14 +61,20 @@ class SegmentShardsDA(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("SSHRD", 'utf-8')
+        self.prefix = bytes("SSHRD", "utf-8")
         self.db = db
 
     def put_batch(self, er_root: ErasureRoot, data: SegShardsDict) -> None:
         key = self.prefix + er_root.encode()
         self.db.put(key, data.encode())
 
-    def put_seg_shard(self, er_root: ErasureRoot, shard_index: ShardIndex, segment_index: SegmentIndex, shard: SegmentShard) -> None:
+    def put_seg_shard(
+        self,
+        er_root: ErasureRoot,
+        shard_index: ShardIndex,
+        segment_index: SegmentIndex,
+        shard: SegmentShard,
+    ) -> None:
         key = self.prefix + er_root.encode()
         data = self.db.get(key)
 
@@ -79,7 +92,9 @@ class SegmentShardsDA(DA):
         ss_dict[shard_index] = s_dict
         self.db.put(key, ss_dict.encode())
 
-    def put(self, er_root: ErasureRoot, shard_index: ShardIndex, shard: SegmentsShard) -> None:
+    def put(
+        self, er_root: ErasureRoot, shard_index: ShardIndex, shard: SegmentsShard
+    ) -> None:
         key = self.prefix + er_root.encode()
         data = self.db.get(key)
 

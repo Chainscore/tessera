@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from typing import Optional, Tuple
@@ -14,8 +13,9 @@ from jam.ring_vrf.ring_proof.constants import (
     Blinding_Base as _TE_BLIND,
 )
 
-_mont_a =29978822694968839326280996386011761570173833766074948509196803838190355340952
+_mont_a = 29978822694968839326280996386011761570173833766074948509196803838190355340952
 _mont_b = 25465760566081946422412445027709227188579564747101592991722834452325077642517
+
 
 class ShortWeierstrassCurve:
     """Encapsulates the Bandersnatch curve in short‑Weierstrass form."""
@@ -39,7 +39,6 @@ class ShortWeierstrassCurve:
     def is_on_curve(cls, pt: Tuple[int, int]) -> bool:
         x, y = pt
         return (y * y - (x * x * x + cls.A * x + cls.B)) % cls.P == 0
-
 
     @classmethod
     def add(cls, P1: Optional[Tuple[int, int]], P2: Optional[Tuple[int, int]]):
@@ -87,7 +86,6 @@ class ShortWeierstrassCurve:
             k >>= 1
         return result
 
-
     @staticmethod
     def _edwards_to_mont(pt: Tuple[int, int]):
         x, y = pt
@@ -98,7 +96,11 @@ class ShortWeierstrassCurve:
     @staticmethod
     def _mont_to_ws(pt: Tuple[int, int]):
         u, v = pt
-        x = (u + _mont_a * ShortWeierstrassCurve._mod_inv(3)) * ShortWeierstrassCurve._mod_inv(_mont_b) % P
+        x = (
+            (u + _mont_a * ShortWeierstrassCurve._mod_inv(3))
+            * ShortWeierstrassCurve._mod_inv(_mont_b)
+            % P
+        )
         y = v * ShortWeierstrassCurve._mod_inv(_mont_b) % P
         return (x, y)
 
@@ -124,7 +126,6 @@ class ShortWeierstrassCurve:
     def to_twisted_edwards(cls, pt: Tuple[int, int]):
         return cls._mont_to_edwards(cls._ws_to_mont(pt))
 
-
     @staticmethod
     def _mod_sqrt(a: int) -> int:
         """Tonelli–Shanks.  Raises if `a` is not a quadratic residue."""
@@ -136,7 +137,8 @@ class ShortWeierstrassCurve:
         # Tonelli–Shanks general case (rarely hit for BN‑field primes)
         q, s = p - 1, 0
         while q & 1 == 0:
-            q >>= 1; s += 1
+            q >>= 1
+            s += 1
         z = 2
         while pow(z, (p - 1) >> 1, p) != p - 1:
             z += 1
@@ -147,7 +149,8 @@ class ShortWeierstrassCurve:
         while t != 1:
             i, tmp = 1, pow(t, 2, p)
             while tmp != 1:
-                tmp = pow(tmp, 2, p); i += 1
+                tmp = pow(tmp, 2, p)
+                i += 1
             b = pow(c, 1 << (m - i - 1), p)
             r = r * b % p
             c = pow(b, 2, p)
@@ -175,9 +178,14 @@ class ShortWeierstrassCurve:
             raise ValueError("invalid compressed point")
         return pt
 
+
 ShortWeierstrassCurve.SEED_POINT = ShortWeierstrassCurve.from_twisted_edwards(_TE_SEED)
-ShortWeierstrassCurve.PADDING_POINT = ShortWeierstrassCurve.from_twisted_edwards(_TE_PADDING)
-ShortWeierstrassCurve.BLINDING_POINT = ShortWeierstrassCurve.from_twisted_edwards(_TE_BLIND)
+ShortWeierstrassCurve.PADDING_POINT = ShortWeierstrassCurve.from_twisted_edwards(
+    _TE_PADDING
+)
+ShortWeierstrassCurve.BLINDING_POINT = ShortWeierstrassCurve.from_twisted_edwards(
+    _TE_BLIND
+)
 
 # print("point:", ShortWeierstrassCurve.SEED_POINT)
 # print("point2:", ShortWeierstrassCurve.PADDING_POINT)
@@ -190,4 +198,3 @@ ShortWeierstrassCurve.BLINDING_POINT = ShortWeierstrassCurve.from_twisted_edward
 __all__ = [
     "ShortWeierstrassCurve",
 ]
-

@@ -15,10 +15,10 @@ from jam.types.work.package import WorkPackageSpec
 from jam.types.work.manifest import SegmentRootLookup
 
 
-
 @structure
 class WorkReport:
     """Work report structure."""
+
     # s
     package_spec: WorkPackageSpec
     # x
@@ -41,7 +41,7 @@ class WorkReport:
         from jam.types.work.package import WorkPackageSpec
         from jam.types.work.manifest import SegmentRootLookup
         from jam.types.work import WorkResults
-        
+
         defaults = {
             "package_spec": WorkPackageSpec.empty(),
             "context": RefineContext.empty(),

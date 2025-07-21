@@ -3,6 +3,4 @@
 from jam.operations.builder import Builder
 
 
-__all__ = [
-    "Builder"
-]
+__all__ = ["Builder"]

@@ -28,7 +28,7 @@ def test_block_production(db_path):
     assert Block.load(TimeSlot(1), db) == block_1
     with pytest.raises(ValueError):
         Block.load(TimeSlot(2), db)
-    #second block
+    # second block
     block_2 = producer._produce_block(state, TimeSlot(2))
     assert block_2.header.slot == TimeSlot(2)
     block_2.save(db)

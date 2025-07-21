@@ -3,7 +3,7 @@ from typing import Optional
 
 from tsrkit_types import Vector, Uint, ByteArray, TypedVector, structure, Bytes
 
-from jam.merklization.binary_merkle import ChoicedHashes, BMRFunctions ,OpaqueHashes
+from jam.merklization.binary_merkle import ChoicedHashes, BMRFunctions, OpaqueHashes
 from jam.types import Hash
 from jam.types.work.manifest import Segments, Segment
 from jam.types.protocol.core import SegmentRoot, OpaqueHash
@@ -12,10 +12,11 @@ from jam.utils.dummy.utils import create_dummy_bytes4104
 from jam.utils.constants import SEGMENT_SIZE
 
 _ZERO_HASH = Bytes[32]([0] * 32)
-_NODE_PREFIX = Bytes('node', 'utf-8')
-_LEAF_PREFIX = Bytes('leaf', 'utf-8')
+_NODE_PREFIX = Bytes("node", "utf-8")
+_LEAF_PREFIX = Bytes("leaf", "utf-8")
 
 NODES: ChoicedHashes = ChoicedHashes([])
+
 
 @structure
 class SegmentVector:
@@ -39,10 +40,8 @@ def zero_padding(value: ByteArray, n: Uint):
 
     return value
 
-def preprocessor_fn(
-    values: TypedVector[Bytes],
-    hash_fn = Hash.blake2b
-) -> OpaqueHashes:
+
+def preprocessor_fn(values: TypedVector[Bytes], hash_fn=Hash.blake2b) -> OpaqueHashes:
     new_values = OpaqueHashes([])
     for val in values:
         new_val = hash_fn(_LEAF_PREFIX + Bytes(val))
@@ -56,10 +55,9 @@ def preprocessor_fn(
 
     return new_values
 
+
 def trace_fn(
-    values: TypedVector[Bytes],
-    index: Uint,
-    hash_fn = Hash.blake2b
+    values: TypedVector[Bytes], index: Uint, hash_fn=Hash.blake2b
 ) -> ChoicedHashes:
     merklizer = BMRFunctions()
     sz = len(values)
@@ -78,14 +76,19 @@ def trace_fn(
         trace.append(node)
 
         new_ind = merklizer._p_i(values, index)
-        trace_nodes = trace_fn(merklizer._p_bool(values, index,True), index - new_ind, hash_fn)
+        trace_nodes = trace_fn(
+            merklizer._p_bool(values, index, True), index - new_ind, hash_fn
+        )
         trace.extend(trace_nodes)
         return trace
+
 
 def test_paged_proof():
     merklizer = BMRFunctions()
 
-    segments : Segments = Segments([Segment(create_dummy_bytes4104()) for _ in range(144)])
+    segments: Segments = Segments(
+        [Segment(create_dummy_bytes4104()) for _ in range(144)]
+    )
     # print("\n")
     # for i, s in enumerate(segments):
     #     print("Segment", i, s.hex())
@@ -114,7 +117,7 @@ def test_paged_proof():
         val = ceil(log2(max(1, len(values))) - int(size))
 
         sz = max(0, val)
-        ind = (2 ** size) * index
+        ind = (2**size) * index
 
         oleaves = preprocessor_fn(values)
 
@@ -126,14 +129,15 @@ def test_paged_proof():
 
         paths.append(path)
 
-
         leaf = merklizer.leaf_page_fn(values=segments, size=Uint(6), index=Uint(x))
         leaves.append(leaf)
 
         merkle_path = bytes(len(path)) + path.encode()
         leaf = bytes(len(leaf)) + leaf.encode()
 
-        segment_proof = Segment(zero_padding(ByteArray(merkle_path + leaf), SEGMENT_SIZE))
+        segment_proof = Segment(
+            zero_padding(ByteArray(merkle_path + leaf), SEGMENT_SIZE)
+        )
         pages.append(segment_proof)
 
     proofs = pages
@@ -154,9 +158,9 @@ def test_paged_proof():
         NODES,
         whole_traces,
         oleaves,
-        single_proofs
+        single_proofs,
     )
 
     from jam.utils.benchmark import write_json
-    write_json("../../../vectors/proofs", vector.to_json())
 
+    write_json("../../../vectors/proofs", vector.to_json())

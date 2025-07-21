@@ -25,6 +25,7 @@ class CE136Data:
             return True
         return False
 
+
 @structure
 class CE136Response:
     len: Uint[32]
@@ -58,7 +59,9 @@ class WorkReportRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE136
 
-    async def transmit(self, node: Node, data: CE136Data, assurers: Assurers = None) -> WorkReport | None:
+    async def transmit(
+        self, node: Node, data: CE136Data, assurers: Assurers = None
+    ) -> WorkReport | None:
         """Request Work Report from Node (server)"""
 
         msg_a = data.work_report_hash.encode()
@@ -73,14 +76,18 @@ class WorkReportRequest(NetworkProtocol):
                     client = node.peer_conn[peer][1]
 
                     # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                    stream_id = client.stream_and_keep_open(
+                        message=self._prefix.encode()
+                    )
 
                     # Append prefix to stream buffer so that we know the stream for handling response
                     client.stream_buffer[stream_id] = self._prefix.encode()
 
                     # Send Messages with their lengths
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    res = await client.close_and_wait(
+                        message=msg_a, stream_id=stream_id
+                    )
 
                     if res is not None:
                         return res
@@ -105,6 +112,7 @@ class WorkReportRequest(NetworkProtocol):
             logger.debug("Fetching Work Report")
             # fetching work report from DA
             from jam.settings import settings
+
             d3l = settings.d3l
             reports_da = ReportsDA(d3l)
             report = reports_da.get(data.work_report_hash)
@@ -120,7 +128,7 @@ class WorkReportRequest(NetworkProtocol):
             logger.info(
                 f"📩 Processed work report query.",
                 report_hash=data.work_report_hash.hex()[:16] + "...",
-                peer=server.peer
+                peer=server.peer,
             )
         except Exception as e:
             logger.error(Code.BAD_RESPONSE, error=str(e))
@@ -136,9 +144,7 @@ class WorkReportRequest(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             logger.info(
-                f"Requested Report received.",
-                peer=client.peer,
-                stream_id=stream_id
+                f"Requested Report received.", peer=client.peer, stream_id=stream_id
             )
 
             # TODO: Save Work Report
@@ -148,4 +154,3 @@ class WorkReportRequest(NetworkProtocol):
         except Exception as e:
             logger.error(Code.BAD_RESPONSE, error=str(e))
             return None
-

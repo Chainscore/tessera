@@ -2,6 +2,7 @@ import asyncio
 import tempfile
 
 import jam.settings
+
 # from jam.state.ghost import GhostState
 # from jam.state.state import setup_state
 import math
@@ -21,6 +22,7 @@ from jam.utils.constants import AUDIT_PERIOD
 
 logger = get_logger("tranche_test")
 
+
 def create_test_tranche_state() -> TrancheState:
     """
     Create a TrancheState with 2 WRs for testing:
@@ -32,10 +34,9 @@ def create_test_tranche_state() -> TrancheState:
 
     unaudited_list = TypedVector[WorkReportHash]([wr1, wr2])
     print("Unaudited Work Reports:", unaudited_list)
-    judgments = Dictionary[WorkReportHash, JudgmentRecord]({
-        wr1: JudgmentRecord.dummy(),
-        wr2: JudgmentRecord.dummy()
-    })
+    judgments = Dictionary[WorkReportHash, JudgmentRecord](
+        {wr1: JudgmentRecord.dummy(), wr2: JudgmentRecord.dummy()}
+    )
 
     valid_set = TypedVector[WorkReportHash]([])
     invalid_set = TypedVector[WorkReportHash]([])
@@ -44,8 +45,9 @@ def create_test_tranche_state() -> TrancheState:
         unaudited_list=unaudited_list,
         judgments=judgments,
         valid_set=valid_set,
-        invalid_set=invalid_set
+        invalid_set=invalid_set,
     )
+
 
 async def test_tranche_engine():
     """
@@ -56,14 +58,13 @@ async def test_tranche_engine():
     - Prints final state for verification
     """
 
-
     slot_index = Uint(0)
     tranche_index = Uint(0)
 
     tranche = Tranche(tranche_index=Uint(tranche_index), slot_index=Uint(slot_index))
-    init_time=datetime.now()
+    init_time = datetime.now()
     initial_state = create_test_tranche_state()
-    store=TrancheStore()
+    store = TrancheStore()
     store.save(tranche, initial_state)
 
     logger.info("✅ Initial TrancheState saved for testing.")
@@ -76,13 +77,18 @@ async def test_tranche_engine():
     updated_tranche_index = math.ceil(
         (datetime.now() - init_time).total_seconds() / AUDIT_PERIOD
     )
-    tranche = Tranche(tranche_index=Uint(updated_tranche_index), slot_index=Uint(slot_index))
+    tranche = Tranche(
+        tranche_index=Uint(updated_tranche_index), slot_index=Uint(slot_index)
+    )
     final_state = store.load(tranche)
 
     print("\n✅ Final TrancheState after TrancheEngine run:")
     print(f"Valid WRs: {[wr.hex()[:16] for wr in final_state.valid_set]}")
     print(f"Invalid WRs: {[wr.hex()[:16] for wr in final_state.invalid_set]}")
-    print(f"Remaining unaudited WRs: {[wr.hex()[:16] for wr in final_state.unaudited_list]}")
+    print(
+        f"Remaining unaudited WRs: {[wr.hex()[:16] for wr in final_state.unaudited_list]}"
+    )
+
 
 if __name__ == "__main__":
     asyncio.run(test_tranche_engine())

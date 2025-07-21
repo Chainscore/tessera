@@ -2,7 +2,6 @@ from math import ceil, log2
 
 
 class Merklizer:
-
     @staticmethod
     def preprocess(values: list[int]):
         new_values = []
@@ -45,7 +44,9 @@ class Merklizer:
         branch = "├── " if is_left else "└── " if is_left is not None else ""
         print(f"{indent}{branch}{label}")
 
-    def print_nodes(self, values: list[int], level: int = 0, is_left: bool = None) -> int:
+    def print_nodes(
+        self, values: list[int], level: int = 0, is_left: bool = None
+    ) -> int:
         sz = len(values)
 
         if sz == 0:
@@ -65,8 +66,8 @@ class Merklizer:
             right = values[mid:]
 
             self._print_tree("NODE", level, is_left)
-            left_node = self.print_nodes(left, level+1, True)
-            right_node = self.print_nodes(right, level+1, False)
+            left_node = self.print_nodes(left, level + 1, True)
+            right_node = self.print_nodes(right, level + 1, False)
 
             node_val = 1 + left_node + right_node
 
@@ -136,7 +137,7 @@ class Merklizer:
         val = ceil(log2(max(1, len(values))) - int(size))
         # print(val)
         sz = max(0, val)
-        ind = (2 ** size) * index
+        ind = (2**size) * index
 
         leaves = self.preprocess(values)
         # print("here", leaves)
@@ -151,15 +152,17 @@ class Merklizer:
 
         page = []
 
-        ind = (2 ** size) * index
-        val = min(ind + 2 ** size, len(values))
+        ind = (2**size) * index
+        val = min(ind + 2**size, len(values))
 
         for i in range(ind, val):
             page.append(values[i])
 
         return page
 
-    def reconstruct_root(self, trace: list[int], index: int, leaf: int, total_nodes: int, curr: int) -> int:
+    def reconstruct_root(
+        self, trace: list[int], index: int, leaf: int, total_nodes: int, curr: int
+    ) -> int:
         if curr == len(trace):
             return leaf
 
@@ -179,11 +182,18 @@ class Merklizer:
 
 from typing import Optional, List, Tuple
 
+
 class TreeNode:
-    def __init__(self, label: str, left: Optional['TreeNode'] = None, right: Optional['TreeNode'] = None):
+    def __init__(
+        self,
+        label: str,
+        left: Optional["TreeNode"] = None,
+        right: Optional["TreeNode"] = None,
+    ):
         self.label = label
         self.left = left
         self.right = right
+
 
 def _display_aux(node: TreeNode) -> Tuple[List[str], int, int, int]:
     # Returns: lines, width, height, middle
@@ -229,10 +239,12 @@ def _display_aux(node: TreeNode) -> Tuple[List[str], int, int, int]:
     lines = [first, second] + [l + " " * w + r for l, r in zipped]
     return lines, lw + rw + w, max(lh, rh) + 2, lw + w // 2
 
+
 def print_tree(node: TreeNode):
     lines, *_ = _display_aux(node)
     for ln in lines:
         print(ln)
+
 
 def node(values: list[int]) -> (int, TreeNode):
     sz = len(values)

@@ -4,7 +4,13 @@ from jam.types.block.extrinsics.tickets import TicketsExtrinsic
 from jam.types.block.extrinsics.preimages import PreimagesExtrinsic
 from jam.types.block.extrinsics.guarantees import GuaranteesExtrinsic
 from jam.types.block.extrinsics.assurances import AssurancesExtrinsic
-from jam.types.block.extrinsics.disputes import DisputesExtrinsic, Culprits, Faults, Verdicts
+from jam.types.block.extrinsics.disputes import (
+    DisputesExtrinsic,
+    Culprits,
+    Faults,
+    Verdicts,
+)
+
 
 @structure
 class Extrinsic:
@@ -23,5 +29,7 @@ class Extrinsic:
             preimages=PreimagesExtrinsic([]),
             guarantees=GuaranteesExtrinsic([]),
             assurances=AssurancesExtrinsic([]),
-            disputes=DisputesExtrinsic(verdicts=Verdicts([]), culprits=Culprits([]), faults=Faults([]))
+            disputes=DisputesExtrinsic(
+                verdicts=Verdicts([]), culprits=Culprits([]), faults=Faults([])
+            ),
         )

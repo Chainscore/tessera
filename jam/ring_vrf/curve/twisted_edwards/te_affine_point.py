@@ -11,6 +11,7 @@ from jam.ring_vrf.curve.e2c import E2C_Variant
 
 from ..point import Point, PointProtocol
 from .te_curve import TECurve
+
 C = TypeVar("C", bound=TECurve)
 
 
@@ -213,12 +214,7 @@ class TEAffinePoint(Point[C]):
         return self.windowed_simultaneous_mult(k1, k2, self, phi, w=2)
 
     def windowed_simultaneous_mult(
-            self,
-            k1: int,
-            k2: int,
-            P1: PointProtocol[C],
-            P2: PointProtocol[C],
-            w: int = 2
+        self, k1: int, k2: int, P1: PointProtocol[C], P2: PointProtocol[C], w: int = 2
     ) -> Self:
         """
         Compute k1 * P1 + k2 * P2 using windowed simultaneous multi-scalar multiplication.
@@ -287,8 +283,8 @@ class TEAffinePoint(Point[C]):
         """
         p = self.curve.PRIME_FIELD
         # These constants should ideally be curve attributes
-        B = 0x52c9f28b828426a561f00d3a63511a882ea712770d9af4d6ee0f014d172510b4
-        C = 0x6cc624cf865457c3a97c6efd6c17d1078456abcfff36f4e9515c806cdf650b3d
+        B = 0x52C9F28B828426A561F00D3A63511A882EA712770D9AF4D6EE0F014D172510B4
+        C = 0x6CC624CF865457C3A97C6EFD6C17D1078456ABCFFF36F4E9515C806CDF650B3D
 
         x, y = self.x, self.y
         y2 = pow(y, 2, p)
@@ -306,7 +302,6 @@ class TEAffinePoint(Point[C]):
 
         return self.__class__(x_a, y_a)
 
-
     def identity_point(self) -> Self:
         """
         Get the identity point (0, 1) of the curve.
@@ -315,7 +310,7 @@ class TEAffinePoint(Point[C]):
             TEAffinePoint: Identity point
         """
         return self.__class__(0, 1)
-    
+
     @classmethod
     def encode_to_curve(cls, alpha_string: bytes, salt: bytes = b"") -> Self:
         if cls.curve.E2C == E2C_Variant.ELL2:
@@ -326,7 +321,9 @@ class TEAffinePoint(Point[C]):
             raise ValueError("Unexpected E2C Variant")
 
     @classmethod
-    def encode_to_curve_hash2_suite(cls, alpha_string: bytes, salt: bytes = b"") -> Self:
+    def encode_to_curve_hash2_suite(
+        cls, alpha_string: bytes, salt: bytes = b""
+    ) -> Self:
         """
         Encode a string to a curve point using Elligator 2.
 
@@ -345,7 +342,7 @@ class TEAffinePoint(Point[C]):
         R = q0 + q1
 
         return R.clear_cofactor()
-    
+
     @classmethod
     def encode_to_curve_tai(cls, alpha_string: bytes, salt: bytes = b"") -> Self:
         """
@@ -360,19 +357,19 @@ class TEAffinePoint(Point[C]):
         """
         ctr = 0
         H = "INVALID"
-        front = b'\x01'
-        back = b'\x00'
+        front = b"\x01"
+        back = b"\x00"
         salt = salt.encode() if isinstance(salt, str) else salt
 
-        suite_string = b'' # cls.curve.SUITE_STRING.encode()
+        suite_string = b""  # cls.curve.SUITE_STRING.encode()
 
         while H == "INVALID" or H == (0, 1):
             ctr_string = ctr.to_bytes(1, "big")
-            hash_input = (suite_string + front + b"" + alpha_string + ctr_string + back)
+            hash_input = suite_string + front + b"" + alpha_string + ctr_string + back
             hash_output = hashlib.sha256(hash_input).digest()
-            H = cls.string_to_point(b'0x02' + hash_output)
+            H = cls.string_to_point(b"0x02" + hash_output)
             if H != "INVALID" and cls.curve.COFACTOR > 1:
-                H = cls.scalar_mul(H,cls.curve.COFACTOR)
+                H = cls.scalar_mul(H, cls.curve.COFACTOR)
             ctr += 1
 
         return H
@@ -436,8 +433,10 @@ class TEAffinePoint(Point[C]):
         """
         Recover x-coordinate from y.
         """
-        lhs = 1 - (y ** 2) % cls.curve.PRIME_FIELD
-        rhs = cls.curve.EdwardsA - (cls.curve.EdwardsD * (y ** 2)) % cls.curve.PRIME_FIELD
+        lhs = 1 - (y**2) % cls.curve.PRIME_FIELD
+        rhs = (
+            cls.curve.EdwardsA - (cls.curve.EdwardsD * (y**2)) % cls.curve.PRIME_FIELD
+        )
         val = cls.curve.mod_inverse(rhs)
         do_sqrt = lhs * val % cls.curve.PRIME_FIELD
         x = cls.curve.mod_sqrt(do_sqrt) % cls.curve.PRIME_FIELD

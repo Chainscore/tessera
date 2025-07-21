@@ -16,6 +16,7 @@ class ValidatorSignature:
 
 ValidatorSignatures = TypedVector[ValidatorSignature]
 
+
 @structure
 class ReportGuarantee:
     """Report guarantee structure."""
@@ -23,5 +24,6 @@ class ReportGuarantee:
     report: WorkReport
     slot: TimeSlot
     signatures: ValidatorSignatures
+
 
 GuaranteesExtrinsic = TypedVector[ReportGuarantee]

@@ -12,4 +12,5 @@ class RefineVector:
     work_rep: WorkReport
     rep_hash: WorkReportHash
 
+
 RefineVectors = TypedVector[RefineVector]

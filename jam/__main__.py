@@ -31,6 +31,7 @@ from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
 
 TIMESLOT = 0
 
+
 async def main(
     genesis_path: str,
     env: str,
@@ -40,7 +41,7 @@ async def main(
     is_validator: bool,
 ) -> None:
     # ---------- SETUP LOGGING ----------
-    genesis_ts = GENESIS_TS         # Actual Genesis time for JAM Common Era
+    genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
     init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
     init_ep = int(init_ts // EPOCH_LENGTH)
 
@@ -49,7 +50,7 @@ async def main(
 
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
-    load_dotenv(env,override=True)
+    load_dotenv(env, override=True)
 
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
@@ -68,17 +69,23 @@ async def main(
         theme=theme,
         node_name=name,
         environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None
+        min_level=getattr(logging, log_level.upper()) if log_level else None,
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+    settings = setup_setting(
+        name=name, port=int(port), seed=int(seed), data_path="data/"
+    )
 
     main_db = settings.main_db
 
     logger.info(
-        "Starting JAM node", name=name, port=port,
-        ts=init_ts, epoch=init_ep, spec=chain_config.name,
+        "Starting JAM node",
+        name=name,
+        port=port,
+        ts=init_ts,
+        epoch=init_ep,
+        spec=chain_config.name,
     )
 
     try:
@@ -91,15 +98,15 @@ async def main(
         update_state(state)
 
         # ----------- SETUP NETWORKING ------------
-        peers = [
-            Peer(data=val)
-            for val in state.kappa
-            if val.metadata.port != port
-        ]
+        peers = [Peer(data=val) for val in state.kappa if val.metadata.port != port]
 
         tsr_node = setup_node(
-            name, int(port), peers, host=str(host),
-            is_bd=is_builder, is_val=is_validator
+            name,
+            int(port),
+            peers,
+            host=str(host),
+            is_bd=is_builder,
+            is_val=is_validator,
         )
 
         # ------------ SET GENESIS BLOCK ------------
@@ -107,7 +114,6 @@ async def main(
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db)
-
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
@@ -126,13 +132,12 @@ async def main(
             #     #
             #     # tg.create_task(AuditProcess.audit_process(newly_avail_wrs=newly_list))
 
-
     except CancelledError:
         logger.info(
             "JAM node shutting down gracefully",
             node_name=name,
             port=port,
-            reason="cancelled_tasks"
+            reason="cancelled_tasks",
         )
 
         # FOR SAVING TEST VECTORS
@@ -148,7 +153,7 @@ async def main(
             "JAM node shutting down gracefully",
             node_name=name,
             port=port,
-            reason="keyboard_interrupt"
+            reason="keyboard_interrupt",
         )
 
     except Exception as e:
@@ -157,7 +162,7 @@ async def main(
             node_name=name,
             port=port,
             error=str(e)[:200],
-            error_type=type(e).__name__
+            error_type=type(e).__name__,
         )
         # Close db connections
         settings.clear()

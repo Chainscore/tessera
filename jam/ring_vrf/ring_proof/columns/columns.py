@@ -6,6 +6,7 @@ from jam.ring_vrf.ring_proof.helpers import Helpers as H
 from jam.ring_vrf.ring_proof.pcs.load_powers import g1_points, g2_points
 from jam.ring_vrf.ring_proof.polynomial.interpolation import poly_interpolate_fft
 from jam.ring_vrf.ring_proof.pcs.kzg import KZG
+
 # from jam.ring_vrf.ring_proof.short_weierstrass.curve import ShortWeierstrassCurve as sw
 
 from jam.ring_vrf.ring_proof.short_weierstrass.banders import TwistedEdwardCurve as TE
@@ -17,7 +18,8 @@ from jam.ring_vrf.ring_proof.constants import (
     Blinding_Base,
     PaddingPoint,
     SeedPoint,
-    MAX_RING_SIZE, SIZE,
+    MAX_RING_SIZE,
+    SIZE,
 )
 
 Scalar = int
@@ -32,11 +34,10 @@ class Column:
     commitment: G1Point | None = None
     size: int = SIZE
 
-
     def interpolate(self, domain_omega: int = OMEGA, prime: int = S_PRIME) -> None:
         """Fill `self.coeffs` from `self.evals` using FFT interpolation."""
         if self.coeffs is None:
-            self.evals+=[0]* (SIZE-len(self.evals))
+            self.evals += [0] * (SIZE - len(self.evals))
             self.coeffs = poly_interpolate_fft(self.evals, domain_omega, prime)
 
     def commit(self, kzg: KZG | None = None) -> None:
@@ -47,12 +48,11 @@ class Column:
             self.commitment = kzg.commit(self.coeffs)
 
 
-
 @lru_cache(maxsize=1)
 def _get_default_kzg() -> KZG:
-
     # Build an SRS with proper Jacobian conversion via the helper.
     from jam.ring_vrf.ring_proof.pcs.kzg import SRS
+
     return KZG(SRS(g1_points, g2_points))
 
 
@@ -62,10 +62,12 @@ class PublicColumnBuilder:
     prime: int = S_PRIME
     omega: int = OMEGA
 
-    def _pad_ring_with_padding_point(self, pk_ring: List[Tuple[int, int]], size: int = MAX_RING_SIZE) -> List[Tuple[int, int]]:
+    def _pad_ring_with_padding_point(
+        self, pk_ring: List[Tuple[int, int]], size: int = MAX_RING_SIZE
+    ) -> List[Tuple[int, int]]:
         """Pad *ring* in‑place with the special padding point until *size*."""
         # padding_sw = sw.from_twisted_edwards(PaddingPoint)
-        padding_sw= PaddingPoint
+        padding_sw = PaddingPoint
         while len(pk_ring) < MAX_RING_SIZE:
             pk_ring.append(padding_sw)
         return pk_ring
@@ -73,14 +75,14 @@ class PublicColumnBuilder:
     def _h_vector(self, blinding_base=Blinding_Base) -> List[Tuple[int, int]]:
         """Return `[2⁰·H, 2¹·H, …]` in short‑Weierstrass coords."""
         # sw_bb = sw.from_twisted_edwards(blinding_base)
-        sw_bb= blinding_base
+        sw_bb = blinding_base
         # print("Blinding Base:",sw_bb)
         return [TE.mul(1 << i, sw_bb) for i in range(self.size)]
 
     def build(self, ring_pk: List[Tuple[int, int]]) -> tuple[Column, Column, Column]:
         """Return (Px, Py, s) columns fully committed."""
-        if len(ring_pk)<MAX_RING_SIZE:
-            ring_pk= self._pad_ring_with_padding_point(ring_pk)
+        if len(ring_pk) < MAX_RING_SIZE:
+            ring_pk = self._pad_ring_with_padding_point(ring_pk)
         # 1. ensure ring size
         h_vec = self._h_vector()
         # print("h_vec_adding", h_vec)
@@ -106,7 +108,6 @@ class PublicColumnBuilder:
         return col_px, col_py, col_s
 
 
-
 @dataclass(slots=True)
 class WitnessColumnBuilder:
     ring_pk: List[Tuple[int, int]]
@@ -126,13 +127,19 @@ class WitnessColumnBuilder:
         bv.append(0)  # padding bit
         return bv
 
-    def _conditional_sum_accumulator(self, b_vector: List[int]) -> tuple[List[int], List[int]]:
+    def _conditional_sum_accumulator(
+        self, b_vector: List[int]
+    ) -> tuple[List[int], List[int]]:
         # seed_sw = sw.from_twisted_edwards(SeedPoint)
-        seed_sw= SeedPoint
+        seed_sw = SeedPoint
 
         acc = [seed_sw]
         for i in range(1, self.size - 3):
-            next_pt = acc[i - 1] if b_vector[i - 1] == 0 else TE.add(acc[i - 1], self.ring_pk[i - 1])
+            next_pt = (
+                acc[i - 1]
+                if b_vector[i - 1] == 0
+                else TE.add(acc[i - 1], self.ring_pk[i - 1])
+            )
             acc.append(next_pt)
         return H.unzip(acc)
 
@@ -141,7 +148,6 @@ class WitnessColumnBuilder:
         for i in range(1, self.size - 3):
             acc.append(acc[i - 1] + b_vector[i - 1] * self.selector_vector[i - 1])
         return acc
-
 
     def build(self) -> tuple[Column, Column, Column, Column]:
         b_vec = self._bits_vector()
@@ -159,14 +165,13 @@ class WitnessColumnBuilder:
             col.commit()
         return tuple(columns)
 
-
     def result(self, Blinding_point):
         """
         input: public key, secret vector and Blinding Base
         output: relation as Result Point
         """
         # sw_H = sw.from_twisted_edwards(Blinding_point)
-        sw_H= Blinding_point
+        sw_H = Blinding_point
         PK_k = self.ring_pk[self.producer_index]
         Result_point = TE.add(PK_k, TE.mul(self.secret_t, sw_H))
         return Result_point
@@ -174,7 +179,7 @@ class WitnessColumnBuilder:
     def result_p_seed(self, result):
         """result plus seed"""
         # res=sw.add(result, sw.from_twisted_edwards(SeedPoint))
-        res= TE.add(result, SeedPoint)
+        res = TE.add(result, SeedPoint)
         return res
 
 
@@ -192,6 +197,3 @@ __all__ = [
     "PublicColumnBuilder",
     "WitnessColumnBuilder",
 ]
-
-
-

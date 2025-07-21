@@ -12,20 +12,17 @@ from jam.types.protocol.merkle import MMR, OptionHash
 
 T = TypeVar("T")
 
+
 class MMRFunctions:
     """General Merklization implementation for Merkle Mountain Ranges as defined in Section E.2"""
 
     def __init__(self):
         super().__init__()
         self._ZERO_HASH = OpaqueHash([0] * 32)
-        self._PEAK_PREFIX = bytes('peak', 'utf-8')
+        self._PEAK_PREFIX = bytes("peak", "utf-8")
 
     @staticmethod
-    def _r(
-        seq: TypedVector[T],
-        ind: Uint,
-        val: T
-    ) -> TypedVector[T]:
+    def _r(seq: TypedVector[T], ind: Uint, val: T) -> TypedVector[T]:
         """
         Helper Function R Implementation as defined in Equation E.8
 
@@ -50,7 +47,7 @@ class MMRFunctions:
         mmr: MMR,
         new_hash: Bytes[32],
         index: Uint,
-        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
+        hash_fn: Optional[Callable[[bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> MMR:
         """
         Helper Function P Implementation as defined in Equation E.8
@@ -89,7 +86,7 @@ class MMRFunctions:
         self,
         mmr: MMR,
         new_hash: Bytes[32],
-        hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b
+        hash_fn: Optional[Callable[[bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> MMR:
         """
         Append Function Implementation as defined in Equation E.8
@@ -125,7 +122,7 @@ class MMRFunctions:
 
         return mmr.encode()
 
-    def super_peak(self, mmr: MMR, flag = True) -> OpaqueHash:
+    def super_peak(self, mmr: MMR, flag=True) -> OpaqueHash:
         """
         MMR Super Peak Function Implementation as defined in Equation E.10
 
@@ -156,4 +153,6 @@ class MMRFunctions:
 
         else:
             val = self.super_peak(MMR(h[:-1]), False)
-            return Hash.keccak256(self._PEAK_PREFIX + bytes(val) + bytes(h[-1].unwrap()))
+            return Hash.keccak256(
+                self._PEAK_PREFIX + bytes(val) + bytes(h[-1].unwrap())
+            )

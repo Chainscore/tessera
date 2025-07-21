@@ -1,20 +1,18 @@
 import sys
 from jam.ring_vrf.ring_proof.constants import OMEGA as omega, D_512 as D, S_PRIME
-from jam.ring_vrf.ring_proof.polynomial.ops import (
-    poly_add, poly_scalar
-)
+from jam.ring_vrf.ring_proof.polynomial.ops import poly_add, poly_scalar
 from jam.ring_vrf.ring_proof.polynomial.ops import poly_evaluate
 from jam.ring_vrf.ring_proof.transcript.phases import phase2_eval_point
 
-class LAggPoly:
 
+class LAggPoly:
     def __init__(self, cur_t, C_q, fixed_cols, witness_res, alphas):
-        self.t, self.zeta= phase2_eval_point(cur_t,C_q)
+        self.t, self.zeta = phase2_eval_point(cur_t, C_q)
         self.zeta_omega = (self.zeta * omega) % S_PRIME
         self.scalar_term = (self.zeta - D[-4]) % S_PRIME
-        self.fs= fixed_cols
-        self.wts= witness_res
-        self.alphas= alphas
+        self.fs = fixed_cols
+        self.wts = witness_res
+        self.alphas = alphas
 
     def evaluate_polys_at_zeta(self):
         self.P_x_zeta = poly_evaluate(self.fs[0].coeffs, self.zeta, S_PRIME)
@@ -29,14 +27,21 @@ class LAggPoly:
         return poly_scalar(self.wts[3].coeffs, self.scalar_term, S_PRIME)
 
     def compute_l2(self):
-        inner = (self.b_zeta * pow((self.acc_x_zeta - self.P_x_zeta) % S_PRIME, 2, S_PRIME)) % S_PRIME
+        inner = (
+            self.b_zeta * pow((self.acc_x_zeta - self.P_x_zeta) % S_PRIME, 2, S_PRIME)
+        ) % S_PRIME
         left = poly_scalar(self.wts[1].coeffs, inner, S_PRIME)
         right = poly_scalar(self.wts[2].coeffs, (1 - self.b_zeta) % S_PRIME, S_PRIME)
         return poly_scalar(poly_add(left, right, S_PRIME), self.scalar_term, S_PRIME)
 
     def compute_l3(self):
-        term1_scalar = (self.b_zeta * ((self.acc_y_zeta - self.P_y_zeta) % S_PRIME) + (1 - self.b_zeta)) % S_PRIME
-        term2_scalar = (self.b_zeta * ((self.acc_x_zeta - self.P_x_zeta) % S_PRIME)) % S_PRIME
+        term1_scalar = (
+            self.b_zeta * ((self.acc_y_zeta - self.P_y_zeta) % S_PRIME)
+            + (1 - self.b_zeta)
+        ) % S_PRIME
+        term2_scalar = (
+            self.b_zeta * ((self.acc_x_zeta - self.P_x_zeta) % S_PRIME)
+        ) % S_PRIME
         term1 = poly_scalar(self.wts[1].coeffs, term1_scalar, S_PRIME)
         term2 = poly_scalar(self.wts[2].coeffs, term2_scalar, S_PRIME)
         return poly_scalar(poly_add(term1, term2, S_PRIME), self.scalar_term, S_PRIME)
@@ -61,16 +66,21 @@ class LAggPoly:
         # return the bundle you want to print later
         # print("Zeta:", self.zeta)
 
-        return self.t, self.zeta, {
-            # "Zeta":self.zeta,
-            "P_x_zeta": self.P_x_zeta,
-            "P_y_zeta": self.P_y_zeta,
-            "s_zeta": self.s_zeta,
-            "b_zeta": self.b_zeta,
-            "acc_ip_zeta": self.acc_ip_zeta,
-            "acc_x_zeta": self.acc_x_zeta,
-            "acc_y_zeta": self.acc_y_zeta,
-            # "l_agg_zeta_omega": l_agg_zeta_omega,
-        }, l_agg, self.zeta_omega, l_agg_zeta_omega
-
-
+        return (
+            self.t,
+            self.zeta,
+            {
+                # "Zeta":self.zeta,
+                "P_x_zeta": self.P_x_zeta,
+                "P_y_zeta": self.P_y_zeta,
+                "s_zeta": self.s_zeta,
+                "b_zeta": self.b_zeta,
+                "acc_ip_zeta": self.acc_ip_zeta,
+                "acc_x_zeta": self.acc_x_zeta,
+                "acc_y_zeta": self.acc_y_zeta,
+                # "l_agg_zeta_omega": l_agg_zeta_omega,
+            },
+            l_agg,
+            self.zeta_omega,
+            l_agg_zeta_omega,
+        )

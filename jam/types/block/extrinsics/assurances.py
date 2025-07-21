@@ -20,8 +20,10 @@ class AvailAssurance:
     signature: Ed25519Signature
 
     def __repr__(self):
-        return (f"Assurance(anchor={self.anchor.hex()}, bitfield={self.bitfield}, "
-                f"validator_index={self.validator_index}, sign={self.signature.hex()})")
+        return (
+            f"Assurance(anchor={self.anchor.hex()}, bitfield={self.bitfield}, "
+            f"validator_index={self.validator_index}, sign={self.signature.hex()})"
+        )
 
 
 AssurancesExtrinsic = TypedVector[AvailAssurance]

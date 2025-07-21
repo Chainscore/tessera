@@ -23,9 +23,13 @@ def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
 
 
 class RecentHistory:
-
     @staticmethod
-    def transition(state: Sigma, block: Block, accumulate_root = Bytes[32]([0] * 32), header_hash=None) -> Sigma:
+    def transition(
+        state: Sigma,
+        block: Block,
+        accumulate_root=Bytes[32]([0] * 32),
+        header_hash=None,
+    ) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
         Includes 3 steps
@@ -74,7 +78,9 @@ class RecentHistory:
 
         # Length Check
         if len(beta) > RECENT_HISTORY_SIZE:
-            raise ValueError("Invalid beta length, must be equal to RECENT_HISTORY_SIZE")
+            raise ValueError(
+                "Invalid beta length, must be equal to RECENT_HISTORY_SIZE"
+            )
 
         # Step 2
         last: MMR = MMR([])
@@ -88,7 +94,7 @@ class RecentHistory:
             Hash.blake2b(block.header.encode()) if header_hash is None else header_hash,
             last,
             Bytes[32]([0] * 32),
-            package(block.extrinsic.guarantees)
+            package(block.extrinsic.guarantees),
         )
 
         # TODO: Genesis Unclear

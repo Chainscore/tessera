@@ -1,8 +1,10 @@
 from jam.error import JamError
 from tsrkit_types.enum import Enum
 
+
 class ReportingError(JamError):
     ...
+
 
 class ReportingErrorCode(Enum):
     """Error codes for the Reporting"""
@@ -26,9 +28,9 @@ class ReportingErrorCode(Enum):
     FUTURE_REPORT_SLOT = "future_report_slot"
     INSUFFICIENT_GUARANTEE = "insufficient_guarantees"
     SERVICE_ITEM_GAS_TOO_LOW = "service_item_gas_too_low"
-    SEGMENT_ROOT_LOOKUP_INVALID= "segment_root_lookup_invalid"
-    WORK_REPORT_GAS_TOO_HIGH= "work_report_gas_too_high"
-    REPORT_EPOCH_BEFORE_LAST="report_epoch_before_last"
+    SEGMENT_ROOT_LOOKUP_INVALID = "segment_root_lookup_invalid"
+    WORK_REPORT_GAS_TOO_HIGH = "work_report_gas_too_high"
+    REPORT_EPOCH_BEFORE_LAST = "report_epoch_before_last"
     WORK_REPORT_TOO_BIG = "work_report_too_big"
     WRONG_ASSIGNMENT = "wrong_assignment"
     BAD_SIGNATURE = "bad_signature"

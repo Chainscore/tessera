@@ -10,7 +10,12 @@ from aioquic.quic.connection import QuicConnection, NetworkAddress
 from aioquic.quic.configuration import QuicConfiguration, SMALLEST_MAX_DATAGRAM_SIZE
 from aioquic.tls import SessionTicketHandler, SessionTicketFetcher
 from aioquic.buffer import Buffer
-from aioquic.quic.packet import QuicPacketType, encode_quic_retry, encode_quic_version_negotiation, pull_quic_header
+from aioquic.quic.packet import (
+    QuicPacketType,
+    encode_quic_retry,
+    encode_quic_version_negotiation,
+    pull_quic_header,
+)
 
 from jam.network.base.quic import QuicProtocol as QuicConnectionProtocol
 
@@ -171,7 +176,7 @@ async def serve(
     session_ticket_handler: Optional[SessionTicketHandler] = None,
     retry: bool = False,
     stream_handler: QuicStreamHandler = None,
-    sock = None
+    sock=None,
 ) -> QuicServer:
     """
     Start a QUIC server at the given `host` and `port`.

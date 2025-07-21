@@ -27,7 +27,7 @@ class Assurances:
     def transition(state: Sigma, block: Block) -> (Sigma, List):
         """
         Process the assurances extrinsic.
-        
+
         Args:
             state: The current state of the chain.
             block: The block to process.
@@ -89,7 +89,11 @@ class Assurances:
                 if core_assurances[i] > super_majority:
                     newly_avail_reports.append(rho[i].unwrap().report)
                     rho[i] = OptionalWorkReportState(Null)
-                if core_assurances[i] > super_majority or block.header.slot >= rho[i].unwrap().timeout + UNAVAILABLE_WORK_EXPIRY:
+                if (
+                    core_assurances[i] > super_majority
+                    or block.header.slot
+                    >= rho[i].unwrap().timeout + UNAVAILABLE_WORK_EXPIRY
+                ):
                     rho[i] = OptionalWorkReportState(Null)
 
         state.rho = rho

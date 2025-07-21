@@ -15,15 +15,26 @@ from jam.utils.constants import (
     SIGNING_CONTEXTS,
     TICKET_SUBMISSION_END,
     TICKET_ENTRIES_PER_VALIDATOR,
-    MAX_TICKETS_PER_EXTRINSIC
+    MAX_TICKETS_PER_EXTRINSIC,
 )
-from jam.types.protocol.crypto import BandersnatchPublic, BandersnatchRingVrfSignature, BandersnatchVrfSignature, BlsPublic, Ed25519Public, Hash, Entropy
+from jam.types.protocol.crypto import (
+    BandersnatchPublic,
+    BandersnatchRingVrfSignature,
+    BandersnatchVrfSignature,
+    BlsPublic,
+    Ed25519Public,
+    Hash,
+    Entropy,
+)
 from jam.ring_vrf.ietf.ietf import IETF_VRF
-from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
+from jam.ring_vrf.curve.specs.bandersnatch import (
+    BandersnatchPoint,
+    Bandersnatch_TE_Curve,
+)
 from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData
 from jam.types.protocol.epoch import MinValidatorData, ValidatorArray, EpochMark
-from dot_ring.vrf.ring.ring_vrf import RingVrf 
+from dot_ring.vrf.ring.ring_vrf import RingVrf
 from py_ark_vrf import PublicKey
 
 logger = get_logger("import")
@@ -38,7 +49,9 @@ class Safrole:
         )
 
     @staticmethod
-    def verify_vrf(message: bytes, ring_root: GammaZ, proof: BandersnatchRingVrfSignature) -> bool:
+    def verify_vrf(
+        message: bytes, ring_root: GammaZ, proof: BandersnatchRingVrfSignature
+    ) -> bool:
         # return RingVrf.ring_vrf_proof_verify(message, ring_root, proof)
         return True
 
@@ -74,14 +87,16 @@ class Safrole:
         if new_epoch > old_epoch:
             # 4.5. Empty the ticket acc for upcoming epoch
             gamma.a = GammaA([])
-        
+
         # 3. Ticket Accumulation
-        ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
+        ticket_submission_active = (
+            block.header.slot % EPOCH_LENGTH
+        ) < TICKET_SUBMISSION_END
         # Process the tickets before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
         # TEST: We removed jump == 0 here bc we also allow tickets to be introduced in an epoch's new slot
         if ticket_submission_active and len(block.extrinsic.tickets) > 0:
             # Validate extrinsics
-            Safrole.ensure_valid_ticket_extrinsics(block) 
+            Safrole.ensure_valid_ticket_extrinsics(block)
             # Accumulate them in gamma.a
             gamma.a += [
                 TicketBody(
@@ -93,22 +108,35 @@ class Safrole:
             gamma.a = GammaA(gamma.a[:EPOCH_LENGTH])
             # Check for duplicates
             if len(gamma.a) != len(list(set(gamma.a))):
-                raise SafroleError(SafroleErrorCode.DUPLICATE_TICKET, "Duplicate tickets are not allowed")
+                raise SafroleError(
+                    SafroleErrorCode.DUPLICATE_TICKET,
+                    "Duplicate tickets are not allowed",
+                )
         # We never expect ticket.py after TICKET_SUBMISSION_END
         if not ticket_submission_active and len(block.extrinsic.tickets) > 0:
-            raise SafroleError(SafroleErrorCode.UNEXPECTED_TICKET, "Tickets are not allowed after TICKET_SUBMISSION_END")
+            raise SafroleError(
+                SafroleErrorCode.UNEXPECTED_TICKET,
+                "Tickets are not allowed after TICKET_SUBMISSION_END",
+            )
 
         # 4. Epoch transition
         if new_epoch > old_epoch:
             # 4.1. Rotate validators
             state.lambda_ = Lambda_(state.kappa)
             state.kappa = Kappa(gamma.k)
-            filtered_validators=[]
+            filtered_validators = []
 
             for k in state.iota:
                 if k.ed25519 in state.psi.offenders:
                     # Offender found, replace with default ValidatorData
-                    filtered_validators.append(ValidatorData(bandersnatch=BandersnatchPublic(32), ed25519=Ed25519Public(32), bls=BlsPublic(144), metadata=Bytes[128](128)))
+                    filtered_validators.append(
+                        ValidatorData(
+                            bandersnatch=BandersnatchPublic(32),
+                            ed25519=Ed25519Public(32),
+                            bls=BlsPublic(144),
+                            metadata=Bytes[128](128),
+                        )
+                    )
                 else:
                     # Not an offender, keep the original validator data
                     filtered_validators.append(k)
@@ -130,16 +158,26 @@ class Safrole:
                 gamma.s = GammaS(GammaSTickets(Safrole.outside_in(state.gamma.a)))
             # Else use the fallback mechanism
             else:
-                logger.warning("Falling to Fallback mode", tickets_collected=len(state.gamma.a))
+                logger.warning(
+                    "Falling to Fallback mode", tickets_collected=len(state.gamma.a)
+                )
                 # Else fallback: use bandersnatch keys
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
                 # 4. 4. Update ring root using gamma k
-                gamma.z = GammaZ(Safrole.compute_ring_root([k.bandersnatch for k in state.gamma.k]))
+                gamma.z = GammaZ(
+                    Safrole.compute_ring_root([k.bandersnatch for k in state.gamma.k])
+                )
 
         for ticket in block.extrinsic.tickets:
             # Signature must be valid Ring-VRF proof
-            if not Safrole.verify_vrf(SIGNING_CONTEXTS["ticket_seal"] + state.eta[2] + ticket.attempt.encode(), gamma.z, ticket.signature):
+            if not Safrole.verify_vrf(
+                SIGNING_CONTEXTS["ticket_seal"]
+                + state.eta[2]
+                + ticket.attempt.encode(),
+                gamma.z,
+                ticket.signature,
+            ):
                 raise SafroleError(
                     SafroleErrorCode.BAD_TICKET_PROOF,
                     f"Ticket {ticket} VRF Proof is invalid",
@@ -147,12 +185,10 @@ class Safrole:
         # 2. Accumulate entropy
         # Use entropy coming from vrf output of Hv once we have valid seals generated
         if int.from_bytes(entropy) > 0:
-            eta[0] = Hash.blake2b(
-                bytes(state.eta[0]) + bytes(entropy)
-            )
+            eta[0] = Hash.blake2b(bytes(state.eta[0]) + bytes(entropy))
             logger.debug("New Eta[0]", eta=eta[0].hex())
         state.eta = eta
-        
+
         state.gamma = gamma
         return state
 
@@ -165,7 +201,6 @@ class Safrole:
         for ticket in block.extrinsic.tickets:
             Safrole.ensure_valid_attempt(ticket)
         Safrole.ensure_valid_tickets_count_before_epoch_end(block)
-        
 
     @staticmethod
     def ensure_tickets_order(tickets: TicketsExtrinsic):
@@ -185,8 +220,9 @@ class Safrole:
                 SafroleErrorCode.BAD_TICKET_ORDER,
                 "Tickets are not in sorted order by VRF output",
             )
+
     # Custom for equ 6.30 check
-    
+
     # Process the ticket.py before TICKET_SUBMISSION_END of the epoch
     @staticmethod
     def ensure_valid_tickets_count_before_epoch_end(block: Block):
@@ -195,7 +231,6 @@ class Safrole:
                 SafroleErrorCode.BAD_TICKET_COUNT,
                 f"Tickets count {len(block.extrinsic.tickets)} is invalid",
             )
-
 
     @staticmethod
     def ensure_valid_attempt(ticket: TicketEnvelope):
@@ -230,7 +265,7 @@ class Safrole:
             val_key = validators[int(index) % len(validators)].bandersnatch
             fallback.append(val_key)
         return GammaS(GammaSFallback(fallback))
-    
+
     @staticmethod
     def outside_in(values: list) -> list:
         """
@@ -238,7 +273,7 @@ class Safrole:
         https://graypaper.fluffylabs.dev/#/68eaa1f/0ea8020ebb02?v=0.6.4
         """
         ret = []
-        fwd = values 
+        fwd = values
         bwd = values[::-1]
         for i in range(len(values)):
             if i % 2:
@@ -258,9 +293,12 @@ class Safrole:
         - We have to be in the same epoch
         """
         if (
-            (len(state.gamma.a) == EPOCH_LENGTH) and 
-            (state.tau % EPOCH_LENGTH > TICKET_SUBMISSION_END and TICKET_SUBMISSION_END <= slot % EPOCH_LENGTH) and
-            (slot // EPOCH_LENGTH == state.tau // EPOCH_LENGTH)
+            (len(state.gamma.a) == EPOCH_LENGTH)
+            and (
+                state.tau % EPOCH_LENGTH > TICKET_SUBMISSION_END
+                and TICKET_SUBMISSION_END <= slot % EPOCH_LENGTH
+            )
+            and (slot // EPOCH_LENGTH == state.tau // EPOCH_LENGTH)
         ):
             return Option[TicketsMark](TicketsMark(Safrole.outside_in(state.gamma.a)))
         else:
@@ -274,13 +312,19 @@ class Safrole:
         - Ensure we are moving to a new epoch
         """
         if slot // EPOCH_LENGTH > state.tau // EPOCH_LENGTH:
-            return Option[EpochMark](EpochMark(
-                entropy=Entropy(state.eta[0]),
-                tickets_entropy=Entropy(state.eta[1]),
-                validators=ValidatorArray([MinValidatorData(
-                    bandersnatch=val.bandersnatch,
-                    ed25519=val.ed25519
-                ) for val in state.gamma.k])
-            ))
+            return Option[EpochMark](
+                EpochMark(
+                    entropy=Entropy(state.eta[0]),
+                    tickets_entropy=Entropy(state.eta[1]),
+                    validators=ValidatorArray(
+                        [
+                            MinValidatorData(
+                                bandersnatch=val.bandersnatch, ed25519=val.ed25519
+                            )
+                            for val in state.gamma.k
+                        ]
+                    ),
+                )
+            )
         else:
             return Option[EpochMark](Null)

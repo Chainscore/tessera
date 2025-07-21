@@ -3,7 +3,13 @@ import hashlib
 from sympy.integrals.risch import residue_reduce_to_basic
 from tsrkit_types.integers import Int
 
-from jam.types import WorkPackageSpec, RefineContext, WorkResult, WorkExecResult, WorkReport
+from jam.types import (
+    WorkPackageSpec,
+    RefineContext,
+    WorkResult,
+    WorkExecResult,
+    WorkReport,
+)
 from jam.types.work import RefineLoad
 from jam.types.work.report import WorkReport, WorkReportHash
 from jam.types.work.package import WorkPackageBundle
@@ -11,7 +17,6 @@ from jam.types.work.package import WorkPackage
 from tsrkit_types import TypedVector, Option, U32, U16, Dictionary, U64, Bytes, Null
 
 from tsrkit_types import Null
-
 
 
 from typing import List, Tuple, cast
@@ -36,7 +41,10 @@ import random
 from typing import List, Optional, cast
 from tests.unit.wp.types import RefineVectors, RefineVector, WorkReport
 
-def sample_work_reports_with_nulls(filepath: str, total_items: int = 10, null_count: int = 3) -> List[Option[WorkReport]]:
+
+def sample_work_reports_with_nulls(
+    filepath: str, total_items: int = 10, null_count: int = 3
+) -> List[Option[WorkReport]]:
     # Load JSON file
     with open(filepath, "r") as f:
         data = json.load(f)
@@ -57,7 +65,6 @@ def sample_work_reports_with_nulls(filepath: str, total_items: int = 10, null_co
 
     # final_report : List[Option[WorkReport]] = reports
 
-
     return reports
 
 
@@ -67,8 +74,8 @@ def sample_work_reports_with_nulls(filepath: str, total_items: int = 10, null_co
 import json
 from typing import Any, Optional
 
-def get_work_package_by_rep_hash(filepath: str, rep_hash: WorkReportHash):
 
+def get_work_package_by_rep_hash(filepath: str, rep_hash: WorkReportHash):
     cnt = 0
     # Load JSON from the given file path
     with open(filepath, "r") as f:
@@ -77,8 +84,8 @@ def get_work_package_by_rep_hash(filepath: str, rep_hash: WorkReportHash):
 
     # Iterate through the list and find matching rep_hash
     for vector in refine_vectors:
-        cnt = cnt +1
-        print("COUNT COUNT COUNT COUNT TO GET SEE THAT REPORT ON COMBINE",cnt)
+        cnt = cnt + 1
+        print("COUNT COUNT COUNT COUNT TO GET SEE THAT REPORT ON COMBINE", cnt)
         vector = cast(RefineVector, vector)
         if vector.rep_hash == rep_hash:
             cnt = 0
@@ -87,20 +94,10 @@ def get_work_package_by_rep_hash(filepath: str, rep_hash: WorkReportHash):
     # If not found
     return Null
 
+
 #
 # result = get_work_package_by_rep_hash("combine.json", "dc71f2c6f1d2ce6f3cce7362b143aa1939de5d59cc3c042e26e9d1af4f17fe76")
 # print(result)
-
-
-
-
-
-
-
-
-
-
-
 
 
 # newly_avail_wrs = [
@@ -114,6 +111,3 @@ def get_work_package_by_rep_hash(filepath: str, rep_hash: WorkReportHash):
 #           WorkReport(package_spec=WorkPackageSpec(hash=b'y*yi\xd0%\xc3\x04\xfcj\x8aq$\x8a\xdb\xa3|\xe4\xe8\xde\xd9\xea8\xd2B\xab\x02~\xa9\x88M\x7f', length=U32(8597), erasure_root=b'v\xe7|\x12\n\x0f\xf5n)\xcd\xcf\xc5N\x18-\xec\xde\x1e\xfa\xd8\xbe-\x04Y\xb7\xc1xz"\x84m\x9b', exports_root=b'k\xa2I\x0fRR\xed\xe3\xa7Q\x0eR[X\x8b\xfa\xf6M\x81%\xbf0S\xdaU\x86\xf5\xc1\x1a\xc3&\x94', exports_count=U16(1)), context=RefineContext(anchor=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', state_root=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', beefy_root=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', lookup_anchor=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', lookup_anchor_slot=U32(0), prerequisites=TypedVector[Bytes[32]]([])), core_index=Int(1), authorizer_hash=b'+h\xb2\xdd\x11\x14\x8f\xe0\xdc\x0f\xa8\xb9$\x11\x96$\xfa\xf0\x98\x93\x1bcM\x14\x99"JO\x15\x1d&\n', auth_output=b'\x01', segment_root_lookup=Dictionary({}), results=TypedVector[WorkResult]([WorkResult(service_id=U32(1), code_hash=b's\x8b\x9a\xff:\xcb\xcc\xabvnE\xcaN\xe1\x1d\x1d\xb9c\xca\xd1|\x9b\x931\xb2\xdaK\x10\xba@\xa8\x94', payload_hash=b'\xad\x83\xe1\x97-\xd0\xa6\x04\xeb\xe9\x85|\xad\xf9\x0f\x9a\x96\xc3,\xf4|{\x82\xc8\x04\xfb\xe8=\x0e\xaa\xf0\xaf', accumulate_gas=U64(1000), result=WorkExecResult(b''), refine_load=RefineLoad(gas_used=Int(49), imports=Int(2), extrinsic_count=Int(0), extrinsic_size=Int(0), exports=Int(1)))]), auth_gas_used=Int(7)),
 #           WorkReport(package_spec=WorkPackageSpec(hash=b"T .+\x8f\x17Q1\xce%\xf8v\x1f\x04F%\xa2\xf83\xfaH,\xfe\xb6A'\xa3\x05\x13\x80gr", length=U32(253), erasure_root=b'E\x1fn\x91\xda\xf0\x87F\xa3\x87i -\xdf=+\xde\xb9\xb6ha+@g\xff\x98\xe4\xb2|\xe7\xcb\xa5', exports_root=b'<\xf9\xb7\xc0\x11\xa5,\xcd[%\x13\xc6\x8c\xde#\xeb\xa2\x07Hst\xb0tt-\xa4\x13\xd9\x05&;\x91', exports_count=U16(1)), context=RefineContext(anchor=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', state_root=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', beefy_root=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', lookup_anchor=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', lookup_anchor_slot=U32(0), prerequisites=TypedVector[Bytes[32]]([])), core_index=Int(1), authorizer_hash=b'\x9e\x81\x89@\x903j\x7f\xfd\xc2\x7f\xd7\x8d\xd3\xcdz\x16\xa3>D\xb1\xa2\x9a\x0b\xf4\x02cm\x93&\x878', auth_output=b'\x01', segment_root_lookup=Dictionary({}), results=TypedVector[WorkResult]([WorkResult(service_id=U32(1), code_hash=b's\x8b\x9a\xff:\xcb\xcc\xabvnE\xcaN\xe1\x1d\x1d\xb9c\xca\xd1|\x9b\x931\xb2\xdaK\x10\xba@\xa8\x94', payload_hash=b'\xad\x83\xe1\x97-\xd0\xa6\x04\xeb\xe9\x85|\xad\xf9\x0f\x9a\x96\xc3,\xf4|{\x82\xc8\x04\xfb\xe8=\x0e\xaa\xf0\xaf', accumulate_gas=U64(1000), result=WorkExecResult(b''), refine_load=RefineLoad(gas_used=Int(49), imports=Int(0), extrinsic_count=Int(0), extrinsic_size=Int(0), exports=Int(1)))]), auth_gas_used=Int(7)),
 #           WorkReport(package_spec=WorkPackageSpec(hash=b'\xba\xc8\x06\xa0\xee\xa5!E@\xee\xfan\x1d\xb4\x9fn1k\xd05\xc2\xc8\xbc\xe7\x10\xb0>r\xb6>\x16\xec', length=U32(4425), erasure_root=b"\xc2\xdd\x17\xe3L\rA\xdc\xf07\x871=oXo'`\x14{\x00\xfc\xa5\x11\x15\xf8\xc6\x9d\xed\x98\xfa\xb8", exports_root=b'k\xa2I\x0fRR\xed\xe3\xa7Q\x0eR[X\x8b\xfa\xf6M\x81%\xbf0S\xdaU\x86\xf5\xc1\x1a\xc3&\x94', exports_count=U16(1)), context=RefineContext(anchor=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', state_root=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', beefy_root=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', lookup_anchor=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', lookup_anchor_slot=U32(0), prerequisites=TypedVector[Bytes[32]]([])), core_index=Int(1), authorizer_hash=b'*\xb9\xcf\xfa\xa2\xec;/\xb5o\xf2\x137Q\xfd\xb5=\xa7z\x86\x86\xa9\xb9\xfe\xaa\xfb\x16\xaf\xf5\xf5U\xe1', auth_output=b'\x01', segment_root_lookup=Dictionary({}), results=TypedVector[WorkResult]([WorkResult(service_id=U32(1), code_hash=b's\x8b\x9a\xff:\xcb\xcc\xabvnE\xcaN\xe1\x1d\x1d\xb9c\xca\xd1|\x9b\x931\xb2\xdaK\x10\xba@\xa8\x94', payload_hash=b'\xad\x83\xe1\x97-\xd0\xa6\x04\xeb\xe9\x85|\xad\xf9\x0f\x9a\x96\xc3,\xf4|{\x82\xc8\x04\xfb\xe8=\x0e\xaa\xf0\xaf', accumulate_gas=U64(1000), result=WorkExecResult(b''), refine_load=RefineLoad(gas_used=Int(49), imports=Int(1), extrinsic_count=Int(0), extrinsic_size=Int(0), exports=Int(1)))]), auth_gas_used=Int(7))]
-
-
-

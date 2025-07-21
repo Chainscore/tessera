@@ -24,7 +24,7 @@ async def connect(
     token_handler: Optional[QuicTokenHandler] = None,
     wait_connected: bool = True,
     local_port: int = 0,
-    sock = None,
+    sock=None,
 ) -> AsyncGenerator[QuicConnectionProtocol, None]:
     """
     Connect to a QUIC server at the given `host` and `port`.
@@ -111,4 +111,3 @@ async def connect(
 
     except Exception as e:
         print("ERROR CLIENT CONNECTION", e)
-

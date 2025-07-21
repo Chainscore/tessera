@@ -39,6 +39,7 @@ class Hash:
     def sha512(data: bytes) -> Bytes[64]:
         """SHA512 hash function"""
         from hashlib import sha512
+
         if not isinstance(data, bytes):
             data = bytes(data)
         return Bytes[64](sha512(data).digest())

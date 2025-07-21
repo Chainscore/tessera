@@ -18,9 +18,27 @@ from tsrkit_types.integers import U16, U8, Uint
 
 from jam.logging import setup_logging
 from jam.network.base.certificate import generate_san
-from jam.types import WorkReport, WorkPackage, Authorizer, RefineContext, ImportSpec, ExtrinsicSpec, WorkItem, \
-    OpaqueHash, WorkPackageSpec, WorkResult, WorkExecResult, WorkReportHash, Hash, HeaderHash, StateRoot, BeefyRoot, \
-    WorkPackageHash, ErasureRoot, ExportsRoot
+from jam.types import (
+    WorkReport,
+    WorkPackage,
+    Authorizer,
+    RefineContext,
+    ImportSpec,
+    ExtrinsicSpec,
+    WorkItem,
+    OpaqueHash,
+    WorkPackageSpec,
+    WorkResult,
+    WorkExecResult,
+    WorkReportHash,
+    Hash,
+    HeaderHash,
+    StateRoot,
+    BeefyRoot,
+    WorkPackageHash,
+    ErasureRoot,
+    ExportsRoot,
+)
 from jam.types.work import RefineLoad
 from jam.utils.chainspec import chain_config
 
@@ -52,6 +70,7 @@ from jam.work_package.stores.reports import ReportsDA
 # Logger for Node test
 logger = get_logger("test")
 
+
 async def run_node(
     genesis_path: str,
     env: str,
@@ -59,7 +78,7 @@ async def run_node(
     theme: str,
     is_builder: bool,
     is_validator: bool,
-    node_task
+    node_task,
 ):
     """Main fn to start the node"""
     # ---------- SETUP LOGGING ----------
@@ -87,11 +106,13 @@ async def run_node(
         theme=theme,
         node_name=name,
         environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None
+        min_level=getattr(logging, log_level.upper()) if log_level else None,
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+    settings = setup_setting(
+        name=name, port=int(port), seed=int(seed), data_path="data/"
+    )
 
     main_db = settings.main_db
 
@@ -104,7 +125,7 @@ async def run_node(
         spec=chain_config.name,
         environment=environment,
         is_builder=is_builder,
-        is_validator=is_validator
+        is_validator=is_validator,
     )
 
     try:
@@ -114,11 +135,7 @@ async def run_node(
         state.store.disable_cache()
         update_state(state)
 
-        peers = [
-            Peer(data=val)
-            for val in state.kappa
-            if val.metadata.port != port
-        ]
+        peers = [Peer(data=val) for val in state.kappa if val.metadata.port != port]
 
         ip = IPAddress.from_str(host)
 
@@ -133,7 +150,7 @@ async def run_node(
                 BlsPublic(bytes(144)),
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2 ** 16 - 1),
+                    protocol=Uint[16](2**16 - 1),
                     host=ip,
                     port=U16(port),
                 ),
@@ -155,7 +172,7 @@ async def run_node(
             "JAM node shutting down gracefully",
             node_name=name,
             port=port,
-            reason="keyboard_interrupt"
+            reason="keyboard_interrupt",
         )
     except Exception as e:
         logger.critical(
@@ -163,7 +180,7 @@ async def run_node(
             node_name=name,
             port=port,
             error=str(e)[:200],
-            error_type=type(e).__name__
+            error_type=type(e).__name__,
         )
 
         # Close db connections
@@ -171,14 +188,15 @@ async def run_node(
 
         raise
 
+
 def run_node_process(
-        genesis_path: str,
-        env: str,
-        start_genesis: bool,
-        theme: str,
-        is_builder: bool,
-        is_validator: bool,
-        node_task
+    genesis_path: str,
+    env: str,
+    start_genesis: bool,
+    theme: str,
+    is_builder: bool,
+    is_validator: bool,
+    node_task,
 ):
     # Handle clean termination
     def handle_sigterm(signum, frame):
@@ -186,12 +204,8 @@ def run_node_process(
 
     signal.signal(signal.SIGTERM, handle_sigterm)
 
-    asyncio.run(run_node(
-        genesis_path,
-        env,
-        start_genesis,
-        theme,
-        is_builder,
-        is_validator,
-        node_task
-    ))
+    asyncio.run(
+        run_node(
+            genesis_path, env, start_genesis, theme, is_builder, is_validator, node_task
+        )
+    )

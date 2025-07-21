@@ -4,7 +4,12 @@ from rockstore import RockStore
 from tsrkit_types import Null
 
 from jam.types.protocol.crypto import Hash
-from jam.types.protocol.core import WorkPackageHash, ExportsRoot, ErasureRoot, WorkReportHash
+from jam.types.protocol.core import (
+    WorkPackageHash,
+    ExportsRoot,
+    ErasureRoot,
+    WorkReportHash,
+)
 from jam.types.work.report import WorkReport
 from jam.types.work.manifest import Assurers, ReportAssurers
 
@@ -20,7 +25,7 @@ class PackageSegmentMap(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("WPSR", 'utf-8')
+        self.prefix = bytes("WPSR", "utf-8")
         self.db = db
 
     def put(self, report: WorkReport) -> None:
@@ -43,6 +48,7 @@ class PackageSegmentMap(DA):
         key = self.prefix + wp_hash.encode()
         self.db.delete(key)
 
+
 class SegmentErasureMap(DA):
     """
     SegmentErasureMap Maps all the segments root to their erasure root.
@@ -50,8 +56,9 @@ class SegmentErasureMap(DA):
     Key: Segments Root
     Value: Erasure Root
     """
+
     def __init__(self, db: RockStore):
-        self.prefix = bytes("SR-ER", 'utf-8')
+        self.prefix = bytes("SR-ER", "utf-8")
         self.db = db
 
     def put(self, root: ExportsRoot, data: ErasureRoot) -> None:
@@ -72,6 +79,7 @@ class SegmentErasureMap(DA):
         key = self.prefix + root.encode()
         self.db.delete(key)
 
+
 class ErasureAssurerMap(DA):
     """
     ErasureAssurerMap Maps all the erasure root to their work report and assurers.
@@ -81,7 +89,7 @@ class ErasureAssurerMap(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("ER-WR-A", 'utf-8')
+        self.prefix = bytes("ER-WR-A", "utf-8")
         self.db = db
 
     def put(self, report: WorkReport, assurers: Assurers) -> None:
@@ -106,6 +114,7 @@ class ErasureAssurerMap(DA):
         key = self.prefix + root.encode()
         self.db.delete(key)
 
+
 class ReportHashAssurerMap(DA):
     """
     ReportHashAssurerMap Maps all the report hash to their assurers.
@@ -115,7 +124,7 @@ class ReportHashAssurerMap(DA):
     """
 
     def __init__(self, db: RockStore):
-        self.prefix = bytes("WRH-A", 'utf-8')
+        self.prefix = bytes("WRH-A", "utf-8")
         self.db = db
 
     def put(self, report: WorkReport, assurers: Assurers) -> None:

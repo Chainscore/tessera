@@ -3,11 +3,11 @@ from py_ecc.optimized_bls12_381 import FQ, is_on_curve
 
 from jam.ring_vrf.ring_proof.constants import S_PRIME
 
-class Helpers:
 
+class Helpers:
     @staticmethod
     def knocker_delta(i, j):
-        """"
+        """ "
         input:i,j
         output: return 1 if i==j 0 otherwise
         """
@@ -15,7 +15,7 @@ class Helpers:
 
     @staticmethod
     def unzip(points):
-        """"
+        """ "
         input:Gets a list of points as input
         output:Splits the points into x,y co-ordinates
         """
@@ -25,7 +25,6 @@ class Helpers:
 
     @staticmethod
     def do_modulus(poly):
-
         # Expand the polynomial to ensure all terms are explicitly separated
         expanded_poly = poly
 
@@ -44,19 +43,13 @@ class Helpers:
     # bls point to string
     def bls_g1_compress(bls_point):
         if len(bls_point) == 2:
-            point = (
-                FQ(bls_point[0]),
-                FQ(bls_point[1]),
-                FQ(1))
+            point = (FQ(bls_point[0]), FQ(bls_point[1]), FQ(1))
         else:
-            point = (
-                FQ(bls_point[0]),
-                FQ(bls_point[1]),
-                FQ(bls_point[2]))
+            point = (FQ(bls_point[0]), FQ(bls_point[1]), FQ(bls_point[2]))
 
         # Compress the point
         compressed = point_compression.compress_G1(point)
-        hex_rep = compressed.to_bytes(48, 'big').hex()
+        hex_rep = compressed.to_bytes(48, "big").hex()
         return hex_rep
 
     @staticmethod
@@ -77,20 +70,17 @@ class Helpers:
     @staticmethod
     # int to hex_string
     def to_bytes(val):
-        res = val.to_bytes(32, 'little')
+        res = val.to_bytes(32, "little")
         return res.hex()
 
     @staticmethod
     def altered_points(g2_points):
-        res= [(b, a) for pair in g2_points for point in pair for a, b in [point]]
+        res = [(b, a) for pair in g2_points for point in pair for a, b in [point]]
         return res
 
     @staticmethod
-    def to_scalar_int(string)->int:
+    def to_scalar_int(string) -> int:
         if isinstance(string, bytes):
-            return int.from_bytes(string, 'little')
+            return int.from_bytes(string, "little")
         byts = bytes.fromhex(string)
-        return int.from_bytes(byts, 'little')
-
-
-
+        return int.from_bytes(byts, "little")

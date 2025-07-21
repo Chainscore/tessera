@@ -3,7 +3,6 @@ from math import ceil
 from jam.merklization.simple_merkle import Merklizer, node, print_tree
 
 
-
 def test_merklizer():
     merklizer = Merklizer()
 
@@ -22,25 +21,25 @@ def test_merklizer():
     page = index // 64
 
     size = 6
-    cnt = ceil(len(values) / (2 ** size))
+    cnt = ceil(len(values) / (2**size))
     for i in range(cnt):
         print(f"-------------------{i}--------------------")
         # trace = merklizer.trace_fn(merklizer.preprocess(values), i)
-        trace = merklizer.merkle_path_fn(values, size,i)
+        trace = merklizer.merkle_path_fn(values, size, i)
         print("")
         print("---------PATH----------")
         for val in trace:
             print(val, end=" ")
         print("")
         print("\n---------LEAVES----------")
-        leaves = merklizer.leaf_page_fn(values, size,i)
+        leaves = merklizer.leaf_page_fn(values, size, i)
         for val in leaves:
             print(val, end=" ")
         print("")
         if i == page:
             print("----------PROOF-GENERATED-------")
             proof = []
-            sub_trace = merklizer.merkle_path_fn(leaves, 0, (index % (2 ** size)))
+            sub_trace = merklizer.merkle_path_fn(leaves, 0, (index % (2**size)))
             for val in trace:
                 proof.append(val)
                 print(val, end=" ")
@@ -48,11 +47,13 @@ def test_merklizer():
                 proof.append(val)
                 print(val, end=" ")
             print("")
-            sub_leaf = merklizer.leaf_page_fn(leaves, 0, (index % (2 ** size)))
+            sub_leaf = merklizer.leaf_page_fn(leaves, 0, (index % (2**size)))
             for val in sub_leaf:
                 print(val, end=" ")
             print("")
-            constructed_root = merklizer.reconstruct_root(proof, index, sub_leaf[0], len(values), 0)
+            constructed_root = merklizer.reconstruct_root(
+                proof, index, sub_leaf[0], len(values), 0
+            )
             print(constructed_root, constructed_root == root)
             print("----------PROOF-EXPECTED-------")
             sub_trace = merklizer.merkle_path_fn(values, 0, index)
@@ -64,5 +65,3 @@ def test_merklizer():
                 print(val, end=" ")
             print("")
         print("\n----------------------------------------")
-
-

@@ -1,15 +1,23 @@
 import time
 
-from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, GENESIS_TS
+from jam.utils.constants import (
+    VALIDATOR_COUNT,
+    CORE_COUNT,
+    EPOCH_LENGTH,
+    ROTATION_PERIOD,
+    GENESIS_TS,
+)
 from jam.utils.shuffle import shuffle
 from tsrkit_types import TypedVector, U32
 from math import floor
 
+
 def rotation(c, n) -> TypedVector[U32]:
     rotated = TypedVector([])
     for x in c:
-        rotated.append(U32((x+n)%CORE_COUNT))
+        rotated.append(U32((x + n) % CORE_COUNT))
     return rotated
+
 
 def permute(e, t) -> TypedVector[U32]:
     validator_assign = TypedVector[U32]([])
@@ -22,6 +30,7 @@ def permute(e, t) -> TypedVector[U32]:
     n = floor((int(t) % EPOCH_LENGTH) / ROTATION_PERIOD)
 
     return rotation(c, n)
+
 
 def guarantor_assignments(state):
     ts = (time.time() - GENESIS_TS) // 6

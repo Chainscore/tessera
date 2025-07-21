@@ -10,6 +10,7 @@ clients = [40000, 40001]
 
 TMUX_SESSION_NAME = "jam_test_nodes"
 
+
 def create_tmux_windows_for_nodes():
     # Create tmux session with one window and two panes
     subprocess.run(["tmux", "new", "-d", "-s", TMUX_SESSION_NAME, "-n", "jam_nodes"])
@@ -21,7 +22,7 @@ def create_tmux_windows_for_nodes():
         "--env envs/40000.env "
         "--theme matrix "
         "--is-validator"
-)
+    )
     cmd_40001 = (
         "poetry run python ./tests/integration/genesis/run_node.py "
         "--env envs/40001.env "
@@ -30,11 +31,16 @@ def create_tmux_windows_for_nodes():
     )
 
     # Send to tmux panes
-    subprocess.run(["tmux", "send-keys", "-t", f"{TMUX_SESSION_NAME}:0.0", cmd_40000, "Enter"])
-    subprocess.run(["tmux", "send-keys", "-t", f"{TMUX_SESSION_NAME}:0.1", cmd_40001, "Enter"])
+    subprocess.run(
+        ["tmux", "send-keys", "-t", f"{TMUX_SESSION_NAME}:0.0", cmd_40000, "Enter"]
+    )
+    subprocess.run(
+        ["tmux", "send-keys", "-t", f"{TMUX_SESSION_NAME}:0.1", cmd_40001, "Enter"]
+    )
 
     # TODO: Fix this. For now run this command in separate terminal window.
     subprocess.Popen(["gnome-shell", "--", "tmux", "attach", "-t", TMUX_SESSION_NAME])
+
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
@@ -52,4 +58,3 @@ async def test_connection():
     print("[+] Test complete, cleaning up tmux session...")
     subprocess.run(["tmux", "kill-session", "-t", TMUX_SESSION_NAME])
     print("[+] Tmux session cleaned. Test finished.")
-

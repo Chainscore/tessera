@@ -2,8 +2,16 @@ import asyncio
 from typing import Dict, Optional
 
 from aioquic.asyncio import QuicConnectionProtocol
-from aioquic.quic.events import QuicEvent, StreamDataReceived, ConnectionTerminated, HandshakeCompleted, \
-    ConnectionIdIssued, ConnectionIdRetired, StreamReset, StopSendingReceived
+from aioquic.quic.events import (
+    QuicEvent,
+    StreamDataReceived,
+    ConnectionTerminated,
+    HandshakeCompleted,
+    ConnectionIdIssued,
+    ConnectionIdRetired,
+    StreamReset,
+    StopSendingReceived,
+)
 from cryptography.x509 import Certificate
 from tsrkit_types import U8
 
@@ -18,8 +26,10 @@ protocol_version = "0"
 # Module-specific logger
 logger = get_logger("network")
 
+
 class QuicProtocol(QuicConnectionProtocol):
     """Quic Protocol for establishing connection with peers."""
+
     from jam.network.peer import Peer
 
     stream_buffer: Dict[int, bytes] = {}
@@ -54,9 +64,11 @@ class QuicProtocol(QuicConnectionProtocol):
                 if not is_valid:
                     logger.error(
                         f"❌ Invalid Peer Certificate received {e}.",
-                        interface=self.interface
+                        interface=self.interface,
                     )
-                    self._quic.close(error_code=0xA, reason_phrase=f"Invalid Peer Certificate")
+                    self._quic.close(
+                        error_code=0xA, reason_phrase=f"Invalid Peer Certificate"
+                    )
 
                 pk = peer_cert.public_key()
                 peer = self.node.get_peer(pk.public_bytes_raw())
@@ -67,21 +79,24 @@ class QuicProtocol(QuicConnectionProtocol):
                 else:
                     logger.error(
                         f"❌ Unknown peer tried to establish contact.",
-                        interface=self.interface
+                        interface=self.interface,
                     )
                     self._quic.close(error_code=0x1, reason_phrase="Unknown Peer.")
 
             if not peer_cert:
                 logger.error(
-                    f"❌ No peer certificate received",
-                    interface=self.interface
+                    f"❌ No peer certificate received", interface=self.interface
                 )
-                self._quic.close(error_code=0xA, reason_phrase="Peer's certificate not present.")
+                self._quic.close(
+                    error_code=0xA, reason_phrase="Peer's certificate not present."
+                )
 
     def stop_stream(self, stream_id: int, error_code: int):
         self._quic.stop_stream(stream_id, error_code)
 
-    def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
+    def stream_and_keep_open(
+        self, message: bytes, stream_id: Optional[int] = None
+    ) -> int:
         """function for streaming data without end stream (FIN) bit."""
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
@@ -92,7 +107,7 @@ class QuicProtocol(QuicConnectionProtocol):
         logger.debug(
             f"📤 Sending message of size {len(message)} bytes",
             stream_id=stream_id,
-            interface=self.interface
+            interface=self.interface,
         )
 
         self._quic.send_stream_data(stream_id, message, end_stream=False)
@@ -100,7 +115,9 @@ class QuicProtocol(QuicConnectionProtocol):
         self.transmit()
         return stream_id
 
-    def stream_and_close(self, message: bytes, stream_id: int, timeout: Optional[float] = 2.0):
+    def stream_and_close(
+        self, message: bytes, stream_id: int, timeout: Optional[float] = 2.0
+    ):
         """function for streaming data with end stream (FIN) bit. used by request interceptors."""
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
@@ -108,20 +125,22 @@ class QuicProtocol(QuicConnectionProtocol):
         logger.debug(
             f"📤 Sending message of size {len(message)} bytes.",
             stream_id=stream_id,
-            interface=self.interface
+            interface=self.interface,
         )
 
         self._quic.send_stream_data(stream_id, message, end_stream=True)
 
-    async def close_and_wait(self, message: bytes, stream_id: int, timeout: Optional[float] = 2.0):
+    async def close_and_wait(
+        self, message: bytes, stream_id: int, timeout: Optional[float] = 2.0
+    ):
         """function for streaming data with end stream (FIN) bit and waiting for response. used by request transmitters."""
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
 
         logger.debug(
             f"📤 Sending message of size {len(message)} bytes.",
-            stream_id = stream_id,
-            interface=self.interface
+            stream_id=stream_id,
+            interface=self.interface,
         )
         self._quic.send_stream_data(stream_id, message, end_stream=True)
 
@@ -133,7 +152,7 @@ class QuicProtocol(QuicConnectionProtocol):
             logger.debug(
                 "Message transmitted, waiting for response",
                 peer=self.peer,
-                stream_id=stream_id
+                stream_id=stream_id,
             )
             return await asyncio.shield(waiter)
 
@@ -142,7 +161,7 @@ class QuicProtocol(QuicConnectionProtocol):
                 "Error occurred while waiting for response",
                 error=str(e),
                 error_type=str(type(e)),
-                stream_id=stream_id
+                stream_id=stream_id,
             )
 
             # TODO: Wait for responses for a certain timeout
@@ -157,6 +176,7 @@ class QuicProtocol(QuicConnectionProtocol):
         """function that handles all the quic events"""
 
         from jam.network.node import node_alpn, builder_alpn
+
         print("EVENT OCCURED", event)
         # Handle TLS Handshake
         if isinstance(event, HandshakeCompleted):
@@ -174,7 +194,7 @@ class QuicProtocol(QuicConnectionProtocol):
                     logger.info(
                         f"🔗 Handshake completed with {peer}.",
                         interface=self.interface,
-                        early_data=event.early_data_accepted
+                        early_data=event.early_data_accepted,
                     )
 
             elif node.is_validator and event.alpn_protocol == builder_alpn:
@@ -195,16 +215,19 @@ class QuicProtocol(QuicConnectionProtocol):
                     logger.info(
                         f"🔗 Handshake completed with a builder.",
                         interface=self.interface,
-                        builders=len(node.builder_conn)
+                        builders=len(node.builder_conn),
                     )
 
                 else:
                     logger.error(
                         f"❌ Max builder connections already achieved!",
                         interface=self.interface,
-                        builders=len(node.builder_conn)
+                        builders=len(node.builder_conn),
                     )
-                    self._quic.close(error_code=0xA, reason_phrase=f"Builder connection limit exceeded!")
+                    self._quic.close(
+                        error_code=0xA,
+                        reason_phrase=f"Builder connection limit exceeded!",
+                    )
 
             elif node.is_builder:
                 try:
@@ -213,24 +236,28 @@ class QuicProtocol(QuicConnectionProtocol):
                         logger.info(
                             f"🔗 Handshake completed with {peer}.",
                             interface="BUILDER CLIENT",
-                            early_data=event.early_data_accepted
+                            early_data=event.early_data_accepted,
                         )
                 except Exception as e:
                     logger.error(
                         f"Builder cannot accept any connection request.",
                         interface=self.interface,
-                        early_data=event.early_data_accepted
+                        early_data=event.early_data_accepted,
                     )
 
             else:
                 logger.error(
                     f"❌ Unknown node tried to establish contact.",
                     interface=self.interface,
-                    alpn=event.alpn_protocol
+                    alpn=event.alpn_protocol,
                 )
-                self._quic.close(error_code=0xA, reason_phrase=f"Malicious node tried to connect.")
+                self._quic.close(
+                    error_code=0xA, reason_phrase=f"Malicious node tried to connect."
+                )
 
-            logger.debug("CONNECTIONS", prev_conn=self.node.peer_conn, new_peer=self.peer)
+            logger.debug(
+                "CONNECTIONS", prev_conn=self.node.peer_conn, new_peer=self.peer
+            )
 
         # elif isinstance(event, ConnectionIdIssued):
         #     logger.debug(f"🔗 Connection Id issued: {event.connection_id}",
@@ -252,9 +279,8 @@ class QuicProtocol(QuicConnectionProtocol):
                 f"🔗 Stream reset.",
                 stream_id=stream_id,
                 error_code=event.error_code,
-                interface=self.interface
+                interface=self.interface,
             )
-
 
         # Handle Stop Sending Data Event
         elif isinstance(event, StopSendingReceived):
@@ -266,7 +292,7 @@ class QuicProtocol(QuicConnectionProtocol):
                 f"🔗 Stream reception stopped.",
                 stream_id=stream_id,
                 error_code=event.error_code,
-                interface=self.interface
+                interface=self.interface,
             )
 
         # Handle Connection Terminated Event
@@ -283,8 +309,8 @@ class QuicProtocol(QuicConnectionProtocol):
                 f"❌ Connection with {self.peer} terminated.",
                 error_code=event.error_code,
                 error=event.reason_phrase,
-                interface=self.interface
-           )
+                interface=self.interface,
+            )
 
         # Handle Received Data Event
         elif isinstance(event, StreamDataReceived):
@@ -302,7 +328,7 @@ class QuicProtocol(QuicConnectionProtocol):
                 f"📩 Received data of size {len(data)} bytes.",
                 peer=peer,
                 stream_id=stream_id,
-                interface=self.interface
+                interface=self.interface,
             )
 
             # -------------------- FIRST HANDLE THE BUFFER --------------------
@@ -322,7 +348,10 @@ class QuicProtocol(QuicConnectionProtocol):
 
                 except Exception as e:
                     prefix = None
-                    logger.error(f"Error identifying protocol on unknown stream. {e}", stream_id=stream_id)
+                    logger.error(
+                        f"Error identifying protocol on unknown stream. {e}",
+                        stream_id=stream_id,
+                    )
 
             # If we know it, then append data in the buffer
             else:
@@ -336,16 +365,26 @@ class QuicProtocol(QuicConnectionProtocol):
                     logger.error(f"Error identifying protocol on known stream. {e}")
             # -------------------- ----- ------ --- ------ --------------------
 
-
             # -------------------- THEN HANDLE THE PARSING --------------------
             # CASE: CE Streams
             if event.end_stream:
                 try:
                     # Map the request to its corresponding CE protocol function
                     ce_protocol = ProtocolMap.get_protocol(prefix)()
-                    logger.debug(f"CE PROTOCOL TRIGGERED", peer=self.peer , prefix=prefix, protocol=type(ce_protocol).__name__)
-                    if (stream_id in self.waiter) and (self.waiter[stream_id] is not None):
-                        logger.debug("Intercepting Response.", protocol=prefix, stream_id=stream_id)
+                    logger.debug(
+                        f"CE PROTOCOL TRIGGERED",
+                        peer=self.peer,
+                        prefix=prefix,
+                        protocol=type(ce_protocol).__name__,
+                    )
+                    if (stream_id in self.waiter) and (
+                        self.waiter[stream_id] is not None
+                    ):
+                        logger.debug(
+                            "Intercepting Response.",
+                            protocol=prefix,
+                            stream_id=stream_id,
+                        )
                         res = ce_protocol.res_intercept(stream_id, self)
 
                         # Wait for acknowledgment
@@ -354,7 +393,12 @@ class QuicProtocol(QuicConnectionProtocol):
                         waiter.set_result(res)
 
                     else:
-                        logger.debug("Intercepting Request.", peer=self.peer, protocol=prefix, stream_id=stream_id)
+                        logger.debug(
+                            "Intercepting Request.",
+                            peer=self.peer,
+                            protocol=prefix,
+                            stream_id=stream_id,
+                        )
                         ce_protocol.req_intercept(stream_id, self)
 
                     # Clear buffer
@@ -366,7 +410,7 @@ class QuicProtocol(QuicConnectionProtocol):
                         f"Error retrieving data from ce stream.",
                         error=str(e),
                         prefix=prefix,
-                        interface=self.interface
+                        interface=self.interface,
                     )
 
                     if self.is_client and self.waiter[stream_id] is not None:
@@ -385,7 +429,12 @@ class QuicProtocol(QuicConnectionProtocol):
                         if len(data) == 4:
                             return
                         up_protocol = ProtocolMap.get_protocol(prefix)()
-                        logger.debug(f"UP PROTOCOL TRIGGERED", peer=self.peer, prefix=prefix, protocol=type(up_protocol).__name__)
+                        logger.debug(
+                            f"UP PROTOCOL TRIGGERED",
+                            peer=self.peer,
+                            prefix=prefix,
+                            protocol=type(up_protocol).__name__,
+                        )
                         up_protocol.req_intercept(stream_id, self)
 
                     except Exception as e:
@@ -394,7 +443,7 @@ class QuicProtocol(QuicConnectionProtocol):
                             f"Error retrieving data from up stream.",
                             error=str(e),
                             prefix=prefix,
-                            interface=self.interface
+                            interface=self.interface,
                         )
                         self.stream_buffer[stream_id] = prefix.encode()
             # -------------------- ----- ------ --- ------ --------------------

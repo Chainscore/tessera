@@ -1,5 +1,6 @@
 from jam.types.block import Block
 
+
 def test_random_blocks():
     block_a = Block.from_random()
     block_b = Block.from_random()

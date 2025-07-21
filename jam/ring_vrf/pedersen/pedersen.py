@@ -25,7 +25,6 @@ class PedersenVRFProof:
 
 
 class PedersenVRF(VRF):
-
     def __init__(self, curve: Curve, point_type: Type[Point]):
         """
         Initialize Pedersen VRF with a curve.
@@ -44,10 +43,7 @@ class PedersenVRF(VRF):
         additional_data: bytes,
         blinding_factor: int,
         salt: bytes = b"",
-    ) -> Tuple[
-        Point,
-        Tuple[Point, Point, Point, int, int],
-    ]:
+    ) -> Tuple[Point, Tuple[Point, Point, Point, int, int],]:
         """
         Generate Pedersen VRF proof.
 

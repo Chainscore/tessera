@@ -12,7 +12,8 @@ from jam.types.block import Block, OffendersMark, DisputesExtrinsic
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import (
     EPOCH_LENGTH,
-    VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY
+    VALIDATORS_SUPER_MAJORITY,
+    VALIDATORS_WONKY,
 )
 
 # Define minimum requirements
@@ -85,10 +86,8 @@ class Disputes:
                 fault.key, message_bytes, fault.target, fault.signature
             ):
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
-            if fault.key not in [v.ed25519
-                for v in (*state.lambda_, *state.kappa)]:
+            if fault.key not in [v.ed25519 for v in (*state.lambda_, *state.kappa)]:
                 raise DisputesError(DisputesErrorCode.BAD_AUDITOR_KEY)
-
 
         # Verifying culprit signatures
         for culprit in disputes.culprits:
@@ -97,10 +96,10 @@ class Disputes:
                 culprit.key, message_bytes, culprit.target, culprit.signature
             ):
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
-            if culprit.key not in [validator.ed25519
-                for validator in (*state.lambda_, *state.kappa)]:
+            if culprit.key not in [
+                validator.ed25519 for validator in (*state.lambda_, *state.kappa)
+            ]:
                 raise DisputesError(DisputesErrorCode.BAD_GUARANTOR_KEY)
-
 
         # Verifying verdicts are sorted by target
         for verdict in disputes.verdicts:

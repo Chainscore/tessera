@@ -16,6 +16,7 @@ logger = get_logger("in_core")
 # from tests.unit.wp.types import RefineVectors, RefineVector
 # vectors = RefineVectors([])
 
+
 class Builder:
     """
     WP Engine: Continuously produces work packages and transmits them.
@@ -34,6 +35,7 @@ class Builder:
         from jam.__main__ import TIMESLOT
 
         from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
+
         CE133 = WorkPackageSubmission()
 
         wp_iter = (time_slot - TIMESLOT) % 4
@@ -59,7 +61,7 @@ class Builder:
             iteration=wp_iter,
             curr_timeslot=curr_ts,
             curr_epoch=curr_ep,
-            gamma_mode=state.gamma.s._choice_key
+            gamma_mode=state.gamma.s._choice_key,
         )
 
         wp = cls._build_package(wp_iter)
@@ -83,34 +85,89 @@ class Builder:
 
         package_len = Uint[32](len(wc.encode()))
         ext_len = Uint[32](len(ext.encode()))
-        data = CE133Data(package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext)
+        data = CE133Data(
+            package_len=package_len,
+            package_data=wc,
+            extrinsics_len=ext_len,
+            extrinsics=ext,
+        )
 
         logger.info(
             "Producing work package",
             iteration=wp_iter,
             core_index=1,
             extrinsics_count=0,
-            curr_timeslot=curr_ts
+            curr_timeslot=curr_ts,
         )
 
         # responses = await CE133.transmit(node, data)
-        logger.debug(
-            "Work package transmitted",
-            node_name=node.name,
-            iteration=wp_iter
-        )
+        logger.debug("Work package transmitted", node_name=node.name, iteration=wp_iter)
 
     @staticmethod
     def _build_package(wp_iter: int) -> WorkPackage:
         wp = create_dummy_package()
 
         pc = bytes(
-            [0, 0, 22, 124, 121, 81, 25, 1, 7, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1, 50, 0, 69,
-             147,
-             18])
-        c0_authorized_code = [0, 0, 21, 124, 121, 81, 9, 6, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1,
-                              50,
-                              0, 165, 73, 9]
+            [
+                0,
+                0,
+                22,
+                124,
+                121,
+                81,
+                25,
+                1,
+                7,
+                40,
+                2,
+                0,
+                149,
+                17,
+                255,
+                70,
+                1,
+                1,
+                100,
+                23,
+                51,
+                8,
+                1,
+                50,
+                0,
+                69,
+                147,
+                18,
+            ]
+        )
+        c0_authorized_code = [
+            0,
+            0,
+            21,
+            124,
+            121,
+            81,
+            9,
+            6,
+            40,
+            2,
+            0,
+            149,
+            17,
+            255,
+            70,
+            1,
+            1,
+            100,
+            23,
+            51,
+            8,
+            1,
+            50,
+            0,
+            165,
+            73,
+            9,
+        ]
         code = Code(code=pc, read=b"", r_write=b"", z=0, s=100)
         bytecode = code.encode()
         service_code = Bytes(b"").encode() + bytecode
@@ -120,15 +177,113 @@ class Builder:
         wp.authorization = Bytes(int(1).to_bytes(1))
 
         wi_pc = bytes(
-            [0, 0, 90, 51, 12, 149, 27, 0, 112, 254, 124, 117, 6, 40, 2, 200, 199, 3, 149, 51, 7, 200, 203, 4,
-             130,
-             57, 123, 73, 149, 204, 8, 172, 92, 240, 100, 194, 40, 2, 200, 203, 7, 51, 8, 20, 9, 255, 255, 255,
-             255,
-             255, 0, 0, 0, 51, 10, 5, 51, 11, 51, 12, 10, 18, 86, 23, 255, 9, 200, 114, 2, 40, 6, 51, 7, 40, 2,
-             149,
-             23, 0, 112, 254, 100, 40, 10, 19, 149, 23, 0, 112, 254, 51, 8, 50, 0, 133, 148, 164, 146, 74, 1,
-             164,
-             138, 84, 161, 66, 1]
+            [
+                0,
+                0,
+                90,
+                51,
+                12,
+                149,
+                27,
+                0,
+                112,
+                254,
+                124,
+                117,
+                6,
+                40,
+                2,
+                200,
+                199,
+                3,
+                149,
+                51,
+                7,
+                200,
+                203,
+                4,
+                130,
+                57,
+                123,
+                73,
+                149,
+                204,
+                8,
+                172,
+                92,
+                240,
+                100,
+                194,
+                40,
+                2,
+                200,
+                203,
+                7,
+                51,
+                8,
+                20,
+                9,
+                255,
+                255,
+                255,
+                255,
+                255,
+                0,
+                0,
+                0,
+                51,
+                10,
+                5,
+                51,
+                11,
+                51,
+                12,
+                10,
+                18,
+                86,
+                23,
+                255,
+                9,
+                200,
+                114,
+                2,
+                40,
+                6,
+                51,
+                7,
+                40,
+                2,
+                149,
+                23,
+                0,
+                112,
+                254,
+                100,
+                40,
+                10,
+                19,
+                149,
+                23,
+                0,
+                112,
+                254,
+                51,
+                8,
+                50,
+                0,
+                133,
+                148,
+                164,
+                146,
+                74,
+                1,
+                164,
+                138,
+                84,
+                161,
+                66,
+                1,
+            ]
         )
 
         wi_code = Code(code=wi_pc, read=b"", r_write=b"", z=0, s=(1024 * 100))
@@ -138,11 +293,17 @@ class Builder:
         wi_service = ServiceId(1)
 
         import_spec1 = ImportSpec(
-            tree_root=SegmentRoot.fromhex("3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91"),
-            index=U16(0))
+            tree_root=SegmentRoot.fromhex(
+                "3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91"
+            ),
+            index=U16(0),
+        )
         import_spec2 = ImportSpec(
-            tree_root=SegmentRoot.fromhex("6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694"),
-            index=U16(0))
+            tree_root=SegmentRoot.fromhex(
+                "6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694"
+            ),
+            index=U16(0),
+        )
 
         if wp_iter % 4 == 0:
             import_specs = []
@@ -161,7 +322,7 @@ class Builder:
             accumulate_gas_limit=Gas(1_000),
             import_segments=ImportSpecs(import_specs),
             extrinsic=ExtrinsicSpecs([]),
-            export_count=U16(1)
+            export_count=U16(1),
         )
         wp.items.append(wi)
 

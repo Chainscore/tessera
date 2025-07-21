@@ -16,11 +16,13 @@ from jam.audit.audit_process import AuditProcess
 
 logger = get_logger("network")
 
+
 @structure
 class Assurance:
     anchor_hash: HeaderHash
     bitfield: AvailBitField
     ed25519_signature: Ed25519Signature
+
 
 @structure
 class CE141Data:
@@ -36,6 +38,7 @@ class CE141Data:
 
 class AssuranceDistribution(NetworkProtocol):
     from jam.network.node import Node
+
     """
     CE-141 Assurance(Validators issue a signed statement, called an assurance) Distribution protocol enables each validator to broadcast an availability assurance for a work report.
 
@@ -57,12 +60,14 @@ class AssuranceDistribution(NetworkProtocol):
         self._prefix = PrefixType.CE141
 
     async def transmit(self, node: Node, data: CE141Data):
-        """ Transmit assurance, From Assurer (client) to Validator (server) """
+        """Transmit assurance, From Assurer (client) to Validator (server)"""
 
         msg = data.assurance.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node.peer_conn)}  validators")
+        logger.info(
+            f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node.peer_conn)}  validators"
+        )
         responses = TypedVector([])
 
         for peer in node.peer_conn:
@@ -81,14 +86,11 @@ class AssuranceDistribution(NetworkProtocol):
 
         return responses
 
-
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         buffer = server.stream_buffer[stream_id]
 
         logger.debug(
-            "Received assurance",
-            stream_id=stream_id,
-            buffer_size=len(buffer[1:])
+            "Received assurance", stream_id=stream_id, buffer_size=len(buffer[1:])
         )
 
         data, offset = CE141Data.decode_from(buffer[1:])
@@ -101,13 +103,17 @@ class AssuranceDistribution(NetworkProtocol):
         vi = ValidatorIndex(server.peer.peer_index)
 
         assurance_extrinsic = AvailAssurance(
-            anchor = assurance.anchor_hash,
-            bitfield = assurance.bitfield,
-            validator_index = vi,
-            signature= assurance.ed25519_signature
+            anchor=assurance.anchor_hash,
+            bitfield=assurance.bitfield,
+            validator_index=vi,
+            signature=assurance.ed25519_signature,
         )
 
-        logger.info("[EXTRINSICS]: RECEIVED ASSURANCE", peer=server.peer, assurance=assurance_extrinsic.to_json())
+        logger.info(
+            "[EXTRINSICS]: RECEIVED ASSURANCE",
+            peer=server.peer,
+            assurance=assurance_extrinsic.to_json(),
+        )
         ext_store.import_assr(assurance_extrinsic)
 
         # Return acknowledgment to Builder
@@ -115,11 +121,8 @@ class AssuranceDistribution(NetworkProtocol):
         server.stream_and_close(ack, stream_id)
 
         logger.debug(
-            "Assurance sent to other validators",
-            stream_id=stream_id,
-            ack_size=len(ack)
+            "Assurance sent to other validators", stream_id=stream_id, ack_size=len(ack)
         )
-
 
     def res_intercept(self, stream_id: int, client: QuicProtocol):
         buffer = client.stream_buffer[stream_id]
@@ -127,7 +130,7 @@ class AssuranceDistribution(NetworkProtocol):
             logger.info(
                 "Assurance ackwonlegmne received",
                 stream_id=stream_id,
-                buffer_size=len(buffer)
+                buffer_size=len(buffer),
             )
             return True
 

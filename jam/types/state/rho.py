@@ -16,6 +16,7 @@ class WorkReportState:
 
 OptionalWorkReportState = Option[WorkReportState]
 
+
 # State key: 10
 class Rho(TypedArray[OptionalWorkReportState, CORE_COUNT]):
     ...

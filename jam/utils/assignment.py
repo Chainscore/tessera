@@ -7,10 +7,15 @@ from jam.state.state import State
 from jam.types import Block, TimeSlot
 
 from jam.utils.shuffle import shuffle
-from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD
+from jam.utils.constants import (
+    VALIDATOR_COUNT,
+    CORE_COUNT,
+    EPOCH_LENGTH,
+    ROTATION_PERIOD,
+)
 
 
-def assign_guarantors(slot: TimeSlot = None, epoch = 0):
+def assign_guarantors(slot: TimeSlot = None, epoch=0):
     """
     Fetch core mappings of guarantors for a specific timeslot or current state's timeslot
 
@@ -25,7 +30,7 @@ def assign_guarantors(slot: TimeSlot = None, epoch = 0):
     vc = VALIDATOR_COUNT
 
     # ------ Fetch State --------
-    if slot :
+    if slot:
         from jam.settings import settings
 
         ts_key = Block.get_storage_key_slot(slot)
@@ -34,6 +39,7 @@ def assign_guarantors(slot: TimeSlot = None, epoch = 0):
 
     else:
         from jam.state.state import state
+
         slot = state.tau
 
     # ------- Validators ---------

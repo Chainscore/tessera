@@ -52,6 +52,7 @@ WorkReportHashes = TypedVector[WorkReportHash]
 
 Offenders = TypedVector[Ed25519Public]
 
+
 @structure
 class DisputesRecords:
     """Disputes records structure."""

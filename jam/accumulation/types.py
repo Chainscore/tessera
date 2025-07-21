@@ -22,7 +22,7 @@ class OperandTuple:
     a: OpaqueHash
     y: OpaqueHash
     g: Uint
-    d: WorkExecResult 
+    d: WorkExecResult
     o: Bytes
 
 
@@ -64,17 +64,17 @@ PreimageDict = Set[Tuple[ServiceId, Bytes]]
 
 @structure
 class AccuContextX:
-    #s
+    # s
     s_index: ServiceId
-    #u
+    # u
     partial_state: StateContext
-    #i
+    # i
     i_index: ServiceId
-    #t
+    # t
     deferred_transfers: DeferredTransfers
-    #y
+    # y
     hash: OptionHash
-    #p
+    # p
     preimage: PreimageDict
 
 

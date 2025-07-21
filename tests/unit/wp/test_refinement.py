@@ -43,16 +43,12 @@ from jam.work_package.processor import Processor
 from tests.unit.wp.types import RefineVectors, RefineVector
 
 CLIENTS = [
-    {
-        "port": 40007,
-        "role": "VALIDATOR",
-        "theme": "matrix",
-        "genesis": True
-    },
+    {"port": 40007, "role": "VALIDATOR", "theme": "matrix", "genesis": True},
 ]
 
 # Logger for WP Production
 logger = get_logger("in_core")
+
 
 async def start_node(node: Node):
     """Define Node tasks"""
@@ -65,12 +61,15 @@ async def start_node(node: Node):
         processor = Processor(node)
         for i, vector in enumerate(refine_vectors):
             vector = cast(RefineVector, vector)
-            wr, wr_hash = processor.process(vector.work_package, vector.core_index, vector.extrinsics)
+            wr, wr_hash = processor.process(
+                vector.work_package, vector.core_index, vector.extrinsics
+            )
 
             assert wr == vector.work_rep and wr_hash == vector.rep_hash
-            print("ASSERTION SUCCESSFUL", i+1)
+            print("ASSERTION SUCCESSFUL", i + 1)
     except Exception as e:
         raise e
+
 
 def run_node_process(
     genesis_path: str,
@@ -83,16 +82,12 @@ def run_node_process(
     # Handle clean termination
     def handle_sigterm(signum, frame):
         exit(0)
+
     signal.signal(signal.SIGTERM, handle_sigterm)
 
-    asyncio.run(run_node(
-        genesis_path,
-        env,
-        start_genesis,
-        theme,
-        is_builder,
-        is_validator
-    ))
+    asyncio.run(
+        run_node(genesis_path, env, start_genesis, theme, is_builder, is_validator)
+    )
 
 
 @pytest.mark.asyncio
@@ -115,7 +110,14 @@ async def test_refinement():
 
         p = Process(
             target=run_node_process,
-            args=("", env_path, client["genesis"], client["theme"], is_builder, is_validator)
+            args=(
+                "",
+                env_path,
+                client["genesis"],
+                client["theme"],
+                is_builder,
+                is_validator,
+            ),
         )
         processes.append(p)
 
@@ -143,7 +145,7 @@ async def run_node(
     start_genesis: bool,
     theme: str,
     is_builder: bool,
-    is_validator: bool
+    is_validator: bool,
 ):
     """Main fn to start the node"""
     # ---------- SETUP LOGGING ----------
@@ -171,11 +173,13 @@ async def run_node(
         theme=theme,
         node_name=name,
         environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None
+        min_level=getattr(logging, log_level.upper()) if log_level else None,
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+    settings = setup_setting(
+        name=name, port=int(port), seed=int(seed), data_path="data/"
+    )
 
     main_db = settings.main_db
 
@@ -188,7 +192,7 @@ async def run_node(
         spec=chain_config.name,
         environment=environment,
         is_builder=is_builder,
-        is_validator=is_validator
+        is_validator=is_validator,
     )
 
     try:
@@ -199,10 +203,7 @@ async def run_node(
         update_state(state)
 
         peers = [
-            Peer(
-                id=generate_san(val.ed25519),
-                data=val
-            )
+            Peer(id=generate_san(val.ed25519), data=val)
             for val in state.kappa
             if val.metadata.port != port
         ]
@@ -220,7 +221,7 @@ async def run_node(
                 BlsPublic(bytes(144)),
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2 ** 16 - 1),
+                    protocol=Uint[16](2**16 - 1),
                     host=ip,
                     port=U16(port),
                 ),
@@ -243,7 +244,7 @@ async def run_node(
             node_name=name,
             err=e,
             port=port,
-            reason="keyboard_interrupt"
+            reason="keyboard_interrupt",
         )
         settings.clear()
 
@@ -252,7 +253,7 @@ async def run_node(
             "JAM node shutting down gracefully",
             node_name=name,
             port=port,
-            reason="keyboard_interrupt"
+            reason="keyboard_interrupt",
         )
 
     except Exception as e:
@@ -261,7 +262,7 @@ async def run_node(
             node_name=name,
             port=port,
             error=str(e)[:200],
-            error_type=type(e).__name__
+            error_type=type(e).__name__,
         )
 
         # Close db connections

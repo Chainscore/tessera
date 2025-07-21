@@ -22,10 +22,12 @@ from jam.merklization import BMRFunctions
 from jam.utils.chainspec import chain_config
 from jam.utils.gather import gather_with_exceptions
 
+
 @structure
 class Query:
     erasure_root: ErasureRoot
     shard_index: ShardIndex
+
 
 @structure
 class CE137Data:
@@ -38,6 +40,7 @@ class CE137Data:
             return True
         return False
 
+
 @structure
 class CE137Response:
     bs_len: Uint[32]
@@ -49,28 +52,30 @@ class CE137Response:
 
     @property
     def is_valid(self):
-        if (len(self.bundle_shard.encode()) == self.bs_len
-                and len(self.segments_shard.encode()) == self.ss_len
-                and len(self.justification.encode()) == self.j_len):
+        if (
+            len(self.bundle_shard.encode()) == self.bs_len
+            and len(self.segments_shard.encode()) == self.ss_len
+            and len(self.justification.encode()) == self.j_len
+        ):
             return True
         return False
 
 
 class ShardDistributionProtocol(NetworkProtocol):
     """
-        CE 137 Protocol for shard distribution
+    CE 137 Protocol for shard distribution
 
-        Assurer -> Guarantor
+    Assurer -> Guarantor
 
-        --> Erasure-Root ++ Shard Index
-        --> FIN
-        <-- Bundle Shard
-        <-- [Segment Shard] (Should include all exported and proof segment shards with the given index)
-        <-- Justification
-        <-- FIN
+    --> Erasure-Root ++ Shard Index
+    --> FIN
+    <-- Bundle Shard
+    <-- [Segment Shard] (Should include all exported and proof segment shards with the given index)
+    <-- Justification
+    <-- FIN
 
-        Source:
-            https://docs.jamcha.in/advanced/simple-networking/spec#ce-137-shard-distribution
+    Source:
+        https://docs.jamcha.in/advanced/simple-networking/spec#ce-137-shard-distribution
     """
 
     from jam.network.node import Node
@@ -98,7 +103,9 @@ class ShardDistributionProtocol(NetworkProtocol):
                     client = node.peer_conn[peer][1]
 
                     # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                    stream_id = client.stream_and_keep_open(
+                        message=self._prefix.encode()
+                    )
 
                     # Append prefix to stream buffer so that we know the stream for handling response
                     client.stream_buffer[stream_id] = self._prefix.encode()
@@ -117,14 +124,13 @@ class ShardDistributionProtocol(NetworkProtocol):
 
         except Exception as e:
             logger.error(
-                "Failed to request shard.",
-                error=str(e),
-                error_type=type(e).__name__
+                "Failed to request shard.", error=str(e), error_type=type(e).__name__
             )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
         from jam.settings import settings
+
         buffer = server.stream_buffer[stream_id]
 
         try:
@@ -135,7 +141,7 @@ class ShardDistributionProtocol(NetworkProtocol):
                 "Received shard request",
                 erasure_root=data.query.erasure_root,
                 shard_index=data.query.shard_index,
-                peer=server.peer
+                peer=server.peer,
             )
 
             if not data.is_valid:
@@ -163,8 +169,13 @@ class ShardDistributionProtocol(NetworkProtocol):
             bundle_shard_indices = bs_dict.keys()
             segment_shard_indices = ss_dict.keys()
 
-            if len(bundle_shard_indices) != chain_config.num_validators or len(segment_shard_indices) != chain_config.num_validators:
-                raise ValueError(f"Length of both type of shards should be {chain_config.num_validators}")
+            if (
+                len(bundle_shard_indices) != chain_config.num_validators
+                or len(segment_shard_indices) != chain_config.num_validators
+            ):
+                raise ValueError(
+                    f"Length of both type of shards should be {chain_config.num_validators}"
+                )
 
             bmrfunctions = BMRFunctions()
             s = TypedVector[Bytes]([])
@@ -175,7 +186,9 @@ class ShardDistributionProtocol(NetworkProtocol):
                 shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                 s.append(Bytes(shards_key.encode()))
 
-            justification = Justification(bmrfunctions.trace_fn(values=s, index=shard_index).unwrap())
+            justification = Justification(
+                bmrfunctions.trace_fn(values=s, index=shard_index).unwrap()
+            )
 
             justification_da = JustificationsDA(audit)
             justification_da.put(erasure_root, shard_index, justification)
@@ -208,10 +221,12 @@ class ShardDistributionProtocol(NetworkProtocol):
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
+    def res_intercept(
+        self, stream_id: int, client: QuicProtocol
+    ) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
         """Intercept Bundle Shard, [Segment Shard] and Justification"""
         buffer = client.stream_buffer[stream_id]
 

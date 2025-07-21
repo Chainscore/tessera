@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 @structure
 class WorkPackageSpec:
     """Work package specification structure."""
+
     # h
     hash: WorkPackageHash
     # l
@@ -44,13 +45,14 @@ class WorkPackageSpec:
             length=Uint[32](0),
             erasure_root=ErasureRoot([0] * 32),
             exports_root=ExportsRoot([0] * 32),
-            exports_count=Uint[16](0)
+            exports_count=Uint[16](0),
         )
 
 
 @structure
 class Authorizer:
     """Authorizer structure."""
+
     # u
     code_hash: OpaqueHash
     # p
@@ -63,6 +65,7 @@ WorkItems = TypedVector[WorkItem]
 @structure
 class WorkPackage:
     """Work package structure."""
+
     # j
     authorization: Bytes
     # h
@@ -76,12 +79,16 @@ class WorkPackage:
 
     @property
     def a(self) -> OpaqueHash:
-        return Hash.blake2b(self.authorizer.code_hash.encode() + self.authorizer.params.encode())
+        return Hash.blake2b(
+            self.authorizer.code_hash.encode() + self.authorizer.params.encode()
+        )
 
     def m_c(self, delta: "Delta") -> Tuple[bytes, bytes]:
-        service_data = delta[self.auth_code_host].historical_lookup(self.context.lookup_anchor_slot, self.authorizer.code_hash)
-        print("bbbb",service_data)
-        if service_data  == None:
+        service_data = delta[self.auth_code_host].historical_lookup(
+            self.context.lookup_anchor_slot, self.authorizer.code_hash
+        )
+        print("bbbb", service_data)
+        if service_data == None:
             return b"user", b"name"
         else:
             return decode_code_hash(service_data)

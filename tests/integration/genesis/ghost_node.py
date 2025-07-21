@@ -55,12 +55,8 @@ async def start_node(node: Node):
         for response in responses:
             assert response == expected_message
 
-async def run_node(
-    env: str,
-    theme: str,
-    is_builder: bool,
-    is_validator: bool
-):
+
+async def run_node(env: str, theme: str, is_builder: bool, is_validator: bool):
     # ---------- SETUP LOGGING ----------
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
     init_ts = (time.time() - genesis_ts) / SLOT_PERIOD
@@ -86,11 +82,13 @@ async def run_node(
         theme=theme,
         node_name=name,
         environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None
+        min_level=getattr(logging, log_level.upper()) if log_level else None,
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+    settings = setup_setting(
+        name=name, port=int(port), seed=int(seed), data_path="data/"
+    )
 
     main_db = settings.main_db
 
@@ -103,7 +101,7 @@ async def run_node(
         spec=chain_config.name,
         environment=environment,
         is_builder=is_builder,
-        is_validator=is_validator
+        is_validator=is_validator,
     )
 
     try:
@@ -114,10 +112,7 @@ async def run_node(
         update_state(state)
 
         peers = [
-            Peer(
-                id=bytes.decode(val.metadata.name, 'utf-8'),
-                data=val
-            )
+            Peer(id=bytes.decode(val.metadata.name, "utf-8"), data=val)
             for val in state.kappa
             if val.metadata.port != port
         ]
@@ -135,7 +130,7 @@ async def run_node(
                 BlsPublic(bytes(144)),
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2 ** 16 - 1),
+                    protocol=Uint[16](2**16 - 1),
                     host=ip,
                     port=U16(port),
                 ),
@@ -157,7 +152,7 @@ async def run_node(
             "JAM node shutting down gracefully",
             node_name=name,
             port=port,
-            reason="keyboard_interrupt"
+            reason="keyboard_interrupt",
         )
     except Exception as e:
         logger.critical(
@@ -165,7 +160,7 @@ async def run_node(
             node_name=name,
             port=port,
             error=str(e)[:200],
-            error_type=type(e).__name__
+            error_type=type(e).__name__,
         )
 
         # Close db connections

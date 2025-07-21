@@ -218,7 +218,7 @@ class Node:
 
         return config
 
-    async def run_server(self, sock = None):
+    async def run_server(self, sock=None):
         """
         Function to initialize server connection of the node.
         """
@@ -237,13 +237,13 @@ class Node:
             retry=True,
             session_ticket_fetcher=session_ticket_store.pop,
             session_ticket_handler=session_ticket_store.add,
-            sock=sock
+            sock=sock,
         )
 
         # Save server connection
         self.server = server
 
-    async def quic_connect(self, peer: Peer, sock = None, delay: int = 0):
+    async def quic_connect(self, peer: Peer, sock=None, delay: int = 0):
         session_ticket_store = SessionTicketStore(self.port)
         if delay:
             logger.warning(f"Connection to {peer} delayed for {delay}s")
@@ -267,15 +267,12 @@ class Node:
                 # wait_connected=False,
                 session_ticket_handler=session_ticket_store.add,
                 # local_port=int(self.port),
-                sock=sock
+                sock=sock,
             ) as client:
-
                 # Save peer connection
                 client = cast(QuicProtocol, client)
 
-                logger.info(
-                    f"🤝 Connection to {str(peer)} established ✅"
-                )
+                logger.info(f"🤝 Connection to {str(peer)} established ✅")
 
                 stream_id = -1
                 if not self.is_builder:
@@ -296,14 +293,18 @@ class Node:
         except Exception as e:
             logger.error(f"Connection to {peer} failed: {e}")
 
-    async def connect_peer(self, peer: Peer, sock = None):
+    async def connect_peer(self, peer: Peer, sock=None):
         """
         Function to connect the node to a peer.
         """
 
         try:
             # Skip self
-            logger.info(f"⚠️ ({self.name}) host: {self.host}, port: {self.port}, {str(peer)} {type(self.port)}", hostcomp=(str(peer.host) == self.host), portcomp=(peer.port == self.port))
+            logger.info(
+                f"⚠️ ({self.name}) host: {self.host}, port: {self.port}, {str(peer)} {type(self.port)}",
+                hostcomp=(str(peer.host) == self.host),
+                portcomp=(peer.port == self.port),
+            )
             if str(peer.host) == self.host and int(peer.port) == self.port:
                 logger.info(f"⚠️ ({self.name}) Skipping self {str(self)}")
                 return
@@ -326,7 +327,7 @@ class Node:
         except Exception as e:
             logger.warning(f"⚠️ ({self.name}) Failed to connect to {peer}: {e}")
 
-    async def run_client(self, sock = None):
+    async def run_client(self, sock=None):
         """
         Function to initialize client connections of the node.
         """
@@ -367,7 +368,6 @@ class Node:
             if self.is_builder:
                 logger.info(f"🚀 ({self.name}) Starting builder on {str(self)}")
 
-
             if not self.is_builder:
                 logger.info(f"🚀 ({self.name}) Starting server on {str(self)}")
                 await self.run_server(sock)
@@ -389,10 +389,15 @@ class Node:
             _, conn = self.peer_conn[peer]
             conn.close(reason_phrase=f"Closing node {self.__id}")
 
-node = Node("god", "127.0.0.1", 0, ValidatorsData.decode(bytes(10000)), [], False, False)
 
-def setup_node(name, port, peers, is_val = True, is_bd = False, host="127.0.0.1") -> Node:
+node = Node(
+    "god", "127.0.0.1", 0, ValidatorsData.decode(bytes(10000)), [], False, False
+)
+
+
+def setup_node(name, port, peers, is_val=True, is_bd=False, host="127.0.0.1") -> Node:
     global node
     from jam.settings import settings
+
     node = Node(name, host, port, settings.val, peers, is_bd, is_val)
     return node

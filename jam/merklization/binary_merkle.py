@@ -12,8 +12,8 @@ from jam.utils.chainspec import chain_config
 ChoicedHash = Choice[Bytes, Bytes[32]]
 OpaqueHashes = TypedVector[OpaqueHash]
 
-class ChoicedHashes(TypedVector[ChoicedHash]):
 
+class ChoicedHashes(TypedVector[ChoicedHash]):
     def unwrap(self) -> TypedVector[Bytes]:
         res = TypedVector[Bytes]([])
         for val in self:
@@ -31,6 +31,7 @@ class ChoicedHashes(TypedVector[ChoicedHash]):
 
         return res
 
+
 class BMRFunctions:
     """General Merklization implementation for Binary Trees as defined in Section E.1"""
 
@@ -42,7 +43,7 @@ class BMRFunctions:
     def _preprocessor_fn(
         self,
         values: TypedVector[Bytes],
-        hash_fn: Optional[Callable[[Bytes], 'Bytes[32]']] = Hash.blake2b
+        hash_fn: Optional[Callable[[Bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> OpaqueHashes:
         """
         Constancy Preprocessor Function Implementation as defined in Equation E.7 in Section E.1.2
@@ -71,7 +72,7 @@ class BMRFunctions:
     def _node_fn(
         self,
         values: TypedVector[Bytes],
-        hash_fn: Optional[Callable[[Bytes], 'Bytes[32]']] = Hash.blake2b
+        hash_fn: Optional[Callable[[Bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> ChoicedHash:
         """
         Node Function Implementation as defined in Equation E.1
@@ -111,7 +112,7 @@ class BMRFunctions:
         Util Function P_I Implementation for Trace Function
         """
         sz = len(values)
-        mid = (sz+1) // 2
+        mid = (sz + 1) // 2
 
         if index < mid:
             return 0
@@ -119,7 +120,9 @@ class BMRFunctions:
             return mid
 
     @staticmethod
-    def _p_bool(values: TypedVector[Bytes], index: int, case: bool) -> TypedVector[Bytes]:
+    def _p_bool(
+        values: TypedVector[Bytes], index: int, case: bool
+    ) -> TypedVector[Bytes]:
         """
         Util Function P_s Implementation for Trace Function
         """
@@ -136,7 +139,7 @@ class BMRFunctions:
         self,
         values: TypedVector[Bytes],
         index: int,
-        hash_fn: Optional[Callable[[Bytes], 'Bytes[32]']] = Hash.blake2b
+        hash_fn: Optional[Callable[[Bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> ChoicedHashes:
         """
         Trace Function Implementation as defined in Equation E.2
@@ -160,14 +163,16 @@ class BMRFunctions:
             trace.append(node)
 
             new_ind = self._p_i(values, index)
-            trace_nodes = self.trace_fn(self._p_bool(values, index,True), index - new_ind, hash_fn)
+            trace_nodes = self.trace_fn(
+                self._p_bool(values, index, True), index - new_ind, hash_fn
+            )
             trace.extend(trace_nodes)
             return trace
 
     def wb_merkle_fn(
         self,
         values: TypedVector[Bytes],
-        hash_fn: Optional[Callable[[Bytes], 'Bytes[32]']] = Hash.blake2b
+        hash_fn: Optional[Callable[[Bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> OpaqueHash:
         """
         Well Balanced Binary Merkle Function Implementation as defined in Equation E.3 in Section E.1.1
@@ -190,7 +195,7 @@ class BMRFunctions:
     def cd_merkle_fn(
         self,
         values: TypedVector[Bytes],
-        hash_fn: Optional[Callable[[Bytes], 'Bytes[32]']] = Hash.blake2b
+        hash_fn: Optional[Callable[[Bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> OpaqueHash:
         """
         Constant Depth Binary Merkle Function Implementation as defined in Equation E.4 in Section E.1.2
@@ -213,7 +218,7 @@ class BMRFunctions:
         values: TypedVector[Bytes],
         page_depth: int,
         index: int,
-        hash_fn: Optional[Callable[[Bytes], 'Bytes[32]']] = Hash.blake2b
+        hash_fn: Optional[Callable[[Bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> ChoicedHashes:
         """
         Page Merkle Path Function Implementation as defined in Equation E.5
@@ -232,7 +237,7 @@ class BMRFunctions:
         val = ceil(log2(max(1, len(values))) - int(page_depth))
 
         sz = max(0, val)
-        ind = (2 ** page_depth) * index
+        ind = (2**page_depth) * index
 
         leaves = self._preprocessor_fn(values, hash_fn)
 
@@ -244,7 +249,7 @@ class BMRFunctions:
         values: TypedVector[Bytes],
         page_depth: int,
         index: int,
-        hash_fn: Optional[Callable[[Bytes], 'Bytes[32]']] = Hash.blake2b
+        hash_fn: Optional[Callable[[Bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> Vector[OpaqueHash]:
         """
         Leaves Page Function Implementation as defined in Equation E.6
@@ -262,21 +267,22 @@ class BMRFunctions:
 
         page = Vector[OpaqueHash]([])
 
-        ind = (2 ** page_depth) * index
-        val = min(ind + 2 ** page_depth, len(values))
+        ind = (2**page_depth) * index
+        val = min(ind + 2**page_depth, len(values))
 
         for i in range(ind, val):
             page.append(hash_fn(self._LEAF_PREFIX + Bytes(values[i])))
 
         return page
 
-    def reconstruct_root(self,
-       leaf_index: int,
-       trace: TypedVector[Bytes],
-       leaf: Bytes,
-       total_nodes: int,
-       curr_index: int = 0,
-       hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b,
+    def reconstruct_root(
+        self,
+        leaf_index: int,
+        trace: TypedVector[Bytes],
+        leaf: Bytes,
+        total_nodes: int,
+        curr_index: int = 0,
+        hash_fn: Optional[Callable[[bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> OpaqueHash:
         """
             Verifies the Merkle justification by reconstructing the Merkle root.
@@ -302,20 +308,24 @@ class BMRFunctions:
         if leaf_index >= mid:
             adjusted_length = Uint(total_nodes - mid)
             index = Uint(leaf_index - mid)
-            child_hash = self.reconstruct_root(index, trace, leaf, adjusted_length, curr_index)
+            child_hash = self.reconstruct_root(
+                index, trace, leaf, adjusted_length, curr_index
+            )
             return hash_fn(self._NODE_PREFIX + sibling + child_hash)
         else:
             adjusted_length = Uint(total_nodes - mid)
-            child_hash = self.reconstruct_root(leaf_index, trace, leaf, adjusted_length, curr_index)
+            child_hash = self.reconstruct_root(
+                leaf_index, trace, leaf, adjusted_length, curr_index
+            )
             return hash_fn(self._NODE_PREFIX + child_hash + sibling)
 
     def verify_wb_merkle(
-            self,
-            leaf: Bytes,
-            erasure_root: Bytes,
-            index: Uint,
-            justification: TypedVector[Bytes],
-            hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b,
+        self,
+        leaf: Bytes,
+        erasure_root: Bytes,
+        index: Uint,
+        justification: TypedVector[Bytes],
+        hash_fn: Optional[Callable[[bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> bool:
         """
             Merkle Proof Verification Function for Well-Balanced Tree (not provided in GP)
@@ -330,10 +340,14 @@ class BMRFunctions:
             Verification Result
         """
 
-        verification_root = self.reconstruct_root(index, justification, leaf, chain_config.num_validators, hash_fn=hash_fn)
+        verification_root = self.reconstruct_root(
+            index, justification, leaf, chain_config.num_validators, hash_fn=hash_fn
+        )
         return verification_root == erasure_root
 
-    def verify_cd_tree(self, trace: OpaqueHashes, leaves: OpaqueHashes, page_index: int) -> OpaqueHash:
+    def verify_cd_tree(
+        self, trace: OpaqueHashes, leaves: OpaqueHashes, page_index: int
+    ) -> OpaqueHash:
         """
         Merkle Proof Verification Function for constant depth tree (not provided in GP)
 

@@ -1,6 +1,7 @@
 from jam.ring_vrf.ring_proof.constants import S_PRIME, D_512 as D
 from sympy import symbols
 
+
 def mod_inverse(val, prime):
     """Find the modular multiplicative inverse of a under modulo m."""
     if pow(val, prime - 1, prime) != 1:
@@ -35,7 +36,7 @@ def poly_subtract(poly1, poly2, prime):
     return result
 
 
-#(On^2)
+# (On^2)
 def poly_multiply(poly1, poly2, prime):
     """Multiply two polynomials in a prime field."""
     result_len = len(poly1) + len(poly2) - 1
@@ -44,7 +45,6 @@ def poly_multiply(poly1, poly2, prime):
         for j in range(len(poly2)):
             result[i + j] = (result[i + j] + poly1[i] * poly2[j]) % prime
     return result
-
 
 
 def poly_division_general(c, d, p=S_PRIME):
@@ -85,7 +85,7 @@ def poly_division_general(c, d, p=S_PRIME):
         # Remove trailing zeroes
         while c and c[-1] == 0:
             c.pop()
-    return quotient#, c
+    return quotient  # , c
 
 
 def poly_scalar(poly, scalar, prime):
@@ -97,7 +97,7 @@ def poly_scalar(poly, scalar, prime):
 def poly_evaluate(poly, x, prime):
     """Evaluate a polynomial at point x using Horner's method."""
     result = 0
-    for coef in  reversed(poly):
+    for coef in reversed(poly):
         result = (result * x + coef) % prime
     return result
 
@@ -130,53 +130,56 @@ def lagrange_basis_polynomial(x_coords, i, prime=S_PRIME):
     return basis_poly
 
 
-#vector subtraction
-def vect_sub(a,b, prime):
+# vector subtraction
+def vect_sub(a, b, prime):
     if isinstance(a, int) and isinstance(b, list):
-        n=len(b)
-        a=[a]*n
-        result=[(i-j)%prime for i,j in zip(a,b)]
+        n = len(b)
+        a = [a] * n
+        result = [(i - j) % prime for i, j in zip(a, b)]
         return result
-    elif isinstance(a,list) and isinstance(b, int):
-        n=len(a)
-        b=[b]*n
-        result= [(i-j)% prime for i, j in zip(a,b)]
+    elif isinstance(a, list) and isinstance(b, int):
+        n = len(a)
+        b = [b] * n
+        result = [(i - j) % prime for i, j in zip(a, b)]
         return result
     else:
-        result=[(i-j)%prime for i, j in zip(a,b)]
+        result = [(i - j) % prime for i, j in zip(a, b)]
         return result
 
-#vector addition
+
+# vector addition
 def vect_add(a, b, prime):
     if isinstance(a, int) and isinstance(b, list):
-        n=len(b)
-        a=[a]*n
-        result=[(i+j)%prime for i,j in zip(a,b)]
+        n = len(b)
+        a = [a] * n
+        result = [(i + j) % prime for i, j in zip(a, b)]
         return result
-    elif isinstance(a,list) and isinstance(b, int):
-        n=len(a)
-        b=[b]*n
-        result= [(i+j)% prime for i, j in zip(a,b)]
+    elif isinstance(a, list) and isinstance(b, int):
+        n = len(a)
+        b = [b] * n
+        result = [(i + j) % prime for i, j in zip(a, b)]
         return result
     else:
-        result=[(i+j)%prime for i, j in zip(a,b)]
+        result = [(i + j) % prime for i, j in zip(a, b)]
         return result
 
-#vector multiplication
+
+# vector multiplication
 def vect_mul(a, b, prime):
     if isinstance(a, int) and isinstance(b, list):
-        n=len(b)
-        a=[a]*n
-        result=[(i*j)%prime for i,j in zip(a,b)]
+        n = len(b)
+        a = [a] * n
+        result = [(i * j) % prime for i, j in zip(a, b)]
         return result
-    elif isinstance(a,list) and isinstance(b, int):
-        n=len(a)
-        b=[b]*n
-        result= [(i*j)% prime for i, j in zip(a,b)]
+    elif isinstance(a, list) and isinstance(b, int):
+        n = len(a)
+        b = [b] * n
+        result = [(i * j) % prime for i, j in zip(a, b)]
         return result
     else:
-        result=[(i*j)%prime for i, j in zip(a,b)]
+        result = [(i * j) % prime for i, j in zip(a, b)]
         return result
+
 
 def vect_scalar_mul(vec, scalar, mod=None):
     """Multiply each element in the vector by the scalar"""

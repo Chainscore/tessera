@@ -16,18 +16,19 @@ from jam.work_package.stores.segments import SegmentShardsDA
 
 class SegmentShardRequest(SegmentShardRequestBase):
     """
-        CE 139 Protocol for Requesting Segments Shards from Assurers
+    CE 139 Protocol for Requesting Segments Shards from Assurers
 
-        Protocol Flow:
-            Guarantor -> Assurers
+    Protocol Flow:
+        Guarantor -> Assurers
 
-            --> [Erasure-Root ++ Shard Index ++ len++[Segment Index]]
-            --> FIN
-            <-- [Segment Shard]
-            <-- FIN
-        Source:
-            https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
+        --> [Erasure-Root ++ Shard Index ++ len++[Segment Index]]
+        --> FIN
+        <-- [Segment Shard]
+        <-- FIN
+    Source:
+        https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
     """
+
     from jam.network.node import Node
 
     def __init__(self):
@@ -36,6 +37,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept & Process Erasure-Root, Shard Index & Segment Indices on Assurer"""
         from jam.settings import settings
+
         buffer = server.stream_buffer[stream_id]
 
         try:
@@ -72,17 +74,18 @@ class SegmentShardRequest(SegmentShardRequestBase):
             logger.error(
                 "Failed to request shards using ce_139",
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> SegmentsShard | None:
+    def res_intercept(
+        self, stream_id: int, client: QuicProtocol
+    ) -> SegmentsShard | None:
         """Intercept [Segment Shard]"""
         buffer = client.stream_buffer[stream_id]
 
         try:
-
             length = U32.decode(buffer[1:5])
-            segments_buf = buffer[5:5 + length]
+            segments_buf = buffer[5 : 5 + length]
             buf_len = len(segments_buf)
 
             if not segments_buf or not buf_len == length:
@@ -97,10 +100,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
                 segments.append(segment)
                 cnt += 1
                 logger.debug(
-                    "Parsed segment",
-                    cnt=cnt,
-                    stream_id=stream_id,
-                    peer=client.peer
+                    "Parsed segment", cnt=cnt, stream_id=stream_id, peer=client.peer
                 )
 
             logger.info(f"Received CE139 segment shards.")

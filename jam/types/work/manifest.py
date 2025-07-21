@@ -14,7 +14,10 @@ Segments = TypedVector[Segment]
 MultiSegments = TypedVector[Segments]
 
 SegmentDict = Dictionary[ExportsRoot, Segments]
-SegmentRootLookup = Dictionary[WorkPackageHash, SegmentRoot, "work_package_hash", "segment_tree_root"]
+SegmentRootLookup = Dictionary[
+    WorkPackageHash, SegmentRoot, "work_package_hash", "segment_tree_root"
+]
+
 
 @structure
 class ProvedSegments:
@@ -24,12 +27,15 @@ class ProvedSegments:
     def __len__(self):
         return len(self.segment) + len(self.proof)
 
+
 Assurers = TypedVector[ValidatorIndex]
+
 
 @structure
 class ReportAssurers:
     report_hash: WorkReportHash
     assurers: Assurers
+
 
 Extrinsic = Bytes
 

@@ -57,4 +57,4 @@ __all__ = [
     "PreimagesExtrinsic",
     # Assurance types
     "AssurancesExtrinsic",
-] 
+]

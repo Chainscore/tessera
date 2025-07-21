@@ -31,14 +31,13 @@ TIMESLOT = 0
 
 vectors: RefineVectors = RefineVectors.from_json(
     [
-
         {
             "work_package": {
                 "authorization": "01",
                 "auth_code_host": 42,
                 "authorizer": {
                     "code_hash": "1053266a8796f3fbb2936233f7b02218694b04e8604ac3c8892e415429f0a12d",
-                    "params": "d914a1f4c711d703a16f"
+                    "params": "d914a1f4c711d703a16f",
                 },
                 "context": {
                     "anchor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -46,7 +45,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "beefy_root": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor_slot": 0,
-                    "prerequisites": []
+                    "prerequisites": [],
                 },
                 "items": [
                     {
@@ -57,9 +56,9 @@ vectors: RefineVectors = RefineVectors.from_json(
                         "accumulate_gas_limit": 1000,
                         "import_segments": [],
                         "extrinsic": [],
-                        "export_count": 1
+                        "export_count": 1,
                     }
-                ]
+                ],
             },
             "core_index": 1,
             "extrinsics": [],
@@ -69,7 +68,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "length": 253,
                     "erasure_root": "6a0e4a8c7c232b28a3983ccc4260d0d16c81fc1550eea136dedd51c9a854a300",
                     "exports_root": "3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91",
-                    "exports_count": 1
+                    "exports_count": 1,
                 },
                 "context": {
                     "anchor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -77,7 +76,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "beefy_root": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor_slot": 0,
-                    "prerequisites": []
+                    "prerequisites": [],
                 },
                 "core_index": 1,
                 "authorizer_hash": "459cd4362e25bdcf6d6260b9cfd206b11d89a8b006d5cd32e029777385a03192",
@@ -89,21 +88,19 @@ vectors: RefineVectors = RefineVectors.from_json(
                         "code_hash": "738b9aff3acbccab766e45ca4ee11d1db963cad17c9b9331b2da4b10ba40a894",
                         "payload_hash": "ad83e1972dd0a604ebe9857cadf90f9a96c32cf47c7b82c804fbe83d0eaaf0af",
                         "accumulate_gas": 1000,
-                        "result": {
-                            "ok": ""
-                        },
+                        "result": {"ok": ""},
                         "refine_load": {
                             "gas_used": 49,
                             "imports": 0,
                             "extrinsic_count": 0,
                             "extrinsic_size": 0,
-                            "exports": 1
-                        }
+                            "exports": 1,
+                        },
                     }
                 ],
-                "auth_gas_used": 7
+                "auth_gas_used": 7,
             },
-            "rep_hash": "dc71f2c6f1d2ce6f3cce7362b143aa1939de5d59cc3c042e26e9d1af4f17fe76"
+            "rep_hash": "dc71f2c6f1d2ce6f3cce7362b143aa1939de5d59cc3c042e26e9d1af4f17fe76",
         },
         {
             "work_package": {
@@ -111,7 +108,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                 "auth_code_host": 42,
                 "authorizer": {
                     "code_hash": "1053266a8796f3fbb2936233f7b02218694b04e8604ac3c8892e415429f0a12d",
-                    "params": "34401c7359774f241912"
+                    "params": "34401c7359774f241912",
                 },
                 "context": {
                     "anchor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -119,7 +116,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "beefy_root": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor_slot": 0,
-                    "prerequisites": []
+                    "prerequisites": [],
                 },
                 "items": [
                     {
@@ -131,13 +128,13 @@ vectors: RefineVectors = RefineVectors.from_json(
                         "import_segments": [
                             {
                                 "tree_root": "3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91",
-                                "index": 0
+                                "index": 0,
                             }
                         ],
                         "extrinsic": [],
-                        "export_count": 1
+                        "export_count": 1,
                     }
-                ]
+                ],
             },
             "core_index": 1,
             "extrinsics": [],
@@ -147,7 +144,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "length": 4425,
                     "erasure_root": "27272da2c88f8106289bfbf1e0330831362e7cd0a200ecbd5cff160048ebcde3",
                     "exports_root": "6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694",
-                    "exports_count": 1
+                    "exports_count": 1,
                 },
                 "context": {
                     "anchor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -155,7 +152,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "beefy_root": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor_slot": 0,
-                    "prerequisites": []
+                    "prerequisites": [],
                 },
                 "core_index": 1,
                 "authorizer_hash": "587d37dafe7e73d6074d03a8eb80d14b8af552599e4437c6c68aa1f30bdaf0b6",
@@ -167,21 +164,19 @@ vectors: RefineVectors = RefineVectors.from_json(
                         "code_hash": "738b9aff3acbccab766e45ca4ee11d1db963cad17c9b9331b2da4b10ba40a894",
                         "payload_hash": "ad83e1972dd0a604ebe9857cadf90f9a96c32cf47c7b82c804fbe83d0eaaf0af",
                         "accumulate_gas": 1000,
-                        "result": {
-                            "ok": ""
-                        },
+                        "result": {"ok": ""},
                         "refine_load": {
                             "gas_used": 49,
                             "imports": 1,
                             "extrinsic_count": 0,
                             "extrinsic_size": 0,
-                            "exports": 1
-                        }
+                            "exports": 1,
+                        },
                     }
                 ],
-                "auth_gas_used": 7
+                "auth_gas_used": 7,
             },
-            "rep_hash": "7688fa8846a5596ebb7a8d715327e0dce7058e1c65e9298bae897d23733755ba"
+            "rep_hash": "7688fa8846a5596ebb7a8d715327e0dce7058e1c65e9298bae897d23733755ba",
         },
         {
             "work_package": {
@@ -189,7 +184,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                 "auth_code_host": 42,
                 "authorizer": {
                     "code_hash": "1053266a8796f3fbb2936233f7b02218694b04e8604ac3c8892e415429f0a12d",
-                    "params": "bcf3588ab585a854fe37"
+                    "params": "bcf3588ab585a854fe37",
                 },
                 "context": {
                     "anchor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -197,7 +192,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "beefy_root": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor_slot": 0,
-                    "prerequisites": []
+                    "prerequisites": [],
                 },
                 "items": [
                     {
@@ -209,13 +204,13 @@ vectors: RefineVectors = RefineVectors.from_json(
                         "import_segments": [
                             {
                                 "tree_root": "6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694",
-                                "index": 0
+                                "index": 0,
                             }
                         ],
                         "extrinsic": [],
-                        "export_count": 1
+                        "export_count": 1,
                     }
-                ]
+                ],
             },
             "core_index": 1,
             "extrinsics": [],
@@ -225,7 +220,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "length": 4425,
                     "erasure_root": "b8880fe309668f83d395131a6b856ce2b815a562272f0de764749bd3d0d492c7",
                     "exports_root": "2e2ea8b591ef3684aabc518001bf43a3ddfe6be2ada603d3501261b6b5dac2c8",
-                    "exports_count": 1
+                    "exports_count": 1,
                 },
                 "context": {
                     "anchor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -233,7 +228,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "beefy_root": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor_slot": 0,
-                    "prerequisites": []
+                    "prerequisites": [],
                 },
                 "core_index": 1,
                 "authorizer_hash": "ff22ab2fabe104fe12e79bdf463a003c8d4d6c62c786a641699cbcdbd3f2c5be",
@@ -245,21 +240,19 @@ vectors: RefineVectors = RefineVectors.from_json(
                         "code_hash": "738b9aff3acbccab766e45ca4ee11d1db963cad17c9b9331b2da4b10ba40a894",
                         "payload_hash": "ad83e1972dd0a604ebe9857cadf90f9a96c32cf47c7b82c804fbe83d0eaaf0af",
                         "accumulate_gas": 1000,
-                        "result": {
-                            "ok": ""
-                        },
+                        "result": {"ok": ""},
                         "refine_load": {
                             "gas_used": 49,
                             "imports": 1,
                             "extrinsic_count": 0,
                             "extrinsic_size": 0,
-                            "exports": 1
-                        }
+                            "exports": 1,
+                        },
                     }
                 ],
-                "auth_gas_used": 7
+                "auth_gas_used": 7,
             },
-            "rep_hash": "a164ca339cc8db81b843d3d19c96ceb7ef80cb377a22f3bacda6b880a91dc26d"
+            "rep_hash": "a164ca339cc8db81b843d3d19c96ceb7ef80cb377a22f3bacda6b880a91dc26d",
         },
         {
             "work_package": {
@@ -267,7 +260,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                 "auth_code_host": 42,
                 "authorizer": {
                     "code_hash": "1053266a8796f3fbb2936233f7b02218694b04e8604ac3c8892e415429f0a12d",
-                    "params": "7c527627ba6fac003b71"
+                    "params": "7c527627ba6fac003b71",
                 },
                 "context": {
                     "anchor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -275,7 +268,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "beefy_root": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor_slot": 0,
-                    "prerequisites": []
+                    "prerequisites": [],
                 },
                 "items": [
                     {
@@ -287,17 +280,17 @@ vectors: RefineVectors = RefineVectors.from_json(
                         "import_segments": [
                             {
                                 "tree_root": "3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91",
-                                "index": 0
+                                "index": 0,
                             },
                             {
                                 "tree_root": "6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694",
-                                "index": 0
-                            }
+                                "index": 0,
+                            },
                         ],
                         "extrinsic": [],
-                        "export_count": 1
+                        "export_count": 1,
                     }
-                ]
+                ],
             },
             "core_index": 1,
             "extrinsics": [],
@@ -307,7 +300,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "length": 8597,
                     "erasure_root": "12c4aaf66b033b8064142e35c2398782fe50c6cbfc6588a4d59f2c3e51f449c7",
                     "exports_root": "6ba2490f5252ede3a7510e525b588bfaf64d8125bf3053da5586f5c11ac32694",
-                    "exports_count": 1
+                    "exports_count": 1,
                 },
                 "context": {
                     "anchor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -315,7 +308,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "beefy_root": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor_slot": 0,
-                    "prerequisites": []
+                    "prerequisites": [],
                 },
                 "core_index": 1,
                 "authorizer_hash": "e84caad83e96d576aae85146afb2e30e59429ad8122cbe6307b5aa0846f38e84",
@@ -327,21 +320,19 @@ vectors: RefineVectors = RefineVectors.from_json(
                         "code_hash": "738b9aff3acbccab766e45ca4ee11d1db963cad17c9b9331b2da4b10ba40a894",
                         "payload_hash": "ad83e1972dd0a604ebe9857cadf90f9a96c32cf47c7b82c804fbe83d0eaaf0af",
                         "accumulate_gas": 1000,
-                        "result": {
-                            "ok": ""
-                        },
+                        "result": {"ok": ""},
                         "refine_load": {
                             "gas_used": 49,
                             "imports": 2,
                             "extrinsic_count": 0,
                             "extrinsic_size": 0,
-                            "exports": 1
-                        }
+                            "exports": 1,
+                        },
                     }
                 ],
-                "auth_gas_used": 7
+                "auth_gas_used": 7,
             },
-            "rep_hash": "dac97a8208e87abc357d958984d017a8ce43b29caa4bb49e800eaa5bafa1f091"
+            "rep_hash": "dac97a8208e87abc357d958984d017a8ce43b29caa4bb49e800eaa5bafa1f091",
         },
         {
             "work_package": {
@@ -349,7 +340,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                 "auth_code_host": 42,
                 "authorizer": {
                     "code_hash": "1053266a8796f3fbb2936233f7b02218694b04e8604ac3c8892e415429f0a12d",
-                    "params": "385e673167ab28c7aac5"
+                    "params": "385e673167ab28c7aac5",
                 },
                 "context": {
                     "anchor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -357,7 +348,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "beefy_root": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor_slot": 0,
-                    "prerequisites": []
+                    "prerequisites": [],
                 },
                 "items": [
                     {
@@ -368,9 +359,9 @@ vectors: RefineVectors = RefineVectors.from_json(
                         "accumulate_gas_limit": 1000,
                         "import_segments": [],
                         "extrinsic": [],
-                        "export_count": 1
+                        "export_count": 1,
                     }
-                ]
+                ],
             },
             "core_index": 1,
             "extrinsics": [],
@@ -380,7 +371,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "length": 253,
                     "erasure_root": "e4e1aa59f7bf14447746d8b6f5371e236a226cab4ea8c1ffeffc1c588df30ff7",
                     "exports_root": "3cf9b7c011a52ccd5b2513c68cde23eba207487374b074742da413d905263b91",
-                    "exports_count": 1
+                    "exports_count": 1,
                 },
                 "context": {
                     "anchor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -388,7 +379,7 @@ vectors: RefineVectors = RefineVectors.from_json(
                     "beefy_root": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor": "0000000000000000000000000000000000000000000000000000000000000000",
                     "lookup_anchor_slot": 0,
-                    "prerequisites": []
+                    "prerequisites": [],
                 },
                 "core_index": 1,
                 "authorizer_hash": "ee74022d4cc61e75e595432eeed50ce258d8d7411ab31bd304d2f2d07b36ed03",
@@ -400,24 +391,23 @@ vectors: RefineVectors = RefineVectors.from_json(
                         "code_hash": "738b9aff3acbccab766e45ca4ee11d1db963cad17c9b9331b2da4b10ba40a894",
                         "payload_hash": "ad83e1972dd0a604ebe9857cadf90f9a96c32cf47c7b82c804fbe83d0eaaf0af",
                         "accumulate_gas": 1000,
-                        "result": {
-                            "ok": ""
-                        },
+                        "result": {"ok": ""},
                         "refine_load": {
                             "gas_used": 49,
                             "imports": 0,
                             "extrinsic_count": 0,
                             "extrinsic_size": 0,
-                            "exports": 1
-                        }
+                            "exports": 1,
+                        },
                     }
                 ],
-                "auth_gas_used": 7
+                "auth_gas_used": 7,
             },
-            "rep_hash": "b0dc4df40d95f1c43ac4bb734b3eb3b0e813d3ca068baa74c3246d83507be941"
-        }
+            "rep_hash": "b0dc4df40d95f1c43ac4bb734b3eb3b0e813d3ca068baa74c3246d83507be941",
+        },
     ]
 )
+
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
@@ -440,7 +430,6 @@ async def test_refinement():
     host = "127.0.0.1"
     logger.info("SET HOST", host=host)
 
-
     # ---------- SETUP LOGGING ----------
     environment = os.environ.get("ENVIRONMENT", "development")
     log_level = os.environ.get("LOG_LEVEL", None)
@@ -449,7 +438,7 @@ async def test_refinement():
         theme="polkadot",
         node_name=name,
         environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None
+        min_level=getattr(logging, log_level.upper()) if log_level else None,
     )
 
     # ---------- SETUP SETTINGS ----------
@@ -458,8 +447,12 @@ async def test_refinement():
     main_db = settings.main_db
 
     logger.info(
-        "Starting JAM node", name=name, port=port,
-        ts=init_ts, epoch=init_ep, spec=chain_config.name,
+        "Starting JAM node",
+        name=name,
+        port=port,
+        ts=init_ts,
+        epoch=init_ep,
+        spec=chain_config.name,
     )
 
     try:
@@ -473,15 +466,10 @@ async def test_refinement():
         update_state(state)
 
         # ----------- SETUP NETWORKING ------------
-        peers = [
-            Peer(data=val)
-            for val in state.kappa
-            if val.metadata.port != port
-        ]
+        peers = [Peer(data=val) for val in state.kappa if val.metadata.port != port]
 
         tsr_node = setup_node(
-            name, int(port), peers, host=str(host),
-            is_bd=False, is_val=True
+            name, int(port), peers, host=str(host), is_bd=False, is_val=True
         )
 
         # ------------ SET GENESIS BLOCK ------------
@@ -491,6 +479,7 @@ async def test_refinement():
         Finality.finalise(header_hash, main_db)
 
         from jam.work_package.processor import Processor
+
         processor = Processor(tsr_node)
 
         for i, v in enumerate(vectors):
@@ -505,4 +494,3 @@ async def test_refinement():
         logger.error("ERROR OCCURRED", err=e)
 
     # node = setup_node("127.0.0.1", 20001, )
-

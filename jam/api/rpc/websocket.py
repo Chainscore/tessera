@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Any, AsyncGenerator, Dict, Set
 import asyncio
 
+
 class Broker:
     def __init__(self) -> None:
         self.topics: Dict[str, Set[asyncio.Queue]] = defaultdict(set)
@@ -21,9 +22,11 @@ class Broker:
         finally:
             self.topics[topic].remove(queue)
 
+
 async def ws_receive() -> None:
     while True:
         topic = await websocket.receive()
         print(f"Received message: {topic}")
+
 
 ws_broker = Broker()

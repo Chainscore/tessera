@@ -6,6 +6,7 @@ AuthorizerHash = OpaqueHash
 
 AuthorizationPool = TypedVector[AuthorizerHash]
 
+
 # State key: 1
 class Alpha(TypedArray[AuthorizationPool, CORE_COUNT]):
     ...

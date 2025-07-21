@@ -1,14 +1,13 @@
-
 from typing import Tuple
 import math
 
 # Bandersnatch curve parameters
-P = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
-a = -5 # -0x05
-d = 0x6389c12633c267cbc66e3bf86be3b6d8cb66677177e54f92b369f2f5188d58e7
+P = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
+a = -5  # -0x05
+d = 0x6389C12633C267CBC66E3BF86BE3B6D8CB66677177E54F92B369F2F5188D58E7
 # d=math.ceil(138827208126141220649022263972958607803/171449701953573178309673572579671231137)
-n = 0x1cfb69d4ca675f520cce760202687600ff8f87007419047174fd06b52876e7e1
-G = 0x664197ccb667315e6064e4ee81ad8c3586d5dcba508b7d150f3e12da9e666c2a
+n = 0x1CFB69D4CA675F520CCE760202687600FF8F87007419047174FD06B52876E7E1
+G = 0x664197CCB667315E6064E4EE81AD8C3586D5DCBA508B7D150F3E12DA9E666C2A
 
 
 def mod_inverse(a: int, m: int) -> int:
@@ -80,9 +79,9 @@ def mod_sqrt(a: int, p: int) -> int:
 
 def find_z_ell2(p: int) -> int:
     """Find non-square Z value for Elligator 2"""
-    ctr = 0x664197ccb667315e6064e4ee81ad8c3586d5dcba508b7d150f3e12da9e666c2a #generator value
+    ctr = 0x664197CCB667315E6064E4EE81AD8C3586D5DCBA508B7D150F3E12DA9E666C2A  # generator value
     while True:
-        for z_cand in (ctr%p, -ctr % p):
+        for z_cand in (ctr % p, -ctr % p):
             if not is_square(z_cand, p):
                 return z_cand
         ctr += 1
@@ -98,7 +97,7 @@ def calculate_montgomery_params(a: int, d: int, p: int) -> Tuple[int, int]:
     J = (2 * (a + d) * denom_inv) % p
     K = (4 * denom_inv) % p
 
-    return J,K
+    return J, K
 
 
 def elligator2_map(u: int, J: int, K: int, Z: int, p: int) -> Tuple[int, int]:
@@ -114,15 +113,21 @@ def elligator2_map(u: int, J: int, K: int, Z: int, p: int) -> Tuple[int, int]:
         x1 = (-J * mod_inverse(K, p)) % p
 
     # 3. Calculate gx1
-    gx1 = (pow(x1, 3, p) + (J * pow(x1, 2, p) * mod_inverse(K, p)) +
-           (x1 * mod_inverse(K * K, p))) % p
+    gx1 = (
+        pow(x1, 3, p)
+        + (J * pow(x1, 2, p) * mod_inverse(K, p))
+        + (x1 * mod_inverse(K * K, p))
+    ) % p
 
     # 4. Calculate x2
     x2 = (-x1 - J * mod_inverse(K, p)) % p
 
     # 5. Calculate gx2
-    gx2 = (pow(x2, 3, p) + (J * pow(x2, 2, p) * mod_inverse(K, p)) +
-           (x2 * mod_inverse(K * K, p))) % p
+    gx2 = (
+        pow(x2, 3, p)
+        + (J * pow(x2, 2, p) * mod_inverse(K, p))
+        + (x2 * mod_inverse(K * K, p))
+    ) % p
 
     # 6-7. Choose point based on square test
     if is_square(gx1, p):
@@ -141,7 +146,6 @@ def elligator2_map(u: int, J: int, K: int, Z: int, p: int) -> Tuple[int, int]:
     t = (y * K) % p
 
     return s, t
-
 
 
 def montgomery_to_edwards(s: int, t: int, p: int) -> Tuple[int, int]:
@@ -188,7 +192,8 @@ def montgomery_to_edwards(s: int, t: int, p: int) -> Tuple[int, int]:
     # 11. return (v, w)
     return v, w
 
-def check_is_point(v,w):
+
+def check_is_point(v, w):
     left = (a * pow(v, 2, P) + pow(w, 2, P)) % P
     right = (1 + d * pow(v, 2, P) * pow(w, 2, P)) % P
     return left == right
@@ -210,14 +215,17 @@ def generate_curve_point(u: int) -> Tuple[int, int]:
 
     return v, w
 
+
 import random
+
+
 # Example usage
 def main():
     # Generate a point using a random value
-    u = random.randint(0,P-1) # Example input
+    u = random.randint(0, P - 1)  # Example input
 
     v, w = generate_curve_point(u)
-    valid= check_is_point(v,w)
+    valid = check_is_point(v, w)
 
     print(f"Generated point on Bandersnatch curve:")
     print(f"v = {hex(v)}")
@@ -230,10 +238,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
 
 
 # def str_to_crv_ell2(input: str):

@@ -27,7 +27,7 @@ from jam.consensus.bp_engine import BlockProducer
 clients = [40000, 40001]
 
 
-async def run_node(env: str, theme: str, height: int, is_requester = False):
+async def run_node(env: str, theme: str, height: int, is_requester=False):
     # ---------- SETUP LOGGING ----------
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
     init_ts = (time.time() - genesis_ts) / SLOT_PERIOD
@@ -37,7 +37,12 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
     load_dotenv(".env")
     load_dotenv(env, override=True)
 
-    name, port, seed, host = os.environ["NODE_NAME"], os.environ["PORT"], os.environ["SEED"], os.environ["HOST"]
+    name, port, seed, host = (
+        os.environ["NODE_NAME"],
+        os.environ["PORT"],
+        os.environ["SEED"],
+        os.environ["HOST"],
+    )
 
     if not name or not port or not host or not seed:
         raise ValueError(f"Missing node info in {env}")
@@ -50,16 +55,25 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
         theme=theme,
         node_name=name,
         environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None
+        min_level=getattr(logging, log_level.upper()) if log_level else None,
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+    settings = setup_setting(
+        name=name, port=int(port), seed=int(seed), data_path="data/"
+    )
 
     main_db = settings.main_db
 
-    logger.info("Starting JAM node", name=name, port=port, ts=init_ts, epoch=init_ep, env=environment)
-    
+    logger.info(
+        "Starting JAM node",
+        name=name,
+        port=port,
+        ts=init_ts,
+        epoch=init_ep,
+        env=environment,
+    )
+
     genesis = json.load(open("dev-spec.json"))
 
     # Set genesis state
@@ -68,10 +82,7 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
     update_state(state)
 
     peers = [
-        Peer(
-            id=bytes.decode(val.metadata.name, 'utf-8'),
-            data=val
-        )
+        Peer(id=bytes.decode(val.metadata.name, "utf-8"), data=val)
         for val in state.kappa
         if val.metadata.port != port
     ]
@@ -91,8 +102,8 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
     Finality.set_head(header_hash, main_db)
     Finality.finalise(header_hash, main_db)
 
-    # Generate random blocks upto height 
-    for i in range(1, height+1):
+    # Generate random blocks upto height
+    for i in range(1, height + 1):
         i_block = BlockProducer(tsr_node, main_db)._produce_block(state, TimeSlot(i))
         state.transition(i_block)
         i_block.save(main_db)
@@ -106,12 +117,15 @@ async def run_node(env: str, theme: str, height: int, is_requester = False):
     async with asyncio.TaskGroup() as tg:
         tg.create_task(tsr_node.initialize())
 
+
 session_name = "jam_test"
 
-def run_node_process(env: str, theme: str, height = 0, req = False):
+
+def run_node_process(env: str, theme: str, height=0, req=False):
     # Handle clean termination
     def handle_sigterm(signum, frame):
         exit(0)
+
     signal.signal(signal.SIGTERM, handle_sigterm)
 
     asyncio.run(run_node(env, theme, height, req))
@@ -125,8 +139,7 @@ async def test_polkajam_connect():
     #     args=('envs/40000.env', "matrix", 10, False)
     # )
     p_bob = Process(
-        target=run_node_process,
-        args=('envs/40001.env', "polkadot", 0, True)
+        target=run_node_process, args=("envs/40001.env", "polkadot", 0, True)
     )
 
     # p_alice.start()
@@ -141,4 +154,3 @@ async def test_polkajam_connect():
     p_bob.terminate()
     # p_alice.join()
     p_bob.join()
-

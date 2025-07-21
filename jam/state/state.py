@@ -17,11 +17,30 @@ from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.itf.codable import Codable
-from jam.types import Block, Hash, Alpha, Eta, Nu, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma, \
-    HeaderHash
+from jam.types import (
+    Block,
+    Hash,
+    Alpha,
+    Eta,
+    Nu,
+    Pi,
+    Psi,
+    Kappa,
+    Lambda_,
+    Rho,
+    Tau,
+    Chi,
+    Iota,
+    Xi,
+    Beta,
+    Phi,
+    Gamma,
+    HeaderHash,
+)
 from jam.logging import get_logger
 
 logger = get_logger("import")
+
 
 def make_state_prop(state_key: int, cl: Type[Codable]):
     def fget(self):
@@ -33,9 +52,15 @@ def make_state_prop(state_key: int, cl: Type[Codable]):
     def fset(self, value):
         k, v = construct_state_key(state_key), value.encode()
         self.store.put(bytes(k), v)
-        logger.debug("State component updated", component=cl.__name__, state_key=state_key, value_size=len(v))
+        logger.debug(
+            "State component updated",
+            component=cl.__name__,
+            state_key=state_key,
+            value_size=len(v),
+        )
 
     return property(fget, fset)
+
 
 class State:
     """
@@ -43,28 +68,28 @@ class State:
     Here we retain and update merkle trie as cache
     """
 
-    # STF Lock, we can only process only Block at a time 
+    # STF Lock, we can only process only Block at a time
     _lock = False
 
-    # DB + Trie + Cache 
+    # DB + Trie + Cache
     store: StateStorage
 
     # State Components
-    alpha       = make_state_prop(1,  Alpha)
-    phi         = make_state_prop(2,  Phi)
-    beta        = make_state_prop(3,  Beta)
-    gamma       = make_state_prop(4,  Gamma)
-    psi         = make_state_prop(5,  Psi)
-    eta         = make_state_prop(6,  Eta)
-    iota        = make_state_prop(7,  Iota)
-    kappa       = make_state_prop(8,  Kappa)
-    lambda_     = make_state_prop(9,  Lambda_)
-    rho         = make_state_prop(10, Rho)
-    tau         = make_state_prop(11, Tau)
-    chi         = make_state_prop(12, Chi)
-    pi          = make_state_prop(13, Pi)
-    nu          = make_state_prop(14, Nu)
-    xi          = make_state_prop(15, Xi)
+    alpha = make_state_prop(1, Alpha)
+    phi = make_state_prop(2, Phi)
+    beta = make_state_prop(3, Beta)
+    gamma = make_state_prop(4, Gamma)
+    psi = make_state_prop(5, Psi)
+    eta = make_state_prop(6, Eta)
+    iota = make_state_prop(7, Iota)
+    kappa = make_state_prop(8, Kappa)
+    lambda_ = make_state_prop(9, Lambda_)
+    rho = make_state_prop(10, Rho)
+    tau = make_state_prop(11, Tau)
+    chi = make_state_prop(12, Chi)
+    pi = make_state_prop(13, Pi)
+    nu = make_state_prop(14, Nu)
+    xi = make_state_prop(15, Xi)
 
     @property
     def delta(self) -> "DeltaView":
@@ -96,10 +121,10 @@ class State:
 
     def revert(self, header_hash):
         """
-        Revert the node to a previous header_hash 
-        
-        1. Collect all updates from latest -> header_hash 
-        2. Apply these to Trie + DB 
+        Revert the node to a previous header_hash
+
+        1. Collect all updates from latest -> header_hash
+        2. Apply these to Trie + DB
         3. Clear cache
         """
         self.store._updates = self.store._load_updates(header_hash)
@@ -112,6 +137,7 @@ class State:
         Create a cloned state (RO DB + Trie Clone w applied updates[do we really need trie?])
         """
         from jam.settings import settings
+
         # Empty trie -I dont think we need past trie data anywhere
         trie = StateTrie()
         # Create a Read-Only instance
@@ -124,9 +150,9 @@ class State:
     def settle(self, header_hash: HeaderHash):
         """Settles a set of state changes cached in store. Marks off the settlement with an unique header hash"""
         from jam.settings import settings
+
         self.store.save_n_clear_cache(header_hash, settings.main_db)
 
-    
     def _force_transition(self, block: Block):
         # 1. Push auth hash of every WR to self.alpha[0:1]
 
@@ -140,7 +166,6 @@ class State:
 
         return self.transition(block)
 
-
     def transition(self, block: Block):
         """
         Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
@@ -152,8 +177,8 @@ class State:
             logger.error("Lock detected, skipping transition")
             return
 
-        self._lock = True 
-        
+        self._lock = True
+
         from jam.accumulation.accumulation import Accumulation
         from jam.report.reporting import Reporting
         from jam.authorization.authorization import Authorization
@@ -167,7 +192,14 @@ class State:
 
         try:
             header_hash = HeaderHash(block.header.hash())
-            logger.info("Starting state transition on block", header_hash=header_hash.hex(), block_slot=int(block.header.slot), parent_hash= block.header.parent.hex()[:16] + "...", state_root= block.header.parent_state_root.hex()[:16] + "...", author_index=int(block.header.author_index))
+            logger.info(
+                "Starting state transition on block",
+                header_hash=header_hash.hex(),
+                block_slot=int(block.header.slot),
+                parent_hash=block.header.parent.hex()[:16] + "...",
+                state_root=block.header.parent_state_root.hex()[:16] + "...",
+                author_index=int(block.header.author_index),
+            )
 
             # TODO: Validate block headers
             # Epoch markers - make sure eta0_1 are the same as current etas
@@ -175,9 +207,9 @@ class State:
             # Offenders mark - make sure offenders are present in psi.offenders
             if block.header.slot == 0:
                 logger.warning("Found genesis block, skipping", hh=header_hash.hex())
-                self._lock = False 
-                return 
-            
+                self._lock = False
+                return
+
             if _set.main_db.get(Block.get_storage_key_block(header_hash)) is not None:
                 logger.warning("Duplicate block found, skipping", hh=header_hash.hex())
                 self._lock = False
@@ -202,18 +234,29 @@ class State:
             Reporting.transition(self, block, [])
 
             # Accumulation
-            logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
-            _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
+            logger.debug(
+                "Processing accumulation...", newly_available_count=len(newly_avail_wrs)
+            )
+            _, commitment_map = Accumulation.transition(
+                self, block, newly_avail_wrs=newly_avail_wrs
+            )
 
             # Authorization
             logger.debug("Processing authorization...")
             Authorization.transition(self, block)
 
             # Recent History
-            logger.debug("Processing recent history...", commitment_count=len(commitment_map))
+            logger.debug(
+                "Processing recent history...", commitment_count=len(commitment_map)
+            )
             history_merkle = BMRFunctions().wb_merkle_fn(
-                sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]),
-                Hash.keccak256
+                sorted(
+                    [
+                        Bytes(comm[0].encode() + comm[1].encode())
+                        for comm in commitment_map
+                    ]
+                ),
+                Hash.keccak256,
             )
             RecentHistory.transition(self, block, history_merkle)
 
@@ -231,32 +274,39 @@ class State:
             Safrole.transition(self, block, vrf_output)
 
             state.settle(header_hash)
-            
+
             logger.info(
                 "Block imported!",
                 header=header_hash.hex()[:16] + "...",
                 timeslot=self.tau,
-                final_state_root=self.root.hex()[:16] + "..."
+                final_state_root=self.root.hex()[:16] + "...",
             )
-                        
+
             block.save(_set.main_db)
             # Set local chain head to produced block
             Finality.set_head(header_hash, _set.main_db)
             # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
             Finality.finalise(header_hash, _set.main_db)
-            
+
             ext_store.clear_on_import(block)
 
             # asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs))
 
         except JamError as jam_e:
-            logger.critical("Invalid block", error=jam_e, hh=block.header.hash().hex(), slot=block.header.slot)
+            logger.critical(
+                "Invalid block",
+                error=jam_e,
+                hh=block.header.hash().hex(),
+                slot=block.header.slot,
+            )
             self.store.clear()
-        
+
         self._lock = False
         return
 
+
 state = State(None)
+
 
 def set_state(new_state: State):
     global state
@@ -266,11 +316,14 @@ def set_state(new_state: State):
     state = new_state
     return state
 
-def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"):
+
+def setup_state(
+    state_db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"
+):
     logger.info(
         "Setting up state from genesis",
         genesis_type=type(genesis).__name__,
-        genesis_source=genesis if isinstance(genesis, str) else "GhostState"
+        genesis_source=genesis if isinstance(genesis, str) else "GhostState",
     )
 
     if isinstance(genesis, str):
@@ -286,7 +339,11 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
     new_state.store.enable_writes()
     new_state.store.enable_cache()
 
-    logger.info("State setup completed", state_root=new_state.root.hex()[:16] + "...", data_entries=len(data))
+    logger.info(
+        "State setup completed",
+        state_root=new_state.root.hex()[:16] + "...",
+        data_entries=len(data),
+    )
 
     global state
     state = new_state

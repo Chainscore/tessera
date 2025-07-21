@@ -3,34 +3,39 @@ from typing import Dict, List, Tuple, Optional
 from tsrkit_types import TypedVector
 
 from jam.state.merkle.node import Node
-from jam.state.merkle.utils import ZERO_HASH, NodeHash, NodeType, encode_branch, encode_leaf
+from jam.state.merkle.utils import (
+    ZERO_HASH,
+    NodeHash,
+    NodeType,
+    encode_branch,
+    encode_leaf,
+)
 from jam.types.protocol.crypto import Hash
 from rockstore import RockStore
 from tsrkit_types.bytes import Bytes
+
 
 class StateTrie:
     """
     Implements the canonical state Merklization (per D.2) using a persistent node model.
     https://graypaper.fluffylabs.dev/#/68eaa1f/392f0039af00?v=0.6.4
-    
+
     - Builds a binary Merkle trie in-memory and records mapping nodes: entries with type, metadata, and encoded bytes for path updates.
     - merkelize(): full rebuild from a key->value dict
     - update(): Rewrites the leaf and its branch ancestors in-memory, updating both mappings. Applies path based leaf updates sequentially, updating the root hash each time.
     """
-    
+
     # Dictionary mapping a node hash to Node data (encoded data [ba64], bit_index, left and right node hashes)
     nodes: Dict[Bytes[32], Node]
     # Cache the root
     root_hash: Bytes[32]
-    
-    def __init__(self, nodes = {}, root_hash = Bytes[32](32)):
-        self.nodes = nodes 
+
+    def __init__(self, nodes={}, root_hash=Bytes[32](32)):
+        self.nodes = nodes
         self.root_hash = root_hash
 
     def _merkelize_recursive(
-        self,
-        leaves: List[Bytes[64]],
-        bit_index: int
+        self, leaves: List[Bytes[64]], bit_index: int
     ) -> Tuple[NodeHash, Bytes[64]]:
         """
         Core recursive routine to build a balanced binary Merkle trie:
@@ -50,10 +55,7 @@ class StateTrie:
         if len(leaves) == 1:
             encoded_leaf = leaves[0]
             node_hash = NodeHash(Hash.blake2b(bytes(encoded_leaf)))
-            self.nodes[node_hash] = Node(
-                encoded=encoded_leaf,
-                bit_index=bit_index
-            )
+            self.nodes[node_hash] = Node(encoded=encoded_leaf, bit_index=bit_index)
             return node_hash, encoded_leaf
 
         # Partition items by current bit
@@ -66,7 +68,9 @@ class StateTrie:
 
         # Build subtrees
         left_hash, left_encoded = self._merkelize_recursive(left_items, bit_index + 1)
-        right_hash, right_encoded = self._merkelize_recursive(right_items, bit_index + 1)
+        right_hash, right_encoded = self._merkelize_recursive(
+            right_items, bit_index + 1
+        )
 
         # Encode current branch
         encoded_branch = encode_branch(left_hash, right_hash)
@@ -76,18 +80,17 @@ class StateTrie:
             encoded=encoded_branch,
             bit_index=bit_index,
             left=left_hash,
-            right=right_hash
+            right=right_hash,
         )
         return node_hash, encoded_branch
 
     def merkelize(
-        self,
-        state_dict: Dict[Bytes, Bytes]
+        self, state_dict: Dict[Bytes, Bytes]
     ) -> Tuple[NodeHash, Dict[NodeHash, Node]]:
         """
         Implements the state Merklization (per D.2)
         https://graypaper.fluffylabs.dev/#/68eaa1f/39e200393301?v=0.6.4
-        
+
         Fully rebuilds the trie from scratch using the provided key->value map.
         Clears any previous state, invokes the recursive builder, sets root_hash,
         and optionally persists raw key/value blobs into the given RockStore.
@@ -122,10 +125,12 @@ class StateTrie:
         the branch nodes on its path, rewiring hashes upward to the root.
         Returns the new root hash.
         """
-        self.root_hash = self._reconstruct_root(self.root_hash, Node(encoded=encode_leaf(key, new_value)))
+        self.root_hash = self._reconstruct_root(
+            self.root_hash, Node(encoded=encode_leaf(key, new_value))
+        )
         return self.root_hash
-    
-    def _reconstruct_root(self, root: Bytes[32], node: Node, bit_index = 0) -> NodeHash:
+
+    def _reconstruct_root(self, root: Bytes[32], node: Node, bit_index=0) -> NodeHash:
         # Recompute branch nodes in reverse path
         current_node = self.nodes.get(root)
         # Empty slot
@@ -141,25 +146,33 @@ class StateTrie:
                 self.nodes[nh] = node
                 return nh
             # else create a new trie from here, and attach it
-            return self._merkelize_recursive([current_node.encoded, node.encoded], bit_index=bit_index)[0]
+            return self._merkelize_recursive(
+                [current_node.encoded, node.encoded], bit_index=bit_index
+            )[0]
         # Branch [update]
         else:
             # if 0, go left
             if node.key_bits_248[bit_index] == 0:
-                current_node.left = self._reconstruct_root(current_node.left, node, bit_index=bit_index+1)
+                current_node.left = self._reconstruct_root(
+                    current_node.left, node, bit_index=bit_index + 1
+                )
             else:
-                current_node.right = self._reconstruct_root(current_node.right, node, bit_index=bit_index+1)
-            
-            new_encoded = encode_branch(current_node.left or ZERO_HASH, current_node.right or ZERO_HASH)
+                current_node.right = self._reconstruct_root(
+                    current_node.right, node, bit_index=bit_index + 1
+                )
+
+            new_encoded = encode_branch(
+                current_node.left or ZERO_HASH, current_node.right or ZERO_HASH
+            )
             new_parent_hash = NodeHash(Hash.blake2b(bytes(new_encoded)))
-            
+
             self.nodes[new_parent_hash] = Node(
                 encoded=new_encoded,
                 bit_index=bit_index,
                 left=current_node.left,
-                right=current_node.right
+                right=current_node.right,
             )
-            
+
             return new_parent_hash
 
     def get_boundaries(self, key: Bytes[31]) -> TypedVector[Bytes[64]]:
@@ -183,14 +196,16 @@ class StateTrie:
             else:
                 to_checkout = self.nodes[key_in_ques].right
 
-            if int.from_bytes(to_checkout) == 0 or self.nodes[to_checkout].type == NodeType.EMPTY:
+            if (
+                int.from_bytes(to_checkout) == 0
+                or self.nodes[to_checkout].type == NodeType.EMPTY
+            ):
                 break
 
             key_in_ques = to_checkout
             ret.append(self.nodes[key_in_ques].encoded)
             bit_index += 1
         return ret
-
 
     def delete(self, key: Bytes[32]) -> NodeHash:
         """
@@ -206,9 +221,7 @@ class StateTrie:
 
         key_bits = key.to_bits()
         new_root, removed = self._delete_recursive(
-            self.root_hash,
-            key_bits,
-            bit_index=0
+            self.root_hash, key_bits, bit_index=0
         )
 
         # If nothing was removed we keep the existing root hash.
@@ -216,10 +229,7 @@ class StateTrie:
         return self.root_hash
 
     def _delete_recursive(
-            self,
-            subtree_hash: Bytes[32],
-            key_bits: List[int],
-            bit_index: int
+        self, subtree_hash: Bytes[32], key_bits: List[int], bit_index: int
     ) -> Tuple[NodeHash, bool]:
         """
         Returns (new_subtree_hash, removed_flag).

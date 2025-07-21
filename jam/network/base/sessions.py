@@ -37,7 +37,10 @@ class SessionTicketStore:
             with open(self.file, "rb") as f:
                 return pickle.load(f)
         except (FileNotFoundError, EOFError):
-            return {}  # Return an empty dictionary if the file doesn't exist or is empty
+            return (
+                {}
+            )  # Return an empty dictionary if the file doesn't exist or is empty
+
 
 def read_store(port: int):
     with open(f"sessions/{port}/session_tickets.pkl", "rb") as file:

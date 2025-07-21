@@ -15,9 +15,10 @@ P = TypeVar("P", bound=Point)
 
 class VRFProtocol(Protocol[C, P]):
     """Protocol defining the interface for VRF implementations."""
+
     curve: C
     point_type: Type[P]
-    
+
     @abstractmethod
     def prove(
         self, alpha: bytes, secret_key: int, additional_data: bytes
@@ -45,6 +46,7 @@ class VRF(ABC):
     This class provides the core functionality for VRF operations,
     following the IETF specification.
     """
+
     curve: C
     point_type: Type[P]
 
@@ -112,7 +114,7 @@ class VRF(ABC):
         challenge_hash = bytes(Hash.sha512(hash_input))[:32]
 
         return int.from_bytes(challenge_hash, "big") % self.curve.ORDER
-    
+
     def ecvrf_decode_proof(self, pi_string: bytes) -> Tuple[Point, int, int]:
         """Decode VRF proof.
 
@@ -124,9 +126,9 @@ class VRF(ABC):
         """
         ptLen = qLen = cLen = 32
         gamma_string = pi_string[:ptLen]
-        c_string = pi_string[ptLen:ptLen + cLen]
-        s_string = pi_string[ptLen + cLen:ptLen + cLen + qLen]
-        
+        c_string = pi_string[ptLen : ptLen + cLen]
+        s_string = pi_string[ptLen + cLen : ptLen + cLen + qLen]
+
         gamma = self.point_type.string_to_point(gamma_string)
         C = ConversionHelper.to_int(c_string) % self.curve.ORDER
         S = ConversionHelper.to_int(s_string) % self.curve.ORDER
@@ -145,7 +147,7 @@ class VRF(ABC):
         """
         gamma, C, S = self.ecvrf_decode_proof(pi_string)
         return self.proof_to_hash(gamma)
-    
+
     def proof_to_hash(self, gamma: Point, mul_cofactor: bool = False) -> bytes:
         """Convert VRF proof to hash.
 
@@ -158,16 +160,16 @@ class VRF(ABC):
         proof_to_hash_domain_separator_front = b"\x03"
         proof_to_hash_domain_separator_back = b"\x00"
         beta_string = Hash.sha512(
-            self.curve.SUITE_STRING+
-            proof_to_hash_domain_separator_front + 
-            (
+            self.curve.SUITE_STRING
+            + proof_to_hash_domain_separator_front
+            + (
                 gamma
                 # In some cases, we don't want to multiply by the cofactor.
                 # https://github.com/davxy/ark-ec-vrfs/issues/52
                 if not mul_cofactor
                 else gamma * self.curve.COFACTOR
-            ).point_to_string() + 
-            proof_to_hash_domain_separator_back
+            ).point_to_string()
+            + proof_to_hash_domain_separator_back
         )
         return bytes(beta_string)
 

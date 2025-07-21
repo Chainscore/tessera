@@ -12,7 +12,7 @@
 #         # TODO: Implement IETF VRF
 #         str_to_crv_ell2()
 #         pass
-    
+
 #     def verify(self, proof: Any) -> Boolean:
 #         # TODO: Implement IETF VRF
 #         pass
@@ -23,13 +23,13 @@ import random
 from typing import Tuple, List, Dict
 
 # Bandersnatch curve parameters
-p = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+p = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
 a = -5
-d = 0x6389c12633c267cbc66e3bf86be3b6d8cb66677177e54f92b369f2f5188d58e7
-n = 0x1cfb69d4ca675f520cce760202687600ff8f87007419047174fd06b52876e7e1
+d = 0x6389C12633C267CBC66E3BF86BE3B6D8CB66677177E54F92B369F2F5188D58E7
+n = 0x1CFB69D4CA675F520CCE760202687600FF8F87007419047174FD06B52876E7E1
 G = (
-    0x664197ccb667315e6064e4ee81ad8c3586d5dcba508b7d150f3e12da9e666c2a,
-    0x43de8d34436910f0ac41fc8837fc5cff2595fd6107e443ea0485ad13e23b0e31
+    0x664197CCB667315E6064E4EE81AD8C3586D5DCBA508B7D150F3E12DA9E666C2A,
+    0x43DE8D34436910F0AC41FC8837FC5CFF2595FD6107E443EA0485AD13E23B0E31,
 )
 
 
@@ -112,11 +112,23 @@ def find_z_ell2(p: int) -> int:
 def elligator2_map(u: int, J: int, K: int, Z: int, p: int) -> Tuple[int, int]:
     """Implement Elligator 2 mapping"""
     denom = (1 + Z * pow(u, 2, p)) % p
-    x1 = (-J * mod_inverse(K, p) * mod_inverse(denom, p)) % p if denom else (-J * mod_inverse(K, p)) % p
+    x1 = (
+        (-J * mod_inverse(K, p) * mod_inverse(denom, p)) % p
+        if denom
+        else (-J * mod_inverse(K, p)) % p
+    )
 
-    gx1 = (pow(x1, 3, p) + J * pow(x1, 2, p) * mod_inverse(K, p) + x1 * mod_inverse(K * K, p)) % p
+    gx1 = (
+        pow(x1, 3, p)
+        + J * pow(x1, 2, p) * mod_inverse(K, p)
+        + x1 * mod_inverse(K * K, p)
+    ) % p
     x2 = (-x1 - J * mod_inverse(K, p)) % p
-    gx2 = (pow(x2, 3, p) + J * pow(x2, 2, p) * mod_inverse(K, p) + x2 * mod_inverse(K * K, p)) % p
+    gx2 = (
+        pow(x2, 3, p)
+        + J * pow(x2, 2, p) * mod_inverse(K, p)
+        + x2 * mod_inverse(K * K, p)
+    ) % p
 
     if is_square(gx1, p):
         x, y = x1, mod_sqrt(gx1, p)
@@ -160,6 +172,7 @@ def check_is_point(P: Tuple[int, int]) -> bool:
     rhs = (1 + d * pow(v, 2, p) * pow(w, 2, p)) % p
     return lhs == rhs
 
+
 # def point_double(P):
 #     """Point doubling on the twisted Edwards curve."""
 #     x1, y1 = P
@@ -177,6 +190,7 @@ def check_is_point(P: Tuple[int, int]) -> bool:
 #
 #     return (x3, y3)
 
+
 def point_double(P: Tuple[int, int]) -> Tuple[int, int]:
     """Point doubling on the twisted Edwards curve."""
     x1, y1 = P
@@ -186,22 +200,23 @@ def point_double(P: Tuple[int, int]) -> Tuple[int, int]:
         return (0, 1)  # Return the identity point in twisted Edwards form
 
     # Calculate new coordinates using the doubling formula
-    denom_x = (a * x1 ** 2 + y1 ** 2) % p
-    denom_y = (2 - a * x1 ** 2 - y1 ** 2) % p
+    denom_x = (a * x1**2 + y1**2) % p
+    denom_y = (2 - a * x1**2 - y1**2) % p
 
     if denom_x == 0 or denom_y == 0:
         return (0, 1)  # Return identity if denominator is zero
 
     x3 = (2 * x1 * y1 * mod_inverse(denom_x, p)) % p
-    y3 = ((y1 ** 2 - a * x1 ** 2) * mod_inverse(denom_y, p)) % p
+    y3 = ((y1**2 - a * x1**2) * mod_inverse(denom_y, p)) % p
 
     return (x3, y3)
+
 
 def point_add(P1: Tuple[int, int], P2: Tuple[int, int]) -> Tuple[int, int]:
     """Add two points on the Bandersnatch curve"""
     x1, y1 = P1
     x2, y2 = P2
-    if P1==P2:
+    if P1 == P2:
         return point_double(P1)
 
     if P1 == (0, 1):
@@ -241,21 +256,35 @@ def point_mul(k: int, P: Tuple[int, int]) -> Tuple[int, int]:
 
 def generate_nonce(secret_key: int, input_point: Tuple[int, int]) -> int:
     """Generate a nonce"""
-    hashed_sk = hashlib.sha512(secret_key.to_bytes(32, 'big')).digest()
+    hashed_sk = hashlib.sha512(secret_key.to_bytes(32, "big")).digest()
     h_input = point_to_string(input_point)
     k_string = sha512(hashed_sk[32:] + h_input)
     return string_to_int(k_string) % n
 
 
-def challenge(Y: Tuple[int, int], I: Tuple[int, int], O: Tuple[int, int],
-              U: Tuple[int, int], V: Tuple[int, int], ad: str) -> int:
+def challenge(
+    Y: Tuple[int, int],
+    I: Tuple[int, int],
+    O: Tuple[int, int],
+    U: Tuple[int, int],
+    V: Tuple[int, int],
+    ad: str,
+) -> int:
     """Generate a challenge value"""
-    data = point_to_string(Y) + point_to_string(I) + point_to_string(O) + \
-           point_to_string(U) + point_to_string(V) + ad.encode()
+    data = (
+        point_to_string(Y)
+        + point_to_string(I)
+        + point_to_string(O)
+        + point_to_string(U)
+        + point_to_string(V)
+        + ad.encode()
+    )
     return string_to_int(sha512(data))
 
 
-def generate_ticket(secret_key: int, input_point: Tuple[int, int], ad: str) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+def generate_ticket(
+    secret_key: int, input_point: Tuple[int, int], ad: str
+) -> Tuple[Tuple[int, int], Tuple[int, int]]:
     """Generate a VRF ticket"""
     O = point_mul(secret_key, input_point)
     Y = point_mul(secret_key, G)
@@ -264,6 +293,7 @@ def generate_ticket(secret_key: int, input_point: Tuple[int, int], ad: str) -> T
     c = challenge(Y, input_point, O, U, V, ad)
     s = (k + c * secret_key) % n
     return O, (c, s)
+
 
 def point_neg(point: Tuple[int, int]) -> Tuple[int, int]:
     """Negate a point on the curve."""
@@ -276,12 +306,13 @@ def point_subtract(p1: Tuple[int, int], p2: Tuple[int, int]) -> Tuple[int, int]:
     return point_add(p1, point_neg(p2))
 
 
-
-
-
-def verify_ticket(public_key: Tuple[int, int], input_point: Tuple[int, int],
-                  additional_data: str, output_point: Tuple[int, int],
-                  proof: Tuple[int, int]) -> bool:
+def verify_ticket(
+    public_key: Tuple[int, int],
+    input_point: Tuple[int, int],
+    additional_data: str,
+    output_point: Tuple[int, int],
+    proof: Tuple[int, int],
+) -> bool:
     """Verify a VRF ticket"""
     c, s = proof
     U = point_subtract(point_mul(s, G), point_mul(c, public_key))
@@ -289,7 +320,7 @@ def verify_ticket(public_key: Tuple[int, int], input_point: Tuple[int, int],
     return c == challenge(public_key, input_point, output_point, U, V, additional_data)
 
 
-def generate_random_point(u:int) -> Tuple[int, int]:
+def generate_random_point(u: int) -> Tuple[int, int]:
     """Generate a random point on the Bandersnatch curve"""
     while True:
         # u = random.randrange(p)
@@ -300,12 +331,13 @@ def generate_random_point(u:int) -> Tuple[int, int]:
         except ValueError:
             raise ValueError
 
+
 def hash_to_point(message):
     """
     Map a message deterministically to a point on the SECP256k1 curve.
     """
     # Hash the message to produce an integer
-    hash_value = int.from_bytes(hashlib.sha256(message.encode()).digest(), 'big')
+    hash_value = int.from_bytes(hashlib.sha256(message.encode()).digest(), "big")
 
     # Find a valid point on the curve
     x = hash_value % p
@@ -315,12 +347,12 @@ def hash_to_point(message):
 def point_to_string(P: Tuple[int, int]) -> bytes:
     """Convert a point to bytes"""
     x, y = P
-    return x.to_bytes(32, 'big') + y.to_bytes(32, 'big')
+    return x.to_bytes(32, "big") + y.to_bytes(32, "big")
 
 
 def string_to_int(s: bytes) -> int:
     """Convert bytes to an integer"""
-    return int.from_bytes(s, 'big')
+    return int.from_bytes(s, "big")
 
 
 def sha512(data: bytes) -> bytes:
@@ -330,11 +362,11 @@ def sha512(data: bytes) -> bytes:
 
 def select_winning_ticket(tickets: List[Dict]) -> Tuple[List[Dict], Dict]:
     """Select the winning ticket from valid ticket.py based on minimum output_point"""
-    valid_tickets = [ticket for ticket in tickets if ticket['valid']]
+    valid_tickets = [ticket for ticket in tickets if ticket["valid"]]
     if not valid_tickets:
         return [], None
 
-    winning_ticket = min(valid_tickets, key=lambda ticket: ticket['output_point'])
+    winning_ticket = min(valid_tickets, key=lambda ticket: ticket["output_point"])
     return valid_tickets, winning_ticket
 
 
@@ -344,7 +376,7 @@ def main():
     validators = ["Hello", "Hello Computer", "Hello Coder"]
 
     for i in range(len(validators)):
-        secret_key = random.randint(1, p- 1)
+        secret_key = random.randint(1, p - 1)
         # input_point=generate_random_point()
         input_point = generate_random_point(hash_to_point(validators[i]))
         ad = f"Ticket {i + 1}"
@@ -352,11 +384,7 @@ def main():
         public_key = point_mul(secret_key, G)
         valid = verify_ticket(public_key, input_point, ad, output_point, proof)
 
-        tickets.append({
-            'proof': proof,
-            'valid': valid,
-            'output_point': output_point
-        })
+        tickets.append({"proof": proof, "valid": valid, "output_point": output_point})
         print(f"Ticket {i + 1}: {'VALID' if valid else 'INVALID'}")
 
     valid_tickets, winning_ticket = select_winning_ticket(tickets)
@@ -364,12 +392,16 @@ def main():
     if valid_tickets:
         print("\nValid ticket.py:")
         for idx, ticket in enumerate(valid_tickets, 1):
-            print(f"Ticket {idx}: Proof {ticket['proof']}, Output Point: {ticket['output_point']}")
+            print(
+                f"Ticket {idx}: Proof {ticket['proof']}, Output Point: {ticket['output_point']}"
+            )
 
-        print(f"\nWinning ticket: Proof {winning_ticket['proof']}, Output Point: {winning_ticket['output_point']}")
+        print(
+            f"\nWinning ticket: Proof {winning_ticket['proof']}, Output Point: {winning_ticket['output_point']}"
+        )
     else:
         print("\nNo valid ticket.py found.")
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()

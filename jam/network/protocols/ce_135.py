@@ -23,6 +23,7 @@ from jam.types.work.manifest import Justification
 from jam.types.work.shard import SegmentsShard, ShardKey
 from jam.utils.chainspec import chain_config
 
+
 @structure
 class CE135Data:
     len: Uint[32]
@@ -36,6 +37,7 @@ class CE135Data:
 
 
 OptBool = Option[Bool]
+
 
 class WorkReportDistribution(NetworkProtocol):
     """
@@ -63,7 +65,9 @@ class WorkReportDistribution(NetworkProtocol):
         msg_a = data.guaranteed_wr.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators")
+        logger.info(
+            f"Transmitting Guaranteed Work-Report to {len(node.peer_conn)} Validators"
+        )
 
         tasks = []
         try:
@@ -97,7 +101,7 @@ class WorkReportDistribution(NetworkProtocol):
             logger.error(
                 "Failed to distribute report.",
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
@@ -116,6 +120,7 @@ class WorkReportDistribution(NetworkProtocol):
 
             # Save extrinsic
             from jam.operations.ext_store import ext_store
+
             ext_store.import_rg(data.guaranteed_wr)
 
             # save assurers
@@ -124,6 +129,7 @@ class WorkReportDistribution(NetworkProtocol):
                 assurers.append(i.validator_index)
 
             from jam.settings import settings
+
             # report hash to assurers mapping
             as_da = ReportHashAssurerMap(settings.d3l)
             as_da.put(data.guaranteed_wr.report, assurers)
@@ -151,9 +157,8 @@ class WorkReportDistribution(NetworkProtocol):
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
-
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
         """Intercept Acknowledgement"""
@@ -162,8 +167,7 @@ class WorkReportDistribution(NetworkProtocol):
 
         if buffer[1:] == b"":
             logger.info(
-                f"Guaranteed Report received on Guarantor Node.",
-                stream_id=stream_id
+                f"Guaranteed Report received on Guarantor Node.", stream_id=stream_id
             )
             return OptBool(True)
 
@@ -182,16 +186,25 @@ class WorkReportDistribution(NetworkProtocol):
 
             shard_index = node.get_shard_index(report.core_index)
 
-            from jam.network.protocols.ce_137 import ShardDistributionProtocol, CE137Data, Query
+            from jam.network.protocols.ce_137 import (
+                ShardDistributionProtocol,
+                CE137Data,
+                Query,
+            )
+
             CE137 = ShardDistributionProtocol()
 
             query = Query(shard_index=shard_index, erasure_root=er_root)
             data = CE137Data(len=U32(len(query.encode())), query=query)
 
-            logger.debug("Requesting Shard", shard_index=shard_index, erasure_root=er_root)
+            logger.debug(
+                "Requesting Shard", shard_index=shard_index, erasure_root=er_root
+            )
 
             try:
-                responses = await CE137.transmit(node=node, data=data, assurers=assurers)
+                responses = await CE137.transmit(
+                    node=node, data=data, assurers=assurers
+                )
                 for shard in responses:
                     # Save Shard
                     if shard is not None:
@@ -203,12 +216,19 @@ class WorkReportDistribution(NetworkProtocol):
 
                         # creating leaf
                         bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
-                        segments_shard_root = bmrfunctions.wb_merkle_fn(values=segments_shard)
+                        segments_shard_root = bmrfunctions.wb_merkle_fn(
+                            values=segments_shard
+                        )
                         shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                         s = Bytes(shards_key.encode())
 
                         # verifying justification
-                        verification = bmrfunctions.verify_wb_merkle(leaf=s, index=shard_index, justification=justification, erasure_root=er_root)
+                        verification = bmrfunctions.verify_wb_merkle(
+                            leaf=s,
+                            index=shard_index,
+                            justification=justification,
+                            erasure_root=er_root,
+                        )
 
                         # if verification == True save shards, justification and break out of loop else move to shards provided by other guarantors
                         if verification:
@@ -228,6 +248,7 @@ class WorkReportDistribution(NetworkProtocol):
 
                             # give assurance for this core & this validator
                             from jam.operations.assr_collector import assr_collector
+
                             assr_collector.record_shard_assr(report.core_index)
 
                             # Save Report
@@ -235,19 +256,21 @@ class WorkReportDistribution(NetworkProtocol):
                             wr_hash = Hash.blake2b(report.encode())
                             rep_da.put(wr_hash, report)
 
-
-                            logger.info(f"📩 Assured work report : {wr_hash} with slot {slot}")
+                            logger.info(
+                                f"📩 Assured work report : {wr_hash} with slot {slot}"
+                            )
 
                             break
             except Exception as e:
                 logger.error(
                     "Failed to request shards using ce_137",
                     error=str(e),
-                    error_type=type(e).__name__
+                    error_type=type(e).__name__,
                 )
         else:
             # give assurance for this core & this validator
             from jam.operations.assr_collector import assr_collector
+
             assr_collector.record_shard_assr(report.core_index)
 
             # saving justification for shard assigned to itself
@@ -271,9 +294,13 @@ class WorkReportDistribution(NetworkProtocol):
             bundle_shard_indices = bs_dict.keys()
             segment_shard_indices = ss_dict.keys()
 
-            if len(bundle_shard_indices) != chain_config.num_validators or len(
-                    segment_shard_indices) != chain_config.num_validators:
-                raise ValueError(f"Length of both type of shards should be {chain_config.num_validators}")
+            if (
+                len(bundle_shard_indices) != chain_config.num_validators
+                or len(segment_shard_indices) != chain_config.num_validators
+            ):
+                raise ValueError(
+                    f"Length of both type of shards should be {chain_config.num_validators}"
+                )
 
             bmrfunctions = BMRFunctions()
             s = TypedVector[Bytes]([])
@@ -284,7 +311,9 @@ class WorkReportDistribution(NetworkProtocol):
                 shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                 s.append(Bytes(shards_key.encode()))
 
-            justification = Justification(bmrfunctions.trace_fn(values=s, index=shard_index).unwrap())
+            justification = Justification(
+                bmrfunctions.trace_fn(values=s, index=shard_index).unwrap()
+            )
 
             justification_da = JustificationsDA(audit)
             justification_da.put(er_root, shard_index, justification)

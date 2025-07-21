@@ -45,7 +45,7 @@ from jam.types.protocol import (
     TicketId,
     TicketAttempt,
     TicketBody,
-    TicketsMark
+    TicketsMark,
 )
 
 # Work types
@@ -184,7 +184,7 @@ __all__ = [
     "OptionHash",
     # Block types
     "Header",
-    "OffendersMark", 
+    "OffendersMark",
     "Block",
     # Work types
     "RefineContext",
