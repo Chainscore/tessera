@@ -151,8 +151,9 @@ class BlockAnnouncement(NetworkProtocol):
                 announced_count += 1
 
                 logger.debug(
-                    "Block announced to peer",
+                    "📣 Block announced to peer",
                     block_slot=int(data.header.slot),
+                    anc=anc
                 )
             except Exception as e:
                 logger.error(
@@ -244,13 +245,26 @@ class BlockAnnouncement(NetworkProtocol):
 
         # Handle announcement
         else:
+            a_len = U32.decode(data[0:4])
+            if len(data[4:]) != a_len:
+                # TODO: Create a buffer to handle large headers 
+                logger.error(
+                    "Received Announcement with incorrect length",
+                    expected_length=a_len,
+                    received_length=len(data[4:]),
+                )
+                return 
+
             anc = Announcement.decode(data[4:])
             asyncio.create_task(self._process_header(header=anc.header))
             # Process goes here
             logger.info(
-                "Block announcement processed successfully",
+                "Block announcement 📣 processed successfully",
                 stream_id=stream_id,
                 block_slot=int(anc.final.time_slot),
+                parent_hash=anc.final.header_hash.hex()[:16] + "...",
+                header_hash=anc.header.hash().hex()[:16] + "...",
+                anc=anc 
             )
 
     def res_intercept(self, stream_id: int, client):
