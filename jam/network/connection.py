@@ -35,43 +35,35 @@ logger = get_logger("network")
 class NodeConnection(QuicConnectionProtocol):
     """JAMNP-spec QUIC Connection handler"""
 
-    # Common UP0 Stream ID
+    # Common UP0 Stream ID. 
+    # If not None, we have connected UP0 
     up0_stream: Optional[int] = None
     # Stream buffers 
     stream_buffer: Dict[int, bytes] = {}
-    # Key we discoeverd during TLS handshake 
+    # Key we discoeverd during TLS handshake. 
+    # If not None, we know its verified
     ed25519_public = None 
-    # Has completed the TLS handshake 
-    is_initialized = False
-    # If we need to do the UP0 handshake = we are a neighbor and not done up0 handshake yet
-    has_pending_handshake: bool = False
-    # If we are supposed to initiate the connection to this node 
-    is_initiating: bool = False 
-    # Flag if we have received the UP0 handshake 
-    received_handshake: bool = False 
-    # Validator Data 
-    val: ValidatorData | None
+    # Have we completed the UP0 handshake  
+    handshake_completed = False
+    # If we are initiating the connection
+    is_initiating = False
+
 
     def __init__(
         self, 
         quic: QuicConnection, 
-        stream_handler: QuicStreamHandler|None = None,
-        is_initiating: bool = False
+        is_initiating: bool,
+        stream_handler: QuicStreamHandler|None = None
     ) -> None:
         super().__init__(quic=quic, stream_handler=stream_handler)
         self.waiter = {}
         self.stream_buffer = {}
         self._close_pending = False
 
-        # if not neighbor, no need to do up0 handshake
-        self.has_pending_handshake = True
-
         self.up0_stream = None 
-        self.is_initialized = False
         self.ed25519_public = None
-        self.is_initiating = is_initiating 
-        self.received_handshake = False 
-
+        self.handshake_completed = False
+        self.is_initiating = is_initiating
 
     def verify_cert(self) -> Ed25519Public|None:
         """
@@ -92,6 +84,7 @@ class NodeConnection(QuicConnectionProtocol):
             logger.info(f"🔗 Handshake completed with {pk.hex()}.")
 
             self.ed25519_public = pk 
+            
             return pk 
         
         except Exception as e:
@@ -106,8 +99,8 @@ class NodeConnection(QuicConnectionProtocol):
 
         if stream_id is None:
             stream_id = self._quic.get_next_available_stream_id()
-            if stream_id == self.up0_stream:
-                stream_id = self._quic.get_next_available_stream_id()
+            if stream_id == self.up0_stream or (self.up0_stream == None and stream_id == 0):
+                stream_id += 4
 
         logger.debug(
             f"📤 Sending message of size {len(message)} bytes",
@@ -164,6 +157,8 @@ class NodeConnection(QuicConnectionProtocol):
     def quic_event_received(self, event: QuicEvent) -> None:
         """function that handles all the quic events"""
 
+        logger.info("Received QUIC Event", name=type(event).__name__)
+
         # Handle TLS Handshake
         if isinstance(event, HandshakeCompleted):
             self.is_initialized = True
@@ -172,14 +167,14 @@ class NodeConnection(QuicConnectionProtocol):
                 logger.error(f"Unsupported ALPN protocol: {event.alpn_protocol}")
                 return self._quic.close()
             
-            pk = self.verify_cert()
-            from .start import node 
-            # Only if we are a non-initaiting neighbor, we need to do reverse up0 handshake 
-            if node and pk in node.neighbors and not self.is_initiating:
-                self.has_pending_handshake = True
-            else: 
-                logger.debug("Node is not a neighbor, no pending handshake required.")
-                self.has_pending_handshake = False
+            if not self.ed25519_public: self.verify_cert()
+            # from .start import node 
+            # # Only if we are a non-initaiting neighbor, we need to do reverse up0 handshake 
+            # if node and pk in node.neighbors and not self.is_initiating:
+            #     self.has_pending_handshake = True
+            # else: 
+            #     logger.debug("Node is not a neighbor, no pending handshake required.")
+            #     self.has_pending_handshake = False
 
         # Handle Stream Reset Event
         elif isinstance(event, (StreamReset, StopSendingReceived)):
@@ -191,6 +186,9 @@ class NodeConnection(QuicConnectionProtocol):
         # Handle Received Data Event
         elif isinstance(event, StreamDataReceived):
             from jam.network.base.protocol_map import ProtocolMap
+
+            if not self.ed25519_public:
+                self.verify_cert()
 
             # Fetch peer & data
             stream_id = event.stream_id
@@ -204,19 +202,24 @@ class NodeConnection(QuicConnectionProtocol):
             # If we don't know stream, we receive prefix
             # i.e. whenever client initiates connection or starts new protocol.
             # Add prefix to the buffer
-            prefix = U8.decode(data[0:1])
+            prefix = U8.decode(data)
             logger.debug(
                 f"📥 Received data on stream {stream_id}",
                 prefix=prefix,
-                stream_id=stream_id,
                 data_len=len(data)
             )
 
-            if (self.up0_stream is None and prefix == PrefixType.UP0) or event.stream_id == self.up0_stream:
-                if self.up0_stream == None:
-                    self.up0_stream = stream_id 
-                    data = data[1:]
+            if self.up0_stream is None and prefix == PrefixType.UP0:
+                # Send UP0 Handshake 
+                from jam.network.protocols.up_0 import BlockAnnouncement 
+                BlockAnnouncement().handshake(stream_id, self)
+                self.up0_stream = stream_id
+                if len(data) == 1:
+                    return
+                data = data[1:]
 
+            
+            if self.up0_stream == event.stream_id or prefix == PrefixType.UP0:
                 from jam.network.protocols.up_0 import BlockAnnouncement 
                 BlockAnnouncement().req_intercept(stream_id, self, data)
                 return
@@ -228,7 +231,7 @@ class NodeConnection(QuicConnectionProtocol):
             if not event.end_stream:
                 return           
             try:
-                prefix = self.stream_buffer[stream_id][0]
+                prefix = U8.decode(self.stream_buffer[stream_id])
                 # Map the request to its corresponding CE protocol function
                 ce_protocol = ProtocolMap.get_protocol(prefix)()
                 logger.debug(f"CE PROTOCOL TRIGGERED", p=type(ce_protocol).__name__)

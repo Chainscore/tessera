@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Set
 import math
 from _pytest.nodes import Node
 from aioquic.quic.retry import QuicRetryTokenHandler
@@ -224,7 +224,7 @@ class QuicNode(asyncio.DatagramProtocol):
                 session_ticket_fetcher=self._session_ticket_fetcher,
                 session_ticket_handler=self._session_ticket_handler,
             )
-            protocol = self._create_protocol(quic=connection)
+            protocol = self._create_protocol(quic=connection, is_initiating=False)
             protocol.connection_made(self._transport)
 
             # register callbacks
@@ -267,20 +267,20 @@ class QuicNode(asyncio.DatagramProtocol):
         logger.debug(f"Connection ID retired", cid=cid.hex())
 
     @property 
-    def active_peers(self) -> List[NodeConnection]:
-        return [
+    def active_peers(self) -> Set[NodeConnection]:
+        return set([
             self.connection_ids[self.conns[k]]
             for k in self.neighbors
-            if self.conns.get(k) and self.connection_ids.get(self.conns.get(k)) and self.connection_ids.get(self.conns.get(k)).is_initialized
-        ]
+            if self.conns.get(k) and self.connection_ids.get(self.conns.get(k))
+        ])
 
     @property 
-    def all_connected(self) -> List[NodeConnection]:
-        return [
+    def all_connected(self) -> Set[NodeConnection]:
+        return set([
             conn 
             for _, conn in self.connection_ids.items()
-            if conn.is_initialized
-        ]
+            if conn.ed25519_public
+        ])
 
     def _connection_terminated(self, protocol: NodeConnection):
         for cid, proto in list(self.connection_ids.items()):
@@ -330,8 +330,17 @@ class QuicNode(asyncio.DatagramProtocol):
         await protocol.wait_connected()
         logger.info(f"➡️ Created client connection with {addr[1]}", cid=quic.host_cid.hex())
 
-        stream_id = protocol._quic.get_next_available_stream_id()
-        from jam.network.protocols import BlockAnnouncement
-        BlockAnnouncement.handshake(stream_id, protocol, True)
+        protocol.up0_stream = 0
+        protocol.stream_and_keep_open(bytes(1), protocol.up0_stream)
+        asyncio.create_task(self.keep_pinging(protocol))
+
+        # stream_id = protocol._quic.get_next_available_stream_id()
+        # from jam.network.protocols import BlockAnnouncement
+        # BlockAnnouncement.handshake(stream_id, protocol, True)
 
         return protocol
+
+    async def keep_pinging(self, conn: NodeConnection, period = 10):
+        while True: 
+            await conn.ping()
+            await asyncio.sleep(period)

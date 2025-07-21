@@ -115,7 +115,6 @@ class BlockAnnouncement(NetworkProtocol):
         # Handshake Message
         conn.stream_and_keep_open(data, stream_id)
 
-        conn.up0_stream = stream_id
 
     async def transmit(self, data: Block):
         """Announce Block to Peers (servers)"""
@@ -214,14 +213,15 @@ class BlockAnnouncement(NetworkProtocol):
         #     # Update the stream ID
         #     conn.up0_stream = stream_id
 
-        # Handle handshake message
-        if conn.is_initialized and conn.has_pending_handshake:
-            # Reverse Handshake on Server
-            logger.info("Doing reverse handshake")
-            self.handshake(stream_id, conn)
-            conn.has_pending_handshake = False
+        # # Handle handshake message
+        # if conn.is_initialized and conn.has_pending_handshake:
+        #     # Reverse Handshake on Server
+        #     logger.info("Doing reverse handshake")
+        #     self.handshake(stream_id, conn)
+        #     conn.has_pending_handshake = False
 
-        if not conn.received_handshake:
+
+        if not conn.handshake_completed:
             # Parse received Handshake
             h_len= U32.decode(data[0:4])
             if len(data[4:]) != h_len:
@@ -243,7 +243,11 @@ class BlockAnnouncement(NetworkProtocol):
                 parent_hash=h.final.header_hash.hex()[:16] + "...",
             )
 
-            conn.received_handshake = True
+            conn.handshake_completed = True
+
+            if conn.is_initiating:
+                self.handshake(stream_id, conn, False)
+                conn.up0_stream = stream_id
 
             # Start synchornization
             # asyncio.create_task(self.synchronise(h, conn))
@@ -261,6 +265,7 @@ class BlockAnnouncement(NetworkProtocol):
                 return 
 
             anc = Announcement.decode(data[4:])
+            
             asyncio.create_task(self._process_header(header=anc.header))
             # Process goes here
             logger.info(
@@ -287,6 +292,7 @@ class BlockAnnouncement(NetworkProtocol):
                 max_blocks=U32(1),
             ),
         )
+        print("received blocks", blocks)
         for block in blocks[0]:
             state.transition(block)
             logger.debug("Imported block", slot=block.header.slot)

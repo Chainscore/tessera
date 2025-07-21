@@ -59,7 +59,7 @@ class BlockRequest(NetworkProtocol):
         transmitted_count = 0
         responses = []
 
-        for client in node.connection_ids.values():
+        for client in node.all_connected:
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 print("using stream", stream_id)
