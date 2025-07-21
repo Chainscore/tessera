@@ -7,27 +7,28 @@ from tsrkit_types.sequences import TypedVector
 from tsrkit_types import structure
 from tsrkit_types.dictionary import Dictionary
 
+from jam.types.protocol.core import ValidatorIndex
 from jam.types.work.report import WorkReport, WorkReportHash
 from tsrkit_types.integers import Uint
 
 SignatureList=TypedVector[Bytes]
-
+ValidatorList=TypedVector[ValidatorIndex]
 @structure
 class JudgmentRecord:
-    true_votes: SignatureList #J_t(wr)(t)
-    false_votes: SignatureList # J_f(wr)(t)
-    announces: SignatureList #A_n
+    true_votes: ValidatorList #J_t(wr)(t)
+    false_votes: ValidatorList # J_f(wr)(t)
+    announces: ValidatorList #A_n
 
     @staticmethod
     def dummy()-> "JudgmentRecord":
-        true_votes:SignatureList=SignatureList([])
-        false_votes:SignatureList=SignatureList([Bytes(0),Bytes(1),Bytes(2),Bytes(3)])
-        announces:SignatureList=SignatureList([Bytes(0),Bytes(1),Bytes(2),Bytes(3),Bytes(4),Bytes(5)])
+        true_votes:ValidatorList=ValidatorList([])
+        false_votes:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3)])
+        announces:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3),ValidatorIndex(4),ValidatorIndex(5)])
         return JudgmentRecord(true_votes=true_votes,false_votes=false_votes,announces=announces)
 
     @staticmethod
     def empty()->"JudgmentRecord":
-        return JudgmentRecord(true_votes=SignatureList([]),false_votes=SignatureList([]),announces=SignatureList([]))
+        return JudgmentRecord(true_votes=ValidatorList([]),false_votes=ValidatorList([]),announces=ValidatorList([]))
 
 @structure
 class TrancheState:
