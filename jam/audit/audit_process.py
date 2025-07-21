@@ -4,7 +4,9 @@ from typing import List, Tuple
 
 from sympy.logic.inference import valid
 from tsrkit_types import structure, U8, Bytes, U32, TypedVector, Option, Bool
+from tsrkit_types.enum import Uint
 
+from jam.audit.tranche import Tranche, TrancheStore
 from jam.types import Hash, BandersnatchVrfSignature, ValidatorIndex
 from jam.types.protocol.core import CoreIndex, EpochIndex
 
@@ -28,7 +30,7 @@ logger = get_logger("in_core")
 class AuditProcess:
 
     @classmethod
-    async def audit_process(cls, newly_avail_wrs: List[Option[WorkReport]]):
+    async def audit_process(cls, newly_avail_wrs: List[Option[WorkReport]],store:TrancheStore,tranche:Tranche):
         from jam.audit.audit import AuditingAndJudgement
         from jam.consensus.grandpa.finality import Finality
         # from jam.state.state import state
@@ -66,10 +68,10 @@ class AuditProcess:
             reports = audit.verifiable_random_selection(entropy_source=entropy_, bandersnatch_key=node.b_key, pre_audit_report=p_a_r)
 
             logger.info(f"Checking assign report length {len(reports)} for each validator")
-
-
-            # asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports))
-            asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports))
+            #To store from the next tranches
+            tranche.tranche_index+=1
+            asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports,store=store,tranche=tranche))
+            # asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports))
 
         except Exception as e:
             logger.error(f"failed to report assignment", error=e)
@@ -77,7 +79,7 @@ class AuditProcess:
 
 
     @classmethod
-    async def audit_announcement(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]]):
+    async def audit_announcement(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]],store:TrancheStore,tranche:Tranche):
         """
             This function just take a list of report which is available for auditing and assign random 10 reports to tha validator then create announcement for them.
 
@@ -101,7 +103,7 @@ class AuditProcess:
         slot = latest_block.header.slot
 
 
-        announcement_sign = audit.validator_announcement_statement(assign_report=assign_wrs, header=header_hash, tranche=U8(0))
+        announcement_sign = audit.validator_announcement_statement(assign_report=assign_wrs, header=header_hash, tranche=tranche.tranche_index)
 
 
         # logger.info("announcement signature", announcement_sign)
@@ -111,7 +113,7 @@ class AuditProcess:
         CE144 = AuditAnnouncement()
 
         # tranche = audit.tranche_index(header_slot=slot)
-        tranche = U8(0)
+
 
 
         # for c, r in assign_wrs:
@@ -125,7 +127,7 @@ class AuditProcess:
 
         announcement = Transmit(
             header_hash=header_hash,
-            tranches=tranche,
+            tranches=tranche.tranche_index,
             announcement=Announcement(
                 assigned_report=assignments,
                 ed25519_signature=announcement_sign

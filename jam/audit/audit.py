@@ -176,7 +176,7 @@ class AuditingAndJudgement:
         return tranche_index
 
     @staticmethod
-    def validator_announcement_statement(assign_report: List[Tuple[CoreIndex, WorkReport]], header: Header, tranche: U8) -> Ed25519Signature:
+    def validator_announcement_statement(assign_report: List[Tuple[CoreIndex, WorkReport]], header: Header, tranche: Uint) -> Ed25519Signature:
         """
         Equations: 17.9, 17.10, 17.11
         This function create Announcement Statement (Valid Ed25519 Signature) is published and distributed to all other Validators Signature.
@@ -339,5 +339,3 @@ class AuditingAndJudgement:
 
         # condition 1 => on that core all the judgment should be true and A_n(r) ⊂ J_T(r
         # condition 2 => if in tranche all the judgment of the validator should be > 2/3
-
-

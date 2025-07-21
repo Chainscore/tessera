@@ -52,7 +52,7 @@ class SubsequentTrancheEvidence:
 @structure
 class Transmit:
     header_hash : HeaderHash
-    tranches : U8
+    tranches : Uint[32]
     announcement : Announcement
 
 @structure
