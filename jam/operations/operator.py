@@ -20,7 +20,7 @@ def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
 
     return [
         (0, BlockProducer),
-        (2, AuditEngine), # audit
+        (2, None), # audit
         (4, assr_collector), # transmit assurances
     ]
 

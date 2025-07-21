@@ -290,7 +290,7 @@ class Node:
 
                 self.peer_conn[peer] = stream_id, client
                 self.is_initialized = True
-
+                print("initialized less go")
                 # Wait indefinitely - the connection will be managed by the context manager
                 await asyncio.Future()
 

@@ -14,8 +14,8 @@ from jam.audit.tranche import JudgmentRecord, Tranche, TrancheState, TrancheStor
 
 
 
-# Logger for Block Production / Authoring module
-logger = get_logger("author")
+# Logger for Auditing module
+logger = get_logger("audit")
 
 class AuditEngine(NodeDispatcher):
     """
