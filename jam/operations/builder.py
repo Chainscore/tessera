@@ -1,16 +1,11 @@
-import asyncio
-from time import time
-
 from tsrkit_types import Bytes, U16, Uint
 
-from jam.settings import Settings
 from jam.execution.pvm.code import Code
 from jam.types import WorkPackage
 from jam.types.protocol.crypto import Hash
 from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
 from jam.types.work.manifest import Extrinsics
-from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
-from jam.network.node import Node
+from jam.utils.constants import EPOCH_LENGTH
 from jam.logging import get_logger
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
@@ -18,8 +13,8 @@ from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
 # Logger for WP Production
 logger = get_logger("in_core")
 
-from tests.unit.wp.types import RefineVectors, RefineVector
-vectors = RefineVectors([])
+# from tests.unit.wp.types import RefineVectors, RefineVector
+# vectors = RefineVectors([])
 
 class Builder:
     """
@@ -75,16 +70,16 @@ class Builder:
 
         # # SAVE TEST VECTORS
         # BUILD REPORT
-        global vectors
-        from jam.utils.benchmark import write_json
-        from jam.work_package.processor import Processor
-        processor = Processor(node)
-        wr, wr_hash = processor.process(wp, CoreIndex(1), ext)
-        write_json("vectors/packages", wp.to_json())
-        write_json("vectors/reports", wr.to_json())
+        # global vectors
+        # from jam.utils.benchmark import write_json
+        # from jam.work_package.processor import Processor
+        # processor = Processor(node)
+        # wr, wr_hash = processor.process(wp, CoreIndex(1), ext)
+        # write_json("vectors/packages", wp.to_json())
+        # write_json("vectors/reports", wr.to_json())
 
-        vector = RefineVector(wp, CoreIndex(1), ext, wr, wr_hash)
-        vectors.append(vector)
+        # vector = RefineVector(wp, CoreIndex(1), ext, wr, wr_hash)
+        # vectors.append(vector)
 
         package_len = Uint[32](len(wc.encode()))
         ext_len = Uint[32](len(ext.encode()))

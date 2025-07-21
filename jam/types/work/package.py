@@ -80,7 +80,11 @@ class WorkPackage:
 
     def m_c(self, delta: "Delta") -> Tuple[bytes, bytes]:
         service_data = delta[self.auth_code_host].historical_lookup(self.context.lookup_anchor_slot, self.authorizer.code_hash)
-        return decode_code_hash(service_data)
+        print("bbbb",service_data)
+        if service_data  == None:
+            return b"user", b"name"
+        else:
+            return decode_code_hash(service_data)
 
     def hash(self) -> Bytes[32]:
         return Hash.blake2b(self.encode())

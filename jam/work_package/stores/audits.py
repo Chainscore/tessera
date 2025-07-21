@@ -30,7 +30,7 @@ class JustificationsDA(DA):
         data = self.db.get(key)
 
         if data is None:
-            raise KeyError("CE137 Justification not found in Audit DA")
+            raise KeyError("Justification not found in Audit DA")
 
         record, _ = Justification.decode_from(data)
         return record

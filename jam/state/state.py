@@ -1,6 +1,10 @@
 import json
 from typing import Type
 from tsrkit_types import Dictionary
+import asyncio
+
+
+# from jam.audit.audit_process import AuditProcess
 from jam.operations.ext_store import ext_store
 from jam.consensus.grandpa.finality import Finality
 from jam.error import JamError
@@ -234,7 +238,6 @@ class State:
                 timeslot=self.tau,
                 final_state_root=self.root.hex()[:16] + "..."
             )
-            
                         
             block.save(_set.main_db)
             # Set local chain head to produced block
@@ -243,7 +246,9 @@ class State:
             Finality.finalise(header_hash, _set.main_db)
             
             ext_store.clear_on_import(block)
-        
+
+            # asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs))
+
         except JamError as jam_e:
             logger.critical("Invalid block", error=jam_e, hh=block.header.hash().hex(), slot=block.header.slot)
             self.store.clear()

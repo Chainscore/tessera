@@ -64,7 +64,7 @@ class Settings:
         self._audit_db = None
         self._d3l = None
         self._state_db = None
-        
+        print("DATA PATH", data_path)
         if data_path:
             import os
             data_path = data_path + str(port)

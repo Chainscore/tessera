@@ -35,21 +35,21 @@ class ExtrinsicStore:
             culprits = Culprits([]),
             faults = Faults([])
         )
-    
+
     # ----- EG ----- #
     def import_rg(self, report_g: ReportGuarantee):
         """
         Process an incoming report gurantee
         """
-        # Find if it already exists in eg, if so, update the signatures(add new ones); ignore old ones 
+        # Find if it already exists in eg, if so, update the signatures(add new ones); ignore old ones
         logger.info("Storing Report Guarantee", report=report_g.to_json(), hash=Hash.blake2b(report_g.encode()).hex()[:16]+"...")
         index = -1
         for i, g in enumerate(self.eg):
             if g.report == report_g.report:
                 # if a new val index, add em
-                index = i 
+                index = i
         if index == -1:
-            # TODO: Validate guarantees + WR 
+            # TODO: Validate guarantees + WR
             self.eg.append(report_g)
         else:
             logger.error("Duplicate Work Report found", report=report_g.to_json())
@@ -66,79 +66,106 @@ class ExtrinsicStore:
         if index == -1:
             logger.warning("Work Report was not collected", report=report_g)
 
-       
+
     # ----- EA ----- #
     def import_assr(self, assr: AvailAssurance):
         """
-        Process an incoming assurance 
+        Process an incoming assurance
         """
         if assr in self.ea:
             logger.error("Duplicate Assurance found", assurance=assr.to_json())
-            return 
+            return
         self.ea.append(assr)
-    
+
     def rm_assr(self, assr: AvailAssurance):
         try:
             indx = self.ea.index(assr)
             self.ea.pop(indx)
         except ValueError as e:
             logger.warning("Assurance was not collected", error=e, assurance=assr.to_json())
-            return 
-    
+            return
+
     # ----- ET ----- #
     def import_tkt(self, tkt: TicketEnvelope):
         """
-        Process an incoming ticket  
+        Process an incoming ticket
         """
         if tkt in self.et:
             logger.error("Duplicate Ticket found", ticket=tkt.to_json())
-            return 
+            return
         self.et.append(tkt)
-    
+
     def rm_tkt(self, tkt: TicketEnvelope):
         try:
             indx = self.et.index(tkt)
             self.et.pop(indx)
         except ValueError as e:
             logger.warning("Ticket was not collected", error=e, ticket=tkt.to_json())
-            return 
-    
-    # TODO: ----- ED ----- #
+            return
 
+    #  ----- ED ----- #
+    def import_disp(self, verdicts:Verdicts,culprits:Culprits,faulters:Faults):
+        """
+        Process an incoming ticket
+        """
+        if verdicts in self.ed.verdicts:
+            logger.error("Duplicate Verdicts", ticket=verdicts.to_json())
+            return
+        if culprits in self.ed.culprits:
+            logger.error("Duplicate Culprits", ticket=verdicts.to_json())
+            return
+        if faulters in self.ed.faults:
+            logger.error("Duplicate Faults", ticket=verdicts.to_json())
+            return
+        self.ed.verdicts.append(verdicts)
+        self.ed.culprits.append(culprits)
+        self.ed.faults.append(faulters)
+
+    def em_disp(self, verdicts:Verdicts, culprits:Culprits, faulters:Faults):
+        try:
+            verd_index = self.ed.verdicts.index(verdicts)
+            self.ed.verdicts.pop(verd_index)
+            culprits_index = self.ed.culprits.index(culprits)
+            self.ed.culprits.pop(culprits_index)
+            faulters_index = self.ed.faults.index(faulters)
+            self.ed.faults.pop(faulters_index)
+        except ValueError as e:
+            logger.warning("Disputes were not found", error=e)
+            return
 
     # ----- EP ----- #
     def import_pimg(self, pimg: Preimage):
         """
-        Process an incoming preimage 
+        Process an incoming preimage
         """
         if pimg in self.ep:
-            logger.error("Duplicate Preimage found", ticket=tkt.to_json())
-            return 
+            logger.error("Duplicate Preimage found", preimage=pimg.to_json())
+            return
         self.ep.append(pimg)
-    
+
     def rm_pimg(self, pimg: Preimage):
         try:
             indx = self.ep.index(pimg)
             self.ep.pop(indx)
         except ValueError as e:
-            logger.warning("Preimage was not collected", error=e, ticket=tkt.to_json())
-            return 
-    
+            logger.warning("Preimage was not collected", error=e, preimage=pimg.to_json())
+            return
+
 
     def clear_on_import(self, block: Block):
-        # Remove Preimages 
+        # Remove Preimages
         for preimage in block.extrinsic.preimages:
             self.rm_pimg(preimage)
         # Remove Tickets
         for ticket in block.extrinsic.tickets:
             self.rm_tkt(ticket)
-        # Remove Assurances 
+        # Remove Assurances
         for assurance in block.extrinsic.assurances:
             self.rm_assr(assurance)
         # Remove WRs
         for grte in block.extrinsic.guarantees:
             self.rm_rg(grte)
-        # TODO: Remove disputes 
+        # TODO: Remove disputes
 
         return
 

@@ -435,21 +435,21 @@ class Processor:
         logger.debug("Building work package bundle..")
         bundle = bundler.build_bundle(package, extrinsics)
 
-        # Distribute Bundle to other Guarantors CE134
-        CE134 = WorkPackageSharing()
-
-        core_segment = CoreSegment(core_index=core, segment_root_map=lookup)
-
-        map_len = U32(len(core_segment.encode()))
-        bundle_len = U32(len(bundle.encode()))
-
-        data = CE134Data(map_len=map_len, work_package_bundle=bundle, bundle_len=bundle_len, core_segment=core_segment)
-
-        loop = asyncio.get_running_loop()
-        loop.set_task_factory(asyncio.eager_task_factory)
-
-        # Distribute Bundle, parallely
-        self.transmit_task = loop.create_task(CE134.transmit(node=self.node, data=data))
+        # # Distribute Bundle to other Guarantors CE134
+        # CE134 = WorkPackageSharing()
+        #
+        # core_segment = CoreSegment(core_index=core, segment_root_map=lookup)
+        #
+        # map_len = U32(len(core_segment.encode()))
+        # bundle_len = U32(len(bundle.encode()))
+        #
+        # data = CE134Data(map_len=map_len, work_package_bundle=bundle, bundle_len=bundle_len, core_segment=core_segment)
+        #
+        # loop = asyncio.get_running_loop()
+        # loop.set_task_factory(asyncio.eager_task_factory)
+        #
+        # # Distribute Bundle, parallely
+        # self.transmit_task = loop.create_task(CE134.transmit(node=self.node, data=data))
 
         # Build Report
         logger.debug("Compiling report..")
@@ -457,14 +457,14 @@ class Processor:
 
 
         # Build Guarantee
-        logger.debug(f"Building guarantees..")
-        try:
-            # Wait for guarantees and process them
-            asyncio.create_task(self.process_guarantees(wr, wr_hash))
-        except asyncio.TimeoutError:
-            logger.error("Timeout waiting for async transmit result")
-        except Exception as e:
-            logger.error(f"Error waiting for async transmit result: {e}")
+        # logger.debug(f"Building guarantees..")
+        # try:
+        #     # Wait for guarantees and process them
+        #     asyncio.create_task(self.process_guarantees(wr, wr_hash))
+        # except asyncio.TimeoutError:
+        #     logger.error("Timeout waiting for async transmit result")
+        # except Exception as e:
+        #     logger.error(f"Error waiting for async transmit result: {e}")
 
         return wr, wr_hash
 

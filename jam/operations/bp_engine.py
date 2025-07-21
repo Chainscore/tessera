@@ -6,7 +6,7 @@ from jam.network.protocols.up_0 import BlockAnnouncement
 from jam.state.state import State
 from jam.types import AssurancesExtrinsic
 from jam.types.block import (
-    Block, 
+    Block,
     Header,
     TicketsExtrinsic,
     GuaranteesExtrinsic,
@@ -33,7 +33,7 @@ class BlockProducer(NodeDispatcher):
     @classmethod
     async def run(cls, time_slot: int):
         """
-        Starts the block producer engine in asyncio loop. 
+        Starts the block producer engine in asyncio loop.
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
         from jam.network.node import node
@@ -64,21 +64,21 @@ class BlockProducer(NodeDispatcher):
             """Generate a header seal"""
             # TODO: Implement once ring-proof are added
             raise NotImplementedError("Only fallback mode is supported for now")
- 
-    @classmethod 
+
+    @classmethod
     def _produce_block(cls, state: State, curr_ts: TimeSlot) -> Block:
         """
         Produce a block for the given timeslot
         """
         eg, et, ea, ep = GuaranteesExtrinsic([]), [], [], []
         from .ext_store import ext_store
-        from jam.settings import settings 
+        from jam.settings import settings
         for rg in ext_store.eg:
             # TODO: Filtering - Take only one WR per core [?]
             eg.append(rg)
             if len(eg) >= CORE_COUNT:
-                break 
-        ep = ext_store.ep 
+                break
+        ep = ext_store.ep
         et = TicketsExtrinsic(ext_store.et[:MAX_TICKETS_PER_EXTRINSIC])
         ea = AssurancesExtrinsic(sorted(ext_store.ea, key=lambda a:a.validator_index))
         extrinsic = Extrinsic(et, ep, eg, ea, ext_store.ed)
@@ -103,7 +103,7 @@ class BlockProducer(NodeDispatcher):
         )
 
         return block
-    
+
     @staticmethod
     def get_author_index(state: State) -> ValidatorIndex:
         """
@@ -116,7 +116,7 @@ class BlockProducer(NodeDispatcher):
 
         logger.error("Author not found in validator set", our_key=node.validator_data.bandersnatch)
         raise ValueError("Author not found in the state")
-    
+
     @staticmethod
     def hash_extrinsic(extrinsic: Extrinsic) -> OpaqueHash:
         all_ext = [

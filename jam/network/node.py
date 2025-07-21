@@ -126,6 +126,10 @@ class Node:
         return self.validator_data.ed25519
 
     @property
+    def b_key(self):
+        return self.validator_data.bandersnatch
+
+    @property
     def ed_pvt_key(self) -> Ed25519PrivateKey:
         from cryptography.hazmat.backends import default_backend
         from cryptography.hazmat.primitives.serialization import load_pem_private_key
@@ -286,7 +290,6 @@ class Node:
 
                 self.peer_conn[peer] = stream_id, client
                 self.is_initialized = True
-
                 # Wait indefinitely - the connection will be managed by the context manager
                 await asyncio.Future()
 
