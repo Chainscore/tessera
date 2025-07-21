@@ -3,6 +3,8 @@ from jam.logging import get_logger
 from rockstore import RockStore
 from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.block import Block
+import asyncio
+from jam.api.rpc.broker import broker
 
 logger = get_logger("grandpa")
 

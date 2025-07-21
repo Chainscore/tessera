@@ -21,7 +21,7 @@ from jam.utils.constants import (
 )
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
 
 def make_account_prop(field):
     def getter(self):

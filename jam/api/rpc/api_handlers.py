@@ -1,10 +1,10 @@
 from typing import Callable
 from tsrkit_types import U32, U8, Bytes, TypedArray
 from jam.api.rpc.utils import parse_data
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
 from jam.state.accounts import Account, AccountDataView, StorageView
 from jam.state.utils import construct_state_key
-from jam.types.block.block import Block
+from jam.block import Block
 from jam.types.protocol.crypto import HeaderHash, OpaqueHash
 from jam.state.state import State, state
 from jam.types.protocol.core import ServiceId, TimeSlot

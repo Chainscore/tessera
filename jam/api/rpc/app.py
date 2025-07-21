@@ -6,10 +6,9 @@ from jam.api.rpc.utils import RpcRequest
 from jam.api.rpc.websocket import ws_receive, ws_broker
 from jam.logging import get_logger
 from quart import Quart, websocket, jsonify, request
-import jam.consensus.grandpa.finality as finality
+import jam.finality.finality as Finality
 import itertools
 from tsrkit_types import U32
-from jam.consensus.grandpa.finality import Finality
 
 def _json_default(val):
     # 1) U32 → int
