@@ -113,7 +113,6 @@ async def main(
             # RPC
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
-            print("is init?",tsr_node.is_initialized)
             tg.create_task(operate(is_builder))
             # if int(tsr_node.port) == 40000 and int(tsr_node.port) == 40001 :
             await asyncio.sleep(10)

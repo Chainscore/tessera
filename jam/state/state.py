@@ -138,7 +138,7 @@ class State:
             print("STATE AFTER UPDATING ALPHA", report.core_index, alpha[report.core_index], report.authorizer_hash)
 
         self.alpha = alpha
-        print("STATE AFTER SETTING ALPHA", self.alpha)
+        # print("STATE AFTER SETTING ALPHA", self.alpha)
 
         return self.transition(block)
 

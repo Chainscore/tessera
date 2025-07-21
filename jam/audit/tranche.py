@@ -13,6 +13,8 @@ from tsrkit_types.integers import Uint
 
 SignatureList=TypedVector[Bytes]
 ValidatorList=TypedVector[ValidatorIndex]
+EncodedWR=bytes
+
 @structure
 class JudgmentRecord:
     true_votes: ValidatorList #J_t(wr)(t)
@@ -33,7 +35,7 @@ class JudgmentRecord:
 @structure
 class TrancheState:
     unaudited_list: TypedVector[WorkReport] #Q ->[wr1,2,3,4]->[]
-    judgments: Dictionary[WorkReport, JudgmentRecord] # {WR:J,S}
+    judgments: Dictionary[EncodedWR, JudgmentRecord] # {WR:J,S}
     valid_set: TypedVector[WorkReport] # Already validated_wrs [wr,1,2,3,4]
     invalid_set: TypedVector[WorkReport] # Already invalid_wrs
 
@@ -41,7 +43,7 @@ class TrancheState:
     def empty()->"TrancheState":
         return TrancheState(
             unaudited_list=TypedVector[WorkReport]([]),
-            judgments=Dictionary[WorkReport, JudgmentRecord]({}),
+            judgments=Dictionary[EncodedWR, JudgmentRecord]({}),
             valid_set=TypedVector[WorkReport]([]),
             invalid_set=TypedVector[WorkReport]([])
         )
@@ -49,8 +51,8 @@ class TrancheState:
 @structure
 # @dataclass
 class Tranche:
-    tranche_index: Uint
-    slot_index: Uint
+    tranche_index: Uint[32]
+    slot_index: Uint[32]
 
 class TrancheStore:
     def __init__(self):
