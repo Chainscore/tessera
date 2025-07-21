@@ -2,6 +2,7 @@ import asyncio
 from typing import cast, Tuple
 
 from tsrkit_types import Uint, structure, TypedVector, Bytes, Null
+from tsrkit_types.integers import Int
 
 from jam.logging import logger
 
@@ -19,9 +20,11 @@ from jam.work_package.stores.segments import SegmentShardsDA
 from jam.merklization import BMRFunctions
 from jam.types.protocol.crypto import Hash
 from jam.utils.gather import gather_with_exceptions
+from jam.types.protocol.core import ValidatorIndex
 
 
-CE138Data = CE137Data
+class CE138Data(CE137Data):
+    ...
 
 @structure
 class CE138Response:
@@ -59,7 +62,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE138
 
-    async def transmit(self, node: Node, data: CE138Data):
+    async def transmit(self, node: Node, data: CE138Data, node_index: ValidatorIndex=None):
         """Transmit Erasure-Root and Shard Index from Auditor (client) to Assurer (server)"""
 
         msg_a = data.query.encode()
@@ -70,26 +73,30 @@ class AuditShardRequestProtocol(NetworkProtocol):
         tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
-                logger.info("Requesting audit shard from peer", port=peer.port)
-                client = node.peer_conn[peer][1]
+                    print("&&&&&&&&&&&&&&&&&",peer.peer_index, node_index)
+                    if peer.peer_index != node_index:
+                        break
+                    else:
+                        logger.info("Requesting audit shard from peer", port=peer.port)
+                        client = node.peer_conn[peer][1]
 
-                # Send Protocol Prefix
-                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                        # Send Protocol Prefix
+                        stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                # Append prefix to stream buffer so that we know the stream for handling response
-                client.stream_buffer[stream_id] = self._prefix.encode()
+                        # Append prefix to stream buffer so that we know the stream for handling response
+                        client.stream_buffer[stream_id] = self._prefix.encode()
 
-                # Send Messages with their lengths
-                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                        # Send Messages with their lengths
+                        client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                        res = client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                task = asyncio.create_task(res)
-                tasks.append(task)
+                        task = asyncio.create_task(res)
+                        tasks.append(task)
 
-            responses = await gather_with_exceptions(tasks)
+                        responses = await gather_with_exceptions(tasks)
 
-            if responses is not None:
-                return responses
+                        if responses is not None:
+                            return responses
 
         except Exception as e:
             logger.error(
@@ -108,9 +115,13 @@ class AuditShardRequestProtocol(NetworkProtocol):
         data, offset = CE138Data.decode_from(buffer[1:])
         data = cast(CE138Data, data)
 
+        print("shard index", data.query.shard_index)
+
         try:
+
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
+
 
             erasure_root = data.query.erasure_root
             shard_index = data.query.shard_index
@@ -121,17 +132,28 @@ class AuditShardRequestProtocol(NetworkProtocol):
             # Fetch Segments Shard
             ss_da = SegmentShardsDA(d3l)
             ss_dict = ss_da.get(erasure_root)
+            # print("444444>>>>>>>",len(ss_dict), ss_dict)
 
             # Fetch Bundle Shard
             audits_da = AuditShardsDA(audit)
             bs_dict = audits_da.get(erasure_root)
+            # print("55555555>>>>>>>>>>>>>>", bs_dict)
+
             if shard_index not in bs_dict.keys():
                 raise ValueError("Bundle shard not found")
             bundle_shard = bs_dict[shard_index]
 
+            print("bundle shard", bundle_shard)
+            segment_shard = SegmentsShard(ss_dict[shard_index].shard)
+            print("segment shard", segment_shard)
+
+
+
             # Fetch Justifications
-            justification_da = JustificationsDA(audit)
-            justification = justification_da.get(erasure_root, shard_index)
+            # justification_da = JustificationsDA(audit)
+            # justification = justification_da.get(erasure_root, shard_index)
+            # print("77777777777>>>>>>", justification)
+            justification = Justification([])
 
             # build segment shard root
             bmrfunctions = BMRFunctions()
@@ -153,12 +175,16 @@ class AuditShardRequestProtocol(NetworkProtocol):
             server.stream_and_close(msg_b, stream_id)
 
         except Exception as e:
-            msg_a = b''.encode()
+            msg_a = Bytes(b'').encode()
             len_a = Uint[32](len(msg_a)).encode()
+            msg_b = Bytes(b'').encode()
+            len_b = Uint[32](len(msg_a)).encode()
 
             # Send response
             server.stream_and_keep_open(len_a, stream_id)
-            server.stream_and_close(msg_a, stream_id)
+            server.stream_and_keep_open(msg_a, stream_id)
+            server.stream_and_keep_open(len_b, stream_id)
+            server.stream_and_close(msg_b, stream_id)
             logger.error(
                 "Failed to find audit shard.",
                 error=str(e),
@@ -183,5 +209,5 @@ class AuditShardRequestProtocol(NetworkProtocol):
             return data.bundle_shard, data.justification
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE)
+            logger.error(Code.BAD_RESPONSE, error=str(e))
             return None

@@ -35,7 +35,7 @@ class AuditProcess:
         from jam.settings import settings
         from jam.network.node import node
 
-        audit = AuditingAndJudgement(node=node)
+        audit = AuditingAndJudgement()
 
         # ---------------------- Rho initial state ( pending wor reports)
         logger.info(f"current block header hash")
@@ -50,7 +50,7 @@ class AuditProcess:
         # entropy = latest_block.header.entropy_source
         entropy_ = "f7caffd3498473b08ab9de28ba3bd76d94f3fe47acc96e6e0111dfe301ba4d0bc7b3a95ebf21a76fb76102c13fdf9947c6c243d71b9893fae0b9adf94aa83f0a81b4566c15c796a79a4e124971130cba959c03066efba2161334cedc0d02151a"
 
-        final_list = sample_work_reports_with_nulls("jam/combine.json",total_items=10, null_count=3)
+        final_list = sample_work_reports_with_nulls("jam/combine.json",total_items=10, null_count=0)
 
 
         try:
@@ -58,23 +58,18 @@ class AuditProcess:
             logger.info(f"Get reports list which about to be audit")
 
             p_a_r = audit.report_to_be_audit(pending_wrs=final_list, newly_avail_wrs=newly_avail_wrs)
-            # print(len(p_a_r), p_a_r[1], p_a_r[2],  p_a_r)
+            print("##############",len(p_a_r) )
 
             # assignment report for auditing to validators
             logger.info(f"Work report assignment for auditing")
 
             reports = audit.verifiable_random_selection(entropy_source=entropy_, bandersnatch_key=node.b_key, pre_audit_report=p_a_r)
 
-            logger.info(f"reports")
-
             logger.info(f"Checking assign report length {len(reports)} for each validator")
 
-            # data=[]
-            task=asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports))
-            data = await task
-            print("data Bhaii------------------", data)
-            asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports))
 
+            # asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports))
+            asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports))
 
         except Exception as e:
             logger.error(f"failed to report assignment", error=e)
@@ -98,7 +93,7 @@ class AuditProcess:
         from jam.settings import settings
         from jam.network.node import node
 
-        audit = AuditingAndJudgement(node=node)
+        audit = AuditingAndJudgement()
 
         # initial rho pending wor reports
         latest_block = Finality.load_latest(kv=settings.main_db)
@@ -106,7 +101,7 @@ class AuditProcess:
         slot = latest_block.header.slot
 
 
-        announcement_sign = audit.validator_announcement_statement(assign_report=assign_wrs, header=header_hash, ed25519_public=node.ed_key, tranche=U8(0))
+        announcement_sign = audit.validator_announcement_statement(assign_report=assign_wrs, header=header_hash, tranche=U8(0))
 
 
         # logger.info("announcement signature", announcement_sign)
@@ -119,8 +114,8 @@ class AuditProcess:
         tranche = U8(0)
 
 
-        for c, r in assign_wrs:
-            print(c, Hash.blake2b(r.encode()))
+        # for c, r in assign_wrs:
+        #     print(c, Hash.blake2b(r.encode()))
 
         assignments = TypedVector[Assign]([
             Assign(core_index=core_idx, report_hash=Hash.blake2b(r.encode()))
@@ -151,9 +146,6 @@ class AuditProcess:
 
             logger.debug(f"Assign Work Reports announcement transmitted successfully")
 
-            # return responses
-
-
         except Exception as e:
             logger.error(
                 "failed to transmitted announcement",
@@ -168,7 +160,7 @@ class AuditProcess:
         from jam.settings import settings
         from jam.network.node import node
 
-        audit =  AuditingAndJudgement(node=node)
+        audit =  AuditingAndJudgement()
 
         latest_block = Finality.load_latest(kv=settings.main_db)
         slot = latest_block.header.slot
@@ -183,18 +175,17 @@ class AuditProcess:
             for c, r in assign_wrs:
 
                 wr_hash = Hash.blake2b(r.encode())
-                print("REPORT AND  REPORT HASH ===>>> ",r, len(wr_hash), type(wr_hash) ,wr_hash.hex())
 
                 logger.info(f"fetch BUNDLE, CORE_INDEX, EXTRINSICS  with the respective work reports")
 
                 package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json",  rep_hash=wr_hash)
 
-                print("=================================", "package =>", package, "core =>", core, "extrinsic =>", extrinsic)
+                # print("=================================", "package =>", package, "core =>", core, "extrinsic =>", extrinsic)
 
-                result = audit.refine(p=package, c=core, e=extrinsic, r_hash=wr_hash, wr=r)
+                result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=node.validator_index)
                 print("RESULTS", result)
 
-                judgment_sign = audit.judgment_signature(r=r, refine=result,ed25519_public=node.b_key)
+                judgment_sign = audit.judgment_signature(r=r, refine=result)
                 # print("jUDGMENT SIGNATURE", len(judgment_sign.encode()), judgment_sign)
 
 
@@ -203,7 +194,6 @@ class AuditProcess:
 
 
                 validity = U8(1) if result else U8(0)
-
 
                 judgment = Judgment(
                     epoch_index=EpochIndex(0),

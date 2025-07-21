@@ -86,6 +86,9 @@ class WorkPackage:
         else:
             return decode_code_hash(service_data)
 
+    def hash(self) -> Bytes[32]:
+        return Hash.blake2b(self.encode())
+
 
 @structure
 class WorkPackageBundle:

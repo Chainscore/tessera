@@ -10,6 +10,7 @@ async def gather_with_exceptions(tasks: List[asyncio.Task]):
     for res in responses:
         if isinstance(res, Exception):
             logger.error(res)
+            # results.append(None)
         else:
             results.append(res)
 

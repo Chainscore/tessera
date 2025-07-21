@@ -110,7 +110,7 @@ class SegmentShardRequestBase(NetworkProtocol):
 
     @staticmethod
     def parse_request(buffer: bytes) -> CE139Data:
-        data, _ = CE139Data.decode_from(buffer)
+        data = CE139Data.decode(buffer)
         data = cast(CE139Data, data)
 
         if not data.is_valid:

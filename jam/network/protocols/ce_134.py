@@ -1,37 +1,35 @@
+import asyncio
 import time
+
 from typing import cast, TYPE_CHECKING, Tuple
-from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32, Bytes
-
-from jam.network.peer import Peer
-from jam.utils.constants import GENESIS_TS
-
-if TYPE_CHECKING:
-    from jam.network.node import Node
+from tsrkit_types import Option, Uint, structure, Null, Bytes
 
 from jam.logging import get_logger
 
+from jam.network.base.quic import QuicProtocol
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.base.quic import QuicProtocol
+from jam.network.peer import Peer
+
 from jam.storage.item_extrinsics import ItemExtrinsics
 
-from jam.types.protocol.core import CoreIndex
+from jam.types.protocol.core import ValidatorIndex, CoreIndex
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
 from jam.types.work.package import WorkPackageBundle
 from jam.types.work import SegmentRootLookup
-from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
 from jam.work_package.processor import Processor
 from jam.work_package.validator import Validator
 
-from jam.work_package.guarantor_assignments import guarantor_assignments
-import asyncio
-from jam.types.protocol.core import ValidatorIndex
+from jam.utils.assignment import assign_guarantors
 from jam.utils.gather import gather_with_exceptions
-# from jam.utils.assignment import assign_guarantors
+from jam.utils.constants import GENESIS_TS
 
 # Module-specific logger
 logger = get_logger("network")
+
+if TYPE_CHECKING:
+    from jam.network.node import Node
 
 @structure
 class CoreSegment:
@@ -42,6 +40,9 @@ class CoreSegment:
 class Credential:
     work_report_hash : WorkReportHash
     ed25519_signature : Ed25519Signature
+
+    def __repr__(self):
+        return f"Credential(wr_hash={self.work_report_hash.hex()}, sign={self.ed25519_signature.hex()})"
 
 @structure
 class CE134Response:
@@ -101,24 +102,14 @@ class WorkPackageSharing(NetworkProtocol):
 
         ci = data.core_segment.core_index
 
-        from jam.state.state import state
-        logger.debug("Tau", tau=state.tau)
-
         # Fetch guarantors mapping
         mapping = assign_guarantors()
-
-        guarantors = mapping[ci]
-        peers = [Peer(val) for i, val in guarantors]
-
-        # TODO: Remove this
-        # mapping = guarantor_assignments(state)[ci]
-        print("MAPPING 134", mapping, (time.time() - GENESIS_TS) // 6, state.tau)
-
+        guarantors = mapping[0][ci]
 
         logger.info(
             "Transmitting work package bundle to guarantors",
             core=ci,
-            guarantors=peers,
+            guarantors=guarantors,
             stream_a_size=data.map_len,
             stream_b_size=data.bundle_len,
             segment_map_length=len(data.core_segment.segment_root_map)
@@ -129,9 +120,13 @@ class WorkPackageSharing(NetworkProtocol):
         transmitted_count = 0
 
         try:
-            for peer in peers:
-                # if int(peer.port) != 40001:
+            for peer in node.peer_conn:
+                # For hardcoded testing
+                # if peer.port != 40000:
                 #     continue
+
+                if peer.data not in guarantors:
+                    continue
 
                 logger.debug("Transmitting bundle", peer=peer)
                 client = node.peer_conn[peer][1]
@@ -167,7 +162,7 @@ class WorkPackageSharing(NetworkProtocol):
             logger.info(
                 "Work package bundle transmission completed",
                 transmitted_to=transmitted_count,
-                guarantors=peers,
+                guarantors=guarantors,
                 core=ci
             )
 
@@ -226,19 +221,19 @@ class WorkPackageSharing(NetworkProtocol):
             pref = Bytes('jam_guarantee', 'utf-8')
 
             # Build Guarantee
-            logger.debug("Building Guarantee..")
+            logger.debug("Building guarantee..")
             payload =  wr.core_index.encode() + wr.encode()
             guarantee = pref + Hash.blake2b(payload).encode()
 
             # Sign the Guarantee
-            logger.debug("Signing Guarantee..")
+            logger.debug("Signing guarantee..")
             sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
             # Build Credential
-            cred = Credential(work_wr_hash=wr_hash, ed25519_signature=sign)
+            cred = Credential(work_report_hash=wr_hash, ed25519_signature=sign)
 
             # Return Credential to OG Guarantor
-            logger.debug("Sharing Guarantee..")
+            logger.debug("Sharing guarantee..")
             msg_a = cred.encode()
             len_a = Uint[32](len(msg_a)).encode()
 
@@ -267,7 +262,7 @@ class WorkPackageSharing(NetworkProtocol):
                 error_type=type(e).__name__
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> Tuple[OptCred, ValidatorIndex] | OptCred(Null):
+    def res_intercept(self, stream_id: int, client: QuicProtocol) -> tuple[Credential | None, Peer]:
         """Intercept Report Guarantee from guarantors"""
 
         buffer = client.stream_buffer[stream_id]
@@ -284,14 +279,16 @@ class WorkPackageSharing(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info(
+            logger.debug(
                 "Report credential received - checking for majority",
                 stream_id=stream_id,
                 wr_hash=data.cred.work_report_hash.hex()[:16] + "...",
                 signature_length=len(data.cred.work_report_hash)
             )
 
-            return OptCred(data.cred), ValidatorIndex(client.peer.peer_index)
+            logger.info("[EXTRINSICS]: RECEIVED GUARANTEE", peer=client.peer, guarantee=data.cred)
+
+            return data.cred, client.peer
 
         except Exception as e:
             logger.error(
@@ -302,4 +299,4 @@ class WorkPackageSharing(NetworkProtocol):
                 error_type=type(e).__name__
             )
 
-            return OptCred(Null)
+            return None, client.peer

@@ -1,6 +1,7 @@
-from typing import cast
-from tsrkit_types import Null, structure, Uint, Bool, TypedVector, Option
 import time
+from typing import cast
+
+from tsrkit_types import structure, Uint
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -12,13 +13,10 @@ from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
 from jam.types.work.package import WorkPackage
 
-from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
-from jam.utils.constants import GENESIS_TS
-
 from jam.work_package.processor import Processor
 
-from jam.work_package.guarantor_assignments import guarantor_assignments
-# from jam.utils.assignment import assign_guarantors
+from jam.utils.constants import GENESIS_TS
+from jam.utils.assignment import assign_guarantors
 
 # Module-specific logger
 logger = get_logger("network")
@@ -42,8 +40,6 @@ class CE133Data:
             return True
         return False
 
-OptBool = Option[Bool]
-
 class WorkPackageSubmission(NetworkProtocol):
     """
     CE 133 Protocol for submitting Work Package
@@ -65,8 +61,8 @@ class WorkPackageSubmission(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE133
 
-    async def transmit(self, node: Node, data: CE133Data):
-        """Transmit Work Package from Builder (client) to Guarantor (server)"""
+    async def transmit(self, node: Node, data: CE133Data) -> tuple[bool, Peer] | None:
+        """Transmit Work Package from Builder to Guarantor"""
 
         msg_a = data.package_data.encode()
         len_a = data.package_len.encode()
@@ -75,23 +71,16 @@ class WorkPackageSubmission(NetworkProtocol):
 
         ci = data.package_data.core_index
 
-        from jam.state.state import state
-        logger.debug("Tau", tau=state.tau)
-
         # Fetch guarantors mapping
         mapping = assign_guarantors()
+        guarantors = mapping[0][ci]
 
-        guarantors = mapping[ci]
-        peers = [Peer(val) for i, val in guarantors]
-
-        # TODO: Remove this
-        # mapping = guarantor_assignments(state)[ci]
-        print("MAPPING 133", mapping, (time.time() - GENESIS_TS) // 6, state.tau)
-
+        wp_hash = data.package_data.work_package.hash().hex()
         logger.info(
             "Trying transmitting work package",
             core=ci,
-            guarantors=peers,
+            guarantors=guarantors,
+            wp_hash=wp_hash[:16]+"...",
             stream_a_size=data.package_len,
             stream_b_size=data.extrinsics_len,
             extrinsics_count=len(data.extrinsics)
@@ -100,10 +89,15 @@ class WorkPackageSubmission(NetworkProtocol):
         transmitted_to = None
         res = None
 
-        for peer in peers:
+
+        for peer in node.peer_conn:
             try:
+                # Hardcoded testo
                 # if peer.port != 40000:
                 #     continue
+
+                if peer.data not in guarantors:
+                    continue
 
                 logger.info("Transmitting package", peer=peer)
                 client = node.peer_conn[peer][1]
@@ -127,8 +121,16 @@ class WorkPackageSubmission(NetworkProtocol):
                     guarantor=peer
                 )
 
-                transmitted_to = peer
-                break
+                if res:
+                    transmitted_to = peer
+                    break
+
+                logger.debug(
+                    "Couldn't transmit package",
+                    stream_id=stream_id,
+                    core=ci,
+                    guarantor=peer
+                )
 
             except Exception as e:
                 logger.warning(
@@ -143,6 +145,7 @@ class WorkPackageSubmission(NetworkProtocol):
         else:
             logger.info(
                 "Work package transmission completed",
+                wp_hash=wp_hash[:16] + "...",
                 transmitted_to=transmitted_to,
                 core=ci,
             )
@@ -150,7 +153,7 @@ class WorkPackageSubmission(NetworkProtocol):
         return res
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """Intercept & Process Work Package on Guarantor (server)"""
+        """Intercept & Process Work Package on Guarantor"""
 
         buffer = server.stream_buffer[stream_id]
 
@@ -175,7 +178,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 stream_id=stream_id,
                 core_index=int(ci),
                 extrinsics_count=len(data.extrinsics),
-                wp_hash=hash(str(wp))
+                wp_hash=wp.hash().hex()[:16]+"..."
             )
 
             # Start Refinement Process
@@ -185,6 +188,7 @@ class WorkPackageSubmission(NetworkProtocol):
             logger.info(
                 "Work package processed successfully",
                 stream_id=stream_id,
+                wp_hash=wp.hash().hex()[:16]+"...",
                 wr_hash=wr_hash,
                 core_index=int(ci)
             )
@@ -211,7 +215,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 error_type=type(e).__name__
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptBool:
+    def res_intercept(self, stream_id: int, client: QuicProtocol) -> tuple[(bool | None), Peer]:
         """Intercept Acknowledgement"""
 
         buffer = client.stream_buffer[stream_id]
@@ -221,6 +225,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 stream_id=stream_id,
                 buffer_size=len(buffer)
             )
-            return OptBool(Bool(True))
+            return True, client.peer
 
-        return OptBool(Null)
+        return None, client.peer
+

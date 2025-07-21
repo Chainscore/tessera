@@ -32,8 +32,6 @@ class CE145Data:
 
     @property
     def is_valid(self):
-        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-        print(len(self.judgment.encode()) , self.len_a)
         if len(self.judgment.encode()) == self.len_a:
             return True
         return False
@@ -53,11 +51,11 @@ class JudgmentPublication(NetworkProtocol):
         len_a = data.len_a.encode()
         msg_a = data.judgment.encode()
 
-        logger.info(
-            f"Transmitting Work-report judgement",
-            len=data.len_a,
-            judgment=len(data.judgment.encode())
-        )
+        # logger.info(
+        #     f"Transmitting Work-report judgement",
+        #     len=data.len_a,
+        #     judgment=len(data.judgment.encode())
+        # )
 
         tasks = []
         responses = []
@@ -106,19 +104,18 @@ class JudgmentPublication(NetworkProtocol):
         """ Intercept Judgment of assigned Work Reports """
 
         buffer = server.stream_buffer[stream_id]
-        print("==============",len(buffer[1:]))
 
         try:
             data, offset = CE145Data.decode_from(buffer[1:])
             data = cast(CE145Data, data)
             print(data)
 
-            logger.debug(
-                f"Received judgment from the validator {data.judgment.validator_index}",
-                stream_id=stream_id,
-                peer=server.peer,
-                buffer_size=len(buffer[1:])
-            )
+            # logger.debug(
+            #     f"Received judgment from the validator {data.judgment.validator_index}",
+            #     stream_id=stream_id,
+            #     peer=server.peer,
+            #     buffer_size=len(buffer[1:])
+            # )
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)

@@ -91,7 +91,7 @@ class Node:
     ):
         self.name = node_name
         self.host = host
-        self.port = port
+        self.port = int(port)
         self.validator_data = validator_data
 
         self.max_builders = 20
@@ -304,7 +304,7 @@ class Node:
 
         try:
             # Skip self
-            logger.info(f"⚠️ ({self.name}) host: {self.host}, {type(self.port)}, port: {self.port}, {str(peer)}", hostcomp=(str(peer.host) == self.host), portcomp=(int(peer.port) == int(self.port)))
+            logger.info(f"⚠️ ({self.name}) host: {self.host}, port: {self.port}, {str(peer)} {type(self.port)}", hostcomp=(str(peer.host) == self.host), portcomp=(peer.port == self.port))
             if str(peer.host) == self.host and int(peer.port) == self.port:
                 logger.info(f"⚠️ ({self.name}) Skipping self {str(self)}")
                 return

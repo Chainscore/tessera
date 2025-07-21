@@ -105,23 +105,23 @@ async def main(
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db)
 
+
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
             # Networking - Block Imports, WP Processing, etc
             tg.create_task(tsr_node.initialize())
-
             # RPC
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
-            tg.create_task(operate(is_builder))
-            # if int(tsr_node.port) == 40000 and int(tsr_node.port) == 40001 :
-            await asyncio.sleep(10)
-            # tg.create_task(CE144.transmit(node=tsr_node, data=data144))
-            # tg.create_task(CE145.transmit(node=tsr_node, data=data145))
 
-            # newly_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=3)
-            # #
-            # tg.create_task(AuditProcess.audit_process(newly_avail_wrs=newly_list))
+            tg.create_task(operate(is_builder))
+            # if int(tsr_node.port) == 40000:
+            #     await asyncio.sleep(5)
+            #     # tg.create_task(CE144.transmit(node=tsr_node, data=data144))
+            #     # tg.create_task(CE145.transmit(node=tsr_node, data=data145))
+            #     newly_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
+            #     #
+            #     tg.create_task(AuditProcess.audit_process(newly_avail_wrs=newly_list))
 
 
     except CancelledError:
