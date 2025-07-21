@@ -1,4 +1,3 @@
-import asyncio
 from typing import cast
 from tsrkit_types import structure, Uint, Bool, U32, U8
 
@@ -76,10 +75,8 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                 "Proxy validator is same as generator validator, transmitting ticket using CE132",
                 node_name=node.name,
             )
-            from jam.network.node import node
-            CE132 = SafroleTicketDistribution()
-            data = CE132Data(epoch_ticket_len=data.epoch_ticket_len, epoch_ticket=data.epoch_ticket)
-            return await CE132.transmit(node, data)
+            from jam.operations.ticket_queue import ticket_queue
+            ticket_queue.push(data.epoch_ticket)
 
         else:
             for peer in node.peer_conn:
@@ -157,12 +154,11 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                 ad
             )
             print("verification", verification)
-            # check if you are supposed to be a proxy
+            # check if you are supposed to be a proxy and ticket is valid
             if int(proxy_validator.metadata.port) == int(server.node.port) and verification:
-                from jam.network.node import node
-                CE132 = SafroleTicketDistribution()
-                data = CE132Data(epoch_ticket_len=data.epoch_ticket_len, epoch_ticket=data.epoch_ticket)
-                responses = asyncio.create_task(CE132.transmit(node, data))
+                from jam.operations.ticket_queue import ticket_queue
+                ticket_queue.push(data)
+                print("Ticket queue updated", ticket_queue.length())
 
             # Return acknowledgment to validator
             ack = b""

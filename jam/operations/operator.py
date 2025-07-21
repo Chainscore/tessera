@@ -43,8 +43,6 @@ async def operate(is_builder):
             await asyncio.sleep(ts_start_time - curr_time)
         logger.debug("Node operations started for a new timeslot", time_slot=ts)
 
-        if (ts % EPOCH_LENGTH) == conductor_ts:
-            asyncio.create_task(conductor.run(time_slot=ts)) # generate and transmit ticket
 
         # Schedule tasks to run immediately
         for dispatch in dispatch_fns(is_builder):

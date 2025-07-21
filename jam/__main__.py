@@ -5,7 +5,7 @@ import os
 import time
 
 from dotenv import load_dotenv
-from jam.operations import operate
+from jam.operations import operate, epoch_operate
 from jam.logging import setup_logging, logger
 from jam.network.base.certificate import generate_san
 from jam.utils.chainspec import chain_config
@@ -16,6 +16,7 @@ from jam.network.node import setup_node
 from jam.state.state import setup_state
 from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
+from jam.operations.ticket_queue import setup_ticket_queue
 
 
 async def main(
@@ -89,6 +90,9 @@ async def main(
             name, port, peers, host=str(host), is_bd=is_builder, is_val=is_validator
         )
 
+        # setup ticket queue
+        setup_ticket_queue()
+
         # ------------ SET GENESIS BLOCK ------------
         block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
@@ -102,6 +106,7 @@ async def main(
             # RPC
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
+            tg.create_task(epoch_operate(is_builder))
             tg.create_task(operate(is_builder))
 
     except KeyboardInterrupt:

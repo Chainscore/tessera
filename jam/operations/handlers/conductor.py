@@ -26,12 +26,9 @@ class Conductor:
         try:
             tasks = []
             # generating & transmitting all the tickets allowed per validator
-            # for i in range(TICKET_ENTRIES_PER_VALIDATOR):
-            for i in range(1):
+            for i in range(TICKET_ENTRIES_PER_VALIDATOR):
                 epoch_index = U32(time_slot // EPOCH_LENGTH)
                 ticket_envelope = cls.generate_ticket(state, i)
-
-                print("ticket envelope", ticket_envelope)
 
                 if ticket_envelope is not None:
                     epoch_ticket = EpochTicket(epoch_index=epoch_index, ticket=ticket_envelope)

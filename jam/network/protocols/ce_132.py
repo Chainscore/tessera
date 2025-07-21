@@ -1,3 +1,5 @@
+import time
+import math
 from typing import cast
 from tsrkit_types import structure, Uint, Bool, U32
 
@@ -8,6 +10,7 @@ from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.block.extrinsics.tickets import TicketEnvelope
 import asyncio
+from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS
 
 # Module-specific logger
 logger = get_logger("network")
@@ -27,6 +30,29 @@ class CE132Data:
         if len(self.epoch_ticket.encode()) == self.epoch_ticket_len:
             return True
         return False
+
+async def forwarding(slot, timeslot):
+    from jam.operations.ticket_queue import ticket_queue
+    print("Ticket queue length", ticket_queue.length())
+    if not ticket_queue.is_empty():
+        ts = timeslot
+        ticket_submission_end = TICKET_SUBMISSION_END
+        slots_available = ticket_submission_end - slot
+        tickets_per_slot = math.ceil(ticket_queue.length() / slots_available)
+
+        print("Tickets per slot", tickets_per_slot)
+
+        for i in range(tickets_per_slot):
+            ticket = ticket_queue.pop()
+            from jam.network.node import node
+            CE132 = SafroleTicketDistribution()
+            data = CE132Data(epoch_ticket_len=ticket.epoch_ticket_len, epoch_ticket=ticket.epoch_ticket)
+            responses = await CE132.transmit(node, data)
+            ts += 1
+            curr_time = time.time()
+            next_time_slot_time = ts * 6 + GENESIS_TS
+            if curr_time < next_time_slot_time:
+                await asyncio.sleep(next_time_slot_time - curr_time)
 
 class SafroleTicketDistribution(NetworkProtocol):
     """
