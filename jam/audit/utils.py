@@ -22,32 +22,6 @@ logger = get_logger("in_core")
 
 public_key = Bytes[32]
 
-def power_set(input_list: TypedVector, length: Optional[int] = None) -> TypedVector[TypedVector]:
-    """
-    Compute the power set of the given list. Optionally, limit to subsets of a specific length.
-
-    Args:
-    - input_list: A list of elements.
-    - length: An optional parameter to limit the power set to subsets of this length.
-
-    Returns:
-    - A list of lists, where each sublist is a subset of the input_list.
-      If length is specified, only subsets of that length are included.
-    """
-    power_set_result = [[]]  # Start with the empty set
-
-    for item in input_list:
-        # For each item in the input_list, create new subsets by adding the item to existing subsets
-        new_subsets = [subset + [item] for subset in power_set_result]
-        power_set_result.extend(new_subsets)  # Add the new subsets to the power_set_result
-
-    # If length is provided, filter subsets to match the specified length
-    if length is not None:
-        power_set_result = [subset for subset in power_set_result if len(subset) == length]
-
-    return power_set_result
-
-
 def sign_bandersnatch(key: Bytes[32], context: Bytes, message:bytes=b"") :
 
     key = int.from_bytes(key)

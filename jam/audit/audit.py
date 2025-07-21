@@ -319,5 +319,3 @@ class AuditingAndJudgement:
 
         # condition 1 => on that core all the judgment should be true and A_n(r) ⊂ J_T(r
         # condition 2 => if in tranche all the judgment of the validator should be > 2/3
-
-
