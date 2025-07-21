@@ -182,7 +182,7 @@ class AuditProcess:
 
                 # print("=================================", "package =>", package, "core =>", core, "extrinsic =>", extrinsic)
 
-                result =  await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r)
+                result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=node.validator_index)
                 print("RESULTS", result)
 
                 judgment_sign = audit.judgment_signature(r=r, refine=result)

@@ -454,7 +454,7 @@ class Processor:
         wr, wr_hash = self.process_bundle(core, bundle, lookup)
 
 
-        # # Build Guarantee
+        # Build Guarantee
         # logger.debug(f"Building guarantees..")
         # try:
         #     # Wait for guarantees and process them

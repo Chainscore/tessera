@@ -1,3 +1,4 @@
+from platform import processor
 from typing import List, Tuple
 
 from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, Bool, Dictionary, U32
@@ -5,7 +6,7 @@ from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8,
 from jam.audit.vectors.reports import reports
 from jam.network.protocols.ce_137 import CE137Data
 from jam.settings import settings
-from jam.types.protocol.core import CoreIndex, TimeSlot
+from jam.types.protocol.core import CoreIndex, TimeSlot,ValidatorIndex
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.work.report import WorkReport
 from jam.utils.constants import CURRENT_TIME, SLOT_PERIOD, AUDIT_PERIOD, SIGNING_CONTEXTS, VALIDATOR_COUNT
@@ -21,10 +22,14 @@ from jam.work_package.processor import Processor
 from jam.types.block.header import Header
 from jam.types.state.rho import OptionalWorkReportState, Rho
 from jam.logging import get_logger
-from jam.audit.utils import sign_bandersnatch,
+from jam.audit.utils import sign_bandersnatch, get_si, get_vi
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey, Ed25519PrivateKey
 from jam.types.work.manifest import Extrinsics
+from tests.unit.safrole.data import validators
+from jam.audit.utils import audit_refine
+
+
 
 # Module-specifier logger
 logger = get_logger("in_core")
@@ -133,7 +138,7 @@ class AuditingAndJudgement:
         for c, w_r in enumerate(pre_audit_report):
             core_report.append((CoreIndex(c), w_r))
 
-        return core_report
+        return core_report[:1]
 
         # ---------------------------------- Array same as size of core_report and shuffle -----------------------------
         array_index = TypedVector[Uint[32]]([])
@@ -224,7 +229,7 @@ class AuditingAndJudgement:
         # return signature
 
     @staticmethod
-    async def audit_refine(p: WorkPackage, c: CoreIndex, e:Extrinsics, wr: WorkReport) -> bool:
+    async def audit_refine(p: WorkPackage, c: CoreIndex, e:Extrinsics, wr: WorkReport, node_index: ValidatorIndex) -> bool:
         """
         Equation: 17.17
         Here we Build whole Work Package bundle and refine it, which gives Work Report amd Report Hash, later check with given work report and return bool value.
@@ -232,8 +237,9 @@ class AuditingAndJudgement:
         Args:
             p:
             c:
-            e;
+            e:
             wr:
+            node_index:
 
         Return:
             Boolean value , Ture or False
@@ -252,30 +258,32 @@ class AuditingAndJudgement:
         from jam.network.protocols.ce_138 import CE138Data, AuditShardRequestProtocol
         from jam.network.protocols.ce_137 import Query
         from jam.types.protocol.core import ErasureRoot
-        from jam.network.node import node
-        from jam.types.work.shard import  ShardIndex, ShardKey
+        from jam.types.work.shard import ShardIndex
         from jam.utils.chainspec import chain_config
 
-
         CE138 = AuditShardRequestProtocol()
+        process = Processor(node=node)
+        erasure_root = ErasureRoot(wr.package_spec.erasure_root)
 
-        for peer in node.peer_conn:
+        # For this node shard index and validator index information is:
+        v_i = node_index
+        s_i = get_si(validator_index=v_i, core_index=wr.core_index)
 
-            erasure_root = ErasureRoot(wr.package_spec.erasure_root)
+        # For other node to get shard data, from which node that shard
+        total_shard = VALIDATOR_COUNT
 
-            index = (wr.core_index * chain_config.recovery_threshold + peer.peer_index) % VALIDATOR_COUNT
-            shard_index = ShardIndex(index)
+        for i in range(VALIDATOR_COUNT):
+            if i != s_i:
+                request_s_i = i
+                request_v_i = get_vi(shard_index=request_s_i, core_index=wr.core_index)
+                print("REQUESTED SHARD_INDEX WITH NODE_INDEX ==>>", request_s_i, request_v_i)
+                query = Query(erasure_root=erasure_root, shard_index=ShardIndex(2))
+                data = CE138Data(len=U32(len(query.encode())), query=query)
+                print("AUDIT REQUESTED SHARED FOR =>>", data)
 
-            print("ERASURE ROOT, INDEX,  =>", erasure_root, index)
+                data = await CE138.transmit(node=node, data=data, node_index=ValidatorIndex(1))
+                print("RECEIVED SHARD HERE WE RECEIVEVD =>", data)
 
-
-
-
-            query = Query(erasure_root=erasure_root, shard_index=shard_index)
-            data = CE138Data(len=U32(len(query.encode())), query=query)
-            print("AUDIT REQUESTED SHARED FOR =>>", data)
-            data = await CE138.transmit(node=node, data=data, core_index=wr.core_index)
-            print("RECEIVED SHARD HERE WE RECEIVEVD =>", data)
 
         # for i in range(6):
         #     shard_index = ShardIndex(i)
@@ -285,9 +293,9 @@ class AuditingAndJudgement:
         #     print("AUDIT REQUESTED SHARED FOR =>>", data)
         #     data = await CE138.transmit(node=node, data=data)
         #     print("RECEIVED SHARD HERE WE RECEIVEVD =>", data)
-        #
-        processor = Processor(node=node)
-        w_r, wr_hash = processor.process(package=p, core=c, extrinsics=e)
+
+
+        w_r, wr_hash = process.process(package=p, core=c, extrinsics=e)
 
         r_hash = Hash.blake2b(wr.encode())
 

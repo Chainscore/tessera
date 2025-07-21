@@ -71,7 +71,6 @@ class CE144Data:
 
     @property
     def is_valid(self):
-        print("###############",len(self.tranche_announcement.encode()) , self.len_a ,  len(self.evidence.encode()),  self.len_b)
         if len(self.tranche_announcement.encode()) == self.len_a and len(self.evidence.encode()) == self.len_b:
             return True
         return False
