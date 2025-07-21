@@ -101,9 +101,7 @@ class Statistics:
 
         state.pi = pi
 
-        #websocket broadcast for statistics
-        from jam.settings import settings
-        final = Finality.load_final(settings.main_db)
-        asyncio.create_task(broker.publish("subscribeStatistics", {"header_hash":list(final.header.hash()),"slot": int(final.header.slot), "value":list(pi.encode())}))
+        # Publishes updates of the statistics stored in chain state returns blob
+        asyncio.create_task(broker.publish("subscribeStatistics", list(pi.encode())))
 
         return state

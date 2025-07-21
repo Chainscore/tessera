@@ -24,7 +24,7 @@ class Finality:
         logger.debug("Finalised block", header_hash=header_hash.hex())
         block = Block.load(header_hash, kv)
 
-        #websocket broadcast for FinalizedBlock
+        #Subscribe's to updates of the latest finalized block, as returned by finalizedBlock.
         asyncio.create_task(broker.publish("subscribeFinalizedBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
     
         kv.put(cls.FINAL_KEY, header_hash.encode())
@@ -36,7 +36,7 @@ class Finality:
         logger.debug("Setting header...", header_hash=header_hash.hex())
         block = Block.load(header_hash, kv)
 
-        #websocket broadcast for bestBlock
+        #Subscribe's to updates of the head of the "best" chain, as returned by bestBlock.
         asyncio.create_task(broker.publish("subscribeBestBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
 
         kv.put(cls.LATEST_KEY, header_hash.encode())

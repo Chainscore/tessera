@@ -12,12 +12,6 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32
 from jam.consensus.grandpa.finality import Finality
 
-## added function to fetch latest finalized block hash
-def get_final():
-    from jam.settings import settings
-    return Finality.load_final(settings.main_db)
-
-
 def make_account_prop(field):
     def getter(self):
         data = self.store.get(bytes(construct_state_key((255, self.id)))) 
@@ -34,9 +28,9 @@ def make_account_prop(field):
 
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()
-        #websocket broadcast for service data
-        
-        asyncio.create_task(broker.publish("subscribeServiceData", {"header_hash":list(get_final().header.hash()),"slot": int(get_final().header.slot),"value":list(meta.encode())}))
+
+        # Publishes updates of the service data.
+        asyncio.create_task(broker.publish("subscribeServiceData", list(meta.encode())))
        
         self.store.put(k, v)
     return property(getter, setter)
@@ -174,9 +168,9 @@ class StorageView:
             #websocket broadcast for service value
 
         self.store.put(key, value)
-        from jam.settings import settings
-        final =  Finality.load_final(settings.main_db)
-        asyncio.create_task(broker.publish("subscribeServiceValue", {"header_hash":list(get_final().header.hash()),"slot": int(get_final().header.slot),"value":list(value.hex())}))
+       
+        # Publishes updates of the service value. On every setitem, the value is broadcasted to all subscribers
+        asyncio.create_task(broker.publish("subscribeServiceValue", list(value.hex())))
 
     def __delitem__(self, key: Bytes[32]):
         curr_value = self[key]
@@ -184,11 +178,9 @@ class StorageView:
             meta_view = AccountDataView(self.id, self.store)
             meta_view.num_i = meta_view.num_i - 1
             meta_view.num_o = meta_view.num_o - len(curr_value) - 32
-        
-        #websocket broadcast for service value
-        from jam.settings import settings
-        final =  Finality.load_final(settings.main_db)
-        asyncio.create_task(broker.publish("subscribeServiceValue", {"header_hash":list(get_final().header.hash()),"slot": int(get_final().header.slot),"value":list(curr_value)}))
+
+        # Publishes updates of the service value. On every delitem, the value is broadcasted to all subscribers
+        asyncio.create_task(broker.publish("subscribeServiceValue", list(curr_value)))
     
         storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
         self.store.delete(storage_key)
@@ -207,19 +199,16 @@ class PreImageView:
         k = construct_state_key((self.id, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24]))
         self.store.put(k, value)
 
-        #websocket broadcast for service preimage
-        from jam.settings import settings
-        final =  Finality.load_final(settings.main_db)
-        asyncio.create_task(broker.publish("subscribeServicePreimage", {"header_hash":list(get_final().header.hash()),"slot": int(get_final().header.slot),"value":list(value)}))
+        # Publishes updates of the service preimage. On every setitem, the value is broadcasted to all subscribers
+        asyncio.create_task(broker.publish("subscribeServicePreimage", list(value)))
 
 
 
     def __delitem__(self, key: Bytes[32]):
         storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24]))
-        #websocket broadcast for service preimage
-        from jam.settings import settings
-        final =  Finality.load_final(settings.main_db)
-        asyncio.create_task(broker.publish("subscribeServicePreimage", {"header_hash":list(get_final().header.hash()),"slot": int(get_final().header.slot),"value":list(storage_key)}))
+
+        # Publishes updates of the service preimage. On every delitem, the value is broadcasted to all subscribers
+        asyncio.create_task(broker.publish("subscribeServicePreimage", list(storage_key)))
         self.store.delete(storage_key)
 
 
@@ -244,10 +233,8 @@ class TimestampsView:
             meta_view.num_i = meta_view.num_i + 2
             meta_view.num_o = meta_view.num_o + key.length + 81
 
-        #websocket broadcast for service value
-        from jam.settings import settings
-        final =  Finality.load_final(settings.main_db)
-        asyncio.create_task(broker.publish("subscribeServiceRequest", {"header_hash":list(get_final().header.hash()),"slot": int(get_final().header.slot),"value":value}))
+        # Publishes updates of the service request. On every setitem, the value is broadcasted to all subscribers
+        asyncio.create_task(broker.publish("subscribeServiceRequest", value))
 
 
         self.store.put(storage_key, v)
@@ -259,9 +246,8 @@ class TimestampsView:
             meta_view = AccountDataView(self.id, self.store)
             meta_view.num_i = meta_view.num_i - 2
             meta_view.num_o = meta_view.num_o - key.length - 81
-        #websocket broadcast for service value
-        from jam.settings import settings
-        final =  Finality.load_final(settings.main_db)
-        asyncio.create_task(broker.publish("subscribeServiceRequest", {"header_hash":list(get_final().header.hash()),"slot": int(get_final().header.slot),"value":curr_data}))
+            
+        # Publishes updates of the service value. On every delitem, the value is broadcasted to all subscribers
+        asyncio.create_task(broker.publish("subscribeServiceRequest", curr_data))
 
         self.store.delete(storage_key)

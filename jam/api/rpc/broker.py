@@ -18,5 +18,7 @@ class Broker:
                 yield await q.get()
         finally:
             self.topics[topic].remove(q)
+    
+   
 
 broker = Broker()
