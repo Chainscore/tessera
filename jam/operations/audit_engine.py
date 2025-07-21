@@ -57,28 +57,3 @@ class AuditEngine(NodeDispatcher):
 
         # Completed auditing for this slot
         logger.info(f"Finished auditing slot {time_slot}")
-
-
-
-# async def heartbeat_loop():
-#     """
-#     Heartbeat loop: every SLOT_PERIOD seconds, schedule block production,
-#     audit engine, and any other timed tasks.
-#     """
-#     # Align to the next slot boundary
-#     now = time.time()
-#     next_slot = int((now - GENESIS_TS) // SLOT_PERIOD) + 1
-#     while True:
-#         ts = next_slot
-#         # Schedule block production at t+0s
-#         asyncio.create_task(BlockProducer.run(ts))
-#         # Schedule audit at t+2s
-#         asyncio.create_task(AuditEngine.run(ts))
-#         # Sleep until the next slot boundary
-#         sleep_until = GENESIS_TS + ts * SLOT_PERIOD - time.time()
-#         if sleep_until > 0:
-#             await asyncio.sleep(sleep_until)
-#         next_slot += 1
-
-# To start heartbeats when node initializes:
-# asyncio.create_task(heartbeat_loop())
