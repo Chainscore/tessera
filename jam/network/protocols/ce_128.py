@@ -5,7 +5,7 @@ from tsrkit_types import TypedVector, Enum
 from jam.logging import get_logger
 from jam.finality.finality import Finality
 from jam.network.base.error import NetworkingErrorCode
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.types import HeaderHash 
 
 
@@ -50,16 +50,16 @@ class BlockRequest(NetworkProtocol):
 
     async def transmit(self, data: CE128Data):
         """Transmit Block Request"""
-        from ..node import node 
+        from jam.network.start import node 
         if not node: return
 
         stream_data = data.encode()
-        logger.info("Transmitting block request to node", num=len(node._protocols), max_blocks=data.max_blocks)
+        logger.info("Transmitting block request to node", num=len(node.connection_ids), max_blocks=data.max_blocks)
 
         transmitted_count = 0
         responses = []
 
-        for client in node._protocols:
+        for client in node.connection_ids.values():
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
@@ -79,7 +79,7 @@ class BlockRequest(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Process Block Request"""
         buffer = server.stream_buffer[stream_id][1:]
 
@@ -156,7 +156,7 @@ class BlockRequest(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: JAMNP):
+    def res_intercept(self, stream_id: int, client: NodeConnection):
         """Intercept Acknowledgement"""
         from jam.block.block import Block
 

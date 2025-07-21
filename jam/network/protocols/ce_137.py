@@ -6,7 +6,7 @@ from jam.logging import logger
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
@@ -77,14 +77,14 @@ class ShardDistributionProtocol(NetworkProtocol):
 
     async def transmit(self, data: CE137Data):
         """Transmit Erasure-Root and Shard Index from Assurer (client) to Guarantor (server)"""
-        from jam.network.node import node 
+        from jam.network.start import node 
 
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Requesting shard from {len(node._protocols)} guarantors")
+        logger.info(f"Requesting shard from {len(node.connection_ids)} guarantors")
 
-        for client in node._protocols.values():
+        for client in node.connection_ids.values():
             try:
                 if int(client.val.metadata.port) == 40001:
                     logger.debug("Requesting shard from", peer=str(client))
@@ -110,7 +110,7 @@ class ShardDistributionProtocol(NetworkProtocol):
                     error_type=type(e).__name__,
                 )
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
         from jam.settings import settings
 
@@ -185,7 +185,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             )
 
     def res_intercept(
-        self, stream_id: int, client: JAMNP
+        self, stream_id: int, client: NodeConnection
     ) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
         """Intercept Bundle Shard, [Segment Shard] and Justification"""
         buffer = client.stream_buffer[stream_id]

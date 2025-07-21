@@ -6,7 +6,7 @@ from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.storage.item_extrinsics import ItemExtrinsics
 
 from jam.types.protocol.core import CoreIndex
@@ -88,7 +88,7 @@ class WorkPackageSharing(NetworkProtocol):
 
     async def transmit(self, data: CE134Data):
         """Request Work Report from Node (server)"""
-        from jam.network.node import node
+        from jam.network.start import node
         msg_a = data.core_segment.encode()
         len_a = data.map_len.encode()
         msg_b = data.work_package_bundle.encode()
@@ -152,10 +152,10 @@ class WorkPackageSharing(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept Work Package Bundle & Build Work Report on Core's Guarantors (server)"""
         from jam.settings import settings
-        from jam.network.node import node 
+        from jam.network.start import node 
 
         buffer = server.stream_buffer[stream_id]
 
@@ -246,7 +246,7 @@ class WorkPackageSharing(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: JAMNP) -> OptCred:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> OptCred:
         """Intercept validated Work Report from guarantors"""
         buffer = client.stream_buffer[stream_id]
 

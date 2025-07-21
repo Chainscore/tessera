@@ -3,7 +3,7 @@ from typing import cast
 from tsrkit_types import structure, TypedVector, Uint
 
 from jam.logging import logger
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 from jam.types.work.manifest import SegmentIndex, Justification, Justifications
@@ -74,14 +74,14 @@ class SegmentShardRequestBase(NetworkProtocol):
 
     async def transmit(self, data: CE139Data):
         """Transmit Erasure-Root and Shard Index from Guarantor to Assurer"""
-        from jam.network.node import node 
+        from jam.network.start import node 
 
         msg_a = data.queries.encode()
         len_a = data.len.encode()
 
         logger.info(f"Sending segment shard request with")
 
-        for client in node._protocols:
+        for client in node.connection_ids.values():
             if int(client.val.metadata.port) == 30333:
                 logger.info("requesting seg shard from 30333")
 
@@ -108,8 +108,8 @@ class SegmentShardRequestBase(NetworkProtocol):
 
         return data
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         ...
 
-    def res_intercept(self, stream_id: int, client: JAMNP):
+    def res_intercept(self, stream_id: int, client: NodeConnection):
         ...

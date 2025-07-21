@@ -2,7 +2,7 @@ from typing import cast, Tuple
 
 from tsrkit_types import Uint
 
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_139_base import (
     SegmentShardRequestBase,
     Justifications,
@@ -41,7 +41,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
     def __init__(self):
         super().__init__(PrefixType.CE140)
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Erasure-Root, Shard Index & Segment Indices on Assurer"""
         from jam.settings import settings
 
@@ -85,7 +85,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
                 server.stream_and_keep_open(msg_n, stream_id)
 
     def res_intercept(
-        self, stream_id: int, client: JAMNP 
+        self, stream_id: int, client: NodeConnection 
     ) -> Tuple[SegmentsShard, Justifications] | None:
         """Intercept [Segment Shard] and Justification"""
         buffer = client.stream_buffer[stream_id]

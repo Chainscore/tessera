@@ -7,7 +7,7 @@ from tsrkit_types.struct import structure
 
 from jam.logging import get_logger
 
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
@@ -76,7 +76,7 @@ class BlockAnnouncement(NetworkProtocol):
         self._prefix = PrefixType.UP0
 
     @staticmethod
-    def handshake(stream_id: int, conn: JAMNP):
+    def handshake(stream_id: int, conn: NodeConnection):
         from jam.settings import settings
         from jam.finality.finality import Finality
         from jam.types.protocol.crypto import Hash
@@ -84,7 +84,7 @@ class BlockAnnouncement(NetworkProtocol):
         db = settings.main_db
         finality = Finality()
 
-        logger.debug("Handshake started", peer=conn.val)
+        logger.debug("Handshake started")
         try:
             final_block = finality.load_final(db)
         except Exception as e:
@@ -104,19 +104,21 @@ class BlockAnnouncement(NetworkProtocol):
         leaves = Leaves([])
         handshake = Handshake(final, leaves)
         h = handshake.encode()
-        h_len = Uint[32](len(h))
+        h_len = U32(len(h))
 
         # Handshake Message
         conn.stream_and_keep_open(h_len.encode(), stream_id)
         conn.stream_and_keep_open(h, stream_id)
 
+        conn.up0_stream = stream_id
+
     async def transmit(self, data: Block):
         """Announce Block to Peers (servers)"""
         from jam.finality.finality import Finality
         from jam.types.protocol.crypto import Hash
-        from jam.network.node import node
+        from jam.network.start import node
 
-        logger.info(f"Announcing blocks to {len(node._protocols)} peers.")
+        logger.info(f"Announcing blocks to {len(node.connection_ids)} peers.")
         from jam.settings import settings
 
         db = settings.main_db
@@ -133,16 +135,14 @@ class BlockAnnouncement(NetworkProtocol):
         message = announcement.encode()
         logger.info(
             "Announcing new block to peers",
-            node_name=node.name,
             block_slot=int(data.header.slot),
             parent_hash=data.header.parent.hex()[:16] + "...",
-            peer_count=len(node.peer_conn),
             message_size=len(message),
         )
 
         announced_count = 0
         # TODO: Implement actual Block Propagation Grid
-        for conn in node._protocols:
+        for conn in node.connection_ids.values():
             try:
                 ann_len = U32(len(message))
 
@@ -152,16 +152,11 @@ class BlockAnnouncement(NetworkProtocol):
 
                 logger.debug(
                     "Block announced to peer",
-                    node_name=node.name,
-                    peer=str(peer),
-                    stream_id=conn.up0_stream,
                     block_slot=int(data.header.slot),
                 )
             except Exception as e:
                 logger.error(
                     "Failed to announce block to peer",
-                    node_name=node.name,
-                    peer=str(peer),
                     error=str(e),
                     error_type=type(e).__name__,
                 )
@@ -199,62 +194,47 @@ class BlockAnnouncement(NetworkProtocol):
             block_slot=int(data.header.slot),
         )
 
-    def req_intercept(self, stream_id: int, conn: JAMNP):
+    def req_intercept(self, stream_id: int, conn: NodeConnection):
         """Intercepting & Process new blocks from peers."""
-        from jam.network.node import node
         buffer = conn.stream_buffer[stream_id]
-        peer = conn.val
-
-        logger.info(
-            "Intercepting UP0 stream",
-            peer=peer,
-            stream_id=stream_id,
-        )
-
-        if peer == "BUILDER":
-            logger.warning("Cannot receive any announcement from builder")
-            return
+        logger.info("Intercepting UP0 stream", len=len(buffer), stream_id=stream_id)
 
         # conn = node._protocols[peer.metadata.port]
         # if node.is_builder and not server.peer_handshake:
         #     up_stream = stream_id
         #     node.peer_conn[peer] = stream_id, conn
 
-        if stream_id != conn.up0_stream:
-            conn.up0_stream = stream_id
+        # if stream_id != conn.up0_stream:
+        #     logger.warning("UP0 Stream ID updated", stream_id=stream_id, old_stream=conn.up0_stream)
+        #     # Update the stream ID
+        #     conn.up0_stream = stream_id
 
         # Handle handshake message
-        if not conn.handshake_completed:
+        if conn.is_initialized and conn.has_pending_handshake:
             # Reverse Handshake on Server
-            # if not server.is_client:
-            logger.info(
-                "Doing reverse handshake",
-                peer=str(conn.val)
-            )
+            logger.info("Doing reverse handshake")
             self.handshake(stream_id, conn)
+            conn.has_pending_handshake = False
 
+        if not conn.received_handshake:
             # Parse received Handshake
-            h_len= Uint[32].decode(buffer[1:5])
+            h_len= U32.decode(conn.stream_buffer[stream_id][1:5])
 
             if len(buffer[5:]) == h_len:
-                h = Handshake.decode(buffer[5:])
+                h = Handshake.decode(conn.stream_buffer[stream_id][5:])
 
                 # TODO: Process Handshake
                 logger.info(
                     "Received peer handshake",
                     stream_id=stream_id,
-                    peer=str(conn.val),
                     handshake=h,
                     block_slot=int(h.final.time_slot),
                     parent_hash=h.final.header_hash.hex()[:16] + "...",
                     buffer_size=len(buffer),
                 )
 
-                # if node.is_builder:
-                #     node.peer_conn[peer] = stream_id, server
-
-                conn.stream_buffer[stream_id] = self._prefix.encode()
-                conn.handshake_completed = True
+                conn.received_handshake = True
+                del conn.stream_buffer[stream_id]
 
                 # Start synchornization
                 asyncio.create_task(self.synchronise(h, conn))
@@ -264,19 +244,20 @@ class BlockAnnouncement(NetworkProtocol):
             # Parse received Announcement
             a_len = Uint[32].decode(buffer[1:5])
 
-            if len(buffer[5:]) == a_len:
+            print(f"Block Announcement Length: {a_len} | Buffer Length: {len(buffer[5:])}")
+
+            if len(buffer[5:]) == 72:
                 a = Announcement.decode(buffer[5:])
 
                 logger.info(
                     "Received block announcement",
                     stream_id=stream_id,
-                    peer=str(conn.val),
                     block_slot=int(a.final.time_slot),
                     parent_hash=a.final.header_hash.hex()[:16] + "...",
                     buffer_size=len(buffer),
                 )
 
-                server.stream_buffer[stream_id] = self._prefix.encode()
+                del conn.stream_buffer[stream_id] 
 
                 # TODO: Process new block
                 # Process new header
@@ -319,7 +300,7 @@ class BlockAnnouncement(NetworkProtocol):
             logger.debug("Imported block", slot=block.header.slot)
 
     @classmethod
-    async def synchronise(cls, h: Handshake, node: JAMNP):
+    async def synchronise(cls, h: Handshake, node: NodeConnection):
         from jam.state.state import state
 
         # To know how many blocks to fetch

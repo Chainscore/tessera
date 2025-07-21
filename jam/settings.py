@@ -1,20 +1,23 @@
+from time import time
+from types import NoneType
+from typing import TYPE_CHECKING, Optional
 from py_ark_vrf import public_from_le_secret
 from typing import Optional
-from cryptography.hazmat.primitives.asymmetric.ed25519 import (
-    Ed25519PrivateKey,
-    Ed25519PublicKey,
-)
-from tsrkit_types import U32, Bytes, Uint
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from tsrkit_types import U32, Bytes, Bytes32, Uint
 from jam.types.protocol.core import CoreIndex
-from jam.types.protocol.crypto import BlsPublic, Hash
+from jam.types.protocol.crypto import BlsPublic, Ed25519Public, Hash, OpaqueHash
 from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata
 from rockstore import RockStore
 import random
-from py_ark_vrf import secret_from_seed, public_from_le_secret
+from py_ark_vrf import public_from_le_secret
 
 from jam.types.work.shard import ShardIndex
-from jam.utils.constants import VALIDATOR_COUNT
+from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
+from jam.utils.merkle.binary_merkle import OpaqueHashes
 
+if TYPE_CHECKING:
+    from jam.state.state import State 
 
 class Settings:
     # Node settings
@@ -34,13 +37,18 @@ class Settings:
     _data_path: str
 
     # Key Store
-    seed: Bytes[32]
+    seed: Bytes32
 
-    ed25519_public: Bytes[32]
-    ed25519_private: Bytes[32]
+    ed25519_public: Bytes32
+    ed25519_private: Bytes32
 
-    bandersnatch_public: Bytes[32]
-    bandersnatch_private: Bytes[32]
+    bandersnatch_public: Bytes32
+    bandersnatch_private: Bytes32
+
+    # Epoch-related
+    _last_recorded_epoch = -1
+    _validator_index: int | None
+    _val: ValidatorData | None 
 
     def __init__(
         self,
@@ -76,15 +84,40 @@ class Settings:
 
         if seed is not None:
             self._seed = seed
-            self.seed = Bytes[32](b"".join([U32(seed).encode()] * 8))
-            self.ed25519_private = Hash.blake2b(Bytes(b"jam_val_key_ed25519") + self.seed)
-            self.ed25519_public = Bytes[32](
+            self.seed = Bytes32(b"".join([U32(seed).encode()] * 8))
+            self.ed25519_private = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_ed25519") + self.seed))
+            self.ed25519_public = Bytes32(
                 Ed25519PrivateKey.from_private_bytes(self.ed25519_private)
                 .public_key()
                 .public_bytes_raw()
             )
-            self.bandersnatch_private = Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed)
-            self.bandersnatch_public = Bytes[32](public_from_le_secret(self.bandersnatch_private))
+            self.bandersnatch_private = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed))
+            self.bandersnatch_public = Bytes32(public_from_le_secret(self.bandersnatch_private))
+
+
+    def update(self, state: Optional["State"] = None):
+        """
+        Updates epoch related data
+        TBD: Can be trigger via state transitions or keep checking while 
+        """
+        if not state:
+            from jam.state.state import state
+
+        curr_epoch = int(time() // 6 // EPOCH_LENGTH)
+
+        if self._last_recorded_epoch == curr_epoch: 
+            return
+        
+        for i, val in enumerate(state.kappa):
+            if val.ed25519 == self.ed25519_public: # and val.bandersnatch == self.bandersnatch:
+                self._validator_index = i
+                self._val = val 
+                break
+        else:
+            self._validator_index = None
+            self._val = None
+
+        self._last_recorded_epoch = curr_epoch 
 
     @property
     def main_db(self) -> RockStore:
@@ -126,28 +159,19 @@ class Settings:
 
     @property
     def val(self) -> ValidatorData:
-        return ValidatorData(
-            bandersnatch=self.bandersnatch_public,
-            ed25519=self.ed25519_public,
-            bls=BlsPublic(144),
-            metadata=ValidatorMetadata(
-                name=Bytes[10](b""),
-                protocol=Uint[16](0),
-                host=IPAddress.from_json([0, 0, 0, 0]),
-                port=Uint[16](40000 + self._seed),
-                buffer=Bytes[110](110),
-            ),
-        )
+        if time()//(6)//EPOCH_LENGTH != self._last_recorded_epoch:
+            raise ValueError("Validator data is not updated, call update() first.")
+        if self._val is None:
+            raise ValueError("Validator data is not set, check if the node is registered in the state.")
+        return self._val
 
     @property
     def validator_index(self):
-        from jam.state.state import state
-
-        for i, val in enumerate(state.kappa):
-            if val.bandersnatch == self.bandersnatch_public:
-                return i
-
-        raise ValueError("No validator found with matching bandersnatch key.")
+        if time()//(6)//EPOCH_LENGTH != self._last_recorded_epoch:
+            raise ValueError("Validator index is not updated, call update() first.")
+        if isinstance(self._validator_index, NoneType):
+            raise ValueError("Validator index is not set, check if the node is registered in the state.")
+        return self._validator_index 
 
     def get_shard_index(self, core_index: CoreIndex):
         from jam.utils.chainspec import chain_config

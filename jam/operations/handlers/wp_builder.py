@@ -33,7 +33,7 @@ class WPBuilder:
         Starts the WP producer engine in asyncio loop.
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
-        from jam.network.node import node
+        from jam.network.start import node
 
         CE133 = WorkPackageSubmission()
 

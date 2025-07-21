@@ -1,4 +1,5 @@
 import asyncio
+import os
 from pathlib import Path
 import signal
 from jam.logging import get_logger
@@ -10,10 +11,13 @@ proc = None
 
 async def run_pj_command(node_id: int):
     global proc
-    print("file", __file__)
     binary_path = str(Path(__file__).parents[3] / "polkajam")
-    envs = "RUST_LOG=quinn_proto=trace"
-    command = f"export {envs} && exec {binary_path}/polkajam run --dev-validator {node_id} -t"
+    envs = ""
+    if hasattr(os.environ, "RUST_LOG"):
+        envs = f"RUST_LOG={os.environ["RUST_LOG"]}"
+
+    command = f"export {envs} && exec {binary_path}/polkajam run --dev-validator {node_id} --temp"
+
     try:
         proc = await asyncio.create_subprocess_shell(
             command,

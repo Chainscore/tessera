@@ -1,7 +1,7 @@
 from tsrkit_types import structure, TypedVector, U32
 from jam.logging import get_logger
 from typing import cast
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types import ValidatorIndex
 from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField
@@ -54,17 +54,17 @@ class AssuranceDistribution(NetworkProtocol):
 
     async def transmit(self, data: CE141Data):
         """Transmit assurance, From Assurer (client) to Validator (server)"""
-        from jam.network.node import node 
+        from jam.network.start import node 
 
         msg = data.assurance.encode()
         len_a = data.len.encode()
 
         logger.info(
-            f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node._protocols)}  validators"
+            f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node.connection_ids)}  validators"
         )
         responses = TypedVector([])
 
-        for client in node._protocols.values():
+        for client in node.connection_ids.values():
             # Send Protocol Prefix
             stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
@@ -78,7 +78,7 @@ class AssuranceDistribution(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         from jam.block.extrinsics.assurances import asr_store
 
         buffer = server.stream_buffer[stream_id]
@@ -108,7 +108,7 @@ class AssuranceDistribution(NetworkProtocol):
 
         logger.debug("Assurance sent to other validators", stream_id=stream_id, ack_size=len(ack))
 
-    def res_intercept(self, stream_id: int, client: JAMNP):
+    def res_intercept(self, stream_id: int, client: NodeConnection):
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
             logger.info("Assurance ack received", stream_id=stream_id, buffer_size=len(buffer))

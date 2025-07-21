@@ -4,7 +4,7 @@ from tsrkit_types import Uint, structure, TypedVector
 
 from jam.logging import logger
 
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_137 import CE137Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -60,15 +60,15 @@ class AuditShardRequestProtocol(NetworkProtocol):
     async def transmit(self, data: CE138Data):
         """Transmit Erasure-Root and Shard Index from Auditor (client) to Assurer (server)"""
         
-        from jam.network.node import node 
+        from jam.network.start import node 
 
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting shard index & erasure root to {len(node._protocols)} assurer")
+        logger.info(f"Transmitting shard index & erasure root to {len(node.connection_ids)} assurer")
 
         responses = TypedVector([])
-        for client in node._protocols.values():
+        for client in node.connection_ids.values():
             if int(client.val.metadata.port) == 30336:
                 logger.info("requesting audit shard from 30336")
 
@@ -86,7 +86,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Erasure-Root and Shard Index on Assurer (server)"""
         from jam.settings import settings
 
@@ -130,7 +130,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
         server.stream_and_close(msg_b, stream_id)
 
     def res_intercept(
-        self, stream_id: int, client: JAMNP
+        self, stream_id: int, client: NodeConnection
     ) -> Tuple[BundleShard, Justification] | None:
         """Intercept Bundle Shard and Justification"""
         buffer = client.stream_buffer[stream_id]

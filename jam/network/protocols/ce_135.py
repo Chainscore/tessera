@@ -3,7 +3,7 @@ from tsrkit_types import Null, Option, Bool, Uint, TypedVector, U32, structure
 
 from jam.logging import logger
 
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -50,7 +50,7 @@ class WorkReportDistribution(NetworkProtocol):
 
     async def transmit(self, data: CE135Data):
         """Transmit Work Report from Guarantor (client) to Validator (server)"""
-        from jam.network.node import node
+        from jam.network.start import node
         msg_a = data.guaranteed_wr.encode()
         len_a = data.len.encode()
 
@@ -76,9 +76,9 @@ class WorkReportDistribution(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Work Report on Validator (server)"""
-        from jam.network.node import node 
+        from jam.network.start import node 
         buffer = server.stream_buffer[stream_id]
 
         logger.info("Received Work Report")
@@ -102,7 +102,7 @@ class WorkReportDistribution(NetworkProtocol):
         logger.info("Fetching assigned shard")
         # asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
 
-    def res_intercept(self, stream_id: int, client: JAMNP) -> OptBool:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> OptBool:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
@@ -112,7 +112,7 @@ class WorkReportDistribution(NetworkProtocol):
         return OptBool(Null)
 
     @staticmethod
-    async def _req_shard(data: ReportGuarantee, node: JAMNP):
+    async def _req_shard(data: ReportGuarantee, node: NodeConnection):
         from jam.settings import settings
 
         slot = data.slot

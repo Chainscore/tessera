@@ -5,6 +5,13 @@ from tsrkit_types import Enum
 from jam.utils.chainspec import chain_config
 
 # ───────────────────────────────────────
+# Networking 
+# ───────────────────────────────────────
+GENESIS_HASH = "b5af8eda"
+JAMNP_VERSION = "0"
+NODE_ALPN = f"jamnp-s/{JAMNP_VERSION}/{GENESIS_HASH}" 
+
+# ───────────────────────────────────────
 # Constants (I.4.4, JAM Graypaper Order)
 # ───────────────────────────────────────
 

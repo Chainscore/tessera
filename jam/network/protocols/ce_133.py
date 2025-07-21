@@ -4,7 +4,7 @@ from tsrkit_types import Null, structure, Uint, Bool, TypedVector, Option
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.types.protocol.core import CoreIndex
@@ -66,7 +66,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
     async def transmit(self, data: CE133Data):
         """Transmit Work Package from Builder (client) to Guarantor (server)"""
-        from jam.network.node import node 
+        from jam.network.start import node 
         if not node: return TypedVector[OptBool]([]) 
 
         msg_a = data.package_data.encode()
@@ -77,7 +77,7 @@ class WorkPackageSubmission(NetworkProtocol):
         logger.info(
             "Transmitting work package to guarantors",
             core_index=int(data.package_data.core_index),
-            guarantor_count=len(node._protocols),
+            guarantor_count=len(node.connection_ids),
             stream_a_size=data.package_len,
             stream_b_size=data.extrinsics_len,
             extrinsics_count=len(data.extrinsics),
@@ -87,7 +87,7 @@ class WorkPackageSubmission(NetworkProtocol):
         # TODO: Use Particular Validators' Connections
 
         responses = TypedVector[OptBool]([])
-        for _, client in node._protocols.items():
+        for _, client in node.connection_ids.items():
             try:
                 if client.val.metadata.port != 40000:
                     continue
@@ -133,7 +133,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Work Package on Guarantor (server)"""
         buffer = server.stream_buffer[stream_id]
 
@@ -193,7 +193,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: JAMNP) -> OptBool:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> OptBool:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":

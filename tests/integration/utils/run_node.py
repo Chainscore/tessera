@@ -13,7 +13,7 @@ from .state_update import update_state
 
 from jam.finality.finality import Finality
 from jam.settings import setup_setting 
-from jam.network.node import start_node
+from jam.network.start import start_node
 from jam.state.state import setup_state 
 from jam.block import Block
 
@@ -88,9 +88,11 @@ async def run_node(
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
+        
+        settings.update()
 
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(start_node(host, int(port), state.kappa))
+            tg.create_task(start_node(host, int(port)))
             if node_task:
                 tg.create_task(node_task(tsr_node))
 

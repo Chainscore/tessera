@@ -3,15 +3,13 @@ import json
 import logging
 import os
 import time
-
 from dotenv import load_dotenv
 from jam.operations import operate
 from jam.logging import setup_logging, logger
-from jam.network.base.certificate import generate_san
 from jam.utils.chainspec import chain_config
 from jam.settings import setup_setting
 from jam.finality.finality import Finality
-from jam.network.node import start_node
+from jam.network.start import start_node
 from jam.state.state import setup_state
 from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
@@ -75,6 +73,8 @@ async def main(
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
 
+        settings.update()
+
         # ------------ SET GENESIS BLOCK ------------
         block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
@@ -84,19 +84,13 @@ async def main(
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
             # Networking - Block Imports, WP Processing, etc
-            tg.create_task(start_node(str(host), int(port), state.kappa))
+            tg.create_task(start_node(str(host), int(port)))
             # RPC
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
             tg.create_task(operate(is_builder))
 
     except Exception as e:
-        logger.critical(
-            "JAM node fatal error",
-            node_name=name,
-            port=port,
-            error=str(e)[:200],
-            error_type=type(e).__name__,
-        )
+        logger.critical("Fatal error", e=e, error_type=type(e).__name__)
         # Close db connections
         settings.clear()

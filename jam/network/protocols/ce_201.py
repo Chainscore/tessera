@@ -1,7 +1,7 @@
 from typing import cast
 from tsrkit_types import Vector, Null, Uint, structure, Bytes 
 from jam.logging import logger 
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -39,16 +39,16 @@ class GhostProtocol(NetworkProtocol):
 
     async def transmit(self, data: str):
         """Request Work Report from Node (server)"""
-        from jam.network.node import node 
+        from jam.network.start import node 
         msg_a = Bytes(data, "utf-8").encode()
         len_a = Uint[32](len(msg_a)).encode()
 
-        logger.info(f"GHOST - Transmitting to {len(node._protocols)} Validators", protocol="201")
+        logger.info(f"GHOST - Transmitting to {len(node.connection_ids)} Validators", protocol="201")
 
         # TODO: Use Original Guarantor Connection
 
         responses = Vector([])
-        for client in node._protocols:
+        for client in node.connection_ids.values():
             logger.debug(f"Transmitting data {msg_a.hex()} to {str(client)}")
 
             # Send Protocol Prefix
@@ -65,7 +65,7 @@ class GhostProtocol(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process test query"""
         buffer = server.stream_buffer[stream_id]
 
@@ -88,7 +88,7 @@ class GhostProtocol(NetworkProtocol):
 
         logger.info(f"📩 Processed Test Protocol query.", message=message, peer=server.peer)
 
-    def res_intercept(self, stream_id: int, client: JAMNP) -> str:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> str:
         """Intercept Test Response"""
         buffer = client.stream_buffer[stream_id]
 

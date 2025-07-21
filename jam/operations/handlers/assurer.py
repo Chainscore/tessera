@@ -22,7 +22,7 @@ class Assurer:
 
     async def run(self, time_slot: int):
         from jam.settings import settings
-        from jam.network.node import node
+        from jam.network.start import node
 
         signr = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private).sign(
             Bytes.from_bits(self._collected)

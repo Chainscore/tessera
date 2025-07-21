@@ -1,7 +1,7 @@
 from tsrkit_types import Uint
 from typing import cast
 
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_139_base import SegmentShardRequestBase, CE139Response
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -30,7 +30,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
     def __init__(self):
         super().__init__(PrefixType.CE139)
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Erasure-Root, Shard Index & Segment Indices on Assurer"""
         from jam.settings import settings
 
@@ -56,7 +56,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
         server.stream_and_keep_open(len_a, stream_id)
         server.stream_and_close(msg_a, stream_id)
 
-    def res_intercept(self, stream_id: int, client: JAMNP) -> SegmentsShard | None:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> SegmentsShard | None:
         """Intercept [Segment Shard]"""
         buffer = client.stream_buffer[stream_id]
 

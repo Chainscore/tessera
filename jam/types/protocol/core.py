@@ -13,7 +13,7 @@ class ValidatorIndex(Uint[16]):
         """
         Get block producer's author index from the state
         """
-        from jam.network.node import node
+        from jam.network.start import node
 
         for i, validator in enumerate(state.kappa):
             if validator.bandersnatch == node.validator_data.bandersnatch:

@@ -1,8 +1,5 @@
 import json
-from typing import TYPE_CHECKING, Type
-
-if TYPE_CHECKING:
-    from jam.finality.finality import Finality
+from typing import Type
 from jam.error import JamError
 from jam.utils.merkle import BMRFunctions
 from rockstore import RockStore
@@ -32,11 +29,9 @@ from jam.types import (
     HeaderHash,
 )
 from jam.block.block import Block
-
 from jam.logging import get_logger
 
 logger = get_logger("import")
-
 
 def make_state_prop(state_key: int, cl: Type[Codable]):
     def fget(self):

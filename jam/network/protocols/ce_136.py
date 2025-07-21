@@ -6,7 +6,7 @@ from jam.logging import logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.network.base.jamnp import JAMNP
+from jam.network.connection import NodeConnection
 from jam.types.protocol.crypto import WorkReportHash
 from jam.types.work.report import WorkReport
 from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
@@ -60,17 +60,17 @@ class WorkReportRequest(NetworkProtocol):
 
     async def transmit(self, data: CE136Data):
         """Request Work Report from Node (server)"""
-        from jam.network.node import node 
+        from jam.network.start import node 
 
         msg_a = data.work_report_hash.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Requesting Work-Report from {len(node._protocols)} Validators")
+        logger.info(f"Requesting Work-Report from {len(node.connection_ids)} Validators")
 
         # TODO: Use Original Guarantor Connection
 
         responses = Vector([])
-        for client in node._protocols.values():
+        for client in node.connection_ids.values():
             if int(client.val.metadata.port) == 40000:
                 logger.debug("Requesting report from 40000")
 
@@ -88,7 +88,7 @@ class WorkReportRequest(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: JAMNP):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Fetch requested Work Report on Node (server)"""
         buffer = server.stream_buffer[stream_id]
 
@@ -117,7 +117,7 @@ class WorkReportRequest(NetworkProtocol):
             peer=server.peer,
         )
 
-    def res_intercept(self, stream_id: int, client: JAMNP) -> OptRep:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> OptRep:
         """Intercept Requested Work Report"""
         buffer = client.stream_buffer[stream_id]
 
