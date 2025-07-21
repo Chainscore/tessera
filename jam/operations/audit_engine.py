@@ -2,7 +2,7 @@ from tsrkit_types import TypedVector
 from tsrkit_types.dictionary import Dictionary
 from jam.audit import tranche
 from jam.audit.tranche_engine import TrancheEngine
-from jam.audit.vectors.q import sample_work_reports_with_nulls
+from jam.audit.q import sample_work_reports_with_nulls
 from jam.logging import get_logger
 from jam.operations.dispatcher import NodeDispatcher
 import asyncio
