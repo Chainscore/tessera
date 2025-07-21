@@ -24,7 +24,7 @@ class Client:
     genesis = True
 
 
-async def setup_processes(clients: list[Client], node_tasks: Optional[list[Callable]], max_time = 20):
+async def setup_processes(clients: list[Client], node_task: Optional[Callable], max_time = 20):
     processes = []
 
     for client in clients:
@@ -46,7 +46,7 @@ async def setup_processes(clients: list[Client], node_tasks: Optional[list[Calla
 
             p = Process(
                 target=run_node_process,
-                args=("", env_path, client.genesis, client.theme, is_builder, is_validator, node_tasks)
+                args=("", env_path, client.genesis, client.theme, is_builder, is_validator, node_task)
             )
         processes.append(p)
 

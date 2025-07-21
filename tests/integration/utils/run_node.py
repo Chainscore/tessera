@@ -94,7 +94,8 @@ async def run_node(
         async with asyncio.TaskGroup() as tg:
             tg.create_task(start_node(host, int(port)))
             if node_task:
-                tg.create_task(node_task(tsr_node))
+                print("starting task")
+                tg.create_task(node_task())
 
     except Exception as e:
         logger.critical(

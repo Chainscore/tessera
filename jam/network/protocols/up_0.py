@@ -76,13 +76,17 @@ class BlockAnnouncement(NetworkProtocol):
         self._prefix = PrefixType.UP0
 
     @staticmethod
-    def handshake(stream_id: int, conn: NodeConnection):
+    def handshake(stream_id: int, conn: NodeConnection, prefix = False):
         from jam.settings import settings
         from jam.finality.finality import Finality
         from jam.types.protocol.crypto import Hash
 
         db = settings.main_db
         finality = Finality()
+        
+        data = b""
+        if prefix:
+            data += PrefixType.UP0.encode()
 
         logger.debug("Handshake started")
         try:
@@ -105,10 +109,11 @@ class BlockAnnouncement(NetworkProtocol):
         handshake = Handshake(final, leaves)
         h = handshake.encode()
         h_len = U32(len(h))
+        data += h_len.encode()  
+        data += h
 
         # Handshake Message
-        conn.stream_and_keep_open(h_len.encode(), stream_id)
-        conn.stream_and_keep_open(h, stream_id)
+        conn.stream_and_keep_open(data, stream_id)
 
         conn.up0_stream = stream_id
 

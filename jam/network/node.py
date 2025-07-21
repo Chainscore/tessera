@@ -113,13 +113,18 @@ class QuicNode(asyncio.DatagramProtocol):
         index = settings.validator_index 
         row = index // w
         col = index % w 
-        neighbors = set([k.ed25519 for i, k in enumerate(state.kappa) if (i // 2 == row or i % 2 == col) and i != index])
-        neighbors.add(state.lambda_[index].ed25519)
-        neighbors.add(state.gamma.k[index].ed25519)
-        neighbors.add(state.iota[index].ed25519)
-        logger.debug("🏠 Neighbors set", neighbors=neighbors, count=len(neighbors))
+        neighbors = set([
+            k for i, k in enumerate(state.kappa) 
+            if (i // w == row or i % w == col) and i != index
+        ])
+        neighbors.add(state.lambda_[index])
+        neighbors.add(state.gamma.k[index])
+        neighbors.add(state.iota[index])
+
+        neighbors = [n for n in neighbors if n.ed25519 != settings.ed25519_public]
+        logger.info("🏠 Neighbors set", neighbors=[n.metadata.port for n in neighbors], count=len(neighbors))
         # Convert to list and save 
-        self.neighbors = list(neighbors)
+        self.neighbors = list([n.ed25519 for n in neighbors])
     
     def close(self) -> None:
         """
@@ -169,7 +174,7 @@ class QuicNode(asyncio.DatagramProtocol):
         original_destination_connection_id: Optional[bytes] = None
         retry_source_connection_id: Optional[bytes] = None
         
-        logger.debug("Datagram received", protocol_exists=protocol is not None, addr=addr, packet_type=header.packet_type, cid=header.destination_cid.hex(), data_len=len(data))
+        # logger.debug("Datagram received", protocol_exists=protocol is not None, addr=addr, packet_type=header.packet_type, cid=header.destination_cid.hex(), data_len=len(data))
 
         if (
             protocol is None and
@@ -209,9 +214,6 @@ class QuicNode(asyncio.DatagramProtocol):
             else:
                 original_destination_connection_id = header.destination_cid
 
-            # create new connection
-            logger.debug("Creating new server connection", address=addr)
-            
             # Create a server config from the original configuration 
             server_cfg = QuicConfiguration(**self._cfg.__dict__)
             server_cfg.is_client = False  # Server side
@@ -240,10 +242,10 @@ class QuicNode(asyncio.DatagramProtocol):
             self.connection_ids[connection.host_cid] = protocol
 
             connection._logger = logger
-            print(f"Created server connection with CID {connection.host_cid.hex()}")
+            logger.info(f"⬅️ Created server connection with {addr[1]}", CID=connection.host_cid.hex())
             
         if protocol is not None:
-            logger.debug("Processing datagram", data_len=len(data), connection_id=protocol._quic.host_cid.hex())
+            logger.debug("🌸Processing datagram", data_len=len(data), connection_id=protocol._quic.host_cid.hex())
             protocol.datagram_received(data, addr)
 
     def _connection_id_issued(self, cid: bytes, protocol: NodeConnection):
@@ -323,18 +325,13 @@ class QuicNode(asyncio.DatagramProtocol):
             self._connection_terminated, protocol=protocol
         )
         # --- Connect --- #
-        logger.debug(f"Creating new client connection", addr=addr, cid=quic.host_cid.hex())
         protocol.connect(addr)                        # start handshake
         protocol.transmit()                           # send initial flight
         await protocol.wait_connected()
-        logger.debug(f"Connected to {addr}", cid=quic.host_cid.hex())
+        logger.info(f"➡️ Created client connection with {addr[1]}", cid=quic.host_cid.hex())
 
         stream_id = protocol._quic.get_next_available_stream_id()
-        pref = PrefixType.UP0.encode()
-        protocol.stream_and_keep_open(pref, stream_id)
         from jam.network.protocols import BlockAnnouncement
-        BlockAnnouncement.handshake(stream_id, protocol)
-        protocol.is_initialized = True
-
+        BlockAnnouncement.handshake(stream_id, protocol, True)
 
         return protocol

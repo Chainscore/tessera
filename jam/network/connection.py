@@ -22,6 +22,7 @@ from jam.network.base.certificate import verify_certificate
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import PrefixType
 from jam.types.protocol.crypto import Ed25519Public
+from jam.types.protocol.validators import ValidatorData
 from jam.utils.constants import NODE_ALPN
 
 genesis_hash = "476243ad"
@@ -48,12 +49,14 @@ class NodeConnection(QuicConnectionProtocol):
     is_initiating: bool = False 
     # Flag if we have received the UP0 handshake 
     received_handshake: bool = False 
+    # Validator Data 
+    val: ValidatorData | None
 
     def __init__(
         self, 
         quic: QuicConnection, 
         stream_handler: QuicStreamHandler|None = None,
-        is_initiating: bool = False 
+        is_initiating: bool = False
     ) -> None:
         super().__init__(quic=quic, stream_handler=stream_handler)
         self.waiter = {}
@@ -87,6 +90,7 @@ class NodeConnection(QuicConnectionProtocol):
             
             pk = Ed25519Public(peer_cert.public_key().public_bytes_raw())
             logger.info(f"🔗 Handshake completed with {pk.hex()}.")
+
             self.ed25519_public = pk 
             return pk 
         
@@ -102,6 +106,8 @@ class NodeConnection(QuicConnectionProtocol):
 
         if stream_id is None:
             stream_id = self._quic.get_next_available_stream_id()
+            if stream_id == self.up0_stream:
+                stream_id = self._quic.get_next_available_stream_id()
 
         logger.debug(
             f"📤 Sending message of size {len(message)} bytes",
@@ -209,7 +215,6 @@ class NodeConnection(QuicConnectionProtocol):
             if (self.up0_stream is None and prefix == PrefixType.UP0) or event.stream_id == self.up0_stream:
                 if self.up0_stream == None:
                     self.up0_stream = stream_id 
-                    print(f"adding {len(bytes(1))} to {len(data)}")
                     data = data[1:]
 
                 from jam.network.protocols.up_0 import BlockAnnouncement 
@@ -220,10 +225,10 @@ class NodeConnection(QuicConnectionProtocol):
                 self.stream_buffer[stream_id] = b""
             self.stream_buffer[stream_id] += data
 
-
             if not event.end_stream:
                 return           
             try:
+                prefix = self.stream_buffer[stream_id][0]
                 # Map the request to its corresponding CE protocol function
                 ce_protocol = ProtocolMap.get_protocol(prefix)()
                 logger.debug(f"CE PROTOCOL TRIGGERED", p=type(ce_protocol).__name__)
