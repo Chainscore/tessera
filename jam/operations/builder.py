@@ -13,12 +13,13 @@ from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
 from jam.network.node import Node
 from jam.logging import get_logger
 from jam.utils.dummy.dummy_package import create_dummy_package
-from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
-from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
 
 # Logger for WP Production
 logger = get_logger("in_core")
+
+from tests.unit.wp.types import RefineVectors, RefineVector
+vectors = RefineVectors([])
 
 class Builder:
     """
@@ -35,22 +36,24 @@ class Builder:
         """
         from jam.settings import settings
         from jam.network.node import node
+        from jam.__main__ import TIMESLOT
 
+        from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
         CE133 = WorkPackageSubmission()
 
-        wp_iter = 0
+        wp_iter = (time_slot - TIMESLOT) % 4
 
         curr_ts = time_slot
         curr_ep = int(curr_ts // EPOCH_LENGTH)
 
         # TODO: Remove hard-coded transmission. Use desired guarantors' connections.
-        if len(node.peer_conn) == 0:
-            logger.debug(
-                "Network not initialized - skipping work package production",
-                node_name=node.name,
-                iteration=wp_iter
-            )
-            return
+        # if len(node.peer_conn) == 0:
+        #     logger.debug(
+        #         "Network not initialized - skipping work package production",
+        #         node_name=node.name,
+        #         iteration=wp_iter
+        #     )
+        #     return
 
         # Get state from db
         from jam.state.state import state
@@ -65,9 +68,23 @@ class Builder:
         )
 
         wp = cls._build_package(wp_iter)
+        from jam.network.protocols.ce_133 import WorkPackageCore
 
         wc = WorkPackageCore(wp, CoreIndex(1))
         ext = Extrinsics([])
+
+        # # SAVE TEST VECTORS
+        # BUILD REPORT
+        global vectors
+        from jam.utils.benchmark import write_json
+        from jam.work_package.processor import Processor
+        processor = Processor(node)
+        wr, wr_hash = processor.process(wp, CoreIndex(1), ext)
+        write_json("vectors/packages", wp.to_json())
+        write_json("vectors/reports", wr.to_json())
+
+        vector = RefineVector(wp, CoreIndex(1), ext, wr, wr_hash)
+        vectors.append(vector)
 
         package_len = Uint[32](len(wc.encode()))
         ext_len = Uint[32](len(ext.encode()))
@@ -81,7 +98,7 @@ class Builder:
             curr_timeslot=curr_ts
         )
 
-        responses = await CE133.transmit(node, data)
+        # responses = await CE133.transmit(node, data)
         logger.debug(
             "Work package transmitted",
             node_name=node.name,

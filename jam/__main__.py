@@ -20,6 +20,7 @@ from jam.state.state import setup_state
 from jam.types.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
 
+TIMESLOT = 0
 
 async def main(
     genesis_path: str,
@@ -34,6 +35,8 @@ async def main(
     init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
     init_ep = int(init_ts // EPOCH_LENGTH)
 
+    global TIMESLOT
+    TIMESLOT = init_ts
 
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")

@@ -5,6 +5,7 @@ import time
 
 from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32
 
+from jam.utils.benchmark import write_json
 from jam.utils.chainspec import chain_config
 from jam.logging import get_logger
 
@@ -306,7 +307,8 @@ class Processor:
 
             logger.debug("Proofs formed", count=len(proofs))
             proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
-
+            from jam.utils.benchmark import write_json
+            write_json("vectors/segments", proved_segments.to_json())
 
             # Build Segment Shards
             logger.debug(f"Building segment shards..")
@@ -416,7 +418,7 @@ class Processor:
             logger.error("Failed to process bundle", error=e, wp_hash=wp_hash.hex(), error_type = type(e).__name__)
             raise
 
-    def process(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
+    async def process(self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
         from jam.network.protocols.ce_134 import CoreSegment, WorkPackageSharing, CE134Data
 
         logger.debug("Validating work package..")

@@ -37,12 +37,12 @@ CLIENTS = [
     #     "theme": "default",
     #     "genesis": True
     # },
-    # {
-    #     "port": 40006,
-    #     "role": "BUILDER",
-    #     "theme": "polkadot",
-    #     "genesis": True
-    # },
+    {
+        "port": 40006,
+        "role": "BUILDER",
+        "theme": "polkadot",
+        "genesis": True
+    },
 ]
 
 # Logger for WP Production

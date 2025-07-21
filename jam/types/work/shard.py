@@ -54,7 +54,7 @@ class SegShardsDict(Dictionary[ShardIndex, SegShardDict, "shard_index", "seg_sha
 
         return s
 
-    def get_shard_tuple(self, segment_index: SegmentIndex, sort = False) -> List[Tuple[ShardIndex, SegmentShard]]:
+    def get_shard_tuple(self, segment_index: SegmentIndex, sort = False) -> List[Tuple[SegmentShard, ShardIndex]]:
         """returns list for all the shards of a particular segment index as tuple"""
         s = []
 
@@ -64,7 +64,7 @@ class SegShardsDict(Dictionary[ShardIndex, SegShardDict, "shard_index", "seg_sha
             if segment_index not in shard:
                 raise IndexError(f"Shard with Segment Index {shard_index} and Shard Index {segment_index} not present.")
             seg_shard = shard[segment_index]
-            s.append((shard_index, seg_shard))
+            s.append((seg_shard, shard_index))
 
         return s
 
@@ -89,14 +89,14 @@ class BundleShardsDict(Dictionary[ShardIndex, BundleShard, "shard_index", "bundl
 
         return bs
 
-    def get_shard_tuple(self, sort = False) -> List[Tuple[ShardIndex, BundleShard]]:
+    def get_shard_tuple(self, sort = False) -> List[Tuple[BundleShard,ShardIndex]]:
         """returns list for all the bundle shards as tuple"""
         bs = []
 
         shard_dict = sorted(self) if sort else self
         for shard_index in shard_dict:
             shard = self[shard_index]
-            bs.append((shard_index, shard))
+            bs.append((shard, shard_index))
 
         return bs
 

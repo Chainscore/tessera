@@ -189,13 +189,13 @@ class State:
             logger.debug("Processing disputes...")
             Disputes.transition(self, block)
 
-            # Reporting
-            logger.debug("Processing reporting...")
-            Reporting.transition(self, block, [])
-
             # Assurances
             logger.debug("Processing assurances...")
             _, newly_avail_wrs = Assurances.transition(self, block)
+
+            # Reporting
+            logger.debug("Processing reporting...")
+            Reporting.transition(self, block, [])
 
             # Accumulation
             logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))

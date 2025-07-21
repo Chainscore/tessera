@@ -7,7 +7,7 @@ from jam.logging import logger
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.work.manifest import SegmentIndex, Justification, Justifications
+from jam.types.work.manifest import SegmentIndex, Justification, Justifications, Assurers
 from jam.types.work.shard import ShardIndex, SegmentsShard
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -70,7 +70,7 @@ class SegmentShardRequestBase(NetworkProtocol):
         super().__init__()
         self._prefix = prefix
 
-    async def transmit(self, node: Node, data: CE139Data):
+    async def transmit(self, node: Node, data: CE139Data, peers: Assurers = None):
         """Transmit Erasure-Root and Shard Index from Guarantor to Assurer"""
 
         msg_a = data.queries.encode()
@@ -78,9 +78,12 @@ class SegmentShardRequestBase(NetworkProtocol):
 
         logger.info(f"Sending segment shard request with")
 
-        tasks = TypedVector([])
+        tasks = []
         try:
             for peer in node.peer_conn:
+                if peers and peer.peer_index not in peers:
+                    continue
+
                 logger.info("Requesting seg shard from:", port=peer.port)
                 client = node.peer_conn[peer][1]
 

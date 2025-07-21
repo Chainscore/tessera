@@ -18,10 +18,8 @@ from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, Hash
 from jam.types.work.package import WorkPackageBundle
 from jam.types.work import SegmentRootLookup
 
-from jam.work_package.processor import Processor
 from jam.work_package.validator import Validator
 
-from jam.utils.assignment import assign_guarantors
 from jam.utils.gather import gather_with_exceptions
 from jam.utils.constants import GENESIS_TS
 
@@ -103,6 +101,7 @@ class WorkPackageSharing(NetworkProtocol):
         ci = data.core_segment.core_index
 
         # Fetch guarantors mapping
+        from jam.utils.assignment import assign_guarantors
         mapping = assign_guarantors()
         guarantors = mapping[0][ci]
 
@@ -210,6 +209,7 @@ class WorkPackageSharing(NetworkProtocol):
 
             # Generating report from work package bundle
             logger.debug("Building Work Report..")
+            from jam.work_package.processor import Processor
             processor = Processor(node)
             wr, wr_hash = processor.process_bundle(
                 core=data.core_segment.core_index,

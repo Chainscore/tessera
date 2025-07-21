@@ -14,3 +14,12 @@ class WorkPackagesErrorCode(Enum):
 
 
 
+class BundlerError(JamError):
+    ...
+
+class BundlerErrorCode(Enum):
+    UNKNOWN_ROOT: "Unrecognized root"
+    SHARDS_UNAVAILABLE: "Shards not available"
+    SEG_ERROR: "Unable to fetch import segments"
+    JFN_ERROR: "Unable to fetch justification"
+    EXT_ERROR: "Unable to fetch extrinsics"

@@ -13,8 +13,6 @@ from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
 from jam.types.work.package import WorkPackage
 
-from jam.work_package.processor import Processor
-
 from jam.utils.constants import GENESIS_TS
 from jam.utils.assignment import assign_guarantors
 
@@ -182,7 +180,10 @@ class WorkPackageSubmission(NetworkProtocol):
             )
 
             # Start Refinement Process
+            from jam.work_package.processor import Processor
             processor = Processor(server.node)
+
+
             wr, wr_hash = processor.process(wp, ci, data.extrinsics)
 
             logger.info(

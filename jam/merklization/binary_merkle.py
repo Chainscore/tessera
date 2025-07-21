@@ -1,15 +1,13 @@
 from math import log2, ceil
 from typing import Optional, Callable
 
-from tsrkit_types import Bytes, TypedVector
+from tsrkit_types import Bytes, TypedVector, Bytes32
 from tsrkit_types.choice import Choice
 from tsrkit_types.integers import Uint
 from tsrkit_types.sequences import Vector
 
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.utils.chainspec import chain_config
-from jam.logging import logger
-
 
 ChoicedHash = Choice[Bytes, Bytes[32]]
 OpaqueHashes = TypedVector[OpaqueHash]
@@ -23,13 +21,23 @@ class ChoicedHashes(TypedVector[ChoicedHash]):
 
         return res
 
+    def unwrap32(self) -> OpaqueHashes:
+        res = OpaqueHashes([])
+        for val in self:
+            value = val.unwrap()
+            if getattr(value, "_length", 0) != 32:
+                raise TypeError(f"Expected Bytes[32]. Got {type(value)}")
+            res.append(Bytes[32](value))
+
+        return res
+
 class BMRFunctions:
     """General Merklization implementation for Binary Trees as defined in Section E.1"""
 
     def __init__(self):
         self._ZERO_HASH = Bytes[32]([0] * 32)
-        self._NODE_PREFIX = Bytes('node', 'utf-8')
-        self._LEAF_PREFIX = Bytes('leaf', 'utf-8')
+        self._NODE_PREFIX = Bytes("node", "utf-8")
+        self._LEAF_PREFIX = Bytes("leaf", "utf-8")
 
     def _preprocessor_fn(
         self,
@@ -98,7 +106,7 @@ class BMRFunctions:
             return ChoicedHash(node_val)
 
     @staticmethod
-    def _p_i(values: TypedVector[Bytes], index: Uint) -> Uint:
+    def _p_i(values: TypedVector[Bytes], index: int) -> int:
         """
         Util Function P_I Implementation for Trace Function
         """
@@ -106,12 +114,12 @@ class BMRFunctions:
         mid = (sz+1) // 2
 
         if index < mid:
-            return Uint(0)
+            return 0
         else:
-            return Uint(mid)
+            return mid
 
     @staticmethod
-    def _p_bool(values: TypedVector[Bytes], index: Uint, case: bool) -> TypedVector[Bytes]:
+    def _p_bool(values: TypedVector[Bytes], index: int, case: bool) -> TypedVector[Bytes]:
         """
         Util Function P_s Implementation for Trace Function
         """
@@ -127,7 +135,7 @@ class BMRFunctions:
     def trace_fn(
         self,
         values: TypedVector[Bytes],
-        index: Uint,
+        index: int,
         hash_fn: Optional[Callable[[Bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> ChoicedHashes:
         """
@@ -200,11 +208,11 @@ class BMRFunctions:
         node = self._node_fn(leaves, hash_fn)
         return OpaqueHash(node.unwrap())
 
-    def merkle_path_fn(
+    def subtree_path(
         self,
         values: TypedVector[Bytes],
-        size: Uint,
-        index: Uint,
+        page_depth: int,
+        index: int,
         hash_fn: Optional[Callable[[Bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> ChoicedHashes:
         """
@@ -214,28 +222,28 @@ class BMRFunctions:
             values: Sequence of octet blobs
             index: Node Index
             hash_fn: Hash Function
-            size: page size = 2 ^ size
+            page_depth: page size = 2 ^ page_depth
         Returns:
             Merkle path to a single page
         """
         if index >= len(values):
             raise IndexError("index out of range")
 
-        val = ceil(log2(max(1, len(values))) - int(size))
+        val = ceil(log2(max(1, len(values))) - int(page_depth))
 
         sz = max(0, val)
-        ind = (2 ** size) * index
+        ind = (2 ** page_depth) * index
 
         leaves = self._preprocessor_fn(values, hash_fn)
 
         path = self.trace_fn(leaves, ind, hash_fn)
         return ChoicedHashes(path[:sz])
 
-    def leaf_page_fn(
+    def subtree_leaves(
         self,
         values: TypedVector[Bytes],
-        size: Uint,
-        index: Uint,
+        page_depth: int,
+        index: int,
         hash_fn: Optional[Callable[[Bytes], 'Bytes[32]']] = Hash.blake2b
     ) -> Vector[OpaqueHash]:
         """
@@ -245,7 +253,7 @@ class BMRFunctions:
             values: Sequence of octet blobs
             index: Node Index
             hash_fn: Hash Function
-            size: page size = 2 ^ size
+            page_depth: page size = 2 ^ page_depth
         Returns:
             Single page of leaves
         """
@@ -254,79 +262,51 @@ class BMRFunctions:
 
         page = Vector[OpaqueHash]([])
 
-        ind = (2 ** size) * index
-        val = min(ind + 2 ** size, len(values))
+        ind = (2 ** page_depth) * index
+        val = min(ind + 2 ** page_depth, len(values))
 
         for i in range(ind, val):
             page.append(hash_fn(self._LEAF_PREFIX + Bytes(values[i])))
 
         return page
 
-    # def verify_constant_proof(self, leaf_slice: Vector[OpaqueHash], page_index: int, x: int, trace: Vector[OpaqueHash], expected_root: OpaqueHash):
-    #     """
-    #         Verify constant-depth Merkle proof (𝓜 + 𝓛ₓ + 𝒥ₓ)
-    #         - leaf_slice: list of hashed leaves from 𝓛ₓ (2^x items)
-    #         - page_index: which 2^x block this is
-    #         - x: log2 of page size (e.g., x=2 for 4-leaf pages)
-    #         - trace: Merkle trace from 𝒥ₓ (log2(n) - x items)
-    #         - expected_root: the full root to compare against
-    #         """
-    #     # Build the subtree root for this page
-    #     nodes = leaf_slice
-    #     while len(nodes) > 1:
-    #         new_level = []
-    #         for i in range(0, len(nodes), 2):
-    #             left = nodes[i]
-    #             right = nodes[i + 1] if i + 1 < len(nodes) else b'\x00' * 32
-    #             new_level.append(self._node_fn(Vector([left, right])))
-    #         nodes = new_level
-    #     subtree_root = nodes[0]
-    #
-    #     index = page_index
-    #     current_hash = subtree_root
-    #     for sibling in trace:
-    #         if index % 2 == 0:
-    #             current_hash = self._node_fn(Vector([current_hash, sibling]))
-    #         else:
-    #             current_hash = self._node_fn(Vector([sibling, current_hash]))
-    #         index //= 2
-    #     return current_hash == expected_root
-
     def reconstruct_root(self,
-               index: Uint,
-               justification: TypedVector[Bytes],
-               nodes: Uint,
-               start: Uint,
-               leaf: Bytes,
-               hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b,
-        ) -> OpaqueHash:
+       leaf_index: int,
+       trace: TypedVector[Bytes],
+       leaf: Bytes,
+       total_nodes: int,
+       curr_index: int = 0,
+       hash_fn: Optional[Callable[[bytes], 'Bytes[32]']] = Hash.blake2b,
+    ) -> OpaqueHash:
         """
             Verifies the Merkle justification by reconstructing the Merkle root.
         Args:
-            index: The original index of the leaf in the full vector
-            justification: Vector of MerkleByte (sibling hashes along path)
+            leaf_index: The original index of the leaf in the full vector
+            trace: Merkle path to the given leaf
             leaf: The leaf value being verified (raw bytes)
-            nodes: Total number of nodes
-            start: starting index of justification
+            total_nodes: Total number of nodes
+            curr_index: current iteration index
             hash_fn: Hash function used in the tree
 
         Returns:
             The reconstructed Merkle root (OpaqueHash)
         """
-        if start == len(justification):
+        if curr_index == len(trace):
             return leaf
 
-        mid = ceil(nodes / 2)
-        sibling = justification[start]
-        start += 1
-        if index >= mid:
-            length = Uint(nodes - mid)
-            index = Uint(index - mid)
-            child_hash = self.reconstruct_root(index, justification, length, start, leaf)
+        mid = ceil(total_nodes / 2)
+        sibling = trace[curr_index]
+
+        curr_index += 1
+
+        if leaf_index >= mid:
+            adjusted_length = Uint(total_nodes - mid)
+            index = Uint(leaf_index - mid)
+            child_hash = self.reconstruct_root(index, trace, leaf, adjusted_length, curr_index)
             return hash_fn(self._NODE_PREFIX + sibling + child_hash)
         else:
-            length = Uint(nodes - mid)
-            child_hash = self.reconstruct_root(index, justification, length, start, leaf)
+            adjusted_length = Uint(total_nodes - mid)
+            child_hash = self.reconstruct_root(leaf_index, trace, leaf, adjusted_length, curr_index)
             return hash_fn(self._NODE_PREFIX + child_hash + sibling)
 
     def verify_wb_merkle(
@@ -349,9 +329,32 @@ class BMRFunctions:
         Returns:
             Verification Result
         """
-        verification_root = self.reconstruct_root(index, justification, chain_config.num_validators, Uint(0), leaf, hash_fn)
 
-        logger.debug("Received erasure root", verification_root=verification_root)
-        logger.debug("Reconstructed erasure root", erasure_root=erasure_root)
-
+        verification_root = self.reconstruct_root(index, justification, leaf, chain_config.num_validators, hash_fn=hash_fn)
         return verification_root == erasure_root
+
+    def verify_cd_tree(self, trace: OpaqueHashes, leaves: OpaqueHashes, page_index: int) -> OpaqueHash:
+        """
+        Merkle Proof Verification Function for constant depth tree (not provided in GP)
+
+        Args:
+            trace: Sequence of nodes depicting path of a tree to a particular index
+            leaves: leaf nodes to prove
+            page_index: Nodes Page Index
+        Returns:
+            Verification Result
+        Note:
+            In case order / depth of subtree is 0, length of leaves would be 1
+            and starting root will be that leaf itself
+        """
+
+        root = self._node_fn(leaves).unwrap()
+        for sibling in reversed(trace):
+            if page_index % 2 == 0:
+                root = self._node_fn(TypedVector([root, sibling])).unwrap()
+            else:
+                root = self._node_fn(TypedVector([sibling, root])).unwrap()
+
+            page_index = page_index // 2
+
+        return OpaqueHash(root)
