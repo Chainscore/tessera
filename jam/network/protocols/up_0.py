@@ -218,16 +218,16 @@ class BlockAnnouncement(NetworkProtocol):
 
         if not conn.received_handshake:
             # Parse received Handshake
-            h_len= U32.decode(data[1:5])
-            if len(data[5:]) != h_len:
+            h_len= U32.decode(data[0:4])
+            if len(data[4:]) != h_len:
                 logger.error(
                     "Received Handshake with incorrect length",
                     expected_length=h_len,
-                    received_length=len(data[5:]),
+                    received_length=len(data[4:]),
                 )
                 return 
 
-            h = Handshake.decode(data[5:])
+            h = Handshake.decode(data[4:])
 
             # TODO: Process Handshake
             logger.info(

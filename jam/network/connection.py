@@ -207,7 +207,11 @@ class NodeConnection(QuicConnectionProtocol):
             )
 
             if (self.up0_stream is None and prefix == PrefixType.UP0) or event.stream_id == self.up0_stream:
-                self.up0_stream = stream_id 
+                if self.up0_stream == None:
+                    self.up0_stream = stream_id 
+                    print(f"adding {len(bytes(1))} to {len(data)}")
+                    data = data[1:]
+
                 from jam.network.protocols.up_0 import BlockAnnouncement 
                 BlockAnnouncement().req_intercept(stream_id, self, data)
                 return
