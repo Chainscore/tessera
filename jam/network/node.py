@@ -50,6 +50,8 @@ class QuicNode(asyncio.DatagramProtocol):
     # Connection ID -> Validator index mapping
     # : Essential for fast access from datagram_received
     connection_ids: dict[bytes, NodeConnection]
+    # port
+    port: int
 
     def __init__(
         self,
@@ -224,7 +226,7 @@ class QuicNode(asyncio.DatagramProtocol):
                 session_ticket_fetcher=self._session_ticket_fetcher,
                 session_ticket_handler=self._session_ticket_handler,
             )
-            protocol = self._create_protocol(quic=connection, is_initiating=False)
+            protocol = self._create_protocol(quic=connection, is_initiating=False, port=addr[1])
             protocol.connection_made(self._transport)
 
             # register callbacks
@@ -311,7 +313,7 @@ class QuicNode(asyncio.DatagramProtocol):
             return None
 
         quic = QuicConnection(configuration=self._cfg)
-        protocol: NodeConnection = self._create_protocol(quic=quic, is_initiating=True)
+        protocol: NodeConnection = self._create_protocol(quic=quic, is_initiating=True, port=peer.metadata.port)
         protocol.connection_made(self._transport)       # share transport
         self.connection_ids[quic.host_cid] = protocol   # register protocol
         self.conns[peer.ed25519] = quic.host_cid        # register connection ID

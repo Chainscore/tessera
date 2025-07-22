@@ -41,8 +41,8 @@ async def epoch_operate(is_builder):
     print("safrol ending", TICKET_SUBMISSION_END // 2)
 
     while True:
-        from jam.network.node import node
-        if node.is_initialized:
+        from jam.network.start import node
+        if node:
             # print("Current timeslot", ts)
             slot = ts%EPOCH_LENGTH
             # logger.debug("Slot", slot=slot)
@@ -53,9 +53,7 @@ async def epoch_operate(is_builder):
                 await asyncio.sleep(sleep_time)
                 ts += (conductor_s - slot)
 
-            elif (conductor_s <= slot <= (TICKET_SUBMISSION_END // 2)) and not ticket_generated:
-                print("Node status", node.is_initialized)
-                print("Node connections", len(node.peer_conn))
+            elif (conductor_s <= slot < (TICKET_SUBMISSION_END // 2)) and not ticket_generated:
                 print("Generating tickets")
                 for dispatch in dispatch_fns(is_builder, is_generating=True):
                     (task_ts, runner) = dispatch
@@ -69,9 +67,7 @@ async def epoch_operate(is_builder):
                     await asyncio.sleep(next_time_slot_time - curr_time)
                 ts += 1
 
-            elif forwarding_s <= slot <= (TICKET_SUBMISSION_END // 2):
-                print("Node status", node.is_initialized)
-                print("Node connections", len(node.peer_conn))
+            elif forwarding_s <= slot < (TICKET_SUBMISSION_END // 2):
                 print("Starting ticket forwarding")
                 from jam.operations.ticket_queue import ticket_queue
                 print("Ticket queue length", ticket_queue.length(), ticket_queue.is_empty())

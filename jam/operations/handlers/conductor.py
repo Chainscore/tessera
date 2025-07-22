@@ -15,7 +15,7 @@ class Conductor:
     
     @classmethod 
     async def run(cls, time_slot: TimeSlot):
-        from jam.network.node import node
+        from jam.network.start import node
         from jam.state.state import state
         CE131 = SafroleTicketProxyDistribution()
 
@@ -36,7 +36,7 @@ class Conductor:
 
                     data = CE131Data(epoch_ticket_len=epoch_ticket_len, epoch_ticket=epoch_ticket)
 
-                    task = CE131.transmit(node, data)
+                    task = CE131.transmit(data)
                     tasks.append(task)
                 else:
                     raise ValueError("Ticket generation failed")
@@ -44,8 +44,7 @@ class Conductor:
             ack = await asyncio.gather(*tasks)
             logger.info(
                 "Ticket transmission completed",
-                node_name=node.name,
-                total_guarantors=len(node.peer_conn),
+                node=str(node.port)
             )
 
         except Exception as e:

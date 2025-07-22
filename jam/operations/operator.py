@@ -42,7 +42,6 @@ async def operate(is_builder):
         curr_time = time.time()
         if curr_time < ts_start_time:
             await asyncio.sleep(ts_start_time - curr_time)
-        logger.debug("Node operations started for a new timeslot", time_slot=ts)
 
         from jam.state.state import state
         from jam.network.start import node

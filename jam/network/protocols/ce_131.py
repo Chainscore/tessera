@@ -4,8 +4,8 @@ from tsrkit_types import structure, Uint, Bool, U32, U8
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.network.connection import NodeConnection
 from jam.types.protocol.crypto import BandersnatchRingVrfSignature
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.utils.constants import VALIDATOR_COUNT
@@ -52,17 +52,18 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE131
 
-    async def transmit(self, node: Node, data: CE131Data):
+    async def transmit(self, data: CE131Data):
         """Transmit Safrole ticket from Validator to Proxy validator"""
-        len_a = data.epoch_ticket_len.encode()
-        msg_a = data.epoch_ticket.encode()
+
+        from jam.network.start import node
+        if not node: return
+
+        stream_data = data.epoch_ticket_len.encode() + data.epoch_ticket.encode()
 
         # calculate validator index using vrf output of signature
         signature = data.epoch_ticket.ticket.signature
         vrf = vrf_output(signature)
         proxy_validator_index = Uint.from_bytes(vrf[-4:], 'big') % VALIDATOR_COUNT
-
-        print("Proxy validator", proxy_validator_index)
 
         # TODO: select proxy validator from next epochs validator list
         # select validator from next epochs validator list using index
@@ -71,34 +72,29 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
         print("Proxy validator port", proxy_validator.metadata.port)
 
-        if proxy_validator.ed25519 == node.ed_key:
+        from jam.settings import settings
+        if proxy_validator.ed25519 == settings.ed25519_public:
             logger.debug(
                 "Proxy validator is same as generator validator, transmitting ticket using CE132",
-                node_name=node.name,
+                node=str(node.port),
             )
             from jam.operations.ticket_queue import ticket_queue
             ticket_queue.push(data)
 
         else:
-            for peer in node.peer_conn:
-                if proxy_validator.ed25519 == peer.ed_key and int(peer.port) != int(node.port):
+            for client in node.all_connected:
+                if proxy_validator.ed25519 == client.ed25519_public:
                     try:
-                        logger.debug("Sending safrol ticket", peer=str(peer), peer_name=str(peer.name))
-                        client = node.peer_conn[peer][1]
+                        logger.debug("Sending safrol ticket", client=str(client.port))
 
-                        # Send Protocol Prefix
                         stream_id = client.stream_and_keep_open(message=self._prefix.encode())
-
-                        # Append prefix to stream buffer so that we know the stream for handling response
-                        client.stream_buffer[stream_id] = self._prefix.encode()
-
-                        # Send Messages with their lengths
-                        client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                        res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                        client.stream_prefix[stream_id] = U8(self._prefix)
+                        client.stream_buffer[stream_id] = b""
+                        res = await client.close_and_wait(message=stream_data, stream_id=stream_id)
 
                         logger.debug(
                             "Ticket transmitted to proxy validator",
-                            port=str(peer.port),
+                            client=str(client.port),
                             stream_id=stream_id,
                         )
 
@@ -107,14 +103,14 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                     except Exception as e:
                         logger.error(
                             "Failed to transmit ticket to proxy validator",
-                            node_name=node.name,
+                            node=str(client.port),
                             error=str(e),
                             error_type=type(e).__name__,
                         )
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process ticket"""
-        buffer = server.stream_buffer[stream_id]
+        buffer = server.stream_buffer[stream_id][1:]
 
         try:
             logger.debug(
@@ -123,7 +119,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                 buffer_size=len(buffer),
             )
 
-            data, offset = CE131Data.decode_from(buffer[1:])
+            data, offset = CE131Data.decode_from(buffer)
             data = cast(CE131Data, data)
 
             if not data.is_valid:
@@ -131,12 +127,15 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
             #TODO: verify the proof and check you are the correct proxy
 
-            # calculate validator index
+            # calculate validator index using vrf output of signature
             signature = data.epoch_ticket.ticket.signature
-            proxy_validator_index = Uint.from_bytes(signature[-4:], 'big') % VALIDATOR_COUNT
+            vrf = vrf_output(signature)
+            proxy_validator_index = Uint.from_bytes(vrf[-4:], 'big') % VALIDATOR_COUNT
+
             from jam.state.state import state
             proxy_validator = state.gamma.k[proxy_validator_index]
 
+            # verifying the received ticket
             eta = state.eta[2]
             vals = [k.bandersnatch for k in state.gamma.k]
             attempt = U8(data.epoch_ticket.ticket.attempt)
@@ -148,9 +147,10 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                 vals,
                 ad
             )
-            print("verification", verification)
+
             # check if you are supposed to be a proxy and ticket is valid
-            if proxy_validator.ed25519 == server.node.ed_key and verification:
+            from jam.settings import settings
+            if proxy_validator.ed25519 == settings.ed25519_public and verification:
                 from jam.operations.ticket_queue import ticket_queue
                 ticket_queue.push(data)
                 print("Ticket queue updated", ticket_queue.length())
@@ -169,7 +169,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> Bool:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> Bool:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":

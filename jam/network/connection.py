@@ -48,12 +48,14 @@ class NodeConnection(QuicConnectionProtocol):
     handshake_completed = False
     # If we are initiating the connection
     is_initiating = False
+    port = None
 
 
     def __init__(
         self, 
         quic: QuicConnection, 
         is_initiating: bool,
+        port: int,
         stream_handler: QuicStreamHandler|None = None
     ) -> None:
         super().__init__(quic=quic, stream_handler=stream_handler)
@@ -66,6 +68,7 @@ class NodeConnection(QuicConnectionProtocol):
         self.ed25519_public = None
         self.handshake_completed = False
         self.is_initiating = is_initiating
+        self.port = port
 
     def verify_cert(self) -> Ed25519Public|None:
         """

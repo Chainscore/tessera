@@ -1,15 +1,15 @@
 import time
 import math
 from typing import cast
-from tsrkit_types import structure, Uint, Bool, U32
+from tsrkit_types import structure, Uint, Bool, U32, U8
 
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.block.extrinsics.tickets import TicketEnvelope
 import asyncio
+from jam.network.connection import NodeConnection
 from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS
 
 # Module-specific logger
@@ -44,10 +44,9 @@ async def forwarding(slot, timeslot):
 
         for i in range(tickets_per_slot):
             ticket = ticket_queue.pop()
-            from jam.network.node import node
             CE132 = SafroleTicketDistribution()
             data = CE132Data(epoch_ticket_len=ticket.epoch_ticket_len, epoch_ticket=ticket.epoch_ticket)
-            responses = await CE132.transmit(node, data)
+            responses = await CE132.transmit(data)
             ts += 1
             curr_time = time.time()
             next_time_slot_time = ts * 6 + GENESIS_TS
@@ -74,56 +73,51 @@ class SafroleTicketDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE132
 
-    async def transmit(self, node: Node, data: CE132Data):
+    async def transmit(self, data: CE132Data):
         """Transmit Safrole ticket from Validator to validator"""
-        len_a = data.epoch_ticket_len.encode()
-        msg_a = data.epoch_ticket.encode()
+
+        from jam.network.start import node
+        if not node: return
+
+        stream_data = data.epoch_ticket_len.encode() + data.epoch_ticket.encode()
 
         tasks = []
-        for peer in node.peer_conn:
-            if int(peer.port) != int(node.port):
-                try:
-                    logger.debug("Sending safrol ticket", peer=str(peer))
-                    client = node.peer_conn[peer][1]
 
-                    # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+        try:
+            for client in node.all_connected:
+                logger.debug("Sending safrol ticket", client=str(client.port))
 
-                    # Append prefix to stream buffer so that we know the stream for handling response
-                    client.stream_buffer[stream_id] = self._prefix.encode()
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                client.stream_prefix[stream_id] = U8(self._prefix)
+                client.stream_buffer[stream_id] = b""
+                task = client.close_and_wait(message=stream_data, stream_id=stream_id)
 
-                    # Send Messages with their lengths
-                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    task = client.close_and_wait(message=msg_a, stream_id=stream_id)
-                    tasks.append(task)
+                tasks.append(task)
 
-                    logger.debug(
-                        "Ticket transmitted to validator",
-                        node_name=node.name,
-                        stream_id=stream_id,
-                    )
+                logger.debug(
+                    "Ticket transmitted to validator",
+                    client=str(client.port),
+                    stream_id=stream_id,
+                )
 
-                except Exception as e:
-                    logger.error(
-                        "Failed to transmit ticket to validator",
-                        node_name=node.name,
-                        error=str(e),
-                        error_type=type(e).__name__,
-                    )
-        res = await asyncio.gather(*tasks)
+            res = await asyncio.gather(*tasks)
+            logger.info(
+                "Ticket transmission completed",
+                node=str(node.port),
+            )
 
-        print(res)
-
-        logger.info(
-            "Ticket transmission completed",
-            node_name=node.name,
-            total_guarantors=len(node.peer_conn),
-        )
+        except Exception as e:
+            logger.error(
+                "Failed to transmit ticket to validator",
+                node=str(node.port),
+                error=str(e),
+                error_type=type(e).__name__,
+            )
 
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process ticket"""
-        buffer = server.stream_buffer[stream_id]
+        buffer = server.stream_buffer[stream_id][1:]
 
         try:
             logger.debug(
@@ -132,14 +126,13 @@ class SafroleTicketDistribution(NetworkProtocol):
                 buffer_size=len(buffer),
             )
 
-            data, offset = CE132Data.decode_from(buffer[1:])
+            data, offset = CE132Data.decode_from(buffer)
             data = cast(CE132Data, data)
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
             # TODO: process ticket
-            print(data)
 
             # Return acknowledgment to validator
             ack = b""
@@ -154,7 +147,7 @@ class SafroleTicketDistribution(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> Bool:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> Bool:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":

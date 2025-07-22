@@ -42,6 +42,7 @@ class Settings:
     ed25519_public: Bytes32
     ed25519_private: Bytes32
 
+    bandersnatch_seed: Bytes32
     bandersnatch_public: Bytes32
     bandersnatch_private: Bytes32
 
@@ -91,8 +92,10 @@ class Settings:
                 .public_key()
                 .public_bytes_raw()
             )
-            self.bandersnatch_private = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed))
-            self.bandersnatch_public = Bytes32(secret_from_seed(self.bandersnatch_private)[0])
+            self.bandersnatch_seed = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed))
+            pub, ss = secret_from_seed(self.bandersnatch_seed)
+            self.bandersnatch_public = Bytes32(pub)
+            self.bandersnatch_private = Bytes32(ss)
 
 
     def update(self, state: Optional["State"] = None):

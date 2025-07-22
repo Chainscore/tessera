@@ -73,6 +73,7 @@ async def start_node(
     )
 
     proto.set_neighbors()
+    proto.port = port
 
     global node 
     node = proto
