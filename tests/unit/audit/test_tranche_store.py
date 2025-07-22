@@ -22,13 +22,11 @@ def another_dummy_tranche():
     return Tranche(tranche_index=TrancheIndex(2), header_hash=HeaderHash(b'header_hash_2'.ljust(32, b'\0')))
 
 
-@pytest.fixture
 def dummy_work_report():
     """Returns a dummy WorkReport object for testing."""
     raw_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=1, null_count=0)
     return raw_list[0]
 
-@pytest.fixture
 def another_dummy_work_report():
     """Returns another dummy WorkReport object for testing."""
     raw_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=2, null_count=0)

@@ -52,7 +52,7 @@ class AuditEngine():
 
         # Instantiate the core tranche engine
         engine = TrancheEngine()
-        engine.run(header_hash=header_hash)
+        await engine.run(header_hash=header_hash)
 
         # Completed auditing for this slot
         logger.info(f"Finished auditing header {header_hash}")

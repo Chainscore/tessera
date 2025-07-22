@@ -26,7 +26,7 @@ class JudgmentRecord:
     @staticmethod
     def dummy()-> "JudgmentRecord":
         false_votes:ValidatorList=ValidatorList([])
-        true_votes:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3)])
+        true_votes:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1)])
         announces:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3),ValidatorIndex(4),ValidatorIndex(5)])
         return JudgmentRecord(true_votes=true_votes,false_votes=false_votes,announces=announces)
 

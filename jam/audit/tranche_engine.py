@@ -27,7 +27,6 @@ class TrancheEngine:
         """
         tranche_index = TrancheIndex(0)
         present_state=self.store._get_state(tranche=Tranche(tranche_index=tranche_index,header_hash=header_hash))
-        print("Starting tranche processing",present_state)
         while True:
             from jam.operations.ext_store import ext_store
             initTranche=Tranche(header_hash=header_hash,tranche_index=tranche_index)
@@ -45,7 +44,7 @@ class TrancheEngine:
 
                     true_count = len(record.true_votes)
                     false_count = len(record.false_votes)
-                    logger.debug(f"WR {wr.encode().hex()[:8]} | True: {true_count} | False: {false_count} | Tranche: {tranche_index}")
+                    logger.debug(f"WR {wr.encode().hex()[:8]} | True: {true_count} | False: {false_count} | Accnouncements: {len(record.announces)} | Tranche: {tranche_index}")
                     # TODO: Will change this true count condition which is !mentioned in GP
                     if true_count!=0 and (false_count == 0 and true_count >= VALIDATOR_COUNT * 2 // 3 or len(record.announces)==len(record.true_votes)):
                         ts.valid_set.append(wr)
