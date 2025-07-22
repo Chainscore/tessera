@@ -15,8 +15,11 @@ from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Publ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from jam.utils.dummy.dummy_state import create_dummy_state
 
+
 def deepcopy(state: GhostState):
     return GhostState.from_json(state.to_json())
+
+
 
 def create_block(slot: U32, tickets: list) -> Block:
     """Create a dummy block with specified parameters"""
@@ -26,17 +29,18 @@ def create_block(slot: U32, tickets: list) -> Block:
     block.header.slot = slot
     return block
 
+
 def create_state(
-    tau: U32, 
-    eta: Eta, 
-    lambda_: Lambda_, 
-    kappa: Kappa, 
-    gamma_k: GammaK, 
-    iota: Iota, 
-    gamma_a: GammaA, 
-    gamma_s: GammaS, 
-    gamma_z: GammaZ, 
-    offenders: PsiO
+    tau: U32,
+    eta: Eta,
+    lambda_: Lambda_,
+    kappa: Kappa,
+    gamma_k: GammaK,
+    iota: Iota,
+    gamma_a: GammaA,
+    gamma_s: GammaS,
+    gamma_z: GammaZ,
+    offenders: PsiO,
 ) -> State:
     """Create a dummy state with specified components"""
     state = create_dummy_state()
@@ -50,8 +54,9 @@ def create_state(
     state.gamma.s = gamma_s
     state.gamma.z = gamma_z
     state.psi.offenders = offenders
-    
+
     return state
+
 
 def create_validator_data_from_keys():
     """Convert validator fixture data to ValidatorData objects"""

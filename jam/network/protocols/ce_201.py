@@ -1,10 +1,7 @@
 from typing import cast
-
-from tsrkit_types import Vector, Null, Uint, structure, Bytes
-
-from jam.logging import logger
-
-from jam.network.base.quic import QuicProtocol
+from tsrkit_types import Vector, Null, Uint, structure, Bytes 
+from jam.logging import logger 
+from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -36,28 +33,23 @@ class GhostProtocol(NetworkProtocol):
         Batman
     """
 
-    from jam.network.node import Node
-
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE201
 
-    async def transmit(self, node: Node, data: str):
+    async def transmit(self, data: str):
         """Request Work Report from Node (server)"""
-
+        from jam.network.start import node 
         msg_a = Bytes(data, "utf-8").encode()
         len_a = Uint[32](len(msg_a)).encode()
 
-        logger.info(
-            f"GHOST - Transmitting to {len(node.peer_conn)} Validators", protocol="201"
-        )
+        logger.info(f"GHOST - Transmitting to {len(node.connection_ids)} Validators", protocol="201")
 
         # TODO: Use Original Guarantor Connection
 
         responses = Vector([])
-        for peer in node.peer_conn:
-            logger.debug(f"Transmitting data {msg_a.hex()} to {str(peer)}")
-            client = node.peer_conn[peer][1]
+        for client in node.connection_ids.values():
+            logger.debug(f"Transmitting data {msg_a.hex()} to {str(client)}")
 
             # Send Protocol Prefix
             stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -73,13 +65,12 @@ class GhostProtocol(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process test query"""
         buffer = server.stream_buffer[stream_id]
 
         logger.info("Received Test Request")
-        data, offset = CE201Data.decode_from(buffer[1:])
-        data = cast(CE201Data, data)
+        data = CE201Data.decode(buffer[1:])
 
         if not data.is_valid:
             raise NetworkingError(Code.INVALID_DATA)
@@ -95,16 +86,14 @@ class GhostProtocol(NetworkProtocol):
         server.stream_and_keep_open(len_a, stream_id)
         server.stream_and_close(msg_a, stream_id)
 
-        logger.info(
-            f"📩 Processed Test Protocol query.", message=message, peer=server.peer
-        )
+        logger.info(f"📩 Processed Test Protocol query.", message=message, peer=server.peer)
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> str:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> str:
         """Intercept Test Response"""
         buffer = client.stream_buffer[stream_id]
 
         try:
-            data, offset = CE201Data.decode_from(buffer[1:])
+            data= CE201Data.decode(buffer[1:])
             data = cast(CE201Data, data)
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)

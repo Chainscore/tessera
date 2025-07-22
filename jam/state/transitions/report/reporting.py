@@ -13,7 +13,13 @@ from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.work import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, LOOKUP_ANCHOR_MAX_AGE, X
 from .error import ReportingError, ReportingErrorCode
-from jam.utils.constants import VALIDATOR_COUNT, CORE_COUNT, EPOCH_LENGTH, ROTATION_PERIOD, MAX_WORK_REPORT_SIZE
+from jam.utils.constants import (
+    VALIDATOR_COUNT,
+    CORE_COUNT,
+    EPOCH_LENGTH,
+    ROTATION_PERIOD,
+    MAX_WORK_REPORT_SIZE,
+)
 from math import floor
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
@@ -23,7 +29,6 @@ logger = get_logger("import")
 
 
 class Reporting:
-
     @staticmethod
     def transition(
         pre_state: Sigma, state: Sigma, block: Block, known_packages: List[OpaqueHash] = []
@@ -168,10 +173,7 @@ class Reporting:
             recent_exports_roots.update(x.reported)
 
         recent_exports_roots.update(
-            {
-                report.package_spec.hash: report.package_spec.exports_root
-                for report in all_reports
-            }
+            {report.package_spec.hash: report.package_spec.exports_root for report in all_reports}
         )
 
         rho_package_hashes = [
@@ -206,9 +208,7 @@ class Reporting:
             found_anchor = False
             for recent_block in state.beta:
                 if recent_block.header_hash == context.anchor:
-                    if context.beefy_root != MMRFunctions().super_peak(
-                        recent_block.mmr
-                    ):
+                    if context.beefy_root != MMRFunctions().super_peak(recent_block.mmr):
                         raise ReportingError(ReportingErrorCode.BAD_BEEFY_MMR_ROOT)
                     if recent_block.state_root != context.state_root:
                         raise ReportingError(ReportingErrorCode.BAD_STATE_ROOT, f"")
@@ -218,10 +218,7 @@ class Reporting:
                     ReportingErrorCode.ANCHOR_NOT_RECENT, "Anchor not found in beta"
                 )
 
-            if (
-                int(context.lookup_anchor_slot)
-                < int(block.header.slot) - LOOKUP_ANCHOR_MAX_AGE
-            ):
+            if int(context.lookup_anchor_slot) < int(block.header.slot) - LOOKUP_ANCHOR_MAX_AGE:
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
                     "Lookup anchor older than max age",
@@ -299,12 +296,8 @@ class Reporting:
                 pi_core[core_index].imports += Uint(result.refine_load.imports)
                 pi_core[core_index].exports += Uint(result.refine_load.exports)
                 pi_core[core_index].gas_used += Uint(result.refine_load.gas_used)
-                pi_core[core_index].extrinsic_count += Uint(
-                    result.refine_load.extrinsic_count
-                )
-                pi_core[core_index].extrinsic_size += Uint(
-                    result.refine_load.extrinsic_size
-                )
+                pi_core[core_index].extrinsic_count += Uint(result.refine_load.extrinsic_count)
+                pi_core[core_index].extrinsic_size += Uint(result.refine_load.extrinsic_size)
             pi_core[core_index].bundle_size = Uint(report.package_spec.length)
 
             for work_result in report.results:
@@ -314,12 +307,8 @@ class Reporting:
                 pi_service[work_result.service_id].refinement_gas_used += Uint(
                     work_result.refine_load.gas_used
                 )
-                pi_service[work_result.service_id].imports += Uint(
-                    work_result.refine_load.imports
-                )
-                pi_service[work_result.service_id].exports += Uint(
-                    work_result.refine_load.exports
-                )
+                pi_service[work_result.service_id].imports += Uint(work_result.refine_load.imports)
+                pi_service[work_result.service_id].exports += Uint(work_result.refine_load.exports)
                 pi_service[work_result.service_id].extrinsic_count += Uint(
                     work_result.refine_load.extrinsic_count
                 )
@@ -360,8 +349,7 @@ class Reporting:
 
                 try:
                     Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
-                        bytes(signature),
-                        X.GUARANTEE.value + bytes(Hash.blake2b(x.report.encode()))
+                        bytes(signature), X.GUARANTEE.value + bytes(Hash.blake2b(x.report.encode()))
                     )
                 except InvalidSignature:
                     raise ReportingError(

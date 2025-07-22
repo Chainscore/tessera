@@ -229,34 +229,16 @@ async def safrole(request_data: RequestData):
 
         try:
             assert transition_output.tau == output_state.tau, "output_mismatch(tau)"
-            assert (
-                transition_output.eta[0] == output_state.eta[0]
-            ), "output_mismatch(eta)"
-            assert (
-                transition_output.eta[1] == output_state.eta[1]
-            ), "output_mismatch(eta)"
-            assert (
-                transition_output.eta[2] == output_state.eta[2]
-            ), "output_mismatch(eta)"
-            assert (
-                transition_output.eta[3] == output_state.eta[3]
-            ), "output_mismatch(eta)"
-            assert (
-                transition_output.lambda_ == output_state.lambda_
-            ), "output_mismatch(lamda)"
-            assert (
-                transition_output.kappa == output_state.kappa
-            ), "output_mismatch(kappa)"
-            assert (
-                transition_output.gamma.k == output_state.gamma.k
-            ), "output_mismatch(gamma_k)"
+            assert transition_output.eta[0] == output_state.eta[0], "output_mismatch(eta)"
+            assert transition_output.eta[1] == output_state.eta[1], "output_mismatch(eta)"
+            assert transition_output.eta[2] == output_state.eta[2], "output_mismatch(eta)"
+            assert transition_output.eta[3] == output_state.eta[3], "output_mismatch(eta)"
+            assert transition_output.lambda_ == output_state.lambda_, "output_mismatch(lamda)"
+            assert transition_output.kappa == output_state.kappa, "output_mismatch(kappa)"
+            assert transition_output.gamma.k == output_state.gamma.k, "output_mismatch(gamma_k)"
             assert transition_output.iota == output_state.iota, "output_mismatch(iota)"
-            assert (
-                transition_output.gamma.a == output_state.gamma.a
-            ), "output_mismatch(gamma_a)"
-            assert (
-                transition_output.gamma.s == output_state.gamma.s
-            ), "output_mismatch(gamma_s)"
+            assert transition_output.gamma.a == output_state.gamma.a, "output_mismatch(gamma_a)"
+            assert transition_output.gamma.s == output_state.gamma.s, "output_mismatch(gamma_s)"
             assert (
                 transition_output.psi.offenders == output_state.psi.offenders
             ), "output_mismatch(psi)"
@@ -320,9 +302,7 @@ async def recent_history(request_data: RequestData):
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GhostState.from_json(request_data.input.state).to_state()
-        transition_output = RecentHistory.transition(
-            test_state, test_block, ByteArray32([0] * 32)
-        )
+        transition_output = RecentHistory.transition(test_state, test_block, ByteArray32([0] * 32))
 
         if request_data.output is None:
             return {"result": True}

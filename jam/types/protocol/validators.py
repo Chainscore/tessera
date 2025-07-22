@@ -1,4 +1,5 @@
 from dataclasses import field
+from typing import Union
 
 from tsrkit_types.sequences import TypedArray
 from tsrkit_types.integers import Uint, U8
@@ -58,6 +59,14 @@ class ValidatorData:
     bls: BlsPublic
     metadata: ValidatorMetadata
 
+    def __hash__(self):
+        return hash(self.encode())
+
 
 """Fixed-size array of validator data with size VALIDATOR_COUNT."""
-ValidatorsData = TypedArray[ValidatorData, VALIDATOR_COUNT]
+class ValidatorsData(TypedArray[ValidatorData, VALIDATOR_COUNT]):
+    def find(self, key: BandersnatchPublic|Ed25519Public) -> Union[int, ValidatorData]:
+        for i, validator in enumerate(self):
+            if validator.bandersnatch == key or validator.ed25519 == key:
+                return i, validator
+        return -1, None  

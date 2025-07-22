@@ -77,7 +77,7 @@ class DisputesExtrinsic:
     verdicts: Verdicts
     culprits: Culprits
     faults: Faults
-    
+
     @classmethod
     def empty(cls):
         return cls(verdicts=Verdicts([]), culprits=Culprits([]), faults=Faults([]))

@@ -10,7 +10,6 @@ from jam.execution.pvm.instructions.instruction_table import InstructionTable
 
 
 class InstructionsWArgs3Reg(InstructionTable):
-
     @property
     def ra(self) -> int:
         return min(12, self.program.zeta[self.counter + 1] % 16)
@@ -33,15 +32,9 @@ class InstructionsWArgs3Reg(InstructionTable):
             194: OpCode(name="div_s_32", fn=cls.div_s_32, gas=1, is_terminating=False),
             195: OpCode(name="rem_u_32", fn=cls.rem_u_32, gas=1, is_terminating=False),
             196: OpCode(name="rem_s_32", fn=cls.rem_s_32, gas=1, is_terminating=False),
-            197: OpCode(
-                name="shlo_l_32", fn=cls.shlo_l_32, gas=1, is_terminating=False
-            ),
-            198: OpCode(
-                name="shlo_r_32", fn=cls.shlo_r_32, gas=1, is_terminating=False
-            ),
-            199: OpCode(
-                name="shar_r_32", fn=cls.shar_r_32, gas=1, is_terminating=False
-            ),
+            197: OpCode(name="shlo_l_32", fn=cls.shlo_l_32, gas=1, is_terminating=False),
+            198: OpCode(name="shlo_r_32", fn=cls.shlo_r_32, gas=1, is_terminating=False),
+            199: OpCode(name="shar_r_32", fn=cls.shar_r_32, gas=1, is_terminating=False),
             200: OpCode(name="add_64", fn=cls.add_64, gas=1, is_terminating=False),
             201: OpCode(name="sub_64", fn=cls.sub_64, gas=1, is_terminating=False),
             202: OpCode(name="mul_64", fn=cls.mul_64, gas=1, is_terminating=False),
@@ -49,27 +42,15 @@ class InstructionsWArgs3Reg(InstructionTable):
             204: OpCode(name="div_s_64", fn=cls.div_s_64, gas=1, is_terminating=False),
             205: OpCode(name="rem_u_64", fn=cls.rem_u_64, gas=1, is_terminating=False),
             206: OpCode(name="rem_s_64", fn=cls.rem_s_64, gas=1, is_terminating=False),
-            207: OpCode(
-                name="shlo_l_64", fn=cls.shlo_l_64, gas=1, is_terminating=False
-            ),
-            208: OpCode(
-                name="shlo_r_64", fn=cls.shlo_r_64, gas=1, is_terminating=False
-            ),
-            209: OpCode(
-                name="shar_r_64", fn=cls.shar_r_64, gas=1, is_terminating=False
-            ),
+            207: OpCode(name="shlo_l_64", fn=cls.shlo_l_64, gas=1, is_terminating=False),
+            208: OpCode(name="shlo_r_64", fn=cls.shlo_r_64, gas=1, is_terminating=False),
+            209: OpCode(name="shar_r_64", fn=cls.shar_r_64, gas=1, is_terminating=False),
             210: OpCode(name="and", fn=cls._op("and"), gas=1, is_terminating=False),
             211: OpCode(name="xor", fn=cls._op("xor"), gas=1, is_terminating=False),
             212: OpCode(name="or", fn=cls._op("or"), gas=1, is_terminating=False),
-            213: OpCode(
-                name="mul_upper_s_s", fn=cls.mul_upper_s_s, gas=1, is_terminating=False
-            ),
-            214: OpCode(
-                name="mul_upper_u_u", fn=cls.mul_upper_u_u, gas=1, is_terminating=False
-            ),
-            215: OpCode(
-                name="mul_upper_s_u", fn=cls.mul_upper_s_u, gas=1, is_terminating=False
-            ),
+            213: OpCode(name="mul_upper_s_s", fn=cls.mul_upper_s_s, gas=1, is_terminating=False),
+            214: OpCode(name="mul_upper_u_u", fn=cls.mul_upper_u_u, gas=1, is_terminating=False),
+            215: OpCode(name="mul_upper_s_u", fn=cls.mul_upper_s_u, gas=1, is_terminating=False),
             216: OpCode(name="set_lt_u", fn=cls.set_lt_u, gas=1, is_terminating=False),
             217: OpCode(name="set_lt_s", fn=cls.set_lt_s, gas=1, is_terminating=False),
             218: OpCode(name="cmov_iz", fn=cls.cmov_iz, gas=1, is_terminating=False),
@@ -84,9 +65,7 @@ class InstructionsWArgs3Reg(InstructionTable):
                 gas=1,
                 is_terminating=False,
             ),
-            225: OpCode(
-                name="or_inv", fn=cls._op("or", inv_b=True), gas=1, is_terminating=False
-            ),
+            225: OpCode(name="or_inv", fn=cls._op("or", inv_b=True), gas=1, is_terminating=False),
             226: OpCode(
                 name="xnor",
                 fn=cls._op("xor", inv_res=True),
@@ -100,9 +79,7 @@ class InstructionsWArgs3Reg(InstructionTable):
         }
 
     def add_32(self, registers: list, memory: Memory) -> OpReturn:
-        registers[self.rd] = chi(
-            (int(registers[self.ra]) + int(registers[self.rb])) % 2**32, 4
-        )
+        registers[self.rd] = chi((int(registers[self.ra]) + int(registers[self.rb])) % 2**32, 4)
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     def add_64(self, registers: list, memory: Memory) -> OpReturn:
@@ -209,9 +186,7 @@ class InstructionsWArgs3Reg(InstructionTable):
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     def shlo_l_64(self, registers: list, memory: Memory) -> OpReturn:
-        registers[self.rd] = (
-            int(registers[self.ra]) * 2 ** (int(registers[self.rb]) % 64)
-        ) % 2**64
+        registers[self.rd] = (int(registers[self.ra]) * 2 ** (int(registers[self.rb]) % 64)) % 2**64
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     def shlo_r_32(self, registers: list, memory: Memory) -> OpReturn:
@@ -255,16 +230,12 @@ class InstructionsWArgs3Reg(InstructionTable):
         return op_impl
 
     def mul_upper_s_s(self, registers: list, memory: Memory) -> OpReturn:
-        registers[self.rd] = z_inv(
-            z(registers[self.ra], 8) * z(registers[self.rb], 8) // 2**64, 8
-        )
+        registers[self.rd] = z_inv(z(registers[self.ra], 8) * z(registers[self.rb], 8) // 2**64, 8)
 
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     def mul_upper_u_u(self, registers: list, memory: Memory) -> OpReturn:
-        registers[self.rd] = (
-            int(registers[self.ra]) * int(registers[self.rb])
-        ) // 2**64
+        registers[self.rd] = (int(registers[self.ra]) * int(registers[self.rb])) // 2**64
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     def mul_upper_s_u(self, registers: list, memory: Memory) -> OpReturn:
@@ -293,9 +264,7 @@ class InstructionsWArgs3Reg(InstructionTable):
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     def _max(self, registers: list, memory: Memory) -> OpReturn:
-        registers[self.rd] = z_inv(
-            max(z(registers[self.ra], 8), z(registers[self.rb], 8)), 8
-        )
+        registers[self.rd] = z_inv(max(z(registers[self.ra], 8), z(registers[self.rb], 8)), 8)
 
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
@@ -304,9 +273,7 @@ class InstructionsWArgs3Reg(InstructionTable):
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     def _min(self, registers: list, memory: Memory) -> OpReturn:
-        registers[self.rd] = z_inv(
-            min(z(registers[self.ra], 8), z(registers[self.rb], 8)), 8
-        )
+        registers[self.rd] = z_inv(min(z(registers[self.ra], 8), z(registers[self.rb], 8)), 8)
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
 
     def _min_u(self, registers: list, memory: Memory) -> OpReturn:

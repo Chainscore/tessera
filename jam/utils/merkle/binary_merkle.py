@@ -15,7 +15,6 @@ OpaqueHashes = TypedVector[OpaqueHash]
 
 
 class ChoicedHashes(TypedVector[ChoicedHash]):
-
     def unwrap(self) -> TypedVector[Bytes]:
         res = TypedVector[Bytes]([])
         for val in self:
@@ -94,9 +93,7 @@ class BMRFunctions:
             left_node = self._node_fn(left, hash_fn)
             right_node = self._node_fn(right, hash_fn)
 
-            node_val = hash_fn(
-                self._NODE_PREFIX + left_node.encode() + right_node.encode()
-            )
+            node_val = hash_fn(self._NODE_PREFIX + left_node.encode() + right_node.encode())
             return ChoicedHash(node_val)
 
     @staticmethod
@@ -113,9 +110,7 @@ class BMRFunctions:
             return Uint(mid)
 
     @staticmethod
-    def _p_bool(
-        values: TypedVector[Bytes], index: Uint, case: bool
-    ) -> TypedVector[Bytes]:
+    def _p_bool(values: TypedVector[Bytes], index: Uint, case: bool) -> TypedVector[Bytes]:
         """
         Util Function P_s Implementation for Trace Function
         """
@@ -156,9 +151,7 @@ class BMRFunctions:
             trace.append(node)
 
             new_ind = self._p_i(values, index)
-            trace_nodes = self.trace_fn(
-                self._p_bool(values, index, True), index - new_ind, hash_fn
-            )
+            trace_nodes = self.trace_fn(self._p_bool(values, index, True), index - new_ind, hash_fn)
             trace.extend(trace_nodes)
             return trace
 
@@ -347,13 +340,9 @@ class BMRFunctions:
         for sibling in justification:
             sibling = sibling.unwrap()
             if index % 2 == 0:
-                current_hash = hash_fn(
-                    self._NODE_PREFIX + current_hash.encode() + sibling.encode()
-                )
+                current_hash = hash_fn(self._NODE_PREFIX + current_hash.encode() + sibling.encode())
             else:
-                current_hash = hash_fn(
-                    self._NODE_PREFIX + sibling.encode() + current_hash.encode()
-                )
+                current_hash = hash_fn(self._NODE_PREFIX + sibling.encode() + current_hash.encode())
 
             index = index // 2
 

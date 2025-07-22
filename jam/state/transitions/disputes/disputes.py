@@ -8,10 +8,7 @@ from jam.types.state.rho import OptionalWorkReportState
 from jam.types.state.sigma import Sigma
 from jam.block import Block, OffendersMark, DisputesExtrinsic
 from jam.types.protocol.crypto import Hash
-from jam.utils.constants import (
-    EPOCH_LENGTH,
-    VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY, X
-)
+from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY, X
 
 # Define minimum requirements
 MINIMUM_FAULTS_FOR_GOOD = 1  # At least 1 fault for solely valid verdicts
@@ -48,7 +45,9 @@ class Disputes:
         for fault in disputes.faults:
             try:
                 message_bytes = (X.VALID if fault.vote else X.INVALID).value
-                Ed25519PublicKey.from_public_bytes(fault.key).verify(fault.signature, message_bytes + fault.target)
+                Ed25519PublicKey.from_public_bytes(fault.key).verify(
+                    fault.signature, message_bytes + fault.target
+                )
             except InvalidSignature:
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
             if fault.key not in [v.ed25519 for v in (*state.lambda_, *state.kappa)]:
@@ -58,10 +57,14 @@ class Disputes:
         for culprit in disputes.culprits:
             try:
                 message_bytes = X.GUARANTEE.value
-                Ed25519PublicKey.from_public_bytes(culprit.key).verify(culprit.signature, message_bytes + culprit.target)
+                Ed25519PublicKey.from_public_bytes(culprit.key).verify(
+                    culprit.signature, message_bytes + culprit.target
+                )
             except InvalidSignature:
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
-            if culprit.key not in [validator.ed25519 for validator in (*state.lambda_, *state.kappa)]:
+            if culprit.key not in [
+                validator.ed25519 for validator in (*state.lambda_, *state.kappa)
+            ]:
                 raise DisputesError(DisputesErrorCode.BAD_GUARANTOR_KEY)
 
         # Verifying verdicts are sorted by target
@@ -80,7 +83,9 @@ class Disputes:
                 # Get the vote value and message
                 try:
                     message_bytes = (X.VALID if vote.vote else X.INVALID).value
-                    Ed25519PublicKey.from_public_bytes(public_key).verify(vote.signature, message_bytes + verdict.target)
+                    Ed25519PublicKey.from_public_bytes(public_key).verify(
+                        vote.signature, message_bytes + verdict.target
+                    )
                 except InvalidSignature:
                     raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
 
@@ -147,10 +152,7 @@ class Disputes:
             total_votes = len(verdict.votes)
 
             # Solely valid verdict (all positive votes)
-            if (
-                positive_votes == total_votes
-                and total_votes >= VALIDATORS_SUPER_MAJORITY
-            ):
+            if positive_votes == total_votes and total_votes >= VALIDATORS_SUPER_MAJORITY:
                 # Check for at least one fault (constraint: solely valid implies ≥1 fault)
                 if fault_counts.get(verdict.target, 0) < MINIMUM_FAULTS_FOR_GOOD:
                     raise DisputesError(DisputesErrorCode.NOT_ENOUGH_FAULTS)
@@ -174,9 +176,7 @@ class Disputes:
                     bad_set.add(verdict.target)
 
             # Wonky verdict (mixed votes meeting wonky threshold)
-            elif (
-                positive_votes == VALIDATORS_WONKY
-            ):  # Condition for wonky verdict EXACTLY
+            elif positive_votes == VALIDATORS_WONKY:  # Condition for wonky verdict EXACTLY
                 if verdict.target not in state.psi.wonky:
                     wonky_set.add(verdict.target)
             else:

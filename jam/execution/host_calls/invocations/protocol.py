@@ -14,9 +14,7 @@ from jam.execution.pvm.status import (
 from jam.types.protocol.core import Gas, Register
 
 Context = Any
-DispatchNormalReturn = Tuple[
-    Union[CONTINUE, HALT, PANIC, OUT_OF_GAS], Gas, list, Memory, Context
-]
+DispatchNormalReturn = Tuple[Union[CONTINUE, HALT, PANIC, OUT_OF_GAS], Gas, list, Memory, Context]
 DispatchReturn = Union[DispatchNormalReturn, ExecutionStatus.PAGE_FAULT]
 
 DispatchFunction = Callable[[Register, Gas, list, Memory, Context], DispatchReturn]
@@ -32,7 +30,8 @@ class InvocationProtocol(Protocol):
         """Starting point of execution"""
         ...
 
-    def table(self) -> Dict[int, InvocationInfo]: ...
+    def table(self) -> Dict[int, InvocationInfo]:
+        ...
 
     def dispatch(
         self, host_call: int, gas: int, registers: list, memory: Memory, x: Context

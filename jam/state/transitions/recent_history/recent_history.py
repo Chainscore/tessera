@@ -23,7 +23,6 @@ def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
 
 
 class RecentHistory:
-
     @staticmethod
     def transition(
         pre_state: Sigma,
@@ -80,9 +79,7 @@ class RecentHistory:
 
         # Length Check
         if len(beta) > RECENT_HISTORY_SIZE:
-            raise ValueError(
-                "Invalid beta length, must be equal to RECENT_HISTORY_SIZE"
-            )
+            raise ValueError("Invalid beta length, must be equal to RECENT_HISTORY_SIZE")
 
         # Step 2
         last: MMR = MMR([])

@@ -38,6 +38,7 @@ data/d3l
 data/audit
 
 benchmarks/
+vectors/
 
 *.log
 .coverage
@@ -73,3 +74,6 @@ logs/
 
 # Ignore Packets
 packets/
+
+# Ignore polkajam binary
+polkajam

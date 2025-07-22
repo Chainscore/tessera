@@ -150,7 +150,7 @@ __all__ = [
     "Hash",
     # Merkle types
     "MMR",
-    "OptionHash", 
+    "OptionHash",
     # Work types
     "RefineContext",
     "ImportSpec",

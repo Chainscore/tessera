@@ -1,7 +1,7 @@
 from tsrkit_types import Uint
 from typing import cast
 
-from jam.network.base.quic import QuicProtocol
+from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_139_base import SegmentShardRequestBase, CE139Response
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -9,7 +9,7 @@ from jam.logging import logger
 
 from jam.network.base.protocol import PrefixType
 from jam.types.work.shard import SegmentsShard
-from jam.work_package.stores.segments import SegmentShardsDA
+from jam.storage.da.segments import SegmentShardsDA
 
 
 class SegmentShardRequest(SegmentShardRequestBase):
@@ -27,12 +27,10 @@ class SegmentShardRequest(SegmentShardRequestBase):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
     """
 
-    from jam.network.node import Node
-
     def __init__(self):
         super().__init__(PrefixType.CE139)
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Erasure-Root, Shard Index & Segment Indices on Assurer"""
         from jam.settings import settings
 
@@ -58,9 +56,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
         server.stream_and_keep_open(len_a, stream_id)
         server.stream_and_close(msg_a, stream_id)
 
-    def res_intercept(
-        self, stream_id: int, client: QuicProtocol
-    ) -> SegmentsShard | None:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> SegmentsShard | None:
         """Intercept [Segment Shard]"""
         buffer = client.stream_buffer[stream_id]
 

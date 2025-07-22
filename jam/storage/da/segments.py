@@ -5,14 +5,13 @@ from rockstore import RockStore
 from jam.types.protocol.core import ExportsRoot, ErasureRoot
 from jam.types.work.manifest import Segments, ProvedSegments, SegmentIndex
 from jam.types.work.shard import (
-    SegmentsShardRoot,
     SegmentsShard,
     SegmentShard,
     ShardIndex,
     SegShardsDict,
     SegShardDict,
 )
-from jam.work_package.store import DA
+from jam.storage.da.store import DA
 
 
 class SegmentsDA(DA):
@@ -92,9 +91,7 @@ class SegmentShardsDA(DA):
         ss_dict[shard_index] = s_dict
         self.db.put(key, ss_dict.encode())
 
-    def put(
-        self, er_root: ErasureRoot, shard_index: ShardIndex, shard: SegmentsShard
-    ) -> None:
+    def put(self, er_root: ErasureRoot, shard_index: ShardIndex, shard: SegmentsShard) -> None:
         key = self.prefix + er_root.encode()
         data = self.db.get(key)
 

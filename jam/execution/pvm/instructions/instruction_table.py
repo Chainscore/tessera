@@ -26,7 +26,8 @@ class InstructionTable(Protocol):
         return self.program.skip(self.counter)
 
     @classmethod
-    def table(cls) -> Dict[int, OpCode]: ...
+    def table(cls) -> Dict[int, OpCode]:
+        ...
 
     # Execute the instruction
     def execute(

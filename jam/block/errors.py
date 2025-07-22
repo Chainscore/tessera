@@ -3,18 +3,19 @@ from jam.error import JamError
 
 
 class BlockErrorCode(Enum):
-    INCORRECT_EXTRINSIC_HASH = 0
-    INVALID_SEAL = 1
-    INVALID_ENTROPY = 2
-    SIGNER_MISMATCH = 3
-    INVALID_PARENT = 4
-    INVALID_TIMESLOT = 5
-    INVALID_AUTHOR = 6
-    EPOCH_MARKER_NOT_EMPTY = 7
-    EPOCH_MARKER_EMPTY = 8
-    TICKETS_MARK_NOT_EMPTY = 9
-    TICKETS_MARK_EMPTY = 10
-    INCORRECT_STATE_ROOT = 11
+    INCORRECT_EXTRINSIC_HASH = "Incorrect extrinsic hash"
+    INVALID_SEAL = "Invalid header seal"
+    INVALID_ENTROPY = "Invalid entropy signature"
+    SIGNER_MISMATCH = "Unexpected signer"
+    INVALID_PARENT = "Incorrect parent header"
+    INVALID_TIMESLOT = "Invalid timeslot"
+    INVALID_AUTHOR = "Author is invalid"
+    EPOCH_MARKER_NOT_EMPTY = "Epoch marker is supposed to be empty"
+    EPOCH_MARKER_EMPTY = "Got empty epoch marker on new epoch"
+    TICKETS_MARK_NOT_EMPTY = "Tickets mark is supposed to be empty"
+    TICKETS_MARK_EMPTY = "Got empty ticket mark when we have accumulated tickets + new epoch"
+    INCORRECT_STATE_ROOT = "Incorrect state root"
 
 
-class BlockError(JamError): ...
+class BlockError(JamError):
+    ...

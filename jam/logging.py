@@ -155,11 +155,7 @@ class ThemedRenderer(ConsoleRenderer):
     def __init__(self, theme: Union[Theme, str] = Theme.DEFAULT) -> None:
         super().__init__()
         if isinstance(theme, str):
-            theme = (
-                Theme[theme.upper()]
-                if theme.upper() in Theme.__members__
-                else Theme.DEFAULT
-            )
+            theme = Theme[theme.upper()] if theme.upper() in Theme.__members__ else Theme.DEFAULT
 
         self.theme: Theme = theme
         self.pal: Dict[str, Any] = _PALETTES[self.theme]
@@ -327,9 +323,7 @@ def setup_logging(
                 # Custom formatter without logger name
                 formatter = logging.Formatter("%(message)s")
                 file_handler.setFormatter(formatter)
-                logging.basicConfig(
-                    level=min_level, handlers=[file_handler], force=True
-                )
+                logging.basicConfig(level=min_level, handlers=[file_handler], force=True)
     else:
         # Use themed console renderer for development
         processors.append(ThemedRenderer(theme))

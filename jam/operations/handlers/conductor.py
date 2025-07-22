@@ -61,14 +61,16 @@ class Conductor:
         try:
             return TicketEnvelope(
                 attempt=TicketAttempt(attempt),
-                signature=BandersnatchRingVrfSignature(RingVrf.ring_vrf_proof(
-                    X.TICKET.value + eta + bytes([attempt]),
-                    b"",
-                    settings.bandersnatch_private,
-                    settings.bandersnatch_public,
-                    vals,
-                    False
-                ))
+                signature=BandersnatchRingVrfSignature(
+                    RingVrf.ring_vrf_proof(
+                        X.TICKET.value + eta + bytes([attempt]),
+                        b"",
+                        settings.bandersnatch_private,
+                        settings.bandersnatch_public,
+                        vals,
+                        False,
+                    )
+                ),
             )
         except Exception as e:
             logger.error("Failed to generate ticket", error=e)

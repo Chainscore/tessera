@@ -28,7 +28,6 @@ def create_dummy_segment_shard() -> ShardRequest:
 
 
 async def segment_shard_request(node: Node, db: KVStore):
-
     genesis_ts = time()
     shard_req = SegmentShardRequestWithJustifications()
 

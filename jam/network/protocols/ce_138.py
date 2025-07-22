@@ -1,20 +1,20 @@
 from typing import cast, Tuple
 
-from tsrkit_types import Uint, structure, TypedVector, Bytes
+from tsrkit_types import Uint, structure, TypedVector
 
 from jam.logging import logger
 
-from jam.network.base.quic import QuicProtocol
+from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_137 import CE137Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.work.manifest import Segment, Justification
-from jam.types.work.shard import SegmentsShard, ShardIndex, BundleShard
+from jam.types.work.manifest import Justification
+from jam.types.work.shard import BundleShard
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
-from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
-from jam.work_package.stores.segments import SegmentShardsDA
+from jam.storage.da.audits import AuditShardsDA, JustificationsDA
+from jam.storage.da.segments import SegmentShardsDA
 
 
 CE138Data = CE137Data
@@ -53,27 +53,24 @@ class AuditShardRequestProtocol(NetworkProtocol):
         https://docs.jamcha.in/advanced/simple-networking/spec#ce-138-shard-distribution
     """
 
-    from jam.network.node import Node
-
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE138
 
-    async def transmit(self, node: Node, data: CE138Data):
+    async def transmit(self, data: CE138Data):
         """Transmit Erasure-Root and Shard Index from Auditor (client) to Assurer (server)"""
+        
+        from jam.network.start import node 
 
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
-        logger.info(
-            f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer"
-        )
+        logger.info(f"Transmitting shard index & erasure root to {len(node.connection_ids)} assurer")
 
         responses = TypedVector([])
-        for peer in node.peer_conn:
-            if int(peer.port) == 30336:
+        for client in node.connection_ids.values():
+            if int(client.val.metadata.port) == 30336:
                 logger.info("requesting audit shard from 30336")
-                client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -89,15 +86,14 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Erasure-Root and Shard Index on Assurer (server)"""
         from jam.settings import settings
 
         buffer = server.stream_buffer[stream_id]
 
         logger.info("Received Shard index & erasure root")
-        data, offset = CE138Data.decode_from(buffer[1:])
-        data = cast(CE138Data, data)
+        data = CE138Data.decode(buffer[1:])
 
         if not data.is_valid:
             raise NetworkingError(Code.INVALID_DATA)
@@ -134,14 +130,13 @@ class AuditShardRequestProtocol(NetworkProtocol):
         server.stream_and_close(msg_b, stream_id)
 
     def res_intercept(
-        self, stream_id: int, client: QuicProtocol
+        self, stream_id: int, client: NodeConnection
     ) -> Tuple[BundleShard, Justification] | None:
         """Intercept Bundle Shard and Justification"""
         buffer = client.stream_buffer[stream_id]
 
         try:
-            data, offset = CE138Response.decode_from(buffer[1:])
-            data = cast(CE138Response, data)
+            data = CE138Response.decode(buffer[1:])
 
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)

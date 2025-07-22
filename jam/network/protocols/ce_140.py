@@ -1,8 +1,8 @@
 from typing import cast, Tuple
 
-from tsrkit_types import Vector, Uint
+from tsrkit_types import Uint
 
-from jam.network.base.quic import QuicProtocol
+from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_139_base import (
     SegmentShardRequestBase,
     Justifications,
@@ -15,9 +15,9 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.logging import logger
 from jam.utils.merkle import BMRFunctions
 
-from jam.types.work.shard import SegmentsShard, SegmentShard
+from jam.types.work.shard import SegmentsShard
 
-from jam.work_package.stores.segments import SegmentShardsDA
+from jam.storage.da.segments import SegmentShardsDA
 
 
 class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
@@ -38,12 +38,10 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
     """
 
-    from jam.network.node import Node
-
     def __init__(self):
         super().__init__(PrefixType.CE140)
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Erasure-Root, Shard Index & Segment Indices on Assurer"""
         from jam.settings import settings
 
@@ -87,7 +85,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
                 server.stream_and_keep_open(msg_n, stream_id)
 
     def res_intercept(
-        self, stream_id: int, client: QuicProtocol
+        self, stream_id: int, client: NodeConnection 
     ) -> Tuple[SegmentsShard, Justifications] | None:
         """Intercept [Segment Shard] and Justification"""
         buffer = client.stream_buffer[stream_id]
@@ -104,8 +102,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
             k = offset
             justifications = Justifications([])
             while k:
-                jfn, i = CE140Justification.decode_from(buffer[1:], k)
-                jfn = cast(CE140Justification, jfn)
+                jfn = CE140Justification.decode(buffer[1:], k)
 
                 if not jfn or not jfn.is_valid:
                     raise NetworkingError(Code.INVALID_DATA)
@@ -116,5 +113,5 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
             return shards, justifications
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE)
+            logger.error(Code.BAD_RESPONSE, e=e)
             return None

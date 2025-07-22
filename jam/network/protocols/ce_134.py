@@ -1,14 +1,12 @@
 from typing import cast, TYPE_CHECKING
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32
-
-if TYPE_CHECKING:
-    from jam.network.node import Node
 
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.base.quic import QuicProtocol
+from jam.network.connection import NodeConnection
 from jam.storage.item_extrinsics import ItemExtrinsics
 
 from jam.types.protocol.core import CoreIndex
@@ -17,8 +15,8 @@ from jam.types.work.package import WorkPackageBundle
 from jam.types.work import SegmentRootLookup
 from jam.utils.benchmark import benchmark, write_benchmarks_to_txt
 
-from jam.work_package.processor import Processor
-from jam.work_package.validator import Validator
+from jam.incore.processor import Processor
+from jam.incore.validator import Validator
 
 # Module-specific logger
 logger = get_logger("network")
@@ -88,9 +86,9 @@ class WorkPackageSharing(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE134
 
-    async def transmit(self, node: "Node", data: CE134Data):
+    async def transmit(self, data: CE134Data):
         """Request Work Report from Node (server)"""
-
+        from jam.network.start import node
         msg_a = data.core_segment.encode()
         len_a = data.map_len.encode()
         msg_b = data.work_package_bundle.encode()
@@ -116,9 +114,7 @@ class WorkPackageSharing(NetworkProtocol):
                     client = node.peer_conn[peer][1]
 
                     # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(
-                        message=self._prefix.encode()
-                    )
+                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
                     # Append prefix to stream buffer so that we know the stream for handling response
                     client.stream_buffer[stream_id] = self._prefix.encode()
@@ -127,9 +123,7 @@ class WorkPackageSharing(NetworkProtocol):
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
                     client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                     client.stream_and_keep_open(message=len_b, stream_id=stream_id)
-                    res = await client.close_and_wait(
-                        message=msg_b, stream_id=stream_id
-                    )
+                    res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
 
                     transmitted_count += 1
 
@@ -158,11 +152,11 @@ class WorkPackageSharing(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept Work Package Bundle & Build Work Report on Core's Guarantors (server)"""
         from jam.settings import settings
+        from jam.network.start import node 
 
-        node = server.node
         buffer = server.stream_buffer[stream_id]
 
         try:
@@ -194,14 +188,14 @@ class WorkPackageSharing(NetworkProtocol):
             # Generating report from work package bundle
 
             with benchmark(f"Work bundle processed"):
-                processor = Processor(node)
+                processor = Processor()
                 report, report_hash = processor.process_bundle(
                     core=data.core_segment.core_index,
                     bundle=bundle,
                     sr_lookup=data.core_segment.segment_root_map,
                 )
 
-            ed25519_key = node.ed_pvt_key
+            ed25519_key = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
 
             # Build Guarantee
             logger.info("Building Guarantee..")
@@ -252,7 +246,7 @@ class WorkPackageSharing(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> OptCred:
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> OptCred:
         """Intercept validated Work Report from guarantors"""
         buffer = client.stream_buffer[stream_id]
 

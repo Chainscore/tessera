@@ -13,7 +13,7 @@ from jam.utils.constants import (
 from jam.types.work.item import WorkItem
 from jam.types.work.package import WorkPackage
 
-from jam.work_package.error import WorkPackagesErrorCode, WorkPackageError
+from jam.incore.error import WorkPackagesErrorCode, WorkPackageError
 
 
 class Validator:
@@ -59,9 +59,7 @@ class Validator:
             for y in x.extrinsic:
                 extrinsic_len = extrinsic_len + y.len
 
-            item_count = (
-                len(x.payload) + len(x.import_segments) * SEGMENT_SIZE + extrinsic_len
-            )
+            item_count = len(x.payload) + len(x.import_segments) * SEGMENT_SIZE + extrinsic_len
 
         package_size = auth_token + parameterization + item_count
         if package_size > MAX_ENCODED_WORK_PACKAGE_SIZE:

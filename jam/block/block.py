@@ -93,7 +93,7 @@ class Block:
 
         # Return the HeaderHash
         return HeaderHash(hh)
-    
+
     def validate(self) -> bool:
         return self.header.validate() and self.extrinsic.validate(self.header)
 
@@ -103,9 +103,12 @@ class Block:
 
         parent_block = Finality.load_latest(settings.main_db)
         extrinsic = Extrinsic.from_collected()
-        # Produce a new header from previous header 
+        # Produce a new header from previous header
         header = parent_block.header.produce(time_slot, extrinsic, None)
-        
+
+        header.validate()
+        extrinsic.validate(header)
+
         block = Block(header=header, extrinsic=extrinsic)
 
         return block

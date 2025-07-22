@@ -1,5 +1,5 @@
 from jam.types.state.sigma import Sigma
-from tsrkit_types import structure, Option, TypedArray,  Null, U64
+from tsrkit_types import structure, Option, TypedArray, Null, U64
 from typing import Self
 from jam.types.protocol.crypto import Entropy
 from jam.utils.constants import EPOCH_LENGTH
@@ -13,7 +13,8 @@ class MinValidatorData:
     ed25519: Ed25519Public
 
 
-class ValidatorArray(TypedArray[MinValidatorData, VALIDATOR_COUNT]): ...
+class ValidatorArray(TypedArray[MinValidatorData, VALIDATOR_COUNT]):
+    ...
 
 
 @structure
@@ -26,7 +27,6 @@ class EpochMarkData:
 
 
 class EpochMark(Option[EpochMarkData]):
-
     @classmethod
     def produce(cls, state: Sigma, slot: U64) -> Self:
         """
@@ -41,9 +41,7 @@ class EpochMark(Option[EpochMarkData]):
                     tickets_entropy=Entropy(state.eta[1]),
                     validators=ValidatorArray(
                         [
-                            MinValidatorData(
-                                bandersnatch=val.bandersnatch, ed25519=val.ed25519
-                            )
+                            MinValidatorData(bandersnatch=val.bandersnatch, ed25519=val.ed25519)
                             for val in state.gamma.k
                         ]
                     ),
@@ -51,4 +49,3 @@ class EpochMark(Option[EpochMarkData]):
             )
         else:
             return cls(Null)
-

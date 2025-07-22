@@ -1,4 +1,5 @@
 import asyncio
+import math
 import time
 from typing import Callable, List, Tuple
 
@@ -16,9 +17,9 @@ def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
         return [(0, WPBuilder)]
 
     return [
-        (0, BlockProducer),
-        (2, None),  # audit
-        (4, assurer),  # transmit assurances
+        # (0, BlockProducer),
+        # (2, None),  # audit
+        # (4, assurer),  # transmit assurances
     ]
 
 
@@ -32,7 +33,7 @@ async def operate(is_builder):
     Starts a never ending 6-sec loop
     """
     curr_time = time.time()
-    ts = int((curr_time - GENESIS_TS) // 6)
+    ts = math.ceil((curr_time - GENESIS_TS) / 6)
     conductor_ts = max((EPOCH_LENGTH // 60), 1)
 
     while True:
@@ -43,7 +44,12 @@ async def operate(is_builder):
             await asyncio.sleep(ts_start_time - curr_time)
         logger.debug("Node operations started for a new timeslot", time_slot=ts)
 
-
+        from jam.state.state import state
+        from jam.network.start import node
+        if not node:
+            ts += 1
+            continue
+        logger.debug("Node operations started for a new timeslot", time_slot=ts, peers=len(node.active_peers), connections=len(node.all_connected))
         # Schedule tasks to run immediately
         for dispatch in dispatch_fns(is_builder):
             (task_ts, runner) = dispatch

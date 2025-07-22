@@ -7,9 +7,7 @@ from tsrkit_types.bytes import Bytes
 @dataclass
 class Node:
     encoded: Bytes[64]  # The full 64-byte encoded value from your encoding routines.
-    bit_index: Optional[int] = (
-        None  # For branch nodes, store the bit index used for splitting.
-    )
+    bit_index: Optional[int] = None  # For branch nodes, store the bit index used for splitting.
     left: Optional[NodeHash] = None  # For branch nodes, pointer to left child.
     right: Optional[NodeHash] = None  # For branch nodes, pointer to right child.
 

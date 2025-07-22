@@ -131,9 +131,7 @@ class Account:
         elif len(lookup_ts) == 2:
             return lookup_ts[0] <= current_ts < lookup_ts[1]
         elif len(lookup_ts) == 3:
-            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[
-                2
-            ] <= current_ts
+            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[2] <= current_ts
         else:
             raise ValueError("Invalid Timestamp data")
 
@@ -160,7 +158,7 @@ class DeltaView:
 
     def __contains__(self, key: ServiceId):
         return self.store.get(bytes(construct_state_key((255, key)))) is not None
-    
+
 
 class StorageView:
     def __init__(self, id: ServiceId, store: StateStorage):
@@ -169,14 +167,10 @@ class StorageView:
 
     def __getitem__(self, key: Bytes[32]):
         data = self.store.get(
-            bytes(
-                construct_state_key(
-                    (self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23])
-                )
-            )
+            bytes(construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23])))
         )
         return Bytes(data) if data else data
-    
+
     def get(self, key):
         return self.__getitem__(key)
 
@@ -199,9 +193,7 @@ class StorageView:
             meta_view = AccountDataView(self.id, self.store)
             meta_view.num_i = meta_view.num_i - 1
             meta_view.num_o = meta_view.num_o - len(curr_value) - 32
-        storage_key = construct_state_key(
-            (self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23])
-        )
+        storage_key = construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23]))
         self.store.delete(storage_key)
 
 
@@ -223,9 +215,7 @@ class PreImageView:
         self.store.put(k, value)
 
     def __delitem__(self, key: Bytes[32]):
-        storage_key = construct_state_key(
-            (self.id, Bytes(U32(2**32 - 2).encode()) + key[1:24])
-        )
+        storage_key = construct_state_key((self.id, Bytes(U32(2**32 - 2).encode()) + key[1:24]))
         self.store.delete(storage_key)
 
 
@@ -243,7 +233,7 @@ class TimestampsView:
         )
         data = self.store.get(storage_key)
         return Timestamps.decode(data) if data else data
-    
+
     def get(self, key):
         return self.__getitem__(key)
 

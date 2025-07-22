@@ -22,19 +22,19 @@ class Assurer:
 
     async def run(self, time_slot: int):
         from jam.settings import settings
-        from jam.network.node import node
+        from jam.network.start import node
 
         signr = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private).sign(
             Bytes.from_bits(self._collected)
         )
 
         from jam.network.protocols.ce_141 import CE141Data, AssuranceDistribution
-        from jam.finality.finality import Finality 
+        from jam.finality.finality import Finality
         from jam.network.protocols.ce_141 import Assurance
-        
+
         from jam.block.extrinsics.assurances import AvailBitField
         from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
-    
+
         try:
             latest_block = Finality.load_latest(kv=settings.main_db)
             header_hash = latest_block.header.hash()

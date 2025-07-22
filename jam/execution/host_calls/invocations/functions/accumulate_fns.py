@@ -54,7 +54,6 @@ logger = get_logger("host_calls")
 
 
 class AccumulateFunctions(INVF):
-
     @staticmethod
     @INVF.register(5, gas_cost=10)
     def bless(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
@@ -76,9 +75,7 @@ class AccumulateFunctions(INVF):
             return (CONTINUE, registers, memory, context)
         else:
             registers = HostStatus.OK
-            context.x.partial_state.privileges = Chi(
-                chi_m=m, chi_a=a, chi_v=v, chi_g=g_dict
-            )
+            context.x.partial_state.privileges = Chi(chi_m=m, chi_a=a, chi_v=v, chi_g=g_dict)
             return (CONTINUE, registers, memory, context)
 
     @staticmethod
@@ -102,9 +99,7 @@ class AccumulateFunctions(INVF):
 
     @staticmethod
     @INVF.register(7, gas_cost=10)
-    def designate(
-        gas: Gas, registers: list, memory: Memory, context: AccumulationContext
-    ):
+    def designate(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         o = registers[7]
         if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
             raise PvmError(PANIC)
@@ -118,9 +113,7 @@ class AccumulateFunctions(INVF):
 
     @staticmethod
     @INVF.register(8, gas_cost=10)
-    def checkpoint(
-        gas: Gas, registers: list, memory: Memory, context: AccumulationContext
-    ):
+    def checkpoint(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         context.y = context.x
         registers[7] = gas
         return CONTINUE, registers, memory, context
@@ -176,9 +169,7 @@ class AccumulateFunctions(INVF):
 
     @staticmethod
     @INVF.register(10, gas_cost=10)
-    def upgrade(
-        gas: Gas, registers: list, memory: Memory, context: AccumulationContext
-    ):
+    def upgrade(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [o, g, m] = registers[7 : 7 + 3]
         if not memory.is_accessible(o, 32):
             raise PvmError(PANIC)
@@ -192,10 +183,9 @@ class AccumulateFunctions(INVF):
     # TODO: Need to update the gas with registers[9]
     @staticmethod
     @INVF.register(11, gas_cost=10)
-    def transfer(
-        gas: Gas, registers: list, memory: Memory, context: AccumulationContext
-    ):
+    def transfer(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         from jam.state.transitions.accumulation.types import DeferredTransfer
+
         [d, a, l, o] = registers[7 : 7 + 4]
         delta = context.x.partial_state.service_accounts
         if not memory.is_accessible(o, TRANSFER_MEMO_SIZE):
@@ -240,10 +230,7 @@ class AccumulateFunctions(INVF):
         accounts = context.x.partial_state.service_accounts
 
         h = Bytes[32](memory.read(o, 32))
-        if (
-            d != context.x.s_index
-            and context.x.partial_state.service_accounts[d] is not None
-        ):
+        if d != context.x.s_index and context.x.partial_state.service_accounts[d] is not None:
             delta = accounts[d]
         else:
             registers[7] = HostStatus.WHO
@@ -257,14 +244,11 @@ class AccumulateFunctions(INVF):
             return CONTINUE, registers, memory, context
         elif (
             len(delta.lookup[LookupTable(h, l)]) == 2
-            and delta.lookup[LookupTable(h, l)][1]
-            < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS
+            and delta.lookup[LookupTable(h, l)][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS
         ):  # [1] refers to x 2nd timestamp which should be smaller than Block Timeslot - PreImage Eviction Timeslot
             registers[7] = HostStatus.OK
             del context.x.partial_state.service_accounts[d]
-            context.x.partial_state.service_accounts[
-                context.x.s_index
-            ].balance += delta.balance
+            context.x.partial_state.service_accounts[context.x.s_index].balance += delta.balance
             return CONTINUE, registers, memory, context
         else:
             registers[7] = HostStatus.HUH
@@ -280,9 +264,9 @@ class AccumulateFunctions(INVF):
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
 
         lookup_key = LookupTable(preimage_hash, preimage_len)
-        lookup_value = context.x.partial_state.service_accounts[
-            context.x.s_index
-        ].lookup[lookup_key]
+        lookup_value = context.x.partial_state.service_accounts[context.x.s_index].lookup[
+            lookup_key
+        ]
         if not lookup_value:
             registers[7] = HostStatus.NONE.value
             registers[8] = 0
@@ -326,9 +310,7 @@ class AccumulateFunctions(INVF):
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
 
         # Account
-        account: AccountData = context.x.partial_state.service_accounts[
-            context.x.s_index
-        ]
+        account: AccountData = context.x.partial_state.service_accounts[context.x.s_index]
         lookup_key = LookupTable(preimage_hash, preimage_len)
         # storing the initial lookup value
         lookup_val: Timestamps | None = account.lookup[lookup_key]
@@ -376,10 +358,7 @@ class AccumulateFunctions(INVF):
         lookup_value = a.lookup[lookup_key]
         if len(a.lookup[lookup_key]) == 0 or (
             len(a.lookup[lookup_key]) == 2
-            and (
-                a.lookup[lookup_key][1]
-                < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS
-            )
+            and (a.lookup[lookup_key][1] < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS)
         ):
             del a.lookup[lookup_key]
             del a.preimages[preimage_hash]
@@ -416,7 +395,7 @@ class AccumulateFunctions(INVF):
         gas: Gas,
         registers: list,
         memory: Memory,
-        context: 'AccumulationContext',
+        context: "AccumulationContext",
         service_id: ServiceId,
     ):
         [o, z] = registers[8, 9]

@@ -2,7 +2,8 @@ from tsrkit_types.enum import Enum
 from jam.error import JamError
 
 
-class DisputesError(JamError): ...
+class DisputesError(JamError):
+    ...
 
 
 class DisputesErrorCode(Enum):
@@ -16,9 +17,7 @@ class DisputesErrorCode(Enum):
     CULPRITS_NOT_SORTED_UNIQUE = (
         "culprits_not_sorted_unique"  # Culprits not sorted in ascending order
     )
-    FAULTS_NOT_SORTED_UNIQUE = (
-        "faults_not_sorted_unique"  # Faults not sorted in ascending order
-    )
+    FAULTS_NOT_SORTED_UNIQUE = "faults_not_sorted_unique"  # Faults not sorted in ascending order
     CULPRITS_VERDICT_NOT_BAD = "culprits_verdict_not_bad"  # Culprits verdict is not bad
     FAULTS_VERDICT_NOT_BAD = "faults_verdict_not_bad"  # Faults verdict is not bad
     ALREADY_JUDGED = "already_judged"  # Already judged

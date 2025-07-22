@@ -2,11 +2,10 @@ import asyncio
 from math import ceil
 from typing import Tuple
 import time
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32
-
 from jam.utils.chainspec import chain_config
 from jam.logging import get_logger
-
 from jam.execution.host_calls.invocations.is_authorized import PsiI
 from jam.execution.host_calls.invocations.refine import PsiR
 
@@ -24,7 +23,6 @@ from jam.types.protocol.core import (
     ValidatorIndex,
 )
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
-
 from jam.types.work import WorkReport, SegmentRootLookup, WorkPackageSpec, WorkResults
 from jam.types.work.item import WorkItem
 from jam.types.work.package import WorkPackage, WorkPackageBundle
@@ -50,41 +48,32 @@ from jam.types.work.shard import (
     SegShardDict,
 )
 from jam.types.work.execution import WorkResult, WorkExecResult, RefineLoad
-
 from jam.utils.benchmark import benchmark
-
 from jam.utils.constants import (
     BASIC_ERASURE_SIZE,
     GENESIS_TS,
     SEGMENT_SIZE,
     MAX_WORK_REPORT_SIZE,
 )
-
-from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
-
+from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap
 from jam.utils.merkle import BMRFunctions
 
+from jam.incore.bundler import Bundler
+from jam.storage.da.audits import AuditShardsDA
+from jam.storage.da import ReportsDA
+from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
+from jam.incore.validator import Validator
 
-from jam.work_package.bundler import Bundler
-from jam.work_package.stores.audits import AuditShardsDA
-from jam.work_package.stores.reports import ReportsDA
-from jam.work_package.stores.segments import SegmentsDA, SegmentShardsDA
-from jam.work_package.validator import Validator
-
-from jam.network.node import Node
 
 # Module-specific logger
 logger = get_logger("in_core")
 
 
 class Processor:
-
-    node: Node
     merkle: BMRFunctions
 
-    def __init__(self, node: Node):
+    def __init__(self):
         self.merkle = BMRFunctions()
-        self.node = node
         self.transmit_task = None
 
     @staticmethod
@@ -131,9 +120,7 @@ class Processor:
             merkle_path = bytes(len(path)) + path.encode()
             leaf = bytes(len(leaf)) + leaf.encode()
 
-            segment_proof = Segment(
-                self.zero_padding(ByteArray(merkle_path + leaf), SEGMENT_SIZE)
-            )
+            segment_proof = Segment(self.zero_padding(ByteArray(merkle_path + leaf), SEGMENT_SIZE))
             pages.append(segment_proof)
 
         return pages
@@ -180,9 +167,7 @@ class Processor:
         )
         return result
 
-    def build_report(
-        self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup
-    ):
+    def build_report(self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup):
         """
         Work Report Computation function Ξ defined in Eqn 14.11
         To be used by main guarantor
@@ -330,9 +315,7 @@ class Processor:
             logger.info(f"Building bundle shards..")
 
             with benchmark("Bundle Padded"):
-                padded_wp_bundle = self.zero_padding(
-                    ByteArray(wp_bundle), BASIC_ERASURE_SIZE
-                )
+                padded_wp_bundle = self.zero_padding(ByteArray(wp_bundle), BASIC_ERASURE_SIZE)
 
             with benchmark("Erasure Coded Bundle"):
                 bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
@@ -365,19 +348,14 @@ class Processor:
                 for item in justified_segments:
                     seg_chunks = erasure_codec.encode(item.encode())
                     all_chunks.append(seg_chunks)
-                    logger.debug(
-                        "Segments Shard formed", count=len(seg_chunks), segment=i
-                    )
+                    logger.debug("Segments Shard formed", count=len(seg_chunks), segment=i)
                     i += 1
 
             with benchmark("Transposed segment shards"):
                 segments_shards = SegmentsShards(
                     [
                         SegmentsShard(
-                            [
-                                SegmentShard(all_chunks[j][i])
-                                for j in range(len(all_chunks))
-                            ]
+                            [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
                         )
                         for i in range(len(all_chunks[0]))
                     ]
@@ -494,7 +472,7 @@ class Processor:
         validator = Validator()
         validator.validate_wp(package)
 
-        bundler = Bundler(self.node)
+        bundler = Bundler()
 
         # Build Segment Root Lookup Dictionary
         logger.info("Building Lookup Dictionary..")
@@ -525,7 +503,7 @@ class Processor:
         loop.set_task_factory(asyncio.eager_task_factory)
 
         # Distribute Bundle, parallely
-        self.transmit_task = loop.create_task(CE134.transmit(node=self.node, data=data))
+        self.transmit_task = loop.create_task(CE134.transmit(data=data))
 
         # Build Report
         with benchmark("bundle processed"):
@@ -551,7 +529,7 @@ class Processor:
         from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
         from jam.settings import settings
 
-        ed25519_key = self.node.ed_pvt_key
+        ed25519_key = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
 
         payload = wr.core_index.encode() + wr.encode()
         guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
@@ -559,9 +537,7 @@ class Processor:
         # Sign the Guarantee
         sign = Ed25519Signature(ed25519_key.sign(guarantee))
 
-        og_guarantee = ValidatorSignature(
-            validator_index=ValidatorIndex(0), signature=sign
-        )
+        og_guarantee = ValidatorSignature(validator_index=ValidatorIndex(0), signature=sign)
 
         # Check majority & Build guarantees:
         guarantees = [og_guarantee]
@@ -582,15 +558,10 @@ class Processor:
                     )
                     guarantees.append(guarantee)
         # Sort them guarantees
-        guarantees = ValidatorSignatures(
-            sorted(guarantees, key=lambda g: g.validator_index)
-        )
+        guarantees = ValidatorSignatures(sorted(guarantees, key=lambda g: g.validator_index))
         # Distribute Guaranteed WR to Validators CE135
-        logger.info(
-            f"Distributing Work Report to other validators..", grte_len=len(guarantees)
-        )
+        logger.info(f"Distributing Work Report to other validators..", grte_len=len(guarantees))
         if len(guarantees) > 1:
-
             d3l = settings.d3l
 
             map_da = PackageSegmentMap(d3l)
@@ -601,9 +572,7 @@ class Processor:
             rep_da.put(wr_hash, wr)
 
             # Store Segment Root - Erasure Root Mapping
-            sr_er_da.put(
-                root=wr.package_spec.exports_root, data=wr.package_spec.erasure_root
-            )
+            sr_er_da.put(root=wr.package_spec.exports_root, data=wr.package_spec.erasure_root)
 
             # Store Package Hash - Segment Root Mapping
             map_da.put(wr)
@@ -620,4 +589,4 @@ class Processor:
             r_len = U32(len(gwr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=gwr)
 
-            acks = await CE135.transmit(node=self.node, data=data)
+            acks = await CE135.transmit(data=data)

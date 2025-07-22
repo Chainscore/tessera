@@ -6,14 +6,14 @@ from jam.logging import logger
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from jam.network.base.quic import QuicProtocol
+from jam.network.connection import NodeConnection
 
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification
 from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex
 
-from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
-from jam.work_package.stores.segments import SegmentShardsDA
+from jam.storage.da.audits import AuditShardsDA, JustificationsDA
+from jam.storage.da.segments import SegmentShardsDA
 
 
 @structure
@@ -71,39 +71,33 @@ class ShardDistributionProtocol(NetworkProtocol):
         https://docs.jamcha.in/advanced/simple-networking/spec#ce-137-shard-distribution
     """
 
-    from jam.network.node import Node
-
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE137
 
-    async def transmit(self, node: Node, data: CE137Data):
+    async def transmit(self, data: CE137Data):
         """Transmit Erasure-Root and Shard Index from Assurer (client) to Guarantor (server)"""
+        from jam.network.start import node 
 
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Requesting shard from {len(node.peer_conn)} guarantors")
+        logger.info(f"Requesting shard from {len(node.connection_ids)} guarantors")
 
-        for peer in node.peer_conn:
+        for client in node.connection_ids.values():
             try:
-                if int(peer.port) == 40001:
-                    logger.debug("Requesting shard from", peer=str(peer))
-                    client = node.peer_conn[peer][1]
+                if int(client.val.metadata.port) == 40001:
+                    logger.debug("Requesting shard from", peer=str(client))
 
                     # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(
-                        message=self._prefix.encode()
-                    )
+                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
                     # Append prefix to stream buffer so that we know the stream for handling response
                     client.stream_buffer[stream_id] = self._prefix.encode()
 
                     # Send Messages with their lengths
                     client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    res = await client.close_and_wait(
-                        message=msg_a, stream_id=stream_id
-                    )
+                    res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
 
                     if res is not None:
                         return res
@@ -116,15 +110,14 @@ class ShardDistributionProtocol(NetworkProtocol):
                     error_type=type(e).__name__,
                 )
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
         from jam.settings import settings
 
         buffer = server.stream_buffer[stream_id]
 
         try:
-            data, offset = CE137Data.decode_from(buffer[1:])
-            data = cast(CE137Data, data)
+            data = CE137Data.decode(buffer[1:])
 
             logger.info(
                 "Received shard request",
@@ -192,7 +185,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             )
 
     def res_intercept(
-        self, stream_id: int, client: QuicProtocol
+        self, stream_id: int, client: NodeConnection
     ) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
         """Intercept Bundle Shard, [Segment Shard] and Justification"""
         buffer = client.stream_buffer[stream_id]

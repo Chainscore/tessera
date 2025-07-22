@@ -139,11 +139,7 @@ class Memory:
 
     def dump_memory(self, start: int, end: int):  # debug helper
         return [
-            (
-                self._page_for(addr)[addr % PAGE_SIZE]
-                if self._page_index(addr) in self._pages
-                else 0
-            )
+            (self._page_for(addr)[addr % PAGE_SIZE] if self._page_index(addr) in self._pages else 0)
             for addr in range(start, end)
         ]
 
@@ -194,10 +190,7 @@ class Memory:
 
         write_pages.extend(
             cls.get_pages(
-                2**32
-                - 2 * PVM_INIT_ZONE_SIZE
-                - PVM_INIT_DATA_SIZE
-                - cls.total_page_size(s),
+                2**32 - 2 * PVM_INIT_ZONE_SIZE - PVM_INIT_DATA_SIZE - cls.total_page_size(s),
                 cls.total_page_size(s),
             )
         )
@@ -236,9 +229,7 @@ class Memory:
             dst[pg_off : pg_off + chunk] = b"\x00" * chunk
             start_address += chunk
 
-    def alter_accessibility(
-        self, start_address: int, length: int, access_type: Accessibility
-    ):
+    def alter_accessibility(self, start_address: int, length: int, access_type: Accessibility):
         for pg in self.get_pages(start_address, length):
             if access_type == Accessibility.WRITE:
                 self._w_pages.add(pg)

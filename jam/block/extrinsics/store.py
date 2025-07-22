@@ -9,7 +9,7 @@ T = TypeVar("T")
 
 class ExtrinsicStore(Generic[T]):
     _store: List[T] = []
-    
+
     def __init__(self) -> None:
         self._store = []
 

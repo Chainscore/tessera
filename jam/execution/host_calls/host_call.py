@@ -11,7 +11,6 @@ HostCallReturn = Tuple[ExecutionStatus, int, int, list, Memory, Context]
 
 
 class PsiH:
-
     @staticmethod
     def execute(
         program: Program,

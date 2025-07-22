@@ -1,7 +1,7 @@
 from typing import Dict
 
 from jam.settings import Settings
-from jam.types.protocol.ticket import TicketBody
+from jam.types.protocol.ticket import TicketAttempt, TicketBody, TicketId
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
 from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
@@ -121,10 +121,13 @@ def create_dummy_state_components() -> Dict[str, object]:
     validator_set = GammaK(dummy_validator_data)
     ring_root = BandersnatchRingRoot(create_dummy_bytes(144))
     slot_sealers = GammaSTickets(
-        [TicketBody(create_dummy_bytes32(), i) for i in range(EPOCH_LENGTH)]
+        [
+            TicketBody(TicketId(create_dummy_bytes32()), TicketAttempt(i))
+            for i in range(EPOCH_LENGTH)
+        ]
     )
     ticket_accumulator = GammaA(
-        [TicketBody(create_dummy_bytes32(), i) for i in range(3)]
+        [TicketBody(TicketId(create_dummy_bytes32()), TicketAttempt(i)) for i in range(3)]
     )
     components["gamma"] = Gamma(
         k=validator_set,
@@ -142,7 +145,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     timestamps = AccountLookup(
         {
-            LookupTable(hash=create_dummy_bytes32(), length=Uint[32](0)): Timestamps(
+            LookupTable(hash=Bytes[32](create_dummy_bytes32()), length=Uint[32](0)): Timestamps(
                 [U32(i) for i in range(3)]
             )
             for _ in range(2)
@@ -178,7 +181,8 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["phi"] = Phi([queue for _ in range(CORE_COUNT)])
 
     # Chi
-    components["chi"] = Chi(chi_m=ServiceId(0), chi_a=ServiceId(0), chi_v=ServiceId(0), chi_g=ChiG({}))
+    chi_g = ChiG({ServiceId(i): Gas(100) for i in range(3)})
+    components["chi"] = Chi(chi_m=ServiceId(0), chi_a=ServiceId(1), chi_v=ServiceId(2), chi_g=chi_g)
 
     # Psi
     components["psi"] = Psi(
@@ -193,7 +197,7 @@ def create_dummy_state_components() -> Dict[str, object]:
         vals_current=AllValidatorStats.empty(),
         vals_last=AllValidatorStats.empty(),
         cores=AllCoreStats.empty(),
-        services=AllServiceStats({})
+        services=AllServiceStats({}),
     )
 
     # Nu and Xi

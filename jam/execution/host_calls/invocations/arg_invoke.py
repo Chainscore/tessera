@@ -56,9 +56,7 @@ class PsiM:
 
         return PsiM.R(
             gas,
-            PsiH.execute(
-                program, pc, int(gas), registers, memory, dispatch_fn, context
-            ),
+            PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context),
         )
 
     @staticmethod
@@ -78,9 +76,7 @@ class PsiM:
 
         if status == ExecutionStatus.OUT_OF_GAS:
             result = status
-            logger.warning(
-                "Invocation ran out of gas", initial_gas=int(g), consumed_gas=int(u)
-            )
+            logger.warning("Invocation ran out of gas", initial_gas=int(g), consumed_gas=int(u))
         elif status == ExecutionStatus.HALT:
             if memory.is_accessible(int(registers[7]), int(registers[8])):
                 result = memory.read(int(registers[7]), int(registers[8]))
@@ -89,9 +85,7 @@ class PsiM:
                     res_mem_addr=registers[7],
                     result_size=registers[8],
                     result_hex=(
-                        result.hex()[:32] + "..."
-                        if len(result.hex()) > 32
-                        else result.hex()
+                        result.hex()[:32] + "..." if len(result.hex()) > 32 else result.hex()
                     ),
                     memory_addr=int(registers[7]),
                     memory_size=int(registers[8]),

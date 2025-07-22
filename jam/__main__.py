@@ -3,16 +3,13 @@ import json
 import logging
 import os
 import time
-
 from dotenv import load_dotenv
 from jam.operations import operate, epoch_operate
 from jam.logging import setup_logging, logger
-from jam.network.base.certificate import generate_san
 from jam.utils.chainspec import chain_config
 from jam.settings import setup_setting
 from jam.finality.finality import Finality
-from jam.network.peer import Peer
-from jam.network.node import setup_node
+from jam.network.start import start_node
 from jam.state.state import setup_state
 from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
@@ -56,9 +53,7 @@ async def main(
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(
-        name=name, port=int(port), seed=int(seed), data_path="data/"
-    )
+    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
 
     main_db = settings.main_db
 
@@ -79,16 +74,7 @@ async def main(
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
 
-        # ----------- SETUP NETWORKING ------------
-        peers = [
-            Peer(id=generate_san(val.ed25519), data=val)
-            for val in state.kappa
-            if val.metadata.port != port
-        ]
-
-        tsr_node = setup_node(
-            name, port, peers, host=str(host), is_bd=is_builder, is_val=is_validator
-        )
+        settings.update()
 
         # setup ticket queue
         setup_ticket_queue()
@@ -102,29 +88,14 @@ async def main(
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
             # Networking - Block Imports, WP Processing, etc
-            tg.create_task(tsr_node.initialize())
+            tg.create_task(start_node(str(host), int(port)))
             # RPC
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
             tg.create_task(epoch_operate(is_builder))
             tg.create_task(operate(is_builder))
 
-    except KeyboardInterrupt:
-        logger.info(
-            "JAM node shutting down gracefully",
-            node_name=name,
-            port=port,
-            reason="keyboard_interrupt",
-        )
     except Exception as e:
-        logger.critical(
-            "JAM node fatal error",
-            node_name=name,
-            port=port,
-            error=str(e)[:200],
-            error_type=type(e).__name__,
-        )
+        logger.critical("Fatal error", e=e, error_type=type(e).__name__)
         # Close db connections
         settings.clear()
-
-        raise

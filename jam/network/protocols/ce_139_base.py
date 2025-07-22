@@ -3,7 +3,7 @@ from typing import cast
 from tsrkit_types import structure, TypedVector, Uint
 
 from jam.logging import logger
-from jam.network.base.quic import QuicProtocol
+from jam.network.connection import NodeConnection
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 from jam.types.work.manifest import SegmentIndex, Justification, Justifications
@@ -68,24 +68,22 @@ CE140Data = CE139Data
 
 class SegmentShardRequestBase(NetworkProtocol):
 
-    from jam.network.node import Node
-
     def __init__(self, prefix: PrefixType):
         super().__init__()
         self._prefix = prefix
 
-    async def transmit(self, node: Node, data: CE139Data):
+    async def transmit(self, data: CE139Data):
         """Transmit Erasure-Root and Shard Index from Guarantor to Assurer"""
+        from jam.network.start import node 
 
         msg_a = data.queries.encode()
         len_a = data.len.encode()
 
         logger.info(f"Sending segment shard request with")
 
-        for peer in node.peer_conn:
-            if int(peer.port) == 30333:
+        for client in node.connection_ids.values():
+            if int(client.val.metadata.port) == 30333:
                 logger.info("requesting seg shard from 30333")
-                client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -110,6 +108,8 @@ class SegmentShardRequestBase(NetworkProtocol):
 
         return data
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol): ...
+    def req_intercept(self, stream_id: int, server: NodeConnection):
+        ...
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol): ...
+    def res_intercept(self, stream_id: int, client: NodeConnection):
+        ...
