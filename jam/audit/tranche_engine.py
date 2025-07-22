@@ -8,11 +8,11 @@ from jam.audit.audit_process import AuditProcess
 from jam.types.block.extrinsics.disputes import Culprits, Faults, Verdicts
 from jam.utils.constants import AUDIT_PERIOD, VALIDATOR_COUNT
 from jam.types.protocol.core import TimeSlot
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.logging import get_logger
 from rockstore import RockStore
 
-from jam.audit.tranche import Tranche, TrancheState, JudgmentRecord, TrancheStore
+from jam.operations.tranche_store import Tranche, TrancheState, JudgmentRecord, tranche_store, TrancheStore
 from jam.types.work.report import WorkReport, WorkReportHash
 
 logger = get_logger("tranche_engine")
@@ -21,7 +21,7 @@ class TrancheEngine:
     def __init__(self, store: TrancheStore):
         self.store = store
 
-    async def run(self, slot_index: Uint[32]):
+    async def run(self, slot_index: Uint[32],header_hash:HeaderHash):
         """
         Run tranche processing for a given slot_index continuously, 8s per tranche.
         """

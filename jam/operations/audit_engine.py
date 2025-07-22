@@ -1,6 +1,6 @@
 from tsrkit_types import TypedVector
 from tsrkit_types.dictionary import Dictionary
-from jam.audit import tranche
+
 from jam.audit.tranche_engine import TrancheEngine
 from jam.audit.q import sample_work_reports_with_nulls
 from jam.logging import get_logger
@@ -8,30 +8,30 @@ from jam.operations.dispatcher import NodeDispatcher
 import asyncio
 from tsrkit_types.bits import Uint
 from jam.network.node import node
+from jam.types.protocol.crypto import HeaderHash
 from jam.types.work.report import WorkReport
 from jam.utils.constants import SLOT_PERIOD, GENESIS_TS
-from jam.audit.tranche import EncodedWR, JudgmentRecord, Tranche, TrancheState, TrancheStore
+from jam.operations.tranche_store import EncodedWR, JudgmentRecord, Tranche, TrancheState, tranche_store
 
 
 
 # Logger for Auditing module
 logger = get_logger("audit")
 
-class AuditEngine(NodeDispatcher):
+class AuditEngine():
     """
     Audit (tranche) engine: after each block (each timeslot), kick off
     the tranche-by-tranche auditing process.
     """
 
     @classmethod
-    async def run(cls, time_slot: int):
+    async def run(cls, header_hash: HeaderHash):
         from jam.network.node import node
 
         # Ensure network is up
         if not node.is_initialized:
             logger.debug("Network not initialized – skipping audit")
             return
-        print("Store Bhaiyuy8uyg")
 
         raw_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
         unaudited_list=TypedVector[WorkReport]([wr for wr in raw_list if wr is not None])
