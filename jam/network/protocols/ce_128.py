@@ -53,7 +53,7 @@ class BlockRequest(NetworkProtocol):
         from jam.network.start import node 
         if not node: return
 
-        stream_data = data.encode()
+        stream_data = U32(len(data.encode())).encode() + data.encode()
         logger.info("Transmitting block request to node", num=len(node.connection_ids), max_blocks=data.max_blocks)
 
         transmitted_count = 0
@@ -62,7 +62,8 @@ class BlockRequest(NetworkProtocol):
         for client in node.all_connected:
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
-                print("using stream", stream_id)
+                client.stream_prefix[stream_id] = self._prefix
+                client.stream_buffer[stream_id] = b""
                 data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
 
                 transmitted_count += 1
@@ -165,9 +166,12 @@ class BlockRequest(NetworkProtocol):
 
         logger.info("Block request ack received", stream_id=stream_id, buffer_size=len(buffer))
 
-        try:
-            data = TypedVector[Block].decode(buffer[1:])
-            return data
-        except Exception as e:
-            logger.error(NetworkingErrorCode.BAD_RESPONSE)
-            return None
+        # try:
+        b_len = U32.decode(buffer)
+        blocks = []
+        offset = 0
+        while offset < b_len:
+            data, off_ = Block.decode_from(buffer[4:], offset)
+            offset += off_
+            blocks.append(data)
+        return blocks 

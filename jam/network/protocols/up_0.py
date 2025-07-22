@@ -250,7 +250,7 @@ class BlockAnnouncement(NetworkProtocol):
                 conn.up0_stream = stream_id
 
             # Start synchornization
-            # asyncio.create_task(self.synchronise(h, conn))
+            asyncio.create_task(self.synchronise(h, conn))
 
         # Handle announcement
         else:

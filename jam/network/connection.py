@@ -40,6 +40,7 @@ class NodeConnection(QuicConnectionProtocol):
     up0_stream: Optional[int] = None
     # Stream buffers 
     stream_buffer: Dict[int, bytes] = {}
+    stream_prefix: Dict[int, int] = {}
     # Key we discoeverd during TLS handshake. 
     # If not None, we know its verified
     ed25519_public = None 
@@ -58,6 +59,7 @@ class NodeConnection(QuicConnectionProtocol):
         super().__init__(quic=quic, stream_handler=stream_handler)
         self.waiter = {}
         self.stream_buffer = {}
+        self.stream_prefix = {}
         self._close_pending = False
 
         self.up0_stream = None 
@@ -204,7 +206,8 @@ class NodeConnection(QuicConnectionProtocol):
             # Add prefix to the buffer
             prefix = U8.decode(data)
             logger.debug(
-                f"📥 Received data on stream {stream_id}",
+                f"📥 Received data",
+                stream_id=stream_id,
                 prefix=prefix,
                 data_len=len(data)
             )
@@ -226,12 +229,14 @@ class NodeConnection(QuicConnectionProtocol):
             
             if stream_id not in self.stream_buffer:
                 self.stream_buffer[stream_id] = b""
+                self.stream_prefix[stream_id] = prefix
             self.stream_buffer[stream_id] += data
 
             if not event.end_stream:
                 return           
             try:
-                prefix = U8.decode(self.stream_buffer[stream_id])
+                prefix = U8(self.stream_prefix[stream_id])
+
                 # Map the request to its corresponding CE protocol function
                 ce_protocol = ProtocolMap.get_protocol(prefix)()
                 logger.debug(f"CE PROTOCOL TRIGGERED", p=type(ce_protocol).__name__)

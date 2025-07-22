@@ -1,5 +1,6 @@
 import asyncio
 from time import time
+from jam.types.state.kappa import Kappa
 from jam.utils.constants import GENESIS_TS
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
 import os
