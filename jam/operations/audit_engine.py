@@ -1,6 +1,6 @@
 from tsrkit_types import TypedVector
 from tsrkit_types.dictionary import Dictionary
-from jam.audit import tranche
+
 from jam.audit.tranche_engine import TrancheEngine
 from jam.audit.q import sample_work_reports_with_nulls
 from jam.logging import get_logger
@@ -11,7 +11,7 @@ from jam.network.node import node
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.work.report import WorkReport
 from jam.utils.constants import SLOT_PERIOD, GENESIS_TS
-from jam.audit.tranche import EncodedWR, JudgmentRecord, Tranche, TrancheState, TrancheStore
+from jam.operations.tranche_store import EncodedWR, JudgmentRecord, Tranche, TrancheState, tranche_store
 
 
 
