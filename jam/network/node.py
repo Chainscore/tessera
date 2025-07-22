@@ -345,7 +345,7 @@ class Node:
 
             logger.info(f"🚀 {self} initialized successfully!")
         except Exception as e:
-            logger.critical(f"🚀 {self} failed to initialize!")
+            logger.critical(f"🚀 {self} failed to initialize!", error=str(e))
 
     def shutdown(self):
         for peer in self.peer_conn:

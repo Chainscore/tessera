@@ -92,5 +92,4 @@ async def epoch_operate(is_builder):
         else:
             logger.debug("Node not initialized sleeping for 6 seconds")
             await asyncio.sleep(6)
-            logger.debug("Awake again")
             ts += 1

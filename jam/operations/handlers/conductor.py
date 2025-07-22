@@ -42,6 +42,11 @@ class Conductor:
                     raise ValueError("Ticket generation failed")
 
             ack = await asyncio.gather(*tasks)
+            logger.info(
+                "Ticket transmission completed",
+                node_name=node.name,
+                total_guarantors=len(node.peer_conn),
+            )
 
         except Exception as e:
             logger.error("Failed to generate & transmit safrol ticket", error=e, time_slot=time_slot)

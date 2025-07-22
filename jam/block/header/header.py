@@ -71,7 +71,7 @@ class Header:
             epoch_mark=EpochMark.produce(state, time_slot),
             tickets_mark=TicketsMark.produce(state, time_slot),
             offenders_mark=OffendersMark.produce(extrinsic.disputes),
-            author_index=ValidatorIndex(state.kappa.index(settings.val)),
+            author_index=ValidatorIndex([k.ed25519 for k in state.kappa].index(settings.ed25519_public)),
             entropy_source=BandersnatchVrfSignature(96),
             seal=BandersnatchVrfSignature(96),
         )
@@ -94,10 +94,11 @@ class Header:
         header.entropy_source = BandersnatchVrfSignature(
             prove_ietf(
                 settings.bandersnatch_private,
-                X.ENTROPY + vrf_output(header.seal), 
+                X.ENTROPY.value + vrf_output(header.seal),
                 b"",
             )
         )
+        return header
 
     def validate(self) -> bool:
         """

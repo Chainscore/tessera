@@ -36,7 +36,7 @@ async def forwarding(slot, timeslot):
     print("Ticket queue length", ticket_queue.length())
     if not ticket_queue.is_empty():
         ts = timeslot
-        ticket_submission_end = TICKET_SUBMISSION_END
+        ticket_submission_end = TICKET_SUBMISSION_END // 2
         slots_available = ticket_submission_end - slot
         tickets_per_slot = math.ceil(ticket_queue.length() / slots_available)
 
