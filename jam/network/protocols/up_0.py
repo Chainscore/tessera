@@ -88,7 +88,6 @@ class BlockAnnouncement(NetworkProtocol):
         if prefix:
             data += PrefixType.UP0.encode()
 
-        logger.debug("Handshake started")
         try:
             final_block = finality.load_final(db)
         except Exception as e:
@@ -113,6 +112,7 @@ class BlockAnnouncement(NetworkProtocol):
         data += h
 
         # Handshake Message
+        logger.debug("Handshake started", final=final.header_hash.hex(), slot=final.time_slot, leaves=leaves.to_json())
         conn.stream_and_keep_open(data, stream_id)
 
 

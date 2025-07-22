@@ -1,6 +1,8 @@
 import pytest
 from dot_ring.vrf.ring.ring_vrf import RingVrf
-from py_ark_vrf import secret_from_seed, verify_ring
+from py_ark_vrf import secret_from_seed, verify_ring, public_from_le_secret
+
+from jam.settings import Settings
 
 
 @pytest.mark.parametrize("vals,idx", [([0, 1, 2, 3, 4, 5], 1)])

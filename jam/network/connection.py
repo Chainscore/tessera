@@ -279,8 +279,3 @@ class NodeConnection(QuicConnectionProtocol):
 
                 # Clear buffer
                 self.stream_buffer.pop(stream_id, None)
-
-            # CASE: UP Streams
-            else:
-                logger.warning("Stream data received without end stream, buffering data.", stream_id=stream_id, prefix=prefix)
-

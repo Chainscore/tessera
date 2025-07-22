@@ -110,7 +110,7 @@ class StateStorage:
             if v is None:
                 self._DB.delete(k)
                 self._TRIE.delete(Bytes(k))
-            else:
+            elif curr_val != v:
                 self._DB.put(k, v)
                 self._TRIE.update(Bytes(k), Bytes(v))
         # Save the cache to DB

@@ -1,6 +1,6 @@
 from typing import List, cast, TYPE_CHECKING
 
-from tsrkit_types import TypedVector, Enum
+from tsrkit_types import TypedArray, TypedVector, Enum
 
 from jam.logging import get_logger
 from jam.finality.finality import Finality
@@ -12,6 +12,7 @@ from jam.types import HeaderHash
 from tsrkit_types.integers import U32
 from tsrkit_types.struct import structure
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.utils.constants import GENESIS_HASH
 
 # Module-specific logger
 logger = get_logger("network")
@@ -85,78 +86,74 @@ class BlockRequest(NetworkProtocol):
         """Process Block Request"""
         buffer = server.stream_buffer[stream_id][1:]
 
-        try:
-            from jam.settings import settings
-            from jam.block.block import Block
+        from jam.settings import settings
+        from jam.block.block import Block
 
-            logger.debug("Received block request", stream_id=stream_id, buffer_size=len(buffer))
+        data = CE128Data.decode(buffer[4:])
 
-            data = CE128Data.decode(buffer)
+        logger.info(
+            "Processing block request",
+            stream_id=stream_id,
+            header_hash=data.header.hex(),
+            direction=data.dir,
+            max_blocks=data.max_blocks,
+        )
 
-            logger.info(
-                "Processing block request",
-                stream_id=stream_id,
-                header_hash=data.header,
-                direction=data.dir,
-                max_blocks=data.max_blocks,
-            )
+        # TODO - Here we assume no gaps blocks, which is likely incorrect
+        # To be thought upon
 
-            # TODO - Here we assume no gaps blocks, which is likely incorrect
-            # To be thought upon
+        # Get the start block
+        start_block = Block.load(data.header, settings.main_db)
+        start_timeslot = start_block.header.slot
+        latest = Finality.load_latest(settings.main_db)
 
-            # Get the start block
-            start_block = Block.load(data.header, settings.main_db)
-            start_timeslot = start_block.header.slot
-            latest = Finality.load_latest(settings.main_db)
+        # if data.dir == Direction.AscExc:
+        #     _range = range(
+        #         start_timeslot + 1,
+        #         min(
+        #             int(latest.header.slot),
+        #             int(start_timeslot) + int(data.max_blocks),
+        #         )
+        #         + 1,
+        #     )
+        # else:
+        #     _range = range(
+        #         start_timeslot,
+        #         max(0, int(start_timeslot) - int(data.max_blocks)),
+        #         -1,
+        #     )
 
-            if data.dir == Direction.AscExc:
-                _range = range(
-                    start_timeslot + 1,
-                    min(
-                        int(latest.header.slot),
-                        int(start_timeslot) + int(data.max_blocks),
-                    )
-                    + 1,
-                )
+        # Get all header hashes in between
+        all_blocks = []
+        hh = data.header
+        while hh != GENESIS_HASH and len(all_blocks) != int(data.max_blocks):
+            _data = settings.main_db.get(Block.get_storage_key_block(hh))
+            if _data:
+                _block = Block.decode(_data)
+                all_blocks.append(_block)
+                hh = _block.header.parent
             else:
-                _range = range(
-                    start_timeslot,
-                    max(0, int(start_timeslot) - int(data.max_blocks)),
-                    -1,
-                )
+                logger.error("Block not found against recorded header_hash", header_hash=hh.hex())
+                break
 
-            # Get all header hashes in between
-            all_blocks = TypedVector[Block]([])
-            hh = data.header
-            while hh != HeaderHash(32) and len(all_blocks) != int(data.max_blocks):
-                _block = Block.decode(settings.main_db.get(Block.get_storage_key_block(hh)))
-                if _block:
-                    all_blocks.append(_block)
-                    hh = _block.header.parent
-                else:
-                    logger.error(
-                        "Block not found against recorded header_hash",
-                        header_hash=_header_hash,
-                        timeslot=ts,
-                    )
+        blocks_enc = TypedArray[Block, len(all_blocks)](all_blocks).encode()
+        message = U32(len(blocks_enc)).encode() + blocks_enc
+        server.stream_and_close(stream_id=stream_id, message=message)
 
-            blocks_enc = all_blocks.encode()
-            server.stream_and_close(stream_id=stream_id, message=self._prefix.encode() + blocks_enc)
+        logger.info(
+            "Blocks request completed successfully. Closed stream",
+            stream_id=stream_id,
+            len=len(blocks_enc),
+        )
 
-            logger.info(
-                "Blocks request completed successfully. Closed stream",
-                stream_id=stream_id,
-                len=len(blocks_enc),
-            )
-
-        except Exception as e:
-            logger.error(
-                "Error processing block request",
-                stream_id=stream_id,
-                buffer_size=len(buffer),
-                error=str(e),
-                error_type=type(e).__name__,
-            )
+        # except Exception as e:
+        #     logger.error(
+        #         "Error processing block request",
+        #         stream_id=stream_id,
+        #         buffer_size=len(buffer),
+        #         error=str(e),
+        #         error_type=type(e).__name__,
+        #     )
 
     def res_intercept(self, stream_id: int, client: NodeConnection):
         """Intercept Acknowledgement"""
