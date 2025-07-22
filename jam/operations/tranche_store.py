@@ -6,7 +6,7 @@ from tsrkit_types.sequences import TypedVector
 from tsrkit_types import U8, structure
 from tsrkit_types.dictionary import Dictionary
 
-from jam.types.protocol.core import ValidatorIndex
+from jam.types.protocol.core import TrancheIndex, ValidatorIndex
 from jam.types.protocol.crypto import HeaderHash, Hash
 from jam.types.work.report import WorkReport, WorkReportHash
 
@@ -25,8 +25,8 @@ class JudgmentRecord:
 
     @staticmethod
     def dummy()-> "JudgmentRecord":
-        true_votes:ValidatorList=ValidatorList([])
-        false_votes:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3)])
+        false_votes:ValidatorList=ValidatorList([])
+        true_votes:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3)])
         announces:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3),ValidatorIndex(4),ValidatorIndex(5)])
         return JudgmentRecord(true_votes=true_votes,false_votes=false_votes,announces=announces)
 
@@ -53,7 +53,7 @@ class TrancheState:
 @structure
 # @dataclass
 class Tranche:
-    tranche_index: U8
+    tranche_index: TrancheIndex
     header_hash: HeaderHash
 
     def __hash__(self):

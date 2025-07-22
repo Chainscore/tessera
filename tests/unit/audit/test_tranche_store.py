@@ -1,5 +1,5 @@
 import pytest
-from tsrkit_types import U8
+from jam.types.protocol.core import TrancheIndex
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.work.report import WorkReport
 from jam.operations.tranche_store import (
@@ -14,12 +14,12 @@ from jam.audit.q import sample_work_reports_with_nulls
 @pytest.fixture
 def dummy_tranche():
     """Returns a dummy Tranche object for testing."""
-    return Tranche(tranche_index=U8(1), header_hash=HeaderHash(b'header_hash_1'.ljust(32, b'\0')))
+    return Tranche(tranche_index=TrancheIndex(1), header_hash=HeaderHash(b'header_hash_1'.ljust(32, b'\0')))
 
 @pytest.fixture
 def another_dummy_tranche():
     """Returns another dummy Tranche object for testing."""
-    return Tranche(tranche_index=U8(2), header_hash=HeaderHash(b'header_hash_2'.ljust(32, b'\0')))
+    return Tranche(tranche_index=TrancheIndex(2), header_hash=HeaderHash(b'header_hash_2'.ljust(32, b'\0')))
 
 
 @pytest.fixture
