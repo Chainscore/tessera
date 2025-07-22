@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, U32
-from jam.types.protocol.core import CoreIndex, TimeSlot,ValidatorIndex
+from jam.types.protocol.core import CoreIndex, TimeSlot, TrancheIndex,ValidatorIndex
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.work.report import WorkReport
 from jam.utils.constants import CURRENT_TIME, SLOT_PERIOD, AUDIT_PERIOD, SIGNING_CONTEXTS, VALIDATOR_COUNT
@@ -150,7 +150,7 @@ class AuditingAndJudgement:
         return shuffle_not_null
 
     @staticmethod
-    def tranche_index(header_slot: TimeSlot) -> U8:
+    def get_tranche_index(slot: TimeSlot) -> TrancheIndex:
         """
         Equation: 17.8
         This function calculated the tranches based on the timeslot, Current time
@@ -164,7 +164,7 @@ class AuditingAndJudgement:
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e74011e8401?v=0.7.0
         """
 
-        tranche_index =  (CURRENT_TIME() - (SLOT_PERIOD * int(header_slot))) // AUDIT_PERIOD
+        tranche_index =  TrancheIndex((CURRENT_TIME() - (SLOT_PERIOD * int(slot))) // AUDIT_PERIOD)
         return tranche_index
 
     @staticmethod

@@ -6,6 +6,9 @@ from tsrkit_types import U8, structure, Bool
 from tsrkit_types.dictionary import Dictionary
 from jam.types.protocol.core import ValidatorIndex
 from jam.types.protocol.crypto import HeaderHash
+
+from jam.types.protocol.core import TrancheIndex, ValidatorIndex
+from jam.types.protocol.crypto import HeaderHash, Hash
 from jam.types.work.report import WorkReport, WorkReportHash
 
 logger = get_logger("tranch_storing")
@@ -49,7 +52,7 @@ class TrancheState:
 @structure
 # @dataclass
 class Tranche:
-    tranche_index: U8
+    tranche_index: TrancheIndex
     header_hash: HeaderHash
 
     def __hash__(self):
