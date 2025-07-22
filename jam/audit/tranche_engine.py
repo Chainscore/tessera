@@ -21,7 +21,7 @@ class TrancheEngine:
     def __init__(self, store: TrancheStore):
         self.store = store
 
-    async def run(self, slot_index: Uint[32],header_hash:HeaderHash):
+    async def run(self, wrs: list,header_hash:HeaderHash):
         """
         Run tranche processing for a given slot_index continuously, 8s per tranche.
         """

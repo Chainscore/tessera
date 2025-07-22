@@ -1,21 +1,17 @@
 from typing import Dict
 from structlog import get_logger
-
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
-from tsrkit_types import U8, structure
+from tsrkit_types import U8, structure, Bool
 from tsrkit_types.dictionary import Dictionary
-
 from jam.types.protocol.core import ValidatorIndex
-from jam.types.protocol.crypto import HeaderHash, Hash
+from jam.types.protocol.crypto import HeaderHash
 from jam.types.work.report import WorkReport, WorkReportHash
-
 
 logger = get_logger("tranch_storing")
 
 SignatureList=TypedVector[Bytes]
 ValidatorList=TypedVector[ValidatorIndex]
-EncodedWR=Bytes # Later might be replaced with Work Report Itself.
 
 @structure
 class JudgmentRecord:
@@ -36,18 +32,18 @@ class JudgmentRecord:
 
 @structure
 class TrancheState:
-    unaudited_list: TypedVector[WorkReport] #Q ->[wr1,2,3,4]->[]
-    judgments: Dictionary[EncodedWR, JudgmentRecord] # {WR:J,S}
-    valid_set: TypedVector[WorkReport] # Already validated_wrs [wr,1,2,3,4]
-    invalid_set: TypedVector[WorkReport] # Already invalid_wrs
+    unaudited_list: TypedVector[WorkReportHash] #Q ->[wr1,2,3,4]->[]
+    judgments: Dictionary[WorkReportHash, JudgmentRecord] # {WR:J,S}
+    valid_set: TypedVector[WorkReportHash] # Already validated_wrs [wr,1,2,3,4]
+    invalid_set: TypedVector[WorkReportHash] # Already invalid_wrs
 
     @staticmethod
     def empty()->"TrancheState":
         return TrancheState(
-            unaudited_list=TypedVector[WorkReport]([]),
-            judgments=Dictionary[EncodedWR, JudgmentRecord]({}),
-            valid_set=TypedVector[WorkReport]([]),
-            invalid_set=TypedVector[WorkReport]([])
+            unaudited_list=TypedVector[WorkReportHash]([]),
+            judgments=Dictionary[WorkReportHash, JudgmentRecord]({}),
+            valid_set=TypedVector[WorkReportHash]([]),
+            invalid_set=TypedVector[WorkReportHash]([])
         )
 
 @structure
@@ -84,56 +80,66 @@ class TrancheStore:
             logger.warning("Attempted to delete non-existent tranche", tranche=tranche.to_json())
 
     # ----- unaudited_list ----- #
-    def add_to_unaudited(self, tranche: Tranche, wr: WorkReport):
+    def add_to_unaudited(self, tranche: Tranche, wr_hash: WorkReportHash):
         state = self._get_state(tranche)
-        if wr in state.unaudited_list:
-            logger.warning("Work report already in unaudited list", wr_hash=Hash.blake2b(wr.encode()).hex()[:16])
+        if wr_hash in state.unaudited_list:
+            logger.warning("Work report already in unaudited list", wr_hash=WorkReportHash)
             return
-        state.unaudited_list.append(wr)
+        state.unaudited_list.append(wr_hash)
         self._save_state(tranche, state)
-        logger.info("Added work report to unaudited list", wr_hash=Hash.blake2b(wr.encode()).hex()[:16])
+        logger.info("Added work report to unaudited list", wr_hash=WorkReportHash)
 
-    def rm_from_unaudited(self, tranche: Tranche, wr: WorkReport):
+    def rm_from_unaudited(self, tranche: Tranche, wr_hash: WorkReportHash):
         state = self._get_state(tranche)
         try:
-            state.unaudited_list.remove(wr)
+            state.unaudited_list.remove(wr_hash)
             self._save_state(tranche, state)
-            logger.info("Removed work report from unaudited list", wr_hash=Hash.blake2b(wr.encode()).hex()[:16])
+            logger.info("Removed work report from unaudited list", wr_hash=wr_hash)
         except ValueError:
-            logger.warning("Work report not found in unaudited list for removal", wr_hash=Hash.blake2b(wr.encode()).hex()[:16])
+            logger.warning("Work report not found in unaudited list for removal", wr_hash=wr_hash)
 
     # ----- judgments ----- #
-    def update_judgment(self, tranche: Tranche, wr: WorkReport, judgment: JudgmentRecord):
+    def update_judgment(self, tranche: Tranche, wr_hash: WorkReportHash, judgment: Bool, validator_index: ValidatorIndex):
         state = self._get_state(tranche)
-        encoded_wr = Bytes(wr.encode())
-        state.judgments[encoded_wr] = judgment
-        self._save_state(tranche, state)
-        logger.info("Updated judgment for work report", wr_hash=Hash.blake2b(encoded_wr).hex()[:16])
+        if judgment:
+            state.judgments[wr_hash].true_votes.push(validator_index)
+        else:
+            state.judgments[wr_hash].false_votes.push(validator_index)
 
-    def get_judgment(self, tranche: Tranche, wr: WorkReport) -> JudgmentRecord | None:
+        self._save_state(tranche, state)
+        logger.info("Updated judgment for work report", wr_hash=wr_hash)
+
+    def get_judgment(self, tranche: Tranche, wr_hash: WorkReportHash) -> JudgmentRecord | None:
         state = self._get_state(tranche)
-        encoded_wr = Bytes(wr.encode())
-        return state.judgments.get(encoded_wr)
+        return state.judgments.get(wr_hash)
+
+    # ----- announcement ----- #
+    def add_announce(self, tranche: Tranche, wr_hash: WorkReportHash, validator_index:ValidatorIndex) :
+        state = self._get_state(tranche)
+        state.judgments[wr_hash].announce.push(validator_index)
+        self._save_state(tranche, state)
+        logger.info("Updated judgment for work report", wr_hash=wr_hash)
+
 
     # ----- valid_set ----- #
-    def add_to_valid_set(self, tranche: Tranche, wr: WorkReport):
+    def add_to_valid_set(self, tranche: Tranche, wr_hash: WorkReportHash):
         state = self._get_state(tranche)
-        if wr in state.valid_set:
-            logger.warning("Work report already in valid set", wr_hash=Hash.blake2b(wr.encode()).hex()[:16])
+        if wr_hash in state.valid_set:
+            logger.warning("Work report already in valid set", wr_hash=wr_hash)
             return
-        state.valid_set.append(wr)
+        state.valid_set.append(wr_hash)
         self._save_state(tranche, state)
-        logger.info("Added work report to valid set", wr_hash=Hash.blake2b(wr.encode()).hex()[:16])
+        logger.info("Added work report to valid set", wr_hash=wr_hash)
 
     # ----- invalid_set ----- #
-    def add_to_invalid_set(self, tranche: Tranche, wr: WorkReport):
+    def add_to_invalid_set(self, tranche: Tranche, wr_hash: WorkReportHash):
         state = self._get_state(tranche)
-        if wr in state.invalid_set:
-            logger.warning("Work report already in invalid set", wr_hash=Hash.blake2b(wr.encode()).hex()[:16])
+        if wr_hash in state.invalid_set:
+            logger.warning("Work report already in invalid set", wr_hash=wr_hash)
             return
-        state.invalid_set.append(wr)
+        state.invalid_set.append(wr_hash)
         self._save_state(tranche, state)
-        logger.info("Added work report to invalid set", wr_hash=Hash.blake2b(wr.encode()).hex()[:16])
+        logger.info("Added work report to invalid set", wr_hash=wr_hash)
 
 
 tranche_store = TrancheStore()

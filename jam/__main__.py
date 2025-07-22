@@ -25,6 +25,7 @@ from jam.network.protocols.ce_145 import JudgmentPublication
 from tests.unit.test_judgment import data144, data145
 from jam.audit.audit_process import AuditProcess
 from jam.audit.vectors.q import sample_work_reports_with_nulls
+from tsrkit_types import U8
 
 CE144 = AuditAnnouncement()
 CE145 = JudgmentPublication()
@@ -121,7 +122,7 @@ async def main(
                 # tg.create_task(CE145.transmit(node=tsr_node, data=data145))
                 newly_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
                 #
-                tg.create_task(AuditProcess.audit_process(newly_avail_wrs=newly_list))
+                tg.create_task(AuditProcess.audit_process(newly_avail_wrs=newly_list, tranche=U8(0)))
 
 
     except CancelledError:

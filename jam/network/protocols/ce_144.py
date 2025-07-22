@@ -11,7 +11,7 @@ from jam.logging import get_logger
 from tsrkit_types import TypedVector, Uint, structure, Choice
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.quic import QuicProtocol
-from jam.types.protocol.core import CoreIndex, ValidatorIndex
+from jam.types.protocol.core import CoreIndex, ValidatorIndex,TrancheIndex
 from tsrkit_types import U8
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, BandersnatchVrfSignature, HeaderHash
 from typing import cast
@@ -76,7 +76,8 @@ class AuditAnnouncement(NetworkProtocol):
     Protocol Flow:
         Auditor -> Auditor
 
-        --> Header_Hash ++ Tranche ++ Announcement[len++[ core_index ++ work_report_hash ] ++ Ed25519_signature]
+        -->import asyncio
+ Header_Hash ++ Tranche ++ Announcement[len++[ core_index ++ work_report_hash ] ++ Ed25519_signature]
         --> Evidence[choice[FirstTrancheEvidence, SubsequentTrancheEvidence]]
         --> FIN
         <-- FIN
@@ -153,6 +154,7 @@ class AuditAnnouncement(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """ Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
+        from jam.operations.tranche_store import tranche_store
 
         v_r: dict[ValidatorIndex, set[CoreIndex]] = {}
 
@@ -163,12 +165,13 @@ class AuditAnnouncement(NetworkProtocol):
             data = cast(CE144Data, data)
 
             get_v_assign = data.tranche_announcement.announcement.assigned_report
-            get_index = server.peer.peer_index
+            v_index = server.peer.peer_index
+            tranche = data.tranche_announcement.tranches
 
-            v_r[get_index] = {assign.core_index for assign in get_v_assign}
+            v_r[v_index] = {assign.report_hash for assign in get_v_assign}
 
-            print(v_r)
-
+            for r_hash in v_r.values():
+                tranche_store.add_announce(tranche=tranche, wr_hash=r_hash, validator_index=v_index)
 
             logger.debug(
                 "Received Audit's Announcement from other Auditors",

@@ -1,6 +1,5 @@
 from typing import cast
-from tsrkit_types import structure, Uint, U8
-from urllib3.poolmanager import pool_classes_by_scheme
+from tsrkit_types import structure, Uint, Bool
 
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
 
@@ -10,7 +9,7 @@ from jam.logging import get_logger
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-
+from tests.unit.test_judgment import judgment
 
 logger = get_logger("network")
 
@@ -18,7 +17,7 @@ logger = get_logger("network")
 class Judgment:
     epoch_index: EpochIndex
     validator_index: ValidatorIndex
-    validity: U8
+    validity: Bool
     work_report_hash: WorkReportHash
     ed25519_signature: Ed25519Signature
 
@@ -111,11 +110,22 @@ class JudgmentPublication(NetworkProtocol):
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """ Intercept individual Judgment from other Auditors for their assigned Work Reports """
 
+        from jam.operations.tranche_store import tranche_store
+
         buffer = server.stream_buffer[stream_id]
 
         try:
             data, offset = CE145Data.decode_from(buffer[1:])
             data = cast(CE145Data, data)
+
+            vi_judgment = data.judgment.validator_index
+            judge = data.judgment.validity
+            wr_h = data.judgment.work_report_hash
+
+
+            # How we get tranche over there
+            # tranche_store.update_judgment(tranche=, wr_hash=wr_h, judgment=judge, validator_index=vi_judgment)
+
 
             logger.debug(
                 "Received Judgment from other Auditors",

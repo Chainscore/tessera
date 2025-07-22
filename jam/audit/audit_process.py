@@ -5,16 +5,14 @@ from typing import List, Tuple
 from tsrkit_types import structure, U8, U32, TypedVector, Option
 
 from jam.types import Hash, BandersnatchVrfSignature, ValidatorIndex
-from jam.types.protocol.core import CoreIndex, EpochIndex
+from jam.types.protocol.core import CoreIndex, EpochIndex,TrancheIndex
 
 from jam.consensus.grandpa.finality import Finality
-
 from jam.types.work.report import WorkReportHash
 from jam.logging import get_logger
 from jam.utils.constants import EPOCH_LENGTH
 from jam.audit.vectors.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
 from tests.unit.wp.types import WorkReport
-
 
 
 # Module-specifier logger
@@ -24,7 +22,7 @@ logger = get_logger("in_core")
 class AuditProcess:
 
     @classmethod
-    async def audit_process(cls, newly_avail_wrs: List[Option[WorkReport]]):
+    async def audit_process(cls, newly_avail_wrs: List[Option[WorkReport]], tranche:TrancheIndex):
         from jam.audit.audit import AuditingAndJudgement
         from jam.consensus.grandpa.finality import Finality
         # from jam.state.state import state
@@ -63,8 +61,8 @@ class AuditProcess:
             logger.info(f"Checking assign report length {len(reports)} for each validator")
 
 
-            # asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports))
-            asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports))
+            asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports, tranche=tranche))
+            # asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports, tranche=tranche))
 
         except Exception as e:
             logger.error(
@@ -75,9 +73,8 @@ class AuditProcess:
             )
             raise
 
-
     @classmethod
-    async def audit_announcement(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]]):
+    async def audit_announcement(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche: TrancheIndex):
         """
             This function just take a list of report which is available for auditing and assign random 10 reports to tha validator then create announcement for them.
 
@@ -105,9 +102,6 @@ class AuditProcess:
         from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, Transmit, FirstTrancheEvidence, Announcement, Assign, Evidence
 
         CE144 = AuditAnnouncement()
-
-        # tranche = audit.tranche_index(header_slot=slot)
-        tranche = U8(0)
 
         assignments = TypedVector[Assign]([
             Assign(core_index=core_idx, report_hash=Hash.blake2b(r.encode()))
@@ -146,9 +140,8 @@ class AuditProcess:
                 error_type=type(e).__name__
         )
 
-
     @classmethod
-    async def judgment_process(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]]):
+    async def judgment_process(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche:TrancheIndex):
         from jam.audit.audit import AuditingAndJudgement
         from jam.settings import settings
         from jam.network.node import node
@@ -168,7 +161,7 @@ class AuditProcess:
 
                 wr_hash = Hash.blake2b(r.encode())
 
-                package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json",  rep_hash=wr_hash)
+                package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json", rep_hash=wr_hash)
 
 
                 result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=node.validator_index)

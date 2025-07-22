@@ -25,7 +25,7 @@ class AuditEngine():
     """
 
     @classmethod
-    async def run(cls, header_hash: HeaderHash):
+    async def run(cls, wrs: list, header_hash: HeaderHash):
         from jam.network.node import node
 
         # Ensure network is up
@@ -51,7 +51,7 @@ class AuditEngine():
         store.save(initTranche,tranche_state)
 
         # Instantiate the core tranche engine
-        engine = TrancheEngine(store)
+        engine = TrancheEngine(wrs,header_hash)
         # Drive through all tranches; sleeps internally by AUDIT_PERIOD
         await engine.run(Uint(time_slot))
 

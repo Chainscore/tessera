@@ -3,6 +3,7 @@ from jam.types.protocol.crypto import OpaqueHash
 
 # Simple type aliases
 TimeSlot = Uint[32]
+TrancheIndex = Uint[8]
 ValidatorIndex = Uint[16]
 CoreIndex = Uint[16]
 EpochIndex = Uint[32]
