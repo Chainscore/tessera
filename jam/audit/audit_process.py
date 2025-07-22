@@ -13,7 +13,7 @@ from jam.types.work.report import WorkReportHash
 from jam.logging import get_logger
 from jam.utils.constants import EPOCH_LENGTH
 from jam.audit.vectors.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
-from tests.unit.wp.types import RefineVectors, RefineVector, WorkReport
+from tests.unit.wp.types import WorkReport
 
 
 
@@ -63,7 +63,7 @@ class AuditProcess:
             logger.info(f"Checking assign report length {len(reports)} for each validator")
 
 
-            asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports))
+            # asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports))
             asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports))
 
         except Exception as e:
@@ -86,7 +86,6 @@ class AuditProcess:
 
             Return:
                 set of ed21599 signature   [ Eq: 17.9, 17.10, 17.11]
-
         """
 
         from jam.audit.audit import AuditingAndJudgement
@@ -103,25 +102,17 @@ class AuditProcess:
 
         announcement_sign = audit.validator_announcement_statement(assign_report=assign_wrs, header=header_hash, tranche=U8(0))
 
-
-        # logger.info("announcement signature", announcement_sign)
-
-        from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, Transmit, FirstTrancheEvidence, Announcement, Assign
+        from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, Transmit, FirstTrancheEvidence, Announcement, Assign, Evidence
 
         CE144 = AuditAnnouncement()
 
         # tranche = audit.tranche_index(header_slot=slot)
         tranche = U8(0)
 
-
-        # for c, r in assign_wrs:
-        #     print(c, Hash.blake2b(r.encode()))
-
         assignments = TypedVector[Assign]([
             Assign(core_index=core_idx, report_hash=Hash.blake2b(r.encode()))
             for core_idx, r in assign_wrs
         ])
-
 
         announcement = Transmit(
             header_hash=header_hash,
@@ -132,15 +123,17 @@ class AuditProcess:
             )
         )
 
-        signature = audit.vrf_signature_bandersnatch(entropy_source="f7caffd3498473b08ab9de28ba3bd76d94f3fe47acc96e6e0111dfe301ba4d0bc7b3a95ebf21a76fb76102c13fdf9947c6c243d71b9893fae0b9adf94aa83f0a81b4566c15c796a79a4e124971130cba959c03066efba2161334cedc0d02151a", bandersnatch_key=node.b_key)
 
-        evidence = FirstTrancheEvidence(bandersnatch_signature=BandersnatchVrfSignature(b'\x97\xf1\xd3\xa71\x97\xd7\x94&\x95c\x8cO\xa9\xac\x0f\xc3h\x8cO\x97t\xb9\x05\xa1N:?\x17\x1b\xacXlU\xe8?\xf9z\x1a\xef\xfb:\xf0\n\xdb"\xc6\xbb\x97\xf1\xd3\xa71\x97\xd7\x94&\x95c\x8cO\xa9\xac\x0f\xc3h\x8cO\x97t\xb9\x05\xa1N:?\x17\x1b\xacXlU\xe8?\xf9z\x1a\xef\xfb:\xf0\n\xdb"\xc6\xbb'))
+        sign = BandersnatchVrfSignature(
+            b'\x97\xf1\xd3\xa71\x97\xd7\x94&\x95c\x8cO\xa9\xac\x0f\xc3h\x8cO\x97t\xb9\x05\xa1N:?\x17\x1b\xacXlU\xe8?\xf9z\x1a\xef\xfb:\xf0\n\xdb"\xc6\xbb\x97\xf1\xd3\xa71\x97\xd7\x94&\x95c\x8cO\xa9\xac\x0f\xc3h\x8cO\x97t\xb9\x05\xa1N:?\x17\x1b\xacXlU\xe8?\xf9z\x1a\xef\xfb:\xf0\n\xdb"\xc6\xbb')
 
+        evidence = Evidence(FirstTrancheEvidence(sign))
+
+        print(U32(len(announcement.encode())), U32(len(evidence.encode())))
 
         data = CE144Data(len_a=U32(len(announcement.encode())), tranche_announcement=announcement, len_b=U32(len(evidence.encode())), evidence=evidence)
 
         try:
-            logger.info(f"transmitting data using protocol 144 {data}")
 
             responses = await CE144.transmit(node=node, data=data)
 
@@ -168,7 +161,6 @@ class AuditProcess:
 
         epoch = math.floor(slot / EPOCH_LENGTH)
 
-
         logger.info(f"Reports are avialable for judgment on this node is {len(assign_wrs)} ")
 
         try:
@@ -178,14 +170,10 @@ class AuditProcess:
 
                 package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json",  rep_hash=wr_hash)
 
-                # print("=================================", "package =>", package, "core =>", core, "extrinsic =>", extrinsic)
 
                 result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=node.validator_index)
-                print("RESULTS", result)
 
                 judgment_sign = audit.judgment_signature(wr=r, refine=result)
-                # print("jUDGMENT SIGNATURE", len(judgment_sign.encode()), judgment_sign)
-
 
                 from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
                 CE145 = JudgmentPublication()
@@ -201,19 +189,11 @@ class AuditProcess:
                     ed25519_signature=judgment_sign
                 )
 
-                # print(len(EpochIndex(0).encode()))
-                # print(len(ValidatorIndex(0).encode()))
-                # print(len(validity.encode()))
-                # print(len(WorkReportHash(wr_hash).encode()))
-                # print(len(judgment_sign.encode()))
-
-                # print( "WHERE IT HAS GONE" ,len(judgment.encode()), judgment)
 
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
                 data = await CE145.transmit(node=node, data=data)
 
             logger.debug(f"Judgment transmitted and intercept successfully")
-
 
         except Exception as e:
             logger.error(

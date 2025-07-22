@@ -1,5 +1,6 @@
 import asyncio
-from typing import cast, TYPE_CHECKING
+from typing import cast, TYPE_CHECKING, Tuple
+from wsgiref.validate import validator
 
 from jam.utils.gather import gather_with_exceptions
 
@@ -47,10 +48,9 @@ class SubsequentTrancheEvidence:
 @structure
 class Transmit:
     header_hash : HeaderHash
-    tranches : Uint[32]
+    tranches : U8
     announcement : Announcement
 
-@structure
 class Evidence(Choice):
     first_tranche: FirstTrancheEvidence
     Subsequent_tranche : SubsequentTrancheEvidence
@@ -100,8 +100,8 @@ class AuditAnnouncement(NetworkProtocol):
 
         logger.info(
             f"Transmitting Announcement to other Auditors",
-            announcement=data.tranche_announcement.announcement,
-            evidence=data.evidence.bandersnatch_signature,
+            announcement=data.tranche_announcement,
+            evidence=data.evidence,
             stream_a_size=data.len_a,
             stream_b_size=data.len_b,
         )
@@ -129,7 +129,7 @@ class AuditAnnouncement(NetworkProtocol):
                 client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                 client.stream_and_keep_open(message=len_b, stream_id=stream_id)
 
-                res =  await client.close_and_wait(message=msg_b, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_b, stream_id=stream_id)
                 task = asyncio.create_task(res)
                 tasks.append(task)
 
@@ -154,11 +154,21 @@ class AuditAnnouncement(NetworkProtocol):
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """ Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
 
+        v_r: dict[ValidatorIndex, set[CoreIndex]] = {}
+
         buffer = server.stream_buffer[stream_id]
 
         try:
             data, offset = CE144Data.decode_from(buffer[1:])
             data = cast(CE144Data, data)
+
+            get_v_assign = data.tranche_announcement.announcement.assigned_report
+            get_index = server.peer.peer_index
+
+            v_r[get_index] = {assign.core_index for assign in get_v_assign}
+
+            print(v_r)
+
 
             logger.debug(
                 "Received Audit's Announcement from other Auditors",
@@ -172,6 +182,8 @@ class AuditAnnouncement(NetworkProtocol):
 
             ack= b""
             server.stream_and_close(ack, stream_id)
+
+
 
         except Exception as e:
             # Stop Streaming

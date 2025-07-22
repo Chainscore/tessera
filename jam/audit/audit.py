@@ -1,5 +1,6 @@
 from typing import List, Tuple
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, U32
 from jam.types.protocol.core import CoreIndex, TimeSlot,ValidatorIndex
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
@@ -129,8 +130,6 @@ class AuditingAndJudgement:
         for c, w_r in enumerate(pre_audit_report):
             core_report.append((CoreIndex(c), w_r))
 
-        return core_report[:1]
-
         # ---------------------------------- Array same as size of core_report and shuffle -----------------------------
         array_index = TypedVector[Uint[32]]([])
         for i in range(len(pre_audit_report)):
@@ -145,7 +144,7 @@ class AuditingAndJudgement:
 
         # ------------------------------------------ take initial 10 reports -------------------------------------------
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-        shuffle_not_null : List[Tuple[CoreIndex, WorkReport]] = [(c, w) for (c, w) in updated_array if w is not Null][:3]
+        shuffle_not_null = list[Tuple[CoreIndex, WorkReport]]([(c, w) for (c, w) in updated_array if w is not Null][:3])
 
         return shuffle_not_null
 
@@ -187,8 +186,6 @@ class AuditingAndJudgement:
         from jam.settings import settings
         from jam.network.node import node
 
-        sign_announcement = None
-
         signing_context = Bytes(SIGNING_CONTEXTS["announce"])
 
         header_hash = Bytes(Hash.blake2b(header.encode()))
@@ -204,18 +201,15 @@ class AuditingAndJudgement:
         for item in set_value:
             set_encode = item.encode() + set_encode
 
+        print(settings.ed25519_private == node.ed_pvt_key)
+
 
         message = signing_context + Bytes(tranche) + set_encode + header_hash
-        #
-        # ed25519_pvt = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
-        #
-        # signature = Ed25519Signature(ed25519_pvt.sign(message))
 
-        signature = sign_bandersnatch(key=node.ed_key, context=Bytes(message))
+        ed25519_pvt = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
+        signature = ed25519_pvt.sign(message)
 
         return Ed25519Signature(signature)
-
-        # return signature
 
     @staticmethod
     async def audit_refine(p: WorkPackage, c: CoreIndex, e:Extrinsics, wr: WorkReport, node_index: ValidatorIndex) -> bool:
@@ -296,18 +290,18 @@ class AuditingAndJudgement:
 
         """
         from jam.network.node import node
+        from jam.settings import settings
 
         if refine:
             message = SIGNING_CONTEXTS["valid"] + Hash.blake2b(wr.encode())
         else:
             message = SIGNING_CONTEXTS["invalid"] + Hash.blake2b(wr.encode())
 
-        # ed25519_pvt = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
-        # signature = Ed25519Signature(ed25519_pvt.sign(message))
 
-        signature = sign_bandersnatch(key=node.ed_key, context=Bytes(message))
+        ed25519_pvt = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
+        signature = ed25519_pvt.sign(message)
 
-        return BandersnatchVrfSignature(signature)
+        return Ed25519Signature(signature)
 
 
     def audited_report(self, pre_audit: List[Option[WorkReport]]) -> TypedVector[Option[WorkReport]]:
