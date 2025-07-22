@@ -83,7 +83,8 @@ async def run_node(
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, "dev-spec.json")
         update_state(state)
-        print("state.root", state.root.hex())
+
+        settings.update()
 
         block = Block.genesis()
         header_hash = block.save(main_db)
@@ -95,7 +96,6 @@ async def run_node(
         async with asyncio.TaskGroup() as tg:
             tg.create_task(start_node(host, int(port)))
             if node_task:
-                print("starting task")
                 tg.create_task(node_task())
 
     except Exception as e:

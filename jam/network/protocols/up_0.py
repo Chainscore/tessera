@@ -121,6 +121,9 @@ class BlockAnnouncement(NetworkProtocol):
         from jam.finality.finality import Finality
         from jam.types.protocol.crypto import Hash
         from jam.network.start import node
+        if not node:
+            logger.error("Node not found to transmit")
+            return
 
         logger.info(f"Announcing blocks to {len(node.connection_ids)} peers.")
         from jam.settings import settings
@@ -146,7 +149,7 @@ class BlockAnnouncement(NetworkProtocol):
 
         announced_count = 0
         # TODO: Implement actual Block Propagation Grid
-        for conn in node.connection_ids.values():
+        for conn in node.all_connected:
             try:
                 ann_len = U32(len(message))
 
@@ -157,7 +160,6 @@ class BlockAnnouncement(NetworkProtocol):
                 logger.debug(
                     "📣 Block announced to peer",
                     block_slot=int(data.header.slot),
-                    anc=anc
                 )
             except Exception as e:
                 logger.error(
@@ -193,9 +195,7 @@ class BlockAnnouncement(NetworkProtocol):
 
         logger.info(
             "Block announcement completed",
-            node_name=node.name,
             announced_to=announced_count,
-            total_peers=len(node.peer_conn),
             block_slot=int(data.header.slot),
         )
 
@@ -235,13 +235,7 @@ class BlockAnnouncement(NetworkProtocol):
             h = Handshake.decode(data[4:])
 
             # TODO: Process Handshake
-            logger.info(
-                "Received peer handshake",
-                stream_id=stream_id,
-                handshake=h,
-                block_slot=int(h.final.time_slot),
-                parent_hash=h.final.header_hash.hex()[:16] + "...",
-            )
+            logger.info("Received peer handshake", h=h.to_json())
 
             conn.handshake_completed = True
 
@@ -250,7 +244,7 @@ class BlockAnnouncement(NetworkProtocol):
                 conn.up0_stream = stream_id
 
             # Start synchornization
-            asyncio.create_task(self.synchronise(h, conn))
+            asyncio.create_task(self.synchronise(h))
 
         # Handle announcement
         else:
@@ -274,7 +268,6 @@ class BlockAnnouncement(NetworkProtocol):
                 block_slot=int(anc.final.time_slot),
                 parent_hash=anc.final.header_hash.hex()[:16] + "...",
                 header_hash=anc.header.hash().hex()[:16] + "...",
-                anc=anc 
             )
 
     def res_intercept(self, stream_id: int, client):
@@ -292,13 +285,11 @@ class BlockAnnouncement(NetworkProtocol):
                 max_blocks=U32(1),
             ),
         )
-        print("received blocks", blocks)
         for block in blocks[0]:
             state.transition(block)
-            logger.debug("Imported block", slot=block.header.slot)
 
     @classmethod
-    async def synchronise(cls, h: Handshake, node: NodeConnection):
+    async def synchronise(cls, h: Handshake):
         from jam.state.state import state
 
         # To know how many blocks to fetch

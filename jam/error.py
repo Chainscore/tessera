@@ -2,6 +2,8 @@ from typing import Any
 from tsrkit_types.enum import Enum
 from enum import Enum as OGEnum
 
+class JamErrorCode(Enum):
+    INVALID_BLOCK = "Block is invalid"
 
 class JamError(Exception):
     def __init__(self, code: Enum | OGEnum, message=None, *args: Any) -> None:

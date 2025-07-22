@@ -17,7 +17,7 @@ def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
         return [(0, WPBuilder)]
 
     return [
-        # (0, BlockProducer),
+        (0, BlockProducer),
         # (2, None),  # audit
         # (4, assurer),  # transmit assurances
     ]
@@ -28,7 +28,7 @@ async def schedule_run(sch_ts: int, runner: NodeDispatcher, *args) -> None:
     await runner.run(*args)
 
 
-async def operate(is_builder):
+async def operate(is_builder = False):
     """
     Starts a never ending 6-sec loop
     """

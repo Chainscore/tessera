@@ -1,6 +1,8 @@
+import enum
+from math import e
 from typing import List, cast, TYPE_CHECKING
 
-from tsrkit_types import TypedArray, TypedVector, Enum
+from tsrkit_types import Bytes32, TypedArray, TypedVector, Enum
 
 from jam.logging import get_logger
 from jam.finality.finality import Finality
@@ -12,6 +14,7 @@ from jam.types import HeaderHash
 from tsrkit_types.integers import U32
 from tsrkit_types.struct import structure
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.types.protocol.core import TimeSlot
 from jam.utils.constants import GENESIS_HASH
 
 # Module-specific logger
@@ -99,61 +102,58 @@ class BlockRequest(NetworkProtocol):
             max_blocks=data.max_blocks,
         )
 
-        # TODO - Here we assume no gaps blocks, which is likely incorrect
-        # To be thought upon
-
         # Get the start block
         start_block = Block.load(data.header, settings.main_db)
-        start_timeslot = start_block.header.slot
-        latest = Finality.load_latest(settings.main_db)
+        if not start_block:
+            logger.warning("Block not found", hh=data.header.hex()[:16]+"...")
+            server.stream_and_close(b"", stream_id)
+            return
 
-        # if data.dir == Direction.AscExc:
-        #     _range = range(
-        #         start_timeslot + 1,
-        #         min(
-        #             int(latest.header.slot),
-        #             int(start_timeslot) + int(data.max_blocks),
-        #         )
-        #         + 1,
-        #     )
-        # else:
-        #     _range = range(
-        #         start_timeslot,
-        #         max(0, int(start_timeslot) - int(data.max_blocks)),
-        #         -1,
-        #     )
+        start_timeslot = start_block.header.slot
+        if data.dir == Direction.AscExc:
+            start_key = Block.get_storage_key_slot(start_timeslot)
+            end_key = Block.get_storage_key_slot(TimeSlot(2**32 - 1))
+        else:
+            start_key = Block.get_storage_key_slot(TimeSlot(0))
+            end_key = Block.get_storage_key_slot(start_timeslot)
+        
+        hhs = settings.main_db.get_range(
+            start_key, 
+            end_key,
+            limit=int(data.max_blocks)
+        )
 
         # Get all header hashes in between
         all_blocks = []
-        hh = data.header
-        while hh != GENESIS_HASH and len(all_blocks) != int(data.max_blocks):
+        for hh in hhs.values():
             _data = settings.main_db.get(Block.get_storage_key_block(hh))
             if _data:
-                _block = Block.decode(_data)
-                all_blocks.append(_block)
-                hh = _block.header.parent
+                all_blocks.append(Block.decode(_data))
             else:
                 logger.error("Block not found against recorded header_hash", header_hash=hh.hex())
                 break
 
-        blocks_enc = TypedArray[Block, len(all_blocks)](all_blocks).encode()
-        message = U32(len(blocks_enc)).encode() + blocks_enc
-        server.stream_and_close(stream_id=stream_id, message=message)
+        if data.dir == Direction.AscExc:
+            all_blocks.reverse()
+        
+        data = TypedArray[Block, len(all_blocks)](all_blocks).encode()
+        msg = U32(len(data)).encode() + data
+        MAX_CHUNK = 1200 # < 1350 safety
+
+        offset = 0
+        while offset < len(msg):
+            chunk = msg[offset : offset + MAX_CHUNK]
+            offset += len(chunk)
+            if offset == len(msg):
+                server.stream_and_close(chunk, stream_id)        # end_stream=True
+            else:
+                server.stream_and_keep_open(chunk, stream_id)    # end_stream=False
 
         logger.info(
             "Blocks request completed successfully. Closed stream",
             stream_id=stream_id,
-            len=len(blocks_enc),
+            len=len(all_blocks),
         )
-
-        # except Exception as e:
-        #     logger.error(
-        #         "Error processing block request",
-        #         stream_id=stream_id,
-        #         buffer_size=len(buffer),
-        #         error=str(e),
-        #         error_type=type(e).__name__,
-        #     )
 
     def res_intercept(self, stream_id: int, client: NodeConnection):
         """Intercept Acknowledgement"""
