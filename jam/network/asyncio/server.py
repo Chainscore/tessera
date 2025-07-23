@@ -205,7 +205,6 @@ async def serve(
     """
 
     loop = asyncio.get_event_loop()
-    print("SOCK SERVER", sock)
     try:
         _, protocol = await loop.create_datagram_endpoint(
             lambda: QuicServer(
@@ -221,7 +220,6 @@ async def serve(
             # sock=sock,
             local_addr=(host, port),
         )
-        print("SERVER CREATED")
     except Exception as e:
         print("ERROR SERVER CREATION", e)
     return protocol

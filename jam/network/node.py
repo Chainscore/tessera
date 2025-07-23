@@ -378,7 +378,7 @@ class Node:
             logger.info(
                 f"🔄 ({self.name}) Opening connections to {len(self.peers)} peers..."
             )
-            # await self.run_client(sock)
+            await self.run_client(sock)
 
             logger.info(f"🚀 {self} initialized successfully!")
         except Exception as e:

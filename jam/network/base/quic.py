@@ -177,7 +177,6 @@ class QuicProtocol(QuicConnectionProtocol):
 
         from jam.network.node import node_alpn, builder_alpn
 
-        print("EVENT OCCURED", event)
         # Handle TLS Handshake
         if isinstance(event, HandshakeCompleted):
             node = self.node
