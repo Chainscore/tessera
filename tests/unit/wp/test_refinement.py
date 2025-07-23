@@ -1,271 +1,144 @@
-from asyncio import CancelledError
+import asyncio
+import json
+from time import time
 from typing import cast
 
 import pytest
-import asyncio
-import signal
-import json
-import shutil
-
-from multiprocessing import Process
-
-import logging
 import os
-import time
 
-from dotenv import load_dotenv
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, Uint
+from tsrkit_types import U32
 
-from jam.logging import setup_logging
-from jam.network.base.certificate import generate_san
-from jam.utils.chainspec import chain_config
-
-from jam.consensus.grandpa.finality import Finality
-from jam.settings import setup_setting
-
-from jam.network.peer import Peer
-from jam.network.node import Node
-
-from jam.operations.utils.state_update import update_state
-from jam.state.state import setup_state
-from jam.types.protocol.crypto import BlsPublic
-from jam.types.block import Block
-from jam.types.protocol.validators import (
-    IPAddress,
-    ValidatorData,
-    ValidatorMetadata,
-)
-
-from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.logging import get_logger
-from jam.work_package.processor import Processor
-from tests.unit.wp.types import RefineVectors, RefineVector
-
-CLIENTS = [
-    {"port": 40007, "role": "VALIDATOR", "theme": "matrix", "genesis": True},
-]
+from jam.network.protocols import WorkPackageSubmission
+from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore, Extrinsics
+from jam.types import ValidatorIndex, Hash
+from jam.types.work import Assurers
+from jam.utils.constants import GENESIS_TS
+from jam.work_package.stores.mappings import (
+    PackageSegmentMap,
+    SegmentErasureMap,
+    ReportHashAssurerMap,
+    ErasureAssurerMap,
+)
+from jam.work_package.stores.reports import ReportsDA
+from tests.integration.utils.setup_processes import Client, Role, setup_processes
+from tests.unit.wp.types import RefineVectors, RefineVector, BundleVector, BundleVectors
 
 # Logger for WP Production
-logger = get_logger("in_core")
+# logger = get_logger("test")
 
+CLIENTS = [
+    Client(Role.VAL, 40000, theme="cyberpunk"),
+    Client(Role.VAL, 40001, theme="monokai"),
+    Client(Role.VAL, 40002, theme="noir"),
+    Client(Role.VAL, 40003, theme="sunset"),
+    Client(Role.VAL, 40004, theme="gruvbox"),
+    Client(Role.VAL, 40005, theme="dracula"),
+    Client(Role.BUILDER, 40006, theme="nord"),
+]
 
-async def start_node(node: Node):
-    """Define Node tasks"""
-
-    with open("vectors/combined/combined-001.json", "r") as f:
+vectors = BundleVectors([])
+for i in range(1, 4):
+    with open(f"vectors/bundles/bundles-{i:03d}.json", "r") as f:
         data = json.load(f)
-        refine_vectors = RefineVectors.from_json(data)
-
-    try:
-        processor = Processor(node)
-        for i, vector in enumerate(refine_vectors):
-            vector = cast(RefineVector, vector)
-            wr, wr_hash = processor.process(
-                vector.work_package, vector.core_index, vector.extrinsics
-            )
-
-            assert wr == vector.work_rep and wr_hash == vector.rep_hash
-            print("ASSERTION SUCCESSFUL", i + 1)
-    except Exception as e:
-        raise e
+        bundle_vec = BundleVector.from_json(data)
+        vectors.append(bundle_vec)
 
 
-def run_node_process(
-    genesis_path: str,
-    env: str,
-    start_genesis: bool,
-    theme: str,
-    is_builder: bool,
-    is_validator: bool,
-):
-    # Handle clean termination
-    def handle_sigterm(signum, frame):
-        exit(0)
+async def node_task():
+    # Wait for initialization
+    await asyncio.sleep(12)
 
-    signal.signal(signal.SIGTERM, handle_sigterm)
+    init_ts = int((time() - GENESIS_TS) // 6)
 
-    asyncio.run(
-        run_node(genesis_path, env, start_genesis, theme, is_builder, is_validator)
-    )
+    from jam.network.node import node
+
+    if node.is_builder:
+        logger = get_logger()
+
+        ts = init_ts
+
+        CE133 = WorkPackageSubmission()
+        for wp_iter, vector in enumerate(vectors):
+            try:
+                wpc = WorkPackageCore(vector.work_package, vector.core_index)
+                wp_len = U32(len(wpc.encode()))
+                ext = vector.extrinsics
+                ext_len = U32(len(ext.encode()))
+                wp_data = CE133Data(wp_len, wpc, ext_len, ext)
+
+                acks = await CE133.transmit(node, wp_data)
+
+                logger.info(
+                    "Testing builder transmission",
+                    time_slot=ts,
+                    iter=wp_iter,
+                    total_iter=ts - init_ts,
+                    peers=len(node.peer_conn),
+                )
+            except Exception as e:
+                logger.error(
+                    "Error occurred while testing builder",
+                    time_slot=ts,
+                    iter=wp_iter,
+                    total_iter=ts - init_ts,
+                    err=str(e),
+                    err_type=type(e).__name__,
+                )
+            finally:
+                ts += 1
+
+            await asyncio.sleep(6)
+    else:
+        await asyncio.sleep(20)
+        from jam.settings import settings
+
+        logger = get_logger()
+
+        d3l = settings.d3l
+
+        logger.info("VALIDATOR NODE", node=node)
+
+        for wp_iter, vector in enumerate(vectors):
+            try:
+                rep_da = ReportsDA(d3l)
+                map_da = PackageSegmentMap(d3l)
+                sr_er_da = SegmentErasureMap(d3l)
+
+                wr = rep_da.get(vector.rep_hash)
+                logger.debug("WORK REP", assertion=wr == vector.work_rep)
+                assert wr.encode() == vector.work_rep.encode()
+
+                wp_hash = Hash.blake2b(vector.work_package.encode())
+                sr = map_da.get(wp_hash)
+                logger.debug(
+                    "SEG ROOT",
+                    assertion=sr == vector.work_rep.package_spec.exports_root,
+                )
+                assert sr.encode() == vector.work_rep.package_spec.exports_root.encode()
+
+                er = sr_er_da.get(sr)
+                logger.debug(
+                    "ERS ROOT",
+                    assertion=er == vector.work_rep.package_spec.erasure_root,
+                    exp=vector.work_rep.package_spec.erasure_root.hex(),
+                    got=er.hex(),
+                )
+                assert er.encode() == vector.work_rep.package_spec.erasure_root.encode()
+
+                logger.info(
+                    "Node assertion successful",
+                    peers=len(node.peer_conn),
+                )
+            except Exception as e:
+                logger.error(
+                    "Error occurred while testing node assertion",
+                    err=str(e),
+                    err_type=type(e).__name__,
+                )
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_refinement():
-    print("START OF TEST")
-
-    processes = []
-
-    for client in CLIENTS:
-        env_path = f"envs/{client['port']}.env"
-        is_validator = client["role"] == "VALIDATOR"
-        is_builder = client["role"] == "BUILDER"
-
-        dir_path = f"/data/{client['port']}"
-
-        if os.path.exists(dir_path):
-            shutil.rmtree(dir_path)
-            print(f"REMOVED DIR: {dir_path}")
-
-        p = Process(
-            target=run_node_process,
-            args=(
-                "",
-                env_path,
-                client["genesis"],
-                client["theme"],
-                is_builder,
-                is_validator,
-            ),
-        )
-        processes.append(p)
-
-    print("STARTING PROCESSES...")
-    for p in processes:
-        p.start()
-
-    print("ALL PROCESSES STARTED")
-
-    # KEEP TEST ALIVE FOR SOME TIME
-    await asyncio.sleep(5)
-
-    print("TERMINATING PROCESSES")
-    for p in processes:
-        p.terminate()
-    for p in processes:
-        p.join()
-
-    print("END OF TEST")
-
-
-async def run_node(
-    genesis_path: str,
-    env: str,
-    start_genesis: bool,
-    theme: str,
-    is_builder: bool,
-    is_validator: bool,
-):
-    """Main fn to start the node"""
-    # ---------- SETUP LOGGING ----------
-    genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
-    init_ts = int((time.time() - genesis_ts) / SLOT_PERIOD)
-    init_ep = int(init_ts // EPOCH_LENGTH)
-
-    # ---------- LOAD ENVIRONMENT ----------
-    load_dotenv(".env")
-    load_dotenv(env, override=True)
-
-    name = os.environ["NODE_NAME"]
-    port = os.environ["PORT"]
-    seed = os.environ["SEED"]
-    host = os.environ["HOST"]
-
-    if not name or not port or not host or not seed:
-        raise ValueError(f"Missing node info in {env}")
-
-    # ---------- SETUP LOGGING ----------
-    environment = os.environ.get("ENVIRONMENT", "development")
-    log_level = os.environ.get("LOG_LEVEL", None)
-
-    setup_logging(
-        theme=theme,
-        node_name=name,
-        environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None,
-    )
-
-    # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(
-        name=name, port=int(port), seed=int(seed), data_path="data/"
-    )
-
-    main_db = settings.main_db
-
-    logger.info(
-        "Starting JAM node",
-        name=name,
-        port=port,
-        ts=init_ts,
-        epoch=init_ep,
-        spec=chain_config.name,
-        environment=environment,
-        is_builder=is_builder,
-        is_validator=is_validator,
-    )
-
-    try:
-        # Set genesis state
-        # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
-        state = setup_state(settings.state_db, "dev-spec.json")
-        state.store.disable_cache()
-        update_state(state)
-
-        peers = [
-            Peer(id=generate_san(val.ed25519), data=val)
-            for val in state.kappa
-            if val.metadata.port != port
-        ]
-
-        ip = IPAddress.from_str(host)
-
-        tsr_node = Node(
-            node_name=name,
-            host=str(host),
-            port=int(port),
-            peers=peers,
-            validator_data=ValidatorData(
-                settings.bandersnatch_public,
-                settings.ed25519_public,
-                BlsPublic(bytes(144)),
-                ValidatorMetadata(
-                    name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2**16 - 1),
-                    host=ip,
-                    port=U16(port),
-                ),
-            ),
-            is_builder=is_builder,
-            is_validator=is_validator,
-        )
-
-        block = Block.genesis()
-        header_hash = block.save(main_db)
-        Finality.set_head(header_hash, main_db)
-
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(tsr_node.initialize())
-            tg.create_task(start_node(tsr_node))
-
-    except CancelledError as e:
-        logger.info(
-            "JAM node shutting down gracefully",
-            node_name=name,
-            err=e,
-            port=port,
-            reason="keyboard_interrupt",
-        )
-        settings.clear()
-
-    except KeyboardInterrupt:
-        logger.info(
-            "JAM node shutting down gracefully",
-            node_name=name,
-            port=port,
-            reason="keyboard_interrupt",
-        )
-
-    except Exception as e:
-        logger.critical(
-            "JAM node fatal error",
-            node_name=name,
-            port=port,
-            error=str(e)[:200],
-            error_type=type(e).__name__,
-        )
-
-        # Close db connections
-        settings.clear()
-
-        raise
+    await setup_processes(CLIENTS, node_task, 36)
