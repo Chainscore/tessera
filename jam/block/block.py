@@ -101,7 +101,7 @@ class Block:
         return self.header.validate() and self.extrinsic.validate(self.header)
 
     def produce(self, time_slot: TimeSlot, ticket: TicketEnvelope|None) -> "Block":
-        extrinsic = Extrinsic.from_collected()
+        extrinsic = Extrinsic.from_collected(time_slot)
 
         # Produce a new header from previous header
         header = self.header.produce(time_slot, extrinsic, ticket)

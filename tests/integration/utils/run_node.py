@@ -19,6 +19,7 @@ from jam.block import Block
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.logging import get_logger
+from jam.operations.ticket_queue import setup_ticket_queue
 
 # Logger for Node test
 logger = get_logger("test")
@@ -87,6 +88,9 @@ async def run_node(
         # update_state(state)
 
         settings.update()
+
+        # setup ticket queue
+        setup_ticket_queue()
 
         block = Block.genesis()
         header_hash = block.save(main_db)

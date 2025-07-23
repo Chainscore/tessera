@@ -57,6 +57,18 @@ async def test_2_tsr_1_pjam():
 
     await setup_processes(CLIENTS, node_info_printer, 80)
 
+@pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_1_tsr_2_pjam():
+    # In this config: 3 -> 1, 1 -> 0; 1 should have 2 peers
+    CLIENTS = [
+        Client(Role.VAL, 40000 + int(os.environ.get("VAL", "0"))),
+        Client(Role.PJAM, int(os.environ.get("PJAM1", "1"))),
+        Client(Role.PJAM, int(os.environ.get("PJAM2", "2"))),
+    ]
+
+    await setup_processes(CLIENTS, node_info_printer, 80)
+
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")

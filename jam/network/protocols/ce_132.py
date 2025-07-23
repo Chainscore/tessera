@@ -10,7 +10,8 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.block.extrinsics.tickets import TicketEnvelope
 import asyncio
 from jam.network.connection import NodeConnection
-from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS
+from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS, EPOCH_LENGTH
+
 
 # Module-specific logger
 logger = get_logger("network")
@@ -133,6 +134,19 @@ class SafroleTicketDistribution(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             # TODO: process ticket
+
+            curr_time = time.time()
+            ts = int((curr_time - GENESIS_TS) // 6)
+            current_slot = ts % EPOCH_LENGTH
+            if current_slot < TICKET_SUBMISSION_END:
+                print("Received ticket", data)
+                # storing ticket extrinsic
+                print(f"Storing ticket in extrinsic, time_slot={ts}, slot={current_slot}")
+                from jam.block.extrinsics.tickets import ticket_store
+                ticket_store.store(data.epoch_ticket.ticket)
+            else:
+                print("Tickets are not allowed after TICKET_SUBMISSION_END")
+                logger.debug("Tickets are not allowed after TICKET_SUBMISSION_END")
 
             # Return acknowledgment to validator
             ack = b""
