@@ -42,7 +42,7 @@ async def test_2_tsr():
         Client(Role.VAL, 40000 + int(os.environ.get("VAL2", "1"))),
     ]
 
-    await setup_processes(CLIENTS, node_info_printer, 80)
+    await setup_processes(CLIENTS, operate, 80)
 
 
 @pytest.mark.asyncio
@@ -55,7 +55,7 @@ async def test_2_tsr_1_pjam():
         Client(Role.PJAM, int(os.environ.get("PJAM", "1"))),
     ]
 
-    await setup_processes(CLIENTS, node_info_printer, 80)
+    await setup_processes(CLIENTS, operate, 80)
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
@@ -72,7 +72,22 @@ async def test_1_tsr_2_pjam():
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_tiny_connections():
+async def test_tiny_tsr():
+    CLIENTS = [
+        Client(Role.VAL, 40000 + 0),
+        Client(Role.VAL, 40000 + 1),
+        Client(Role.VAL, 40000 + 2),
+        Client(Role.VAL, 40000 + 3),
+        Client(Role.VAL, 40000 + 4),
+        Client(Role.VAL, 40000 + 5),
+    ]
+    
+    await setup_processes(CLIENTS, operate, 80)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_tiny_tsr_1_pjam():
     CLIENTS = [
         Client(Role.VAL, 40000 + 0),
         Client(Role.PJAM, 1),
@@ -82,5 +97,5 @@ async def test_tiny_connections():
         Client(Role.VAL, 40000 + 5),
     ]
     
-    await setup_processes(CLIENTS, node_info_printer, 40)
+    await setup_processes(CLIENTS, operate, 80)
 

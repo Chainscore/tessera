@@ -181,7 +181,7 @@ class State:
 
         try:
             header_hash = HeaderHash(block.header.hash())
-            logger.info(
+            logger.debug(
                 "Starting state transition on block",
                 header_hash=header_hash.hex(),
                 block_slot=int(block.header.slot),
@@ -198,12 +198,12 @@ class State:
             # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
             # Offenders mark - make sure offenders are present in psi.offenders
             if block.header.slot == 0:
-                logger.warning("Found genesis block, skipping", hh=header_hash.hex())
+                logger.debug("Found genesis block, skipping", hh=header_hash.hex())
                 self._lock = False
                 return False
 
             if _set.main_db.get(Block.get_storage_key_block(header_hash)) is not None:
-                logger.warning("Duplicate block found, skipping", hh=header_hash.hex())
+                logger.debug("Duplicate block found, skipping", hh=header_hash.hex())
                 self._lock = False
                 return False
 

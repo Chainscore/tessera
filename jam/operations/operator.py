@@ -48,7 +48,7 @@ async def operate(is_builder = False):
         if not node:
             ts += 1
             continue
-        logger.debug("Node operations started for a new timeslot", time_slot=ts, peers=len(node.active_peers), connections=len(node.all_connected))
+        logger.info(f"New Time Slot #{ts}", peers=len(node.active_peers), connections=len(node.all_connected))
         # Schedule tasks to run immediately
         for dispatch in dispatch_fns(is_builder):
             (task_ts, runner) = dispatch

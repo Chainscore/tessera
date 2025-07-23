@@ -176,7 +176,7 @@ class ThemedRenderer(ConsoleRenderer):
         parts: list[str] = []
 
         if node:
-            parts.append(f"{self.pal['node']}[{node}]{RESET}")
+            parts.append(f"{self.pal['node']}[{node + "_" * (10 - (len(node)))}]{RESET}")
 
         if component:
             parts.append(f"{self.pal['logger']}[{component}]{RESET}")
