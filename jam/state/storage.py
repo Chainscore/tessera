@@ -103,6 +103,7 @@ class StateStorage:
         if self._read_only:
             raise PermissionError("State storage is not writable")
         _state_cache = StateUpdates({})
+
         for k, v in self._updates.items():
             curr_val = self._DB.get(k)
             if kv and hh:
@@ -110,9 +111,10 @@ class StateStorage:
             if v is None:
                 self._DB.delete(k)
                 self._TRIE.delete(Bytes(k))
-            elif curr_val != v:
+            elif v != curr_val:
                 self._DB.put(k, v)
                 self._TRIE.update(Bytes(k), Bytes(v))
+        
         # Save the cache to DB
         self._updates = {}
         # State cache to store in DB

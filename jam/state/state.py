@@ -188,6 +188,9 @@ class State:
                 parent_hash=block.header.parent.hex()[:16] + "...",
                 state_root=block.header.parent_state_root.hex()[:16] + "...",
                 author_index=int(block.header.author_index),
+                preimages=len(block.extrinsic.preimages),
+                wrs=len(block.extrinsic.guarantees),
+                assurances=len(block.extrinsic.assurances),
             )
 
             # TODO: Validate block headers
@@ -220,6 +223,12 @@ class State:
 
             # Assurances
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
+            if len(newly_avail_wrs) > 0:
+                logger.critical(
+                    "Newly available WRs",
+                    count=len(newly_avail_wrs),
+                    wrs=[wr.hex()[:16] + "..." for wr in newly_avail_wrs],
+                )
 
             # Accumulation
             _, commitment_map = Accumulation.transition(

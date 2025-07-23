@@ -263,11 +263,10 @@ class BlockAnnouncement(NetworkProtocol):
             asyncio.create_task(self._process_header(header=anc.header))
             # Process goes here
             logger.info(
-                "Block announcement 📣 processed successfully",
-                stream_id=stream_id,
+                "Block announcement 📣 processed successfully", stream_id=stream_id,
                 block_slot=int(anc.final.time_slot),
-                parent_hash=anc.final.header_hash.hex()[:16] + "...",
                 header_hash=anc.header.hash().hex()[:16] + "...",
+                root=anc.header.parent_state_root.hex()[:16] + "..."
             )
 
     def res_intercept(self, stream_id: int, client):
@@ -308,12 +307,8 @@ class BlockAnnouncement(NetworkProtocol):
         logger.debug(f"Received {len(blocks_to_import)} blocks. Importing...")
 
         for block in reversed(blocks_to_import):
+            print("importing block", block.header.slot)
             state.transition(block)
-            logger.debug(
-                "Imported block",
-                header_hash=block.header.hash().hex(),
-                slot=block.header.slot,
-            )
 
         logger.info("Sync complete!", state_root=state.root)
         return

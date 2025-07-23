@@ -111,17 +111,24 @@ class BlockRequest(NetworkProtocol):
 
         start_timeslot = start_block.header.slot
         if data.dir == Direction.AscExc:
-            start_key = Block.get_storage_key_slot(start_timeslot)
+            start_key = Block.get_storage_key_slot(start_timeslot + 1)
             end_key = Block.get_storage_key_slot(TimeSlot(2**32 - 1))
+            limit = int(data.max_blocks)
         else:
             start_key = Block.get_storage_key_slot(TimeSlot(0))
-            end_key = Block.get_storage_key_slot(start_timeslot)
-        
+            end_key = Block.get_storage_key_slot(start_timeslot + 1)
+            limit = 2**32 - 1 
+
+
         hhs = settings.main_db.get_range(
             start_key, 
             end_key,
-            limit=int(data.max_blocks)
+            limit=limit
         )
+
+        # If desc, take last max_blocks
+        if data.dir == Direction.DesInc:
+            hhs = dict(list(hhs.items())[-data.max_blocks:])
 
         # Get all header hashes in between
         all_blocks = []
@@ -133,22 +140,22 @@ class BlockRequest(NetworkProtocol):
                 logger.error("Block not found against recorded header_hash", header_hash=hh.hex())
                 break
 
-        if data.dir == Direction.AscExc:
-            all_blocks.reverse()
+
+        # It has to be an array and not a vector 
+        msg = TypedArray[Block, len(all_blocks)](all_blocks).encode()
+        data = U32(len(msg)).encode() + msg
         
-        data = TypedArray[Block, len(all_blocks)](all_blocks).encode()
-        msg = U32(len(data)).encode() + data
-        MAX_CHUNK = 1200 # < 1350 safety
-
+        CHUNK_SIZE = 1200 
         offset = 0
-        while offset < len(msg):
-            chunk = msg[offset : offset + MAX_CHUNK]
-            offset += len(chunk)
-            if offset == len(msg):
-                server.stream_and_close(chunk, stream_id)        # end_stream=True
+        # Manually chunk it up, aioquic twrow invalid payload error 
+        while offset < len(data):
+            chunk = data[offset: offset+CHUNK_SIZE]
+            if len(chunk) < CHUNK_SIZE:
+                server.stream_and_close(chunk, stream_id)
             else:
-                server.stream_and_keep_open(chunk, stream_id)    # end_stream=False
-
+                server.stream_and_keep_open(chunk, stream_id)
+            offset += len(chunk)
+        
         logger.info(
             "Blocks request completed successfully. Closed stream",
             stream_id=stream_id,

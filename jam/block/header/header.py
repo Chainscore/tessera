@@ -140,8 +140,7 @@ class Header:
         if isinstance(s_vals, GammaSFallback):
             if author.bandersnatch != s_vals[slot_entry]:
                 raise BlockError(
-                    BlockErrorCode.INVALID_AUTHOR,
-                    f"Expected {s_vals[slot_entry]}, got {author.bandersnatch}",
+                    BlockErrorCode.INVALID_AUTHOR, f"E: {s_vals[slot_entry]}, A: {author.bandersnatch}",
                 )
         else:
             if s_vals[slot_entry].id != vrf_output(self.seal):
@@ -166,7 +165,7 @@ class Header:
 
         # State root check
         if self.parent_state_root != state.root:
-            raise BlockError(BlockErrorCode.INCORRECT_STATE_ROOT)
+            raise BlockError(BlockErrorCode.INCORRECT_STATE_ROOT, f"E: {self.parent_state_root.hex()}, A: {state.root.hex()}")
         
         # Marker checks
         is_new_epoch = (self.slot // EPOCH_LENGTH) == (state.tau // EPOCH_LENGTH)
