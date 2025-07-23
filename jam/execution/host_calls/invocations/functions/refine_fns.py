@@ -88,9 +88,9 @@ class RefineFunctions(INVF):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
         if memory.is_accessible(address=p, length=z, for_write=True):
-            from jam.work_package.processor import Processor
+            from jam.work_package.utils import Utils
 
-            x = Processor.zero_padding(
+            x = Utils.zero_padding(
                 value=ByteArray(memory.read(address=p, length=z)), n=Uint(SEGMENT_SIZE)
             )
         else:
