@@ -1,3 +1,5 @@
+import asyncio
+
 from tsrkit_types import Bytes, U16, Uint
 
 from jam.execution.pvm.code import Code
@@ -33,6 +35,10 @@ class Builder:
         from jam.settings import settings
         from jam.network.node import node
         from jam.__main__ import TIMESLOT
+
+        while len(node.peer_conn) < 6:
+            print("SLEEPING")
+            await asyncio.sleep(1)
 
         from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 
@@ -100,7 +106,7 @@ class Builder:
             curr_timeslot=curr_ts,
         )
 
-        # responses = await CE133.transmit(node, data)
+        responses = await CE133.transmit(node, data)
         logger.debug("Work package transmitted", node_name=node.name, iteration=wp_iter)
 
     @staticmethod
