@@ -211,7 +211,7 @@ def test_tree():
     utils = Utils()
     merklizer = BMRFunctions()
 
-    root = merklizer.cd_merkle_fn(segments)
+    root = merklizer.cd_merklize(segments)
 
     print("\n\nACTUAL ROOT", root.hex())
 

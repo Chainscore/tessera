@@ -129,7 +129,7 @@ def test_paged_proof():
 
         paths.append(path)
 
-        leaf = merklizer.leaf_page_fn(values=segments, size=Uint(6), index=Uint(x))
+        leaf = merklizer.subtree_leaves(values=segments, page_depth=6, index=x)
         leaves.append(leaf)
 
         merkle_path = bytes(len(path)) + path.encode()
@@ -144,7 +144,7 @@ def test_paged_proof():
 
     single_proofs = TypedVector[ChoicedHashes]([])
     for i in range(6):
-        single_proof = merklizer.merkle_path_fn(segments, Uint(0), Uint(i))
+        single_proof = merklizer.subtree_path(segments, Uint(0), Uint(i))
         single_proofs.append(single_proof)
 
     global NODES
