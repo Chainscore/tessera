@@ -23,7 +23,7 @@ class JudgmentRecord:
     @staticmethod
     def dummy()-> "JudgmentRecord":
         true_votes:ValidatorList=ValidatorList([])
-        false_votes:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3)])
+        false_votes:ValidatorList=ValidatorList([ValidatorIndex(0)])
         announces:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3),ValidatorIndex(4),ValidatorIndex(5)])
         return JudgmentRecord(true_votes=true_votes,false_votes=false_votes,announces=announces)
 
@@ -33,7 +33,7 @@ class JudgmentRecord:
 
 @structure
 class TrancheState:
-    unaudited_list: TypedVector[WorkReportHash] #Q ->[wr1,2,3,4]->[]
+    unaudited_list: TypedVector[WorkReport] #Q ->[wr1,2,3,4]->[]
     judgments: Dictionary[WorkReportHash, JudgmentRecord] # {WR:J,S}
     valid_set: TypedVector[WorkReportHash] # Already validated_wrs [wr,1,2,3,4]
     invalid_set: TypedVector[WorkReportHash] # Already invalid_wrs
@@ -41,7 +41,7 @@ class TrancheState:
     @staticmethod
     def empty()->"TrancheState":
         return TrancheState(
-            unaudited_list=TypedVector[WorkReportHash]([]),
+            unaudited_list=TypedVector[WorkReport]([]),
             judgments=Dictionary[WorkReportHash, JudgmentRecord]({}),
             valid_set=TypedVector[WorkReportHash]([]),
             invalid_set=TypedVector[WorkReportHash]([])
@@ -126,6 +126,7 @@ class TrancheStore:
         state.judgments[wr_hash].announces.append(validator_index)
         self._save_state(tranche, state)
         logger.info("Updated announcement for work report", wr_hash =wr_hash)
+
 
 
     # ----- valid_set ----- #

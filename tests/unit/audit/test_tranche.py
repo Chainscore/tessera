@@ -8,9 +8,9 @@ import math
 # from rockstore import RockStore
 
 from jam.audit.tranche_engine import TrancheEngine
-from jam.operations.tranche_store import EncodedWR, Tranche, TrancheState, JudgmentRecord, TrancheStore,tranche_store
-from jam.types.protocol.core import TrancheIndex
-from jam.types.protocol.crypto import HeaderHash
+from jam.operations.tranche_store import Tranche, TrancheState, JudgmentRecord, TrancheStore, ValidatorList,tranche_store
+from jam.types.protocol.core import TrancheIndex, ValidatorIndex
+from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.types.work.report import WorkReport, WorkReportHash
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.dictionary import Dictionary
@@ -30,16 +30,19 @@ def create_test_tranche_state() -> TrancheState:
     - wr1 with dummy judgments (treated as likely valid)
     - wr2 with empty judgments (treated as pending/unaudited)
     """
-    wr1 = dummy_work_report()
-    wr2 = another_dummy_work_report()
-
-    unaudited_list = TypedVector[WorkReport]([wr1, wr2])
-    judgments = Dictionary[EncodedWR, JudgmentRecord]({
-        wr1.encode(): JudgmentRecord.dummy(),
-        wr2.encode(): JudgmentRecord.dummy()
+    wr_hash1 = WorkReportHash(Hash.blake2b(dummy_work_report().encode()))
+    wr_hash2 = WorkReportHash(Hash.blake2b(another_dummy_work_report().encode()))
+    dummy_judgements1=JudgmentRecord.dummy()
+    dummy_judgements2=JudgmentRecord.dummy()
+    dummy_judgements2.true_votes=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3),ValidatorIndex(4),ValidatorIndex(5)])
+    dummy_judgements2.false_votes=ValidatorList([])
+    unaudited_list = TypedVector[WorkReportHash]([wr_hash1, wr_hash2])
+    judgments = Dictionary[WorkReportHash, JudgmentRecord]({
+        wr_hash1: dummy_judgements1,
+        wr_hash2: dummy_judgements2
     })
-    valid_set = TypedVector[WorkReport]([])
-    invalid_set = TypedVector[WorkReport]([])
+    valid_set = TypedVector[WorkReportHash]([])
+    invalid_set = TypedVector[WorkReportHash]([])
 
     return TrancheState(
         unaudited_list=unaudited_list,
@@ -86,3 +89,4 @@ async def test_tranche_engine():
 
 if __name__ == "__main__":
     asyncio.run(test_tranche_engine())
+    # create_test_tranche_state()

@@ -1,4 +1,5 @@
-from tsrkit_types import TypedVector
+from typing import List
+from tsrkit_types import Option, TypedVector
 from tsrkit_types.dictionary import Dictionary
 
 from jam.audit.tranche_engine import TrancheEngine
@@ -26,7 +27,7 @@ class AuditEngine():
     """
 
     @classmethod
-    async def run(cls, header_hash: HeaderHash):
+    async def run(cls, header_hash: HeaderHash,raw_list:List[Option[WorkReport]]):
         from jam.network.node import node
 
         # Ensure network is up
@@ -34,12 +35,10 @@ class AuditEngine():
             logger.debug("Network not initialized – skipping audit")
             return
 
-        raw_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
+        # raw_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
         unaudited_list=TypedVector[WorkReport]([wr for wr in raw_list if wr is not None])
 
-
-
-        valid_set = TypedVector[WorkReportHash]([])
+        valid_set = TypedVector[WorkReport]([])
         invalid_set = TypedVector[WorkReportHash]([])
         judgments = Dictionary[WorkReportHash, JudgmentRecord]({})
         initTranche=Tranche(header_hash=header_hash,tranche_index=TrancheIndex(0))

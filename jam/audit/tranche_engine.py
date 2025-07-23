@@ -26,7 +26,7 @@ class TrancheEngine:
         Run tranche processing for a given header_hash continuously, 8s per tranche.
         """
         tranche_index = TrancheIndex(0)
-        present_state=self.store._get_state(tranche=Tranche(tranche_index=tranche_index,header_hash=header_hash))
+        # present_state=self.store._get_state(tranche=Tranche(tranche_index=tranche_index,header_hash=header_hash))
         while True:
             from jam.operations.ext_store import ext_store
             initTranche=Tranche(header_hash=header_hash,tranche_index=tranche_index)
@@ -35,30 +35,32 @@ class TrancheEngine:
             logger.info(f"⚙️ Running tranche {tranche_index} for header {header_hash}, auditing {len(ts.unaudited_list)} WRs, valid {len(ts.valid_set)}, invalid {len(ts.invalid_set)}")
             #TODO: Sending the store through the task for the auditors to save their judgement & announcements in the store itself
             # asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs=ts.unaudited_list,store=self.store,tranche=initTranche))
+            asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs=ts.unaudited_list, tranche=initTranche.tranche_index))
 
             if tranche_index>0:
-                new_unaudited:TypedVector[WorkReport] = TypedVector[WorkReport]([])
+                new_unaudited:TypedVector[WorkReportHash] = TypedVector[WorkReportHash]([])
 
                 for wr in ts.unaudited_list:
-                    record: JudgmentRecord = ts.judgments.get(wr.encode(), JudgmentRecord.empty())
+                    record: JudgmentRecord = ts.judgments.get(wr, JudgmentRecord.empty())
 
                     true_count = len(record.true_votes)
                     false_count = len(record.false_votes)
-                    logger.debug(f"WR {wr.encode().hex()[:8]} | True: {true_count} | False: {false_count} | Accnouncements: {len(record.announces)} | Tranche: {tranche_index}")
+                    logger.debug(f"WR {wr.hex()[:8]} | True: {true_count} | False: {false_count} | Accnouncements: {len(record.announces)} | Tranche: {tranche_index}")
                     # TODO: Will change this true count condition which is !mentioned in GP
-                    if true_count!=0 and (false_count == 0 and true_count >= VALIDATOR_COUNT * 2 // 3 or len(record.announces)==len(record.true_votes)):
+                    if false_count == 0 and true_count >= VALIDATOR_COUNT * 2 // 3 or len(record.announces)==len(record.true_votes):
                         ts.valid_set.append(wr)
                     elif false_count >= VALIDATOR_COUNT * 1 // 3:
                         verdicts:Verdicts=Verdicts([])
                         culprits: Culprits = Culprits([])
                         faults:Faults=Faults([])
-                        ext_store.import_disp(verdicts,culprits,faults)
+                        # ext_store.import_disp(verdicts,culprits,faults)
                         ts.invalid_set.append(wr)
                     else:
                         new_unaudited.append(wr)
 
 
-                ts.unaudited_list =TypedVector[WorkReport](new_unaudited)
+
+                ts.unaudited_list =TypedVector[WorkReportHash](new_unaudited)
 
                 # print("new audits",ts.unaudited_list,ts.invalid_set,ts.valid_set)
                 if not new_unaudited:
