@@ -1,5 +1,6 @@
 import asyncio
 from time import time
+from jam.operations.operator import operate
 from jam.types.state.kappa import Kappa
 from jam.utils.constants import GENESIS_TS
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
@@ -31,7 +32,7 @@ async def test_1_tsr_1_pjam():
         Client(Role.VAL, 40000 + int(os.environ.get("VAL", "1"))),
         Client(Role.PJAM, int(os.environ.get("PJAM", "0"))),
     ]
-    await setup_processes(CLIENTS, None, 80)
+    await setup_processes(CLIENTS, operate, 240)
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")

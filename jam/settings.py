@@ -42,8 +42,8 @@ class Settings:
     ed25519_public: Bytes32
     ed25519_private: Bytes32
 
-    bandersnatch_seed: Bytes32
     bandersnatch_public: Bytes32
+    bandersnatch_seed: Bytes32
     bandersnatch_private: Bytes32
 
     # Epoch-related
@@ -94,6 +94,7 @@ class Settings:
             )
             self.bandersnatch_seed = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed))
             pub, ss = secret_from_seed(self.bandersnatch_seed)
+            # print(f"my pub {pub.hex()}, ss {ss.hex()}")
             self.bandersnatch_public = Bytes32(pub)
             self.bandersnatch_private = Bytes32(ss)
 

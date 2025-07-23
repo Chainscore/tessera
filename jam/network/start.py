@@ -24,6 +24,8 @@ async def start_node(
     loop = asyncio.get_running_loop()
 
     from jam.state.state import state
+
+    # await asyncio.sleep(10)
     
     # --- Socket --- #
     # Build one UDP socket, dual-stack, reusable
@@ -46,7 +48,7 @@ async def start_node(
         verify_mode=ssl.CERT_NONE, 
         max_data=(100*1024*1024), 
         max_stream_data=(10*1024*1024), 
-        max_datagram_size=1550, 
+        max_datagram_size=1350, 
         idle_timeout=120
     )
     cfg.quic_logger = QuicLogger()
