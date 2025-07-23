@@ -192,7 +192,7 @@ class BlockAnnouncement(NetworkProtocol):
         #     conn.has_pending_handshake = False
 
 
-        if not conn.handshake_completed:
+        if not conn.handshake_completed :
             # Parse received Handshake
             h_len= U32.decode(data[0:4])
             if len(data[4:]) != h_len:
@@ -227,12 +227,12 @@ class BlockAnnouncement(NetworkProtocol):
             
             anc = Announcement.decode(data[4:])
             hh = anc.header.hash()
+            # Process goes here
+            asyncio.create_task(self._process_header(header=anc.header, node=conn))
             # if we have not already processed this header, announce it 
             if hh not in self._processed_headers:
                 self._processed_headers.add(hh)
                 asyncio.create_task(self.transmit(anc))
-            asyncio.create_task(self._process_header(header=anc.header, node=conn))
-            # Process goes here
             logger.debug(
                 "Block announcement 📣 processed successfully", stream_id=stream_id,
                 block_slot=int(anc.final.time_slot),

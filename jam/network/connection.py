@@ -212,9 +212,13 @@ class NodeConnection(QuicConnectionProtocol):
                 data_len=len(data)
             )
 
-            if self.up0_stream is None and prefix == PrefixType.UP0:
+            from jam.network.start import node
+            assert node, "Node must be initialized before handling streams."
+
+            if self.up0_stream is None and self.ed25519_public in node.neighbors and prefix == PrefixType.UP0:
                 # Send UP0 Handshake 
                 from jam.network.protocols.up_0 import BlockAnnouncement 
+
                 BlockAnnouncement().handshake(stream_id, self)
                 self.up0_stream = stream_id
                 if len(data) == 1:
