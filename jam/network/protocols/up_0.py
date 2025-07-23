@@ -255,7 +255,7 @@ class BlockAnnouncement(NetworkProtocol):
                     server.peer_handshake = True
 
                     # Start synchornization
-                    asyncio.create_task(self.synchronise(h, node, peer=peer))
+                    # asyncio.create_task(self.synchronise(h, node, peer=peer))
 
             # Handle announcement
             else:

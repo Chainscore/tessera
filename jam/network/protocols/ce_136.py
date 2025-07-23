@@ -62,7 +62,7 @@ class WorkReportRequest(NetworkProtocol):
     async def transmit(
         self, node: Node, data: CE136Data, assurers: Assurers = None
     ) -> WorkReport | None:
-        """Request Work Report from Node (server)"""
+        """Request Work Report from Node"""
 
         msg_a = data.work_report_hash.encode()
         len_a = data.len.encode()
@@ -99,7 +99,7 @@ class WorkReportRequest(NetworkProtocol):
         return None
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """Intercept & Fetch requested Work Report on Node (server)"""
+        """Intercept & Fetch requested Work Report on Node"""
         buffer = server.stream_buffer[stream_id]
 
         logger.info("Received Work Report Request")
@@ -131,6 +131,9 @@ class WorkReportRequest(NetworkProtocol):
                 peer=server.peer,
             )
         except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
             logger.error(Code.BAD_RESPONSE, error=str(e))
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> WorkReport | None:

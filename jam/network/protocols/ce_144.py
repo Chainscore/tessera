@@ -62,7 +62,6 @@ class Transmit:
     announcement: Announcement
 
 
-@structure
 class Evidence(Choice):
     first_tranche: FirstTrancheEvidence
     Subsequent_tranche: SubsequentTrancheEvidence

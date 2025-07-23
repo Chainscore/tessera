@@ -85,9 +85,10 @@ class ShardDistributionProtocol(NetworkProtocol):
         self._prefix = PrefixType.CE137
 
     async def transmit(self, node: Node, data: CE137Data, assurers: Assurers = None):
-        """Transmit Erasure-Root and Shard Index from Assurer (client) to Guarantor (server)"""
+        """Transmit Erasure-Root and Shard Index Query from Assurer to Guarantor"""
 
-        msg_a = data.query.encode()
+        query = data.query
+        msg_a = query.encode()
         len_a = data.len.encode()
 
         logger.info(f"Requesting shard from {len(node.peer_conn)} guarantors")
@@ -98,24 +99,29 @@ class ShardDistributionProtocol(NetworkProtocol):
                 # if int(peer.port) != 40001:
                 #     continue
 
-                if Uint[16](peer.peer_index) in assurers:
-                    logger.debug("Requesting shard from", peer=str(peer))
-                    client = node.peer_conn[peer][1]
+                if Uint[16](peer.peer_index) not in assurers:
+                    continue
 
-                    # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(
-                        message=self._prefix.encode()
-                    )
+                logger.debug(
+                    "Requesting full shard",
+                    peer=peer,
+                    er_root=query.erasure_root.hex(),
+                    s_ind=query.shard_index,
+                )
+                client = node.peer_conn[peer][1]
 
-                    # Append prefix to stream buffer so that we know the stream for handling response
-                    client.stream_buffer[stream_id] = self._prefix.encode()
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                    # Send Messages with their lengths
-                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    # res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
-                    res = client.close_and_wait(message=msg_a, stream_id=stream_id)
-                    task = asyncio.create_task(res)
-                    tasks.append(task)
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
+
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                # res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                task = asyncio.create_task(res)
+                tasks.append(task)
 
             responses = await gather_with_exceptions(tasks)
 
@@ -128,7 +134,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """Intercept & Process Erasure-Root and Shard Index on Guarantor (server)"""
+        """Intercept & Process Erasure-Root and Shard Index Query on Guarantor"""
         from jam.settings import settings
 
         buffer = server.stream_buffer[stream_id]
@@ -139,7 +145,7 @@ class ShardDistributionProtocol(NetworkProtocol):
 
             logger.info(
                 "Received shard request",
-                erasure_root=data.query.erasure_root,
+                erasure_root=data.query.erasure_root.hex()[:16] + "...",
                 shard_index=data.query.shard_index,
                 peer=server.peer,
             )
@@ -177,17 +183,17 @@ class ShardDistributionProtocol(NetworkProtocol):
                     f"Length of both type of shards should be {chain_config.num_validators}"
                 )
 
-            bmrfunctions = BMRFunctions()
+            merklizer = BMRFunctions()
             s = TypedVector[Bytes]([])
             for i in range(chain_config.num_validators):
                 bundle_shard_hash = Hash.blake2b(bs_dict[i].encode())
                 segment_shard = SegmentsShard(ss_dict[i].shard)
-                segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
+                segments_shard_root = merklizer.wb_merklize(values=segment_shard)
                 shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                 s.append(Bytes(shards_key.encode()))
 
             justification = Justification(
-                bmrfunctions.trace_fn(values=s, index=shard_index).unwrap()
+                merklizer.trace_fn(values=s, index=shard_index).unwrap()
             )
 
             justification_da = JustificationsDA(audit)
@@ -209,12 +215,8 @@ class ShardDistributionProtocol(NetworkProtocol):
             server.stream_and_close(msg_c, stream_id)
 
         except Exception as e:
-            msg_a = Null.encode()
-            len_a = Uint[32](len(msg_a)).encode()
-
-            # Send response
-            server.stream_and_keep_open(len_a, stream_id)
-            server.stream_and_close(msg_a, stream_id)
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
 
             logger.error(
                 "Error processing shard request",
@@ -237,7 +239,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info("Data received on Assurer Node")
+            logger.info("Full Shard received", peer=client.peer)
 
             return data.bundle_shard, data.segments_shard, data.justification
 

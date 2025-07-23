@@ -31,7 +31,13 @@ class Query:
     seg_indexes: SegmentIndexes
 
 
-Queries = TypedVector[Query]
+class Queries(TypedVector[Query]):
+    def hex_roots(self):
+        roots = []
+        for query in self:
+            roots.append(query.erasure_root.hex()[:8] + "...")
+
+        return roots
 
 
 @structure
@@ -94,7 +100,12 @@ class SegmentShardRequestBase(NetworkProtocol):
                 if peers and peer.peer_index not in peers:
                     continue
 
-                logger.info("Requesting seg shard from:", port=peer.port)
+                logger.debug(
+                    "Requesting segment shard",
+                    peer=peer,
+                    queries=len(data.queries),
+                    roots=data.queries.hex_roots(),
+                )
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix

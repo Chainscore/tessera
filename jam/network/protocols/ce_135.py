@@ -11,6 +11,7 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.types.block.extrinsics.guarantees import ReportGuarantee
 from jam.types.protocol.crypto import Hash
 from jam.types.work.manifest import Assurers
+from jam.work_package.processor import Processor
 
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.reports import ReportsDA
@@ -123,20 +124,7 @@ class WorkReportDistribution(NetworkProtocol):
 
             ext_store.import_rg(data.guaranteed_wr)
 
-            # save assurers
-            assurers = Assurers([])
-            for i in data.guaranteed_wr.signatures:
-                assurers.append(i.validator_index)
-
-            from jam.settings import settings
-
-            # report hash to assurers mapping
-            as_da = ReportHashAssurerMap(settings.d3l)
-            as_da.put(data.guaranteed_wr.report, assurers)
-
-            # erasure root to report hash & assurers mapping
-            er_da = ErasureAssurerMap(settings.d3l)
-            er_da.put(data.guaranteed_wr.report, assurers)
+            Processor.process_guaranteed_report(data.guaranteed_wr)
 
             # Send Acknowledgement
             ack = self._prefix.encode()
@@ -145,7 +133,7 @@ class WorkReportDistribution(NetworkProtocol):
             logger.info("Sent acknowledgement back to guarantor")
 
             logger.debug("Fetching assigned shard")
-            asyncio.create_task(self._req_shard(data.guaranteed_wr, node, assurers))
+            asyncio.create_task(self._req_shard(data.guaranteed_wr, node))
 
         except Exception as e:
             # Stop Streaming
@@ -174,11 +162,12 @@ class WorkReportDistribution(NetworkProtocol):
         return OptBool(Null)
 
     @staticmethod
-    async def _req_shard(data: ReportGuarantee, node: Node, assurers: Assurers):
+    async def _req_shard(data: ReportGuarantee, node: Node):
         from jam.settings import settings
 
         slot = data.slot
         signatures = data.signatures
+        assurers = Assurers([sign.validator_index for sign in signatures])
 
         report = data.report
         if node.validator_index not in assurers:
@@ -198,9 +187,10 @@ class WorkReportDistribution(NetworkProtocol):
             data = CE137Data(len=U32(len(query.encode())), query=query)
 
             logger.debug(
-                "Requesting Shard", shard_index=shard_index, erasure_root=er_root
+                "Requesting Shard",
+                shard_index=shard_index,
+                erasure_root=er_root.hex()[:16] + "...",
             )
-
             try:
                 responses = await CE137.transmit(
                     node=node, data=data, assurers=assurers
@@ -208,7 +198,7 @@ class WorkReportDistribution(NetworkProtocol):
                 for shard in responses:
                     # Save Shard
                     if shard is not None:
-                        bmrfunctions = BMRFunctions()
+                        merklizer = BMRFunctions()
 
                         bundle_shard = shard[0]
                         segments_shard = shard[1]
@@ -216,14 +206,14 @@ class WorkReportDistribution(NetworkProtocol):
 
                         # creating leaf
                         bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
-                        segments_shard_root = bmrfunctions.wb_merkle_fn(
+                        segments_shard_root = merklizer.wb_merklize(
                             values=segments_shard
                         )
                         shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                         s = Bytes(shards_key.encode())
 
                         # verifying justification
-                        verification = bmrfunctions.verify_wb_merkle(
+                        verification = merklizer.verify_wb_tree(
                             leaf=s,
                             index=shard_index,
                             justification=justification,
@@ -257,13 +247,15 @@ class WorkReportDistribution(NetworkProtocol):
                             rep_da.put(wr_hash, report)
 
                             logger.info(
-                                f"📩 Assured work report : {wr_hash} with slot {slot}"
+                                f"📩 Assured work report",
+                                wr_hash=wr_hash.hex()[:16] + "...",
+                                slot=slot,
                             )
 
                             break
             except Exception as e:
                 logger.error(
-                    "Failed to request shards using ce_137",
+                    "Failed to request Full Shard (CE137)",
                     error=str(e),
                     error_type=type(e).__name__,
                 )
@@ -302,17 +294,17 @@ class WorkReportDistribution(NetworkProtocol):
                     f"Length of both type of shards should be {chain_config.num_validators}"
                 )
 
-            bmrfunctions = BMRFunctions()
+            merklizer = BMRFunctions()
             s = TypedVector[Bytes]([])
             for i in range(chain_config.num_validators):
                 bundle_shard_hash = Hash.blake2b(bs_dict[i].encode())
                 segment_shard = SegmentsShard(ss_dict[i].shard)
-                segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
+                segments_shard_root = merklizer.wb_merklize(values=segment_shard)
                 shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                 s.append(Bytes(shards_key.encode()))
 
             justification = Justification(
-                bmrfunctions.trace_fn(values=s, index=shard_index).unwrap()
+                merklizer.trace_fn(values=s, index=shard_index).unwrap()
             )
 
             justification_da = JustificationsDA(audit)

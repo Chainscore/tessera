@@ -1,8 +1,7 @@
 import asyncio
 from typing import cast, Tuple
 
-from tsrkit_types import Uint, structure, TypedVector, Bytes, Null
-from tsrkit_types.integers import Int
+from tsrkit_types import Uint, structure, TypedVector, Bytes
 
 from jam.logging import logger
 
@@ -10,17 +9,16 @@ from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_137 import CE137Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.work.manifest import Segment, Justification
-from jam.types.work.shard import SegmentsShard, ShardIndex, BundleShard, ShardKey
+from jam.types.work.manifest import Justification
+from jam.types.work.shard import SegmentsShard, BundleShard
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.work_package.stores.audits import AuditShardsDA, JustificationsDA
 from jam.work_package.stores.segments import SegmentShardsDA
 from jam.merklization import BMRFunctions
-from jam.types.protocol.crypto import Hash
 from jam.utils.gather import gather_with_exceptions
-from jam.types.protocol.core import ValidatorIndex
+from jam.types.work.manifest import Assurers
 
 
 class CE138Data(CE137Data):
@@ -66,11 +64,10 @@ class AuditShardRequestProtocol(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE138
 
-    async def transmit(
-        self, node: Node, data: CE138Data, node_index: ValidatorIndex = None
-    ):
-        """Transmit Erasure-Root and Shard Index from Auditor (client) to Assurer (server)"""
+    async def transmit(self, node: Node, data: CE138Data, assurers: Assurers = None):
+        """Transmit Erasure-Root and Shard Index from Auditor to Assurer"""
 
+        query = data.query
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
@@ -81,41 +78,46 @@ class AuditShardRequestProtocol(NetworkProtocol):
         tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
-                if peer.peer_index != node_index:
-                    break
-                else:
-                    logger.info("Requesting audit shard from peer", port=peer.port)
-                    client = node.peer_conn[peer][1]
+                if peer.peer_index not in assurers:
+                    continue
 
-                    # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(
-                        message=self._prefix.encode()
-                    )
+                logger.debug(
+                    "Requesting audit shard",
+                    peer=peer,
+                    er_root=query.erasure_root.hex(),
+                    s_ind=query.shard_index,
+                )
+                client = node.peer_conn[peer][1]
 
-                    # Append prefix to stream buffer so that we know the stream for handling response
-                    client.stream_buffer[stream_id] = self._prefix.encode()
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                    # Send Messages with their lengths
-                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    res = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                # Append prefix to stream buffer so that we know the stream for handling response
+                client.stream_buffer[stream_id] = self._prefix.encode()
 
-                    task = asyncio.create_task(res)
-                    tasks.append(task)
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                    responses = await gather_with_exceptions(tasks)
+                task = asyncio.create_task(res)
+                tasks.append(task)
 
-                    if responses is not None:
-                        return responses
+                responses = await gather_with_exceptions(tasks)
+
+                if responses is not None:
+                    return responses
 
         except Exception as e:
             logger.error(
                 "Failed to request audit shard.",
+                er_root=query.erasure_root.hex(),
+                s_ind=query.shard_index,
                 error=str(e),
                 error_type=type(e).__name__,
             )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """Intercept & Process Erasure-Root and Shard Index on Assurer (server)"""
+        """Intercept & Process Erasure-Root and Shard Index on Assurer"""
         from jam.settings import settings
 
         buffer = server.stream_buffer[stream_id]
@@ -147,14 +149,13 @@ class AuditShardRequestProtocol(NetworkProtocol):
             bundle_shard = bs_dict[shard_index]
 
             # Fetch Justifications
-            # justification_da = JustificationsDA(audit)
-            # justification = justification_da.get(erasure_root, shard_index)
-            justification = Justification([])
+            justification_da = JustificationsDA(audit)
+            justification = justification_da.get(erasure_root, shard_index)
 
             # build segment shard root
-            bmrfunctions = BMRFunctions()
+            merklizer = BMRFunctions()
             segment_shard = SegmentsShard(ss_dict[shard_index].shard)
-            segments_shard_root = bmrfunctions.wb_merkle_fn(values=segment_shard)
+            segments_shard_root = merklizer.wb_merklize(values=segment_shard)
             s = Bytes(segments_shard_root.encode())
 
             justification.append(s)
@@ -171,16 +172,9 @@ class AuditShardRequestProtocol(NetworkProtocol):
             server.stream_and_close(msg_b, stream_id)
 
         except Exception as e:
-            msg_a = Bytes(b"").encode()
-            len_a = Uint[32](len(msg_a)).encode()
-            msg_b = Bytes(b"").encode()
-            len_b = Uint[32](len(msg_a)).encode()
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
 
-            # Send response
-            server.stream_and_keep_open(len_a, stream_id)
-            server.stream_and_keep_open(msg_a, stream_id)
-            server.stream_and_keep_open(len_b, stream_id)
-            server.stream_and_close(msg_b, stream_id)
             logger.error(
                 "Failed to find audit shard.", error=str(e), error_type=type(e).__name__
             )
@@ -198,11 +192,9 @@ class AuditShardRequestProtocol(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info("Data received on Auditor Node")
-
-            logger.info("Received bundle shard")
+            logger.info("Audit Shard received", peer=client.peer)
             return data.bundle_shard, data.justification
 
         except Exception as e:
-            logger.error(Code.BAD_SRESPONSE, error=str(e))
+            logger.error(Code.BAD_RESPONSE, error=str(e))
             return None

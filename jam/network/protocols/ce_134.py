@@ -2,6 +2,8 @@ import asyncio
 import time
 
 from typing import cast, TYPE_CHECKING, Tuple
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import Option, Uint, structure, Null, Bytes
 
 from jam.logging import get_logger
@@ -21,7 +23,7 @@ from jam.types.work import SegmentRootLookup
 from jam.work_package.validator import Validator
 
 from jam.utils.gather import gather_with_exceptions
-from jam.utils.constants import GENESIS_TS
+from jam.utils.constants import GENESIS_TS, SIGNING_CONTEXTS
 
 # Module-specific logger
 logger = get_logger("network")
@@ -229,23 +231,27 @@ class WorkPackageSharing(NetworkProtocol):
                 sr_lookup=data.core_segment.segment_root_map,
             )
 
-            ed25519_key = node.ed_pvt_key
-            pref = Bytes("jam_guarantee", "utf-8")
+            ed25519_key = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
 
             # Build Guarantee
             logger.debug("Building guarantee..")
-            payload = wr.core_index.encode() + wr.encode()
-            guarantee = pref + Hash.blake2b(payload).encode()
+            payload = SIGNING_CONTEXTS["guarantee"] + wr_hash.encode()
 
             # Sign the Guarantee
             logger.debug("Signing guarantee..")
-            sign = Ed25519Signature(ed25519_key.sign(guarantee))
+            sign = Ed25519Signature(ed25519_key.sign(payload))
 
             # Build Credential
             cred = Credential(work_report_hash=wr_hash, ed25519_signature=sign)
 
             # Return Credential to OG Guarantor
-            logger.debug("Sharing guarantee..")
+
+            logger.debug(
+                "Sharing guarantee..",
+                wr_hash=wr_hash.hex()[:16] + "...",
+                sign=sign.hex()[:16] + "...",
+                to=server.peer,
+            )
             msg_a = cred.encode()
             len_a = Uint[32](len(msg_a)).encode()
 
@@ -292,17 +298,12 @@ class WorkPackageSharing(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.debug(
-                "Report credential received - checking for majority",
-                stream_id=stream_id,
-                wr_hash=data.cred.work_report_hash.hex()[:16] + "...",
-                signature_length=len(data.cred.work_report_hash),
-            )
-
             logger.info(
                 "[EXTRINSICS]: RECEIVED GUARANTEE",
+                stream_id=stream_id,
                 peer=client.peer,
-                guarantee=data.cred,
+                wr_hash=data.cred.work_report_hash.hex()[:16] + "...",
+                sign=data.cred.ed25519_signature.hex()[:16] + "...",
             )
 
             return data.cred, client.peer

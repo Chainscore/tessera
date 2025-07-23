@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import cast
 
@@ -188,15 +189,11 @@ class WorkPackageSubmission(NetworkProtocol):
 
             processor = Processor(server.node)
 
-            wr, wr_hash = processor.process(wp, ci, data.extrinsics)
-
-            logger.info(
-                "Work package processed successfully",
-                stream_id=stream_id,
-                wp_hash=wp.hash().hex()[:16] + "...",
-                wr_hash=wr_hash,
-                core_index=int(ci),
+            # wr, wr_hash = processor.process(wp, ci, data.extrinsics)
+            refine_task = asyncio.create_task(
+                processor.process(wp, ci, data.extrinsics)
             )
+            refine_task.add_done_callback(self.on_done_callback(stream_id, wp, ci))
 
             # Return acknowledgment to Builder
             ack = b""
@@ -235,3 +232,21 @@ class WorkPackageSubmission(NetworkProtocol):
             return True, client.peer
 
         return None, client.peer
+
+    @staticmethod
+    def on_done_callback(stream_id, wp, ci):
+        def on_done(task: asyncio.Future):
+            try:
+                wr, wr_hash = task.result()
+                logger.info(
+                    "Work package processed successfully",
+                    stream_id=stream_id,
+                    wp_hash=wp.hash().hex()[:16] + "...",
+                    wr_hash=wr_hash.hex()[:16] + "...",
+                    core_index=int(ci),
+                )
+
+            except Exception as e:
+                logger.error("Refine task failed", stream_id=stream_id, error=str(e))
+
+        return on_done

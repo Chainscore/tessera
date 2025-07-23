@@ -71,8 +71,11 @@ class SegmentShardRequest(SegmentShardRequestBase):
             server.stream_and_close(msg_a, stream_id)
 
         except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
             logger.error(
-                "Failed to request shards using ce_139",
+                "Failed to handle shard request via CE140",
                 error=str(e),
                 error_type=type(e).__name__,
             )
@@ -103,7 +106,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
                     "Parsed segment", cnt=cnt, stream_id=stream_id, peer=client.peer
                 )
 
-            logger.info(f"Received CE139 segment shards.")
+            logger.info("Segment Shards received via CE139", peer=client.peer)
 
             return segments
 

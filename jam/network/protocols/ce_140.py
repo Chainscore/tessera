@@ -125,8 +125,11 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
                 else:
                     server.stream_and_keep_open(msg_n, stream_id)
         except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
             logger.error(
-                "Failed to request shards using ce_140",
+                "Failed to handle shard request via CE140",
                 error=str(e),
                 error_type=type(e).__name__,
             )
@@ -165,7 +168,9 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
                 justifications.append(justification)
                 justifications_buf = justifications_buf[length + 4 :]
 
-            logger.info("Received CE140 shard+justification response")
+            logger.info(
+                "Segment Shards and Justifications received via CE140", peer=client.peer
+            )
 
             return segments, justifications
 
