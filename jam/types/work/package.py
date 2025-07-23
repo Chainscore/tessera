@@ -87,7 +87,6 @@ class WorkPackage:
         service_data = delta[self.auth_code_host].historical_lookup(
             self.context.lookup_anchor_slot, self.authorizer.code_hash
         )
-        print("bbbb", service_data)
         if service_data == None:
             return b"user", b"name"
         else:

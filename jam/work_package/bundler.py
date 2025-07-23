@@ -1,10 +1,10 @@
+import asyncio
 from math import ceil
 from typing import Tuple, Dict, List, Set
 
 from tsrkit_types import Vector, Uint, Bytes
 
 from jam.logging import get_logger
-from jam.network.protocols import SegmentShardRequest
 from jam.network.protocols.ce_139_base import SegmentIndexes, Query, Queries, CE139Data
 from jam.network.utils.shards import get_vi
 from jam.storage.item_extrinsics import ItemExtrinsics
@@ -30,7 +30,8 @@ from jam.types.work import SegmentRootLookup
 from jam.types.protocol.core import SegmentRoot
 from jam.types.protocol.crypto import OpaqueHash
 
-from jam.merklization.binary_merkle import BMRFunctions
+from jam.merklization.binary_merkle import BMRFunctions, OpaqueHashes
+from jam.utils.gather import gather_with_exceptions
 from jam.work_package.error import BundlerError, BundlerErrorCode as Code
 
 from jam.work_package.stores.mappings import (
@@ -236,7 +237,7 @@ class Bundler:
                     # Check for Segments in Cached Segments first
                     if n in segs_dict:
                         logger.debug(
-                            "Cache Hit",
+                            "Segments Cache Hit",
                             seg_root=s_root.hex()[:16],
                             er_root=e_root.hex()[:16],
                             seg_ind=n,
@@ -246,7 +247,7 @@ class Bundler:
                     # If cache miss, check in DB, and cache it
                     else:
                         logger.debug(
-                            "Cache Miss",
+                            "Segments Cache Miss",
                             seg_root=s_root.hex()[:16],
                             er_root=e_root.hex()[:16],
                             seg_ind=n,
@@ -345,6 +346,8 @@ class Bundler:
                             seg_ind=n,
                         )
 
+                        from jam.network.protocols import SegmentShardRequest
+
                         ce_139 = SegmentShardRequest()
                         for i in range(chain_config.num_validators):
                             vi = get_vi(i, wr.core_index)
@@ -403,6 +406,12 @@ class Bundler:
         for spec in w.import_segments:
             h = spec.tree_root
             n = spec.index
+            if (h, n) not in fetched_imports:
+                logger.error(
+                    f"Exception occurred compiling segments ({h},{n})",
+                )
+                raise BundlerError(Code.SEG_ERROR)
+
             segment = fetched_imports[(h, n)]
             imports.append(segment)
 
@@ -488,7 +497,7 @@ class Bundler:
                 import_map[r] = ([(n, page_index)], wr)
 
         # Fetched Jfns
-        fetched_jfns: Dict[Tuple[SegmentRoot, SegmentIndex], Justification] = {}
+        fetched_jfns: Dict[Tuple[SegmentRoot, SegmentIndex], OpaqueHashes] = {}
 
         for s_root in import_map:
             metadata = import_map[s_root]
@@ -528,7 +537,7 @@ class Bundler:
                     # Check for Pages in Cached Proofs first
                     if p in proofs_dict:
                         logger.debug(
-                            "Cache Hit",
+                            "Proofs Cache Hit",
                             seg_root=s_root.hex()[:16],
                             er_root=e_root.hex()[:16],
                             seg_ind=n,
@@ -537,12 +546,12 @@ class Bundler:
                         proof = proofs_dict[p]
 
                         _, jfn = utils.zero_depth_proof(proof, n)
-                        fetched_jfns[(s_root, n)] = Justification(jfn)
+                        fetched_jfns[(s_root, n)] = jfn
 
                     # If cache miss, check in DB, and cache it
                     else:
                         logger.debug(
-                            "Cache Miss",
+                            "Proofs Cache Miss",
                             seg_root=s_root.hex()[:16],
                             er_root=e_root.hex()[:16],
                             seg_ind=n,
@@ -563,7 +572,8 @@ class Bundler:
                             count=len(proofs),
                         )
                         _, jfn = utils.zero_depth_proof(proofs[p], n)
-                        fetched_jfns[(s_root, n)] = Justification(jfn)
+
+                        fetched_jfns[(s_root, n)] = jfn
 
                 except KeyError as PROOF_MISS:
                     logger.warning(
@@ -634,7 +644,7 @@ class Bundler:
                                 )
 
                         _, jfn = utils.zero_depth_proof(proofs_dict[p], n)
-                        fetched_jfns[(s_root, n)] = Justification(jfn)
+                        fetched_jfns[(s_root, n)] = jfn
 
                     except KeyError as SHARD_MISS:
                         logger.debug(
@@ -646,6 +656,8 @@ class Bundler:
                             seg_ind=n,
                             proof_ind=(exports_count + p),
                         )
+
+                        from jam.network.protocols import SegmentShardRequest
 
                         ce_139 = SegmentShardRequest()
                         for i in range(chain_config.num_validators):
@@ -693,7 +705,7 @@ class Bundler:
                                 )
 
                         _, jfn = utils.zero_depth_proof(proofs_dict[p], n)
-                        fetched_jfns[(s_root, n)] = Justification(jfn)
+                        fetched_jfns[(s_root, n)] = jfn
 
                 except Exception as JFN_MISS:
                     logger.error(
@@ -718,7 +730,11 @@ class Bundler:
                         f"Proofs not found for root: {s_root.hex()[:16]}, index: {n}"
                     )
 
-                justification = fetched_jfns[(s_root, n)]
+                jfn = fetched_jfns[(s_root, n)]
+                justification = Justification([])
+
+                for node in jfn:
+                    justification.append(Bytes(node))
 
                 justifications.append(justification)
             except Exception as e:
@@ -743,13 +759,17 @@ class Bundler:
         for j, item in enumerate(p.items):
             # Fetch Imports
             logger.debug("Fetching imports..", work_item=j)
-            imports = await self.fetch_imports(item)
-            all_imp.append(imports)
+            imports_task = asyncio.create_task(self.fetch_imports(item))
 
             # Fetch Justifications
             logger.debug("Compiling justifications..", work_item=j)
-            justifications = await self.fetch_justifications(item)
-            all_jfn.append(justifications)
+            justifications_task = asyncio.create_task(self.fetch_justifications(item))
+
+            imports = await gather_with_exceptions([imports_task, justifications_task])
+            # imports = await gather_with_exceptions([imports_task])
+
+            all_imp.append(imports[0])
+            all_jfn.append(imports[1])
 
             # Fetch Extrinsics
             logger.debug("Processing extrinsics..", work_item=j)

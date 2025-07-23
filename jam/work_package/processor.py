@@ -1,11 +1,16 @@
 import asyncio
-from math import ceil
 from typing import Tuple
 import time
 
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PublicKey,
+    Ed25519PrivateKey,
+)
 from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32
 
-from jam.utils.benchmark import write_json
+from jam.network.peer import Peer
+from jam.network.protocols.ce_134 import Credential
 from jam.utils.chainspec import chain_config
 from jam.logging import get_logger
 
@@ -60,7 +65,9 @@ from jam.utils.constants import (
     SEGMENT_SIZE,
     MAX_WORK_REPORT_SIZE,
     SLOT_PERIOD,
+    SIGNING_CONTEXTS,
 )
+from jam.work_package.error import ProcessorError, ProcessorErrorCode
 
 from jam.work_package.stores.mappings import PackageSegmentMap, SegmentErasureMap
 
@@ -81,82 +88,109 @@ logger = get_logger("in_core")
 
 
 class Processor:
+    """ "Refinement Engine. Synced upto GP v0.7.0"""
+
     node: Node
     merkle: BMRFunctions
 
     def __init__(self, node: Node):
         self.merkle = BMRFunctions()
         self.node = node
-        self.transmit_task = None
 
-    @staticmethod
-    def zero_padding(value: ByteArray, n: Uint):
-        """
-        Zero Padding function P defined in Eqn 14.17
-        Ensures that the length of individual byte array becomes a multiple of a given integer n.
+    async def process(
+        self,
+        package: WorkPackage,
+        core: CoreIndex,
+        extrinsics: Extrinsics,
+        share_guarantee: bool = True,
+    ):
+        from jam.network.protocols.ce_134 import (
+            CoreSegment,
+            WorkPackageSharing,
+            CE134Data,
+        )
+        from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
 
-        Source:
-            https://graypaper.fluffylabs.dev/#/cc517d7/1c08011c2d01?v=0.6.5
-        Args:
-            value (ByteArray) : Octet Array to be padded.
-            n (Int) : The target block size. Each element will be padded to a length that is a multiple of n
-        Returns:
-            New list containing padded byte arrays. Each element's length is now a multiple of n, padded with zeroes at the end.
-        """
+        logger.debug("Validating work package..")
+        validator = Validator()
+        validator.validate_wp(package)
 
-        length = len(value)
-        padding = n - (((length + n - 1) % n) + 1)
+        bundler = Bundler(self.node)
 
-        for i in range(padding):
-            value.append(0)
+        # Build Segment Root Lookup Dictionary
+        logger.debug("Building lookup dictionary..")
+        lookup = bundler.build_lookup(package)
 
-        return value
+        # Build Work Package Bundle
+        logger.debug("Building work package bundle..")
+        bundle = await bundler.build_bundle(package, extrinsics)
 
-    def paged_proof(self, segments: Segments) -> Segments:
-        """
-        Page Proof function P defined in Eqn 14.10
-        Compiles Justifications for exported segments
-
-        Source:
-            https://graypaper.fluffylabs.dev/#/cc517d7/1b2a001b8b00?v=0.6.5
-        Args:
-            segments (Segments): List of exported segments
-        Returns:
-            Proofs of size same as segments
-        """
-        page_count = ceil(len(segments) / 64)
-
-        pages: Segments = Segments([])
-        for x in range(page_count):
-            path = self.merkle.merkle_path_fn(
-                values=segments, size=Uint(6), index=Uint(x)
+        guarantee_task = None
+        if share_guarantee:
+            # Distribute Bundle to other Guarantors CE134
+            CE134 = WorkPackageSharing()
+            core_segment = CoreSegment(core_index=core, segment_root_map=lookup)
+            map_len = U32(len(core_segment.encode()))
+            bundle_len = U32(len(bundle.encode()))
+            data = CE134Data(
+                map_len=map_len,
+                work_package_bundle=bundle,
+                bundle_len=bundle_len,
+                core_segment=core_segment,
             )
-            leaf = self.merkle.leaf_page_fn(
-                values=segments, size=Uint(6), index=Uint(x)
-            )
-            merkle_path = bytes(len(path)) + path.encode()
-            leaf = bytes(len(leaf)) + leaf.encode()
 
-            segment_proof = Segment(
-                self.zero_padding(ByteArray(merkle_path + leaf), SEGMENT_SIZE)
-            )
-            pages.append(segment_proof)
+            logger.debug("Distributing work package bundle..")
 
-        return pages
+            # Use event loop to distribute bundle parallely
+            loop = asyncio.get_running_loop()
+            loop.set_task_factory(asyncio.eager_task_factory)
+
+            guarantee_task = loop.create_task(CE134.transmit(node=self.node, data=data))
+
+        # Build Report
+        logger.debug("Processing work package bundle..")
+        wr, wr_hash = self.process_bundle(core, bundle, lookup)
+
+        if share_guarantee and (guarantee_task is not None):
+            # Build Guaranteed WR
+            guarantees = await guarantee_task
+            logger.debug(f"Processing guarantees..", cnt=len(guarantees))
+            guaranteed_wr = self.process_guarantees(wr, wr_hash, guarantees)
+
+            # Distribute Guaranteed Work Report to other validators
+            CE135 = WorkReportDistribution()
+            r_len = U32(len(guaranteed_wr.encode()))
+            data = CE135Data(len=r_len, guaranteed_wr=guaranteed_wr)
+
+            logger.debug("Distributing guaranteed work report..")
+            transmit_task = asyncio.create_task(
+                CE135.transmit(node=self.node, data=data)
+            )
+            # acks = await transmit_task
+
+            logger.debug("Saving guaranteed work report mappings..")
+            self.process_guaranteed_report(guaranteed_wr)
+
+        # Record assurance for this core & this validator
+        from jam.operations.assr_collector import assr_collector
+
+        assr_collector.record_shard_assr(wr.core_index)
+
+        return wr, wr_hash
 
     @staticmethod
     def item_to_digest(item: WorkItem, result: WorkExecResult, gas: Gas) -> WorkResult:
         """
-        Item to Digest function C defined in Eqn 14.8
+        Item to Digest function C defined in Eqn 14.9
 
         Source:
-            https://graypaper.fluffylabs.dev/#/cc517d7/1a6a011a5002?v=0.6.5
+            https://graypaper.fluffylabs.dev/#/38c4e62/1bee001bb501?v=0.7.0
         Args:
             item: WorkItem
             result: WorkExecResult
             gas: Gas
         Returns:
-            Work Digest
+            Work Digest a.k.a. Work Result
         """
 
         extrinsic_size: Uint = Uint(0)
@@ -191,11 +225,11 @@ class Processor:
         self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup
     ):
         """
-        Work Report Computation function Ξ defined in Eqn 14.11
+        Work Report Computation function Ξ defined in Eqn 14.12
         To be used by main guarantor
 
         Source:
-            https://graypaper.fluffylabs.dev/#/68eaa1f/1b7c001be700?v=0.6.4
+            https://graypaper.fluffylabs.dev/#/38c4e62/1bab021b2e03?v=0.7.0
         Args:
             b: Work Package Bundle
             c: Core Index
@@ -218,10 +252,10 @@ class Processor:
 
             def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
                 """
-                Function I defined in Eqn 14.11
+                Function I defined in Eqn 14.12
                 Performs Ordered Accumulation of work items in a package p
 
-                https://graypaper.fluffylabs.dev/#/cc517d7/1b3f011b8d01?v=0.6.5
+                https://graypaper.fluffylabs.dev/#/38c4e62/1b92031b5104?v=0.7.0
                 """
 
                 nonlocal s_result
@@ -300,31 +334,38 @@ class Processor:
             raise
 
     def availability_specifier(
-        self, package_hash: OpaqueHash, wp_bundle: bytes, export_segments: Segments
+        self,
+        package_hash: OpaqueHash,
+        wp_bundle: bytes,
+        export_segments: Segments,
+        store: bool = True,
     ) -> WorkPackageSpec:
         """
-        Availability Specification function defined in Eqn 14.16
+        Availability Specification function defined in Eqn 14.17
         Creates a package specification from the package hash, work-package bundle and the sequence of exported segments
 
         Source:
-            https://graypaper.fluffylabs.dev/#/cc517d7/1c3a001cf000?v=0.6.5
+            https://graypaper.fluffylabs.dev/#/38c4e62/1c24011c0302?v=0.7.0
         Args:
             package_hash (OpaqueHash): Hash of package
             wp_bundle (Bytes): Encoded Audit Bundle
             export_segments (Segments): Exported Segments
+            store (bool): A flag to allow process to store formed segments and shards
         Returns:
             s: Availability specifier
         """
 
         from jam.erasure_coding.erasure_code import ErasureCode
+        from jam.work_package.utils import Utils
         from jam.settings import settings
 
+        utils = Utils()
         try:
             # Work Bundle Length, l
             l = len(wp_bundle)
 
             # Segment Root, e
-            e = ExportsRoot(self.merkle.cd_merkle_fn(export_segments))
+            e = ExportsRoot(self.merkle.cd_merklize(export_segments))
             logger.debug(
                 f"Exports Root calculated - {e.hex()}",
                 wp_hash=package_hash.hex()[:16] + "...",
@@ -338,7 +379,7 @@ class Processor:
 
             # Build Bundle Shards
             logger.debug(f"Building bundle shards..")
-            padded_wp_bundle = self.zero_padding(
+            padded_wp_bundle = utils.zero_padding(
                 ByteArray(wp_bundle), BASIC_ERASURE_SIZE
             )
 
@@ -355,13 +396,10 @@ class Processor:
                 bs_dict[shard_index] = bundle_shard
                 bs_hashes.append(bs_hash)
 
-            proofs = self.paged_proof(export_segments)
+            proofs = utils.paged_proof(export_segments)
 
             logger.debug("Proofs formed", count=len(proofs))
             proved_segments = ProvedSegments(segment=export_segments, proof=proofs)
-            from jam.utils.benchmark import write_json
-
-            write_json("vectors/segments", proved_segments.to_json())
 
             # Build Segment Shards
             logger.debug(f"Building segment shards..")
@@ -396,7 +434,7 @@ class Processor:
                     segment_index = SegmentIndex(sgi)
                     s_dict[segment_index] = SegmentShard(s)
 
-                ss_root = self.merkle.wb_merkle_fn(ss)
+                ss_root = self.merkle.wb_merklize(ss)
                 ss_dict[shard_index] = s_dict
                 ss_roots.append(ss_root)
 
@@ -415,32 +453,33 @@ class Processor:
                 shards_keys.append(Bytes(shards_key.encode()))
 
             # Erasure Root
-            u = self.merkle.wb_merkle_fn(shards_keys)
+            u = self.merkle.wb_merklize(shards_keys)
             logger.info(
                 f"Erasure Root calculated - {u.hex()}",
                 wp_hash=package_hash.hex()[:16] + "...",
             )
 
-            logger.debug(f"Updating DA..")
+            if store:
+                logger.debug(f"Storing Segments & Shards")
 
-            # Access DA
-            d3l = settings.d3l
-            audits = settings.audit_da
+                # Access DA
+                d3l = settings.d3l
+                audits = settings.audit_da
 
-            # Store Exported Segments
-            seg_da = SegmentsDA(d3l)
-            seg_da.put(e, proved_segments)
-            logger.debug("Stored segments")
+                # Store Exported Segments
+                seg_da = SegmentsDA(d3l)
+                seg_da.put(e, proved_segments)
+                logger.debug("Stored segments")
 
-            # Store Bundle Shards
-            audits_da = AuditShardsDA(audits)
-            audits_da.put_batch(u, bs_dict)
-            logger.debug("Stored bundle shards")
+                # Store Bundle Shards
+                audits_da = AuditShardsDA(audits)
+                audits_da.put_batch(u, bs_dict)
+                logger.debug("Stored bundle shards")
 
-            # Store Segment Shards
-            s_shards_da = SegmentShardsDA(d3l)
-            s_shards_da.put_batch(u, ss_dict)
-            logger.debug("Stored segment shards")
+                # Store Segment Shards
+                s_shards_da = SegmentShardsDA(d3l)
+                s_shards_da.put_batch(u, ss_dict)
+                logger.debug("Stored segment shards")
 
             spec = WorkPackageSpec(
                 hash=package_hash,
@@ -449,6 +488,7 @@ class Processor:
                 exports_root=e,
                 exports_count=Uint[16](n),
             )
+
             logger.info(
                 f"Compiled availability specification",
                 erasure_root=u.hex(),
@@ -461,7 +501,11 @@ class Processor:
             raise
 
     def process_bundle(
-        self, core: CoreIndex, bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup
+        self,
+        core: CoreIndex,
+        bundle: WorkPackageBundle,
+        sr_lookup: SegmentRootLookup,
+        store: bool = True,
     ) -> Tuple[WorkReport, WorkReportHash]:
         from jam.settings import settings
 
@@ -476,15 +520,16 @@ class Processor:
                 f"Report compiled", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex()
             )
 
-            # Access DA
-            d3l = settings.d3l
+            if store:
+                # Access DA
+                d3l = settings.d3l
 
-            # Store Report
-            reports_da = ReportsDA(d3l)
-            reports_da.put(wr_hash, report)
-            logger.debug(
-                f"Stored work report", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex()
-            )
+                # Store Report
+                reports_da = ReportsDA(d3l)
+                reports_da.put(wr_hash, report)
+                logger.debug(
+                    f"Stored work report", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex()
+                )
 
             return report, wr_hash
 
@@ -497,75 +542,69 @@ class Processor:
             )
             raise
 
-    async def process(
-        self, package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics
-    ):
-        from jam.network.protocols.ce_134 import (
-            CoreSegment,
-            WorkPackageSharing,
-            CE134Data,
-        )
-
-        logger.debug("Validating work package..")
-        validator = Validator()
-        validator.validate_wp(package)
-
-        bundler = Bundler(self.node)
-
-        # Build Segment Root Lookup Dictionary
-        logger.debug("Building lookup dictionary..")
-        lookup = bundler.build_lookup(package)
-
-        # Build Work Package Bundle
-        logger.debug("Building work package bundle..")
-        bundle = bundler.build_bundle(package, extrinsics)
-
-        # # Distribute Bundle to other Guarantors CE134
-        # CE134 = WorkPackageSharing()
-        #
-        # core_segment = CoreSegment(core_index=core, segment_root_map=lookup)
-        #
-        # map_len = U32(len(core_segment.encode()))
-        # bundle_len = U32(len(bundle.encode()))
-        #
-        # data = CE134Data(map_len=map_len, work_package_bundle=bundle, bundle_len=bundle_len, core_segment=core_segment)
-        #
-        # loop = asyncio.get_running_loop()
-        # loop.set_task_factory(asyncio.eager_task_factory)
-        #
-        # # Distribute Bundle, parallely
-        # self.transmit_task = loop.create_task(CE134.transmit(node=self.node, data=data))
-
-        # Build Report
-        logger.debug("Compiling report..")
-        wr, wr_hash = self.process_bundle(core, bundle, lookup)
-
-        # Build Guarantee
-        # logger.debug(f"Building guarantees..")
-        # try:
-        #     # Wait for guarantees and process them
-        #     asyncio.create_task(self.process_guarantees(wr, wr_hash))
-        # except asyncio.TimeoutError:
-        #     logger.error("Timeout waiting for async transmit result")
-        # except Exception as e:
-        #     logger.error(f"Error waiting for async transmit result: {e}")
-
-        return wr, wr_hash
-
-    async def process_guarantees(self, wr: WorkReport, wr_hash: WorkReportHash):
-        """
-        Utility Async function for receiving guarantees and processing it.
-        """
-        from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
+    @staticmethod
+    def process_guaranteed_report(report_guarantee: ReportGuarantee):
         from jam.settings import settings
 
-        ed25519_key = self.node.ed_pvt_key
+        wr = report_guarantee.report
+        wr_hash = Hash.blake2b(wr.encode())
 
-        payload = wr.core_index.encode() + wr.encode()
-        guarantee = b"jam_guarantee" + Hash.blake2b(payload).encode()
+        guarantees = report_guarantee.signatures
+        erasure_root = wr.package_spec.erasure_root
+        exports_root = wr.package_spec.exports_root
+
+        package_hash = wr.package_spec.hash
+        assurers = Assurers([sign.validator_index for sign in guarantees])
+
+        d3l = settings.d3l
+
+        rep_da = ReportsDA(d3l)
+        map_da = PackageSegmentMap(d3l)
+        sr_er_da = SegmentErasureMap(d3l)
+        er_ar_da = ErasureAssurerMap(settings.d3l)
+        wr_da = ReportHashAssurerMap(d3l)
+
+        # Store Report Hash -> Report Mapping
+        rep_da.put(wr_hash, wr)
+
+        # Store Package Hash -> Segment Root Mapping
+        map_da.put(wr)
+
+        # Store Segment Root -> Erasure Root Mapping
+        sr_er_da.put(root=exports_root, data=erasure_root)
+
+        # Store Erasure Root -> Report Hash + Assurers Mapping
+        er_ar_da.put(wr, assurers)
+
+        # Store Report Hash -> Assurers Mapping
+        wr_da.put(wr, assurers)
+
+        logger.debug(
+            "Saved guaranteed work report",
+            wp_hash=package_hash.hex()[:16] + "...",
+            wr_hash=wr_hash.hex()[:16] + "...",
+            er_root=erasure_root.hex()[:16] + "...",
+            seg_root=exports_root.hex()[:16] + "...",
+        )
+
+    def process_guarantees(
+        self,
+        wr: WorkReport,
+        wr_hash: WorkReportHash,
+        signatures: list[tuple[Credential | None, Peer]],
+    ):
+        """
+        Function for processing guarantees
+        """
+
+        from jam.settings import settings
+
+        ed25519_key = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
+
+        payload = SIGNING_CONTEXTS["guarantee"] + wr_hash.encode()
 
         # Sign the Guarantee
-        sign = Ed25519Signature(ed25519_key.sign(guarantee))
+        sign = Ed25519Signature(ed25519_key.sign(payload))
 
         og_guarantee = ValidatorSignature(
             validator_index=ValidatorIndex(self.node.validator_index), signature=sign
@@ -574,79 +613,40 @@ class Processor:
         # Check majority & Build guarantees:
         guarantees = [og_guarantee]
 
-        # Working fix
-        responses = await self.transmit_task
-        logger.debug("✅ Received guarantees", cnt=len(responses), guarantees=responses)
+        for cred, peer in signatures:
+            if cred is not None and cred.work_report_hash == wr_hash:
+                try:
+                    Ed25519PublicKey.from_public_bytes(peer.data.ed25519).verify(
+                        cred.ed25519_signature,
+                        payload,
+                    )
 
-        from jam.network.protocols.ce_134 import OptCred
-
-        for response, peer in responses:
-            if response != OptCred(Null):
-                cred = response
-                if cred.work_report_hash == wr_hash:
                     guarantee = ValidatorSignature(
                         validator_index=peer.peer_index,
                         signature=cred.ed25519_signature,
                     )
+
                     guarantees.append(guarantee)
+                except InvalidSignature:
+                    logger.error("Invalid guarantee received from peer", peer=peer)
 
-        # Sort them guarantees
-
+        # Sort the guarantees
         guarantees = ValidatorSignatures(
             sorted(guarantees, key=lambda g: g.validator_index)
         )
 
-        # Distribute Guaranteed WR to Validators CE135
-        logger.info(
-            f"Distributing Work Report to other validators..", grte_len=len(guarantees)
+        guaranteed_wr = ReportGuarantee(
+            report=wr,
+            slot=TimeSlot((time.time() - GENESIS_TS) // SLOT_PERIOD),
+            signatures=guarantees,
         )
 
-        if len(guarantees) > 1:
-            d3l = settings.d3l
+        if len(guarantees) < 2:
+            raise ProcessorError(ProcessorErrorCode.INSUFFICIENT_GUARANTEES)
 
-            map_da = PackageSegmentMap(d3l)
-            sr_er_da = SegmentErasureMap(d3l)
-            rep_da = ReportsDA(d3l)
+        logger.debug(
+            "Processed guarantees",
+            wr_hash=wr_hash.hex()[:16] + "...",
+        )
 
-            # Store Report
-            rep_da.put(wr_hash, wr)
-
-            # Store Segment Root - Erasure Root Mapping
-            sr_er_da.put(
-                root=wr.package_spec.exports_root, data=wr.package_spec.erasure_root
-            )
-
-            # Store Package Hash - Segment Root Mapping
-            map_da.put(wr)
-
-            # save assurers
-            assurers = Assurers([])
-            for i in guarantees:
-                assurers.append(i.validator_index)
-
-            from jam.settings import settings
-
-            wr_da = ReportHashAssurerMap(settings.d3l)
-            # report hash to assurers mapping
-            wr_da.put(wr, assurers)
-
-            # erasure root to report hash & assurers mapping
-            er_da = ErasureAssurerMap(settings.d3l)
-            er_da.put(wr, assurers)
-
-            CE135 = WorkReportDistribution()
-            # TODO: Fix timeslot
-            gwr = ReportGuarantee(
-                report=wr,
-                slot=TimeSlot((time.time() - GENESIS_TS) // SLOT_PERIOD),
-                signatures=guarantees,
-            )
-            r_len = U32(len(gwr.encode()))
-            data = CE135Data(len=r_len, guaranteed_wr=gwr)
-
-            # give assurance for this core & this validator
-            from jam.operations.assr_collector import assr_collector
-
-            assr_collector.record_shard_assr(wr.core_index)
-
-            acks = await CE135.transmit(node=self.node, data=data)
+        return guaranteed_wr

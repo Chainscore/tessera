@@ -2,11 +2,11 @@ from jam.error import JamError
 from tsrkit_types.enum import Enum
 
 
-class WorkPackageError(JamError):
+class ValidatorError(JamError):
     ...
 
 
-class WorkPackagesErrorCode(Enum):
+class ValidatorErrorCode(Enum):
     BAD_EXPORT_ITEM = "bad_export_item"
     BAD_IMPORT_ITEM = "bad_import_item"
     BAD_EXTRINSIC_COUNT = "bad_extrinsic_tem"
@@ -25,3 +25,12 @@ class BundlerErrorCode(Enum):
     SEG_ERROR: "Unable to fetch import segments"
     JFN_ERROR: "Unable to fetch justification"
     EXT_ERROR: "Unable to fetch extrinsics"
+
+
+class ProcessorError(JamError):
+    ...
+
+
+class ProcessorErrorCode(Enum):
+    INVALID_SIGN: "Invalid Guarantor Signature"
+    INSUFFICIENT_GUARANTEES: "Insufficient guarantees for generated work report"
