@@ -202,8 +202,6 @@ class AuditingAndJudgement:
         for item in set_value:
             set_encode = item.encode() + set_encode
 
-        print(settings.ed25519_private == node.ed_pvt_key)
-
 
         message = signing_context + Bytes(tranche) + set_encode + header_hash
 
@@ -259,13 +257,10 @@ class AuditingAndJudgement:
             if i != s_i:
                 request_s_i = i
                 request_v_i = get_vi(shard_index=request_s_i, core_index=wr.core_index)
-                print("REQUESTED SHARD_INDEX WITH NODE_INDEX ==>>", request_s_i, request_v_i)
                 query = Query(erasure_root=erasure_root, shard_index=ShardIndex(2))
                 data = CE138Data(len=U32(len(query.encode())), query=query)
-                print("AUDIT REQUESTED SHARED FOR =>>", data)
 
                 data = await CE138.transmit(node=node, data=data, node_index=ValidatorIndex(1))
-                print("RECEIVED SHARD HERE WE RECEIVEVD =>", data)
 
 
         w_r, wr_hash = audit_refine(package=p, core=c, extrinsics=e)
@@ -285,7 +280,7 @@ class AuditingAndJudgement:
 
         Args:
             wr: Work Report
-            refine: Boolean valaue (True/False)
+            refine: Boolean value (True/False)
 
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f6f011f9801?v=0.7.0
 

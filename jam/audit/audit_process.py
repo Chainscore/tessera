@@ -28,13 +28,15 @@ class AuditProcess:
         # from jam.state.state import state
         from jam.settings import settings
         from jam.network.node import node
+        from jam.operations.tranche_store import tranche_store, Tranche
+
 
         audit = AuditingAndJudgement()
 
         # ---------------------- Rho initial state ( pending wor reports) -----------------------------
         logger.info(f"Current Block header hash")
-        # latest_block = Finality.load_latest(kv=settings.main_db)
-        # header_hash = latest_block.header.hash()
+        latest_block = Finality.load_latest(kv=settings.main_db)
+        header_hash = latest_block.header.hash()
 
         logger.info(f"Get rho pending state (Initial state)")
         # pending_rho_ = state.load(header_hash=header_hash).rho
@@ -64,6 +66,8 @@ class AuditProcess:
             asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports, tranche=tranche))
             # asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports, tranche=tranche))
 
+
+
         except Exception as e:
             logger.error(
                 "Failed to report assignment",
@@ -80,6 +84,7 @@ class AuditProcess:
 
             Arg:
                 reports: List of report which just become available for auditing  [ ( Q[R?]_c )  Eq. 17.1 ]
+                tranche: Current tranche index
 
             Return:
                 set of ed21599 signature   [ Eq: 17.9, 17.10, 17.11]
@@ -94,19 +99,25 @@ class AuditProcess:
         # initial rho pending wor reports
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
-        slot = latest_block.header.slot
-
 
         announcement_sign = audit.validator_announcement_statement(assign_report=assign_wrs, header=header_hash, tranche=U8(0))
 
         from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, Transmit, FirstTrancheEvidence, Announcement, Assign, Evidence
+        from jam.operations.tranche_store import tranche_store, Tranche
+
 
         CE144 = AuditAnnouncement()
+
 
         assignments = TypedVector[Assign]([
             Assign(core_index=core_idx, report_hash=Hash.blake2b(r.encode()))
             for core_idx, r in assign_wrs
         ])
+
+        # saved its own reports
+        for core , wr in assign_wrs:
+            tranche_store.add_announce(tranche=tranche, wr_hash=Hash.blake2b(wr.encode()), validator_index=ValidatorIndex(node.validator_index))
+
 
         announcement = Transmit(
             header_hash=header_hash,
@@ -117,13 +128,10 @@ class AuditProcess:
             )
         )
 
-
         sign = BandersnatchVrfSignature(
             b'\x97\xf1\xd3\xa71\x97\xd7\x94&\x95c\x8cO\xa9\xac\x0f\xc3h\x8cO\x97t\xb9\x05\xa1N:?\x17\x1b\xacXlU\xe8?\xf9z\x1a\xef\xfb:\xf0\n\xdb"\xc6\xbb\x97\xf1\xd3\xa71\x97\xd7\x94&\x95c\x8cO\xa9\xac\x0f\xc3h\x8cO\x97t\xb9\x05\xa1N:?\x17\x1b\xacXlU\xe8?\xf9z\x1a\xef\xfb:\xf0\n\xdb"\xc6\xbb')
 
         evidence = Evidence(FirstTrancheEvidence(sign))
-
-        print(U32(len(announcement.encode())), U32(len(evidence.encode())))
 
         data = CE144Data(len_a=U32(len(announcement.encode())), tranche_announcement=announcement, len_b=U32(len(evidence.encode())), evidence=evidence)
 
@@ -145,6 +153,8 @@ class AuditProcess:
         from jam.audit.audit import AuditingAndJudgement
         from jam.settings import settings
         from jam.network.node import node
+        from jam.operations.tranche_store import tranche_store
+
 
         audit =  AuditingAndJudgement()
 
@@ -181,6 +191,8 @@ class AuditProcess:
                     work_report_hash=WorkReportHash(wr_hash),
                     ed25519_signature=judgment_sign
                 )
+
+                tranche_store.update_judgment(tranche=tranche, wr_hash=wr_hash, judgment=result, validator_index=node.validator_index)
 
 
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)

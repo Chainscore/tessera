@@ -9,7 +9,6 @@ from jam.logging import get_logger
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from tests.unit.test_judgment import judgment
 
 logger = get_logger("network")
 
@@ -109,8 +108,7 @@ class JudgmentPublication(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """ Intercept individual Judgment from other Auditors for their assigned Work Reports """
-
-        from jam.operations.tranche_store import tranche_store
+        from jam.operations.tranche_store import tranche_store, Tranche
 
         buffer = server.stream_buffer[stream_id]
 
@@ -122,10 +120,12 @@ class JudgmentPublication(NetworkProtocol):
             judge = data.judgment.validity
             wr_h = data.judgment.work_report_hash
 
-
-            # How we get tranche over there
-            # tranche_store.update_judgment(tranche=, wr_hash=wr_h, judgment=judge, validator_index=vi_judgment)
-
+            # tranche=Tranche(
+            #     tranche_index=tranche_idx,
+            #     header_hash=header_hash
+            # )
+            #
+            # tranche_store.update_judgment( tranche=, wr_hash=wr_h, judgment=, validator_index=vi_judgment)
 
             logger.debug(
                 "Received Judgment from other Auditors",

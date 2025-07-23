@@ -150,13 +150,14 @@ class AuditAnnouncement(NetworkProtocol):
                 error_type=type(e).__name__
             )
 
+
         return responses
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """ Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
-        from jam.operations.tranche_store import tranche_store
+        from jam.operations.tranche_store import tranche_store, Tranche
 
-        v_r: dict[ValidatorIndex, set[CoreIndex]] = {}
+        v_r: dict[ValidatorIndex, set[WorkReportHash]] = {}
 
         buffer = server.stream_buffer[stream_id]
 
@@ -166,12 +167,21 @@ class AuditAnnouncement(NetworkProtocol):
 
             get_v_assign = data.tranche_announcement.announcement.assigned_report
             v_index = server.peer.peer_index
-            tranche = data.tranche_announcement.tranches
+            tranche_idx = data.tranche_announcement.tranches
+            header_hash = data.tranche_announcement.header_hash
 
             v_r[v_index] = {assign.report_hash for assign in get_v_assign}
 
-            for r_hash in v_r.values():
-                tranche_store.add_announce(tranche=tranche, wr_hash=r_hash, validator_index=v_index)
+            tranche = Tranche(
+                tranche_index= tranche_idx,
+                header_hash=header_hash
+            )
+
+            for v, r_hash in v_r.items():
+                for value in r_hash:
+                    # print(value, tranche ,v_index)
+                    tranche_store.add_announce(tranche=tranche, wr_hash=value, validator_index=v_index)
+
 
             logger.debug(
                 "Received Audit's Announcement from other Auditors",
@@ -185,8 +195,6 @@ class AuditAnnouncement(NetworkProtocol):
 
             ack= b""
             server.stream_and_close(ack, stream_id)
-
-
 
         except Exception as e:
             # Stop Streaming

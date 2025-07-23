@@ -6,9 +6,7 @@ from tsrkit_types import U8, structure, Bool
 from tsrkit_types.dictionary import Dictionary
 from jam.types.protocol.core import ValidatorIndex
 from jam.types.protocol.crypto import HeaderHash
-
 from jam.types.protocol.core import TrancheIndex, ValidatorIndex
-from jam.types.protocol.crypto import HeaderHash, Hash
 from jam.types.work.report import WorkReport, WorkReportHash
 
 logger = get_logger("tranch_storing")
@@ -104,10 +102,14 @@ class TrancheStore:
     # ----- judgments ----- #
     def update_judgment(self, tranche: Tranche, wr_hash: WorkReportHash, judgment: Bool, validator_index: ValidatorIndex):
         state = self._get_state(tranche)
+
+        if wr_hash not in state.judgments:
+            state.judgments[wr_hash] = JudgmentRecord.empty()
+
         if judgment:
-            state.judgments[wr_hash].true_votes.push(validator_index)
+            state.judgments[wr_hash].true_votes.append(validator_index)
         else:
-            state.judgments[wr_hash].false_votes.push(validator_index)
+            state.judgments[wr_hash].false_votes.appeend(validator_index)
 
         self._save_state(tranche, state)
         logger.info("Updated judgment for work report", wr_hash=wr_hash)
@@ -119,9 +121,11 @@ class TrancheStore:
     # ----- announcement ----- #
     def add_announce(self, tranche: Tranche, wr_hash: WorkReportHash, validator_index:ValidatorIndex) :
         state = self._get_state(tranche)
-        state.judgments[wr_hash].announce.push(validator_index)
+        if wr_hash not in state.judgments:
+            state.judgments[wr_hash] = JudgmentRecord.empty()
+        state.judgments[wr_hash].announces.append(validator_index)
         self._save_state(tranche, state)
-        logger.info("Updated judgment for work report", wr_hash=wr_hash)
+        logger.info("Updated announcement for work report", wr_hash =wr_hash)
 
 
     # ----- valid_set ----- #

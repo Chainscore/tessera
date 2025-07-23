@@ -6,6 +6,7 @@ import time
 
 from asyncio import CancelledError
 from dotenv import load_dotenv
+
 from jam.operations.operator import operate
 from jam.api.rpc.app import rpc
 from jam.logging import setup_logging, logger
@@ -26,6 +27,7 @@ from tests.unit.test_judgment import data144, data145
 from jam.audit.audit_process import AuditProcess
 from jam.audit.vectors.q import sample_work_reports_with_nulls
 from tsrkit_types import U8
+from jam.operations.audit_engine import AuditEngine
 
 CE144 = AuditAnnouncement()
 CE145 = JudgmentPublication()
@@ -116,13 +118,15 @@ async def main(
             # Node Ops - Block Prod, Audit, Assurances, etc
 
             # tg.create_task(operate(is_builder))
-            if int(tsr_node.port) == 40000:
-                await asyncio.sleep(5)
-                # tg.create_task(CE144.transmit(node=tsr_node, data=data144))
-                # tg.create_task(CE145.transmit(node=tsr_node, data=data145))
-                newly_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
-                #
-                tg.create_task(AuditProcess.audit_process(newly_avail_wrs=newly_list, tranche=U8(0)))
+            # if int(tsr_node.port) == 40000:
+            await asyncio.sleep(5)
+            # tg.create_task(CE144.transmit(node=tsr_node, data=data144))
+            # tg.create_task(CE145.transmit(node=tsr_node, data=data145))
+            newly_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
+            #
+            tg.create_task(AuditProcess.audit_process(newly_avail_wrs=newly_list, tranche=U8(0)))
+                # engine = AuditEngine()
+                # await engine.run(header_hash=header_hash, raw_list=newly_list)
 
 
     except CancelledError:

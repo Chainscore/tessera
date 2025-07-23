@@ -73,7 +73,6 @@ class AuditShardRequestProtocol(NetworkProtocol):
         tasks = TypedVector([])
         try:
             for peer in node.peer_conn:
-                    print("&&&&&&&&&&&&&&&&&",peer.peer_index, node_index)
                     if peer.peer_index != node_index:
                         break
                     else:
@@ -115,13 +114,11 @@ class AuditShardRequestProtocol(NetworkProtocol):
         data, offset = CE138Data.decode_from(buffer[1:])
         data = cast(CE138Data, data)
 
-        print("shard index", data.query.shard_index)
 
         try:
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
-
 
             erasure_root = data.query.erasure_root
             shard_index = data.query.shard_index
@@ -132,27 +129,17 @@ class AuditShardRequestProtocol(NetworkProtocol):
             # Fetch Segments Shard
             ss_da = SegmentShardsDA(d3l)
             ss_dict = ss_da.get(erasure_root)
-            # print("444444>>>>>>>",len(ss_dict), ss_dict)
 
             # Fetch Bundle Shard
             audits_da = AuditShardsDA(audit)
             bs_dict = audits_da.get(erasure_root)
-            # print("55555555>>>>>>>>>>>>>>", bs_dict)
 
             if shard_index not in bs_dict.keys():
                 raise ValueError("Bundle shard not found")
             bundle_shard = bs_dict[shard_index]
 
-            print("bundle shard", bundle_shard)
             segment_shard = SegmentsShard(ss_dict[shard_index].shard)
-            print("segment shard", segment_shard)
 
-
-
-            # Fetch Justifications
-            # justification_da = JustificationsDA(audit)
-            # justification = justification_da.get(erasure_root, shard_index)
-            # print("77777777777>>>>>>", justification)
             justification = Justification([])
 
             # build segment shard root
