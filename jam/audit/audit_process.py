@@ -12,7 +12,7 @@ from jam.consensus.grandpa.finality import Finality
 from jam.types.work.report import WorkReportHash
 from jam.logging import get_logger
 from jam.utils.constants import EPOCH_LENGTH
-from jam.audit.vectors.q import (
+from jam.audit.q import (
     sample_work_reports_with_nulls,
     get_work_package_by_rep_hash,
 )

@@ -249,7 +249,7 @@ class State:
             logger.debug(
                 "Processing recent history...", commitment_count=len(commitment_map)
             )
-            history_merkle = BMRFunctions().wb_merkle_fn(
+            history_merkle = BMRFunctions().wb_merklize(
                 sorted(
                     [
                         Bytes(comm[0].encode() + comm[1].encode())
