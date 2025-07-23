@@ -159,7 +159,7 @@ class NodeConnection(QuicConnectionProtocol):
     def quic_event_received(self, event: QuicEvent) -> None:
         """function that handles all the quic events"""
 
-        logger.info("Received QUIC Event", name=type(event).__name__)
+        logger.debug("Received QUIC Event", name=type(event).__name__)
 
         # Handle TLS Handshake
         if isinstance(event, HandshakeCompleted):
@@ -222,7 +222,7 @@ class NodeConnection(QuicConnectionProtocol):
                 data = data[1:]
 
             
-            if self.up0_stream == event.stream_id or prefix == PrefixType.UP0:
+            if self.up0_stream == event.stream_id:
                 from jam.network.protocols.up_0 import BlockAnnouncement 
                 BlockAnnouncement().req_intercept(stream_id, self, data)
                 return

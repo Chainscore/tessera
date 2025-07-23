@@ -268,10 +268,13 @@ class QuicNode(asyncio.DatagramProtocol):
 
     @property 
     def active_peers(self) -> Set[NodeConnection]:
+        """
+        Get all active peers - connected nodes (up0) that are neighbors 
+        """
         return set([
             self.connection_ids[self.conns[k]]
             for k in self.neighbors
-            if self.conns.get(k) and self.connection_ids.get(self.conns.get(k))
+            if self.conns.get(k) and self.connection_ids.get(self.conns.get(k)) and self.connection_ids.get(self.conns.get(k)).up0_stream is not None
         ])
 
     @property 

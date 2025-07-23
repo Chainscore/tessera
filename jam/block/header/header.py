@@ -153,7 +153,6 @@ class Header:
             else X.FALLBACK.value + eta.encode()
         )
         # Verify seal
-        print("seal from", author.bandersnatch.hex())
         if not verify_ietf(author.bandersnatch, self.seal, context, self.encode_unsigned()):
             raise BlockError(BlockErrorCode.INVALID_SEAL)
 

@@ -84,7 +84,7 @@ class BlockProducer(NodeDispatcher):
 
         if state.transition(block):
             logger.info("⛏ Produced block", hash=block.header.hash().hex()[:16]+"...", slot=time_slot)
-            asyncio.create_task(up0.transmit(block))
+            asyncio.create_task(up0.transmit(BlockAnnouncement.block_to_announcement(block)))
         else:
             logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block)
 

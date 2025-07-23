@@ -52,18 +52,22 @@ class BlockRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE128
 
-    async def transmit(self, data: CE128Data):
+    async def transmit(self, data: CE128Data, peers: List[NodeConnection]|None = None):
         """Transmit Block Request"""
         from jam.network.start import node 
         if not node: return
 
         stream_data = U32(len(data.encode())).encode() + data.encode()
-        logger.info("Transmitting block request to node", num=len(node.connection_ids), max_blocks=data.max_blocks)
+        logger.debug("Transmitting block request to node", num=len(node.connection_ids), max_blocks=data.max_blocks)
 
         transmitted_count = 0
         responses = []
 
-        for client in node.all_connected:
+        if not peers:
+            # If no specific peers are provided, use all connected nodes
+            peers = node.all_connected 
+
+        for client in peers:
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 client.stream_prefix[stream_id] = self._prefix
@@ -78,7 +82,7 @@ class BlockRequest(NetworkProtocol):
                 responses.append(None)
                 logger.error("Failed to transmit state request", error=e)
 
-        logger.info(
+        logger.debug(
             "Block request transmission completed",
             transmitted_to=transmitted_count,
         )
@@ -94,7 +98,7 @@ class BlockRequest(NetworkProtocol):
 
         data = CE128Data.decode(buffer[4:])
 
-        logger.info(
+        logger.debug(
             "Processing block request",
             stream_id=stream_id,
             header_hash=data.header.hex(),
@@ -105,7 +109,7 @@ class BlockRequest(NetworkProtocol):
         # Get the start block
         start_block = Block.load(data.header, settings.main_db)
         if not start_block:
-            logger.warning("Block not found", hh=data.header.hex()[:16]+"...")
+            logger.debug("Block not found", hh=data.header.hex()[:16]+"...")
             server.stream_and_close(b"", stream_id)
             return
 
@@ -116,7 +120,7 @@ class BlockRequest(NetworkProtocol):
             limit = int(data.max_blocks)
         else:
             start_key = Block.get_storage_key_slot(TimeSlot(0))
-            end_key = Block.get_storage_key_slot(start_timeslot + 1)
+            end_key = Block.get_storage_key_slot(start_timeslot)
             limit = 2**32 - 1 
 
 
@@ -156,7 +160,7 @@ class BlockRequest(NetworkProtocol):
                 server.stream_and_keep_open(chunk, stream_id)
             offset += len(chunk)
         
-        logger.info(
+        logger.debug(
             "Blocks request completed successfully. Closed stream",
             stream_id=stream_id,
             len=len(all_blocks),
@@ -168,7 +172,7 @@ class BlockRequest(NetworkProtocol):
 
         buffer = client.stream_buffer[stream_id]
 
-        logger.info("Block request ack received", stream_id=stream_id, buffer_size=len(buffer))
+        logger.debug("Block request ack received", stream_id=stream_id, buffer_size=len(buffer))
 
         # try:
         b_len = U32.decode(buffer)
