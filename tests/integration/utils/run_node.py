@@ -1,40 +1,27 @@
-# TODO: Work in Progress
+from typing import Callable
 
-import pytest
 import asyncio
-import logging
 import signal
+import logging
 import os
-import subprocess
 import time
-from multiprocessing import Process
-
 from dotenv import load_dotenv
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
 
-from jam.logging import setup_logging, logger
+from jam.logging import setup_logging
 from jam.utils.chainspec import chain_config
+from .state_update import update_state
 
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
 from jam.settings import setup_setting
-
-from jam.network.peer import Peer
-from jam.network.node import Node, setup_node
-
-from jam.network.protocols.ce_201 import CE201Data, GhostProtocol
-from jam.operations import Builder
-from jam.operations.utils.state_update import update_state
-from jam.state.state import setup_state, State
-from jam.types.protocol.crypto import BlsPublic
-from jam.types.block import Block
-from jam.types.protocol.validators import (
-    IPAddress,
-    ValidatorData,
-    ValidatorMetadata,
-)
+from jam.network.start import start_node
+from jam.state.state import setup_state
+from jam.block import Block
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
+from jam.logging import get_logger
+
+# Logger for Node test
+logger = get_logger("test")
 
 
 async def run_node(
@@ -46,10 +33,11 @@ async def run_node(
     is_validator: bool,
     node_task,
 ):
+    """Main fn to start the node"""
     # ---------- SETUP LOGGING ----------
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
-    init_ts = (time.time() - genesis_ts) / SLOT_PERIOD
-    init_ep = init_ts // EPOCH_LENGTH
+    init_ts = int((time.time() - genesis_ts) / SLOT_PERIOD)
+    init_ep = int(init_ts // EPOCH_LENGTH)
 
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
@@ -99,37 +87,19 @@ async def run_node(
         state = setup_state(settings.state_db, "dev-spec.json")
         state.store.disable_cache()
         update_state(state)
-        peers = [Peer(data=val) for val in state.kappa if val.metadata.port != port]
-
-        ip = IPAddress.from_str(host)
-
-        tsr_node = setup_node(
-            name,
-            int(port),
-            peers,
-            host=str(host),
-            is_bd=is_builder,
-            is_val=is_validator,
-        )
 
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db)
+
+        settings.update()
 
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(tsr_node.initialize())
+            tg.create_task(start_node(host, int(port)))
             if node_task:
-                print("STARTING NODE TASKS")
+                print("starting task")
                 tg.create_task(node_task())
 
-    except KeyboardInterrupt:
-        logger.info(
-            "JAM node shutting down gracefully",
-            node_name=name,
-            port=port,
-            reason="keyboard_interrupt",
-        )
     except Exception as e:
         logger.critical(
             "JAM node fatal error",
