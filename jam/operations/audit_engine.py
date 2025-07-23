@@ -1,4 +1,5 @@
-from tsrkit_types import TypedVector
+from typing import List
+from tsrkit_types import Option, TypedVector
 from tsrkit_types.dictionary import Dictionary
 
 from jam.audit.tranche_engine import TrancheEngine
@@ -8,11 +9,11 @@ from jam.operations.dispatcher import NodeDispatcher
 import asyncio
 from tsrkit_types.bits import Uint
 from jam.network.node import node
-from jam.types.protocol.core import TrancheIndex
+from jam.types.protocol.core import TrancheIndex, WorkReportHash
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.work.report import WorkReport
 from jam.utils.constants import SLOT_PERIOD, GENESIS_TS
-from jam.operations.tranche_store import EncodedWR, JudgmentRecord, Tranche, TrancheState, TrancheStore, tranche_store
+from jam.operations.tranche_store import JudgmentRecord, Tranche, TrancheState, TrancheStore, tranche_store
 
 
 
@@ -26,30 +27,30 @@ class AuditEngine():
     """
 
     @classmethod
-    async def run(cls, header_hash: HeaderHash):
+    async def run(cls, header_hash: HeaderHash,raw_list:List[Option[WorkReport]]):
         from jam.network.node import node
 
         # Ensure network is up
-        if not node.is_initialized:
-            logger.debug("Network not initialized – skipping audit")
-            return
+        # if not node.is_initialized:
+        #     logger.debug("Network not initialized – skipping audit")
+        #     return
 
-        raw_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
+        # raw_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
         unaudited_list=TypedVector[WorkReport]([wr for wr in raw_list if wr is not None])
 
-        valid_set = TypedVector[WorkReport]([])
-        invalid_set = TypedVector[WorkReport]([])
-        judgments = Dictionary[EncodedWR, JudgmentRecord]({})
+        valid_set = TypedVector[WorkReportHash]([])
+        invalid_set = TypedVector[WorkReportHash]([])
+        judgments = Dictionary[WorkReportHash, JudgmentRecord]({})
         initTranche=Tranche(header_hash=header_hash,tranche_index=TrancheIndex(0))
         tranche_state=TrancheState(
             unaudited_list=unaudited_list,
             judgments=judgments,
             valid_set=valid_set,
             invalid_set=invalid_set)
-
+        logger.debug(f"Tranche running {initTranche}")
         # Build a store for this slot's audit tranches
         tranche_store._save_state(initTranche,tranche_state)
-
+        logger.debug(f"Store on init tranche{tranche_store._get_state(initTranche)}")
         # Instantiate the core tranche engine
         engine = TrancheEngine()
         await engine.run(header_hash=header_hash)
