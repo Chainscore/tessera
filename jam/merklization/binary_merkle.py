@@ -49,13 +49,14 @@ class BMRFunctions:
         Constancy Preprocessor Function Implementation as defined in Equation E.7 in Section E.1.2
 
         Definition:
-            (v: [Y], H: Y->H) -> o: [H]
+            (v: [B], H: B->H) -> o: [H]
         Args:
             values: Sequence of 32 octet blobs
             hash_fn: Hash Function
         Returns:
             Sequences of Hashes (in Bytes[32])
         """
+
         new_values = OpaqueHashes([])
         for val in values:
             new_val = hash_fn(self._LEAF_PREFIX + Bytes(val))
@@ -78,13 +79,14 @@ class BMRFunctions:
         Node Function Implementation as defined in Equation E.1
 
         Definition:
-            (v: [Yn], H: Y->H) -> o: Yn U H
+            (v: [Bn], H: Y->H) -> o: Bn U H
         Args:
             values: Sequence of octet blobs
             hash_fn: Hash Function
         Returns:
             32 octet blob or Hash for a node
         """
+
         sz = len(values)
 
         if sz == 0:
@@ -110,7 +112,9 @@ class BMRFunctions:
     def _p_i(values: TypedVector[Bytes], index: int) -> int:
         """
         Util Function P_I Implementation for Trace Function
+        This function return new start index of the subtree values where the value might lie.
         """
+
         sz = len(values)
         mid = (sz + 1) // 2
 
@@ -125,7 +129,10 @@ class BMRFunctions:
     ) -> TypedVector[Bytes]:
         """
         Util Function P_s Implementation for Trace Function
+        This function returns the new set of values for given index based on
+        whether it is in the subtree or is in adjacent subtree.
         """
+
         sz = len(values)
         mid = (sz + 1) // 2
         if (index < mid) == case:
@@ -143,6 +150,8 @@ class BMRFunctions:
     ) -> ChoicedHashes:
         """
         Trace Function Implementation as defined in Equation E.2
+        Returns each opposite node from top to bottom as the tree is navigated to
+        arrive at some leaf corresponding to the item of a given index into the sequence.
 
         Args:
             values: Sequence of octet blobs
@@ -151,6 +160,7 @@ class BMRFunctions:
         Returns:
             Vector of corresponding path nodes
         """
+
         sz = len(values)
 
         trace = ChoicedHashes([])
@@ -169,16 +179,16 @@ class BMRFunctions:
             trace.extend(trace_nodes)
             return trace
 
-    def wb_merkle_fn(
+    def wb_merklize(
         self,
         values: TypedVector[Bytes],
         hash_fn: Optional[Callable[[Bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> OpaqueHash:
         """
-        Well Balanced Binary Merkle Function Implementation as defined in Equation E.3 in Section E.1.1
+        Well Balanced Binary Merkle Function, MB, Implementation as defined in Equation E.3 in Section E.1.1
 
         Definition:
-            (v: [Y], H: Y->H) -> o: H
+            (v: [B], H: B->H) -> o: H
         Args:
             values: Sequence of octet blobs
             hash_fn: Hash Function
@@ -192,16 +202,16 @@ class BMRFunctions:
             node = self._node_fn(values, hash_fn)
             return OpaqueHash(node.unwrap())
 
-    def cd_merkle_fn(
+    def cd_merklize(
         self,
         values: TypedVector[Bytes],
         hash_fn: Optional[Callable[[Bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> OpaqueHash:
         """
-        Constant Depth Binary Merkle Function Implementation as defined in Equation E.4 in Section E.1.2
+        Constant Depth Binary Merkle Function, M, Implementation as defined in Equation E.4 in Section E.1.2
 
         Definition:
-            (v: [Y], H: Y->H) -> o: H
+            (v: [B], H: B->H) -> o: H
         Args:
             values: Sequence of octet blobs
             hash_fn: Hash Function
@@ -231,6 +241,7 @@ class BMRFunctions:
         Returns:
             Merkle path to a single page
         """
+
         if index >= len(values):
             raise IndexError("index out of range")
 
@@ -262,6 +273,7 @@ class BMRFunctions:
         Returns:
             Single page of leaves
         """
+
         if index >= len(values):
             raise IndexError("index out of range")
 
@@ -285,7 +297,8 @@ class BMRFunctions:
         hash_fn: Optional[Callable[[bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> OpaqueHash:
         """
-            Verifies the Merkle justification by reconstructing the Merkle root.
+        Verifies the Merkle justification by reconstructing the Merkle root (not provided in GP)
+
         Args:
             leaf_index: The original index of the leaf in the full vector
             trace: Merkle path to the given leaf
@@ -297,6 +310,7 @@ class BMRFunctions:
         Returns:
             The reconstructed Merkle root (OpaqueHash)
         """
+
         if curr_index == len(trace):
             return leaf
 
@@ -319,7 +333,7 @@ class BMRFunctions:
             )
             return hash_fn(self._NODE_PREFIX + child_hash + sibling)
 
-    def verify_wb_merkle(
+    def verify_wb_tree(
         self,
         leaf: Bytes,
         erasure_root: Bytes,
@@ -328,7 +342,8 @@ class BMRFunctions:
         hash_fn: Optional[Callable[[bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> bool:
         """
-            Merkle Proof Verification Function for Well-Balanced Tree (not provided in GP)
+        Merkle Proof Verification Function for Well-Balanced Tree (not provided in GP)
+
         Args:
             leaf: The leaf value being verified (raw bytes)
             erasure_root:
