@@ -31,7 +31,7 @@ async def run_node(
     theme: str,
     is_builder: bool,
     is_validator: bool,
-    node_task
+    node_tasks
 ):
     """Main fn to start the node"""
     # ---------- SETUP LOGGING ----------
@@ -101,8 +101,9 @@ async def run_node(
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(start_node(host, int(port)))
-            if node_task:
-                tg.create_task(node_task())
+            for node_task in node_tasks:
+                if node_task:
+                    tg.create_task(node_task())
 
     except Exception as e:
         logger.critical(
@@ -125,7 +126,7 @@ def run_node_process(
         theme: str,
         is_builder: bool,
         is_validator: bool,
-        node_task
+        node_tasks
 ):
     # Handle clean termination
     def handle_sigterm(signum, frame):
@@ -140,7 +141,7 @@ def run_node_process(
         theme,
         is_builder,
         is_validator,
-        node_task
+        node_tasks
     ))
 
 

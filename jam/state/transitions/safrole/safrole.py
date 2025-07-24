@@ -142,6 +142,7 @@ class Safrole:
             if len(pre_state.gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
                 # If we have sufficient tickets accumulated,
                 # use outside-in sequencer and place the ticket in gamma.s
+                logger.warning("Safrole ticketing mode", tickets_collected=len(state.gamma.a))
                 gamma.s = GammaS(GammaSTickets(outside_in(pre_state.gamma.a)))
             # Else use the fallback mechanism
             else:
@@ -155,7 +156,7 @@ class Safrole:
         for ticket in block.extrinsic.tickets:
             # Signature must be valid Ring-VRF proof
             if not Safrole.verify_vrf(
-                X.TICKET.value + eta[2] + ticket.attempt.encode(),
+                X.TICKET.value + eta[2] + bytes([ticket.attempt]),
                 gamma.z,
                 [k.bandersnatch for k in gamma.k],
                 ticket.signature,

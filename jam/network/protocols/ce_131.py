@@ -153,6 +153,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             if proxy_validator.ed25519 == settings.ed25519_public and verification:
                 from jam.operations.ticket_queue import ticket_queue
                 ticket_queue.push(data)
+                print("Proxy ticket received from", server.port)
                 print("Ticket queue updated", ticket_queue.length())
 
             # Return acknowledgment to validator

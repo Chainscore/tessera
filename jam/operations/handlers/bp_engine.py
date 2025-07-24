@@ -77,7 +77,7 @@ class BlockProducer(NodeDispatcher):
             else:
                 ticket = entry
         elif entry != settings.bandersnatch_public:
-            logger.debug("⏭ Skipping BP: Not our fallback", expected=entry.hex(), our_key=settings.bandersnatch_public.hex())
+            logger.debug("⏭ Skipping BP: Not our fallback", expected=entry, our_key=settings.bandersnatch_public.hex())
             return 
             
         block = latest.produce(TimeSlot(time_slot), ticket)

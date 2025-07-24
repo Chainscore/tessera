@@ -25,7 +25,7 @@ async def schedule_run(sch_ts: int, runner: NodeDispatcher, *args) -> None:
     await runner.run(*args)
 
 
-async def epoch_operate(is_builder):
+async def epoch_operate(is_builder = False):
     """
     Starts a never ending 3600 sec loop
     """

@@ -4,11 +4,17 @@ from jam.block.errors import BlockError, BlockErrorCode
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import CORE_COUNT, MAX_TICKETS_PER_EXTRINSIC, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from tsrkit_types.struct import structure
-from jam.block.extrinsics.tickets import TicketsExtrinsic
+from jam.block.extrinsics.tickets import TicketsExtrinsic, TicketEnvelope
 from jam.block.extrinsics.preimages import PreimagesExtrinsic
 from jam.block.extrinsics.guarantees import GuaranteesExtrinsic
 from jam.block.extrinsics.assurances import AssurancesExtrinsic
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Culprits, Faults, Verdicts
+from jam.types.protocol.crypto import (
+    BandersnatchRingVrfSignature,
+    Hash,
+    OpaqueHash,
+)
+from py_ark_vrf import vrf_output
 
 if TYPE_CHECKING:
     from jam.block.header.header import Header
@@ -51,6 +57,11 @@ class Extrinsic:
             + bytes(Hash.blake2b(self.disputes.encode()))
         )
 
+    @staticmethod
+    def get_vrf_output(signature: BandersnatchRingVrfSignature) -> OpaqueHash:
+        # return Bytes[32](RingVrf.pedersen_proof_to_hash(signature))
+        return OpaqueHash(vrf_output(signature)[:32])
+
     @classmethod
     def from_collected(cls, time_slot):
         # --- Extrinsic Collection --- #
@@ -66,10 +77,17 @@ class Extrinsic:
             if len(eg) >= CORE_COUNT:
                 break
         ep = PreimagesExtrinsic(preimg_store._store[:])
+
+        def sort_fn(ticket: TicketEnvelope) -> int:
+            # Take VRF output of the signature and sort by it
+            return int.from_bytes(Extrinsic.get_vrf_output(ticket.signature))
+
         if time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
             print(f"Including tickets in block, time_slot={time_slot}, slot={time_slot%EPOCH_LENGTH}")
-            print("Tickets included", ticket_store._store[:MAX_TICKETS_PER_EXTRINSIC])
             et = TicketsExtrinsic(ticket_store._store[:MAX_TICKETS_PER_EXTRINSIC])
+            et.sort(key=sort_fn)
+            print("Number of tickets included", len(et))
+
         else:
             print(f"Tickets are not allowed in block after TICKET_SUBMISSION_END, time_slot={time_slot}, slot={time_slot%EPOCH_LENGTH}")
             et = TicketsExtrinsic([])

@@ -1,4 +1,6 @@
+from multiprocessing import Pool, get_context
 import asyncio
+from concurrent.futures import ProcessPoolExecutor
 from tsrkit_types import U32
 from jam.types.protocol.ticket import TicketAttempt
 from jam.block.extrinsics.tickets import TicketEnvelope
@@ -27,8 +29,10 @@ class Conductor:
             tasks = []
             # generating & transmitting all the tickets allowed per validator
             for i in range(TICKET_ENTRIES_PER_VALIDATOR):
-                epoch_index = U32(time_slot // EPOCH_LENGTH)
-                ticket_envelope = cls.generate_ticket(state, i+1)
+                # ticket_envelope = cls.generate_ticket(state, i)
+                loop = asyncio.get_running_loop()
+                ticket_envelope = await loop.run_in_executor(None, cls.generate_ticket, *(state, i))
+                epoch_index = U32(state.tau // EPOCH_LENGTH)
 
                 if ticket_envelope is not None:
                     epoch_ticket = EpochTicket(epoch_index=epoch_index, ticket=ticket_envelope)
@@ -41,7 +45,7 @@ class Conductor:
                 else:
                     raise ValueError("Ticket generation failed")
 
-            ack = await asyncio.gather(*tasks)
+            ack = asyncio.gather(*tasks)
             logger.info(
                 "Ticket transmission completed",
                 node=str(node.port)

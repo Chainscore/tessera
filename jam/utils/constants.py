@@ -76,7 +76,7 @@ MAX_DEPENDENCIES = 8
 J = MAX_DEPENDENCIES
 
 # K — Max number of tickets that can be submitted in a single extrinsic.
-MAX_TICKETS_PER_EXTRINSIC = 16
+MAX_TICKETS_PER_EXTRINSIC = chain_config.max_tickets_per_extrinsic
 K = MAX_TICKETS_PER_EXTRINSIC
 
 # L — Max age (in timeslots) of the lookup anchor.
