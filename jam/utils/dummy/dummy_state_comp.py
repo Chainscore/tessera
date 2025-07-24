@@ -13,9 +13,37 @@ from jam.types.state.delta import (
     AccountLookup,
     AccountPreimages,
     ServiceCodeHash,
-    Timestamps, AccountMetadata, Ao, Ai, LookupTable,
+    Timestamps,
+    AccountMetadata,
+    Ao,
+    Ai,
+    LookupTable,
 )
-from jam.types import Eta, Iota, Kappa, Lambda_, AuthorizationQueue, Phi, AllValidatorStats, Pi, ValidatorStat, AllCoreStats, CoreStat, AllServiceStats, Psi, PsiB, PsiG, PsiO, PsiW, OptionalWorkReportState, Rho, Tau, AllReadyWRs, Nu, Xi
+from jam.types import (
+    Eta,
+    Iota,
+    Kappa,
+    Lambda_,
+    AuthorizationQueue,
+    Phi,
+    AllValidatorStats,
+    Pi,
+    ValidatorStat,
+    AllCoreStats,
+    CoreStat,
+    AllServiceStats,
+    Psi,
+    PsiB,
+    PsiG,
+    PsiO,
+    PsiW,
+    OptionalWorkReportState,
+    Rho,
+    Tau,
+    AllReadyWRs,
+    Nu,
+    Xi,
+)
 
 from jam.state.state import State
 from tsrkit_types.bytes import Bytes
@@ -23,7 +51,7 @@ from tsrkit_types.integers import U16, U32, U8, Uint
 from tsrkit_types.null import Null
 
 from jam.types.protocol.crypto import (
-	BlsPublic,
+    BlsPublic,
     Ed25519Public,
     HeaderHash,
     OpaqueHash,
@@ -82,7 +110,12 @@ def create_dummy_state_components() -> Dict[str, object]:
             bandersnatch=BandersnatchPublic(create_dummy_bytes32()),
             ed25519=Ed25519Public(create_dummy_bytes32()),
             bls=BlsPublic(create_dummy_bytes(144)),
-            metadata=ValidatorMetadata(name=Bytes(10), protocol=Uint[16](2**16 - 1), host=IPAddress([U8(127), U8(0), U8(0), U8(1)]), port=U16(0)),
+            metadata=ValidatorMetadata(
+                name=Bytes(10),
+                protocol=Uint[16](2**16 - 1),
+                host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
+                port=U16(0),
+            ),
         )
         for _ in range(VALIDATOR_COUNT)
     ]
@@ -93,9 +126,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     slot_sealers = GammaSTickets(
         [TicketBody(create_dummy_bytes32(), i) for i in range(EPOCH_LENGTH)]
     )
-    ticket_accumulator = GammaA(
-        [TicketBody(create_dummy_bytes32(), i) for i in range(3)]
-    )
+    ticket_accumulator = GammaA([TicketBody(create_dummy_bytes32(), i) for i in range(3)])
     components["gamma"] = Gamma(
         k=validator_set,
         z=ring_root,
@@ -112,7 +143,9 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     timestamps = AccountLookup(
         {
-            LookupTable(hash=create_dummy_bytes32(), length=Uint[32](0)): Timestamps([U32(i) for i in range(3)])
+            LookupTable(hash=create_dummy_bytes32(), length=Uint[32](0)): Timestamps(
+                [U32(i) for i in range(3)]
+            )
             for _ in range(2)
         }
     )
@@ -126,8 +159,8 @@ def create_dummy_state_components() -> Dict[str, object]:
             gas_limit=Gas(5000),
             min_gas=Gas(100),
             num_o=Ao(0),
-            num_i=Ai(0)
-        )
+            num_i=Ai(0),
+        ),
     )
     components["delta"] = Delta({ServiceId(i): account for i in range(3)})
 
@@ -136,9 +169,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["iota"] = Iota(dummy_validator_data)
     components["kappa"] = Kappa(dummy_validator_data)
     components["lambda_"] = Lambda_(dummy_validator_data)
-    components["rho"] = Rho(
-        [OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]
-    )
+    components["rho"] = Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)])
     components["tau"] = Tau(0)
 
     # Phi - Authorization queue
@@ -149,7 +180,9 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Chi
     chi_g = ChiG({ServiceId(i): Gas(100) for i in range(3)})
-    components["chi"] = Chi(chi_m=ServiceId(0), chi_a=ServiceId(1), chi_v=ServiceId(2), chi_g=chi_g)
+    components["chi"] = Chi(
+        chi_m=ServiceId(0), chi_a=ServiceId(1), chi_v=ServiceId(2), chi_g=chi_g
+    )
 
     # Psi
     components["psi"] = Psi(
@@ -200,16 +233,13 @@ def create_dummy_state_components() -> Dict[str, object]:
         vals_current=all_validator_stats,
         vals_last=all_validator_stats,
         cores=all_core_stats,
-        services=all_service_stats
+        services=all_service_stats,
     )
 
     # Nu and Xi
     components["nu"] = Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
 
-
-    components["xi"] = Xi(
-        [WorkDependencies([]) for _ in range(EPOCH_LENGTH)]
-    )
+    components["xi"] = Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)])
 
     return components
 

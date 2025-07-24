@@ -36,6 +36,7 @@ data/d3l
 data/audit
 
 benchmarks/
+vectors/
 
 *.log
 .coverage
@@ -57,7 +58,7 @@ azure_logs/
 
 mydb/
 db/
-vectors/
+god_mode/
 
 # Ignore all folders in /seeds, but not the keys.json
 /seeds/*

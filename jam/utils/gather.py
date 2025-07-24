@@ -3,6 +3,7 @@ from typing import List
 
 from jam.logging import logger
 
+
 async def gather_with_exceptions(tasks: List[asyncio.Task]):
     responses = await asyncio.gather(*tasks, return_exceptions=True)
     results = []
@@ -15,6 +16,7 @@ async def gather_with_exceptions(tasks: List[asyncio.Task]):
             results.append(res)
 
     return results
+
 
 # async def main():
 #     async def success(): return "ok"
@@ -31,4 +33,3 @@ async def gather_with_exceptions(tasks: List[asyncio.Task]):
 # # Run the async main
 # if __name__ == "__main__":
 #     asyncio.run(main())
-

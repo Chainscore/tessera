@@ -1,5 +1,5 @@
 from typing import cast
-from tsrkit_types import structure, Uint, Bool
+from tsrkit_types import structure, Uint, U8, Bool
 
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
 
@@ -12,6 +12,7 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 logger = get_logger("network")
 
+
 @structure
 class Judgment:
     epoch_index: EpochIndex
@@ -19,6 +20,7 @@ class Judgment:
     validity: Bool
     work_report_hash: WorkReportHash
     ed25519_signature: Ed25519Signature
+
 
 @structure
 class CE145Data:
@@ -30,6 +32,7 @@ class CE145Data:
         if len(self.judgment.encode()) == self.len_a:
             return True
         return False
+
 
 class JudgmentPublication(NetworkProtocol):
     """
@@ -54,7 +57,7 @@ class JudgmentPublication(NetworkProtocol):
         self._prefix = PrefixType.CE145
 
     async def transmit(self, node: Node, data: CE145Data):
-        """ Transmit Judgments for the particular Work Report to other Auditors"""
+        """Transmit Judgments for the particular Work Report to other Auditors"""
 
         len_a = data.len_a.encode()
         msg_a = data.judgment.encode()
@@ -73,7 +76,6 @@ class JudgmentPublication(NetworkProtocol):
             logger.info(f"Transmitting Judgment to {len(node.peer_conn)} validators")
 
             for peer in node.peer_conn:
-
                 client = node.peer_conn[peer][1]
 
                 # send protocol prefix
@@ -94,22 +96,22 @@ class JudgmentPublication(NetworkProtocol):
                     "Judgment transmitted",
                     stream_id=stream_id,
                     port=peer.port,
-                    validator = peer
+                    validator=peer,
                 )
 
         except Exception as e:
             logger.error(
                 "Failed to transmitting Judgment",
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
         return responses
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """ Intercept individual Judgment from other Auditors for their assigned Work Reports """
+        """Intercept individual Judgment from other Auditors for their assigned Work Reports """
         from jam.operations.tranche_store import tranche_store, Tranche
-        from jam.consensus.grandpa.finality import Finality
+        from jam.finality.finality import Finality
         from jam.settings import settings
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
@@ -117,7 +119,7 @@ class JudgmentPublication(NetworkProtocol):
         buffer = server.stream_buffer[stream_id]
 
         try:
-            data, offset = CE145Data.decode_from(buffer[1:])
+            data = CE145Data.decode(buffer[1:])
             data = cast(CE145Data, data)
 
             # JUDGMENT RECEIVED FROM WHICH VALIDATOR THAT INDEX, JUDGMENT, WR_HASH
@@ -138,7 +140,7 @@ class JudgmentPublication(NetworkProtocol):
                 "Received Judgment from other Auditors",
                 stream_id=stream_id,
                 peer=server.peer,
-                buffer_size=len(buffer[1:])
+                buffer_size=len(buffer[1:]),
             )
 
             if not data.is_valid:
@@ -156,18 +158,18 @@ class JudgmentPublication(NetworkProtocol):
                 auditor=server.peer,
                 stream_id=stream_id,
                 error=str(e),
-                err_type=type(e).__name__
+                err_type=type(e).__name__,
             )
 
     def res_intercept(self, stream_id: int, client: "QuicProtocol"):
-        """ Intercept judgment Acknowledgement """
+        """Intercept judgment Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
 
         if buffer[1:] == b"":
             logger.info(
                 "Judgment acknowledge received",
                 stream_id=stream_id,
-                buffer_size=len(buffer)
+                buffer_size=len(buffer),
             )
             return True
 

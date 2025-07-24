@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import cast
 
@@ -13,18 +14,17 @@ from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
 from jam.types.work.package import WorkPackage
 
-from jam.work_package.processor import Processor
-
-from jam.utils.constants import GENESIS_TS
 from jam.utils.assignment import assign_guarantors
 
 # Module-specific logger
 logger = get_logger("network")
 
+
 @structure
 class WorkPackageCore:
-    work_package : WorkPackage
-    core_index : CoreIndex
+    work_package: WorkPackage
+    core_index: CoreIndex
+
 
 @structure
 class CE133Data:
@@ -35,10 +35,13 @@ class CE133Data:
 
     @property
     def is_valid(self):
-        if (len(self.package_data.encode()) == self.package_len
-                and len(self.extrinsics.encode()) == self.extrinsics_len):
+        if (
+            len(self.package_data.encode()) == self.package_len
+            and len(self.extrinsics.encode()) == self.extrinsics_len
+        ):
             return True
         return False
+
 
 class WorkPackageSubmission(NetworkProtocol):
     """
@@ -80,19 +83,18 @@ class WorkPackageSubmission(NetworkProtocol):
             "Trying transmitting work package",
             core=ci,
             guarantors=guarantors,
-            wp_hash=wp_hash[:16]+"...",
+            wp_hash=wp_hash[:16] + "...",
             stream_a_size=data.package_len,
             stream_b_size=data.extrinsics_len,
-            extrinsics_count=len(data.extrinsics)
+            extrinsics_count=len(data.extrinsics),
         )
 
         transmitted_to = None
         res = None
 
-
         for peer in node.peer_conn:
             try:
-                # Hardcoded testo
+                # Hardcoded testing
                 # if peer.port != 40000:
                 #     continue
 
@@ -118,7 +120,7 @@ class WorkPackageSubmission(NetworkProtocol):
                     "Work package transmitted",
                     stream_id=stream_id,
                     core=ci,
-                    guarantor=peer
+                    guarantor=peer,
                 )
 
                 if res:
@@ -129,7 +131,7 @@ class WorkPackageSubmission(NetworkProtocol):
                     "Couldn't transmit package",
                     stream_id=stream_id,
                     core=ci,
-                    guarantor=peer
+                    guarantor=peer,
                 )
 
             except Exception as e:
@@ -137,7 +139,7 @@ class WorkPackageSubmission(NetworkProtocol):
                     "Work package transmission failed",
                     guarantor=peer,
                     error=str(e),
-                    error_type=type(e).__name__
+                    error_type=type(e).__name__,
                 )
 
         if not transmitted_to:
@@ -161,7 +163,7 @@ class WorkPackageSubmission(NetworkProtocol):
             logger.debug(
                 "Received work package submission",
                 stream_id=stream_id,
-                buffer_size=len(buffer)
+                buffer_size=len(buffer),
             )
 
             data = CE133Data.decode(buffer[1:])
@@ -178,20 +180,19 @@ class WorkPackageSubmission(NetworkProtocol):
                 stream_id=stream_id,
                 core_index=int(ci),
                 extrinsics_count=len(data.extrinsics),
-                wp_hash=wp.hash().hex()[:16]+"..."
+                wp_hash=wp.hash().hex()[:16] + "...",
             )
 
             # Start Refinement Process
-            processor = Processor(server.node)
-            wr, wr_hash = processor.process(wp, ci, data.extrinsics)
+            from jam.incore.processor import Processor
 
-            logger.info(
-                "Work package processed successfully",
-                stream_id=stream_id,
-                wp_hash=wp.hash().hex()[:16]+"...",
-                wr_hash=wr_hash,
-                core_index=int(ci)
+            processor = Processor(server.node)
+
+            # wr, wr_hash = processor.process(wp, ci, data.extrinsics)
+            refine_task = asyncio.create_task(
+                processor.process(wp, ci, data.extrinsics)
             )
+            refine_task.add_done_callback(self.on_done_callback(stream_id, wp, ci))
 
             # Return acknowledgment to Builder
             ack = b""
@@ -200,7 +201,7 @@ class WorkPackageSubmission(NetworkProtocol):
             logger.debug(
                 "Acknowledgement sent to builder",
                 stream_id=stream_id,
-                ack_size=len(ack)
+                ack_size=len(ack),
             )
 
         except Exception as e:
@@ -212,10 +213,12 @@ class WorkPackageSubmission(NetworkProtocol):
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> tuple[(bool | None), Peer]:
+    def res_intercept(
+        self, stream_id: int, client: QuicProtocol
+    ) -> tuple[(bool | None), Peer]:
         """Intercept Acknowledgement"""
 
         buffer = client.stream_buffer[stream_id]
@@ -223,9 +226,26 @@ class WorkPackageSubmission(NetworkProtocol):
             logger.info(
                 "Work package acknowledgement received",
                 stream_id=stream_id,
-                buffer_size=len(buffer)
+                buffer_size=len(buffer),
             )
             return True, client.peer
 
         return None, client.peer
 
+    @staticmethod
+    def on_done_callback(stream_id, wp, ci):
+        def on_done(task: asyncio.Future):
+            try:
+                wr, wr_hash = task.result()
+                logger.info(
+                    "Work package processed successfully",
+                    stream_id=stream_id,
+                    wp_hash=wp.hash().hex()[:16] + "...",
+                    wr_hash=wr_hash.hex()[:16] + "...",
+                    core_index=int(ci),
+                )
+
+            except Exception as e:
+                logger.error("Refine task failed", stream_id=stream_id, error=str(e))
+
+        return on_done

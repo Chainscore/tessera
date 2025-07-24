@@ -8,6 +8,7 @@ from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
+
 @structure
 class CE201Data:
     len: Uint[32]
@@ -18,6 +19,7 @@ class CE201Data:
         if len(self.data.encode()) == self.len:
             return True
         return False
+
 
 class GhostProtocol(NetworkProtocol):
     """
@@ -46,7 +48,9 @@ class GhostProtocol(NetworkProtocol):
         msg_a = Bytes(data, "utf-8").encode()
         len_a = Uint[32](len(msg_a)).encode()
 
-        logger.info(f"GHOST - Transmitting to {len(node.peer_conn)} Validators", protocol="201")
+        logger.info(
+            f"GHOST - Transmitting to {len(node.peer_conn)} Validators", protocol="201"
+        )
 
         # TODO: Use Original Guarantor Connection
 
@@ -80,7 +84,6 @@ class GhostProtocol(NetworkProtocol):
         if not data.is_valid:
             raise NetworkingError(Code.INVALID_DATA)
 
-
         message = data.data.decode("utf-8")
         logger.debug(f"Intercepted data {message}")
 
@@ -93,9 +96,7 @@ class GhostProtocol(NetworkProtocol):
         server.stream_and_close(msg_a, stream_id)
 
         logger.info(
-            f"📩 Processed Test Protocol query.",
-            message=message,
-            peer=server.peer
+            f"📩 Processed Test Protocol query.", message=message, peer=server.peer
         )
 
     def res_intercept(self, stream_id: int, client: QuicProtocol) -> str:
@@ -113,7 +114,7 @@ class GhostProtocol(NetworkProtocol):
                 f"Test Response received.",
                 peer=client.peer,
                 stream_id=stream_id,
-                message = message
+                message=message,
             )
 
             return message
@@ -121,4 +122,3 @@ class GhostProtocol(NetworkProtocol):
         except Exception as e:
             logger.error(Code.BAD_RESPONSE, error=str(e))
             return Null
-

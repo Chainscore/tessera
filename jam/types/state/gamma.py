@@ -15,13 +15,17 @@ from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 class GammaK(TypedArray[ValidatorData, VALIDATOR_COUNT]):
     ...
 
+
 class GammaA(TypedVector[TicketBody]):
     ...
 
+
 GammaZ = BandersnatchRingRoot
+
 
 class GammaSTickets(TypedArray[TicketBody, EPOCH_LENGTH]):
     ...
+
 
 class GammaSFallback(TypedArray[BandersnatchPublic, EPOCH_LENGTH]):
     ...
@@ -32,6 +36,7 @@ class GammaS(Choice):
 
     tickets: GammaSTickets
     keys: GammaSFallback
+
 
 # State key: 4
 @structure

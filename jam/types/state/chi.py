@@ -14,6 +14,7 @@ ChiV = ServiceId
 
 ChiG = Dictionary[ServiceId, Gas]
 
+
 # State key: 12
 @structure
 class Chi:

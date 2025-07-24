@@ -16,18 +16,12 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
     @property
     def lx(self) -> int:
         return min(4, max(0, self.skip_index - 1))
-    
+
     @property
     def vx(self) -> int:
         start = self.counter + 2
         end = start + self.lx
-        return chi(
-            int.from_bytes(
-                self.program.zeta[start:end],
-                "little"
-            ),
-            self.lx
-        )
+        return chi(int.from_bytes(self.program.zeta[start:end], "little"), self.lx)
 
     @classmethod
     def table(cls) -> Dict[int, OpCode]:
@@ -47,50 +41,45 @@ class InstructionsWArgs1Reg1Imm(InstructionTable):
             62: OpCode(name="store_u64", fn=cls.store_u(64), gas=1, is_terminating=False),
         }
 
-    def jump_ind(
-        self, registers: list, memory: Memory
-    ) -> OpReturn:
-        status, counter = self.program.djump(self.counter, floor(int(registers[self.ra]) + self.vx) % 2**32)
-        return status, counter, registers, memory 
-            
-    def load_imm(
-        self, registers: list, memory: Memory
-    ) -> OpReturn:
+    def jump_ind(self, registers: list, memory: Memory) -> OpReturn:
+        status, counter = self.program.djump(
+            self.counter, floor(int(registers[self.ra]) + self.vx) % 2**32
+        )
+        return status, counter, registers, memory
+
+    def load_imm(self, registers: list, memory: Memory) -> OpReturn:
         """
         OPC20: Load a 64-bit immediate value into a register.
         """
         registers[self.ra] = self.vx
         return CONTINUE, self.counter + self.skip_index + 1, registers, memory
-    
+
     @staticmethod
     def load_u(bitsize: int) -> Callable[[Any, list, Memory], OpReturn]:
-        def load_u_impl(
-                self, registers: list, memory: Memory
-        ) -> OpReturn:
+        def load_u_impl(self, registers: list, memory: Memory) -> OpReturn:
             registers[self.ra] = int.from_bytes(memory.read(self.vx, bitsize // 8), "little")
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
+
         return load_u_impl
-    
+
     @staticmethod
     def store_u(bitsize: int) -> Callable[[Any, list, Memory], OpReturn]:
-        def store_u_impl(
-                self, registers: list, memory: Memory
-        ) -> OpReturn:
+        def store_u_impl(self, registers: list, memory: Memory) -> OpReturn:
             memory.write(
-                self.vx, 
-                int(registers[self.ra] % (2**bitsize)).to_bytes(bitsize // 8, "little")
+                self.vx,
+                int(registers[self.ra] % (2**bitsize)).to_bytes(bitsize // 8, "little"),
             )
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
+
         return store_u_impl
-    
+
     @staticmethod
     def load_i(bitsize: int) -> Callable[[Any, list, Memory], OpReturn]:
-        def load_i_impl(
-                self, registers: list, memory: Memory
-        ) -> OpReturn:
+        def load_i_impl(self, registers: list, memory: Memory) -> OpReturn:
             registers[self.ra] = chi(
                 int.from_bytes(memory.read(self.vx, bitsize // 8), "little"),
-                bitsize // 8
+                bitsize // 8,
             )
             return CONTINUE, self.counter + self.skip_index + 1, registers, memory
+
         return load_i_impl

@@ -3,25 +3,23 @@ import time
 from typing import Callable, List, Tuple
 
 from jam.logging import get_logger
+from .handlers import WPBuilder, assurer, BlockProducer
 from jam.operations.audit_engine import AuditEngine
-from jam.operations.builder import Builder
-
-from .assr_collector import assr_collector
-from .bp_engine import BlockProducer
 from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS
 
 
 logger = get_logger("nodeops")
 
+
 def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
     if is_bd:
-        return [(0, Builder)]
+        return [(0, WPBuilder)]
 
     return [
         (0, BlockProducer),
-        (2, None), # audit
-        (4, assr_collector), # transmit assurances
+        (2, None),  # audit
+        (4, assurer),  # transmit assurances
     ]
 
 
@@ -47,7 +45,8 @@ async def operate(is_builder):
         # Schedule tasks to run immediately
         for dispatch in dispatch_fns(is_builder):
             (task_ts, runner) = dispatch
-            if runner: asyncio.create_task(schedule_run(task_ts, runner, ts))
+            if runner:
+                asyncio.create_task(schedule_run(task_ts, runner, ts))
 
         # Move on to next timeslot and sleep
         ts += 1

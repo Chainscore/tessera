@@ -7,25 +7,26 @@ from tsrkit_types import structure, U8, U32, TypedVector, Option, Null
 from jam.types import Hash, BandersnatchVrfSignature, ValidatorIndex
 from jam.types.protocol.core import CoreIndex, EpochIndex,TrancheIndex
 
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
+
 from jam.types.work.report import WorkReportHash
 from jam.logging import get_logger
 from jam.utils.constants import EPOCH_LENGTH
-from jam.audit.vectors.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
+from jam.audit.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
 from tests.unit.wp.types import WorkReport
 
 
 # Module-specifier logger
 logger = get_logger("in_core")
 
+
 @structure
 class AuditProcess:
-
     @classmethod
     async def audit_process(cls, newly_avail_wrs: List[Option[WorkReport]], tranche_idx:TrancheIndex):
         from jam.audit.audit import AuditingAndJudgement
-        from jam.consensus.grandpa.finality import Finality
-        from jam.state.state import state
+
+        # from jam.state.state import state
         from jam.settings import settings
         from jam.network.node import node
         from jam.operations.tranche_store import tranche_store, Tranche
@@ -41,7 +42,6 @@ class AuditProcess:
         logger.info(f"Get rho pending state (Initial state)")
         # pending_rho_ = state.load(header_hash=header_hash).rho
 
-
         # ---------------------- Block's header entropy sources -----------------------------------
         entropy = latest_block.header.entropy_source
 
@@ -51,7 +51,9 @@ class AuditProcess:
             # pre audit reports
             logger.info(f"Get reports list which about to be audit")
 
-            p_a_r = audit.report_to_be_audit(pending_wrs=final_list, newly_avail_wrs=newly_avail_wrs)
+            p_a_r = audit.report_to_be_audit(
+                pending_wrs=final_list, newly_avail_wrs=newly_avail_wrs
+            )
 
             # ---------------------- Update the q in tranche store ------------------------------------
             tranche = Tranche(
@@ -66,8 +68,9 @@ class AuditProcess:
 
             reports = audit.verifiable_random_selection(entropy_source=entropy, bandersnatch_key=node.b_key, pre_audit_report=p_a_r)
 
-            logger.info(f"Checking assign report length {len(reports)} for each validator")
-
+            logger.info(
+                f"Checking assign report length {len(reports)} for each validator"
+            )
 
             asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports, tranche_idx=tranche_idx))
             asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports, tranche_idx=tranche_idx))
@@ -78,14 +81,14 @@ class AuditProcess:
                 "Failed to report assignment",
                 error=str(e),
                 err_type=type(e).__name__,
-                exc_info = True
+                exc_info=True,
             )
             raise
 
     @classmethod
     async def audit_announcement(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche_idx: TrancheIndex):
         """
-            This function just take a list of report which is available for auditing and assign random 10 reports to tha validator then create announcement for them.
+        This function just take a list of report which is available for auditing and assign random 10 reports to tha validator then create announcement for them.
 
             Arg:
                 reports: List of report which just become available for auditing  [ ( Q[R?]_c )  Eq. 17.1 ]
@@ -123,9 +126,8 @@ class AuditProcess:
             header_hash=header_hash,
             tranches=tranche_idx,
             announcement=Announcement(
-                assigned_report=assignments,
-                ed25519_signature=announcement_sign
-            )
+                assigned_report=assignments, ed25519_signature=announcement_sign
+            ),
         )
 
         # siggnature = audit.vrf_signature_bandersnatch(entropy_source=, bandersnatch_key=, tranche_index=, )
@@ -142,7 +144,12 @@ class AuditProcess:
         evidence = Evidence(FirstTrancheEvidence(sign))
 
 
-        data = CE144Data(len_a=U32(len(announcement.encode())), tranche_announcement=announcement, len_b=U32(len(evidence.encode())), evidence=evidence)
+        data = CE144Data(
+            len_a=U32(len(announcement.encode())),
+            tranche_announcement=announcement,
+            len_b=U32(len(evidence.encode())),
+            evidence=evidence,
+        )
 
         try:
 
@@ -165,16 +172,16 @@ class AuditProcess:
         from jam.operations.tranche_store import tranche_store, Tranche
 
 
-        audit =  AuditingAndJudgement()
+        audit = AuditingAndJudgement()
 
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
         slot = latest_block.header.slot
-        logger.info(f"curent judgment slot  {slot}")
+        logger.info(f"current judgment slot  {slot}")
 
         epoch = math.floor(slot / EPOCH_LENGTH)
 
-        logger.info(f"Reports are avialable for judgment on this node is {len(assign_wrs)} ")
+        logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)} ")
 
         tranche = Tranche(
             tranche_index=tranche_idx,
@@ -183,7 +190,6 @@ class AuditProcess:
 
         try:
             for c, r in assign_wrs:
-
                 wr_hash = Hash.blake2b(r.encode())
 
                 package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json", rep_hash=wr_hash)
@@ -198,7 +204,6 @@ class AuditProcess:
                 from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
                 CE145 = JudgmentPublication()
 
-
                 validity = U8(1) if result else U8(0)
 
                 judgment = Judgment(
@@ -206,7 +211,7 @@ class AuditProcess:
                     validator_index=node.validator_index,
                     validity=validity,
                     work_report_hash=WorkReportHash(wr_hash),
-                    ed25519_signature=judgment_sign
+                    ed25519_signature=judgment_sign,
                 )
 
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
@@ -218,5 +223,5 @@ class AuditProcess:
             logger.error(
                 f"failed to transmitted judgment",
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )

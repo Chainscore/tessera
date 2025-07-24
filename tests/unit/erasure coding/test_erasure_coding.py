@@ -1,6 +1,6 @@
 from tsrkit_types import Bytes, Vector
 
-from jam.erasure_coding.erasure_code import ErasureCode
+from jam.utils.erasure_coding.erasure_code import ErasureCode
 from jam.types.work.manifest import Segments, Segment
 from jam.utils.dummy.utils import create_dummy_bytes4104
 

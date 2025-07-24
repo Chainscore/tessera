@@ -13,7 +13,12 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.quic import QuicProtocol
 from jam.types.protocol.core import CoreIndex, ValidatorIndex,TrancheIndex
 from tsrkit_types import U8
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, BandersnatchVrfSignature, HeaderHash
+from jam.types.protocol.crypto import (
+    WorkReportHash,
+    Ed25519Signature,
+    BandersnatchVrfSignature,
+    HeaderHash,
+)
 from typing import cast
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -21,50 +26,60 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 # Module-specific logger
 logger = get_logger("network")
 
+
 @structure
 class Assign:
     core_index: CoreIndex
     report_hash: WorkReportHash
+
 
 @structure
 class Announcement:
     assigned_report: TypedVector[Assign]
     ed25519_signature: Ed25519Signature
 
+
 @structure
 class FirstTrancheEvidence:
-    bandersnatch_signature : BandersnatchVrfSignature
+    bandersnatch_signature: BandersnatchVrfSignature
+
 
 @structure
 class NoShow:
-    validator_index : ValidatorIndex
-    announcement : Announcement
+    validator_index: ValidatorIndex
+    announcement: Announcement
+
 
 @structure
 class SubsequentTrancheEvidence:
-    bandersnatch_signature : BandersnatchVrfSignature
-    no_show : NoShow
+    bandersnatch_signature: BandersnatchVrfSignature
+    no_show: NoShow
+
 
 @structure
 class Transmit:
-    header_hash : HeaderHash
-    tranches : U8
-    announcement : Announcement
+    header_hash: HeaderHash
+    tranches: U8
+    announcement: Announcement
 
 class Evidence(Choice):
     first_tranche: FirstTrancheEvidence
-    Subsequent_tranche : SubsequentTrancheEvidence
+    Subsequent_tranche: SubsequentTrancheEvidence
+
 
 @structure
 class CE144Data:
     len_a: Uint[32]
-    tranche_announcement : Transmit
-    len_b : Uint[32]
-    evidence : Evidence
+    tranche_announcement: Transmit
+    len_b: Uint[32]
+    evidence: Evidence
 
     @property
     def is_valid(self):
-        if len(self.tranche_announcement.encode()) == self.len_a and len(self.evidence.encode()) == self.len_b:
+        if (
+            len(self.tranche_announcement.encode()) == self.len_a
+            and len(self.evidence.encode()) == self.len_b
+        ):
             return True
         return False
 
@@ -76,8 +91,7 @@ class AuditAnnouncement(NetworkProtocol):
     Protocol Flow:
         Auditor -> Auditor
 
-        -->import asyncio
- Header_Hash ++ Tranche ++ Announcement[len++[ core_index ++ work_report_hash ] ++ Ed25519_signature]
+        --> Header_Hash ++ Tranche ++ Announcement[len++[ core_index ++ work_report_hash ] ++ Ed25519_signature]
         --> Evidence[choice[FirstTrancheEvidence, SubsequentTrancheEvidence]]
         --> FIN
         <-- FIN
@@ -85,6 +99,7 @@ class AuditAnnouncement(NetworkProtocol):
     sources:
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-144-audit-announcement
     """
+
     from jam.network.node import Node
 
     def __init__(self):
@@ -92,7 +107,7 @@ class AuditAnnouncement(NetworkProtocol):
         self._prefix = PrefixType.CE144
 
     async def transmit(self, node: Node, data: CE144Data):
-        """ Transmit Announcement of assign Work report for auditing from Auditor to Other Validators(Auditors) """
+        """Transmit Announcement of assign Work report for auditing from Auditor to Other Validators(Auditors)"""
 
         from jam.operations.tranche_store import tranche_store, Tranche
 
@@ -130,7 +145,9 @@ class AuditAnnouncement(NetworkProtocol):
         transmitted_count = 0
 
         try:
-            logger.info(f"Transmitting Work report's announcement to {len(node.peer_conn)} validators ")
+            logger.info(
+                f"Transmitting Work report's announcement to {len(node.peer_conn)} validators "
+            )
 
             for peer in node.peer_conn:
                 client = node.peer_conn[peer][1]
@@ -156,7 +173,7 @@ class AuditAnnouncement(NetworkProtocol):
                     "Transmitted announcement",
                     stream_id=stream_id,
                     port=peer.port,
-                    validator=peer
+                    validator=peer,
                 )
 
             responses = await gather_with_exceptions(tasks)
@@ -165,13 +182,13 @@ class AuditAnnouncement(NetworkProtocol):
             logger.error(
                 "Failed to transmitting Announcement",
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
         return responses
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """ Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
+        """Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
         from jam.operations.tranche_store import tranche_store, Tranche
 
         v_r: dict[ValidatorIndex, set[WorkReportHash]] = {}
@@ -203,13 +220,13 @@ class AuditAnnouncement(NetworkProtocol):
                 "Received Audit's Announcement from other Auditors",
                 stream_id=stream_id,
                 peer=server.peer,
-                buffer_size=len(buffer[1:])
+                buffer_size=len(buffer[1:]),
             )
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            ack= b""
+            ack = b""
             server.stream_and_close(ack, stream_id)
 
         except Exception as e:
@@ -225,7 +242,7 @@ class AuditAnnouncement(NetworkProtocol):
             )
 
     def res_intercept(self, stream_id: int, client: "QuicProtocol"):
-        """ Intercept Announcement Acknowledgement """
+        """Intercept Announcement Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
             logger.info(

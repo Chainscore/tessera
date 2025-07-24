@@ -2,6 +2,7 @@ from dataclasses import field
 from typing import Union, Tuple
 
 from tsrkit_types import Bytes
+
 # from jam.execution.utils import decode_code_hash
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.integers import Uint, U32
@@ -11,7 +12,11 @@ from tsrkit_types.struct import structure
 from jam.execution.utils import decode_code_hash
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId, TimeSlot
 from jam.types.protocol.crypto import Hash
-from jam.utils.constants import BASIC_MINIMUM_BALANCE, ADDITIONAL_BALANCE_PER_ITEM, ADDITIONAL_BALANCE_PER_OCTET
+from jam.utils.constants import (
+    BASIC_MINIMUM_BALANCE,
+    ADDITIONAL_BALANCE_PER_ITEM,
+    ADDITIONAL_BALANCE_PER_OCTET,
+)
 
 
 ServiceCodeHash = Bytes[32]
@@ -29,14 +34,18 @@ At = Balance
 class AccountMetadata:
     code_hash: ServiceCodeHash  # code_hash
     balance: Balance  # balance
-    gas_limit: Gas      = field(metadata={"name": "min_item_gas"})
-    min_gas: Gas        = field(metadata={"name": "min_memo_gas"})
-    num_o: Ao           = field(metadata={"name": "bytes"})
-    num_i: Ai           = field(metadata={"name": "items"})
+    gas_limit: Gas = field(metadata={"name": "min_item_gas"})
+    min_gas: Gas = field(metadata={"name": "min_memo_gas"})
+    num_o: Ao = field(metadata={"name": "bytes"})
+    num_i: Ai = field(metadata={"name": "items"})
 
     @property
     def t(self):
-        return Balance(BASIC_MINIMUM_BALANCE + ADDITIONAL_BALANCE_PER_ITEM * self.num_i + ADDITIONAL_BALANCE_PER_OCTET * self.num_o)
+        return Balance(
+            BASIC_MINIMUM_BALANCE
+            + ADDITIONAL_BALANCE_PER_ITEM * self.num_i
+            + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
+        )
 
     @staticmethod
     def empty() -> "AccountMetadata":
@@ -46,12 +55,13 @@ class AccountMetadata:
             gas_limit=Gas(0),
             min_gas=Gas(0),
             num_i=Ai(0),
-            num_o=Ao(0)
+            num_o=Ao(0),
         )
 
 
 class AccountStorage(Dictionary[Bytes[32], Bytes, "key", "value"]):
     """Storage dictionary"""
+
     _meta: AccountMetadata
 
     def __setitem__(self, key, value):
@@ -78,6 +88,7 @@ AccountPreimages = Dictionary[Bytes[32], Bytes, "hash", "blob"]
 """Lookup timestamps"""
 Timestamps = TypedBoundedVector[U32, 0, 3]
 
+
 @structure
 class LookupTable:
     hash: Bytes[32]
@@ -92,6 +103,7 @@ class LookupTable:
 
 class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
     """Lookup timestamps"""
+
     _meta: AccountMetadata
 
     def __setitem__(self, key: LookupTable, value):
@@ -111,10 +123,10 @@ class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
 
 @structure
 class AccountData:
-    service: AccountMetadata        = field(metadata={"default": AccountMetadata.empty()})
-    storage: AccountStorage         = field(metadata={"default": AccountStorage({})})
-    preimages: AccountPreimages     = field(metadata={"default": AccountPreimages({})})
-    lookup: AccountLookup           = field(metadata={"name": "lookup_meta", "default": AccountLookup({})})
+    service: AccountMetadata = field(metadata={"default": AccountMetadata.empty()})
+    storage: AccountStorage = field(metadata={"default": AccountStorage({})})
+    preimages: AccountPreimages = field(metadata={"default": AccountPreimages({})})
+    lookup: AccountLookup = field(metadata={"name": "lookup_meta", "default": AccountLookup({})})
 
     def __post_init__(self):
         self.storage._meta = self.service
@@ -122,20 +134,23 @@ class AccountData:
 
     def m_c(self) -> Union[Tuple[bytes, bytes], None]:
         img = self.preimages.get(self.service.code_hash)
-        if img: return decode_code_hash(img)
-        else: return None
+        if img:
+            return decode_code_hash(img)
+        else:
+            return None
 
     def historical_lookup(self, timeslot: TimeSlot, preimage_hash: Bytes[32]):
         """
         https://graypaper.fluffylabs.dev/#/cc517d7/11c70011e000?v=0.6.5
         """
-        if (
-                self.preimages[preimage_hash] is not None and
-                self.is_preimage_valid(
-                    self.lookup[
-                        LookupTable(hash=preimage_hash, length=BlobLength(len(self.lookup[preimage_hash])))],
-                    timeslot
+        if self.preimages[preimage_hash] is not None and self.is_preimage_valid(
+            self.lookup[
+                LookupTable(
+                    hash=preimage_hash,
+                    length=BlobLength(len(self.lookup[preimage_hash])),
                 )
+            ],
+            timeslot,
         ):
             return self.preimages[preimage_hash]
         else:

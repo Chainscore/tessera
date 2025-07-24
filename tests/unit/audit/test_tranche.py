@@ -1,11 +1,10 @@
 import asyncio
-# import tempfile
+import os
 import math
 
-# import jam.settings
-# from jam.state.ghost import GhostState
-# from jam.state.state import setup_state
-# from rockstore import RockStore
+
+import pytest
+
 
 from jam.audit.tranche_engine import TrancheEngine
 from jam.operations.tranche_store import Tranche, TrancheState, JudgmentRecord, TrancheStore, ValidatorList,tranche_store
@@ -23,6 +22,7 @@ from jam.utils.constants import AUDIT_PERIOD
 from tests.unit.audit.test_tranche_store import another_dummy_work_report, dummy_work_report
 
 logger = get_logger("tranche_test")
+
 
 def create_test_tranche_state() -> TrancheState:
     """
@@ -48,9 +48,11 @@ def create_test_tranche_state() -> TrancheState:
         unaudited_list=unaudited_list,
         judgments=judgments,
         valid_set=valid_set,
-        invalid_set=invalid_set
+        invalid_set=invalid_set,
     )
 
+@pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_tranche_engine():
     """
     Full test for TrancheEngine:

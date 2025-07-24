@@ -24,7 +24,7 @@ async def connect(
     token_handler: Optional[QuicTokenHandler] = None,
     wait_connected: bool = True,
     local_port: int = 0,
-    sock = None,
+    sock=None,
 ) -> AsyncGenerator[QuicConnectionProtocol, None]:
     """
     Connect to a QUIC server at the given `host` and `port`.
@@ -53,7 +53,6 @@ async def connect(
       0-RTT.
     * ``local_port`` is the UDP port number that this client wants to bind.
     """
-    print("CONNECTING", port)
     loop = asyncio.get_event_loop()
     local_host = "::"
 
@@ -83,12 +82,10 @@ async def connect(
         completed = True
     except Exception as e:
         sock.close()
-        print("ERROR CLIENT SOCKET BINDING", e)
     finally:
         if not completed:
             sock.close()
 
-    print("SOCK CLIENT", sock)
     # connect
     try:
         transport, protocol = await loop.create_datagram_endpoint(
@@ -111,4 +108,3 @@ async def connect(
 
     except Exception as e:
         print("ERROR CLIENT CONNECTION", e)
-

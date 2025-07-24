@@ -1,4 +1,4 @@
-VERSION=1
+VERSION = 1
 
 from jam.utils.constants import (
     BASIC_MINIMUM_BALANCE,  # B_S

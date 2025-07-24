@@ -14,12 +14,13 @@ class InvocationFunctions(Protocol):
                 "execute": fn,
             }
             return fn
+
         return decorator
-    
+
     @classmethod
     def execute(cls, host_call: int, gas: int, registers: list, memory: Memory, context, args):
         call = cls.HANDLERS[host_call]
-        if gas < call['gas']:
+        if gas < call["gas"]:
             return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context
-        gas = gas - cls.HANDLERS[host_call]['gas']
-        return call['execute'](gas=gas, registers=registers, memory=memory, context=context, **args)
+        gas = gas - cls.HANDLERS[host_call]["gas"]
+        return call["execute"](gas=gas, registers=registers, memory=memory, context=context, **args)

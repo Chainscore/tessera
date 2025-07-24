@@ -9,6 +9,7 @@ from tsrkit_types.enum import Uint
 
 U8 = Uint[8]
 
+
 class PrefixType:
     # UP Streams
     UP0 = U8(0)

@@ -3,7 +3,7 @@ from tsrkit_types import Option, TypedVector
 from tsrkit_types.dictionary import Dictionary
 
 from jam.audit.tranche_engine import TrancheEngine
-from jam.audit.vectors.q import sample_work_reports_with_nulls
+from jam.audit.q import sample_work_reports_with_nulls
 from jam.logging import get_logger
 from jam.operations.dispatcher import NodeDispatcher
 import asyncio
@@ -20,7 +20,7 @@ from jam.operations.tranche_store import JudgmentRecord, Tranche, TrancheState, 
 # Logger for Auditing module
 logger = get_logger("audit")
 
-class AuditEngine():
+class AuditEngine:
     """
     Audit (tranche) engine: after each block (each timeslot), kick off
     the tranche-by-tranche auditing process.
@@ -47,7 +47,8 @@ class AuditEngine():
             unaudited_list=unaudited_list,
             judgments=judgments,
             valid_set=valid_set,
-            invalid_set=invalid_set)
+            invalid_set=invalid_set,
+        )
 
         # Build a store for this slot's audit tranches
         tranche_store._save_state(initTranche,tranche_state)

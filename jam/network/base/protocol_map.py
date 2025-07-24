@@ -14,8 +14,10 @@ from jam.network.protocols.ce_145 import JudgmentPublication
 from jam.network.protocols.ce_201 import GhostProtocol
 from jam.network.protocols.up_0 import BlockAnnouncement
 
+
 class ProtocolMap:
     """mapping for all the protocols"""
+
     ALL_PROTOCOLS = {
         PrefixType.UP0: BlockAnnouncement,
         PrefixType.CE128: BlockRequest,

@@ -8,24 +8,24 @@ from multiprocessing import Process
 
 from dotenv import load_dotenv
 from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
+from tsrkit_types.integers import U16, Uint
 
 from jam.logging import setup_logging, logger
 from jam.utils.chainspec import chain_config
 
-from jam.consensus.grandpa.finality import Finality
+from jam.finality.finality import Finality
 from jam.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
 
-from jam.consensus.bp_engine import BlockProducer
-from jam.network.protocols.ce_201 import CE201Data, GhostProtocol
-from jam.operations import Builder
-from jam.operations.utils.state_update import update_state
-from jam.state.state import setup_state, State
+from jam.operations.handlers.bp_engine import BlockProducer
+from jam.network.protocols.ce_201 import GhostProtocol
+
+# from jam.operations.utils.state_update import update_state
+from jam.state.state import setup_state
 from jam.types.protocol.crypto import BlsPublic
-from jam.types.block import Block
+from jam.block import Block
 from jam.types.protocol.validators import (
     IPAddress,
     ValidatorData,
@@ -54,13 +54,14 @@ async def start_node(node: Node):
         for response in responses:
             assert response == expected_message
 
+
 async def run_node(
     genesis_path: str,
     env: str,
     start_genesis: bool,
     theme: str,
     is_builder: bool,
-    is_validator: bool
+    is_validator: bool,
 ):
     # ---------- SETUP LOGGING ----------
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
@@ -87,7 +88,7 @@ async def run_node(
         theme=theme,
         node_name=name,
         environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None
+        min_level=getattr(logging, log_level.upper()) if log_level else None,
     )
 
     # ---------- SETUP SETTINGS ----------
@@ -104,7 +105,7 @@ async def run_node(
         spec=chain_config.name,
         environment=environment,
         is_builder=is_builder,
-        is_validator=is_validator
+        is_validator=is_validator,
     )
 
     try:
@@ -112,13 +113,10 @@ async def run_node(
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, "dev-spec.json")
         state.store.disable_cache()
-        update_state(state)
+        # update_state(state)
 
         peers = [
-            Peer(
-                id=bytes.decode(val.metadata.name, 'utf-8'),
-                data=val
-            )
+            Peer(id=bytes.decode(val.metadata.name, "utf-8"), data=val)
             for val in state.kappa
             if val.metadata.port != port
         ]
@@ -136,7 +134,7 @@ async def run_node(
                 BlsPublic(bytes(144)),
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2 ** 16 - 1),
+                    protocol=Uint[16](2**16 - 1),
                     host=ip,
                     port=U16(port),
                 ),
@@ -158,7 +156,7 @@ async def run_node(
             "JAM node shutting down gracefully",
             node_name=name,
             port=port,
-            reason="keyboard_interrupt"
+            reason="keyboard_interrupt",
         )
     except Exception as e:
         logger.critical(
@@ -166,13 +164,14 @@ async def run_node(
             node_name=name,
             port=port,
             error=str(e)[:200],
-            error_type=type(e).__name__
+            error_type=type(e).__name__,
         )
 
         # Close db connections
         settings.clear()
 
         raise
+
 
 def run_node_process(
     genesis_path: str,
@@ -185,16 +184,10 @@ def run_node_process(
     # Handle clean termination
     def handle_sigterm(signum, frame):
         exit(0)
+
     signal.signal(signal.SIGTERM, handle_sigterm)
 
-    asyncio.run(run_node(
-        genesis_path,
-        env,
-        start_genesis,
-        theme,
-        is_builder,
-        is_validator
-    ))
+    asyncio.run(run_node(genesis_path, env, start_genesis, theme, is_builder, is_validator))
 
 
 @pytest.mark.asyncio
@@ -203,12 +196,10 @@ async def test_connection():
     tasks = []
 
     p_alice = Process(
-        target=run_node_process,
-        args=("", 'envs/40000.env', True, "matrix", False, True)
+        target=run_node_process, args=("", "envs/40000.env", True, "matrix", False, True)
     )
     p_bob = Process(
-        target=run_node_process,
-        args=("", 'envs/40001.env', True, "polkadot", False, True)
+        target=run_node_process, args=("", "envs/40001.env", True, "polkadot", False, True)
     )
 
     p_alice.start()
@@ -217,11 +208,9 @@ async def test_connection():
     # KEEP TEST ALIVE FOR SOME TIME
     await asyncio.sleep(20)
 
-
     print("END OF TEST")
 
     p_alice.terminate()
     p_bob.terminate()
     p_alice.join()
     p_bob.join()
-

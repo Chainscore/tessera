@@ -1,28 +1,42 @@
 import json
-from typing import Type
-from tsrkit_types import Dictionary
-import asyncio
+from typing import TYPE_CHECKING, Type
 
-
-# from jam.audit.audit_process import AuditProcess
-from jam.operations.audit_engine import AuditEngine
-from jam.operations.ext_store import ext_store
-from jam.consensus.grandpa.finality import Finality
+if TYPE_CHECKING:
+    from jam.finality.finality import Finality
 from jam.error import JamError
-from jam.merklization import BMRFunctions
+from jam.utils.merkle import BMRFunctions
 from rockstore import RockStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
-from jam.state.merkle import StateTrie
+from jam.utils.trie.merkle import StateTrie
 from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.itf.codable import Codable
-from jam.types import Block, Hash, Alpha, Eta, Nu, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma, \
-    HeaderHash
+from tsrkit_types import Bytes, Codable, Dictionary
+from jam.types import (
+    Hash,
+    Alpha,
+    Eta,
+    Nu,
+    Pi,
+    Psi,
+    Kappa,
+    Lambda_,
+    Rho,
+    Tau,
+    Chi,
+    Iota,
+    Xi,
+    Beta,
+    Phi,
+    Gamma,
+    HeaderHash,
+)
+from jam.block.block import Block
+
 from jam.logging import get_logger
 
 logger = get_logger("import")
+
 
 def make_state_prop(state_key: int, cl: Type[Codable]):
     def fget(self):
@@ -34,9 +48,15 @@ def make_state_prop(state_key: int, cl: Type[Codable]):
     def fset(self, value):
         k, v = construct_state_key(state_key), value.encode()
         self.store.put(bytes(k), v)
-        logger.debug("State component updated", component=cl.__name__, state_key=state_key, value_size=len(v))
+        logger.debug(
+            "State component updated",
+            component=cl.__name__,
+            state_key=state_key,
+            value_size=len(v),
+        )
 
     return property(fget, fset)
+
 
 class State:
     """
@@ -51,21 +71,21 @@ class State:
     store: StateStorage
 
     # State Components
-    alpha       = make_state_prop(1,  Alpha)
-    phi         = make_state_prop(2,  Phi)
-    beta        = make_state_prop(3,  Beta)
-    gamma       = make_state_prop(4,  Gamma)
-    psi         = make_state_prop(5,  Psi)
-    eta         = make_state_prop(6,  Eta)
-    iota        = make_state_prop(7,  Iota)
-    kappa       = make_state_prop(8,  Kappa)
-    lambda_     = make_state_prop(9,  Lambda_)
-    rho         = make_state_prop(10, Rho)
-    tau         = make_state_prop(11, Tau)
-    chi         = make_state_prop(12, Chi)
-    pi          = make_state_prop(13, Pi)
-    nu          = make_state_prop(14, Nu)
-    xi          = make_state_prop(15, Xi)
+    alpha = make_state_prop(1, Alpha)
+    phi = make_state_prop(2, Phi)
+    beta = make_state_prop(3, Beta)
+    gamma = make_state_prop(4, Gamma)
+    psi = make_state_prop(5, Psi)
+    eta = make_state_prop(6, Eta)
+    iota = make_state_prop(7, Iota)
+    kappa = make_state_prop(8, Kappa)
+    lambda_ = make_state_prop(9, Lambda_)
+    rho = make_state_prop(10, Rho)
+    tau = make_state_prop(11, Tau)
+    chi = make_state_prop(12, Chi)
+    pi = make_state_prop(13, Pi)
+    nu = make_state_prop(14, Nu)
+    xi = make_state_prop(15, Xi)
 
     @property
     def delta(self) -> "DeltaView":
@@ -107,12 +127,17 @@ class State:
         self.store.save_n_clear_cache()
 
     @classmethod
-    def load(cls, header_hash) -> "State":
+    def load(cls, header_hash=HeaderHash(Hash.blake2b(b"empty"))) -> "State":
         """
         Load a readable instance of state. Made for serving API data.
         Create a cloned state (RO DB + Trie Clone w applied updates[do we really need trie?])
+
+        Args;
+            - `header_hash`: Loads state at point in time when this header was imported.
+            If this is not provided, we assume the request is just to have a readable instance of latest state
         """
         from jam.settings import settings
+
         # Empty trie -I dont think we need past trie data anywhere
         trie = StateTrie()
         # Create a Read-Only instance
@@ -125,12 +150,13 @@ class State:
     def settle(self, header_hash: HeaderHash):
         """Settles a set of state changes cached in store. Marks off the settlement with an unique header hash"""
         from jam.settings import settings
-        self.store.save_n_clear_cache(header_hash, settings.main_db)
 
+        self.store.save_n_clear_cache(header_hash, settings.main_db)
 
     def _force_transition(self, block: Block):
         # 1. Push auth hash of every WR to self.alpha[0:1]
 
+        # TODO: We should remove this
         alpha = self.alpha
 
         for guarantee in block.extrinsic.guarantees:
@@ -140,7 +166,6 @@ class State:
         self.alpha = alpha
 
         return self.transition(block)
-
 
     def transition(self, block: Block):
         """
@@ -155,20 +180,27 @@ class State:
 
         self._lock = True
 
-        from jam.accumulation.accumulation import Accumulation
-        from jam.report.reporting import Reporting
-        from jam.authorization.authorization import Authorization
-        from jam.recent_history.recent_history import RecentHistory
-        from jam.consensus.safrole.safrole import Safrole
-        from jam.assurances.assurances import Assurances
-        from jam.disputes.disputes import Disputes
-        from jam.preimages.preimages import Preimages
-        from jam.statistics.statistics import Statistics
+        from jam.state.transitions.accumulation import Accumulation
+        from jam.state.transitions.report import Reporting
+        from jam.state.transitions.authorization import Authorization
+        from jam.state.transitions.recent_history import RecentHistory
+        from jam.state.transitions.safrole import Safrole
+        from jam.state.transitions.assurances import Assurances
+        from jam.state.transitions.disputes import Disputes
+        from jam.state.transitions.preimages import Preimages
+        from jam.state.transitions.statistics import Statistics
         from jam.settings import settings as _set
 
         try:
             header_hash = HeaderHash(block.header.hash())
-            logger.info("Starting state transition on block", header_hash=header_hash.hex(), block_slot=int(block.header.slot), parent_hash= block.header.parent.hex()[:16] + "...", state_root= block.header.parent_state_root.hex()[:16] + "...", author_index=int(block.header.author_index))
+            logger.info(
+                "Starting state transition on block",
+                header_hash=header_hash.hex(),
+                block_slot=int(block.header.slot),
+                parent_hash=block.header.parent.hex()[:16] + "...",
+                state_root=block.header.parent_state_root.hex()[:16] + "...",
+                author_index=int(block.header.author_index),
+            )
 
             # TODO: Validate block headers
             # Epoch markers - make sure eta0_1 are the same as current etas
@@ -194,19 +226,19 @@ class State:
             logger.debug("Processing disputes...")
             Disputes.transition(self, block)
 
+            # Assurances
+            logger.debug("Processing assurances...")
+            _, newly_avail_wrs = Assurances.transition(self, block)
+
             # Reporting
             logger.debug("Processing reporting...")
             Reporting.transition(self, block, [])
 
-            # Assurances
-            logger.debug("Processing assurances...")
-            _, newly_avail_wrs = Assurances.transition(self, block)
-            # print("Avail wr fetched",newly_avail_wrs)
-            engine=AuditEngine()
-            engine.run(header_hash)
             # Accumulation
             logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
-            _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
+            _, commitment_map = Accumulation.transition(
+                self, block, newly_avail_wrs=newly_avail_wrs
+            )
 
             # Authorization
             logger.debug("Processing authorization...")
@@ -214,9 +246,9 @@ class State:
 
             # Recent History
             logger.debug("Processing recent history...", commitment_count=len(commitment_map))
-            history_merkle = BMRFunctions().wb_merkle_fn(
+            history_merkle = BMRFunctions().wb_merklize(
                 sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]),
-                Hash.keccak256
+                Hash.keccak256,
             )
             RecentHistory.transition(self, block, history_merkle)
 
@@ -239,7 +271,7 @@ class State:
                 "Block imported!",
                 header=header_hash.hex()[:16] + "...",
                 timeslot=self.tau,
-                final_state_root=self.root.hex()[:16] + "..."
+                final_state_root=self.root.hex()[:16] + "...",
             )
 
             block.save(_set.main_db)
@@ -248,18 +280,24 @@ class State:
             # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
             Finality.finalise(header_hash, _set.main_db)
 
-            ext_store.clear_on_import(block)
-
+            block.extrinsic.clear_from_stores()
             # asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs))
 
         except JamError as jam_e:
-            logger.critical("Invalid block", error=jam_e, hh=block.header.hash().hex(), slot=block.header.slot)
+            logger.error(
+                "Invalid block",
+                error=jam_e,
+                hh=block.header.hash().hex(),
+                slot=block.header.slot,
+            )
             self.store.clear()
 
         self._lock = False
         return
 
+
 state = State(None)
+
 
 def set_state(new_state: State):
     global state
@@ -269,11 +307,12 @@ def set_state(new_state: State):
     state = new_state
     return state
 
+
 def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"):
     logger.info(
         "Setting up state from genesis",
         genesis_type=type(genesis).__name__,
-        genesis_source=genesis if isinstance(genesis, str) else "GhostState"
+        genesis_source=genesis if isinstance(genesis, str) else "GhostState",
     )
 
     if isinstance(genesis, str):
@@ -289,7 +328,11 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
     new_state.store.enable_writes()
     new_state.store.enable_cache()
 
-    logger.info("State setup completed", state_root=new_state.root.hex()[:16] + "...", data_entries=len(data))
+    logger.info(
+        "State setup completed",
+        state_root=new_state.root.hex()[:16] + "...",
+        data_entries=len(data),
+    )
 
     global state
     state = new_state

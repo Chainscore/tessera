@@ -30,12 +30,13 @@ def get_random(h, l):
         l: length of array(array to be shuffled)
 
     Return:
-        A random_array that is generated using a hash value after performing certain operations on the hash value.    """
+        A random_array that is generated using a hash value after performing certain operations on the hash value.
+    """
     random = []
     for i in range(l):
         new_h = h + Uint[32](i // 8).encode()
         new_hash = Hash.blake2b(new_h)
-        new_hash_slice = new_hash[((4 * i) % 32): ((4 * i) % 32) + 4]
+        new_hash_slice = new_hash[((4 * i) % 32) : ((4 * i) % 32) + 4]
         num = Uint[32].decode(bytes(Bytes(new_hash_slice)))
         random.append(num)
     return random
@@ -51,5 +52,3 @@ def shuffle(h, array: TypedVector[Uint[32]]) -> TypedVector[Uint[32]]:
     fisher_yates_with_hash(array, l, random)
     array.reverse()
     return array
-
-
