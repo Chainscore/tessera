@@ -1,13 +1,14 @@
 from typing import cast, Tuple
+from jam.types.protocol.crypto import Hash
+from tsrkit_types import Uint, U32
 
-from tsrkit_types import Uint
+from tsrkit_types import Vector, Uint, Bytes, TypedVector
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_139_base import (
     SegmentShardRequestBase,
     Justifications,
-    CE139Response,
-    CE140Justification,
+    Justification,
 )
 from jam.network.base.protocol import PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -15,9 +16,10 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.logging import logger
 from jam.utils.merkle import BMRFunctions
 
-from jam.types.work.shard import SegmentsShard
+from jam.types.work.shard import SegmentsShard, SegmentShard
 
 from jam.storage.da.segments import SegmentShardsDA
+from jam.storage.da.audits import JustificationsDA, AuditShardsDA
 
 
 class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
@@ -47,42 +49,90 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
 
         buffer = server.stream_buffer[stream_id]
 
-        request = self.parse_request(buffer[1:])
-        logger.info("Handling CE140 shard + justification request")
+        try:
+            request = self.parse_request(buffer[1:])
 
-        d3l = settings.d3l
-        ss_da = SegmentShardsDA(d3l)
+            d3l = settings.d3l
+            audit = settings.audit_da
+            ss_da = SegmentShardsDA(d3l)
+            audits_da = AuditShardsDA(audit)
+            justification_da = JustificationsDA(audit)
 
-        # Fetching segments...
-        shards = SegmentsShard([])
+            # Fetching segments...
+            shards = SegmentsShard([])
 
-        # TODO: Fix Justifications
-        justifications = Justifications([])
-        merkle = BMRFunctions()
+            bmrfunctions = BMRFunctions()
+            justifications = Justifications([])
 
-        for query in request.queries:
-            ss_dict = ss_da.get(query.erasure_root)
-            s_dict = ss_dict[query.shard_index]
-            for index in query.seg_indexes:
-                shards.append(s_dict[index])
+            for query in request.queries:
+                try:
+                    ss_dict = ss_da.get(query.erasure_root)
+                    justification = justification_da.get(
+                        query.erasure_root, query.shard_index
+                    )
+                    bs_dict = audits_da.get(query.erasure_root)
+                    bundle_shard = bs_dict[query.shard_index]
+                    bundle_shard_hash = TypedVector[Bytes](
+                        [Bytes(Hash.blake2b(bundle_shard.encode()))]
+                    )
+                    if query.shard_index in ss_dict.keys():
+                        s_dict = ss_dict[query.shard_index]
 
-        # Return requested shards & justifications
-        msg_a = shards.encode()
-        len_a = Uint[32](len(msg_a)).encode()
+                        s = TypedVector[Bytes]([])
+                        for i in s_dict.keys():
+                            s.append(Bytes(s_dict[i].encode()))
 
-        server.stream_and_keep_open(len_a, stream_id)
-        server.stream_and_keep_open(msg_a, stream_id)
+                        for index in query.seg_indexes:
+                            trace = Justification(
+                                bmrfunctions.trace_fn(values=s, index=index).unwrap()
+                            )
+                            justification.extend(bundle_shard_hash)
+                            justification.extend(trace)
+                            if index in s_dict.keys():
+                                shards.append(s_dict[index])
+                            else:
+                                raise KeyError("Segment index not found")
 
-        n = len(justifications)
-        for ind, jfn in enumerate(justifications):
-            msg_n = jfn.encode()
-            len_n = Uint[32](len(msg_n)).encode()
-            server.stream_and_keep_open(len_n, stream_id)
+                        justifications.append(justification)
 
-            if ind == n - 1:
-                server.stream_and_close(msg_n, stream_id)
-            else:
-                server.stream_and_keep_open(msg_n, stream_id)
+                    else:
+                        raise KeyError("Shard index not found")
+
+                except Exception as e:
+                    logger.error(
+                        "Error processing some shard index",
+                        error=str(e),
+                        error_type=type(e).__name__,
+                    )
+
+            # Return requested shards
+            msg_a = Bytes(b"")
+            for shard in shards:
+                msg_a += shard.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_keep_open(msg_a, stream_id)
+
+            n = len(justifications)
+            for ind, jfn in enumerate(justifications):
+                msg_n = jfn.encode()
+                len_n = Uint[32](len(msg_n)).encode()
+                server.stream_and_keep_open(len_n, stream_id)
+
+                if ind == n - 1:
+                    server.stream_and_close(msg_n, stream_id)
+                else:
+                    server.stream_and_keep_open(msg_n, stream_id)
+        except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
+            logger.error(
+                "Failed to handle shard request via CE140",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
 
     def res_intercept(
         self, stream_id: int, client: QuicProtocol
@@ -91,28 +141,39 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
         buffer = client.stream_buffer[stream_id]
 
         try:
-            data, offset = CE139Response.decode_from(buffer[1:])
-            data = cast(CE139Response, data)
+            length = U32.decode(buffer[1:5])
+            segments_buf = buffer[5 : 5 + length]
+            justifications_buf = buffer[length + 5 :]
+            buf_len = len(segments_buf)
 
-            if not data or not data.is_valid:
+            if not segments_buf or not buf_len == length:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            shards = data.s_shards
+            offset = 0
+            cnt = 0
+            segments = SegmentsShard([])
+            while offset < buf_len:
+                segment, off = SegmentShard.decode_from(segments_buf, offset)
+                offset += off
+                segments.append(segment)
+                cnt += 1
+                logger.debug(
+                    "Parsed segment", cnt=cnt, stream_id=stream_id, peer=client.peer
+                )
 
-            k = offset
             justifications = Justifications([])
-            while k:
-                jfn, i = CE140Justification.decode_from(buffer[1:], k)
-                jfn = cast(CE140Justification, jfn)
+            while len(justifications_buf) != 0:
+                length = U32.decode(justifications_buf[0:4])
+                justification = Justification.decode(justifications_buf[4 : length + 4])
+                justifications.append(justification)
+                justifications_buf = justifications_buf[length + 4 :]
 
-                if not jfn or not jfn.is_valid:
-                    raise NetworkingError(Code.INVALID_DATA)
-                justifications.append(jfn.justification)
+            logger.info(
+                "Segment Shards and Justifications received via CE140", peer=client.peer
+            )
 
-            logger.info("Received CE140 shard+justification response")
-
-            return shards, justifications
+            return segments, justifications
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE)
+            logger.error(Code.BAD_RESPONSE, error=e)
             return None

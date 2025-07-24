@@ -94,7 +94,9 @@ class AllValidatorStats(TypedArray[ValidatorStat, VALIDATOR_COUNT]):
 
     @staticmethod
     def empty() -> "AllValidatorStats":
-        return AllValidatorStats([ValidatorStat.empty() for _ in range(VALIDATOR_COUNT)])
+        return AllValidatorStats(
+            [ValidatorStat.empty() for _ in range(VALIDATOR_COUNT)]
+        )
 
 
 class AllCoreStats(TypedArray[CoreStat, CORE_COUNT]):
@@ -110,7 +112,7 @@ class AllServiceStats(Dictionary[ServiceId, ServiceStat, "id", "record"]):
 
     ...
 
-
+# State key: 13
 @structure
 class Pi:
     """Pi"""

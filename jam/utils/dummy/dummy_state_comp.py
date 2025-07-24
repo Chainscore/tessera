@@ -180,7 +180,9 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Chi
     chi_g = ChiG({ServiceId(i): Gas(100) for i in range(3)})
-    components["chi"] = Chi(chi_m=ServiceId(0), chi_a=ServiceId(1), chi_v=ServiceId(2), chi_g=chi_g)
+    components["chi"] = Chi(
+        chi_m=ServiceId(0), chi_a=ServiceId(1), chi_v=ServiceId(2), chi_g=chi_g
+    )
 
     # Psi
     components["psi"] = Psi(

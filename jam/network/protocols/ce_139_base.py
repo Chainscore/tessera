@@ -1,3 +1,4 @@
+import asyncio
 from typing import cast
 
 from tsrkit_types import structure, TypedVector, Uint
@@ -6,12 +7,18 @@ from jam.logging import logger
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.work.manifest import SegmentIndex, Justification, Justifications
+from jam.types.work.manifest import (
+    SegmentIndex,
+    Justification,
+    Justifications,
+    Assurers,
+)
 from jam.types.work.shard import ShardIndex, SegmentsShard
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.types.protocol.core import ErasureRoot, ValidatorIndex
+from jam.utils.gather import gather_with_exceptions
 
 
 SegmentIndexes = TypedVector[SegmentIndex]
@@ -24,7 +31,13 @@ class Query:
     seg_indexes: SegmentIndexes
 
 
-Queries = TypedVector[Query]
+class Queries(TypedVector[Query]):
+    def hex_roots(self):
+        roots = []
+        for query in self:
+            roots.append(query.erasure_root.hex()[:8] + "...")
+
+        return roots
 
 
 @structure
@@ -73,7 +86,7 @@ class SegmentShardRequestBase(NetworkProtocol):
         super().__init__()
         self._prefix = prefix
 
-    async def transmit(self, node: Node, data: CE139Data):
+    async def transmit(self, node: Node, data: CE139Data, peers: Assurers = None):
         """Transmit Erasure-Root and Shard Index from Guarantor to Assurer"""
 
         msg_a = data.queries.encode()
@@ -81,9 +94,18 @@ class SegmentShardRequestBase(NetworkProtocol):
 
         logger.info(f"Sending segment shard request with")
 
-        for peer in node.peer_conn:
-            if int(peer.port) == 30333:
-                logger.info("requesting seg shard from 30333")
+        tasks = []
+        try:
+            for peer in node.peer_conn:
+                if peers and peer.peer_index not in peers:
+                    continue
+
+                logger.debug(
+                    "Requesting segment shard",
+                    peer=peer,
+                    queries=len(data.queries),
+                    roots=data.queries.hex_roots(),
+                )
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
@@ -94,14 +116,23 @@ class SegmentShardRequestBase(NetworkProtocol):
 
                 # Send Messages with their lengths
                 client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                res = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                if res is not None:
-                    return res
+                task = asyncio.create_task(res)
+                tasks.append(task)
+
+            responses = await gather_with_exceptions(tasks)
+            if responses is not None:
+                return responses
+
+        except Exception as e:
+            logger.error(
+                "Failed to request shards", error=str(e), error_type=type(e).__name__
+            )
 
     @staticmethod
     def parse_request(buffer: bytes) -> CE139Data:
-        data, _ = CE139Data.decode_from(buffer)
+        data = CE139Data.decode(buffer)
         data = cast(CE139Data, data)
 
         if not data.is_valid:

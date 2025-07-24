@@ -4,6 +4,7 @@ from typing import Callable, List, Tuple
 
 from jam.logging import get_logger
 from .handlers import WPBuilder, assurer, BlockProducer
+from jam.operations.audit_engine import AuditEngine
 from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS
 
@@ -17,7 +18,7 @@ def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
 
     return [
         (0, BlockProducer),
-        (2, None),  # audit
+        (2, AuditEngine),  # audit
         (4, assurer),  # transmit assurances
     ]
 

@@ -12,15 +12,23 @@ from jam.types.protocol.validators import ValidatorData
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 
 
-GammaK = TypedArray[ValidatorData, VALIDATOR_COUNT]
+class GammaK(TypedArray[ValidatorData, VALIDATOR_COUNT]):
+    ...
 
-GammaA = TypedVector[TicketBody]
+
+class GammaA(TypedVector[TicketBody]):
+    ...
+
 
 GammaZ = BandersnatchRingRoot
 
-GammaSTickets = TypedArray[TicketBody, EPOCH_LENGTH]
 
-GammaSFallback = TypedArray[BandersnatchPublic, EPOCH_LENGTH]
+class GammaSTickets(TypedArray[TicketBody, EPOCH_LENGTH]):
+    ...
+
+
+class GammaSFallback(TypedArray[BandersnatchPublic, EPOCH_LENGTH]):
+    ...
 
 
 class GammaS(Choice):
@@ -30,6 +38,7 @@ class GammaS(Choice):
     keys: GammaSFallback
 
 
+# State key: 4
 @structure
 class Gamma:
     """Gamma state"""

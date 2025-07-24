@@ -1,23 +1,29 @@
+import asyncio
 from typing import cast, Tuple
 
-from tsrkit_types import Uint, structure, TypedVector
+from tsrkit_types import Uint, structure, TypedVector, Bytes
 
 from jam.logging import logger
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_137 import CE137Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
+from jam.types import Hash
 
-from jam.types.work.manifest import Justification
-from jam.types.work.shard import BundleShard
+from jam.types.work.manifest import Justification, Assurers
+from jam.types.work.shard import BundleShard, SegmentsShard, ShardKey
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.storage.da.audits import AuditShardsDA, JustificationsDA
 from jam.storage.da.segments import SegmentShardsDA
 
+from jam.utils.merkle import BMRFunctions
+from jam.utils.gather import gather_with_exceptions
 
-CE138Data = CE137Data
+
+class CE138Data(CE137Data):
+    ...
 
 
 @structure
@@ -59,18 +65,29 @@ class AuditShardRequestProtocol(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE138
 
-    async def transmit(self, node: Node, data: CE138Data):
-        """Transmit Erasure-Root and Shard Index from Auditor (client) to Assurer (server)"""
+    async def transmit(self, node: Node, data: CE138Data, assurers: Assurers = None):
+        """Transmit Erasure-Root and Shard Index from Auditor to Assurer"""
 
+        query = data.query
         msg_a = data.query.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer")
+        logger.info(
+            f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer"
+        )
 
-        responses = TypedVector([])
-        for peer in node.peer_conn:
-            if int(peer.port) == 30336:
-                logger.info("requesting audit shard from 30336")
+        tasks = TypedVector([])
+        try:
+            for peer in node.peer_conn:
+                if peer.peer_index not in assurers:
+                    continue
+
+                logger.debug(
+                    "Requesting audit shard",
+                    peer=peer,
+                    er_root=query.erasure_root.hex(),
+                    s_ind=query.shard_index,
+                )
                 client = node.peer_conn[peer][1]
 
                 # Send Protocol Prefix
@@ -81,14 +98,47 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
                 # Send Messages with their lengths
                 client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                data = await client.close_and_wait(message=msg_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
 
-                responses.append(data)
+                task = asyncio.create_task(res)
+                tasks.append(task)
 
-        return responses
+            return await gather_with_exceptions(tasks)
+
+            # TODO: Handle Shard Verification where transmit fn is called
+            # shards = []
+            #
+            # # Verify Shards
+            # for response in responses:
+            #     if response:
+            #         jfn = response[1]
+            #         bs = response[0]
+            #         bs_hash = Hash.blake2b(bs.encode())
+            #
+            #         leaf = Bytes(ShardKey(bs_hash, jfn[-1]).encode())
+            #         trace = jfn[:-1]
+            #
+            #         merklizer = BMRFunctions()
+            #         is_correct = merklizer.verify_wb_tree(leaf, query.erasure_root, query.shard_index, trace)
+            #
+            #         if is_correct:
+            #             shards.append(response)
+            #         else:
+            #             shards.append(None)
+            #
+            # return shards
+
+        except Exception as e:
+            logger.error(
+                "Failed to request audit shard.",
+                er_root=query.erasure_root.hex(),
+                s_ind=query.shard_index,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        """Intercept & Process Erasure-Root and Shard Index on Assurer (server)"""
+        """Intercept & Process Erasure-Root and Shard Index on Assurer"""
         from jam.settings import settings
 
         buffer = server.stream_buffer[stream_id]
@@ -97,42 +147,61 @@ class AuditShardRequestProtocol(NetworkProtocol):
         data, offset = CE138Data.decode_from(buffer[1:])
         data = cast(CE138Data, data)
 
-        if not data.is_valid:
-            raise NetworkingError(Code.INVALID_DATA)
+        try:
+            if not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
 
-        query = data.query
+            erasure_root = data.query.erasure_root
+            shard_index = data.query.shard_index
 
-        logger.info("Processing")
-        # TODO: Process received erasure code & shard index
+            d3l = settings.d3l
+            audit = settings.audit_da
 
-        d3l = settings.d3l
-        audit = settings.audit
+            # Fetch Segments Shard
+            ss_da = SegmentShardsDA(d3l)
+            ss_dict = ss_da.get(erasure_root)
 
-        audits_da = AuditShardsDA(audit)
-        ss_da = SegmentShardsDA(d3l)
-        justification_da = JustificationsDA(audit)
+            # Fetch Bundle Shard
+            audits_da = AuditShardsDA(audit)
+            bs_dict = audits_da.get(erasure_root)
 
-        # Fetch Bundle Shard
-        audits_da = AuditShardsDA(audit)
-        bs_dict = audits_da.get(query.erasure_root)
-        bundle_shard = bs_dict[query.shard_index]
+            if shard_index not in bs_dict.keys():
+                raise ValueError("Bundle shard not found")
+            bundle_shard = bs_dict[shard_index]
 
-        # TODO: Fetch Justifications
-        justification = Justification([])
+            # Fetch Justifications
+            justification_da = JustificationsDA(audit)
+            justification = justification_da.get(erasure_root, shard_index)
 
-        # Return requested shards
-        msg_a = bundle_shard.encode()
-        len_a = Uint[32](len(msg_a)).encode()
-        msg_b = justification.encode()
-        len_b = Uint[32](len(msg_a)).encode()
+            # build segment shard root
+            merklizer = BMRFunctions()
+            segment_shard = SegmentsShard(ss_dict[shard_index].shard)
+            segments_shard_root = merklizer.wb_merklize(values=segment_shard)
+            s = Bytes(segments_shard_root.encode())
 
-        server.stream_and_keep_open(len_a, stream_id)
-        server.stream_and_keep_open(msg_a, stream_id)
-        server.stream_and_keep_open(len_b, stream_id)
-        server.stream_and_close(msg_b, stream_id)
+            justification.append(s)
+
+            # Return requested shards
+            msg_a = bundle_shard.encode()
+            len_a = Uint[32](len(msg_a)).encode()
+            msg_b = justification.encode()
+            len_b = Uint[32](len(msg_b)).encode()
+
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_keep_open(msg_a, stream_id)
+            server.stream_and_keep_open(len_b, stream_id)
+            server.stream_and_close(msg_b, stream_id)
+
+        except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
+            logger.error(
+                "Failed to find audit shard.", error=str(e), error_type=type(e).__name__
+            )
 
     def res_intercept(
-        self, stream_id: int, client: QuicProtocol
+            self, stream_id: int, client: QuicProtocol
     ) -> Tuple[BundleShard, Justification] | None:
         """Intercept Bundle Shard and Justification"""
         buffer = client.stream_buffer[stream_id]
@@ -144,14 +213,10 @@ class AuditShardRequestProtocol(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info("Data received on Auditor Node")
+            logger.info("Audit Shard received", peer=client.peer)
 
-            # TODO: verify justification
-            # TODO: save the justification for CE139/140 and proceed further with data
-
-            logger.info("Received bundle shard")
             return data.bundle_shard, data.justification
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE)
+            logger.error(Code.BAD_RESPONSE, error=str(e))
             return None

@@ -13,7 +13,7 @@ from jam.utils.constants import (
 from jam.types.work.item import WorkItem
 from jam.types.work.package import WorkPackage
 
-from jam.incore.error import WorkPackagesErrorCode, WorkPackageError
+from jam.incore.error import ValidatorErrorCode as Code, ValidatorError
 
 
 class Validator:
@@ -23,8 +23,8 @@ class Validator:
     @staticmethod
     def export_count(item: WorkItem):
         if item.export_count > MAX_EXPORT_ITEM:
-            raise WorkPackageError(
-                WorkPackagesErrorCode.BAD_EXPORT_ITEM,
+            raise ValidatorError(
+                Code.BAD_EXPORT_ITEM,
                 "count of import segment are more than actual value",
             )
 
@@ -32,8 +32,8 @@ class Validator:
     @staticmethod
     def import_count(item: WorkItem):
         if len(item.import_segments) > MAX_IMPORT_ITEM:
-            raise WorkPackageError(
-                WorkPackagesErrorCode.BAD_IMPORT_ITEM,
+            raise ValidatorError(
+                Code.BAD_IMPORT_ITEM,
                 "count of import segment are more than actual value",
             )
 
@@ -41,8 +41,8 @@ class Validator:
     @staticmethod
     def extrinsic_count(item: WorkItem):
         if len(item.extrinsic) > EXTRINSIC_COUNT:
-            raise WorkPackageError(
-                WorkPackagesErrorCode.BAD_EXTRINSIC_COUNT,
+            raise ValidatorError(
+                Code.BAD_EXTRINSIC_COUNT,
                 "count of extrinsic more than are more than actual value",
             )
 
@@ -59,12 +59,14 @@ class Validator:
             for y in x.extrinsic:
                 extrinsic_len = extrinsic_len + y.len
 
-            item_count = len(x.payload) + len(x.import_segments) * SEGMENT_SIZE + extrinsic_len
+            item_count = (
+                len(x.payload) + len(x.import_segments) * SEGMENT_SIZE + extrinsic_len
+            )
 
         package_size = auth_token + parameterization + item_count
         if package_size > MAX_ENCODED_WORK_PACKAGE_SIZE:
-            raise WorkPackageError(
-                WorkPackagesErrorCode.BAD_WORK_PACKAGE_SIZE,
+            raise ValidatorError(
+                Code.BAD_WORK_PACKAGE_SIZE,
                 "count of extrinsic more than are more than actual value",
             )
 
@@ -78,13 +80,13 @@ class Validator:
             total_accumulate_gas = total_accumulate_gas + x.accumulate_gas_limit
 
         if total_refine_gas >= REFINE_GAS:
-            raise WorkPackageError(
-                WorkPackagesErrorCode.BAD_REFINEMENT_GAS,
+            raise ValidatorError(
+                Code.BAD_REFINEMENT_GAS,
                 "count of extrinsic more than are more than actual value",
             )
         if total_accumulate_gas >= ACCUMULATION_GAS:
-            raise WorkPackageError(
-                WorkPackagesErrorCode.BAD_ACCUMULATION_GAS,
+            raise ValidatorError(
+                Code.BAD_ACCUMULATION_GAS,
                 "count of extrinsic more than are more than actual value",
             )
 
@@ -102,6 +104,6 @@ class Validator:
 
             return True
 
-        except WorkPackageError as err:
+        except ValidatorError as err:
             logger.info(f"WP Validation failed! Error {err.code}: {err.message}")
             return False

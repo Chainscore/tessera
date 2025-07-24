@@ -3,4 +3,6 @@ from jam.types.protocol.validators import ValidatorData
 from jam.utils.constants import VALIDATOR_COUNT
 
 
-Iota = TypedArray[ValidatorData, VALIDATOR_COUNT]
+# State key: 7
+class Iota(TypedArray[ValidatorData, VALIDATOR_COUNT]):
+    ...

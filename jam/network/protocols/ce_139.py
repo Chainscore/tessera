@@ -1,14 +1,15 @@
-from tsrkit_types import Uint
-from typing import cast
+from tsrkit_types import Uint, U32
 
 from jam.network.base.quic import QuicProtocol
-from jam.network.protocols.ce_139_base import SegmentShardRequestBase, CE139Response
+from jam.network.protocols.ce_139_base import SegmentShardRequestBase
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
+
+from tsrkit_types import Bytes
 
 from jam.logging import logger
 
 from jam.network.base.protocol import PrefixType
-from jam.types.work.shard import SegmentsShard
+from jam.types.work.shard import SegmentsShard, SegmentShard
 from jam.storage.da.segments import SegmentShardsDA
 
 
@@ -36,40 +37,76 @@ class SegmentShardRequest(SegmentShardRequestBase):
 
         buffer = server.stream_buffer[stream_id]
 
-        request = self.parse_request(buffer[1:])
-        logger.info("Handling CE139 shard request")
-        d3l = settings.d3l
-        ss_da = SegmentShardsDA(d3l)
+        try:
+            request = self.parse_request(buffer[1:])
+            logger.info("Handling CE139 shard request")
+            d3l = settings.d3l
+            ss_da = SegmentShardsDA(d3l)
 
-        # Fetching segments...
-        shards = SegmentsShard([])
-        for query in request.queries:
-            ss_dict = ss_da.get(query.erasure_root)
-            s_dict = ss_dict[query.shard_index]
-            for index in query.seg_indexes:
-                shards.append(s_dict[index])
+            # TODO: optimize by creating map of erasure root to shard index and segment index
 
-        # Return requested shards
-        msg_a = shards.encode()
-        len_a = Uint[32](len(msg_a)).encode()
+            shards = []
+            for query in request.queries:
+                ss_dict = ss_da.get(query.erasure_root)
+                if query.shard_index in ss_dict.keys():
+                    s_dict = ss_dict[query.shard_index]
+                    for index in query.seg_indexes:
+                        if index in s_dict.keys():
+                            shards.append(s_dict[index])
+                        else:
+                            logger.error("Segment index not found")
+                else:
+                    logger.error("Shard index not found")
 
-        server.stream_and_keep_open(len_a, stream_id)
-        server.stream_and_close(msg_a, stream_id)
+            # Return requested shards
+            msg_a = Bytes(b"")
+            for shard in shards:
+                msg_a += shard.encode()
+            len_a = Uint[32](len(msg_a)).encode()
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol) -> SegmentsShard | None:
+            server.stream_and_keep_open(len_a, stream_id)
+            server.stream_and_close(msg_a, stream_id)
+
+        except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
+            logger.error(
+                "Failed to handle shard request via CE140",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+
+    def res_intercept(
+        self, stream_id: int, client: QuicProtocol
+    ) -> SegmentsShard | None:
         """Intercept [Segment Shard]"""
         buffer = client.stream_buffer[stream_id]
 
         try:
-            data, _ = CE139Response.decode_from(buffer[1:])
-            data = cast(CE139Response, data)
-            if not data or not data.is_valid:
+            length = U32.decode(buffer[1:5])
+            segments_buf = buffer[5 : 5 + length]
+            buf_len = len(segments_buf)
+
+            if not segments_buf or not buf_len == length:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info(f"Received CE139 segment shards: {data.s_shards}")
+            offset = 0
+            cnt = 0
+            segments = SegmentsShard([])
+            while offset < buf_len:
+                segment, off = SegmentShard.decode_from(segments_buf, offset)
+                offset += off
+                segments.append(segment)
+                cnt += 1
+                logger.debug(
+                    "Parsed segment", cnt=cnt, stream_id=stream_id, peer=client.peer
+                )
 
-            return data.s_shards
+            logger.info("Segment Shards received via CE139", peer=client.peer)
+
+            return segments
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE)
+            logger.error(Code.BAD_RESPONSE, err=str(e))
             return None

@@ -1,57 +1,37 @@
-# TODO: Work in Progress
-
-import asyncio
-import logging
 import os
 import time
+import signal
+import asyncio
+import logging
 
 from dotenv import load_dotenv
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, Uint
 
-from jam.logging import setup_logging, logger
-from jam.utils.chainspec import chain_config
+from jam.block import Block
 
 from jam.finality.finality import Finality
-from jam.settings import setup_setting
+from jam.logging import setup_logging, logger
 
 from jam.network.peer import Peer
-from jam.network.node import Node
+from jam.network.node import Node, setup_node
 
-from jam.consensus.bp_engine import BlockProducer
-from jam.network.protocols.ce_201 import GhostProtocol
-from jam.operations.utils.state_update import update_state
+from jam.settings import setup_setting
 from jam.state.state import setup_state
-from jam.types.protocol.crypto import BlsPublic
-from jam.block import Block
-from jam.types.protocol.validators import (
-    IPAddress,
-    ValidatorData,
-    ValidatorMetadata,
-)
+from jam.types.protocol.validators import IPAddress
 
+from jam.utils.chainspec import chain_config
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 
+from tests.integration.utils.state_update import update_state
 
-# DEFINE NODE TASKS
-async def start_node(node: Node):
-    # TEMP FIX: Wait for node to initialize
-    await asyncio.sleep(5)
-
-    for peer in node.peer_conn:
-        up_stream, conn = node.peer_conn[peer]
-
-        protocol = GhostProtocol()
-        message = f"Hello {peer.name}"
-
-        responses = await protocol.transmit(node, message)
-        expected_message = f"DATA RECEIVED: {message}"
-
-        for response in responses:
-            assert response == expected_message
-
-
-async def run_node(env: str, theme: str, is_builder: bool, is_validator: bool):
+async def run_node(
+    genesis_path: str,
+    env: str,
+    start_genesis: bool,
+    theme: str,
+    is_builder: bool,
+    is_validator: bool,
+    node_task,
+):
     # ---------- SETUP LOGGING ----------
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
     init_ts = (time.time() - genesis_ts) / SLOT_PERIOD
@@ -81,7 +61,9 @@ async def run_node(env: str, theme: str, is_builder: bool, is_validator: bool):
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+    settings = setup_setting(
+        name=name, port=int(port), seed=int(seed), data_path="data/"
+    )
 
     main_db = settings.main_db
 
@@ -103,42 +85,29 @@ async def run_node(env: str, theme: str, is_builder: bool, is_validator: bool):
         state = setup_state(settings.state_db, "dev-spec.json")
         state.store.disable_cache()
         update_state(state)
-
-        peers = [
-            Peer(id=bytes.decode(val.metadata.name, "utf-8"), data=val)
-            for val in state.kappa
-            if val.metadata.port != port
-        ]
+        peers = [Peer(data=val) for val in state.kappa if val.metadata.port != port]
 
         ip = IPAddress.from_str(host)
 
-        tsr_node = Node(
-            node_name=name,
+        tsr_node = setup_node(
+            name,
+            int(port),
+            peers,
             host=str(host),
-            port=int(port),
-            peers=peers,
-            validator_data=ValidatorData(
-                settings.bandersnatch_public,
-                settings.ed25519_public,
-                BlsPublic(bytes(144)),
-                ValidatorMetadata(
-                    name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2**16 - 1),
-                    host=ip,
-                    port=U16(port),
-                ),
-            ),
-            is_builder=is_builder,
-            is_validator=is_validator,
+            is_bd=is_builder,
+            is_val=is_validator,
         )
 
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
+        Finality.finalise(header_hash, main_db)
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            tg.create_task(start_node(tsr_node))
+            if node_task:
+                print("STARTING NODE TASKS")
+                tg.create_task(node_task())
 
     except KeyboardInterrupt:
         logger.info(
@@ -160,3 +129,25 @@ async def run_node(env: str, theme: str, is_builder: bool, is_validator: bool):
         settings.clear()
 
         raise
+
+
+def run_node_process(
+    genesis_path: str,
+    env: str,
+    start_genesis: bool,
+    theme: str,
+    is_builder: bool,
+    is_validator: bool,
+    node_task,
+):
+    # Handle clean termination
+    def handle_sigterm(signum, frame):
+        exit(0)
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
+    asyncio.run(
+        run_node(
+            genesis_path, env, start_genesis, theme, is_builder, is_validator, node_task
+        )
+    )

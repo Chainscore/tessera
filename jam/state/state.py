@@ -155,6 +155,16 @@ class State:
 
     def _force_transition(self, block: Block):
         # 1. Push auth hash of every WR to self.alpha[0:1]
+
+        # TODO: We should remove this
+        alpha = self.alpha
+
+        for guarantee in block.extrinsic.guarantees:
+            report = guarantee.report
+            alpha[report.core_index][0] = report.authorizer_hash
+
+        self.alpha = alpha
+
         return self.transition(block)
 
     def transition(self, block: Block):
@@ -216,13 +226,13 @@ class State:
             logger.debug("Processing disputes...")
             Disputes.transition(self, block)
 
-            # Reporting
-            logger.debug("Processing reporting...")
-            Reporting.transition(self, block, [])
-
             # Assurances
             logger.debug("Processing assurances...")
             _, newly_avail_wrs = Assurances.transition(self, block)
+
+            # Reporting
+            logger.debug("Processing reporting...")
+            Reporting.transition(self, block, [])
 
             # Accumulation
             logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
@@ -236,7 +246,7 @@ class State:
 
             # Recent History
             logger.debug("Processing recent history...", commitment_count=len(commitment_map))
-            history_merkle = BMRFunctions().wb_merkle_fn(
+            history_merkle = BMRFunctions().wb_merklize(
                 sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]),
                 Hash.keccak256,
             )
@@ -271,6 +281,7 @@ class State:
             Finality.finalise(header_hash, _set.main_db)
 
             block.extrinsic.clear_from_stores()
+            # asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs))
 
         except JamError as jam_e:
             logger.error(

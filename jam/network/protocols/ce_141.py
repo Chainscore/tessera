@@ -1,13 +1,16 @@
+import asyncio
+
+# from jam.operations.ext_store import ext_store
 from tsrkit_types import structure, TypedVector, U32
 from jam.logging import get_logger
 from typing import cast
+
 from jam.network.base.quic import QuicProtocol
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types import ValidatorIndex
-from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField
+from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField, asr_store
 from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-
 
 logger = get_logger("network")
 
@@ -82,13 +85,13 @@ class AssuranceDistribution(NetworkProtocol):
         return responses
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
-        from jam.block.extrinsics.assurances import asr_store
-
         buffer = server.stream_buffer[stream_id]
 
-        logger.debug("Received assurance", stream_id=stream_id, buffer_size=len(buffer[1:]))
+        logger.debug(
+            "Received assurance", stream_id=stream_id, buffer_size=len(buffer[1:])
+        )
 
-        data, offset = CE141Data.decode_from(buffer[1:])
+        data = CE141Data.decode(buffer[1:])
         data = cast(CE141Data, data)
 
         if not data.is_valid:
@@ -104,18 +107,28 @@ class AssuranceDistribution(NetworkProtocol):
             signature=assurance.ed25519_signature,
         )
 
+        logger.info(
+            "[EXTRINSICS]: RECEIVED ASSURANCE",
+            peer=server.peer,
+            assurance=assurance_extrinsic.to_json(),
+        )
         asr_store.store(assurance_extrinsic)
-
         # Return acknowledgment to Builder
         ack = b""
         server.stream_and_close(ack, stream_id)
 
-        logger.debug("Assurance sent to other validators", stream_id=stream_id, ack_size=len(ack))
+        logger.debug(
+            "Assurance sent to other validators", stream_id=stream_id, ack_size=len(ack)
+        )
 
     def res_intercept(self, stream_id: int, client: QuicProtocol):
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
-            logger.info("Assurance ack received", stream_id=stream_id, buffer_size=len(buffer))
+            logger.info(
+                "Assurance acknowledgement received",
+                stream_id=stream_id,
+                buffer_size=len(buffer),
+            )
             return True
 
         return False

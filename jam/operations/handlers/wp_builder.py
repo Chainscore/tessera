@@ -1,3 +1,4 @@
+import os
 from tsrkit_types import Bytes, U16, Uint
 
 from jam.execution.pvm.code import Code
@@ -296,10 +297,12 @@ class WPBuilder:
         else:  # wp_iter % 4 == 3
             import_specs = [import_spec1, import_spec2]
 
+        import_specs = []
+
         wi = WorkItem(
             service=wi_service,
             code_hash=wi_code_hash,
-            payload=Bytes(b"bobaboba"),
+            payload=Bytes(os.urandom(256)),
             refine_gas_limit=Gas(1_000),
             accumulate_gas_limit=Gas(1_000),
             import_segments=ImportSpecs(import_specs),

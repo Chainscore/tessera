@@ -239,9 +239,7 @@ async def safrole(request_data: RequestData):
             assert transition_output.iota == output_state.iota, "output_mismatch(iota)"
             assert transition_output.gamma.a == output_state.gamma.a, "output_mismatch(gamma_a)"
             assert transition_output.gamma.s == output_state.gamma.s, "output_mismatch(gamma_s)"
-            assert (
-                transition_output.psi.offenders == output_state.psi.offenders
-            ), "output_mismatch(psi)"
+            assert transition_output.psi.offenders == output_state.psi.offenders, "output_mismatch(psi)"
             # TODO: uncomment this once KZG_commitment(⟦HB⟧) is implemented
             # assert len(transition_output.gamma.z) == len(output_state.gamma_z)
             # assert transition_output.gamma.z == output_state.gamma_z
@@ -302,7 +300,9 @@ async def recent_history(request_data: RequestData):
     try:
         test_block = Block.from_json(request_data.input.block)
         test_state = GhostState.from_json(request_data.input.state).to_state()
-        transition_output = RecentHistory.transition(test_state, test_block, ByteArray32([0] * 32))
+        transition_output = RecentHistory.transition(
+            test_state, test_block, Bytes[32](32)
+        )
 
         if request_data.output is None:
             return {"result": True}

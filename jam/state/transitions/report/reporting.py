@@ -1,43 +1,48 @@
+from math import floor
 from typing import Dict, Set, List
 
-from tsrkit_types import Bytes
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.exceptions import InvalidSignature
+
+from tsrkit_types.null import Null
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import Uint
+
+from jam.block import Block
 from jam.logging import get_logger
-from jam.utils.merkle import MMRFunctions
+
+from jam.state.transitions.report.error import ReportingError, ReportingErrorCode
+from jam.state.transitions.report.guarantee_assignment import guarantor_assignment
+
 from jam.types.protocol.core import CoreIndex
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
-from jam.block import Block
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.work import WorkReport
+
+from jam.utils.merkle import MMRFunctions
 from jam.utils.constants import (
     ACCUMULATION_GAS,
     MAX_DEPENDENCIES,
     SIGNING_CONTEXTS,
     LOOKUP_ANCHOR_MAX_AGE,
-)
-from jam.state.transitions.report.error import ReportingError, ReportingErrorCode
-from jam.utils.constants import (
     VALIDATOR_COUNT,
     CORE_COUNT,
     EPOCH_LENGTH,
     ROTATION_PERIOD,
     MAX_WORK_REPORT_SIZE,
 )
-from math import floor
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from cryptography.exceptions import InvalidSignature
-from jam.state.transitions.report.guarantee_assignment import guarantor_assignment
-from tsrkit_types.integers import Uint
-from tsrkit_types.null import Null
 
 logger = get_logger("import")
 
 
 class Reporting:
     @staticmethod
-    def transition(state: Sigma, block: Block, known_packages: List[OpaqueHash] = []) -> Sigma:
+    def transition(
+        state: Sigma, block: Block, known_packages: List[OpaqueHash] = []
+    ) -> Sigma:
         """
         Description:
             This function takes two arguments: state, block. This transition function check all the boundary cases for work_report and update the state Rho.
@@ -178,7 +183,10 @@ class Reporting:
             recent_exports_roots.update(x.reported)
 
         recent_exports_roots.update(
-            {report.package_spec.hash: report.package_spec.exports_root for report in all_reports}
+            {
+                report.package_spec.hash: report.package_spec.exports_root
+                for report in all_reports
+            }
         )
 
         rho_package_hashes = [
@@ -213,7 +221,9 @@ class Reporting:
             found_anchor = False
             for recent_block in state.beta:
                 if recent_block.header_hash == context.anchor:
-                    if context.beefy_root != MMRFunctions().super_peak(recent_block.mmr):
+                    if context.beefy_root != MMRFunctions().super_peak(
+                        recent_block.mmr
+                    ):
                         raise ReportingError(ReportingErrorCode.BAD_BEEFY_MMR_ROOT)
                     if recent_block.state_root != context.state_root:
                         raise ReportingError(ReportingErrorCode.BAD_STATE_ROOT, f"")
@@ -223,7 +233,10 @@ class Reporting:
                     ReportingErrorCode.ANCHOR_NOT_RECENT, "Anchor not found in beta"
                 )
 
-            if int(context.lookup_anchor_slot) < int(block.header.slot) - LOOKUP_ANCHOR_MAX_AGE:
+            if (
+                int(context.lookup_anchor_slot)
+                < int(block.header.slot) - LOOKUP_ANCHOR_MAX_AGE
+            ):
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
                     "Lookup anchor older than max age",
@@ -301,8 +314,12 @@ class Reporting:
                 pi_core[core_index].imports += Uint(result.refine_load.imports)
                 pi_core[core_index].exports += Uint(result.refine_load.exports)
                 pi_core[core_index].gas_used += Uint(result.refine_load.gas_used)
-                pi_core[core_index].extrinsic_count += Uint(result.refine_load.extrinsic_count)
-                pi_core[core_index].extrinsic_size += Uint(result.refine_load.extrinsic_size)
+                pi_core[core_index].extrinsic_count += Uint(
+                    result.refine_load.extrinsic_count
+                )
+                pi_core[core_index].extrinsic_size += Uint(
+                    result.refine_load.extrinsic_size
+                )
             pi_core[core_index].bundle_size = Uint(report.package_spec.length)
 
             for work_result in report.results:
@@ -312,8 +329,12 @@ class Reporting:
                 pi_service[work_result.service_id].refinement_gas_used += Uint(
                     work_result.refine_load.gas_used
                 )
-                pi_service[work_result.service_id].imports += Uint(work_result.refine_load.imports)
-                pi_service[work_result.service_id].exports += Uint(work_result.refine_load.exports)
+                pi_service[work_result.service_id].imports += Uint(
+                    work_result.refine_load.imports
+                )
+                pi_service[work_result.service_id].exports += Uint(
+                    work_result.refine_load.exports
+                )
                 pi_service[work_result.service_id].extrinsic_count += Uint(
                     work_result.refine_load.extrinsic_count
                 )
@@ -355,7 +376,8 @@ class Reporting:
                 try:
                     Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
                         bytes(signature),
-                        SIGNING_CONTEXTS["guarantee"] + bytes(Hash.blake2b(x.report.encode())),
+                        SIGNING_CONTEXTS["guarantee"]
+                        + bytes(Hash.blake2b(x.report.encode())),
                     )
                 except InvalidSignature:
                     raise ReportingError(

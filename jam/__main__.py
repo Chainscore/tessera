@@ -4,6 +4,7 @@ import logging
 import os
 import time
 
+from asyncio import CancelledError
 from dotenv import load_dotenv
 from jam.operations import operate
 from jam.logging import setup_logging, logger
@@ -13,10 +14,12 @@ from jam.settings import setup_setting
 from jam.finality.finality import Finality
 from jam.network.peer import Peer
 from jam.network.node import setup_node
+from jam.operations.utils.state_update import update_state
 from jam.state.state import setup_state
 from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
 
+TIMESLOT = 0
 
 async def main(
     genesis_path: str,
@@ -30,6 +33,9 @@ async def main(
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
     init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
     init_ep = int(init_ts // EPOCH_LENGTH)
+
+    global TIMESLOT
+    TIMESLOT = init_ts
 
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
@@ -55,7 +61,9 @@ async def main(
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+    settings = setup_setting(
+        name=name, port=int(port), seed=int(seed), data_path="data/"
+    )
 
     main_db = settings.main_db
 
@@ -76,15 +84,19 @@ async def main(
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
 
+        # TODO: Remove Later
+        update_state(state)
+
         # ----------- SETUP NETWORKING ------------
-        peers = [
-            Peer(id=generate_san(val.ed25519), data=val)
-            for val in state.kappa
-            if val.metadata.port != port
-        ]
+        peers = [Peer(data=val) for val in state.kappa if val.metadata.port != port]
 
         tsr_node = setup_node(
-            name, port, peers, host=str(host), is_bd=is_builder, is_val=is_validator
+            name,
+            int(port),
+            peers,
+            host=str(host),
+            is_bd=is_builder,
+            is_val=is_validator,
         )
 
         # ------------ SET GENESIS BLOCK ------------
@@ -100,7 +112,18 @@ async def main(
             # RPC
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
+
             tg.create_task(operate(is_builder))
+
+    except CancelledError:
+        logger.info(
+            "JAM node shutting down gracefully",
+            node_name=name,
+            port=port,
+            reason="cancelled_tasks",
+        )
+
+        settings.clear()
 
     except KeyboardInterrupt:
         logger.info(
@@ -109,6 +132,7 @@ async def main(
             port=port,
             reason="keyboard_interrupt",
         )
+
     except Exception as e:
         logger.critical(
             "JAM node fatal error",
