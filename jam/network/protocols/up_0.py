@@ -192,7 +192,7 @@ class BlockAnnouncement(NetworkProtocol):
         #     conn.has_pending_handshake = False
 
 
-        if not conn.handshake_completed:
+        if not conn.handshake_completed :
             # Parse received Handshake
             h_len= U32.decode(data[0:4])
             if len(data[4:]) != h_len:
@@ -230,9 +230,8 @@ class BlockAnnouncement(NetworkProtocol):
             # if we have not already processed this header, announce it 
             if hh not in self._processed_headers:
                 self._processed_headers.add(hh)
-                asyncio.create_task(self.transmit(anc))
-            asyncio.create_task(self._process_header(header=anc.header, node=conn))
-            # Process goes here
+                # Process goes here
+                asyncio.create_task(self._process_header(anc=anc, node=conn))
             logger.debug(
                 "Block announcement 📣 processed successfully", stream_id=stream_id,
                 block_slot=int(anc.final.time_slot),
@@ -243,9 +242,9 @@ class BlockAnnouncement(NetworkProtocol):
     def res_intercept(self, stream_id: int, client):
         raise NotImplementedError("Client Intercept not available for UP protocols")
 
-    @classmethod
-    async def _process_header(cls, header: Header, node: NodeConnection|None = None):
+    async def _process_header(self, anc: Announcement, node: NodeConnection|None = None):
         from jam.state.state import state
+        header = anc.header
 
         logger.debug("Fetching block to import", slot=header.slot)
         blocks = await BlockRequest().transmit(
@@ -257,8 +256,14 @@ class BlockAnnouncement(NetworkProtocol):
             peers=[node] if node else None
         )
         if not blocks or len(blocks) == 0 or blocks[0] is None or len(blocks[0]) == 0 or blocks[0][0] is None:
-            return await cls._process_header(header, None)
-        state.transition(blocks[0][0])
+            if node is None:
+                logger.error("No blocks received for header", header=header.hash().hex()[:16] + "...")
+                return None
+            return await self._process_header(anc, None)
+
+        _valid = state.transition(blocks[0][0])
+        if _valid:
+            await self.transmit(anc)
 
     @classmethod
     async def synchronise(cls, h: Handshake):
