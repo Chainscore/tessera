@@ -61,7 +61,7 @@ class JudgmentPublication(NetworkProtocol):
 
         logger.info(
             f"Transmitting Work-report judgement",
-            judgment=len(data.judgment.encode()),
+            judgment=data.judgment,
             len_a=data.len_a
         )
 
@@ -109,6 +109,10 @@ class JudgmentPublication(NetworkProtocol):
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """ Intercept individual Judgment from other Auditors for their assigned Work Reports """
         from jam.operations.tranche_store import tranche_store, Tranche
+        from jam.consensus.grandpa.finality import Finality
+        from jam.settings import settings
+        latest_block = Finality.load_latest(kv=settings.main_db)
+        header_hash = latest_block.header.hash()
 
         buffer = server.stream_buffer[stream_id]
 
@@ -116,16 +120,19 @@ class JudgmentPublication(NetworkProtocol):
             data, offset = CE145Data.decode_from(buffer[1:])
             data = cast(CE145Data, data)
 
+            # JUDGMENT RECEIVED FROM WHICH VALIDATOR THAT INDEX, JUDGMENT, WR_HASH
             vi_judgment = data.judgment.validator_index
             judge = data.judgment.validity
-            wr_h = data.judgment.work_report_hash
+            wr_hash = data.judgment.work_report_hash
 
-            # tranche=Tranche(
-            #     tranche_index=tranche_idx,
-            #     header_hash=header_hash
-            # )
-            #
-            # tranche_store.update_judgment( tranche=, wr_hash=wr_h, judgment=, validator_index=vi_judgment)
+            tranche_idx = tranche_store.get_tranche_index(header_hash=header_hash)
+
+            tranche=Tranche(
+                tranche_index=tranche_idx,
+                header_hash=header_hash
+            )
+
+            tranche_store.update_judgment( tranche=tranche, wr_hash=wr_hash, judgment=judge, validator_index=vi_judgment)
 
             logger.debug(
                 "Received Judgment from other Auditors",

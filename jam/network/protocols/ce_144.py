@@ -94,6 +94,9 @@ class AuditAnnouncement(NetworkProtocol):
     async def transmit(self, node: Node, data: CE144Data):
         """ Transmit Announcement of assign Work report for auditing from Auditor to Other Validators(Auditors) """
 
+        from jam.operations.tranche_store import tranche_store, Tranche
+
+
         len_a = data.len_a.encode()
         msg_a = data.tranche_announcement.encode()
         len_b = data.len_b.encode()
@@ -106,6 +109,21 @@ class AuditAnnouncement(NetworkProtocol):
             stream_a_size=data.len_a,
             stream_b_size=data.len_b,
         )
+
+        v_r1: dict[ValidatorIndex, set[WorkReportHash]] = {}
+
+        # storing its report
+        v_r1[node.validator_index] = {assign.report_hash for assign in data.tranche_announcement.announcement.assigned_report}
+
+        tranche = Tranche(
+            tranche_index=data.tranche_announcement.tranches,
+            header_hash=data.tranche_announcement.header_hash
+        )
+
+        for v, r_hash in v_r1.items():
+            for value in r_hash:
+                tranche_store.add_announce(tranche=tranche, wr_hash=value, validator_index=node.validator_index)
+
 
         tasks = []
         responses = []
@@ -150,7 +168,6 @@ class AuditAnnouncement(NetworkProtocol):
                 error_type=type(e).__name__
             )
 
-
         return responses
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
@@ -179,7 +196,6 @@ class AuditAnnouncement(NetworkProtocol):
 
             for v, r_hash in v_r.items():
                 for value in r_hash:
-                    # print(value, tranche ,v_index)
                     tranche_store.add_announce(tranche=tranche, wr_hash=value, validator_index=v_index)
 
 

@@ -2,7 +2,7 @@ import asyncio
 import math
 from typing import List, Tuple
 
-from tsrkit_types import structure, U8, U32, TypedVector, Option
+from tsrkit_types import structure, U8, U32, TypedVector, Option, Null
 
 from jam.types import Hash, BandersnatchVrfSignature, ValidatorIndex
 from jam.types.protocol.core import CoreIndex, EpochIndex,TrancheIndex
@@ -22,10 +22,10 @@ logger = get_logger("in_core")
 class AuditProcess:
 
     @classmethod
-    async def audit_process(cls, newly_avail_wrs: List[Option[WorkReport]], tranche:TrancheIndex):
+    async def audit_process(cls, newly_avail_wrs: List[Option[WorkReport]], tranche_idx:TrancheIndex):
         from jam.audit.audit import AuditingAndJudgement
         from jam.consensus.grandpa.finality import Finality
-        # from jam.state.state import state
+        from jam.state.state import state
         from jam.settings import settings
         from jam.network.node import node
         from jam.operations.tranche_store import tranche_store, Tranche
@@ -33,7 +33,7 @@ class AuditProcess:
 
         audit = AuditingAndJudgement()
 
-        # ---------------------- Rho initial state ( pending wor reports) -----------------------------
+        # ---------------------- Rho initial state ( pending wor reports) -------------------------
         logger.info(f"Current Block header hash")
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
@@ -43,11 +43,9 @@ class AuditProcess:
 
 
         # ---------------------- Block's header entropy sources -----------------------------------
-        # entropy = latest_block.header.entropy_source
-        entropy_ = "f7caffd3498473b08ab9de28ba3bd76d94f3fe47acc96e6e0111dfe301ba4d0bc7b3a95ebf21a76fb76102c13fdf9947c6c243d71b9893fae0b9adf94aa83f0a81b4566c15c796a79a4e124971130cba959c03066efba2161334cedc0d02151a"
+        entropy = latest_block.header.entropy_source
 
-        final_list = sample_work_reports_with_nulls("jam/combine.json",total_items=10, null_count=0)
-
+        final_list = sample_work_reports_with_nulls("jam/combine.json",total_items=12, null_count=4)
 
         try:
             # pre audit reports
@@ -55,17 +53,24 @@ class AuditProcess:
 
             p_a_r = audit.report_to_be_audit(pending_wrs=final_list, newly_avail_wrs=newly_avail_wrs)
 
+            # ---------------------- Update the q in tranche store ------------------------------------
+            tranche = Tranche(
+                tranche_index=tranche_idx,
+                header_hash=header_hash
+            )
+
+            tranche_store.add_to_unaudited(tranche=tranche, p_a_r=p_a_r)
+
             # assignment report for auditing to validators
             logger.info(f"Work report assignment for auditing")
 
-            reports = audit.verifiable_random_selection(entropy_source=entropy_, bandersnatch_key=node.b_key, pre_audit_report=p_a_r)
+            reports = audit.verifiable_random_selection(entropy_source=entropy, bandersnatch_key=node.b_key, pre_audit_report=p_a_r)
 
             logger.info(f"Checking assign report length {len(reports)} for each validator")
 
 
-            asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports, tranche=tranche))
-            # asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports, tranche=tranche))
-
+            asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports, tranche_idx=tranche_idx))
+            asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports, tranche_idx=tranche_idx))
 
 
         except Exception as e:
@@ -78,7 +83,7 @@ class AuditProcess:
             raise
 
     @classmethod
-    async def audit_announcement(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche: TrancheIndex):
+    async def audit_announcement(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche_idx: TrancheIndex):
         """
             This function just take a list of report which is available for auditing and assign random 10 reports to tha validator then create announcement for them.
 
@@ -114,24 +119,28 @@ class AuditProcess:
             for core_idx, r in assign_wrs
         ])
 
-        # saved its own reports
-        for core , wr in assign_wrs:
-            tranche_store.add_announce(tranche=tranche, wr_hash=Hash.blake2b(wr.encode()), validator_index=ValidatorIndex(node.validator_index))
-
-
         announcement = Transmit(
             header_hash=header_hash,
-            tranches=tranche,
+            tranches=tranche_idx,
             announcement=Announcement(
                 assigned_report=assignments,
                 ed25519_signature=announcement_sign
             )
         )
 
+        # siggnature = audit.vrf_signature_bandersnatch(entropy_source=, bandersnatch_key=, tranche_index=, )
+
+        # Handling Evidence based on current tranches
+        # if tranche_idx == 0:
+        #     evidence = Evidence(FirstTrancheEvidence(sign))
+        # else:
+        #     evidence = Evidence(SubsequentTrancheEvidence())
+
         sign = BandersnatchVrfSignature(
             b'\x97\xf1\xd3\xa71\x97\xd7\x94&\x95c\x8cO\xa9\xac\x0f\xc3h\x8cO\x97t\xb9\x05\xa1N:?\x17\x1b\xacXlU\xe8?\xf9z\x1a\xef\xfb:\xf0\n\xdb"\xc6\xbb\x97\xf1\xd3\xa71\x97\xd7\x94&\x95c\x8cO\xa9\xac\x0f\xc3h\x8cO\x97t\xb9\x05\xa1N:?\x17\x1b\xacXlU\xe8?\xf9z\x1a\xef\xfb:\xf0\n\xdb"\xc6\xbb')
 
         evidence = Evidence(FirstTrancheEvidence(sign))
+
 
         data = CE144Data(len_a=U32(len(announcement.encode())), tranche_announcement=announcement, len_b=U32(len(evidence.encode())), evidence=evidence)
 
@@ -149,22 +158,28 @@ class AuditProcess:
         )
 
     @classmethod
-    async def judgment_process(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche:TrancheIndex):
+    async def judgment_process(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche_idx:TrancheIndex):
         from jam.audit.audit import AuditingAndJudgement
         from jam.settings import settings
         from jam.network.node import node
-        from jam.operations.tranche_store import tranche_store
+        from jam.operations.tranche_store import tranche_store, Tranche
 
 
         audit =  AuditingAndJudgement()
 
         latest_block = Finality.load_latest(kv=settings.main_db)
+        header_hash = latest_block.header.hash()
         slot = latest_block.header.slot
         logger.info(f"curent judgment slot  {slot}")
 
         epoch = math.floor(slot / EPOCH_LENGTH)
 
         logger.info(f"Reports are avialable for judgment on this node is {len(assign_wrs)} ")
+
+        tranche = Tranche(
+            tranche_index=tranche_idx,
+            header_hash=header_hash
+        )
 
         try:
             for c, r in assign_wrs:
@@ -173,8 +188,10 @@ class AuditProcess:
 
                 package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json", rep_hash=wr_hash)
 
-
                 result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=node.validator_index)
+
+                # STORE JUDGMENT HERE ONLY FOR TRANSMITTING
+                tranche_store.update_judgment(tranche=tranche, wr_hash=wr_hash, judgment=result, validator_index=node.validator_index)
 
                 judgment_sign = audit.judgment_signature(wr=r, refine=result)
 
@@ -186,17 +203,14 @@ class AuditProcess:
 
                 judgment = Judgment(
                     epoch_index=EpochIndex(0),
-                    validator_index=ValidatorIndex(1),
+                    validator_index=node.validator_index,
                     validity=validity,
                     work_report_hash=WorkReportHash(wr_hash),
                     ed25519_signature=judgment_sign
                 )
 
-                tranche_store.update_judgment(tranche=tranche, wr_hash=wr_hash, judgment=result, validator_index=node.validator_index)
-
-
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
-                data = await CE145.transmit(node=node, data=data)
+                response = await CE145.transmit(node=node, data=data)
 
             logger.debug(f"Judgment transmitted and intercept successfully")
 

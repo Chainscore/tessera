@@ -35,7 +35,7 @@ class TrancheEngine:
             logger.info(f"⚙️ Running tranche {tranche_index} for header {header_hash}, auditing {len(ts.unaudited_list)} WRs, valid {len(ts.valid_set)}, invalid {len(ts.invalid_set)}")
             #TODO: Sending the store through the task for the auditors to save their judgement & announcements in the store itself
             # asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs=ts.unaudited_list,store=self.store,tranche=initTranche))
-            asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs=ts.unaudited_list, tranche=initTranche.tranche_index))
+            asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs=ts.unaudited_list, tranche_idx=initTranche.tranche_index))
 
             if tranche_index>0:
                 new_unaudited:TypedVector[WorkReportHash] = TypedVector[WorkReportHash]([])
@@ -62,7 +62,6 @@ class TrancheEngine:
 
                 ts.unaudited_list =TypedVector[WorkReportHash](new_unaudited)
 
-                # print("new audits",ts.unaudited_list,ts.invalid_set,ts.valid_set)
                 if not new_unaudited:
                     if len(ts.invalid_set) > 0:
                         logger.info("❌ Block is INVALID due to invalid WRs")
@@ -79,6 +78,6 @@ class TrancheEngine:
 
 
             self.store._save_state(updated_tranche, ts)
-            logger.info(f"tranche bhai: {tranche_index}")
+            logger.info(f"Tranche index: {tranche_index}")
 
             await asyncio.sleep(AUDIT_PERIOD)

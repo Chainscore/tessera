@@ -122,9 +122,9 @@ async def main(
             await asyncio.sleep(5)
             # tg.create_task(CE144.transmit(node=tsr_node, data=data144))
             # tg.create_task(CE145.transmit(node=tsr_node, data=data145))
-            newly_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
+            newly_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=12, null_count=4)
             #
-            tg.create_task(AuditProcess.audit_process(newly_avail_wrs=newly_list, tranche=U8(0)))
+            tg.create_task(AuditProcess.audit_process(newly_avail_wrs=newly_list, tranche_idx=U8(0)))
                 # engine = AuditEngine()
                 # await engine.run(header_hash=header_hash, raw_list=newly_list)
 

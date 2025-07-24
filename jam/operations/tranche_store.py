@@ -1,8 +1,8 @@
-from typing import Dict
+from typing import Dict, List
 from structlog import get_logger
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
-from tsrkit_types import U8, structure, Bool
+from tsrkit_types import U8, structure, Bool, Null, Option
 from tsrkit_types.dictionary import Dictionary
 from jam.types.protocol.core import ValidatorIndex
 from jam.types.protocol.crypto import HeaderHash
@@ -33,7 +33,7 @@ class JudgmentRecord:
 
 @structure
 class TrancheState:
-    unaudited_list: TypedVector[WorkReport] #Q ->[wr1,2,3,4]->[]
+    unaudited_list: list[Option[WorkReport]] #Q ->[wr1,2,3,4]->[]
     judgments: Dictionary[WorkReportHash, JudgmentRecord] # {WR:J,S}
     valid_set: TypedVector[WorkReportHash] # Already validated_wrs [wr,1,2,3,4]
     invalid_set: TypedVector[WorkReportHash] # Already invalid_wrs
@@ -41,7 +41,7 @@ class TrancheState:
     @staticmethod
     def empty()->"TrancheState":
         return TrancheState(
-            unaudited_list=TypedVector[WorkReport]([]),
+            unaudited_list=list[Option[WorkReport]]([]),
             judgments=Dictionary[WorkReportHash, JudgmentRecord]({}),
             valid_set=TypedVector[WorkReportHash]([]),
             invalid_set=TypedVector[WorkReportHash]([])
@@ -69,9 +69,22 @@ class TrancheStore:
         state = self._tranche_store.get(tranche)
         return state if state is not None else TrancheState.empty()
 
+
     def _save_state(self, tranche: Tranche, state: TrancheState):
         """Store TrancheState under its tranche key automatically."""
         self._tranche_store[tranche] = state
+
+
+
+    # ----------------------------------- RELATED TRANCHE --------------------------------------------------------------
+
+    def get_tranche_index(self, header_hash: HeaderHash):
+        for tranche in self._tranche_store:
+            if tranche.header_hash == header_hash:
+                return tranche.tranche_index
+            else:
+                logger.info("There is no header hash exist in tranche store")
+
 
     def delete_tranche(self, tranche: Tranche):
         if tranche in self._tranche_store:
@@ -80,15 +93,36 @@ class TrancheStore:
         else:
             logger.warning("Attempted to delete non-existent tranche", tranche=tranche.to_json())
 
-    # ----- unaudited_list ----- #
-    def add_to_unaudited(self, tranche: Tranche, wr_hash: WorkReportHash):
+    # ---------------------------------- UNAUDITED LIST -----------------------------------
+    def add_to_unaudited(self, tranche: Tranche, p_a_r: list[Option[WorkReport]]):
         state = self._get_state(tranche)
-        if wr_hash in state.unaudited_list:
-            logger.warning("Work report already in unaudited list", wr_hash=WorkReportHash)
+
+        if tranche.tranche_index == 0:
+            state.unaudited_list = p_a_r
+            self._save_state(tranche=tranche, state=state)
             return
-        state.unaudited_list.append(wr_hash)
-        self._save_state(tranche, state)
-        logger.info("Added work report to unaudited list", wr_hash=WorkReportHash)
+
+
+        # for wr in p_a_r:
+        #     if wr == Null:
+        #         state.unaudited_list.append(Null)
+        #     elif wr is not Null and wr in state.unaudited_list:
+        #         logger.warning("Work report already in unaudited list", wr_hash=WorkReportHash)
+        #         return
+        #     else:
+        #         state.unaudited_list.append(wr)
+        #
+        # self._save_state(tranche, state)
+        # logger.info("Added work report to unaudited list", wr_hash=WorkReportHash)
+
+    def get_unaudit_list(self, tranche: Tranche):
+        state = self._tranche_store.get(tranche)
+        if state:
+            return state.unaudited_list
+        else:
+            logger.info("Empty unaudit list")
+
+
 
     def rm_from_unaudited(self, tranche: Tranche, wr_hash: WorkReportHash):
         state = self._get_state(tranche)
@@ -99,7 +133,19 @@ class TrancheStore:
         except ValueError:
             logger.warning("Work report not found in unaudited list for removal", wr_hash=wr_hash)
 
-    # ----- judgments ----- #
+
+    # ----------------------------- ANNOUNCEMENT'S FUNCTION ------------------------------------------------------------
+    def add_announce(self, tranche: Tranche, wr_hash: WorkReportHash, validator_index:ValidatorIndex) :
+        state = self._get_state(tranche)
+        if wr_hash not in state.judgments:
+            state.judgments[wr_hash] = JudgmentRecord.empty()
+        state.judgments[wr_hash].announces.append(validator_index)
+        self._save_state(tranche, state)
+        logger.info("Updated announcement for work report", wr_hash =wr_hash)
+
+
+    # ----------------------------- JUDGMENT'S FUNCTION ----------------------------------------------------------------
+
     def update_judgment(self, tranche: Tranche, wr_hash: WorkReportHash, judgment: Bool, validator_index: ValidatorIndex):
         state = self._get_state(tranche)
 
@@ -118,18 +164,10 @@ class TrancheStore:
         state = self._get_state(tranche)
         return state.judgments.get(wr_hash)
 
-    # ----- announcement ----- #
-    def add_announce(self, tranche: Tranche, wr_hash: WorkReportHash, validator_index:ValidatorIndex) :
-        state = self._get_state(tranche)
-        if wr_hash not in state.judgments:
-            state.judgments[wr_hash] = JudgmentRecord.empty()
-        state.judgments[wr_hash].announces.append(validator_index)
-        self._save_state(tranche, state)
-        logger.info("Updated announcement for work report", wr_hash =wr_hash)
+
+    # --------------------- VALID AND INVALID FUNCTIONS ----------------------------------------------------------------
 
 
-
-    # ----- valid_set ----- #
     def add_to_valid_set(self, tranche: Tranche, wr_hash: WorkReportHash):
         state = self._get_state(tranche)
         if wr_hash in state.valid_set:
@@ -139,7 +177,6 @@ class TrancheStore:
         self._save_state(tranche, state)
         logger.info("Added work report to valid set", wr_hash=wr_hash)
 
-    # ----- invalid_set ----- #
     def add_to_invalid_set(self, tranche: Tranche, wr_hash: WorkReportHash):
         state = self._get_state(tranche)
         if wr_hash in state.invalid_set:

@@ -2,7 +2,7 @@
 from typing import List, Tuple
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from tsrkit_types import structure,  Null, TypedVector, Bytes, Uint, Option, U8, U32
+from tsrkit_types import Null, TypedVector, Bytes, Uint, Option, U8, U32
 from jam.types.protocol.core import CoreIndex, TimeSlot, TrancheIndex,ValidatorIndex
 from jam.ring_vrf.curve.specs.bandersnatch import BandersnatchPoint, Bandersnatch_TE_Curve
 from jam.types.work.report import WorkReport
@@ -77,7 +77,7 @@ class AuditingAndJudgement:
         return pre_audit_report
 
     @staticmethod
-    def vrf_signature_bandersnatch(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, tranche_index: U8 = None, w_r: WorkReport = None) -> BandersnatchVrfSignature:
+    def vrf_signature_bandersnatch(entropy_source: BandersnatchVrfSignature, bandersnatch_key: BandersnatchPublic, tranche_index: U8, w_r: WorkReport = None) -> BandersnatchVrfSignature:
         """
         Equation: 17.3, 17.4
         This function create a random quantity to get entropy for shuffling.
@@ -145,7 +145,7 @@ class AuditingAndJudgement:
 
         # ------------------------------------------ take initial 10 reports -------------------------------------------
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-        shuffle_not_null = list[Tuple[CoreIndex, WorkReport]]([(c, w) for (c, w) in updated_array if w is not Null][:3])
+        shuffle_not_null = list[Tuple[CoreIndex, WorkReport]]([(c, w) for (c, w) in updated_array if w is not Null][:4])
 
         return shuffle_not_null
 
@@ -242,25 +242,25 @@ class AuditingAndJudgement:
         from jam.types.work.shard import ShardIndex
         from jam.utils.chainspec import chain_config
 
-        CE138 = AuditShardRequestProtocol()
-        # process = Processor(node=node)
-        erasure_root = ErasureRoot(wr.package_spec.erasure_root)
+        # CE138 = AuditShardRequestProtocol()
+        # # process = Processor(node=node)
+        # erasure_root = ErasureRoot(wr.package_spec.erasure_root)
+        #
+        # # For this node shard index and validator index information is:
+        # v_i = node_index
+        # s_i = get_si(validator_index=v_i, core_index=wr.core_index)
+        #
+        # # For other node to get shard data, from which node that shard
+        # total_shard = VALIDATOR_COUNT
 
-        # For this node shard index and validator index information is:
-        v_i = node_index
-        s_i = get_si(validator_index=v_i, core_index=wr.core_index)
-
-        # For other node to get shard data, from which node that shard
-        total_shard = VALIDATOR_COUNT
-
-        for i in range(VALIDATOR_COUNT):
-            if i != s_i:
-                request_s_i = i
-                request_v_i = get_vi(shard_index=request_s_i, core_index=wr.core_index)
-                query = Query(erasure_root=erasure_root, shard_index=ShardIndex(2))
-                data = CE138Data(len=U32(len(query.encode())), query=query)
-
-                data = await CE138.transmit(node=node, data=data, node_index=ValidatorIndex(1))
+        # for i in range(VALIDATOR_COUNT):
+        #     if i != s_i:
+        #         request_s_i = i
+        #         request_v_i = get_vi(shard_index=request_s_i, core_index=wr.core_index)
+        #         query = Query(erasure_root=erasure_root, shard_index=ShardIndex(2))
+        #         data = CE138Data(len=U32(len(query.encode())), query=query)
+        #
+        #         data = await CE138.transmit(node=node, data=data, node_index=ValidatorIndex(1))
 
 
         w_r, wr_hash = audit_refine(package=p, core=c, extrinsics=e)

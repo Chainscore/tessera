@@ -23,6 +23,7 @@ from jam.network.base.protocol import PrefixType
 from jam.network.base.sessions import SessionTicketStore
 from jam.utils import constants
 from .peer import Peer
+from ..types import ValidatorIndex
 
 # Module-specific logger
 logger = get_logger("network")
@@ -156,7 +157,7 @@ class Node:
 
         for i, val in enumerate(state.kappa):
             if val.bandersnatch == self.validator_data.bandersnatch:
-                return i
+                return ValidatorIndex(i)
 
         raise ValueError("No validator found with matching bandersnatch key.")
 
