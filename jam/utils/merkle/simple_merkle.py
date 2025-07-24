@@ -34,7 +34,7 @@ class Merklizer:
             left_node = self.node(left)
             right_node = self.node(right)
 
-            node_val = 1 + left_node + right_node
+            node_val = 1 + left_node * 10 + right_node
 
             return node_val
 
@@ -194,76 +194,76 @@ class TreeNode:
         self.left = left
         self.right = right
 
+class MerkleVisualizer:
+    def _display_aux(self, node: TreeNode) -> Tuple[List[str], int, int, int]:
+        # Returns: lines, width, height, middle
+        if node is None:
+            return [], 0, 0, 0
+        if not node.left and not node.right:
+            line = node.label
+            width = len(line)
+            return [line], width, 1, width // 2
 
-def _display_aux(node: TreeNode) -> Tuple[List[str], int, int, int]:
-    # Returns: lines, width, height, middle
-    if node is None:
-        return [], 0, 0, 0
-    if not node.left and not node.right:
-        line = node.label
-        width = len(line)
-        return [line], width, 1, width // 2
+        if not node.right:
+            left_lines, lw, lh, lm = self._display_aux(node.left)
+            line = node.label
+            w = len(line)
+            first = " " * (lm + 1) + "_" * (lw - lm - 1) + line
+            second = " " * lm + "/" + " " * (lw - lm - 1 + w)
+            shifted = [line + " " * w for line in left_lines]
+            return [first, second] + shifted, lw + w, lh + 2, lw + w // 2
 
-    if not node.right:
-        left_lines, lw, lh, lm = _display_aux(node.left)
+        if not node.left:
+            right_lines, rw, rh, rm = self._display_aux(node.right)
+            line = node.label
+            w = len(line)
+            first = line + "_" * rm + " " * (rw - rm)
+            second = " " * (w + rm) + "\\" + " " * (rw - rm - 1)
+            shifted = [" " * w + rl for rl in right_lines]
+            return [first, second] + shifted, rw + w, rh + 2, w // 2
+
+        left_lines, lw, lh, lm = self._display_aux(node.left)
+        right_lines, rw, rh, rm = self._display_aux(node.right)
+
         line = node.label
         w = len(line)
-        first = " " * (lm + 1) + "_" * (lw - lm - 1) + line
-        second = " " * lm + "/" + " " * (lw - lm - 1 + w)
-        shifted = [line + " " * w for line in left_lines]
-        return [first, second] + shifted, lw + w, lh + 2, lw + w // 2
+        first = " " * (lm + 1) + "_" * (lw - lm - 1) + line + "_" * rm + " " * (rw - rm)
+        second = " " * lm + "/" + " " * (lw - lm - 1 + w + rm) + "\\" + " " * (rw - rm - 1)
 
-    if not node.left:
-        right_lines, rw, rh, rm = _display_aux(node.right)
-        line = node.label
-        w = len(line)
-        first = line + "_" * rm + " " * (rw - rm)
-        second = " " * (w + rm) + "\\" + " " * (rw - rm - 1)
-        shifted = [" " * w + rl for rl in right_lines]
-        return [first, second] + shifted, rw + w, rh + 2, w // 2
+        if lh < rh:
+            left_lines += [" " * lw] * (rh - lh)
+        elif rh < lh:
+            right_lines += [" " * rw] * (lh - rh)
 
-    left_lines, lw, lh, lm = _display_aux(node.left)
-    right_lines, rw, rh, rm = _display_aux(node.right)
-
-    line = node.label
-    w = len(line)
-    first = " " * (lm + 1) + "_" * (lw - lm - 1) + line + "_" * rm + " " * (rw - rm)
-    second = " " * lm + "/" + " " * (lw - lm - 1 + w + rm) + "\\" + " " * (rw - rm - 1)
-
-    if lh < rh:
-        left_lines += [" " * lw] * (rh - lh)
-    elif rh < lh:
-        right_lines += [" " * rw] * (lh - rh)
-
-    zipped = zip(left_lines, right_lines)
-    lines = [first, second] + [l + " " * w + r for l, r in zipped]
-    return lines, lw + rw + w, max(lh, rh) + 2, lw + w // 2
+        zipped = zip(left_lines, right_lines)
+        lines = [first, second] + [l + " " * w + r for l, r in zipped]
+        return lines, lw + rw + w, max(lh, rh) + 2, lw + w // 2
 
 
-def print_tree(node: TreeNode):
-    lines, *_ = _display_aux(node)
-    for ln in lines:
-        print(ln)
+    def print_tree(self, node: TreeNode):
+        lines, *_ = self._display_aux(node)
+        for ln in lines:
+            print(ln)
 
 
-def node(values: list[int]) -> (int, TreeNode):
-    sz = len(values)
+    def node(self, values: list[int]) -> (int, TreeNode):
+        sz = len(values)
 
-    if sz == 0:
-        return 0, TreeNode("0")
+        if sz == 0:
+            return 0, TreeNode("0")
 
-    elif sz == 1:
-        return values[0], TreeNode(str(values[0]))
+        elif sz == 1:
+            return values[0], TreeNode(str(values[0]))
 
-    else:
-        mid = (sz + 1) // 2
+        else:
+            mid = (sz + 1) // 2
 
-        left = values[:mid]
-        right = values[mid:]
+            left = values[:mid]
+            right = values[mid:]
 
-        left_node, left_root = node(left)
-        right_node, right_root = node(right)
+            left_node, left_root = self.node(left)
+            right_node, right_root = self.node(right)
 
-        node_val = 1 + left_node + right_node
+            node_val = 1 + left_node + right_node
 
-        return node_val, TreeNode(str(node_val), left_root, right_root)
+            return node_val, TreeNode(str(node_val), left_root, right_root)

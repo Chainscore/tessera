@@ -4,7 +4,7 @@ from jam.utils.merkle.binary_merkle import (
     BMRFunctions,
     OpaqueHashes,
 )
-from jam.utils.merkle.simple_merkle import print_tree, TreeNode
+from jam.utils.merkle.simple_merkle import MerkleVisualizer, TreeNode
 from jam.types import Hash
 from jam.types.work.manifest import Segments
 from jam.types.protocol.core import OpaqueHash
@@ -216,7 +216,8 @@ def test_tree():
 
     print("-----^------")
     test_root, tree = node(processed_leaves)
-    print_tree(tree)
+    visualizer = MerkleVisualizer()
+    visualizer.print_tree(tree)
     print("------<>------")
 
     subtree_depth = 6
