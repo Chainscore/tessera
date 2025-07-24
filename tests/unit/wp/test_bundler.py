@@ -46,7 +46,7 @@ async def node_task():
     init_ts = ts
 
     # while True:
-    while ts-init_ts != 100:
+    while ts-init_ts != min(len(vectors), 100):
         from jam.network.node import node
 
         if node:
@@ -146,9 +146,8 @@ async def node_task():
                     err=str(e),
                     err_type=type(e).__name__,
                 )
-            finally:
-                ts += 1
 
+        ts += 1
         # await asyncio.sleep(6)
 
 

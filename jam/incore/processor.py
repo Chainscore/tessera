@@ -104,6 +104,7 @@ class Processor:
         core: CoreIndex,
         extrinsics: Extrinsics,
         share_guarantee: bool = True,
+        save_assurance: bool = True,
     ):
         ts = int((time.time() - GENESIS_TS) //  SLOT_PERIOD)
         from jam.network.protocols.ce_134 import (
@@ -173,15 +174,17 @@ class Processor:
             logger.debug("Saving guaranteed work report mappings..")
             self.process_guaranteed_report(guaranteed_wr)
 
-        # Record assurance for this core & this validator
-        from jam.operations.handlers.assurer import assurer
-        assurer.record_shard_assr(wr.core_index)
+        if save_assurance:
+            # Record assurance for this core & this validator
+            from jam.operations.handlers.assurer import assurer
+            assurer.record_shard_assr(wr.core_index)
 
-        logger.info(
-            f"📩 Assured work report (Primary Guarantor)",
-            wr_hash=wr_hash.hex()[:16] + "...",
-            slot=ts,
-        )
+            logger.info(
+                f"📩 Assured work report (Primary Guarantor)",
+                wr_hash=wr_hash.hex()[:16] + "...",
+                slot=ts,
+            )
+
         return wr, wr_hash
 
     @staticmethod
