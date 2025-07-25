@@ -83,7 +83,7 @@ async def main(
         block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db)
+        Finality.finalise(header_hash, main_db, True)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
@@ -92,7 +92,6 @@ async def main(
             # RPC
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
-            tg.create_task(epoch_operate(is_builder))
             tg.create_task(operate(is_builder))
 
     except Exception as e:

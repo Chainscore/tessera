@@ -7,6 +7,7 @@ from jam.finality.finality import Finality
 from jam.state.transitions.safrole.safrole import Safrole
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import Hash
+from jam.types.protocol.ticket import TicketBody
 from jam.types.state.gamma import GammaS, GammaSFallback, GammaSTickets
 from jam.utils.constants import (
     EPOCH_LENGTH,
@@ -54,7 +55,10 @@ class BlockProducer(NodeDispatcher):
             return 
 
         slot_index = time_slot % EPOCH_LENGTH
-        entry = state.gamma.s.unwrap()[slot_index] 
+        entry = state.gamma.s.unwrap()[slot_index]
+
+        print('entry', entry)
+
         ticket = None
         if state.tau // EPOCH_LENGTH != time_slot // EPOCH_LENGTH:
             if time_slot // EPOCH_LENGTH == (state.tau // EPOCH_LENGTH) + 1 and len(state.gamma.a) == EPOCH_LENGTH and slot_index >= TICKET_SUBMISSION_END:
@@ -62,7 +66,7 @@ class BlockProducer(NodeDispatcher):
             else:
                 entry = Safrole.arrange_fallback(state.eta[1], state.gamma.k).unwrap()[slot_index]
         
-        if isinstance(entry, TicketEnvelope):
+        if isinstance(entry, TicketBody):
             eta = state.eta[2] if time_slot % EPOCH_LENGTH == 0 else state.eta[3]
             our_id = vrf_output(
                 prove_ietf(
@@ -70,9 +74,11 @@ class BlockProducer(NodeDispatcher):
                     X.TICKET.value + eta.encode() + entry.attempt.encode(), b""
                 )
             )
-            entry_id = vrf_output(entry.signature)
+            print('our_id', our_id)
+            entry_id = entry.id
+            # entry_id = vrf_output(entry.signature)
             if our_id != entry_id:
-                logger.debug("⏭ Skipping BP: Not our ticket", sig=entry.signature.hex(), our_id=our_id.hex(), entry_id=entry_id.hex())
+                logger.debug("⏭ Skipping BP: Not our ticket", sig=entry.id.hex(), our_id=our_id.hex(), entry_id=entry_id.hex())
                 return 
             else:
                 ticket = entry

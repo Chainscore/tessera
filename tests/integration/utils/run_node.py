@@ -95,7 +95,7 @@ async def run_node(
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db)
+        Finality.finalise(header_hash, main_db, True)
         
         settings.update()
 

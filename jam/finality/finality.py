@@ -1,3 +1,4 @@
+import asyncio
 from typing import TYPE_CHECKING
 from jam.logging import get_logger
 from rockstore import RockStore
@@ -19,10 +20,20 @@ class Finality:
     LATEST_KEY = bytes(Hash.blake2b(b"LATEST_BLOCK"))
 
     @classmethod
-    def finalise(cls, header_hash: HeaderHash, kv: RockStore):
+    async def schedule_run(cls, header_hash: HeaderHash, kv: RockStore, sch_ts: int, initial: bool ) -> None:
+        if initial:
+            print("Finalized", header_hash.encode().hex()[0:30])
+            kv.put(cls.FINAL_KEY, header_hash.encode())
+        else:
+            await asyncio.sleep(sch_ts)
+            print("Finalized", header_hash.encode().hex()[0:30])
+            kv.put(cls.FINAL_KEY, header_hash.encode())
+
+    @classmethod
+    def finalise(cls, header_hash: HeaderHash, kv: RockStore, initial: bool):
         # asyncio.create_task(ws_broker.publish("final", {"" : header_hash}))
         logger.debug("Finalised block", header_hash=header_hash.hex())
-        kv.put(cls.FINAL_KEY, header_hash.encode())
+        asyncio.create_task(cls.schedule_run(header_hash, kv, 18, initial))
 
     @classmethod
     def set_head(cls, header_hash: HeaderHash, kv: RockStore):

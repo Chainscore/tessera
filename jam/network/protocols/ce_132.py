@@ -47,7 +47,7 @@ async def forwarding(slot, timeslot):
             ticket = ticket_queue.pop()
             CE132 = SafroleTicketDistribution()
             data = CE132Data(epoch_ticket_len=ticket.epoch_ticket_len, epoch_ticket=ticket.epoch_ticket)
-            responses = CE132.transmit(data)
+            responses = await CE132.transmit(data)
             ts += 1
             curr_time = time.time()
             next_time_slot_time = ts * 6 + GENESIS_TS
@@ -79,6 +79,15 @@ class SafroleTicketDistribution(NetworkProtocol):
 
         from jam.network.start import node
         if not node: return
+
+        curr_time = time.time()
+        ts = int((curr_time - GENESIS_TS) // 6)
+        current_slot = ts % EPOCH_LENGTH
+        if current_slot < TICKET_SUBMISSION_END:
+            # storing ticket extrinsic
+            print(f"Storing ticket in extrinsic, time_slot={ts}, slot={current_slot}")
+            from jam.block.extrinsics.tickets import ticket_store
+            ticket_store.store(data.epoch_ticket.ticket)
 
         stream_data = data.epoch_ticket_len.encode() + data.epoch_ticket.encode()
 

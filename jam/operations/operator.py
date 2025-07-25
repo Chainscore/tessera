@@ -9,16 +9,14 @@ from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from .handlers.conductor import Conductor
 from jam.network.protocols.ce_132 import forwarding
+from ..finality.finality import Finality
 
 logger = get_logger("nodeops")
 
 
-def dispatch_fns(is_bd: bool, is_generating: bool = False) -> List[Tuple[int, NodeDispatcher]]:
+def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
     if is_bd:
         return [(0, WPBuilder)]
-
-    if is_generating:
-        return [(0, Conductor)]
 
     return [
         (0, BlockProducer),
@@ -60,21 +58,31 @@ async def operate(is_builder = False):
         logger.info(f"New Time Slot #{ts}", slot_index=(ts % EPOCH_LENGTH), peers=len(node.active_peers), connections=len(node.all_connected))
         # Schedule tasks to run immediately
 
-        if conductor_ts < (ts%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2) and not ticket_generated:
-            for dispatch in dispatch_fns(is_builder ,is_generating=True):
-                (task_ts, runner) = dispatch
-                if runner:
-                    asyncio.create_task(schedule_run(task_ts, runner, ts))
-                ticket_generated = True
+        from jam.settings import settings
+        main_db = settings.main_db
+        finality_block = Finality.load_final(main_db)
+        finality_time_slot = finality_block.header.slot
 
-        if forwarding_s < (ts%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2):
-            asyncio.create_task(schedule_run_2(ts%EPOCH_LENGTH, ts))
+        if conductor_ts < (finality_time_slot%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2) and not ticket_generated:
+            asyncio.create_task(schedule_run(0, conductor, ts))
+            ticket_generated = True
+
+        # if forwarding_s < (ts%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2):
+        #     asyncio.create_task(schedule_run_2(ts%EPOCH_LENGTH, ts))
 
         for dispatch in dispatch_fns(is_builder):
             (task_ts, runner) = dispatch
             if runner:
                 asyncio.create_task(schedule_run(task_ts, runner, ts))
 
+        if ts%EPOCH_LENGTH == 11:
+            ticket_generated = False
+            from jam.block.extrinsics.tickets import ticket_store
+            from jam.block.extrinsics.guarantees import wrg_store
+            from jam.block.extrinsics.assurances import asr_store
+            ticket_store.clear()
+            wrg_store.clear()
+            asr_store.clear()
 
         # Move on to next timeslot and sleep
         ts += 1

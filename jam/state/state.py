@@ -270,7 +270,7 @@ class State:
                 # Set local chain head to produced block
                 Finality.set_head(header_hash, _set.main_db)
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-                Finality.finalise(header_hash, _set.main_db)
+                Finality.finalise(header_hash, _set.main_db, False)
                 block.extrinsic.clear_from_stores()
                 self._lock = False
                 return True 

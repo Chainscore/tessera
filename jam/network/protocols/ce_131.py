@@ -1,6 +1,8 @@
+import asyncio
 from typing import cast
 from tsrkit_types import structure, Uint, Bool, U32, U8
 
+from jam.finality.finality import Finality
 from jam.logging import get_logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -8,7 +10,7 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.types.protocol.crypto import BandersnatchRingVrfSignature
 from jam.block.extrinsics.tickets import TicketEnvelope
-from jam.utils.constants import VALIDATOR_COUNT
+from jam.utils.constants import VALIDATOR_COUNT, EPOCH_LENGTH
 from jam.network.protocols.ce_132 import SafroleTicketDistribution, CE132Data
 from py_ark_vrf import verify_ring, vrf_output
 from jam.utils.constants import X
@@ -78,8 +80,11 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                 "Proxy validator is same as generator validator, transmitting ticket using CE132",
                 node=str(node.port),
             )
-            from jam.operations.ticket_queue import ticket_queue
-            ticket_queue.push(data)
+            # from jam.operations.ticket_queue import ticket_queue
+            # ticket_queue.push(data)
+            CE132 = SafroleTicketDistribution()
+            data = CE132Data(epoch_ticket_len=data.epoch_ticket_len, epoch_ticket=data.epoch_ticket)
+            responses = await CE132.transmit(data)
 
         else:
             for client in node.all_connected:
@@ -148,13 +153,17 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                 ad
             )
 
-            # check if you are supposed to be a proxy and ticket is valid
             from jam.settings import settings
+            # check if you are supposed to be a proxy and ticket is valid
             if proxy_validator.ed25519 == settings.ed25519_public and verification:
-                from jam.operations.ticket_queue import ticket_queue
-                ticket_queue.push(data)
+                # from jam.operations.ticket_queue import ticket_queue
+                # ticket_queue.push(data)
+                # print("Ticket queue updated", ticket_queue.length())
                 print("Proxy ticket received from", server.port)
-                print("Ticket queue updated", ticket_queue.length())
+
+                CE132 = SafroleTicketDistribution()
+                data = CE132Data(epoch_ticket_len=data.epoch_ticket_len, epoch_ticket=data.epoch_ticket)
+                responses = asyncio.create_task(CE132.transmit(data))
 
             # Return acknowledgment to validator
             ack = b""

@@ -10,6 +10,7 @@ from dot_ring.vrf.ring.ring_vrf import RingVrf
 from jam.logging import get_logger
 from jam.utils.constants import EPOCH_LENGTH, X, TICKET_ENTRIES_PER_VALIDATOR
 from jam.network.protocols.ce_131 import SafroleTicketProxyDistribution, CE131Data, EpochTicket
+from jam.finality.finality import Finality
 
 logger = get_logger("nodeops")
 
@@ -18,7 +19,6 @@ class Conductor:
     @classmethod 
     async def run(cls, time_slot: TimeSlot):
         from jam.network.start import node
-        from jam.state.state import state
         CE131 = SafroleTicketProxyDistribution()
 
         if int(node.port) != 40000:
@@ -29,10 +29,14 @@ class Conductor:
             tasks = []
             # generating & transmitting all the tickets allowed per validator
             for i in range(TICKET_ENTRIES_PER_VALIDATOR):
-                # ticket_envelope = cls.generate_ticket(state, i)
+                from jam.state.state import state
                 loop = asyncio.get_running_loop()
                 ticket_envelope = await loop.run_in_executor(None, cls.generate_ticket, *(state, i))
-                epoch_index = U32(state.tau // EPOCH_LENGTH)
+                from jam.settings import settings
+                main_db = settings.main_db
+                finality_block = Finality.load_final(main_db)
+                finality_time_slot = finality_block.header.slot
+                epoch_index = U32(finality_time_slot // EPOCH_LENGTH)
 
                 if ticket_envelope is not None:
                     epoch_ticket = EpochTicket(epoch_index=epoch_index, ticket=ticket_envelope)
@@ -45,7 +49,7 @@ class Conductor:
                 else:
                     raise ValueError("Ticket generation failed")
 
-            ack = asyncio.gather(*tasks)
+            ack = await asyncio.gather(*tasks)
             logger.info(
                 "Ticket transmission completed",
                 node=str(node.port)

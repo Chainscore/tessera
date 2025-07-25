@@ -1,8 +1,6 @@
 import asyncio
 from time import time
-from jam.operations.operator import operate
-from jam.operations.epoch_opeator import epoch_operate
-from jam.types.state.kappa import Kappa
+from jam.operations import operate
 from jam.utils.constants import GENESIS_TS
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
 import os
@@ -113,5 +111,5 @@ async def test_tiny_tsr_5_pjam():
         Client(Role.PJAM, 5),
     ]
     
-    await setup_processes(CLIENTS, [operate], 240)
+    await setup_processes(CLIENTS, [operate], 2400)
 
