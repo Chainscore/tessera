@@ -20,11 +20,11 @@ class BundlerError(JamError):
 
 
 class BundlerErrorCode(Enum):
-    UNKNOWN_ROOT: "Unrecognized root"
-    SHARDS_UNAVAILABLE: "Shards not available"
-    SEG_ERROR: "Unable to fetch import segments"
-    JFN_ERROR: "Unable to fetch justification"
-    EXT_ERROR: "Unable to fetch extrinsics"
+    UNKNOWN_ROOT = "Unrecognized root"
+    SHARDS_UNAVAILABLE = "Shards not available"
+    SEG_ERROR = "Unable to fetch import segments"
+    JFN_ERROR = "Unable to fetch justification"
+    EXT_ERROR = "Unable to fetch extrinsics"
 
 
 class ProcessorError(JamError):
@@ -32,5 +32,5 @@ class ProcessorError(JamError):
 
 
 class ProcessorErrorCode(Enum):
-    INVALID_SIGN: "Invalid Guarantor Signature"
-    INSUFFICIENT_GUARANTEES: "Insufficient guarantees for generated work report"
+    INVALID_SIGN = "Invalid Guarantor Signature"
+    INSUFFICIENT_GUARANTEES = "Insufficient guarantees for generated work report"

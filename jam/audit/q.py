@@ -6,7 +6,7 @@ from typing import List, cast
 from tsrkit_types import Option, Null
 
 from jam.types.work.report import WorkReportHash
-from tests.unit.wp.types import RefineVectors, RefineVector, WorkReport
+from tests.unit.incore.types import RefineVectors, RefineVector, WorkReport
 
 
 def sample_work_reports_with_nulls(

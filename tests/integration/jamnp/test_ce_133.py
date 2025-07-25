@@ -161,7 +161,7 @@ wr_hash = WorkReportHash(
 )
 wc = WorkPackageCore(wp, CoreIndex(1))
 ext = Extrinsics([])
-from tests.unit.wp.types import RefineVectors
+from tests.unit.incore.types import RefineVectors
 
 vectors: RefineVectors = RefineVectors.from_json(
     [

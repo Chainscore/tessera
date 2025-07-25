@@ -264,7 +264,7 @@ class AuditingAndJudgement:
             node_index:
 
         Return:
-            Boolean value , Ture or False
+            Boolean value , True or False
 
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f2f011f6c01?v=0.7.0
         """

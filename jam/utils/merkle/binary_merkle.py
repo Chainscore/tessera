@@ -337,7 +337,7 @@ class BMRFunctions:
         self,
         leaf: Bytes,
         erasure_root: Bytes,
-        index: Uint,
+        index: int,
         justification: TypedVector[Bytes],
         hash_fn: Optional[Callable[[bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> bool:

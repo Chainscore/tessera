@@ -23,7 +23,7 @@ from jam.utils.constants import GENESIS_TS
 
 
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
-from tests.unit.wp.types import BundleVectors, BundleVector
+from tests.unit.incore.types import BundleVectors, BundleVector
 
 CLIENTS = [Client(Role.VAL, 40001, theme="monokai")]
 

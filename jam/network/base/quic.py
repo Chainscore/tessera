@@ -154,6 +154,7 @@ class QuicProtocol(QuicConnectionProtocol):
                 peer=self.peer,
                 stream_id=stream_id,
             )
+            # return await asyncio.wait_for(asyncio.shield(waiter), 2)
             return await asyncio.shield(waiter)
 
         except Exception as e:

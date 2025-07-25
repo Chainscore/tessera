@@ -231,7 +231,7 @@ class Processor:
         return result
 
     def build_report(
-        self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup
+        self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup, store: bool = True
     ):
         """
         Work Report Computation function Ξ defined in Eqn 14.12
@@ -243,6 +243,7 @@ class Processor:
             b: Work Package Bundle
             c: Core Index
             sr_lookup: Segment Root Lookup
+            store: Flag to allow storage
         Returns:
             Work Report
         """
@@ -275,10 +276,10 @@ class Processor:
                 for i in range(k):
                     l += p.items[i].export_count
 
-                # ------------------------------------------ REFINE INVOCATION ------------------------------------------
+                # ------------------------------------------ REFINE INVOCATION ----------------------------------------
                 logger.debug(f"Refining Work Item {j}..", payload=p.items[j].payload.hex())
                 r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
-                # ------------------------------------------ ----------------- ------------------------------------------
+                # ------------------------------------------ ----------------- ----------------------------------------
 
                 segment = Segment([U8(0)] * SEGMENT_SIZE)
                 segment_count = w.export_count
@@ -320,9 +321,7 @@ class Processor:
 
             # Availability Specification, s
             logger.debug(f"Building availability specification..")
-            specs = self.availability_specifier(
-                package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap
-            )
+            specs = self.availability_specifier(h, b.encode(), e_bar_cap)
 
             logger.debug(f"Compiling Report..")
             report = WorkReport(
@@ -522,7 +521,7 @@ class Processor:
         try:
             # Generate Report
             logger.debug("Building Work Report..")
-            report = self.build_report(bundle, core, sr_lookup)
+            report = self.build_report(bundle, core, sr_lookup, store)
 
             wr_hash = Hash.blake2b(report.encode())
             logger.info(

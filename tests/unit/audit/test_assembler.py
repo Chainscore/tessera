@@ -8,6 +8,8 @@ import os
 
 from tsrkit_types import U32
 
+from jam.audit.assembler import Assembler
+from jam.incore.processor import Processor
 from jam.logging import get_logger
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
@@ -19,7 +21,7 @@ from jam.storage.da.mappings import (
 )
 from jam.storage.da.reports import ReportsDA
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
-from tests.unit.wp.types import RefineVectors, RefineVector, BundleVector, BundleVectors
+from tests.unit.incore.types import RefineVectors, RefineVector, BundleVector, BundleVectors
 
 # Logger for WP Production
 # logger = get_logger("test")
@@ -35,7 +37,7 @@ CLIENTS = [
 ]
 
 vectors = BundleVectors([])
-for i in range(1, 4):
+for i in range(14, 24):
     with open(f"vectors/bundles/bundles-{i:03d}.json", "r") as f:
         data = json.load(f)
         bundle_vec = BundleVector.from_json(data)
@@ -44,7 +46,7 @@ for i in range(1, 4):
 
 async def node_task():
     # Wait for initialization
-    await asyncio.sleep(12)
+    await asyncio.sleep(6)
 
     init_ts = int((time() - GENESIS_TS) // 6)
 
@@ -82,19 +84,21 @@ async def node_task():
                     err=str(e),
                     err_type=type(e).__name__,
                 )
-            finally:
-                ts += 1
 
-            await asyncio.sleep(6)
-    else:
-        await asyncio.sleep(20)
+            ts += 1
+
+            # await asyncio.sleep(6)
+    elif node.port == 40004:
+        await asyncio.sleep(12)
         from jam.settings import settings
-
         logger = get_logger()
 
         d3l = settings.d3l
 
-        logger.info("VALIDATOR NODE", node=node)
+        logger.info("AUDITOR NODE", node=node)
+
+        assembler = Assembler()
+        processor = Processor(node)
 
         for wp_iter, vector in enumerate(vectors):
             try:
@@ -103,28 +107,28 @@ async def node_task():
                 sr_er_da = SegmentErasureMap(d3l)
 
                 wr = rep_da.get(vector.rep_hash)
-                logger.debug("WORK REP", assertion=wr == vector.work_rep)
-                assert wr.encode() == vector.work_rep.encode()
+                assert wr == vector.work_rep
 
                 wp_hash = Hash.blake2b(vector.work_package.encode())
                 sr = map_da.get(wp_hash)
-                logger.debug(
-                    "SEG ROOT",
-                    assertion=sr == vector.work_rep.package_spec.exports_root,
-                )
-                assert sr.encode() == vector.work_rep.package_spec.exports_root.encode()
+                assert sr == vector.work_rep.package_spec.exports_root
 
                 er = sr_er_da.get(sr)
-                logger.debug(
-                    "ERS ROOT",
-                    assertion=er == vector.work_rep.package_spec.erasure_root,
-                    exp=vector.work_rep.package_spec.erasure_root.hex(),
-                    got=er.hex(),
-                )
-                assert er.encode() == vector.work_rep.package_spec.erasure_root.encode()
+                assert er == vector.work_rep.package_spec.erasure_root
 
-                logger.info(
+                logger.debug(
                     "Node assertion successful",
+                    peers=len(node.peer_conn),
+                )
+
+                bundle = await assembler.assemble(wr)
+                new_wr, new_wr_hash = processor.process_bundle(wr.core_index, bundle, wr.segment_root_lookup, True)
+
+                assert new_wr_hash == vector.rep_hash
+                assert new_wr == vector.work_rep
+
+                logger.debug(
+                    "Audit assertion successful",
                     peers=len(node.peer_conn),
                 )
             except Exception as e:
@@ -134,8 +138,10 @@ async def node_task():
                     err_type=type(e).__name__,
                 )
 
+            # await asyncio.sleep(6)
+
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_refinement():
-    await setup_processes(CLIENTS, node_task, 36)
+async def test_assembler():
+    await setup_processes(CLIENTS, node_task, 30)

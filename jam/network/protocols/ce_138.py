@@ -3,7 +3,7 @@ from typing import cast, Tuple
 
 from tsrkit_types import Uint, structure, TypedVector, Bytes
 
-from jam.logging import logger
+from jam.logging import get_logger
 
 from jam.network.base.quic import QuicProtocol
 from jam.network.protocols.ce_137 import CE137Data
@@ -21,6 +21,9 @@ from jam.storage.da.segments import SegmentShardsDA
 from jam.utils.merkle import BMRFunctions
 from jam.utils.gather import gather_with_exceptions
 
+
+# Module-specific logger
+logger = get_logger("network")
 
 class CE138Data(CE137Data):
     ...
@@ -73,7 +76,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
         len_a = data.len.encode()
 
         logger.info(
-            f"Transmitting shard index & erasure root to {len(node.peer_conn)} assurer"
+            f"Transmitting shard index & erasure root to {len(assurers)} assurer"
         )
 
         tasks = TypedVector([])
@@ -104,29 +107,6 @@ class AuditShardRequestProtocol(NetworkProtocol):
                 tasks.append(task)
 
             return await gather_with_exceptions(tasks)
-
-            # TODO: Handle Shard Verification where transmit fn is called
-            # shards = []
-            #
-            # # Verify Shards
-            # for response in responses:
-            #     if response:
-            #         jfn = response[1]
-            #         bs = response[0]
-            #         bs_hash = Hash.blake2b(bs.encode())
-            #
-            #         leaf = Bytes(ShardKey(bs_hash, jfn[-1]).encode())
-            #         trace = jfn[:-1]
-            #
-            #         merklizer = BMRFunctions()
-            #         is_correct = merklizer.verify_wb_tree(leaf, query.erasure_root, query.shard_index, trace)
-            #
-            #         if is_correct:
-            #             shards.append(response)
-            #         else:
-            #             shards.append(None)
-            #
-            # return shards
 
         except Exception as e:
             logger.error(
