@@ -5,7 +5,7 @@ a = Analysis(
     ['jam/cli.py'],
     pathex=[],
     binaries=[],
-    datas=[('dev-spec.json', '.'), ('envs', 'envs')],
+    datas=[('dev-spec.json', '.'), ('genesis.json', '.'), ('envs', 'envs')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
