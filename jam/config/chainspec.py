@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
+
+
 class ChainSpec(Enum):
     """Chain specification types."""
 
@@ -216,8 +218,24 @@ class JamConfig:
 
 # Default to tiny chain if not specified
 DEFAULT_CHAIN = "tiny"
-# Load chain spec from environment variable
-CHAIN_SPEC = os.environ.get("JAM_CHAIN_SPEC", DEFAULT_CHAIN)
 
-# Create config from chain spec
-chain_config = JamConfig.from_chain(CHAIN_SPEC)
+# Internal cache for singleton-style lazy initialization
+_chain_config_instance: Optional[JamConfig] = None
+
+def get_chain_config() -> JamConfig:
+    global _chain_config_instance
+    chain = os.environ.get("JAM_CHAIN_SPEC", DEFAULT_CHAIN)
+    if _chain_config_instance is None or _chain_config_instance.name != chain:
+        _chain_config_instance = JamConfig.from_chain(chain)
+    return _chain_config_instance
+
+# ✅ chain_config acts like a JamConfig but loads lazily at runtime
+class _ChainConfigProxy:
+    def __getattr__(self, name):
+        return getattr(get_chain_config(), name)
+
+    def __repr__(self):
+        return repr(get_chain_config())
+
+# ✅ Exported name, compatible with existing imports
+chain_config = _ChainConfigProxy()

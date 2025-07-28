@@ -1,16 +1,18 @@
 # jam/cli.py
 
+from ast import arg
+from logging import Logger
 import sys
 import os
+import json
 import argparse
 import asyncio
 from dotenv import load_dotenv
+from jam.__main__ import main as node_main
+from jam.config.logging import get_logger
 
-# Try to import your async entrypoint
-try:
-    from .__main__ import main as node_main
-except (ImportError, SystemError):
-    from jam.__main__ import main as node_main  # fallback
+
+logger=get_logger("cli")
 
 def detect_base_dir():
     """
@@ -28,18 +30,31 @@ def build_parser(base_dir: str):
         prog="Tessera",
         description="Tessera node CLI: specify node ID and options"
     )
+    # positional validator index (e.g. 2)
     p.add_argument(
-        "node",
-        metavar="NODE",
-        help=(
-            "Node identifier (e.g. 40002) → loads envs/40002.env, "
-            "sets PORT and NODE_NAME accordingly"
-        )
+        "validator_index",
+        type=int,
+        metavar="Validator Index",
+        help="Validator index (e.g. 2). Port and env file derived as 4000{validator_index}."
+    )
+    p.add_argument(
+        "--port",
+        type=int,
+        help="Port for the node to run"
+    )
+    p.add_argument(
+        "--rpc_port",
+        help="RPC port for the rpc to running on that port"
     )
     p.add_argument(
         "--genesis",
         default=os.path.join(base_dir, "dev-spec.json"),
         help="Path to genesis spec JSON"
+    )
+    p.add_argument(
+        "--chain_spec",
+        default="tiny",
+        help="Setting the chain Specifications"
     )
     p.add_argument(
         "--start-genesis",
@@ -51,15 +66,17 @@ def build_parser(base_dir: str):
         default="polkadot",
         help="Theme for logging"
     )
-    p.add_argument(
+    # Mutually exclusive group: only one can be true
+    mode_group = p.add_mutually_exclusive_group()
+    mode_group.add_argument(
         "--builder",
         action="store_true",
         help="Run in builder mode"
     )
-    p.add_argument(
+    mode_group.add_argument(
         "--validator",
         action="store_true",
-        help="Run in validator mode"
+        help="Run in validator mode (default)"
     )
     return p
 
@@ -69,20 +86,21 @@ def run_cmd(args):
 
     # 2) Change into that folder so bare filenames resolve:
     os.chdir(base)
+    port=40000+args.validator_index
 
     # 3) Load environment
     load_dotenv(os.path.join(base, ".env"))
-    env_file = os.path.join(base, "envs", f"{args.node}.env")
+    env_file = os.path.join(base, "envs", f"{port}.env")
     load_dotenv(env_file, override=True)
 
-    os.environ.setdefault("PORT",      os.getenv("PORT", args.node))
-    os.environ.setdefault("NODE_NAME", os.getenv("NODE_NAME", f"node-{args.node}"))
-    os.environ.setdefault("SEED",      os.getenv("SEED", args.node))
+    os.environ["PORT"]=str(args.port if args.port is not None else port)
+    os.environ["JAM_CHAIN_SPEC"]=str(args.chain_spec)
+    os.environ.setdefault("NODE_NAME", os.getenv("NODE_NAME", f"node-{port}"))
+    os.environ.setdefault("SEED",      os.getenv("SEED", port))
+    if args.rpc_port is not None:
+        os.environ.setdefault("RPC_PORT",os.getenv("RPC_PORT", args.rpc_port))
 
-    # 4) Dispatch into your async main
-    #    Note: __main__.py will still do:
-    #        setup_state(..., "dev-spec.json")
-    #        json.load(open(genesis_path))
+
     asyncio.run(
         node_main(
             args.genesis,

@@ -10,7 +10,7 @@ from tsrkit_types.integers import U16, U8, Uint
 
 from jam.config.keys import setup_keys
 from jam.config.logging import setup_logging, logger
-from jam.config.chainspec import chain_config
+from jam.config.chainspec import chain_config,get_chain_config
 
 from jam.consensus.bp_engine import BlockProducer
 from jam.consensus.grandpa.finality import Finality
@@ -47,11 +47,13 @@ async def main(
     genesis_ts = GENESIS_TS         # Actual Genesis time for JAM Common Era
     init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
     init_ep = int(init_ts // EPOCH_LENGTH)
+    print(f"Chain bhai is on: {chain_config.name}")
 
-
+    if not is_builder and not is_validator:
+        is_validator=True
     # ---------- LOAD ENVIRONMENT ----------
-    load_dotenv(".env")
-    load_dotenv(env,override=True)
+    # load_dotenv(".env")
+    # load_dotenv(env,override=True)
 
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
@@ -91,14 +93,17 @@ async def main(
     try:
         # Set genesis state
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
-        state = setup_state(settings.state_db, "dev-spec.json")
+
+        # logger.info(json.load(open(genesis_path))["genesis_state"])
+        # Genesis specs
+        state = setup_state(settings.state_db,genesis_path)
         state.store.disable_cache()
         update_state(state)
 
         keys = setup_keys(int(seed))
 
-        # Genesis specs
-        dev_spec = json.load(open(genesis_path))
+
+        # dev_spec = json.load(open(genesis_path))
 
         peers = [
             Peer(
