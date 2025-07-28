@@ -15,14 +15,9 @@ class Conductor:
     
     @classmethod 
     async def run(cls, time_slot: TimeSlot, finality_time_slot: TimeSlot):
-        from jam.network.start import node
-        CE131 = SafroleTicketProxyDistribution()
-
-        if int(node.port) != 40000:
-            print("Not generating ticket")
-            return
-
         try:
+            from jam.network.start import node
+            CE131 = SafroleTicketProxyDistribution()
             tasks = []
             # generating & transmitting all the tickets allowed per validator
             for i in range(TICKET_ENTRIES_PER_VALIDATOR):
@@ -42,13 +37,10 @@ class Conductor:
                     raise ValueError("Ticket generation failed")
 
             ack = await asyncio.gather(*tasks)
-            logger.info(
-                "Ticket transmission completed",
-                node=str(node.port)
-            )
+            logger.info("Ticket transmission completed", port=node.port)
 
         except Exception as e:
-            logger.error("Failed to generate & transmit safrol ticket", error=e, time_slot=time_slot)
+            logger.error("Failed to generate & transmit safrole ticket", error=e, time_slot=time_slot)
     
     @classmethod
     def generate_ticket(cls, state, attempt: int) -> TicketEnvelope | None:
@@ -71,5 +63,3 @@ class Conductor:
             )
         except Exception as e:
             logger.error("Failed to generate ticket", error=e)
-
-conductor = Conductor()

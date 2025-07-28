@@ -8,10 +8,8 @@ from jam.logging import get_logger
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
-from jam.types.protocol.crypto import BandersnatchRingVrfSignature
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.utils.constants import VALIDATOR_COUNT, EPOCH_LENGTH
-from jam.network.protocols.ce_132 import SafroleTicketDistribution, CE132Data
 from py_ark_vrf import verify_ring, vrf_output
 from jam.utils.constants import X
 
@@ -67,12 +65,11 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         vrf = vrf_output(signature)
         proxy_validator_index = Uint.from_bytes(vrf[-4:], 'big') % VALIDATOR_COUNT
 
-        # TODO: select proxy validator from next epochs validator list
         # select validator from next epochs validator list using index
         from jam.state.state import state
         proxy_validator = state.gamma.k[proxy_validator_index]
 
-        print("Proxy validator port", proxy_validator.metadata.port)
+        logger.debug(f"Proxy validator port {proxy_validator.metadata.port}")
 
         from jam.settings import settings
         if proxy_validator.ed25519 == settings.ed25519_public:
@@ -80,18 +77,15 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                 "Proxy validator is same as generator validator, transmitting ticket using CE132",
                 node=str(node.port),
             )
-            # from jam.operations.ticket_queue import ticket_queue
-            # ticket_queue.push(data)
-            CE132 = SafroleTicketDistribution()
-            data = CE132Data(epoch_ticket_len=data.epoch_ticket_len, epoch_ticket=data.epoch_ticket)
-            responses = asyncio.create_task(CE132.transmit(data))
-            return responses
+            # ticket queue for delayed forwarding
+            from jam.operations.ticket_queue import ticket_queue
+            ticket_queue.push(data)
 
         else:
             for client in node.all_connected:
                 if proxy_validator.ed25519 == client.ed25519_public:
                     try:
-                        logger.debug("Sending safrol ticket", client=str(client.port))
+                        logger.debug("Sending safrole ticket", client=str(client.port))
 
                         stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                         client.stream_prefix[stream_id] = U8(self._prefix)
@@ -120,7 +114,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
         try:
             logger.debug(
-                "Received safrol ticket",
+                "Received safrole ticket",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )
@@ -131,7 +125,18 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            #TODO: Implement finality check using epoch index
+            # finality check using epoch index
+            from jam.settings import settings
+            main_db = settings.main_db
+            finality_block = Finality.load_final(main_db)
+            finality_time_slot = finality_block.header.slot
+
+            expected_epoch_index = finality_time_slot // EPOCH_LENGTH
+            received_epoch_index = data.epoch_ticket.epoch_index
+
+            if int(expected_epoch_index) != int(received_epoch_index):
+                logger.error("Finality lagging", current=received_epoch_index, final=expected_epoch_index)
+                raise ValueError("Finality lagging")
 
             # calculate validator index using vrf output of signature
             signature = data.epoch_ticket.ticket.signature
@@ -153,18 +158,12 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                 vals,
                 ad
             )
-
-            from jam.settings import settings
             # check if you are supposed to be a proxy and ticket is valid
             if proxy_validator.ed25519 == settings.ed25519_public and verification:
-                # from jam.operations.ticket_queue import ticket_queue
-                # ticket_queue.push(data)
-                # print("Ticket queue updated", ticket_queue.length())
-                print("Proxy ticket received from", server.port)
-
-                CE132 = SafroleTicketDistribution()
-                data = CE132Data(epoch_ticket_len=data.epoch_ticket_len, epoch_ticket=data.epoch_ticket)
-                responses = asyncio.create_task(CE132.transmit(data))
+                logger.debug(f"Proxy ticket received from {server.port}")
+                from jam.operations.ticket_queue import ticket_queue
+                ticket_queue.push(data)
+                logger.debug(f"Ticket queue updated {ticket_queue.length()}")
 
             # Return acknowledgment to validator
             ack = b""
@@ -173,7 +172,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
         except Exception as e:
             logger.error(
-                "Error safrol ticket submission",
+                "Error safrole ticket submission",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
@@ -185,7 +184,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
             logger.info(
-                "Safrol ticket acknowledgement received",
+                "Safrole ticket acknowledgement received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )

@@ -4,11 +4,9 @@ import time
 from typing import Callable, List, Tuple
 
 from jam.logging import get_logger
-from .handlers import WPBuilder, assurer, BlockProducer, conductor
+from .handlers import WPBuilder, assurer, BlockProducer, Conductor, Forwarding
 from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, TICKET_SUBMISSION_END
-from .handlers.conductor import Conductor
-from jam.network.protocols.ce_132 import forwarding
 from ..finality.finality import Finality
 
 logger = get_logger("nodeops")
@@ -29,10 +27,6 @@ async def schedule_run(sch_ts: int, runner: NodeDispatcher, *args) -> None:
     await asyncio.sleep(sch_ts)
     await runner.run(*args)
 
-async def schedule_run_2(slot, time_slot) -> None:
-    await forwarding(slot, time_slot)
-
-
 async def operate(is_builder = False):
     """
     Starts a never ending 6-sec loop
@@ -50,7 +44,6 @@ async def operate(is_builder = False):
         if curr_time < ts_start_time:
             await asyncio.sleep(ts_start_time - curr_time)
 
-        from jam.state.state import state
         from jam.network.start import node
         if not node:
             ts += 1
@@ -65,11 +58,12 @@ async def operate(is_builder = False):
 
         if conductor_ts <= (finality_time_slot%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2) and not ticket_generated:
             logger.info("Tickets announcement to proxies")
-            asyncio.create_task(schedule_run(0, conductor, ts, finality_time_slot))
+            asyncio.create_task(schedule_run(0, Conductor, ts, finality_time_slot))
             ticket_generated = True
 
-        # if forwarding_s < (ts%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2):
-        #     asyncio.create_task(schedule_run_2(ts%EPOCH_LENGTH, ts))
+        if forwarding_s <= (finality_time_slot%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2):
+            # asyncio.create_task(schedule_run_2(finality_time_slot%EPOCH_LENGTH, finality_time_slot))
+            asyncio.create_task(schedule_run(0, Forwarding, finality_time_slot%EPOCH_LENGTH, finality_time_slot))
 
         for dispatch in dispatch_fns(is_builder):
             (task_ts, runner) = dispatch

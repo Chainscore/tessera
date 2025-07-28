@@ -1,7 +1,7 @@
 import time
 import math
 from typing import cast
-from tsrkit_types import structure, Uint, Bool, U32, U8
+from tsrkit_types import structure, Bool, U32, U8
 
 from jam.logging import get_logger
 
@@ -11,6 +11,7 @@ from jam.block.extrinsics.tickets import TicketEnvelope
 import asyncio
 from jam.network.connection import NodeConnection
 from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS, EPOCH_LENGTH
+from jam.finality.finality import Finality
 
 
 # Module-specific logger
@@ -31,28 +32,6 @@ class CE132Data:
         if len(self.epoch_ticket.encode()) == self.epoch_ticket_len:
             return True
         return False
-
-async def forwarding(slot, timeslot):
-    from jam.operations.ticket_queue import ticket_queue
-    print("Ticket queue length", ticket_queue.length())
-    if not ticket_queue.is_empty():
-        ts = timeslot
-        ticket_submission_end = TICKET_SUBMISSION_END // 2
-        slots_available = ticket_submission_end - slot
-        tickets_per_slot = math.ceil(ticket_queue.length() / slots_available)
-
-        print("Tickets per slot", tickets_per_slot)
-
-        for i in range(tickets_per_slot):
-            ticket = ticket_queue.pop()
-            CE132 = SafroleTicketDistribution()
-            data = CE132Data(epoch_ticket_len=ticket.epoch_ticket_len, epoch_ticket=ticket.epoch_ticket)
-            responses = await CE132.transmit(data)
-            ts += 1
-            curr_time = time.time()
-            next_time_slot_time = ts * 6 + GENESIS_TS
-            if curr_time < next_time_slot_time:
-                await asyncio.sleep(next_time_slot_time - curr_time)
 
 class SafroleTicketDistribution(NetworkProtocol):
     """
@@ -95,7 +74,7 @@ class SafroleTicketDistribution(NetworkProtocol):
 
         try:
             for client in node.all_connected:
-                logger.debug("Sending safrol ticket", client=str(client.port))
+                logger.debug("Sending safrole ticket", client=str(client.port))
 
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 client.stream_prefix[stream_id] = U8(self._prefix)
@@ -131,7 +110,7 @@ class SafroleTicketDistribution(NetworkProtocol):
 
         try:
             logger.debug(
-                "Received safrol ticket",
+                "Received safrole ticket",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )
@@ -142,19 +121,26 @@ class SafroleTicketDistribution(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            # TODO: process ticket & check finality
+            # check finality using received epoch index
+            from jam.settings import settings
+            main_db = settings.main_db
+            finality_block = Finality.load_final(main_db)
+            finality_time_slot = finality_block.header.slot
 
-            curr_time = time.time()
-            ts = int((curr_time - GENESIS_TS) // 6)
-            current_slot = ts % EPOCH_LENGTH
-            if current_slot < TICKET_SUBMISSION_END:
-                print("Received ticket from", server.port)
+            expected_epoch_index = finality_time_slot // EPOCH_LENGTH
+            received_epoch_index = data.epoch_ticket.epoch_index
+
+            if int(expected_epoch_index) != int(received_epoch_index):
+                logger.error("Finality lagging", current=received_epoch_index, final=expected_epoch_index)
+                raise ValueError("Finality lagging")
+
+            # Tickets are not allowed after ticket submission ends
+            if finality_time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
+                logger.debug("Received ticket from", port=server.port)
                 # storing ticket extrinsic
-                print(f"Storing ticket in extrinsic, time_slot={ts}, slot={current_slot}")
                 from jam.block.extrinsics.tickets import ticket_store
                 ticket_store.store(data.epoch_ticket.ticket)
             else:
-                print(f"Tickets are not allowed after TICKET_SUBMISSION_END, time_slot={ts}, slot={current_slot}")
                 logger.debug("Tickets are not allowed after TICKET_SUBMISSION_END")
 
             # Return acknowledgment to validator
@@ -163,7 +149,7 @@ class SafroleTicketDistribution(NetworkProtocol):
 
         except Exception as e:
             logger.error(
-                "Error safrol ticket submission",
+                "Error safrole ticket submission",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
@@ -175,7 +161,7 @@ class SafroleTicketDistribution(NetworkProtocol):
         buffer = client.stream_buffer[stream_id]
         if buffer[1:] == b"":
             logger.info(
-                "Safrol ticket acknowledgement received",
+                "Safrole ticket acknowledgement received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )
