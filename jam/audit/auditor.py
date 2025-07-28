@@ -5,6 +5,9 @@ from typing import List, Tuple, cast
 from tsrkit_types import structure, U8, U32, TypedVector, Option, Null
 
 from jam.block import Block
+from jam.types import Hash, BandersnatchVrfSignature, ValidatorIndex, Ed25519Signature
+from jam.types.protocol.core import CoreIndex, EpochIndex
+
 from jam.finality.finality import Finality
 from jam.audit.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
 from jam.state.state import State
@@ -116,22 +119,47 @@ class Auditor:
         # initial rho pending wor reports
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
+        entropy_source = latest_block.header.entropy_source
 
         announcement_sign = audit.validator_announcement_statement(assign_report=assign_wrs, header=header_hash, tranche=U8(0))
 
-        from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, Transmit, FirstTrancheEvidence, Announcement, Assign, Evidence
-        from jam.operations.tranche_store import tranche_store, Tranche
-
+        from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, TrancheAnnouncement, FirstTrancheEvidence, Announcement, Assign, Evidence, SubsequentTrancheEvidence, NoShow
 
         CE144 = AuditAnnouncement()
-
 
         assignments = TypedVector[Assign]([
             Assign(core_index=core_idx, report_hash=Hash.blake2b(r.encode()))
             for core_idx, r in assign_wrs
         ])
 
-        announcement = Transmit(
+        # -------------------- Handling Evidence based on Tranche Index --------------------------
+        bandersnatch_sign  = BandersnatchVrfSignature()
+
+        if tranche_idx == 0:
+            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=node.b_key)
+            evidence = Evidence(FirstTrancheEvidence(bandersnatch_sign))
+        else:
+            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=node.b_ke, tranche_index=tranche_idx, w_r=WorkReport())
+            evidence = Evidence(
+                TypedVector[SubsequentTrancheEvidence]([
+                    SubsequentTrancheEvidence(
+                        bandersnatch_signature=BandersnatchVrfSignature(bandersnatch_sign),
+                        no_show=NoShow(
+                            # TODO: FIX IT : DIKSHANT
+                            validator_index=ValidatorIndex(),
+                            # here will come validator index which is announcing for previous reports
+                            announcement=Announcement(
+                                assigned_report=assignments,
+                                ed25519_signature=Ed25519Signature(ed25519)
+                                # which will create using the equation 17.9 and tak validator index form mentioned in N-show
+                            )
+                        )
+                    )
+                ])
+            )
+
+        # ---------------------- Data to be transmitted ----------------------------------------
+        tranche_announce = TrancheAnnouncement(
             header_hash=header_hash,
             tranches=tranche_idx,
             announcement=Announcement(
@@ -139,23 +167,9 @@ class Auditor:
             )
         )
 
-        # siggnature = audit.vrf_signature_bandersnatch(entropy_source=, bandersnatch_key=, tranche_index=, )
-
-        # Handling Evidence based on current tranches
-        # if tranche_idx == 0:
-        #     evidence = Evidence(FirstTrancheEvidence(sign))
-        # else:
-        #     evidence = Evidence(SubsequentTrancheEvidence())
-
-        sign = BandersnatchVrfSignature(
-            b'\x97\xf1\xd3\xa71\x97\xd7\x94&\x95c\x8cO\xa9\xac\x0f\xc3h\x8cO\x97t\xb9\x05\xa1N:?\x17\x1b\xacXlU\xe8?\xf9z\x1a\xef\xfb:\xf0\n\xdb"\xc6\xbb\x97\xf1\xd3\xa71\x97\xd7\x94&\x95c\x8cO\xa9\xac\x0f\xc3h\x8cO\x97t\xb9\x05\xa1N:?\x17\x1b\xacXlU\xe8?\xf9z\x1a\xef\xfb:\xf0\n\xdb"\xc6\xbb')
-
-        evidence = Evidence(FirstTrancheEvidence(sign))
-
-
         data = CE144Data(
-            len_a=U32(len(announcement.encode())),
-            tranche_announcement=announcement,
+            len_a=U32(len(tranche_announce.encode())),
+            tranche_announcement=tranche_announce,
             len_b=U32(len(evidence.encode())),
             evidence=evidence,
         )
@@ -185,10 +199,13 @@ class Auditor:
 
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
+
+
+        # ------ JUDGMENT EPOCH INDEX ------
         slot = latest_block.header.slot
         logger.info(f"current judgment slot  {slot}")
 
-        epoch = int(slot // EPOCH_LENGTH)
+        epoch_idx = int(slot // EPOCH_LENGTH)
 
         logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)} ")
 
@@ -212,17 +229,18 @@ class Auditor:
                 from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
                 CE145 = JudgmentPublication()
 
-                validity = U8(1) if result else U8(0)
+                validity = True if result else False
 
                 judgment = Judgment(
-                    epoch_index=EpochIndex(0),
-                    validator_index=node.validator_index,
+                    epoch_index=EpochIndex(epoch_idx),
+                    validator_index=ValidatorIndex(node.validator_index),
                     validity=validity,
                     work_report_hash=WorkReportHash(wr_hash),
-                    ed25519_signature=judgment_sign,
+                    ed25519_signature=Ed25519Signature(judgment_sign),
                 )
 
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
+
                 response = await CE145.transmit(node=node, data=data)
 
             logger.debug(f"Judgment transmitted and intercept successfully")

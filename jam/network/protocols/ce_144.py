@@ -12,13 +12,13 @@ from tsrkit_types import TypedVector, Uint, structure, Choice
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.quic import QuicProtocol
 from jam.types.protocol.core import CoreIndex, ValidatorIndex
-from tsrkit_types import U8
 from jam.types.protocol.crypto import (
     WorkReportHash,
     Ed25519Signature,
     BandersnatchVrfSignature,
     HeaderHash,
 )
+from jam.types.audit.tranche import TrancheIndex
 from typing import cast
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -53,24 +53,24 @@ class NoShow:
 @structure
 class SubsequentTrancheEvidence:
     bandersnatch_signature: BandersnatchVrfSignature
-    no_show: NoShow
+    no_show: TypedVector[NoShow]
 
 
 @structure
-class Transmit:
+class TrancheAnnouncement:
     header_hash: HeaderHash
-    tranches: U8
+    tranches: TrancheIndex
     announcement: Announcement
 
 class Evidence(Choice):
     first_tranche: FirstTrancheEvidence
-    Subsequent_tranche: SubsequentTrancheEvidence
+    subsequent_tranche: TypedVector[SubsequentTrancheEvidence]
 
 
 @structure
 class CE144Data:
     len_a: Uint[32]
-    tranche_announcement: Transmit
+    tranche_announcement: TrancheAnnouncement
     len_b: Uint[32]
     evidence: Evidence
 
@@ -214,6 +214,13 @@ class AuditAnnouncement(NetworkProtocol):
             for v, r_hash in v_r.items():
                 for value in r_hash:
                     tranche_store.add_announce(tranche=tranche, wr_hash=value, validator_index=v_index)
+
+            tranche = Tranche(
+                tranche_index=TrancheIndex(0),
+                header_hash=header_hash,
+            )
+
+            print("FINAL TRANCHE STATE FROM ANNOUNCEMENT ", tranche_store._get_state(tranche=tranche))
 
 
             logger.debug(
