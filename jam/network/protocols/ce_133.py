@@ -185,8 +185,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
             # Start Refinement Process
             from jam.incore.processor import Processor
-
-            processor = Processor(server.node)
+            processor = Processor()
 
             # wr, wr_hash = processor.process(wp, ci, data.extrinsics)
             refine_task = asyncio.create_task(

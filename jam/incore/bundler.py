@@ -57,7 +57,9 @@ class Bundler:
     segments_lookup: Vector[SegmentDict]
     node: Node
 
-    def __init__(self, node: Node):
+    def __init__(self):
+        from jam.network.node import node
+
         self.merkle = BMRFunctions()
         self.sr_lookup = SegmentRootLookup({})
         self.segments_lookup = Vector([])

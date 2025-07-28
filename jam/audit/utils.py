@@ -11,8 +11,6 @@ from jam.types.protocol.core import CoreIndex, ValidatorIndex
 from jam.types.work.package import WorkPackage
 from jam.types.work.manifest import Extrinsics
 from jam.types.work.shard import ShardIndex
-from jam.incore.bundler import Bundler
-from jam.incore.validator import Validator
 
 from jam.types.work.report import WorkReport, WorkReportHash
 from jam.logging import get_logger
@@ -42,14 +40,16 @@ def audit_refine(package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
     """This function for perform refine logic for specifically Auditing."""
     from jam.network.node import node
     from jam.incore.processor import Processor
+    from jam.incore.bundler import Bundler
+    from jam.incore.validator import Validator
 
-    process = Processor(node=node)
+    validator = Validator()
+    processor = Processor()
+    bundler = Bundler()
 
     logger.debug("Validating work package..")
-    validator = Validator()
     validator.validate_wp(package)
 
-    bundler = Bundler(node)
 
     # Build Segment Root Lookup Dictionary
     logger.debug("Building lookup dictionary..")

@@ -98,7 +98,7 @@ async def node_task():
         logger.info("AUDITOR NODE", node=node)
 
         assembler = Assembler()
-        processor = Processor(node)
+        processor = Processor()
 
         for wp_iter, vector in enumerate(vectors):
             try:

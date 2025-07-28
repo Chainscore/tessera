@@ -1,30 +1,33 @@
 import asyncio
 import math
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 from tsrkit_types import structure, U8, U32, TypedVector, Option, Null
 
-from jam.types import Hash, BandersnatchVrfSignature, ValidatorIndex
-from jam.types.protocol.core import CoreIndex, EpochIndex,TrancheIndex
-
+from jam.block import Block
 from jam.finality.finality import Finality
+from jam.audit.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
+from jam.state.state import State
+from jam.types import OptionalWorkReportState
 
-from jam.types.work.report import WorkReportHash
+from jam.types.audit.tranche import TrancheIndex
+from jam.types.protocol.core import CoreIndex, EpochIndex
+from jam.types.protocol.crypto import Hash, BandersnatchVrfSignature
+from jam.types.state.rho import WorkReportState
+from jam.types.work.report import WorkReport, WorkReportHash
+
 from jam.logging import get_logger
 from jam.utils.constants import EPOCH_LENGTH
-from jam.audit.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
-from tests.unit.incore.types import WorkReport
 
 
 # Module-specifier logger
-logger = get_logger("in_core")
-
+logger = get_logger("auditor")
 
 @structure
-class AuditProcess:
+class Auditor:
     @classmethod
-    async def audit_process(cls, newly_avail_wrs: List[Option[WorkReport]], tranche_idx:TrancheIndex):
-        from jam.audit.audit import AuditingAndJudgement
+    async def audit(cls, block: Block, newly_avail_wrs: List[Option[WorkReport]], tranche_idx: TrancheIndex = TrancheIndex(0)):
+        from jam.audit.audit import Utils
 
         # from jam.state.state import state
         from jam.settings import settings
@@ -32,28 +35,34 @@ class AuditProcess:
         from jam.operations.tranche_store import tranche_store, Tranche
 
 
-        audit = AuditingAndJudgement()
+        audit = Utils()
 
-        # ---------------------- Rho initial state ( pending wor reports) -------------------------
-        logger.info(f"Current Block header hash")
-        latest_block = Finality.load_latest(kv=settings.main_db)
-        header_hash = latest_block.header.hash()
+        # -------------- Fetch Last Finalized Block --------------
+        last_finalized_block = Finality.load_final(settings.main_db)
+        header_hash = block.header.hash()
 
-        logger.info(f"Get rho pending state (Initial state)")
-        # pending_rho_ = state.load(header_hash=header_hash).rho
+        if block.header.slot < last_finalized_block.header.slot:
+            logger.info("Block must be finalized or invalid.")
+            return
 
-        # ---------------------- Block's header entropy sources -----------------------------------
-        entropy = latest_block.header.entropy_source
+        # -------------- Fetch Pending Reports --------------
+        prior_state = State.load(block.header.parent)
+        auditable_reports = List[Option[WorkReport]]([])
+        for r in prior_state.rho:
+            report_state: (WorkReportState | Null) = r.unwrap()
+            if isinstance(report_state, WorkReportState) and r.report in newly_avail_wrs:
+                auditable_reports.append(Option(r.report))
+            else:
+                auditable_reports.append(Option(Null))
 
-        final_list = sample_work_reports_with_nulls("jam/combine.json",total_items=12, null_count=4)
+        entropy = block.header.entropy_source
 
         try:
-            # pre audit reports
-            logger.info(f"Get reports list which about to be audit")
+            # Pre Audit Reports
+            logger.info(f"Fetching auditable reports per core")
 
-            p_a_r = audit.report_to_be_audit(
-                pending_wrs=final_list, newly_avail_wrs=newly_avail_wrs
-            )
+            # TODO: Remove this
+            # auditable_reports = audit.fetch_auditable_reports(prior_state, block)
 
             # ---------------------- Update the q in tranche store ------------------------------------
             tranche = Tranche(
@@ -61,19 +70,19 @@ class AuditProcess:
                 header_hash=header_hash
             )
 
-            tranche_store.add_to_unaudited(tranche=tranche, p_a_r=p_a_r)
+            tranche_store.add_to_unaudited(tranche=tranche, p_a_r=auditable_reports)
 
             # assignment report for auditing to validators
             logger.info(f"Work report assignment for auditing")
 
-            reports = audit.verifiable_random_selection(entropy_source=entropy, bandersnatch_key=node.b_key, pre_audit_report=p_a_r)
+            reports = audit.verifiable_random_selection(entropy_source=entropy, bandersnatch_key=node.b_key, pre_audit_report=auditable_reports)
 
             logger.info(
                 f"Checking assign report length {len(reports)} for each validator"
             )
 
-            asyncio.create_task(AuditProcess.audit_announcement(assign_wrs=reports, tranche_idx=tranche_idx))
-            asyncio.create_task(AuditProcess.judgment_process(assign_wrs=reports, tranche_idx=tranche_idx))
+            asyncio.create_task(cls.audit_announcement(assign_wrs=reports, tranche_idx=tranche_idx))
+            asyncio.create_task(cls.judgment_process(assign_wrs=reports, tranche_idx=tranche_idx))
 
 
         except Exception as e:
@@ -98,11 +107,11 @@ class AuditProcess:
                 set of ed21599 signature   [ Eq: 17.9, 17.10, 17.11]
         """
 
-        from jam.audit.audit import AuditingAndJudgement
+        from jam.audit.audit import Utils
         from jam.settings import settings
         from jam.network.node import node
 
-        audit = AuditingAndJudgement()
+        audit = Utils()
 
         # initial rho pending wor reports
         latest_block = Finality.load_latest(kv=settings.main_db)
@@ -127,7 +136,7 @@ class AuditProcess:
             tranches=tranche_idx,
             announcement=Announcement(
                 assigned_report=assignments, ed25519_signature=announcement_sign
-            ),
+            )
         )
 
         # siggnature = audit.vrf_signature_bandersnatch(entropy_source=, bandersnatch_key=, tranche_index=, )
@@ -166,20 +175,20 @@ class AuditProcess:
 
     @classmethod
     async def judgment_process(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche_idx:TrancheIndex):
-        from jam.audit.audit import AuditingAndJudgement
+        from jam.audit.audit import Utils
         from jam.settings import settings
         from jam.network.node import node
         from jam.operations.tranche_store import tranche_store, Tranche
 
 
-        audit = AuditingAndJudgement()
+        audit = Utils()
 
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
         slot = latest_block.header.slot
         logger.info(f"current judgment slot  {slot}")
 
-        epoch = math.floor(slot / EPOCH_LENGTH)
+        epoch = int(slot // EPOCH_LENGTH)
 
         logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)} ")
 
@@ -192,9 +201,8 @@ class AuditProcess:
             for c, r in assign_wrs:
                 wr_hash = Hash.blake2b(r.encode())
 
-                package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json", rep_hash=wr_hash)
-
-                result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=node.validator_index)
+                logger.debug("Refining work report for auditing.", wr_hash=wr_hash)
+                result = await audit.refine(r)
 
                 # STORE JUDGMENT HERE ONLY FOR TRANSMITTING
                 tranche_store.update_judgment(tranche=tranche, wr_hash=wr_hash, judgment=result, validator_index=node.validator_index)

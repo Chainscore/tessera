@@ -11,7 +11,7 @@ from jam.logging import get_logger
 from tsrkit_types import TypedVector, Uint, structure, Choice
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.quic import QuicProtocol
-from jam.types.protocol.core import CoreIndex, ValidatorIndex,TrancheIndex
+from jam.types.protocol.core import CoreIndex, ValidatorIndex
 from tsrkit_types import U8
 from jam.types.protocol.crypto import (
     WorkReportHash,

@@ -224,7 +224,7 @@ class WorkPackageSharing(NetworkProtocol):
             logger.debug("Building Work Report..")
             from jam.incore.processor import Processor
 
-            processor = Processor(node)
+            processor = Processor()
             wr, wr_hash = processor.process_bundle(
                 core=data.core_segment.core_index,
                 bundle=bundle,

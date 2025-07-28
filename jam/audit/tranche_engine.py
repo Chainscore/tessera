@@ -3,10 +3,10 @@ import asyncio
 from tsrkit_types.bits import Uint
 from tsrkit_types.sequences import TypedVector
 
-from jam.audit.audit_process import AuditProcess
+from jam.audit.auditor import Auditor
 from jam.block.extrinsics.disputes import Culprits, Faults, Verdicts
+from jam.types.audit.tranche import TrancheIndex
 from jam.utils.constants import AUDIT_PERIOD, VALIDATOR_COUNT
-from jam.types.protocol.core import TrancheIndex
 from jam.types.protocol.crypto import  HeaderHash
 from jam.logging import get_logger
 
@@ -34,7 +34,6 @@ class TrancheEngine:
             logger.info(f"⚙️ Running tranche {tranche_index} for header {header_hash}, auditing {len(ts.unaudited_list)} WRs, valid {len(ts.valid_set)}, invalid {len(ts.invalid_set)}")
             #TODO: Sending the store through the task for the auditors to save their judgement & announcements in the store itself
 
-            # asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs=ts.unaudited_list,store=self.store,tranche=initTranche))
 
             if tranche_index > 0:
                 new_unaudited: TypedVector[WorkReport] = TypedVector[WorkReport]([])
@@ -79,5 +78,6 @@ class TrancheEngine:
 
             self.store._save_state(updated_tranche, ts)
             logger.info(f"Tranche index: {tranche_index}")
+            # asyncio.create_task(Auditor.audit_process(newly_avail_wrs=ts.unaudited_list,store=self.store,tranche=initTranche))
 
             await asyncio.sleep(AUDIT_PERIOD)

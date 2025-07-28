@@ -3,8 +3,12 @@ from typing import List, Tuple
 from tsrkit_types import structure, Null, TypedVector, Bytes, Uint, Option, U8, U32
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+from jam.audit.assembler import Assembler
+from jam.block import Block
 from jam.network.utils.shards import get_si, get_vi
-from jam.types.protocol.core import CoreIndex, TimeSlot, TrancheIndex, ValidatorIndex
+from jam.state.state import State
+from jam.types.protocol.core import CoreIndex, TimeSlot, ValidatorIndex
 from jam.ring_vrf.curve.specs.bandersnatch import (
     BandersnatchPoint,
     Bandersnatch_TE_Curve,
@@ -15,7 +19,7 @@ from jam.utils.constants import (
     SLOT_PERIOD,
     AUDIT_PERIOD,
     SIGNING_CONTEXTS,
-    VALIDATOR_COUNT,
+    VALIDATOR_COUNT, CORE_COUNT, UNAVAILABLE_WORK_EXPIRY,
 )
 from jam.ring_vrf.vrf import VRF
 from jam.utils.shuffle import shuffle
@@ -32,7 +36,7 @@ from jam.audit.utils import sign_bandersnatch, audit_refine
 
 
 
-from jam.types.work.manifest import Extrinsics
+from jam.types.audit.tranche import TrancheIndex
 
 from tests.unit.safrole.data import validators
 from jam.audit.utils import audit_refine
@@ -41,53 +45,61 @@ from jam.audit.utils import audit_refine
 logger = get_logger("in_core")
 
 
-class AuditingAndJudgement:
+class Utils:
     def __init__(self):
         self.vrf = VRF
 
     @staticmethod
-    def report_to_be_audit(
-        pending_wrs: List[Option[WorkReport]], newly_avail_wrs: List[Option[WorkReport]]
-    ) -> List[Option[WorkReport]]:
+    def fetch_auditable_reports(prior_state: State, block: Block) -> List[Option[WorkReport]]:
         """
         Equation: 17.1, 17.2
-        This functions as a mapping of core index to a work-report pending which has just become available, or ∅ if no report became available on the core.
+        Returns Auditable Report per Core
 
         Args:
-            newly_avail_wrs: Reports just become available after assurances
-            pending_wrs: Pending Work Reports (Rho)
+            prior_state: Prior State to access pending work reports
+            block: Block to access newly guaranteed work reports
 
         Returns:
-            A sequence of length equal to the number of cores
+            A sequence of optional auditable reports
 
         Source:
             https://graypaper.fluffylabs.dev/#/38c4e62/1e61001eb600?v=0.7.0
         """
 
-        pre_audit_report: List[Option[WorkReport]] = []
+        auditable_reports = list[Option[WorkReport]]([])
+        pending_wrs = prior_state.rho
+        new_wrs = block.extrinsic.guarantees
 
-        # for i, report in enumerate(pending_wrs):
-        #     if report is not Null:
-        #         if report in newly_avail_wrs[i]:
-        #             pre_audit_report.append(report["report"])
-        #         else:
-        #             pre_audit_report.append(Null)
-        #     else:
-        #         pre_audit_report.append(Null)
+        wr_dict: dict[int, tuple[WorkReport, TimeSlot]] = {}
+        for wrg in new_wrs:
+            core_index = int(wrg.report.core_index)
+            wr_dict[core_index] = wrg.report, wrg.slot
 
-        for i in range(len(pending_wrs)):
-            value1 = pending_wrs[i]
-            value2 = newly_avail_wrs[i]
+        # check for pending and new report for each core
+        for i in range(CORE_COUNT):
 
-            if value1 is None:
-                pre_audit_report.append(Null)
-            else:
-                if value1 == value2:
-                    pre_audit_report.append(value1)
+            # if new report available
+            if i in wr_dict:
+                new_rep, ts = wr_dict[i]
+                pending_rep = pending_wrs[i].unwrap()
+
+                # if no pending report or new report is same as pending report
+                if pending_rep == Null or pending_rep.report == new_rep:
+                    auditable_reports.append(Option(new_rep))
+
+                # TODO: Is this condition required?
+                # if pending report's timeslot is way before than current report's timeslot
+                elif pending_rep.timeout + UNAVAILABLE_WORK_EXPIRY <= ts:
+                    auditable_reports.append(Option(new_rep))
+
+                # pending report is still in pending state
                 else:
-                    pre_audit_report.append(Null)
+                    auditable_reports.append(Option(Null))
+            # if no new report available
+            else:
+                auditable_reports.append(Option(Null))
 
-        return pre_audit_report
+        return auditable_reports
 
     @staticmethod
     def vrf_signature_bandersnatch(
@@ -245,69 +257,46 @@ class AuditingAndJudgement:
         return Ed25519Signature(signature)
 
     @staticmethod
-    async def audit_refine(
-        p: WorkPackage,
-        c: CoreIndex,
-        e: Extrinsics,
-        wr: WorkReport,
-        node_index: ValidatorIndex,
-    ) -> bool:
+    async def refine(wr: WorkReport) -> bool:
         """
         Equation: 17.17
-        Here we Build whole Work Package bundle and refine it, which gives Work Report amd Report Hash, later check with given work report and return bool value.
+        Rebuild bundle for given work report, refine it and compare reports
 
+        Source:
+            https://graypaper.fluffylabs.dev/#/38c4e62/1f2f011f6c01?v=0.7.0
         Args:
-            p:
-            c:
-            e:
-            wr:
-            node_index:
-
-        Return:
-            Boolean value , True or False
-
-        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f2f011f6c01?v=0.7.0
+            wr: Work Report
+        Returns:
+            Validation Result (Bool)
         """
 
-        from jam.network.node import node
+        wr_hash = Hash.blake2b(wr.encode())
 
-        # TODO: construct Work package Bundle using protocol => CE138
-        # TODO: Condition check after building package => 1. W_p hash with Wr->spec->hash, 2.import Segments, 3. Export segments, 4. Extrinsic
-        # TODO: Final Report hashes values and return True and False
+        from jam.incore import Processor
 
-        from jam.network.protocols.ce_138 import CE138Data, AuditShardRequestProtocol
-        from jam.network.protocols.ce_137 import Query
-        from jam.types.protocol.core import ErasureRoot
-        from jam.types.work.shard import ShardIndex
-        from jam.utils.chainspec import chain_config
+        assembler = Assembler()
+        processor = Processor()
 
-        # CE138 = AuditShardRequestProtocol()
-        # # process = Processor(node=node)
-        # erasure_root = ErasureRoot(wr.package_spec.erasure_root)
-        #
-        # # For this node shard index and validator index information is:
-        # v_i = node_index
-        # s_i = get_si(validator_index=v_i, core_index=wr.core_index)
-        #
-        # # For other node to get shard data, from which node that shard
-        # total_shard = VALIDATOR_COUNT
+        try:
+            logger.debug("Recompiling bundle...", wr_hash=wr_hash.hex())
+            bundle = await assembler.assemble(wr)
 
-        # for i in range(VALIDATOR_COUNT):
-        #     if i != s_i:
-        #         request_s_i = i
-        #         request_v_i = get_vi(shard_index=request_s_i, core_index=wr.core_index)
-        #         query = Query(erasure_root=erasure_root, shard_index=ShardIndex(2))
-        #         data = CE138Data(len=U32(len(query.encode())), query=query)
-        #
-        #         data = await CE138.transmit(node=node, data=data, node_index=ValidatorIndex(1))
+            logger.debug("Reprocessing bundle...", wr_hash=wr_hash.hex())
+            new_wr, new_wr_hash = processor.process_bundle(wr.core_index, bundle, wr.segment_root_lookup, False)
 
-        w_r, wr_hash = audit_refine(package=p, core=c, extrinsics=e)
+            logger.info("✒️ Audited report successfully!", wr_hash=wr_hash.hex(), is_valid=(wr_hash == new_wr_hash))
+            assert wr_hash == new_wr_hash
 
-        r_hash = Hash.blake2b(wr.encode())
-
-        if wr_hash == r_hash:
             return True
-        else:
+
+        except Exception as NO_REFINE:
+            logger.error(
+                "Auditing failed..",
+                err=str(NO_REFINE),
+                err_type=type(NO_REFINE).__name__,
+                wr_hash=wr_hash.hex()
+            )
+
             return False
 
     @staticmethod

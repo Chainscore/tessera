@@ -92,10 +92,12 @@ class Processor:
     """ "Refinement Engine. Synced upto GP v0.7.0"""
 
     node: Node
-    merkle: BMRFunctions
+    merklizer: BMRFunctions
 
-    def __init__(self, node: Node):
-        self.merkle = BMRFunctions()
+    def __init__(self):
+        from jam.network.node import node
+
+        self.merklizer = BMRFunctions()
         self.node = node
 
     async def process(
@@ -118,7 +120,7 @@ class Processor:
         validator = Validator()
         validator.validate_wp(package)
 
-        bundler = Bundler(self.node)
+        bundler = Bundler()
 
         # Build Segment Root Lookup Dictionary
         logger.debug("Building lookup dictionary..")
@@ -373,7 +375,7 @@ class Processor:
             l = len(wp_bundle)
 
             # Segment Root, e
-            e = ExportsRoot(self.merkle.cd_merklize(export_segments))
+            e = ExportsRoot(self.merklizer.cd_merklize(export_segments))
             logger.debug(
                 f"Exports Root calculated - {e.hex()}",
                 wp_hash=package_hash.hex()[:16] + "...",
@@ -442,7 +444,7 @@ class Processor:
                     segment_index = SegmentIndex(sgi)
                     s_dict[segment_index] = SegmentShard(s)
 
-                ss_root = self.merkle.wb_merklize(ss)
+                ss_root = self.merklizer.wb_merklize(ss)
                 ss_dict[shard_index] = s_dict
                 ss_roots.append(ss_root)
 
@@ -461,7 +463,7 @@ class Processor:
                 shards_keys.append(Bytes(shards_key.encode()))
 
             # Erasure Root
-            u = self.merkle.wb_merklize(shards_keys)
+            u = self.merklizer.wb_merklize(shards_keys)
             logger.info(
                 f"Erasure Root calculated - {u.hex()}",
                 wp_hash=package_hash.hex()[:16] + "...",

@@ -272,7 +272,7 @@ def wp_bench():
 
     start = time.perf_counter()
 
-    process = Processor(node)
+    process = Processor()
     with benchmark("work package processing"):
         process.process(package=wp, core=CoreIndex(1), extrinsics=[Bytes(b"2172636nds")])
 

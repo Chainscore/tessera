@@ -29,7 +29,6 @@ class ValidatorIndex(Uint[16]):
         raise ValueError("Author not found in the state")
 
 
-TrancheIndex = Uint[8]
 CoreIndex = Uint[16]
 EpochIndex = Uint[32]
 Gas = Uint[64]

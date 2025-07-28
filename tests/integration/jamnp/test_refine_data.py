@@ -409,7 +409,7 @@ async def node_tasks(node: Node):
     if node.port == 40000:
         from jam.incore.processor import Processor
 
-        processor = Processor(node)
+        processor = Processor()
 
         for i, v in enumerate(vectors):
             wr, wr_hash = await processor.process(v.work_package, v.core_index, v.extrinsics)
