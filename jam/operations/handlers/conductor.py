@@ -1,23 +1,20 @@
-from multiprocessing import Pool, get_context
 import asyncio
-from concurrent.futures import ProcessPoolExecutor
 from tsrkit_types import U32
 from jam.types.protocol.ticket import TicketAttempt
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.types.protocol.crypto import BandersnatchRingVrfSignature
 from jam.types.protocol.core import TimeSlot
-from dot_ring.vrf.ring.ring_vrf import RingVrf
+from py_ark_vrf import prove_ring
 from jam.logging import get_logger
 from jam.utils.constants import EPOCH_LENGTH, X, TICKET_ENTRIES_PER_VALIDATOR
 from jam.network.protocols.ce_131 import SafroleTicketProxyDistribution, CE131Data, EpochTicket
-from jam.finality.finality import Finality
 
 logger = get_logger("nodeops")
 
 class Conductor:
     
     @classmethod 
-    async def run(cls, time_slot: TimeSlot):
+    async def run(cls, time_slot: TimeSlot, finality_time_slot: TimeSlot):
         from jam.network.start import node
         CE131 = SafroleTicketProxyDistribution()
 
@@ -30,12 +27,7 @@ class Conductor:
             # generating & transmitting all the tickets allowed per validator
             for i in range(TICKET_ENTRIES_PER_VALIDATOR):
                 from jam.state.state import state
-                loop = asyncio.get_running_loop()
-                ticket_envelope = await loop.run_in_executor(None, cls.generate_ticket, *(state, i))
-                from jam.settings import settings
-                main_db = settings.main_db
-                finality_block = Finality.load_final(main_db)
-                finality_time_slot = finality_block.header.slot
+                ticket_envelope = cls.generate_ticket(state, i)
                 epoch_index = U32(finality_time_slot // EPOCH_LENGTH)
 
                 if ticket_envelope is not None:
@@ -69,13 +61,11 @@ class Conductor:
             return TicketEnvelope(
                 attempt=TicketAttempt(attempt),
                 signature=BandersnatchRingVrfSignature(
-                    RingVrf.ring_vrf_proof(
-                        X.TICKET.value + eta + bytes([attempt]),
-                        b"",
-                        settings.bandersnatch_private,
-                        settings.bandersnatch_public,
-                        vals,
-                        False,
+                    prove_ring(
+                        secret_scalar=settings.bandersnatch_private,
+                        input_data=X.TICKET.value + eta + bytes([attempt]),
+                        ring=vals,
+                        aux=b"",
                     )
                 ),
             )

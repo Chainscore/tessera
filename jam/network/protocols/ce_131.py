@@ -84,7 +84,8 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             # ticket_queue.push(data)
             CE132 = SafroleTicketDistribution()
             data = CE132Data(epoch_ticket_len=data.epoch_ticket_len, epoch_ticket=data.epoch_ticket)
-            responses = await CE132.transmit(data)
+            responses = asyncio.create_task(CE132.transmit(data))
+            return responses
 
         else:
             for client in node.all_connected:
@@ -130,7 +131,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            #TODO: verify the proof and check you are the correct proxy
+            #TODO: Implement finality check using epoch index
 
             # calculate validator index using vrf output of signature
             signature = data.epoch_ticket.ticket.signature

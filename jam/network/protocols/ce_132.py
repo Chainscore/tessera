@@ -142,7 +142,7 @@ class SafroleTicketDistribution(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            # TODO: process ticket
+            # TODO: process ticket & check finality
 
             curr_time = time.time()
             ts = int((curr_time - GENESIS_TS) // 6)

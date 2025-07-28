@@ -22,11 +22,11 @@ class Finality:
     @classmethod
     async def schedule_run(cls, header_hash: HeaderHash, kv: RockStore, sch_ts: int, initial: bool ) -> None:
         if initial:
-            print("Finalized", header_hash.encode().hex()[0:30])
+            logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
             kv.put(cls.FINAL_KEY, header_hash.encode())
         else:
             await asyncio.sleep(sch_ts)
-            print("Finalized", header_hash.encode().hex()[0:30])
+            logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
             kv.put(cls.FINAL_KEY, header_hash.encode())
 
     @classmethod

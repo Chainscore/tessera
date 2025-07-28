@@ -63,8 +63,9 @@ async def operate(is_builder = False):
         finality_block = Finality.load_final(main_db)
         finality_time_slot = finality_block.header.slot
 
-        if conductor_ts < (finality_time_slot%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2) and not ticket_generated:
-            asyncio.create_task(schedule_run(0, conductor, ts))
+        if conductor_ts <= (finality_time_slot%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2) and not ticket_generated:
+            logger.info("Tickets announcement to proxies")
+            asyncio.create_task(schedule_run(0, conductor, ts, finality_time_slot))
             ticket_generated = True
 
         # if forwarding_s < (ts%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2):

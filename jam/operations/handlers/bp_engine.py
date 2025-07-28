@@ -57,8 +57,6 @@ class BlockProducer(NodeDispatcher):
         slot_index = time_slot % EPOCH_LENGTH
         entry = state.gamma.s.unwrap()[slot_index]
 
-        print('entry', entry)
-
         ticket = None
         if state.tau // EPOCH_LENGTH != time_slot // EPOCH_LENGTH:
             if time_slot // EPOCH_LENGTH == (state.tau // EPOCH_LENGTH) + 1 and len(state.gamma.a) == EPOCH_LENGTH and slot_index >= TICKET_SUBMISSION_END:
@@ -74,9 +72,7 @@ class BlockProducer(NodeDispatcher):
                     X.TICKET.value + eta.encode() + entry.attempt.encode(), b""
                 )
             )
-            print('our_id', our_id)
             entry_id = entry.id
-            # entry_id = vrf_output(entry.signature)
             if our_id != entry_id:
                 logger.debug("⏭ Skipping BP: Not our ticket", sig=entry.id.hex(), our_id=our_id.hex(), entry_id=entry_id.hex())
                 return 
@@ -84,12 +80,15 @@ class BlockProducer(NodeDispatcher):
                 ticket = entry
         elif entry != settings.bandersnatch_public:
             logger.debug("⏭ Skipping BP: Not our fallback", expected=entry, our_key=settings.bandersnatch_public.hex())
-            return 
-            
+            return
+
         block = latest.produce(TimeSlot(time_slot), ticket)
 
         if state.transition(block):
-            logger.info("⛏ Produced block", hash=block.header.hash().hex()[:16]+"...", slot=time_slot)
+            if ticket:
+                logger.info("⛏ Produced block using ticket", hash=block.header.hash().hex()[:16] + "...", slot=time_slot)
+            else:
+                logger.info("⛏ Produced block", hash=block.header.hash().hex()[:16]+"...", slot=time_slot)
             asyncio.create_task(up0.transmit(BlockAnnouncement.block_to_announcement(block)))
         else:
             logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block)
