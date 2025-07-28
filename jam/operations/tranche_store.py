@@ -155,7 +155,7 @@ class TrancheStore:
         if judgment:
             state.judgments[wr_hash].true_votes.append(validator_index)
         else:
-            state.judgments[wr_hash].false_votes.appeend(validator_index)
+            state.judgments[wr_hash].false_votes.append(validator_index)
 
         self._save_state(tranche, state)
         logger.info("Updated judgment for work report", wr_hash=wr_hash)

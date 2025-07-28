@@ -1,8 +1,4 @@
-from jam.ring_vrf.curve.specs.bandersnatch import (
-    Bandersnatch_TE_Curve,
-    BandersnatchPoint,
-)
-from jam.ring_vrf.ietf.ietf import IETF_VRF
+
 
 from jam.utils import constants
 from tsrkit_types import Bytes, TypedVector
@@ -24,18 +20,18 @@ logger = get_logger("in_core")
 public_key = Bytes[32]
 
 
-def sign_bandersnatch(key: Bytes[32], context: Bytes, message: bytes = b""):
-    key = int.from_bytes(key)
-    vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
-    # Vrf2 = IETF_VRF(Ed25519_TE_Curve, Ed25519Point)
-    output_point, proof = vrf.prove(
-        alpha=message, secret_key=key, additional_data=context, salt=b""
-    )
-    op_bt_str = output_point.point_to_string()
-    proof_bt_str = proof[0].to_bytes(32, "little") + proof[1].to_bytes(32, "little")
-    signature = op_bt_str + proof_bt_str
-
-    return signature
+# def sign_bandersnatch(key: Bytes[32], context: Bytes, message: bytes = b""):
+#     key = int.from_bytes(key)
+#     vrf = IETF_VRF(Bandersnatch_TE_Curve, BandersnatchPoint)
+#     # Vrf2 = IETF_VRF(Ed25519_TE_Curve, Ed25519Point)
+#     output_point, proof = vrf.prove(
+#         alpha=message, secret_key=key, additional_data=context, salt=b""
+#     )
+#     op_bt_str = output_point.point_to_string()
+#     proof_bt_str = proof[0].to_bytes(32, "little") + proof[1].to_bytes(32, "little")
+#     signature = op_bt_str + proof_bt_str
+#
+#     return signature
 
 
 def audit_refine(package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
