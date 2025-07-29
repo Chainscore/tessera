@@ -1,16 +1,40 @@
 import asyncio
+import json
+from jam.api.rpc.broker import broker
 from jam.api.rpc.api_handlers import dispatch_api_call
 from jam.api.rpc.utils import RpcRequest
 from jam.api.rpc.websocket import ws_receive, ws_broker
 from jam.logging import get_logger
 from quart import Quart, websocket, jsonify, request
+import jam.finality.finality as Finality
+import itertools
+from tsrkit_types import U32
+
+
+def _json_default(val):
+    # 1) U32 → int
+    if isinstance(val, U32):
+        return int(val)
+    # 2) anything iterable (Bytes, TypedVector, etc) → list(val)
+    try:
+        return list(val)
+    except Exception:
+        pass
+    return str(val)
+
 
 logger = get_logger("rpc")
 
 rpc = Quart(__name__)
 
+logger.info("RPC server is starting up")
+# subscription ID's setup
+# increment sub id at every connection
+_sub_id_counter = itertools.count(1)
+sub_id = next(_sub_id_counter)
 
-@rpc.route("/rpc", methods=["POST"])
+
+@rpc.route("/", methods=["POST"])
 async def rpc_handler():
     """
     RPC requests for different methods.
@@ -32,42 +56,53 @@ async def rpc_handler():
         )
 
 
-@rpc.websocket("/ws")
+@rpc.websocket("/")
 async def ws():
-    topic = await websocket.receive()  # e.g., client sends: "news"
-    task = asyncio.ensure_future(ws_receive())
-    try:
-        async for message in ws_broker.subscribe(topic):
-            await websocket.send(f"[{topic}] {message}")
-    finally:
-        task.cancel()
-        await task
+    raw = await websocket.receive()
+    # increment sub id at every connection
+    sub_id = next(_sub_id_counter)
 
+    req = json.loads(raw)
 
-# TODO - Cleanup - remove this upon ws testing
-# # Start the splitter in the background
-# @rpc.before_serving
-# async def startup():
-#     rpc.sub_stats = asyncio.create_task(splitter.subscribe_statistics())
-#     rpc.sub_service_data = asyncio.create_task(splitter.subscribe_service_data())
-#     rpc.sub_service_val = asyncio.create_task(splitter.subscribe_service_value())
-#     rpc.sub_service_preimage = asyncio.create_task(splitter.subscribe_service_preimage())
-#     rpc.sub_service_request = asyncio.create_task(splitter.subscribe_service_request())
-#     rpc.sub_best_block = asyncio.create_task(splitter.subscribe_best_block())
-#     rpc.sub_fin_block = asyncio.create_task(splitter.subscribe_finalized_block())
-#
-# # Clean up the task when shutting down
-# @rpc.after_serving
-# async def shutdown():
-#     rpc.sub_stats.cancel()
-#     rpc.sub_stats.cancel()
-#     rpc.sub_service_data.cancel()
-#     rpc.sub_service_val.cancel()
-#     rpc.sub_service_preimage.cancel()
-#     rpc.sub_service_request.cancel()
-#     rpc.sub_best_block.cancel()
-#     rpc.sub_fin_block.cancel()
-#     # try:
-#     #     await rpc.splitter_task
-#     # except asyncio.CancelledError:
-#     #     pass
+    method = req.get("method")
+    params = req.get("params", [])
+    req_id = req.get("id")
+
+    async for msg in broker.subscribe(method):
+        # wrap & JSON-serialize
+
+        from jam.settings import settings
+
+        final = Finality.load_final(settings.main_db)
+        # await websocket.send(json.dumps({"id":1, "jsonrpc": "2.0", "result":sub_id}))
+
+        # special handling for subscribeBestBlock and subscribeFinalizedBlock
+        if method == "subscribeBestBlock" or method == "subscribeFinalizedBlock":
+            await websocket.send(
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "method": method,
+                        "params": {"subscription": sub_id, "result": msg},
+                    },
+                    default=_json_default,
+                )
+            )
+        else:
+            await websocket.send(
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "method": method,
+                        "params": {
+                            "subscription": sub_id,
+                            "result": {
+                                "header_hash": final.header.hash(),
+                                "slot": int(final.header.slot),
+                                "value": msg,
+                            },
+                        },
+                    },
+                    default=_json_default,
+                )
+            )

@@ -1,4 +1,4 @@
-import json
+import json 
 from typing import Type
 from jam.error import JamError, JamErrorCode
 from jam.utils.merkle import BMRFunctions
@@ -284,10 +284,9 @@ class State:
                 slot=block.header.slot,
             )
             self.store.clear()
-
         self._lock = False
-        return False
 
+        return False
 
 state = State(None)
 
