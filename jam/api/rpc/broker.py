@@ -2,6 +2,7 @@ from collections import defaultdict
 import asyncio
 from typing import Any, AsyncGenerator, Dict, Set
 
+
 class Broker:
     def __init__(self):
         self.topics: Dict[str, Set[asyncio.Queue]] = defaultdict(set)
@@ -18,7 +19,6 @@ class Broker:
                 yield await q.get()
         finally:
             self.topics[topic].remove(q)
-    
-   
+
 
 broker = Broker()

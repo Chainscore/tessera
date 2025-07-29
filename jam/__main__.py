@@ -18,6 +18,7 @@ from hypercorn.asyncio import serve
 from hypercorn.config import Config
 from jam.api.rpc.app import rpc
 
+
 async def main(
     genesis_path: str,
     env: str,
@@ -75,10 +76,9 @@ async def main(
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
 
-
         # Genesis specs
         dev_spec = json.load(open(genesis_path))
-        
+
         block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
@@ -87,10 +87,7 @@ async def main(
         update_state(state)
 
         peers = [
-            Peer(
-                id=bytes.decode(val.metadata.name, 'utf-8'),
-                data=val
-            )
+            Peer(id=bytes.decode(val.metadata.name, "utf-8"), data=val)
             for val in state.kappa
             if val.metadata.port != port
         ]
@@ -107,7 +104,7 @@ async def main(
                 BlsPublic(bytes(144)),
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2 ** 16 - 1),
+                    protocol=Uint[16](2**16 - 1),
                     host=ip,
                     port=U16(port),
                 ),
@@ -116,18 +113,14 @@ async def main(
             is_validator=is_validator,
         )
 
-      
-#       RPC/WebSocket server setup
+        #       RPC/WebSocket server setup
         rpc_port = int(os.environ.get("RPC_PORT", 5000))
         rpc_config = Config()
-        rpc_config.bind         = [f"{host}:{port}"]
-        rpc_config.debug        = True
+        rpc_config.bind = [f"{host}:{port}"]
+        rpc_config.debug = True
         rpc_config.use_reloader = False
 
-        logger.info(
-            "📡 Starting RPC/WebSocket server",
-            host=host, port=rpc_port
-        )
+        logger.info("📡 Starting RPC/WebSocket server", host=host, port=rpc_port)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
@@ -136,7 +129,7 @@ async def main(
                 tg.create_task(Builder(tsr_node, settings).run())
             else:
                 tg.create_task(BlockProducer(tsr_node, main_db).run())
-            #using the Hypercorn server to serve the RPC API
+            # using the Hypercorn server to serve the RPC API
             tg.create_task(serve(rpc, rpc_config))
 
     except KeyboardInterrupt:
@@ -144,7 +137,7 @@ async def main(
             "JAM node shutting down gracefully",
             node_name=name,
             port=port,
-            reason="keyboard_interrupt"
+            reason="keyboard_interrupt",
         )
     except Exception as e:
         logger.critical("Fatal error", e=e, error_type=type(e).__name__)

@@ -35,13 +35,16 @@ from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
 
 
 def get_gen_state(db):
-	# Load genesis state
+    # Load genesis state
     setting = setup_setting(db, None)
-    genesis_state_json = json.load(open(Path(__file__).parents[3] / "dev-spec.json"))["genesis_state"]
+    genesis_state_json = json.load(open(Path(__file__).parents[3] / "dev-spec.json"))[
+        "genesis_state"
+    ]
     state = State.from_keyvals(genesis_state_json, setting.state_db)
     state.store.enable_cache()
     state.store.enable_writes()
     return state, setting
+
 
 def produce_chain(state, db, length, starting_parent=None):
     """
@@ -54,64 +57,64 @@ def produce_chain(state, db, length, starting_parent=None):
     for i in range(length):
         blk = Block.genesis()
         blk.header.parent = parent
-        blk.header.slot   = TimeSlot(i)
+        blk.header.slot = TimeSlot(i)
         hh = HeaderHash(blk.header.hash())
         state.transition(blk)
         parent = hh
         last_hh = hh
     return last_hh
 
+
 @pytest.mark.asyncio
 async def test_ws_finalized_block(db_path):
     # ——— set up on‐chain state just like the Node ———
     settings = setup_setting(db_path, 0, "alice", 0)
-    state    = setup_state(settings.state_db)
+    state = setup_state(settings.state_db)
 
     block = Block.genesis()
-    hh    = block.save(settings.main_db)
+    hh = block.save(settings.main_db)
     Finality.finalise(hh, settings.main_db)
     Finality.set_head(hh, settings.main_db)
 
     finalized_block = Finality.load_final(settings.main_db)
-    expected = [
-        list(finalized_block.header.hash()),
-        int(finalized_block.header.slot)
-    ]
+    expected = [list(finalized_block.header.hash()), int(finalized_block.header.slot)]
 
     async with rpc.test_client() as client:
         async with client.websocket("/") as ws:
-
-            await ws.send(json.dumps({"method": "subscribeFinalizedBlock"}))            # won't work without this sleep
+            await ws.send(
+                json.dumps({"method": "subscribeFinalizedBlock"})
+            )  # won't work without this sleep
             await asyncio.sleep(0.01)
 
-            #make call to the finality function to test ws implementation
+            # make call to the finality function to test ws implementation
             Finality.finalise(hh, settings.main_db)
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
             assert data["params"]["result"]["header_hash"] == expected[0]
             assert data["params"]["result"]["slot"] == expected[1]
-            
+
+
 @pytest.mark.asyncio
 async def test_ws_best_block(db_path):
     # ——— mirror the HTTP setup for bestBlock ———
     settings = setup_setting(db_path, 0, "alice", 0)
-    state    = setup_state(settings.state_db)
+    state = setup_state(settings.state_db)
 
     block = Block.genesis()
-    hh    = block.save(settings.main_db)
-    Finality.finalise(hh, settings.main_db)    
+    hh = block.save(settings.main_db)
+    Finality.finalise(hh, settings.main_db)
     Finality.set_head(hh, settings.main_db)
-    
-    expected = [ list(block.header.hash()), int(block.header.slot) ]
+
+    expected = [list(block.header.hash()), int(block.header.slot)]
 
     #  open a WS & subscribe to the function
     async with rpc.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(json.dumps({"method": "subscribeBestBlock"}))          
+            await ws.send(json.dumps({"method": "subscribeBestBlock"}))
 
             await asyncio.sleep(0.01)
 
-            #make call to the finality set head function to test ws implementation
+            # make call to the finality set head function to test ws implementation
             Finality.set_head(hh, settings.main_db)
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
@@ -122,19 +125,17 @@ async def test_ws_best_block(db_path):
 
 @pytest.mark.asyncio
 async def test_ws_statistics(db_path):
-  
     # 3) open WS, subscribe, then read until slot‐2’s update arrives
     async with rpc.test_client() as client:
         async with client.websocket("/") as ws:
             await ws.send(json.dumps({"method": "subscribeStatistics"}))
-            await asyncio.sleep(0.01)  
+            await asyncio.sleep(0.01)
             settings = setup_setting(db_path, None)
             state = setup_state(settings.state_db)
             block = Block.genesis()
             hh = block.save(settings.main_db)  # Save to test-specific DB
             Finality.finalise(hh, settings.main_db)
             Finality.set_head(hh, settings.main_db)
-            
 
             # 2) churn 5 blocks (slots 1–5)
             produce_chain(state, settings.main_db, length=5)
@@ -148,13 +149,14 @@ async def test_ws_statistics(db_path):
 
             assert stats == expected_pi
 
+
 @pytest.mark.asyncio
 async def test_ws_service_data(db_path):
-    
-
     async with rpc.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(json.dumps({"method": "subscribeServiceData"}))            # won't work without this sleep
+            await ws.send(
+                json.dumps({"method": "subscribeServiceData"})
+            )  # won't work without this sleep
 
             await asyncio.sleep(0.01)
 
@@ -165,32 +167,29 @@ async def test_ws_service_data(db_path):
             hh = block.save(settings.main_db)  # Save to test-specific DB
             Finality.finalise(hh, settings.main_db)
             Finality.set_head(hh, settings.main_db)
-            
 
             # 2) churn 5 blocks (slots 1–5)
             produce_chain(state, settings.main_db, length=5)
 
-    
             update_state(state)
             await asyncio.wait_for(ws.receive(), timeout=5)
             state_delta_store = state.delta[ServiceId(42)].service.store
             expected = state_delta_store.get(bytes(construct_state_key((255, ServiceId(42)))))
             meta_expected = AccountMetadata.decode(expected)
 
-
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
             assert data["params"]["result"]["value"] == list(meta_expected.encode())
 
+
 @pytest.mark.asyncio
 async def test_ws_service_value(db_path):
-    
     async with rpc.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(json.dumps({"method": "subscribeServiceValue"}))          
+            await ws.send(json.dumps({"method": "subscribeServiceValue"}))
 
             await asyncio.sleep(0.01)
-            
+
             settings = setup_setting(db_path, None)
             state = setup_state(settings.state_db)
             db = settings.main_db
@@ -198,18 +197,18 @@ async def test_ws_service_value(db_path):
             hh = block.save(settings.main_db)  # Save to test-specific DB
             Finality.finalise(hh, settings.main_db)
             Finality.set_head(hh, settings.main_db)
-            
 
             # 2) churn 5 blocks (slots 1–5)
             produce_chain(state, settings.main_db, length=5)
 
-
             data = create_dummy_bytes(100)
             sid = ServiceId(100)
             state.delta[sid] = AccountData()
-            key = Bytes[32].fromhex("a3dc3bed1b0727caf428961bed11c9998ae2476d8a97fad203171b628363d9a2")
+            key = Bytes[32].fromhex(
+                "a3dc3bed1b0727caf428961bed11c9998ae2476d8a97fad203171b628363d9a2"
+            )
             value = Bytes[32]([0xB] * 32)
-            state.delta[sid].storage[key] = value   
+            state.delta[sid].storage[key] = value
             hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
 
             state_delta_store = state.delta[ServiceId(1)].service.store
@@ -220,35 +219,33 @@ async def test_ws_service_value(db_path):
             data = json.loads(raw)
             assert data["params"]["result"]["value"] == expected[0]
 
+
 @pytest.mark.asyncio
 async def test_ws_service_preimage(db_path):
-    
     async with rpc.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(json.dumps({"method": "subscribeServicePreimage"}))          
+            await ws.send(json.dumps({"method": "subscribeServicePreimage"}))
 
             await asyncio.sleep(0.01)
-            
+
             settings = setup_setting(db_path, None)
 
             state = setup_state(settings.state_db)
 
-            
             db = settings.main_db
             block = Block.genesis()
             hh = block.save(settings.main_db)  # Save to test-specific DB
             Finality.finalise(hh, settings.main_db)
             Finality.set_head(hh, settings.main_db)
-            
 
             # 2) churn 5 blocks (slots 1–5)
             produce_chain(state, settings.main_db, length=5)
-           
+
             state_at_hh = State.load(hh)
             data = create_dummy_bytes(100)
             state.delta[ServiceId(1)].preimages[Hash.blake2b(data)] = Bytes(data)
 
-            state.settle(header_hash=Bytes([1]*32))
+            state.settle(header_hash=Bytes([1] * 32))
 
             assert state.delta[ServiceId(1)].preimages[Hash.blake2b(data)] == Bytes(data)
 
@@ -259,13 +256,12 @@ async def test_ws_service_preimage(db_path):
             data = json.loads(raw)
             assert data["params"]["result"]["value"] == expected
 
+
 @pytest.mark.asyncio
 async def test_ws_service_request(db_path):
-
-    
     async with rpc.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(json.dumps({"method": "subscribeServiceRequest"}))          
+            await ws.send(json.dumps({"method": "subscribeServiceRequest"}))
 
             await asyncio.sleep(0.01)
             # await broker.publish("subscribeServiceRequest", expected)
@@ -273,23 +269,25 @@ async def test_ws_service_request(db_path):
 
             state = setup_state(settings.state_db)
 
-                    
             db = settings.main_db
             block = Block.genesis()
             hh = block.save(settings.main_db)  # Save to test-specific DB
             Finality.finalise(hh, settings.main_db)
             Finality.set_head(hh, settings.main_db)
-                    
 
-                    # 2) churn 5 blocks (slots 1–5)
+            # 2) churn 5 blocks (slots 1–5)
             produce_chain(state, settings.main_db, length=5)
-                
+
             data = create_dummy_bytes(100)
             state.delta[ServiceId(1)] = AccountData()
-            state.delta[ServiceId(1)].lookup[LookupTable(hash=Hash.blake2b(data), length=100)] = Timestamps([U32(1752078176), U32(1752078177)])
+            state.delta[ServiceId(1)].lookup[
+                LookupTable(hash=Hash.blake2b(data), length=100)
+            ] = Timestamps([U32(1752078176), U32(1752078177)])
 
-            state.settle(header_hash=Bytes([1]*32))
-            expected = state.delta[ServiceId(1)].lookup[LookupTable(hash=Hash.blake2b(data), length=100)]
+            state.settle(header_hash=Bytes([1] * 32))
+            expected = state.delta[ServiceId(1)].lookup[
+                LookupTable(hash=Hash.blake2b(data), length=100)
+            ]
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)

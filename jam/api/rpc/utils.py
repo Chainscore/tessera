@@ -67,5 +67,4 @@ def parse_data(data_types: list[Type[Codable]], data: list) -> list[Codable]:
     for i, d in enumerate(data):
         ret.append(data_types[i](d))
 
-
     return ret
