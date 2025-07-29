@@ -32,7 +32,7 @@ def build_parser(base_dir: str):
     )
     # positional validator index (e.g. 2)
     p.add_argument(
-        "validator_index",
+        "--validator_index",
         type=int,
         metavar="Validator Index",
         help="Validator index (e.g. 2). Port and env file derived as 4000{validator_index}."
@@ -66,6 +66,11 @@ def build_parser(base_dir: str):
         default="polkadot",
         help="Theme for logging"
     )
+    p.add_argument(
+        "--temp_db",
+        action="store_true",
+        help="Initialize chain from genesis"
+    )
     # Mutually exclusive group: only one can be true
     mode_group = p.add_mutually_exclusive_group()
     mode_group.add_argument(
@@ -94,13 +99,13 @@ def run_cmd(args):
     load_dotenv(env_file, override=True)
 
     os.environ["PORT"]=str(args.port if args.port is not None else port)
+    if args.temp_db:
+        os.environ["TEMPDB"]=str(args.temp_db)
     os.environ["JAM_CHAIN_SPEC"]=str(args.chain_spec)
     os.environ.setdefault("NODE_NAME", os.getenv("NODE_NAME", f"node-{port}"))
     os.environ.setdefault("SEED",      os.getenv("SEED", port))
     if args.rpc_port is not None:
         os.environ.setdefault("RPC_PORT",os.getenv("RPC_PORT", args.rpc_port))
-
-
     asyncio.run(
         node_main(
             args.genesis,

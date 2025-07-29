@@ -1,16 +1,25 @@
 from rockstore import RockStore
+import tempfile
 
 class DataStores:
     _main_db: RockStore | None
     _state_db: RockStore | None
     _audit_db: RockStore | None
     _d3l: RockStore | None
+    _temp_dir: tempfile.TemporaryDirectory | None = None
 
     def __init__(self):
         self._main_db = None
         self._audit_db = None
         self._d3l = None
         self._state_db = None
+        self._temp_dir = None
+
+    def use_temp_directory(self) -> str:
+            if self._temp_dir is None:
+                self._temp_dir = tempfile.TemporaryDirectory()
+                print(f"[DataStores] Using TEMP DB directory: {self._temp_dir.name}")
+            return self._temp_dir.name
 
     @property
     def main_db(self) -> RockStore:
@@ -64,6 +73,10 @@ class DataStores:
         if self._state_db:
             self._state_db.close()
             print("Closing state db")
+        if self._temp_dir:
+            print(f"[DataStores] Cleaning up TEMP DB dir: {self._temp_dir.name}")
+            self._temp_dir.cleanup()
+            self._temp_dir = None
 
 
 data_stores = DataStores()

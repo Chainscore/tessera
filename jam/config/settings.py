@@ -1,3 +1,5 @@
+import os
+
 class Settings:
     # Node settings
     NODE_NAME: str = "JAM-Node"
@@ -42,7 +44,10 @@ settings: Settings = Settings()
 
 def setup_setting(name: str, port: int,  db_path = "data", node_id = None) -> Settings:
     global settings
-
+    # Check if TEMPDB was passed via env
+    from jam.config.data_stores import data_stores
+    if os.environ.get("TEMPDB", "false").lower() == "true":
+        db_path = data_stores.use_temp_directory()
     node_path = f"{db_path}/{port}"
     settings.NODE_PATH = node_path
 
