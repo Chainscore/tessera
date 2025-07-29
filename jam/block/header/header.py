@@ -1,7 +1,7 @@
 from tsrkit_types.bytes import Bytes
 from jam.types.state.gamma import GammaSTickets
 import json
-from typing import Optional
+from typing import Optional, Self
 from jam.block.errors import BlockError, BlockErrorCode
 from jam.block.extrinsics.extrinsic import Extrinsic
 from jam.block.extrinsics.tickets import TicketEnvelope
@@ -59,29 +59,29 @@ class Header:
         time_slot: TimeSlot,
         extrinsic: Extrinsic,
         ticket: Optional[TicketEnvelope],
-    ):
+    ) -> Self | None:
         """
         Produces a child header of current header
         """
         from jam.settings import settings
-        from jam.state.state import state
+        from jam.state.state import state 
 
         header = Header(
             parent=Hash.blake2b(self.encode()),
             parent_state_root=state.root,
-            extrinsic_hash=Hash.blake2b(extrinsic.encode()),
+            extrinsic_hash=extrinsic.hash(),
             slot=time_slot,
             epoch_mark=EpochMark.produce(state, time_slot),
             tickets_mark=TicketsMark.produce(state, time_slot),
             offenders_mark=OffendersMark.produce(extrinsic.disputes),
-            author_index=ValidatorIndex(state.kappa.index(settings.val)),
+            author_index=ValidatorIndex([k.bandersnatch for k in state.kappa].index(settings.bandersnatch_public)),
             entropy_source=BandersnatchVrfSignature(96),
             seal=BandersnatchVrfSignature(96),
         )
 
         # --- Seal --- #
         # If start of a new epoch, use eta[2], else eta[3]
-        eta = state.eta[2] if time_slot % EPOCH_LENGTH == 0 else state.eta[3]
+        eta = state.eta[2] if state.tau // EPOCH_LENGTH != time_slot // EPOCH_LENGTH else state.eta[3]
 
         # Fallback / Ticket context
         context = (
@@ -89,20 +89,27 @@ class Header:
             if ticket
             else X.FALLBACK.value + eta.encode()
         )
-        header.seal = BandersnatchVrfSignature(
+
+        seal_output = vrf_output(
             prove_ietf(
-                settings.bandersnatch_private,
-                context,
-                header.encode_unsigned(),
+                settings.bandersnatch_private, 
+                context, b""
             )
         )
         header.entropy_source = BandersnatchVrfSignature(
             prove_ietf(
                 settings.bandersnatch_private,
-                X.ENTROPY + vrf_output(header.seal),
-                b"",
+                X.ENTROPY.value + seal_output, b"",
             )
         )
+        header.seal = BandersnatchVrfSignature(
+            prove_ietf(
+                settings.bandersnatch_private,
+                context, header.encode_unsigned(),
+            )
+        )
+        
+        return header
 
     def validate(self) -> bool:
         """
@@ -133,8 +140,7 @@ class Header:
         if isinstance(s_vals, GammaSFallback):
             if author.bandersnatch != s_vals[slot_entry]:
                 raise BlockError(
-                    BlockErrorCode.INVALID_AUTHOR,
-                    f"Expected {s_vals[slot_entry]}, got {author.bandersnatch}",
+                    BlockErrorCode.INVALID_AUTHOR, f"E: {s_vals[slot_entry]}, A: {author.bandersnatch}",
                 )
         else:
             if s_vals[slot_entry].id != vrf_output(self.seal):
@@ -158,8 +164,8 @@ class Header:
 
         # State root check
         if self.parent_state_root != state.root:
-            raise BlockError(BlockErrorCode.INCORRECT_STATE_ROOT)
-
+            raise BlockError(BlockErrorCode.INCORRECT_STATE_ROOT, f"E: {self.parent_state_root.hex()}, A: {state.root.hex()}")
+        
         # Marker checks
         is_new_epoch = (self.slot // EPOCH_LENGTH) == (state.tau // EPOCH_LENGTH)
         # Epoch marker

@@ -1,7 +1,7 @@
 from time import time
 from types import NoneType
 from typing import TYPE_CHECKING, Optional
-from py_ark_vrf import public_from_le_secret
+from py_ark_vrf import public_from_le_secret, secret_from_seed
 from typing import Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import U32, Bytes, Bytes32, Uint
@@ -43,6 +43,7 @@ class Settings:
     ed25519_private: Bytes32
 
     bandersnatch_public: Bytes32
+    bandersnatch_seed: Bytes32
     bandersnatch_private: Bytes32
 
     # Epoch-related
@@ -91,8 +92,11 @@ class Settings:
                 .public_key()
                 .public_bytes_raw()
             )
-            self.bandersnatch_private = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed))
-            self.bandersnatch_public = Bytes32(public_from_le_secret(self.bandersnatch_private))
+            self.bandersnatch_seed = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed))
+            pub, ss = secret_from_seed(self.bandersnatch_seed)
+            print(f"my pub {pub.hex()}, ss {ss.hex()}")
+            self.bandersnatch_public = Bytes32(pub)
+            self.bandersnatch_private = Bytes32(ss)
 
 
     def update(self, state: Optional["State"] = None):

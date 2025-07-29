@@ -1,6 +1,6 @@
 import json 
 from typing import Type
-from jam.error import JamError
+from jam.error import JamError, JamErrorCode
 from jam.utils.merkle import BMRFunctions
 from rockstore import RockStore
 from jam.state.accounts import DeltaView
@@ -152,7 +152,7 @@ class State:
         # 1. Push auth hash of every WR to self.alpha[0:1]
         return self.transition(block)
 
-    def transition(self, block: Block):
+    def transition(self, block: Block) -> bool:
         """
         Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
 
@@ -161,7 +161,7 @@ class State:
         """
         if self._lock:
             logger.error("Lock detected, skipping transition")
-            return
+            return False
 
         self._lock = True
 
@@ -181,13 +181,16 @@ class State:
 
         try:
             header_hash = HeaderHash(block.header.hash())
-            logger.info(
+            logger.debug(
                 "Starting state transition on block",
                 header_hash=header_hash.hex(),
                 block_slot=int(block.header.slot),
                 parent_hash=block.header.parent.hex()[:16] + "...",
                 state_root=block.header.parent_state_root.hex()[:16] + "...",
                 author_index=int(block.header.author_index),
+                preimages=len(block.extrinsic.preimages),
+                wrs=len(block.extrinsic.guarantees),
+                assurances=len(block.extrinsic.assurances),
             )
 
             # TODO: Validate block headers
@@ -195,14 +198,14 @@ class State:
             # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
             # Offenders mark - make sure offenders are present in psi.offenders
             if block.header.slot == 0:
-                logger.warning("Found genesis block, skipping", hh=header_hash.hex())
+                logger.debug("Found genesis block, skipping", hh=header_hash.hex())
                 self._lock = False
-                return
+                return False
 
             if _set.main_db.get(Block.get_storage_key_block(header_hash)) is not None:
-                logger.warning("Duplicate block found, skipping", hh=header_hash.hex())
+                logger.debug("Duplicate block found, skipping", hh=header_hash.hex())
                 self._lock = False
-                return
+                return False
 
             pre_state = self.load()
 
@@ -213,29 +216,29 @@ class State:
             self.beta = beta
 
             # Disputes
-            logger.debug("Processing disputes...")
             Disputes.transition(pre_state, self, block)
 
             # Reporting
-            logger.debug("Processing reporting...")
             Reporting.transition(pre_state, self, block, [])
 
             # Assurances
-            logger.debug("Processing assurances...")
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
+            if len(newly_avail_wrs) > 0:
+                logger.critical(
+                    "Newly available WRs",
+                    count=len(newly_avail_wrs),
+                    wrs=[wr.hex()[:16] + "..." for wr in newly_avail_wrs],
+                )
 
             # Accumulation
-            logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
             _, commitment_map = Accumulation.transition(
                 pre_state, self, block, newly_avail_wrs=newly_avail_wrs
             )
 
             # Authorization
-            logger.debug("Processing authorization...")
             Authorization.transition(pre_state, self, block)
 
             # Recent History
-            logger.debug("Processing recent history...", commitment_count=len(commitment_map))
             history_merkle = BMRFunctions().wb_merkle_fn(
                 TypedVector[Bytes[32]](
                     sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map])
@@ -245,15 +248,12 @@ class State:
             RecentHistory.transition(pre_state, self, block, history_merkle)
 
             # Preimages
-            logger.debug("Processing preimages...")
             Preimages.transition(pre_state, self, block)
 
             # Statistics
-            logger.debug("Processing statistics...")
             Statistics.transition(pre_state, self, block, newly_avail_wrs)
 
             # Safrole
-            logger.debug("Processing safrole...")
             vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
             Safrole.transition(pre_state, self, block, vrf_output)
 
@@ -271,22 +271,23 @@ class State:
                 Finality.set_head(header_hash, _set.main_db)
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                 Finality.finalise(header_hash, _set.main_db)
-
                 block.extrinsic.clear_from_stores()
+                self._lock = False
+                return True 
             else:
-                raise JamError("Block is not valid")
+                raise JamError(JamErrorCode.INVALID_BLOCK)
 
         except JamError as jam_e:
             logger.error(
-                "Invalid block",
-                error=jam_e,
+                "Invalid block", error=jam_e,
                 hh=block.header.hash().hex(),
                 slot=block.header.slot,
             )
             self.store.clear()
         self._lock = False
-        return
-    
+
+        return False
+
 state = State(None)
 
 

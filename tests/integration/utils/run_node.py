@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Final
 
 import asyncio
 import signal 
@@ -81,20 +81,23 @@ async def run_node(
     try:
         # Set genesis state
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
-        state = setup_state(settings.state_db, "dev-spec.json")
-        state.store.disable_cache()
-        update_state(state)
+        setup_state(settings.state_db, "dev-spec.json")
+
+        # This fucks up syncing with polkajam, update this elsewhere
+        # update_state(state)
+
+        settings.update()
 
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
+        Finality.finalise(header_hash, main_db)
         
         settings.update()
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(start_node(host, int(port)))
             if node_task:
-                print("starting task")
                 tg.create_task(node_task())
 
     except Exception as e:

@@ -17,7 +17,7 @@ def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
         return [(0, WPBuilder)]
 
     return [
-        # (0, BlockProducer),
+        (0, BlockProducer),
         # (2, None),  # audit
         # (4, assurer),  # transmit assurances
     ]
@@ -28,7 +28,7 @@ async def schedule_run(sch_ts: int, runner: NodeDispatcher, *args) -> None:
     await runner.run(*args)
 
 
-async def operate(is_builder):
+async def operate(is_builder = False):
     """
     Starts a never ending 6-sec loop
     """
@@ -48,7 +48,7 @@ async def operate(is_builder):
         if not node:
             ts += 1
             continue
-        logger.debug("Node operations started for a new timeslot", time_slot=ts, peers=len(node.active_peers), connections=len(node.all_connected))
+        logger.info(f"New Time Slot #{ts}", peers=len(node.active_peers), connections=len(node.all_connected))
         # Schedule tasks to run immediately
         for dispatch in dispatch_fns(is_builder):
             (task_ts, runner) = dispatch

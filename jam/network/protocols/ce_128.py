@@ -1,6 +1,8 @@
+import enum
+from math import e
 from typing import List, cast, TYPE_CHECKING
 
-from tsrkit_types import TypedVector, Enum
+from tsrkit_types import Bytes32, TypedArray, TypedVector, Enum
 
 from jam.logging import get_logger
 from jam.finality.finality import Finality
@@ -12,6 +14,8 @@ from jam.types import HeaderHash
 from tsrkit_types.integers import U32
 from tsrkit_types.struct import structure
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.types.protocol.core import TimeSlot
+from jam.utils.constants import GENESIS_HASH
 
 # Module-specific logger
 logger = get_logger("network")
@@ -48,21 +52,26 @@ class BlockRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE128
 
-    async def transmit(self, data: CE128Data):
+    async def transmit(self, data: CE128Data, peers: List[NodeConnection]|None = None):
         """Transmit Block Request"""
         from jam.network.start import node 
         if not node: return
 
-        stream_data = data.encode()
-        logger.info("Transmitting block request to node", num=len(node.connection_ids), max_blocks=data.max_blocks)
+        stream_data = U32(len(data.encode())).encode() + data.encode()
+        logger.debug("Transmitting block request to node", num=len(node.connection_ids), max_blocks=data.max_blocks)
 
         transmitted_count = 0
         responses = []
 
-        for client in node.connection_ids.values():
+        if not peers:
+            # If no specific peers are provided, use all connected nodes
+            peers = node.all_connected 
+
+        for client in peers:
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
-                print("using stream", stream_id)
+                client.stream_prefix[stream_id] = self._prefix
+                client.stream_buffer[stream_id] = b""
                 data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
 
                 transmitted_count += 1
@@ -73,7 +82,7 @@ class BlockRequest(NetworkProtocol):
                 responses.append(None)
                 logger.error("Failed to transmit state request", error=e)
 
-        logger.info(
+        logger.debug(
             "Block request transmission completed",
             transmitted_to=transmitted_count,
         )
@@ -84,78 +93,78 @@ class BlockRequest(NetworkProtocol):
         """Process Block Request"""
         buffer = server.stream_buffer[stream_id][1:]
 
-        try:
-            from jam.settings import settings
-            from jam.block.block import Block
+        from jam.settings import settings
+        from jam.block.block import Block
 
-            logger.debug("Received block request", stream_id=stream_id, buffer_size=len(buffer))
+        data = CE128Data.decode(buffer[4:])
 
-            data = CE128Data.decode(buffer)
+        logger.debug(
+            "Processing block request",
+            stream_id=stream_id,
+            header_hash=data.header.hex(),
+            direction=data.dir,
+            max_blocks=data.max_blocks,
+        )
 
-            logger.info(
-                "Processing block request",
-                stream_id=stream_id,
-                header_hash=data.header,
-                direction=data.dir,
-                max_blocks=data.max_blocks,
-            )
+        # Get the start block
+        start_block = Block.load(data.header, settings.main_db)
+        if not start_block:
+            logger.info("Block not found", hh=data.header.hex()[:16]+"...")
+            server.stream_and_close(b"", stream_id)
+            return
 
-            # TODO - Here we assume no gaps blocks, which is likely incorrect
-            # To be thought upon
+        start_timeslot = start_block.header.slot
+        if data.dir == Direction.AscExc:
+            start_key = Block.get_storage_key_slot(start_timeslot + 1)
+            end_key = Block.get_storage_key_slot(TimeSlot(2**32 - 1))
+            limit = int(data.max_blocks)
+        else:
+            start_key = Block.get_storage_key_slot(TimeSlot(0))
+            end_key = Block.get_storage_key_slot(start_timeslot)
+            limit = 2**32 - 1 
 
-            # Get the start block
-            start_block = Block.load(data.header, settings.main_db)
-            start_timeslot = start_block.header.slot
-            latest = Finality.load_latest(settings.main_db)
 
-            if data.dir == Direction.AscExc:
-                _range = range(
-                    start_timeslot + 1,
-                    min(
-                        int(latest.header.slot),
-                        int(start_timeslot) + int(data.max_blocks),
-                    )
-                    + 1,
-                )
+        hhs = settings.main_db.get_range(
+            start_key, 
+            end_key,
+            limit=limit
+        )
+
+        # If desc, take last max_blocks
+        if data.dir == Direction.DesInc:
+            hhs = dict(list(hhs.items())[-data.max_blocks:])
+
+        # Get all header hashes in between
+        all_blocks = []
+        for hh in hhs.values():
+            _data = settings.main_db.get(Block.get_storage_key_block(hh))
+            if _data:
+                all_blocks.append(Block.decode(_data))
             else:
-                _range = range(
-                    start_timeslot,
-                    max(0, int(start_timeslot) - int(data.max_blocks)),
-                    -1,
-                )
+                logger.error("Block not found against recorded header_hash", header_hash=hh.hex())
+                break
 
-            # Get all header hashes in between
-            all_blocks = TypedVector[Block]([])
-            hh = data.header
-            while hh != HeaderHash(32) and len(all_blocks) != int(data.max_blocks):
-                _block = Block.decode(settings.main_db.get(Block.get_storage_key_block(hh)))
-                if _block:
-                    all_blocks.append(_block)
-                    hh = _block.header.parent
-                else:
-                    logger.error(
-                        "Block not found against recorded header_hash",
-                        header_hash=_header_hash,
-                        timeslot=ts,
-                    )
 
-            blocks_enc = all_blocks.encode()
-            server.stream_and_close(stream_id=stream_id, message=self._prefix.encode() + blocks_enc)
-
-            logger.info(
-                "Blocks request completed successfully. Closed stream",
-                stream_id=stream_id,
-                len=len(blocks_enc),
-            )
-
-        except Exception as e:
-            logger.error(
-                "Error processing block request",
-                stream_id=stream_id,
-                buffer_size=len(buffer),
-                error=str(e),
-                error_type=type(e).__name__,
-            )
+        # It has to be an array and not a vector 
+        msg = TypedArray[Block, len(all_blocks)](all_blocks).encode()
+        data = U32(len(msg)).encode() + msg
+        
+        CHUNK_SIZE = 1200 
+        offset = 0
+        # Manually chunk it up, aioquic twrow invalid payload error 
+        while offset < len(data):
+            chunk = data[offset: offset+CHUNK_SIZE]
+            if len(chunk) < CHUNK_SIZE:
+                server.stream_and_close(chunk, stream_id)
+            else:
+                server.stream_and_keep_open(chunk, stream_id)
+            offset += len(chunk)
+        
+        logger.debug(
+            "Blocks request completed successfully. Closed stream",
+            stream_id=stream_id,
+            len=len(all_blocks),
+        )
 
     def res_intercept(self, stream_id: int, client: NodeConnection):
         """Intercept Acknowledgement"""
@@ -163,11 +172,14 @@ class BlockRequest(NetworkProtocol):
 
         buffer = client.stream_buffer[stream_id]
 
-        logger.info("Block request ack received", stream_id=stream_id, buffer_size=len(buffer))
+        logger.debug("Block request ack received", stream_id=stream_id, buffer_size=len(buffer))
 
-        try:
-            data = TypedVector[Block].decode(buffer[1:])
-            return data
-        except Exception as e:
-            logger.error(NetworkingErrorCode.BAD_RESPONSE)
-            return None
+        # try:
+        b_len = U32.decode(buffer)
+        blocks = []
+        offset = 0
+        while offset < b_len:
+            data, off_ = Block.decode_from(buffer[4:], offset)
+            offset += off_
+            blocks.append(data)
+        return blocks 

@@ -1,6 +1,7 @@
 from typing import Self
 
 from jam.block.errors import BlockError, BlockErrorCode
+from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.utils.constants import EPOCH_LENGTH
 from tsrkit_types.struct import structure
 from rockstore import RockStore
@@ -69,7 +70,9 @@ class Block:
 
     @staticmethod
     def get_storage_key_slot(slot: TimeSlot) -> bytes:
-        return Hash.blake2b("TIMESLOT_TO_HH".encode() + slot.encode())
+        val = "TIMESLOT_TO_HH".encode() + slot.encode()
+        val += bytes(32 - len(val))
+        return val
 
     def save(self, db: RockStore) -> HeaderHash:
         """
@@ -97,17 +100,11 @@ class Block:
     def validate(self) -> bool:
         return self.header.validate() and self.extrinsic.validate(self.header)
 
-    def produce(self, time_slot: TimeSlot):
-        from jam.settings import settings
-        from jam.finality.finality import Finality
-
-        parent_block = Finality.load_latest(settings.main_db)
+    def produce(self, time_slot: TimeSlot, ticket: TicketEnvelope|None) -> "Block":
         extrinsic = Extrinsic.from_collected()
-        # Produce a new header from previous header
-        header = parent_block.header.produce(time_slot, extrinsic, None)
 
-        header.validate()
-        extrinsic.validate(header)
+        # Produce a new header from previous header
+        header = self.header.produce(time_slot, extrinsic, ticket)
 
         block = Block(header=header, extrinsic=extrinsic)
 

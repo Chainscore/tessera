@@ -16,7 +16,7 @@ async def run_pj_command(node_id: int):
     if hasattr(os.environ, "RUST_LOG"):
         envs = f"RUST_LOG={os.environ["RUST_LOG"]}"
 
-    command = f"export {envs} && exec {binary_path}/polkajam run --dev-validator {node_id} --temp"
+    command = f"export {envs} && exec {binary_path}/polkajam run --dev-validator {node_id} --temp --rpc-port {19800+int(node_id)}"
 
     try:
         proc = await asyncio.create_subprocess_shell(

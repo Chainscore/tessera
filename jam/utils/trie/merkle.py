@@ -121,8 +121,12 @@ class StateTrie:
         the branch nodes on its path, rewiring hashes upward to the root.
         Returns the new root hash.
         """
+        encoded_leaf = encode_leaf(key, new_value)
+        node_hash = NodeHash(Hash.blake2b(bytes(encoded_leaf)))
+
+ 
         self.root_hash = self._reconstruct_root(
-            self.root_hash, Node(encoded=encode_leaf(key, new_value))
+            self.root_hash, Node(encoded=encoded_leaf)
         )
         return self.root_hash
 
