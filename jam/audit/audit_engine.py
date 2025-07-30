@@ -10,6 +10,9 @@ from jam.block.block import Block
 from jam.finality.finality import Finality
 from jam.logging import get_logger
 from jam.state.state import State
+from jam.audit.utils import Utils
+from jam.types.protocol.core import ValidatorIndex
+
 
 from jam.types.audit.tranche import TrancheIndex, Tranche, TrancheState, AuditRecord
 from jam.types.protocol.crypto import HeaderHash
@@ -17,6 +20,8 @@ from jam.types.state.rho import WorkReportState
 from jam.types.work.report import WorkReport, WorkReportHash, WorkReports
 from jam.storage.tranche_store import tranche_store, TrancheStore
 from jam.utils.constants import CURRENT_TIME, SLOT_PERIOD, AUDIT_PERIOD, VALIDATOR_COUNT
+from jam.network.protocols.ce_144 import Announcement, NoShow
+
 
 # Logger for Auditing module
 logger = get_logger("audit")
@@ -29,12 +34,10 @@ class AuditEngine:
 
     @classmethod
     async def run(cls, block: Block, new_wr: WorkReports):
-        from jam.network.node import node
         from jam.settings import settings
 
-        header_hash = block.header.hash()
-
         auditor = Auditor()
+        utils = Utils()
 
         # -------------- Fetch Last Finalized Block --------------
         last_finalized_block = Finality.load_final(settings.main_db)
@@ -44,9 +47,35 @@ class AuditEngine:
             logger.info("Block must be finalized or invalid.")
             return
 
+        # ------------- Initialize tranche and processed --------------
+        tranche_index = TrancheIndex(0)
+
+        # ----------------------------- initialized state for node and saved -----------------------
+        tranche_zero = Tranche(
+            header_hash=header_hash,
+            tranche_index=tranche_index
+        )
+
+        unaudited_list = List[Option[WorkReport]]([])
+        announcements = Dictionary[ValidatorIndex, Announcement]({})
+        valid_set = TypedVector[WorkReport]([])
+        invalid_set = TypedVector[WorkReportHash]([])
+        judgments = Dictionary[WorkReportHash, AuditRecord]({})
+
+        tranche_state = TrancheState(
+            unaudited_list=unaudited_list,
+            announcements=announcements,
+            judgments=judgments,
+            valid_set=valid_set,
+            invalid_set=invalid_set,
+        )
+
+        tranche_store.save_state(tranche=tranche_zero, tranche_state=tranche_state)
+
         # -------------- Fetch Pending Reports --------------
         prior_state = State.load(block.header.parent)
         auditable_reports = List[Option[WorkReport]]([])
+
         for r in prior_state.rho:
             report_state: (WorkReportState | Null) = r.unwrap()
             if isinstance(report_state, WorkReportState) and r.report in new_wr:
@@ -54,19 +83,18 @@ class AuditEngine:
             else:
                 auditable_reports.append(Option[WorkReport](Null))
 
+        tranche_store.add_to_unaudited(tranche=tranche_zero, unaudit_reports=auditable_reports)
+
         while True:
-            tranche_index = TrancheIndex(
-                (CURRENT_TIME() - (SLOT_PERIOD * int(block.header.slot))) // AUDIT_PERIOD
-            )
+            tranche_index = utils.tranche_index(block=block)
 
             if tranche_index == TrancheIndex(0):
                 tranche_state = TrancheState.empty()
                 tranche_state.unaudited_list = TypedVector[Option[WorkReport]](auditable_reports)
 
-
             else:
                 prev_tranche = Tranche(TrancheIndex(tranche_index - 1), header_hash)
-                prev_state = tranche_store._get_state(prev_tranche)
+                prev_state = tranche_store.get_state(prev_tranche)
 
                 # Validation logic
                 old_queue = prev_state.unaudited_list
@@ -142,8 +170,6 @@ class AuditEngine:
             tranche_store._save_state(curr_tranche, tranche_state)
             asyncio.create_task(auditor.audit(block, tranche_index))
 
-            # Check for noshows at the end
-            break
 
         """
         TODO:
@@ -166,3 +192,79 @@ class AuditEngine:
             at the end of tranche / just at start of new tranche we have to check whether the report is audited or not.
             this must be done by checking that there must not be any unaudited report left. 
         """
+
+    @classmethod
+    def assigned_report(cls, block: Block, tranche: Tranche):
+        from jam.network.node import node
+
+        audit = Utils()
+
+        assigned_wr = List[WorkReport]([])
+
+        tranche_index = tranche.tranche_index
+        header_hash = tranche.header_hash
+        tranche_state = tranche_store.get_state(tranche)
+        reports_queue = tranche_state.unaudited_list
+
+        entropy = block.header.entropy_source
+
+        if tranche_index == 0:
+
+            assigned_wr = audit.verifiable_random_selection(
+                entropy_source=entropy,
+                bandersnatch_key=node.b_key,
+                unaudited_report=reports_queue,
+                tranche=tranche
+            )
+
+            return assigned_wr
+
+        else:
+
+            pre_tranche=Tranche(
+                header_hash=header_hash,
+                tranche_index=tranche_index - TrancheIndex(1)
+            )
+
+            state = tranche_store.get_state(tranche=pre_tranche)
+            records = state.records
+
+            no_show = TypedVector[NoShow]([])
+
+            for wr_hash, record in records.items():
+                announce = len(record.announces)
+                true = len(record.true_votes)
+                false = len(record.false_votes)
+                no_votes = len(record.no_votes)
+
+                if announce > true + false and no_votes != 0:
+                    for v in AuditRecord.no_votes:
+                        ann_list = tranche_store.get_set_announcement(
+                            tranche=Tranche(
+                                header_hash=header_hash,
+                                tranche_index=tranche_index - TrancheIndex(1)
+                            ),
+                            validator_index=v
+                        )
+                        if v not in [k for k, _ in no_show]:
+                            no_show.append(NoShow(
+                                validator_index=v,
+                                announcement=ann_list)
+                            )
+                        else:
+                            logger.info("Validator announcement already exists")
+
+                    while len(no_show) != 0:
+                        tranche = Tranche(
+                            header_hash=header_hash,
+                            tranche_index=tranche_index
+                        )
+
+            assigned_wr = audit.vrf_tranche(
+                header_hash=tranche.header_hash,
+                no_shows=no_show,
+                tranche=tranche,
+                entropy=entropy
+            )
+
+            return assigned_wr

@@ -1,32 +1,28 @@
 from typing import List, Tuple
 
-from tsrkit_types import structure, Null, TypedVector, Bytes, Uint, Option, U8, U32
+from tsrkit_types import structure, Null, TypedVector, Bytes, Uint, Option
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.audit.assembler import Assembler
-from jam.block import Block
-from jam.network.utils.shards import get_si, get_vi
-from jam.state.state import State
-from jam.types.protocol.core import CoreIndex, TimeSlot, ValidatorIndex
+from jam.types.protocol.core import CoreIndex
 from jam.types.work.report import WorkReport
 from jam.utils.constants import (
     CURRENT_TIME,
     SLOT_PERIOD,
     AUDIT_PERIOD,
     SIGNING_CONTEXTS,
-    VALIDATOR_COUNT, CORE_COUNT, UNAVAILABLE_WORK_EXPIRY,
 )
 from jam.utils.shuffle import shuffle
-from jam.types.protocol.crypto import Hash, BandersnatchPublic
+from jam.types.protocol.crypto import Hash, BandersnatchPublic, HeaderHash
+from jam.block.block import Block
 from jam.types import BandersnatchVrfSignature, Ed25519Signature
-from jam.types.work.package import WorkPackage
-from jam.types.audit.tranche import TrancheIndex
+from jam.types.audit.tranche import TrancheIndex, Tranche
 from jam.block.header import Header
+from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR
+from jam.network.protocols.ce_144 import NoShow, AssignedReport
 
-# from jam.types.state.rho import OptionalWorkReportState, Rho
 from jam.logging import get_logger
-# from jam.audit.utils import sign_bandersnatch, audit_refine
 from py_ark_vrf import prove_ietf, vrf_output
 
 # Module-specifier logger
@@ -39,7 +35,7 @@ class Utils:
     def vrf_signature_bandersnatch(
         entropy_source: BandersnatchVrfSignature,
         bandersnatch_key: BandersnatchPublic,
-        tranche_index: TrancheIndex = None,
+        tranche: Tranche,
         w_r: WorkReport = None,
     ) -> BandersnatchVrfSignature:
         """
@@ -49,22 +45,23 @@ class Utils:
         Args:
             entropy_source: Header's entropy-yielding vrf signature H_v
             bandersnatch_key: Validator(Node) bandersnatch key
-            tranche_index: Current tranche index
+            tranche: Current tranche
             w_r: Work Report
 
         Return:
             Valid Bandersnatch Signature
 
 
-        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1ec1001e0001?v=0.7.0
+        Source: https://graypaper.fluffylabs.dev/#/1c979cb/1eb2001ed800?v=0.7.1
         """
+        tranche_index = tranche.tranche_index
 
-        entropy_vrf_proof = BandersnatchVrfSignature(prove_ietf(entropy_source.encode(), input_data=b"", aux=b""))
+        entropy_vrf_proof = BandersnatchVrfSignature(proof=vrf_output(entropy_source.encode()))
 
         context = SIGNING_CONTEXTS["audit"] + entropy_vrf_proof
 
         if tranche_index != TrancheIndex(0):
-            context += Bytes(Hash.blake2b(w_r.encode())) + tranche_index
+            context += Bytes(Hash.blake2b(w_r.encode())) + Bytes(tranche_index)
 
         signature = prove_ietf(
                 bandersnatch_key,
@@ -78,36 +75,35 @@ class Utils:
         cls,
         entropy_source: BandersnatchVrfSignature,
         bandersnatch_key: BandersnatchPublic,
-        pre_audit_report: List[Option[WorkReport]],
-        tranche_index: TrancheIndex
+        unaudited_report: List[Option[WorkReport]],
+        tranche: Tranche
     ) -> List[Tuple[CoreIndex, WorkReport]]:
         """
         Equation: 17.5, 17.6
         Here in this function we just take q(report_to_be_audit function above) , shuffled it and get initial 10 Work Reports assign to validator.
 
         Args:
-            entropy_source:
-            bandersnatch_key:
-            pre_audit_report:
-            tranche_index:
+            entropy_source: Header's entropy-yielding vrf signature H_v
+            bandersnatch_key: Validator(Node) bandersnatch key
+            unaudited_report: q (work-reports which we may be required to audit)
+            tranche: Current tranche index
 
         Return:
             Random initial 10 not Null Work Reports
 
-        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e0a011e5601?v=0.7.0
+        Source: https://graypaper.fluffylabs.dev/#/1c979cb/1efb001e4701?v=0.7.1
         """
 
-        entropy = vrf_output(cls.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=bandersnatch_key, tranche_index=tranche_index, w_r=None))
-        print("ENTROPY ENTROPY ENTROPY ENTROPY ENTROPY ENTROPY", len(entropy))
+        entropy = vrf_output(cls.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=bandersnatch_key, tranche=tranche, w_r=None))
 
         # ---------------------------- mapping q's reports as tuple[CoreIndex, Option[WorkReport]] ---------------------
         core_report = list[Tuple[CoreIndex, Option[WorkReport]]]([])
-        for c, w_r in enumerate(pre_audit_report):
+        for c, w_r in enumerate(unaudited_report):
             core_report.append((CoreIndex(c), w_r))
 
         # ---------------------------------- Array same as size of core_report and shuffle -----------------------------
         array_index = TypedVector[Uint[32]]([])
-        for i in range(len(pre_audit_report)):
+        for i in range(len(unaudited_report)):
             array_index.append(Uint[32](i))
 
         # ------------------------- shuffle function that shuffle array based on entropy (for randomness) --------------
@@ -119,14 +115,14 @@ class Utils:
 
         # ------------------------------------------ take initial 10 reports -------------------------------------------
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-        shuffle_not_null = list[Tuple[CoreIndex, WorkReport]]([(c, w) for (c, w) in updated_array if w is not Null][:4])
+        shuffle_not_null = list[Tuple[CoreIndex, WorkReport]]([(c, w) for (c, w) in updated_array if w is not Null][:10])
 
         return shuffle_not_null
 
     @staticmethod
-    def get_tranche_index(slot: TimeSlot) -> TrancheIndex:
+    def tranche_index(block: Block) -> TrancheIndex:
         """
-        Equation: 17.8
+        Equation: 17.7
         This function calculated the tranches based on the timeslot, Current time
 
         Args:
@@ -135,15 +131,17 @@ class Utils:
         Return:
             Current Tranches index
 
-        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e74011e8401?v=0.7.0
+        Source: https://graypaper.fluffylabs.dev/#/1c979cb/1e51011e6501?v=0.7.1
         """
 
-        tranche_index =  TrancheIndex((CURRENT_TIME() - (SLOT_PERIOD * int(slot))) // AUDIT_PERIOD)
+        tranche_index =  TrancheIndex((CURRENT_TIME() - (SLOT_PERIOD * int(block.header.slot))) // AUDIT_PERIOD)
         return tranche_index
 
     @staticmethod
     def validator_announcement_statement(
-        assign_report: List[Tuple[CoreIndex, WorkReport]], header: Header, tranche: U8
+            assign_report: List[Tuple[CoreIndex, WorkReport]],
+            header: Header,
+            tranche: Tranche
     ) -> Ed25519Signature:
         """
         Equations: 17.9, 17.10, 17.11
@@ -152,20 +150,20 @@ class Utils:
         Args:
             assign_report: Assigned Reports to the validator
             header: latest Block's Header
-            tranche: Current tranche index
+            tranche: Current tranche
 
         Returns:
             valid Ed25519 Signature
 
-        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1e9e011eec01?v=0.7.0
+        Source: https://graypaper.fluffylabs.dev/#/1c979cb/1e7a011ec901?v=0.7.1
         """
-
         from jam.settings import settings
-        from jam.network.node import node
+
+        tranche_index = tranche.tranche_index
 
         signing_context = Bytes(SIGNING_CONTEXTS["announce"])
 
-        header_hash = Bytes(Hash.blake2b(header.encode()))
+        header_hash = HeaderHash(Hash.blake2b(header.encode()))
 
         set_value: set[Bytes] = set()
 
@@ -178,12 +176,87 @@ class Utils:
         for item in set_value:
             set_encode = item.encode() + set_encode
 
-        message = signing_context + Bytes(tranche) + set_encode + header_hash
+        message = signing_context + Bytes(tranche_index) + set_encode + header_hash
 
         ed25519_pvt = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
         signature = ed25519_pvt.sign(message)
 
         return Ed25519Signature(signature)
+
+    @classmethod
+    def vrf_tranche(
+            cls,
+            header_hash: HeaderHash,
+            no_shows: TypedVector[NoShow],
+            tranche: Tranche,
+            entropy: BandersnatchVrfSignature
+    ) -> TypedVector[AssignedReport]:
+        """
+        Equation: 17.14, 17.15
+        This function define a_n beyond the initial tranche through a new vrf which acts upon the set of no-show validators (for n (tranche) > 0).
+
+        Args:
+            header_hash: Current Tranche Header hash
+            no_shows: List of Work Reports ( No judgment or Negative judgment)
+            tranche: Current Tranche
+            entropy: Entropy source
+
+        Return:
+            Assigned report for
+
+        Source: https://graypaper.fluffylabs.dev/#/1c979cb/1f3d001fb900?v=0.7.1
+        """
+        from jam.network.node import node
+        from jam.storage.tranche_store import tranche_store
+        from jam.storage.da.reports import ReportsDA
+        from jam.settings import settings
+        from jam.network.protocols.ce_144 import AssignedReport
+
+        d3l = settings.d3l
+
+        assigned_wr = TypedVector[AssignedReport]([])
+        tranche_index = tranche.tranche_index
+
+        for no_show in no_shows:
+            for c, wr_hash in no_show.announcement.assigned_report:
+
+                # FETCH WORK-REPORT CORRESPONDING OF WORK-REPORT-HASH
+                rep_da = ReportsDA(d3l)
+                wr = rep_da.get(wr_hash=wr_hash)
+
+                random_quantity = cls.vrf_signature_bandersnatch(
+                    bandersnatch_key=node.b_key,
+                    entropy_source=entropy,
+                    tranche=tranche,
+                    w_r=wr
+                )
+
+                # HERE WE CHECK VRF CONDITION
+                vrf_check = (VALIDATOR_COUNT / (256 * AUDIT_BIAS_FACTOR)) * vrf_output(random_quantity)[1:]
+
+                # NEGATIVE AND NO-JUDGMENT FOR THAT WORK REPORT
+                last_tranche_idx = tranche_index - TrancheIndex(1)
+
+                tranche = Tranche(
+                    tranche_index=last_tranche_idx,
+                    header_hash=header_hash
+                )
+
+                state = tranche_store.get_state(tranche=tranche)
+
+                records = state.judgments.get(wr_hash)
+
+                # Count of no-judgment and negative judgment for that work_report
+                m_n = len(records.announces) - len(records.true_votes)
+
+                if vrf_check < m_n:
+                    assigned_report = AssignedReport(
+                        core_index=c,
+                        report_hash=wr_hash
+                    )
+                    assigned_wr.append(assigned_report)
+
+        return assigned_wr
 
     @staticmethod
     async def refine(wr: WorkReport) -> bool:
@@ -191,12 +264,13 @@ class Utils:
         Equation: 17.17
         Rebuild bundle for given work report, refine it and compare reports
 
-        Source:
-            https://graypaper.fluffylabs.dev/#/38c4e62/1f2f011f6c01?v=0.7.0
         Args:
             wr: Work Report
+
         Returns:
             Validation Result (Bool)
+
+        Source: https://graypaper.fluffylabs.dev/#/1c979cb/1fde001f1b01?v=0.7.1
         """
 
         wr_hash = Hash.blake2b(wr.encode())
@@ -231,7 +305,7 @@ class Utils:
     @staticmethod
     def judgment_signature(wr: WorkReport, refine: bool) -> Bytes[96]:
         """
-        Equations: 17.18
+        Equations: 17.17
         This function just build the ed25519 signature(Judgment Signature) for the particular work report.
 
         Args:
@@ -241,7 +315,6 @@ class Utils:
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f6f011f9801?v=0.7.0
 
         """
-        from jam.network.node import node
         from jam.settings import settings
 
         if refine:

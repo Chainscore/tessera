@@ -126,52 +126,6 @@ class TrancheEngine:
 
             judgments = zero_tranche.judgments
 
-            no_show = TypedVector[NoShow]([])
-
-            if tranche_state is not None:
-                # Step 2: Loop through each WorkReportHash and JudgmentRecord
-                wr_cnt = 0
-                for wr_hash, judgment_record in judgments.items():
-                    announce = len(judgment_record.announces)
-                    true =  len(judgment_record.true_votes)
-                    false = len(judgment_record.false_votes)
-                    no_votes = len(judgment_record.no_votes)
-
-                    if announce == true and false == 0:
-                        wr_cnt += 1
-                        continue
-                    elif announce > true + false and no_votes != 0:
-                        for v in judgment_record.no_votes:
-                            ann_list = tranche_store.get_set_announcement(
-                                tranche=Tranche(
-                                    header_hash=header_hash,
-                                    tranche_index=tranche_index-TrancheIndex(1)
-                                ),
-                                validator_index=v
-                            )
-                            if v not in [k for k, _ in no_show]:
-                                no_show.append(NoShow(
-                                    validator_index= v,
-                                    announcement= ann_list
-                                    )
-                                )
-                            else:
-                                logger.info("Validator announcement already exists")
-
-                        while len(no_show) != 0:
-                            tranche = Tranche(
-                                header_hash=header_hash,
-                                tranche_index=tranche_index
-                            )
-                            updated_no_show = self.tranche_loop(tranche=tranche, no_show=no_show)
-
-
-                    if wr_cnt == CORE_COUNT:
-                        print("block about to be audit")
-
-
-            else:
-                print("TrancheState not found for this tranche.")
 
 
 

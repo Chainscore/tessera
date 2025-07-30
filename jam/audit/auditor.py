@@ -31,47 +31,17 @@ class Auditor:
     @classmethod
     async def audit(cls, block: Block, tranche: Tranche):
         from jam.audit.utils import Utils
-
-        # from jam.state.state import state
-        from jam.settings import settings
-        from jam.network.node import node
+        from jam.audit.audit_engine import AuditEngine
         from jam.storage.tranche_store import tranche_store, Tranche
 
         audit = Utils()
-
-        tranche_idx = int(tranche.tranche_index)
-        header_hash = tranche.header_hash
-
-        tranche_state = tranche_store._get_state(tranche)
-        reports_queue = tranche_state.unaudited_list
-
-        # TODO: Calculate only if tranche > 0
-        prev_tranche = tranche
-        prev_tranche.tranche_index = TrancheIndex(tranche_idx - 1)
-        prev_tranche_state = tranche_store._get_state(prev_tranche)
-
-        entropy = block.header.entropy_source
+        engine = AuditEngine()
 
         try:
-            # Pre Audit Reports
-            logger.info(f"Fetching auditable reports per core")
-            if tranche_idx == 0:
 
-                assigned_reports = audit.verifiable_random_selection(entropy_source=entropy,
-                                                                     bandersnatch_key=node.b_key,
-                                                                     pre_audit_report=reports_queue)
+            assigned_reports = engine.assigned_report(block=block, tranche=tranche)
 
-                logger.info(
-                    f"Checking assign report length {len(assigned_reports)} for each validator"
-                )
-
-            else:
-                assigned_reports = WorkReports([])
-
-            tranche_state.assigned_wrs = assigned_reports
-            asyncio.create_task(cls.audit_announcement(assign_wrs=assigned_reports, tranche_idx=tranche_idx))
-            asyncio.create_task(cls.judgment_process(assign_wrs=assigned_reports, tranche_idx=tranche_idx))
-
+            asyncio.create_task(cls.announce_judgment(assign_wrs=assigned_reports, tranche=tranche))
 
         except Exception as e:
             logger.error(

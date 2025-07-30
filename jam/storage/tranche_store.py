@@ -28,7 +28,7 @@ class TrancheStore:
         """Store TrancheState under its tranche key automatically."""
         self._tranche_store[tranche] = state
 
-    # ----------------------------------- RELATED TRANCHE --------------------------------------------------------------
+    # ----------------------------------- RELATED TRANCHE (HEADER AND TRANCHE_INDEX) --------------------------------------------------------------
 
     def get_tranche_index(self, header_hash: HeaderHash):
         for tranche in self._tranche_store:
@@ -45,6 +45,7 @@ class TrancheStore:
         else:
             logger.warning("Attempted to delete non-existent tranche", tranche=tranche.to_json())
 
+
     # ---------------------------------- UNAUDITED LIST -----------------------------------
     def add_to_unaudited(self, tranche: Tranche, unaudited_reports: list[Option[WorkReport]]):
         state = self.get_state(tranche)
@@ -53,7 +54,6 @@ class TrancheStore:
             state.unaudited_list = unaudited_reports
             self.save_state(tranche=tranche, state=state)
             return
-
 
         # for wr in p_a_r:
         #     if wr == Null:
@@ -67,8 +67,6 @@ class TrancheStore:
         # self.save_state(tranche, state)
         # logger.info("Added work report to unaudited list", wr_hash=WorkReportHash)
 
-
-
     def get_unaudit_list(self, tranche: Tranche):
         state = self._tranche_store.get(tranche)
         if state:
@@ -76,8 +74,7 @@ class TrancheStore:
         else:
             logger.info("Empty unaudit list")
 
-
-
+    # ----------------------------------------------------------------------------------------
 
     def rm_from_unaudited(self, tranche: Tranche, wr_hash: WorkReportHash):
         state = self.get_state(tranche)
