@@ -1,4 +1,4 @@
-from jam.clihelpers.helpertexts import help_theme
+from jam.utils.clihelpers .helpertexts import help_theme
 # from jam.helptexts.validator_index import help_validator_index
 # from jam.helptexts.temp_db import help_temp_db
 

@@ -1,19 +1,27 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-
 a = Analysis(
     ['jam/cli.py'],
     pathex=[],
     binaries=[],
-    datas=[('dev-spec.json', '.'), ('genesis.json', '.'), ('envs', 'envs')],
+    datas=[
+        ('dev-spec.json', '.'),
+        ('genesis.json', '.'),
+        ('envs', 'envs'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['pytest', 'black', 'sphinx', 'flake8', 'isort', 'pre_commit'],
+    excludes=[
+    'tkinter', 'unittest', 'html', 'http', 'xml',
+    'babel', '__pycache__', 'sphinx', 'pytest', 'pytest_asyncio',
+    'black', 'isort', 'pre_commit', 'pyinstaller', 'flake8',
+    ],
     noarchive=False,
-    optimize=0,
+    optimize=1,
 )
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -25,7 +33,7 @@ exe = EXE(
     name='Tessera',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,
+    strip=True,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
