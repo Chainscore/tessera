@@ -1,6 +1,5 @@
 import asyncio
-from typing import cast, TYPE_CHECKING, Tuple
-from wsgiref.validate import validator
+from typing import TYPE_CHECKING
 
 from jam.utils.gather import gather_with_exceptions
 
@@ -28,14 +27,14 @@ logger = get_logger("network")
 
 
 @structure
-class Assign:
+class AssignedReport:
     core_index: CoreIndex
     report_hash: WorkReportHash
 
 
 @structure
 class Announcement:
-    assigned_report: TypedVector[Assign]
+    assigned_reports: TypedVector[AssignedReport]
     ed25519_signature: Ed25519Signature
 
 
@@ -59,7 +58,7 @@ class SubsequentTrancheEvidence:
 @structure
 class TrancheAnnouncement:
     header_hash: HeaderHash
-    tranches: TrancheIndex
+    tranche: TrancheIndex
     announcement: Announcement
 
 class Evidence(Choice):
@@ -109,7 +108,7 @@ class AuditAnnouncement(NetworkProtocol):
     async def transmit(self, node: Node, data: CE144Data):
         """Transmit Announcement of assign Work report for auditing from Auditor to Other Validators(Auditors)"""
 
-        from jam.operations.tranche_store import tranche_store, Tranche
+        from jam.storage.tranche_store import tranche_store, Tranche
 
 
         len_a = data.len_a.encode()
@@ -189,7 +188,7 @@ class AuditAnnouncement(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: QuicProtocol):
         """Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
-        from jam.operations.tranche_store import tranche_store, Tranche
+        from jam.storage.tranche_store import tranche_store, Tranche
 
         v_r: dict[ValidatorIndex, set[WorkReportHash]] = {}
 

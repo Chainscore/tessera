@@ -27,10 +27,10 @@ py-ecc = "^8.0.0"
 tsrkit-types = "^0.1.8"
 rockstore = "^0.1.2"
 reed-solomon-leopard = "^0.2.1"
-py-ark-vrf = {path = "../py-ark-vrf"}
 python-dotenv = "^1.1.0"
 asyncio = "^3.4.3"
 dot_ring = { path = "../dot-ring", develop = true }
+py-ark-vrf = "^0.1.3"
 #py-ark-vrf = { path = "../py-ark-vrf", develop = true }
 deepdiff = "^8.5.0"
 

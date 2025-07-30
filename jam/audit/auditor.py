@@ -1,19 +1,15 @@
 import asyncio
-import math
-from typing import List, Tuple, cast
+from typing import List, Tuple
 
 from tsrkit_types import structure, U8, U32, TypedVector, Option, Null
 
 from jam.block import Block
-from jam.types import Hash, BandersnatchVrfSignature, ValidatorIndex, Ed25519Signature
-from jam.types.protocol.core import CoreIndex, EpochIndex
+from jam.types import ValidatorIndex, Ed25519Signature, WorkReports
 
 from jam.finality.finality import Finality
-from jam.audit.q import sample_work_reports_with_nulls, get_work_package_by_rep_hash
 from jam.state.state import State
-from jam.types import OptionalWorkReportState
 
-from jam.types.audit.tranche import TrancheIndex
+from jam.types.audit.tranche import TrancheIndex, Tranche
 from jam.types.protocol.core import CoreIndex, EpochIndex
 from jam.types.protocol.crypto import Hash, BandersnatchVrfSignature
 from jam.types.state.rho import WorkReportState
@@ -29,63 +25,47 @@ logger = get_logger("auditor")
 @structure
 class Auditor:
     @classmethod
-    async def audit(cls, block: Block, newly_avail_wrs: List[Option[WorkReport]], tranche_idx: TrancheIndex = TrancheIndex(0)):
-        from jam.audit.audit import Utils
+    async def audit(cls, block: Block, tranche: Tranche):
+        from jam.audit.utils import Utils
 
         # from jam.state.state import state
         from jam.settings import settings
         from jam.network.node import node
-        from jam.operations.tranche_store import tranche_store, Tranche
+        from jam.storage.tranche_store import tranche_store, Tranche
 
 
         audit = Utils()
 
-        # -------------- Fetch Last Finalized Block --------------
-        last_finalized_block = Finality.load_final(settings.main_db)
-        header_hash = block.header.hash()
+        tranche_idx = int(tranche.tranche_index)
+        header_hash = tranche.header_hash
 
-        if block.header.slot < last_finalized_block.header.slot:
-            logger.info("Block must be finalized or invalid.")
-            return
+        tranche_state = tranche_store._get_state(tranche)
+        reports_queue = tranche_state.unaudited_list
 
-        # -------------- Fetch Pending Reports --------------
-        prior_state = State.load(block.header.parent)
-        auditable_reports = List[Option[WorkReport]]([])
-        for r in prior_state.rho:
-            report_state: (WorkReportState | Null) = r.unwrap()
-            if isinstance(report_state, WorkReportState) and r.report in newly_avail_wrs:
-                auditable_reports.append(Option(r.report))
-            else:
-                auditable_reports.append(Option(Null))
+        # TODO: Calculate only if tranche > 0
+        prev_tranche = tranche
+        prev_tranche.tranche_index = TrancheIndex(tranche_idx-1)
+        prev_tranche_state =  tranche_store._get_state(prev_tranche)
 
         entropy = block.header.entropy_source
 
         try:
             # Pre Audit Reports
             logger.info(f"Fetching auditable reports per core")
+            if tranche_idx == 0:
 
-            # TODO: Remove this
-            # auditable_reports = audit.fetch_auditable_reports(prior_state, block)
+                assigned_reports = audit.verifiable_random_selection(entropy_source=entropy, bandersnatch_key=node.b_key, pre_audit_report=reports_queue)
 
-            # ---------------------- Update the q in tranche store ------------------------------------
-            tranche = Tranche(
-                tranche_index=tranche_idx,
-                header_hash=header_hash
-            )
+                logger.info(
+                    f"Checking assign report length {len(assigned_reports)} for each validator"
+                )
 
-            tranche_store.add_to_unaudited(tranche=tranche, p_a_r=auditable_reports)
+            else:
+                assigned_reports = WorkReports([])
 
-            # assignment report for auditing to validators
-            logger.info(f"Work report assignment for auditing")
-
-            reports = audit.verifiable_random_selection(entropy_source=entropy, bandersnatch_key=node.b_key, pre_audit_report=auditable_reports)
-
-            logger.info(
-                f"Checking assign report length {len(reports)} for each validator"
-            )
-
-            asyncio.create_task(cls.audit_announcement(assign_wrs=reports, tranche_idx=tranche_idx))
-            asyncio.create_task(cls.judgment_process(assign_wrs=reports, tranche_idx=tranche_idx))
+            tranche_state.assigned_wrs = assigned_reports
+            asyncio.create_task(cls.audit_announcement(assign_wrs=assigned_reports, tranche_idx=tranche_idx))
+            asyncio.create_task(cls.judgment_process(assign_wrs=assigned_reports, tranche_idx=tranche_idx))
 
 
         except Exception as e:
@@ -110,25 +90,25 @@ class Auditor:
                 set of ed21599 signature   [ Eq: 17.9, 17.10, 17.11]
         """
 
-        from jam.audit.audit import Utils
+        from jam.audit.utils import Utils
         from jam.settings import settings
         from jam.network.node import node
 
         audit = Utils()
 
-        # initial rho pending wor reports
+        # initial rho pending work reports
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
         entropy_source = latest_block.header.entropy_source
 
         announcement_sign = audit.validator_announcement_statement(assign_report=assign_wrs, header=header_hash, tranche=U8(0))
 
-        from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, TrancheAnnouncement, FirstTrancheEvidence, Announcement, Assign, Evidence, SubsequentTrancheEvidence, NoShow
+        from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, TrancheAnnouncement, FirstTrancheEvidence, Announcement, AssignedReport, Evidence, SubsequentTrancheEvidence, NoShow
 
         CE144 = AuditAnnouncement()
 
-        assignments = TypedVector[Assign]([
-            Assign(core_index=core_idx, report_hash=Hash.blake2b(r.encode()))
+        assignments = TypedVector[AssignedReport]([
+            AssignedReport(core_index=core_idx, report_hash=Hash.blake2b(r.encode()))
             for core_idx, r in assign_wrs
         ])
 
@@ -149,7 +129,7 @@ class Auditor:
                             validator_index=ValidatorIndex(),
                             # here will come validator index which is announcing for previous reports
                             announcement=Announcement(
-                                assigned_report=assignments,
+                                assigned_reports=assignments,
                                 ed25519_signature=Ed25519Signature(ed25519)
                                 # which will create using the equation 17.9 and tak validator index form mentioned in N-show
                             )
@@ -189,10 +169,10 @@ class Auditor:
 
     @classmethod
     async def judgment_process(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche_idx:TrancheIndex):
-        from jam.audit.audit import Utils
+        from jam.audit.utils import Utils
         from jam.settings import settings
         from jam.network.node import node
-        from jam.operations.tranche_store import tranche_store, Tranche
+        from jam.storage.tranche_store import tranche_store, Tranche
 
 
         audit = Utils()
@@ -200,6 +180,7 @@ class Auditor:
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
 
+        # TODO: Also refine those reports which received negative judgements
 
         # ------ JUDGMENT EPOCH INDEX ------
         slot = latest_block.header.slot

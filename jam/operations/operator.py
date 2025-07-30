@@ -1,10 +1,9 @@
 import asyncio
 import time
-from typing import Callable, List, Tuple
+from typing import List, Tuple
 
 from jam.logging import get_logger
 from .handlers import WPBuilder, assurer, BlockProducer
-from jam.operations.audit_engine import AuditEngine
 from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS
 

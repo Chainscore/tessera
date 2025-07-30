@@ -1,8 +1,7 @@
 import pytest
 from jam.types.protocol.core import TrancheIndex
 from jam.types.protocol.crypto import HeaderHash
-from jam.types.work.report import WorkReport
-from jam.operations.tranche_store import (
+from jam.storage.tranche_store import (
     Tranche,
     TrancheStore,
     JudgmentRecord,

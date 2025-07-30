@@ -46,7 +46,7 @@ from jam.network.protocols.ce_144 import (
     AuditAnnouncement,
     CE144Data,
     Announcement,
-    Assign,
+    AssignedReport,
     Transmit,
     FirstTrancheEvidence,
 )
@@ -185,7 +185,7 @@ transmit = Transmit(
     tranches=Bytes(U8(0)),
     announcement=Announcement(
         assigned_report=TypedVector(
-            [Assign(core_index=CoreIndex(1), report_hash=wr_hash)]
+            [AssignedReport(core_index=CoreIndex(1), report_hash=wr_hash)]
         ),
         ed25519_signature=Ed25519Signature(
             b"\x89\x11\x7f!\x1dsc\x08\xb5\xd9\xc0\xf6\xbd\x0c\xe4\xc5\x01\xaaV\x90u\x05m\r\x00\x14{\xcbAH\xbb\xd0\xfb\xfa\xfc\xb85!\xa3\xdc\xd8z\xfd6E\xeff\x8e\xe2\xb2\xe8\xe0\xac\x0b\rK\xd2\xdbwO\x8aD\xfb\x17x\t\xbd9\xa4\x88\xa6\x88:d\x97\x11\x8eU\x98cD\xe6\x97s\n\x8dH\x16\x9f\x83\xd7jY\xd9F\x00"

@@ -1,24 +1,20 @@
 import asyncio
 import os
-import math
-
 
 import pytest
 
 
 from jam.audit.tranche_engine import TrancheEngine
-from jam.operations.tranche_store import Tranche, TrancheState, JudgmentRecord, TrancheStore, ValidatorList,tranche_store
+from jam.storage.tranche_store import Tranche, TrancheState, JudgmentRecord, ValidatorList,tranche_store
 from jam.types.protocol.core import TrancheIndex, ValidatorIndex
 from jam.types.protocol.crypto import Hash, HeaderHash
-from jam.types.work.report import WorkReport, WorkReportHash
+from jam.types.work.report import WorkReportHash
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.dictionary import Dictionary
-from tsrkit_types.integers import Uint
 
 from datetime import datetime
 
 from jam.logging import get_logger
-from jam.utils.constants import AUDIT_PERIOD
 from tests.unit.audit.test_tranche_store import another_dummy_work_report, dummy_work_report
 
 logger = get_logger("tranche_test")
