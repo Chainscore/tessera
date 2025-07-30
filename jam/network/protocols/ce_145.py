@@ -1,5 +1,5 @@
 from typing import cast
-from tsrkit_types import structure, Uint, U8, Bool
+from tsrkit_types import structure, Uint, Bool
 
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
 

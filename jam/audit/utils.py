@@ -34,7 +34,7 @@ public_key = Bytes[32]
 #     return signature
 
 
-def audit_refine(package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
+async def audit_refine(package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
     """This function for perform refine logic for specifically Auditing."""
     from jam.network.node import node
     from jam.incore.processor import Processor
@@ -53,7 +53,7 @@ def audit_refine(package: WorkPackage, core: CoreIndex, extrinsics: Extrinsics):
 
     # Build Work Package Bundle
     logger.debug("Building work package bundle..")
-    bundle = bundler.build_bundle(package, extrinsics)
+    bundle = await bundler.build_bundle(package, extrinsics)
 
     # Build Report
     logger.debug("Compiling report..")

@@ -27,7 +27,7 @@ class AuditEngine:
     """
 
     @classmethod
-    async def run(cls, header_hash: HeaderHash,raw_list:List[Option[WorkReport]]):
+    async def run(cls, header_hash: HeaderHash, newly_avail_wrs :List[Option[WorkReport]]):
         from jam.network.node import node
 
         # Ensure network is up
@@ -36,26 +36,26 @@ class AuditEngine:
             return
 
         # raw_list = sample_work_reports_with_nulls( "jam/combine.json",total_items=10, null_count=0)
-        unaudited_list=TypedVector[WorkReport]([wr for wr in raw_list if wr is not None])
+        # unaudited_list = list[Option[WorkReport]]([wr for wr in newly_avail_wrs if wr is not None])
 
         valid_set = TypedVector[WorkReport]([])
         invalid_set = TypedVector[WorkReportHash]([])
         judgments = Dictionary[WorkReportHash, JudgmentRecord]({})
-        initTranche=Tranche(header_hash=header_hash,tranche_index=TrancheIndex(0))
+        init_tranche=Tranche(header_hash=header_hash,tranche_index=TrancheIndex(0))
 
-        tranche_state=TrancheState(
-            unaudited_list=unaudited_list,
-            judgments=judgments,
-            valid_set=valid_set,
-            invalid_set=invalid_set,
-        )
-
-        # Build a store for this slot's audit tranches
-        tranche_store._save_state(initTranche,tranche_state)
+        # tranche_state=TrancheState(
+        #     unaudited_list=unaudited_list,
+        #     judgments=judgments,
+        #     valid_set=valid_set,
+        #     invalid_set=invalid_set,
+        # )
+        #
+        # # Build a store for this slot's audit tranches
+        # tranche_store._save_state(tranche=init_tranche,tranche_state=tranche_state)
 
         # Instantiate the core tranche engine
         engine = TrancheEngine()
-        await engine.run(header_hash=header_hash)
+        await engine.run(header_hash=header_hash, newly_avail_wrs = newly_avail_wrs)
 
         # Completed auditing for this slot
         logger.info(f"Finished auditing header {header_hash}")
