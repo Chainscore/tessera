@@ -41,11 +41,19 @@ class Theme(str, Enum):
     SOLARIZED  = auto()
     MONOKAI    = auto()
     NOIR       = auto()
+# class Theme(str, Enum):
+#     DEFAULT    = "default"
+#     MATRIX     = "matrix"
+#     POLKADOT   = "polkadot"
+#     SOLARIZED  = "solarized"
+#     MONOKAI    = "monokai"
+#     NOIR       = "noir"
+
 
 
 class Environment(str, Enum):
     DEVELOPMENT = "development"
-    TESTING = "testing" 
+    TESTING = "testing"
     PRODUCTION = "production"
 
 
@@ -200,11 +208,11 @@ def add_performance_context(_, __, event_dict):
 def filter_sensitive_data(_, __, event_dict):
     """Filter out sensitive data from logs in production."""
     sensitive_keys = {"private_key", "seed", "password", "token", "secret"}
-    
+
     for key in list(event_dict.keys()):
         if any(sensitive in key.lower() for sensitive in sensitive_keys):
             event_dict[key] = "[REDACTED]"
-    
+
     return event_dict
 
 
@@ -233,6 +241,9 @@ def setup_module_logging_levels():
 
 
 # ---------- bootstrap ------------------------------------------------------- #
+theme_choices = [name.lower() for name in Theme.__members__.keys()]
+
+
 
 def setup_logging(
     *,
@@ -259,7 +270,7 @@ def setup_logging(
     # Normalize environment
     if isinstance(environment, str):
         environment = Environment(environment.lower())
-    
+
     # Set default log level based on environment
     if min_level is None:
         min_level = _ENV_LOG_LEVELS.get(environment, logging.INFO)
@@ -268,10 +279,10 @@ def setup_logging(
     logging.getLogger("quic").setLevel(logging.WARNING)
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     logging.getLogger("aioquic").setLevel(logging.WARNING)
-    
+
     # Configure processors based on environment
     processors = []
-    
+
     def add_node_context(_, __, event: Dict[str, Any]) -> Dict[str, Any]:
         if node_name:
             event["node_name"] = node_name
@@ -284,7 +295,7 @@ def setup_logging(
         add_log_level,
         TimeStamper(fmt="iso"),
     ])
-    
+
     # Add sensitive data filtering in production
     if environment == Environment.PRODUCTION:
         processors.insert(-2, filter_sensitive_data)
@@ -293,26 +304,26 @@ def setup_logging(
     if enable_json_logs or environment == Environment.PRODUCTION:
         # Use JSON renderer for production or when explicitly requested
         processors.append(JSONRenderer())
-        
+
         # Set up file logging for production
         if log_file or environment == Environment.PRODUCTION:
             log_file = log_file or f"/var/log/jam/{node_name or 'node'}.log"
             os.makedirs(os.path.dirname(log_file), exist_ok=True)
-            
+
             # Configure file handler
             file_handler = logging.FileHandler(log_file)
             file_handler.setLevel(min_level)
-            
+
             # Also log to stderr in production for container environments
             if environment == Environment.PRODUCTION:
                 console_handler = logging.StreamHandler(sys.stderr)
                 console_handler.setLevel(logging.WARNING)  # Only warnings+ to console
-                
+
                 # Custom formatter without logger name
                 formatter = logging.Formatter('%(message)s')
                 file_handler.setFormatter(formatter)
                 console_handler.setFormatter(formatter)
-                
+
                 logging.basicConfig(
                     level=min_level,
                     handlers=[file_handler, console_handler],
@@ -326,13 +337,13 @@ def setup_logging(
     else:
         # Use themed console renderer for development
         processors.append(ThemedRenderer(theme))
-        
+
         # Configure console handler with custom formatter that excludes logger name
         console_handler = logging.StreamHandler()
         console_handler.setLevel(min_level)
         formatter = logging.Formatter('%(message)s')
         console_handler.setFormatter(formatter)
-        
+
         logging.basicConfig(
             level=min_level,
             handlers=[console_handler],
@@ -354,11 +365,11 @@ def setup_logging(
 def get_logger(name: str | None = None, component: str | None = None):
     """
     Return a themed structlog logger with optional component context.
-    
+
     Args:
         name: Logger name (typically __name__)
         component: Component name for better log organization
-        
+
     Examples:
         logger = get_logger("pvm")
         logger = get_logger("import")

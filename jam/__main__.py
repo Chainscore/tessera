@@ -47,7 +47,6 @@ async def main(
     genesis_ts = GENESIS_TS         # Actual Genesis time for JAM Common Era
     init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
     init_ep = int(init_ts // EPOCH_LENGTH)
-    print(f"Chain bhai is on: {chain_config.name}")
 
     if not is_builder and not is_validator:
         is_validator=True

@@ -9,16 +9,16 @@ import argparse
 import asyncio
 from dotenv import load_dotenv
 from jam.__main__ import main as node_main
+from jam.clihelpers import show_help_topic
 from jam.config.logging import get_logger
-
 
 logger=get_logger("cli")
 
+
 def detect_base_dir():
     """
-    Return the folder containing your data files:
-      - If frozen by PyInstaller, that's _MEIPASS
-      - Otherwise, it's the parent of this package (i.e. your project root)
+    Detect the base directory whether running from source or frozen binary.
+    Compatible with Nuitka and PyInstaller.
     """
     if getattr(sys, "frozen", False):
         return getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
@@ -63,13 +63,15 @@ def build_parser(base_dir: str):
     )
     p.add_argument(
         "--theme",
+        type=str,
+        # choices=theme_choices,
         default="polkadot",
-        help="Theme for logging"
+        help=f"Theme for logging."
     )
     p.add_argument(
         "--temp_db",
         action="store_true",
-        help="Initialize chain from genesis"
+        help="Create a temp database directory for the node datas to be stored temporarily"
     )
     # Mutually exclusive group: only one can be true
     mode_group = p.add_mutually_exclusive_group()
@@ -119,6 +121,11 @@ def run_cmd(args):
 
 def main():
     base_dir = detect_base_dir()
+    # Custom help handler before parser
+    if len(sys.argv) == 3 and sys.argv[1] == "help":
+        show_help_topic(sys.argv[2])
+        return
+
     parser = build_parser(base_dir)
     args = parser.parse_args()
     run_cmd(args)

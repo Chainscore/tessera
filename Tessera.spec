@@ -10,7 +10,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['pytest', 'black', 'sphinx', 'flake8', 'isort', 'pre_commit'],
     noarchive=False,
     optimize=0,
 )
