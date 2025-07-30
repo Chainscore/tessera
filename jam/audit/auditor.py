@@ -1,7 +1,8 @@
 import asyncio
+import math
 from typing import List, Tuple
 
-from tsrkit_types import structure, U8, U32, TypedVector, Option, Null
+from tsrkit_types import structure, U8, U32, TypedVector, Option, Null, Bool
 
 from jam.block import Block
 from jam.types import ValidatorIndex, Ed25519Signature, WorkReports
@@ -17,6 +18,8 @@ from jam.types.work.report import WorkReport, WorkReportHash
 
 from jam.logging import get_logger
 from jam.utils.constants import EPOCH_LENGTH
+from jam.network.protocols.ce_144 import NoShow, AssignedReport
+from jam.storage.tranche_store import TrancheStore, Tranche
 
 
 # Module-specifier logger
@@ -24,6 +27,7 @@ logger = get_logger("auditor")
 
 @structure
 class Auditor:
+
     @classmethod
     async def audit(cls, block: Block, tranche: Tranche):
         from jam.audit.utils import Utils
@@ -32,7 +36,6 @@ class Auditor:
         from jam.settings import settings
         from jam.network.node import node
         from jam.storage.tranche_store import tranche_store, Tranche
-
 
         audit = Utils()
 
@@ -44,8 +47,8 @@ class Auditor:
 
         # TODO: Calculate only if tranche > 0
         prev_tranche = tranche
-        prev_tranche.tranche_index = TrancheIndex(tranche_idx-1)
-        prev_tranche_state =  tranche_store._get_state(prev_tranche)
+        prev_tranche.tranche_index = TrancheIndex(tranche_idx - 1)
+        prev_tranche_state = tranche_store._get_state(prev_tranche)
 
         entropy = block.header.entropy_source
 
@@ -54,7 +57,9 @@ class Auditor:
             logger.info(f"Fetching auditable reports per core")
             if tranche_idx == 0:
 
-                assigned_reports = audit.verifiable_random_selection(entropy_source=entropy, bandersnatch_key=node.b_key, pre_audit_report=reports_queue)
+                assigned_reports = audit.verifiable_random_selection(entropy_source=entropy,
+                                                                     bandersnatch_key=node.b_key,
+                                                                     pre_audit_report=reports_queue)
 
                 logger.info(
                     f"Checking assign report length {len(assigned_reports)} for each validator"
@@ -78,7 +83,7 @@ class Auditor:
             raise
 
     @classmethod
-    async def audit_announcement(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche_idx: TrancheIndex):
+    async def announce_judgment(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche: Tranche, no_shows: TypedVector[NoShow] = None):
         """
         This function just take a list of report which is available for auditing and assign random 10 reports to tha validator then create announcement for them.
 
@@ -96,26 +101,27 @@ class Auditor:
 
         audit = Utils()
 
-        # initial rho pending work reports
+        tranche_index = tranche.tranche_index
+
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
         entropy_source = latest_block.header.entropy_source
 
-        announcement_sign = audit.validator_announcement_statement(assign_report=assign_wrs, header=header_hash, tranche=U8(0))
-
-        from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, TrancheAnnouncement, FirstTrancheEvidence, Announcement, AssignedReport, Evidence, SubsequentTrancheEvidence, NoShow
-
+        from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, TrancheAnnouncement, FirstTrancheEvidence, Announcement, Assign, Evidence, SubsequentTrancheEvidence, NoShow
         CE144 = AuditAnnouncement()
 
+        # ------------------------------------- Validator Announcement and Statement ---------------------------------------
         assignments = TypedVector[AssignedReport]([
             AssignedReport(core_index=core_idx, report_hash=Hash.blake2b(r.encode()))
             for core_idx, r in assign_wrs
         ])
 
-        # -------------------- Handling Evidence based on Tranche Index --------------------------
-        bandersnatch_sign  = BandersnatchVrfSignature()
+        announcement_sign = audit.validator_announcement_statement(assign_report=assign_wrs, header=header_hash, tranche=U8(0))
 
-        if tranche_idx == 0:
+        # -------------------- Handling Evidence based on Tranche Index --------------------------
+        bandersnatch_sign  = BandersnatchVrfSignature(b"")
+
+        if tranche_index == TrancheIndex(0):
             bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=node.b_key)
             evidence = Evidence(FirstTrancheEvidence(bandersnatch_sign))
         else:
@@ -124,16 +130,7 @@ class Auditor:
                 TypedVector[SubsequentTrancheEvidence]([
                     SubsequentTrancheEvidence(
                         bandersnatch_signature=BandersnatchVrfSignature(bandersnatch_sign),
-                        no_show=NoShow(
-                            # TODO: FIX IT : DIKSHANT
-                            validator_index=ValidatorIndex(),
-                            # here will come validator index which is announcing for previous reports
-                            announcement=Announcement(
-                                assigned_reports=assignments,
-                                ed25519_signature=Ed25519Signature(ed25519)
-                                # which will create using the equation 17.9 and tak validator index form mentioned in N-show
-                            )
-                        )
+                        no_show=no_shows
                     )
                 ])
             )
@@ -141,7 +138,7 @@ class Auditor:
         # ---------------------- Data to be transmitted ----------------------------------------
         tranche_announce = TrancheAnnouncement(
             header_hash=header_hash,
-            tranches=tranche_idx,
+            tranche=tranche_index,
             announcement=Announcement(
                 assigned_report=assignments, ed25519_signature=announcement_sign
             )
@@ -158,6 +155,11 @@ class Auditor:
 
             responses = await CE144.transmit(node=node, data=data)
 
+            if responses:
+
+                no_show_report = await cls.judgment_process(assign_wrs=assign_wrs, tranche=tranche)
+
+
             logger.debug(f"Assign Work Reports announcement transmitted successfully")
 
         except Exception as e:
@@ -168,7 +170,7 @@ class Auditor:
         )
 
     @classmethod
-    async def judgment_process(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche_idx:TrancheIndex):
+    async def judgment_process(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche:Tranche):
         from jam.audit.utils import Utils
         from jam.settings import settings
         from jam.network.node import node
@@ -180,27 +182,20 @@ class Auditor:
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
 
-        # TODO: Also refine those reports which received negative judgements
-
         # ------ JUDGMENT EPOCH INDEX ------
         slot = latest_block.header.slot
-        logger.info(f"current judgment slot  {slot}")
-
-        epoch_idx = int(slot // EPOCH_LENGTH)
+        epoch_idx = EpochIndex(math.floor(slot / EPOCH_LENGTH))
 
         logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)} ")
 
-        tranche = Tranche(
-            tranche_index=tranche_idx,
-            header_hash=header_hash
-        )
 
         try:
             for c, r in assign_wrs:
                 wr_hash = Hash.blake2b(r.encode())
 
-                logger.debug("Refining work report for auditing.", wr_hash=wr_hash)
-                result = await audit.refine(r)
+                package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json", rep_hash=wr_hash)
+
+                result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=node.validator_index)
 
                 # STORE JUDGMENT HERE ONLY FOR TRANSMITTING
                 tranche_store.update_judgment(tranche=tranche, wr_hash=wr_hash, judgment=result, validator_index=node.validator_index)
@@ -210,12 +205,10 @@ class Auditor:
                 from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
                 CE145 = JudgmentPublication()
 
-                validity = True if result else False
-
                 judgment = Judgment(
-                    epoch_index=EpochIndex(epoch_idx),
+                    epoch_index=epoch_idx,
                     validator_index=ValidatorIndex(node.validator_index),
-                    validity=validity,
+                    validity=Bool(True),
                     work_report_hash=WorkReportHash(wr_hash),
                     ed25519_signature=Ed25519Signature(judgment_sign),
                 )

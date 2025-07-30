@@ -5,7 +5,7 @@ import pytest
 
 
 from jam.audit.tranche_engine import TrancheEngine
-from jam.storage.tranche_store import Tranche, TrancheState, JudgmentRecord, ValidatorList,tranche_store
+from jam.storage.tranche_store import Tranche, TrancheState, AuditRecord, ValidatorList,tranche_store
 from jam.types.protocol.core import TrancheIndex, ValidatorIndex
 from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.types.work.report import WorkReportHash
@@ -28,12 +28,12 @@ def create_test_tranche_state() -> TrancheState:
     """
     wr_hash1 = WorkReportHash(Hash.blake2b(dummy_work_report().encode()))
     wr_hash2 = WorkReportHash(Hash.blake2b(another_dummy_work_report().encode()))
-    dummy_judgements1=JudgmentRecord.dummy()
-    dummy_judgements2=JudgmentRecord.dummy()
+    dummy_judgements1=AuditRecord.dummy()
+    dummy_judgements2=AuditRecord.dummy()
     dummy_judgements2.true_votes=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3),ValidatorIndex(4),ValidatorIndex(5)])
     dummy_judgements2.false_votes=ValidatorList([])
     unaudited_list = TypedVector[WorkReportHash]([wr_hash1, wr_hash2])
-    judgments = Dictionary[WorkReportHash, JudgmentRecord]({
+    judgments = Dictionary[WorkReportHash, AuditRecord]({
         wr_hash1: dummy_judgements1,
         wr_hash2: dummy_judgements2
     })

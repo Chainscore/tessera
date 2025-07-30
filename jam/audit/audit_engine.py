@@ -11,7 +11,7 @@ from jam.finality.finality import Finality
 from jam.logging import get_logger
 from jam.state.state import State
 
-from jam.types.audit.tranche import TrancheIndex, Tranche, TrancheState, JudgmentRecord
+from jam.types.audit.tranche import TrancheIndex, Tranche, TrancheState, AuditRecord
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.state.rho import WorkReportState
 from jam.types.work.report import WorkReport, WorkReportHash, WorkReports

@@ -5,11 +5,9 @@ from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.struct import structure
 from tsrkit_types.option import Option
 
-from jam.network.protocols.ce_145 import Judgment
 from jam.network.protocols.ce_144 import Announcement
 from jam.types.protocol.crypto import HeaderHash, Hash
 from jam.types.protocol.core import ValidatorIndex
-from jam.types.state.rho import WorkReportState
 from jam.types.work.report import WorkReport, WorkReportHash, WorkReports
 
 SignatureList=TypedVector[Bytes]
@@ -18,30 +16,25 @@ ValidatorList=TypedVector[ValidatorIndex]
 TrancheIndex = U8
 OptionalReport = Option[WorkReport]
 
+
 @structure
-class JudgmentRecord:
-    true_votes: ValidatorList #J_t(wr)(t)
-    false_votes: ValidatorList # J_f(wr)(t)
-    # announces: ValidatorList #A_n
+class AuditRecord:
+    true_votes: ValidatorList #J_t(wr)(t)  Carry Forward
+    false_votes: ValidatorList # J_f(wr)(t) Carry Forward
+    announces: ValidatorList #A_n
+    no_votes: ValidatorList
 
     @staticmethod
-    def dummy()-> "JudgmentRecord":
-        true_votes:ValidatorList=ValidatorList([])
-        false_votes:ValidatorList=ValidatorList([ValidatorIndex(0)])
-        # announces:ValidatorList=ValidatorList([ValidatorIndex(0),ValidatorIndex(1),ValidatorIndex(2),ValidatorIndex(3),ValidatorIndex(4),ValidatorIndex(5)])
-        return JudgmentRecord(true_votes=true_votes,false_votes=false_votes)
-
-    @staticmethod
-    def empty()->"JudgmentRecord":
-        return JudgmentRecord(true_votes=ValidatorList([]),false_votes=ValidatorList([]))
+    def empty() -> "AuditRecord":
+        return AuditRecord(announces=ValidatorList([]), true_votes=ValidatorList([]), false_votes=ValidatorList([]),
+                           no_votes=ValidatorList([]))
 
 @structure
 class TrancheState:
     unaudited_list: TypedVector[OptionalReport] # Corpus of reports (q), a_n will be calculated from this.
     announcements: Dictionary[ValidatorIndex, Announcement] # Announcements received in this tranche
     assigned_wrs: WorkReports
-    announcement_map: Dictionary[WorkReportHash, ValidatorList] # A_n mapping.
-    judgment_map: Dictionary[WorkReportHash, JudgmentRecord] # J_t, J_f mappings. This must be continued forward.
+    records: Dictionary[WorkReportHash, AuditRecord] # A_n, J_t, J_f mappings.
 
     valid_set: TypedVector[WorkReportHash] # Already validated_wrs [wr,1,2,3,4]
     invalid_set: TypedVector[WorkReportHash] # Already invalid_wrs
@@ -53,8 +46,7 @@ class TrancheState:
             announcements=Dictionary[ValidatorIndex, Announcement]({}),
             assigned_wrs=WorkReports([]),
 
-            announcement_map=Dictionary[WorkReportHash, ValidatorList]({}),
-            judgment_map=Dictionary[WorkReportHash, JudgmentRecord]({}),
+            records=Dictionary[WorkReportHash, AuditRecord]({}),
 
             valid_set=TypedVector[WorkReportHash]([]),
             invalid_set=TypedVector[WorkReportHash]([])

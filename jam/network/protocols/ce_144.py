@@ -130,9 +130,12 @@ class AuditAnnouncement(NetworkProtocol):
         v_r1[node.validator_index] = {assign.report_hash for assign in data.tranche_announcement.announcement.assigned_report}
 
         tranche = Tranche(
-            tranche_index=data.tranche_announcement.tranches,
+            tranche_index=data.tranche_announcement.tranche,
             header_hash=data.tranche_announcement.header_hash
         )
+
+        tranche_store.add_set_announcement(tranche=tranche, validator_index=node.validator_index, assign_r=data.tranche_announcement.announcement.assigned_report)
+
 
         for v, r_hash in v_r1.items():
             for value in r_hash:
@@ -200,7 +203,7 @@ class AuditAnnouncement(NetworkProtocol):
 
             get_v_assign = data.tranche_announcement.announcement.assigned_report
             v_index = server.peer.peer_index
-            tranche_idx = data.tranche_announcement.tranches
+            tranche_idx = data.tranche_announcement.tranche
             header_hash = data.tranche_announcement.header_hash
 
             v_r[v_index] = {assign.report_hash for assign in get_v_assign}
@@ -210,6 +213,9 @@ class AuditAnnouncement(NetworkProtocol):
                 header_hash=header_hash
             )
 
+            tranche_store.add_set_announcement(tranche=tranche, validator_index=v_index,
+                                               assign_r=data.tranche_announcement.announcement.assigned_report)
+
             for v, r_hash in v_r.items():
                 for value in r_hash:
                     tranche_store.add_announce(tranche=tranche, wr_hash=value, validator_index=v_index)
@@ -218,9 +224,6 @@ class AuditAnnouncement(NetworkProtocol):
                 tranche_index=TrancheIndex(0),
                 header_hash=header_hash,
             )
-
-            print("FINAL TRANCHE STATE FROM ANNOUNCEMENT ", tranche_store._get_state(tranche=tranche))
-
 
             logger.debug(
                 "Received Audit's Announcement from other Auditors",
