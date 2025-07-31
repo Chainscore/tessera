@@ -191,7 +191,7 @@ async def start_node():
             package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext
         )
 
-        responses = await protocol.transmit(node, data)
+        responses = await protocol.transmit(data)
 
         # expected_message = Bool(True)
 

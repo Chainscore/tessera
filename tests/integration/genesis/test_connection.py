@@ -37,7 +37,7 @@ async def start_node():
         protocol = GhostProtocol()
         message = f"Hello {client.port}"
 
-        responses = await protocol.transmit(node, message)
+        responses = await protocol.transmit(message)
         expected_message = f"DATA RECEIVED: {message}"
 
         for response in responses:

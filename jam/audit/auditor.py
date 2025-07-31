@@ -67,7 +67,6 @@ class Auditor:
 
         from jam.audit.utils import Utils
         from jam.settings import settings
-        from jam.network.node import node
 
         audit = Utils()
 
@@ -92,10 +91,10 @@ class Auditor:
         bandersnatch_sign  = BandersnatchVrfSignature(b"")
 
         if tranche_index == TrancheIndex(0):
-            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=node.b_key)
+            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=settings.bandersnatch_public)
             evidence = Evidence(FirstTrancheEvidence(bandersnatch_sign))
         else:
-            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=node.b_ke, tranche_index=tranche_idx, w_r=WorkReport())
+            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=settings.bandersnatch_public, tranche_index=tranche_idx, w_r=WorkReport())
             evidence = Evidence(
                 TypedVector[SubsequentTrancheEvidence]([
                     SubsequentTrancheEvidence(
@@ -123,7 +122,7 @@ class Auditor:
 
         try:
 
-            responses = await CE144.transmit(node=node, data=data)
+            responses = await CE144.transmit(data=data)
 
             if responses:
 
@@ -143,8 +142,8 @@ class Auditor:
     async def judgment_process(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche:Tranche):
         from jam.audit.utils import Utils
         from jam.settings import settings
-        from jam.network.node import node
         from jam.storage.tranche_store import tranche_store, Tranche
+        from jam.settings import settings
 
 
         audit = Utils()
@@ -165,10 +164,10 @@ class Auditor:
 
                 package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json", rep_hash=wr_hash)
 
-                result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=node.validator_index)
+                result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=settings.validator_index)
 
                 # STORE JUDGMENT HERE ONLY FOR TRANSMITTING
-                tranche_store.update_judgment(tranche=tranche, wr_hash=wr_hash, judgment=result, validator_index=node.validator_index)
+                tranche_store.update_judgment(tranche=tranche, wr_hash=wr_hash, judgment=result, validator_index=settings.validator_index)
 
                 judgment_sign = audit.judgment_signature(wr=r, refine=result)
 
@@ -177,7 +176,7 @@ class Auditor:
 
                 judgment = Judgment(
                     epoch_index=epoch_idx,
-                    validator_index=ValidatorIndex(node.validator_index),
+                    validator_index=ValidatorIndex(settings.validator_index),
                     validity=Bool(True),
                     work_report_hash=WorkReportHash(wr_hash),
                     ed25519_signature=Ed25519Signature(judgment_sign),
@@ -185,7 +184,7 @@ class Auditor:
 
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
 
-                response = await CE145.transmit(node=node, data=data)
+                response = await CE145.transmit(data=data)
 
             logger.debug(f"Judgment transmitted and intercept successfully")
 

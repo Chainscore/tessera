@@ -48,7 +48,7 @@ async def node_task():
 
     init_ts = int((time() - GENESIS_TS) // 6)
 
-    from jam.network.node import node
+    from jam.network.start import node
 
     if node.is_builder:
         logger = get_logger()
@@ -64,14 +64,14 @@ async def node_task():
                 ext_len = U32(len(ext.encode()))
                 wp_data = CE133Data(wp_len, wpc, ext_len, ext)
 
-                acks = await CE133.transmit(node, wp_data)
+                acks = await CE133.transmit(wp_data)
 
                 logger.info(
                     "Testing builder transmission",
                     time_slot=ts,
                     iter=wp_iter,
                     total_iter=ts - init_ts,
-                    peers=len(node.peer_conn),
+                    peers=len(node.all_connected),
                 )
             except Exception as e:
                 logger.error(

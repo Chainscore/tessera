@@ -21,7 +21,6 @@ class Assurer:
 
     async def run(self, time_slot: int):
         from jam.settings import settings
-        from jam.network.start import node
 
         pref = Bytes("jam_available", "utf-8")
 
@@ -49,7 +48,7 @@ class Assurer:
                 ed25519_signature=Ed25519Signature(signr),
             )
             data = CE141Data(assurance=assurance, len=U32(len(assurance.encode())))
-            asyncio.create_task(CE141.transmit(node=node, data=data))
+            asyncio.create_task(CE141.transmit(data=data))
         except Exception as e:
             logger.error("Failed to record assurance", error=e, time_slot=time_slot)
         self.clear()

@@ -108,7 +108,7 @@ async def publish_judgment(node, judgment: Judgment):
 
     # Use CE145 protocol to transmit
     ce145 = JudgmentPublication()
-    responses = await ce145.transmit(node, ce145_data)
+    responses = await ce145.transmit(ce145_data)
 
     logger.info(
         "Judgment publication completed",
