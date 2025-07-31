@@ -2,6 +2,7 @@
 
 from tsrkit_types import Enum
 
+from datetime import datetime, timezone
 from jam.utils.chainspec import chain_config
 
 # ───────────────────────────────────────
@@ -198,3 +199,10 @@ REGISTER_COUNT = 13
 VALIDATORS_SUPER_MAJORITY = 1 + 2 * VALIDATOR_COUNT // 3
 VALIDATORS_WONKY = VALIDATOR_COUNT // 3
 GENESIS_TS = 1735732800  # January 1, 2025 12:00 UTC
+
+
+# Jam Common‐Era epoch (2025-01-01 12:00 UTC)
+JCE_EPOCH = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+
+# T — current seconds since JCE_EPOCH
+CURRENT_TIME = lambda: int((datetime.now(timezone.utc) - JCE_EPOCH).total_seconds())

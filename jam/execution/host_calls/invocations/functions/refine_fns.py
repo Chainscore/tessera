@@ -88,10 +88,9 @@ class RefineFunctions(INVF):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
         if memory.is_accessible(address=p, length=z, for_write=True):
-            from jam.incore.processor import Processor
-
-            x = Processor.zero_padding(
-                value=ByteArray(memory.read(address=p, length=z)), n=Uint(SEGMENT_SIZE)
+            from jam.incore.utils import Utils
+            x = Utils.zero_padding(
+                value=ByteArray(memory.read(address=p, length=z)), n=SEGMENT_SIZE
             )
         else:
             raise PvmError(PANIC)
@@ -122,7 +121,9 @@ class RefineFunctions(INVF):
         try:
             Program.decode_from(p)
             # TODO: Updating the commitment map, need to see how the dict is appended
-            context.m[n] = IntegratedPVM(program_code=p, memory=u, instruction_counter=i)
+            context.m[n] = IntegratedPVM(
+                program_code=p, memory=u, instruction_counter=i
+            )
             registers[7] = n
             return CONTINUE, gas, registers, memory, context
         except:
@@ -196,7 +197,11 @@ class RefineFunctions(INVF):
             registers[7] = HostStatus.WHO
             return CONTINUE, gas, registers, memory, context
 
-        if p < 16 or p + c >= 2 * 32 / PVM_MEMORY_PAGE_SIZE or not u.is_accessible(p, c):
+        if (
+            p < 16
+            or p + c >= 2 * 32 / PVM_MEMORY_PAGE_SIZE
+            or not u.is_accessible(p, c)
+        ):
             registers[7] = HostStatus.HUH
             return CONTINUE, gas, registers, memory, context
         else:
@@ -229,7 +234,9 @@ class RefineFunctions(INVF):
         context.m[n].memory = u_dash
         if c == ExecutionStatus.HOST:
             context.m[n].instruction_counter = i_dash + 1
-            registers[7] = U64(ExecutionStatus.HOST)  # NOTE: Saving the ExecValu on register[7]
+            registers[7] = U64(
+                ExecutionStatus.HOST
+            )  # NOTE: Saving the ExecValu on register[7]
             registers[8] = c.value.register
             return CONTINUE, gas, registers, memory, context
         else:

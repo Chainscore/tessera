@@ -3,7 +3,6 @@ import os
 import pytest
 from jam.settings import Settings, setup_setting
 from jam.network.base.certificate import generate_san
-from jam.network.peer import Peer
 from jam.network.node import Node
 from dotenv import load_dotenv
 

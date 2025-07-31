@@ -4,7 +4,7 @@ import logging
 import os
 import time
 from dotenv import load_dotenv
-from jam.operations import operate, epoch_operate
+from jam.operations import operate
 from jam.logging import setup_logging, logger
 from jam.utils.chainspec import chain_config
 from jam.settings import setup_setting
@@ -14,6 +14,7 @@ from jam.state.state import setup_state
 from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
 from jam.operations.ticket_queue import setup_ticket_queue
+from tests.integration.utils.state_update import update_state
 
 
 async def main(
@@ -53,7 +54,9 @@ async def main(
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
+    settings = setup_setting(
+        name=name, port=int(port), seed=int(seed), data_path="data/"
+    )
 
     main_db = settings.main_db
 
@@ -73,6 +76,7 @@ async def main(
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
+        update_state(state)
 
         settings.update()
 

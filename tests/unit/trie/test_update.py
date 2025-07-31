@@ -56,7 +56,9 @@ def test_trie_update():
 
 def test_reinsert_same_value_no_change():
     """Re-inserting the same value should not change the root."""
-    key = Bytes[32].fromhex("a3dc3bed1b0727caf428961bed11c9998ae2476d8a97fad203171b628363d9a2")
+    key = Bytes[32].fromhex(
+        "a3dc3bed1b0727caf428961bed11c9998ae2476d8a97fad203171b628363d9a2"
+    )
     val = Bytes.fromhex("8a0dafa9d6ae6177")
     trie = StateTrie()
     root1, _ = trie.merkelize({key: val})

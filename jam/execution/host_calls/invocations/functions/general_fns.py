@@ -484,7 +484,6 @@ class GeneralFunctions(INVF):
         o = registers[8]
 
         if t is not None:
-            print("t.service", t.service.balance)
             m = (
                 bytes(t.service.code_hash)
                 + Uint(t.service.balance).encode()

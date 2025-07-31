@@ -1,10 +1,10 @@
 from typing import Callable, Final
 
 import asyncio
-import signal 
+import signal
 import logging
 import os
-import time 
+import time
 from dotenv import load_dotenv
 
 from jam.logging import setup_logging
@@ -12,9 +12,9 @@ from jam.utils.chainspec import chain_config
 from .state_update import update_state
 
 from jam.finality.finality import Finality
-from jam.settings import setup_setting 
+from jam.settings import setup_setting
 from jam.network.start import start_node
-from jam.state.state import setup_state 
+from jam.state.state import setup_state
 from jam.block import Block
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
@@ -96,7 +96,7 @@ async def run_node(
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db, True)
-        
+
         settings.update()
 
         async with asyncio.TaskGroup() as tg:

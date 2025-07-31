@@ -12,4 +12,7 @@ class ReadyWR:
 
 AllReadyWRs = TypedVector[ReadyWR]
 
-Nu = TypedArray[AllReadyWRs, EPOCH_LENGTH]
+
+# State key: 14
+class Nu(TypedArray[AllReadyWRs, EPOCH_LENGTH]):
+    ...

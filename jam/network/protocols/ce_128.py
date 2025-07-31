@@ -1,11 +1,10 @@
 import enum
 from math import e
-from typing import List, cast, TYPE_CHECKING
+from typing import List
 
-from tsrkit_types import Bytes32, TypedArray, TypedVector, Enum
+from tsrkit_types import TypedArray, Enum
 
 from jam.logging import get_logger
-from jam.finality.finality import Finality
 from jam.network.base.error import NetworkingErrorCode
 from jam.network.connection import NodeConnection
 from jam.types import HeaderHash 
@@ -60,6 +59,7 @@ class BlockRequest(NetworkProtocol):
         stream_data = U32(len(data.encode())).encode() + data.encode()
         logger.debug("Transmitting block request to node", num=len(node.connection_ids), max_blocks=data.max_blocks)
 
+        header_hash = data.header.hex()[:16] + "..."
         transmitted_count = 0
         responses = []
 
@@ -77,7 +77,11 @@ class BlockRequest(NetworkProtocol):
                 transmitted_count += 1
                 responses.append(data)
 
-                logger.debug("Block request transmitted to node", stream_id=stream_id)
+                logger.debug(
+                    "Block request transmitted",
+                    stream_id=stream_id,
+                    header_hash=header_hash,
+                )
             except Exception as e:
                 responses.append(None)
                 logger.error("Failed to transmit state request", error=e)
@@ -85,6 +89,7 @@ class BlockRequest(NetworkProtocol):
         logger.debug(
             "Block request transmission completed",
             transmitted_to=transmitted_count,
+            header_hash=header_hash,
         )
 
         return responses

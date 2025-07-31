@@ -47,7 +47,7 @@ def generate_san(pubkey: bytes) -> str:
         return alphabet[n % 32] + b(Uint[256](n // 32), l - 1)
 
     alphabet = "abcdefghijklmnopqrstuvwxyz234567"
-    n, _ = Uint[256].decode_from(pubkey)
+    n = Uint[256].decode(pubkey)
     return "e" + b(n, 52)
 
 
@@ -157,7 +157,9 @@ def verify_certificate(cert: x509.Certificate):
         san = san_extension.value.get_values_for_type(x509.general_name.DNSName)
 
         if len(san) != 1:
-            raise ValueError("Certificate must have exactly one Subject Alternative Name.")
+            raise ValueError(
+                "Certificate must have exactly one Subject Alternative Name."
+            )
 
         if san[0] != test_san:
             raise ValueError("Subject Alternative Name doesn't match with key.")

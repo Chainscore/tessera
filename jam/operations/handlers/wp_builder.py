@@ -1,10 +1,11 @@
+import os
 from tsrkit_types import Bytes, U16, Uint
 
 from jam.execution.pvm.code import Code
 from jam.types import WorkPackage
 from jam.types.protocol.crypto import Hash
 from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
-from jam.types.work.manifest import Extrinsics
+from jam.types.work.manifest import Extrinsics, Extrinsic
 from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
 from jam.logging import get_logger
 from jam.utils.dummy.dummy_package import create_dummy_package
@@ -43,10 +44,10 @@ class WPBuilder:
         curr_ep = int(curr_ts // EPOCH_LENGTH)
 
         # TODO: Remove hard-coded transmission. Use desired guarantors' connections.
-        if len(node.peer_conn) == 0:
+        if not node:
             logger.debug(
                 "Network not initialized - skipping work package production",
-                node_name=node.name,
+                # node_name=node.name,
                 iteration=wp_iter,
             )
             return
@@ -56,7 +57,7 @@ class WPBuilder:
 
         logger.debug(
             "Work package production cycle",
-            node_name=node.name,
+            # node_name=node.name,
             iteration=wp_iter,
             curr_timeslot=curr_ts,
             curr_epoch=curr_ep,
@@ -66,7 +67,8 @@ class WPBuilder:
         wp = cls._build_package(wp_iter)
 
         wc = WorkPackageCore(wp, CoreIndex(1))
-        ext = Extrinsics([])
+        ext = Extrinsics([Extrinsic(b"") for i in range(len(wp.items))])
+
 
         package_len = Uint[32](len(wc.encode()))
         ext_len = Uint[32](len(ext.encode()))
@@ -82,8 +84,10 @@ class WPBuilder:
             curr_timeslot=curr_ts,
         )
 
-        responses = await CE133.transmit(node, data)
-        logger.debug("Work package transmitted", node_name=node.name, iteration=wp_iter)
+        responses = await CE133.transmit(data)
+        logger.debug("Work package transmitted",
+                     # node_name=node.name,
+                     iteration=wp_iter)
 
     @staticmethod
     def _build_package(wp_iter: int) -> WorkPackage:
@@ -296,10 +300,12 @@ class WPBuilder:
         else:  # wp_iter % 4 == 3
             import_specs = [import_spec1, import_spec2]
 
+        import_specs = []
+
         wi = WorkItem(
             service=wi_service,
             code_hash=wi_code_hash,
-            payload=Bytes(b"bobaboba"),
+            payload=Bytes(os.urandom(256)),
             refine_gas_limit=Gas(1_000),
             accumulate_gas_limit=Gas(1_000),
             import_segments=ImportSpecs(import_specs),

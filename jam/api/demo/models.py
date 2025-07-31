@@ -20,7 +20,9 @@ class ConversionSuccessResponse(BaseModel):
 class InputData(BaseModel):
     block: Dict[str, Any] = Field(..., description="Block data in JSON format")
     state: Dict[str, Any] = Field(..., description="State data in JSON format")
-    entropy: Optional[Any] = Field(None, description="Optional entropy for randomization")
+    entropy: Optional[Any] = Field(
+        None, description="Optional entropy for randomization"
+    )
 
 
 class InputDataShuffle(BaseModel):
@@ -35,14 +37,11 @@ class OutputDataShuffle(BaseModel):
 class OutputData(BaseModel):
     state: Dict[str, Any] = Field(..., description="Expected output state in JSON format")
 
-
 class FileType(BaseModel):
     id: str = Field(..., description="Type identifier")
 
-
 class RequestDataTypes(BaseModel):
     types: list[FileType] = Field(..., description="List of available type identifiers")
-
 
 # Request models with proper field descriptions
 class RequestData(BaseModel):
@@ -50,11 +49,9 @@ class RequestData(BaseModel):
     output: Optional[OutputData] = Field(None, description="Expected output for validation")
     flags: Optional[Dict[str, Any]] = Field(None, description="Optional flags for validation")
 
-
 class RequestDataShuffle(BaseModel):
     input: InputDataShuffle = Field(..., description="Input data for shuffle validation")
     output: OutputDataShuffle = Field(..., description="Expected output after shuffling")
-
 
 # Define the literal types for codec labels
 CodecLabelType = Literal[
@@ -90,7 +87,6 @@ LABEL_DESCRIPTIONS = {
     "work_result": "Work result data structure",
 }
 
-
 # Type labels as enum for documentation
 class TypeLabelEnum(str, Enum):
     """Available type labels for conversion between JSON and codec formats"""
@@ -112,7 +108,9 @@ class TypeLabelEnum(str, Enum):
 
 # Json to codec type format
 class InputDataCodec(BaseModel):
-    file: Dict[str, Any] = Field(..., description="JSON file content to convert to codec format")
+    file: Dict[str, Any] = Field(
+        ..., description="JSON file content to convert to codec format"
+    )
     label: str = Field(
         ...,
         description="Type label for conversion",
@@ -138,7 +136,10 @@ class InputDataCodec(BaseModel):
 
 
 class RequestDataCodec(BaseModel):
-    input: InputDataCodec = Field(..., description="Input data for JSON to codec conversion")
+    input: InputDataCodec = Field(
+        ..., description="Input data for JSON to codec conversion"
+    )
+
 
 
 # Codec to JSON format

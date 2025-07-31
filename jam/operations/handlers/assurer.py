@@ -4,14 +4,13 @@ from jam.logging import get_logger
 
 from jam.utils.constants import CORE_COUNT
 from tsrkit_types import Bytes, U32
-from typing import TYPE_CHECKING, List
 
 
 logger = get_logger("nodeops")
 
 
 class Assurer:
-    _collected: List[bool]
+    _collected: list[bool]
 
     def __init__(self) -> None:
         self._collected = [False] * CORE_COUNT
@@ -24,20 +23,24 @@ class Assurer:
         from jam.settings import settings
         from jam.network.start import node
 
-        signr = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private).sign(
-            Bytes.from_bits(self._collected)
-        )
+        pref = Bytes("jam_available", "utf-8")
 
         from jam.network.protocols.ce_141 import CE141Data, AssuranceDistribution
         from jam.finality.finality import Finality
         from jam.network.protocols.ce_141 import Assurance
 
         from jam.block.extrinsics.assurances import AvailBitField
-        from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
+        from jam.types.protocol.crypto import Ed25519Signature, HeaderHash, Hash
 
         try:
             latest_block = Finality.load_latest(kv=settings.main_db)
             header_hash = latest_block.header.hash()
+            sign_data = header_hash.encode() + Bytes.from_bits(self._collected)
+
+            signr = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private).sign(
+                pref + Hash.blake2b(sign_data)
+            )
+
             # TODO: Construct & Transmit Ea
             CE141 = AssuranceDistribution()
             assurance = Assurance(

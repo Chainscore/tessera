@@ -20,7 +20,7 @@ async def node_info_printer():
                 peers=len(node.active_peers), 
                 connections=len(node.all_connected)
             )
-        ts+=1 
+        ts += 1
         await asyncio.sleep(6)
 
 
@@ -47,7 +47,7 @@ async def test_2_tsr():
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_2_tsr_1_pjam():
-    # In this config: 3 -> 1, 1 -> 0; 1 should have 2 peers 
+    # In this config: 3 -> 1, 1 -> 0; 1 should have 2 peers
     CLIENTS = [
         Client(Role.VAL, 40000 + int(os.environ.get("VAL1", "0"))),
         Client(Role.VAL, 40000 + int(os.environ.get("VAL2", "3"))),

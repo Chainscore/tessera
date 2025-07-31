@@ -84,7 +84,7 @@ async def start_node(
     from jam.settings import settings
     index = settings.validator_index
     peers = set(state.kappa)
-    peers.add(state.lambda_[index]) 
+    peers.add(state.lambda_[index])
     peers.add(state.gamma.k[index])
     peers.add(state.iota[index])
 
@@ -94,7 +94,7 @@ async def start_node(
             continue
         # TODO: reconnect in 6 secs if still not connected
         tasks.append(asyncio.create_task(proto.connect(peer)))
-    
+
     await asyncio.gather(*tasks)
 
     return proto

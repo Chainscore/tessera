@@ -17,7 +17,7 @@ from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 from jam.utils.merkle.binary_merkle import OpaqueHashes
 
 if TYPE_CHECKING:
-    from jam.state.state import State 
+    from jam.state.state import State
 
 class Settings:
     # Node settings
@@ -49,7 +49,7 @@ class Settings:
     # Epoch-related
     _last_recorded_epoch = -1
     _validator_index: int | None
-    _val: ValidatorData | None 
+    _val: ValidatorData | None
 
     def __init__(
         self,
@@ -102,49 +102,57 @@ class Settings:
     def update(self, state: Optional["State"] = None):
         """
         Updates epoch related data
-        TBD: Can be trigger via state transitions or keep checking while 
+        TBD: Can be trigger via state transitions or keep checking while
         """
         if not state:
             from jam.state.state import state
 
         curr_epoch = int(time() // 6 // EPOCH_LENGTH)
 
-        if self._last_recorded_epoch == curr_epoch: 
+        if self._last_recorded_epoch == curr_epoch:
             return
-        
+
         for i, val in enumerate(state.kappa):
             if val.ed25519 == self.ed25519_public: # and val.bandersnatch == self.bandersnatch:
                 self._validator_index = i
-                self._val = val 
+                self._val = val
                 break
         else:
             self._validator_index = None
             self._val = None
 
-        self._last_recorded_epoch = curr_epoch 
+        self._last_recorded_epoch = curr_epoch
 
     @property
     def main_db(self) -> RockStore:
         if not self._main_db:
-            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
+            raise ValueError(
+                "DB Paths are not set, call configure_db_paths before this."
+            )
         return self._main_db
 
     @property
     def audit_da(self) -> RockStore:
         if not self._audit_db:
-            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
+            raise ValueError(
+                "DB Paths are not set, call configure_db_paths before this."
+            )
         return self._audit_db
 
     @property
     def d3l(self) -> RockStore:
         if not self._d3l:
-            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
+            raise ValueError(
+                "DB Paths are not set, call configure_db_paths before this."
+            )
         return self._d3l
 
     @property
     def state_db(self) -> RockStore:
         if not self._state_db:
-            raise ValueError("DB Paths are not set, call configure_db_paths before this.")
+            raise ValueError(
+                "DB Paths are not set, call configure_db_paths before this."
+            )
         return self._state_db
 
     def clear(self):
@@ -175,7 +183,7 @@ class Settings:
             raise ValueError("Validator index is not updated, call update() first.")
         if isinstance(self._validator_index, NoneType):
             raise ValueError("Validator index is not set, check if the node is registered in the state.")
-        return self._validator_index 
+        return self._validator_index
 
     def get_shard_index(self, core_index: CoreIndex):
         from jam.utils.chainspec import chain_config

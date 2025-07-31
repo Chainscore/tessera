@@ -79,7 +79,9 @@ class RecentHistory:
 
         # Length Check
         if len(beta) > RECENT_HISTORY_SIZE:
-            raise ValueError("Invalid beta length, must be equal to RECENT_HISTORY_SIZE")
+            raise ValueError(
+                "Invalid beta length, must be equal to RECENT_HISTORY_SIZE"
+            )
 
         # Step 2
         last: MMR = MMR([])

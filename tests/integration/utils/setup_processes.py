@@ -1,8 +1,8 @@
 import os
 import asyncio
-import shutil 
+import shutil
 from multiprocessing import Process
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Optional
 from .run_node import run_node_process
@@ -17,12 +17,11 @@ class Role(Enum):
 
 @dataclass
 class Client:
-    role: Role 
-    # Port in case of validator/builder, else validator index 
+    role: Role
+    # Port in case of validator/builder, else validator index
     idx: int
     theme = "default"
     genesis = True
-
 
 async def setup_processes(clients: list[Client], node_tasks: list[Optional[Callable]], max_time = 20):
     processes = []
@@ -35,7 +34,7 @@ async def setup_processes(clients: list[Client], node_tasks: list[Optional[Calla
             )
         else:
             env_path = f"envs/{client.idx}.env"
-            is_validator = client.role == Role.VAL 
+            is_validator = client.role == Role.VAL
             is_builder = client.role == Role.BUILDER
 
             dir_path = f"/data/{client.idx}"
@@ -46,7 +45,15 @@ async def setup_processes(clients: list[Client], node_tasks: list[Optional[Calla
 
             p = Process(
                 target=run_node_process,
-                args=("", env_path, client.genesis, client.theme, is_builder, is_validator, node_tasks)
+                args=(
+                    "",
+                    env_path,
+                    client.genesis,
+                    client.theme,
+                    is_builder,
+                    is_validator,
+                    node_tasks,
+                ),
             )
         processes.append(p)
 

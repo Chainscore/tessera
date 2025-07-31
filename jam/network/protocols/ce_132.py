@@ -1,5 +1,5 @@
 import time
-import math
+import asyncio
 from typing import cast
 from tsrkit_types import structure, Bool, U32, U8
 
@@ -12,6 +12,7 @@ import asyncio
 from jam.network.connection import NodeConnection
 from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS, EPOCH_LENGTH
 from jam.finality.finality import Finality
+from jam.utils.gather import gather_with_exceptions
 
 
 # Module-specific logger
@@ -47,8 +48,6 @@ class SafroleTicketDistribution(NetworkProtocol):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-131132-safrole-ticket-distribution
     """
 
-    from jam.network.node import Node
-
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE132
@@ -59,28 +58,26 @@ class SafroleTicketDistribution(NetworkProtocol):
         from jam.network.start import node
         if not node: return
 
-        curr_time = time.time()
-        ts = int((curr_time - GENESIS_TS) // 6)
-        current_slot = ts % EPOCH_LENGTH
-        if current_slot < TICKET_SUBMISSION_END:
-            # storing ticket extrinsic
-            print(f"Storing ticket in extrinsic, time_slot={ts}, slot={current_slot}")
-            from jam.block.extrinsics.tickets import ticket_store
-            ticket_store.store(data.epoch_ticket.ticket)
-
-        stream_data = data.epoch_ticket_len.encode() + data.epoch_ticket.encode()
-
-        tasks = []
-
         try:
+            curr_time = time.time()
+            ts = int((curr_time - GENESIS_TS) // 6)
+            current_slot = ts % EPOCH_LENGTH
+            if current_slot < TICKET_SUBMISSION_END:
+                # storing ticket extrinsic
+                print(f"Storing ticket in extrinsic, time_slot={ts}, slot={current_slot}")
+                from jam.block.extrinsics.tickets import ticket_store
+                ticket_store.store(data.epoch_ticket.ticket)
+
+            stream_data = data.epoch_ticket_len.encode() + data.epoch_ticket.encode()
+            tasks = []
             for client in node.all_connected:
                 logger.debug("Sending safrole ticket", client=str(client.port))
 
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 client.stream_prefix[stream_id] = U8(self._prefix)
                 client.stream_buffer[stream_id] = b""
-                task = client.close_and_wait(message=stream_data, stream_id=stream_id)
-
+                res = client.close_and_wait(message=stream_data, stream_id=stream_id)
+                task = asyncio.create_task(res)
                 tasks.append(task)
 
                 logger.debug(
@@ -89,11 +86,12 @@ class SafroleTicketDistribution(NetworkProtocol):
                     stream_id=stream_id,
                 )
 
-            res = await asyncio.gather(*tasks)
+            res = await gather_with_exceptions(tasks)
             logger.info(
                 "Ticket transmission completed",
                 node=str(node.port),
             )
+            return res
 
         except Exception as e:
             logger.error(
@@ -115,7 +113,7 @@ class SafroleTicketDistribution(NetworkProtocol):
                 buffer_size=len(buffer),
             )
 
-            data, offset = CE132Data.decode_from(buffer)
+            data = CE132Data.decode(buffer)
             data = cast(CE132Data, data)
 
             if not data.is_valid:
@@ -148,6 +146,7 @@ class SafroleTicketDistribution(NetworkProtocol):
             server.stream_and_close(ack, stream_id)
 
         except Exception as e:
+            server.stop_stream(stream_id, 1)
             logger.error(
                 "Error safrole ticket submission",
                 stream_id=stream_id,
@@ -159,7 +158,7 @@ class SafroleTicketDistribution(NetworkProtocol):
     def res_intercept(self, stream_id: int, client: NodeConnection) -> Bool:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
-        if buffer[1:] == b"":
+        if buffer == b"":
             logger.info(
                 "Safrole ticket acknowledgement received",
                 stream_id=stream_id,

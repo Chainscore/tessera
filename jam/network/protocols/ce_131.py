@@ -1,4 +1,3 @@
-import asyncio
 from typing import cast
 from tsrkit_types import structure, Uint, Bool, U32, U8
 
@@ -45,8 +44,6 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
     Source:
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-131132-safrole-ticket-distribution
     """
-
-    from jam.network.node import Node
 
     def __init__(self):
         super().__init__()
@@ -171,6 +168,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
 
         except Exception as e:
+            server.stop_stream(stream_id, 1)
             logger.error(
                 "Error safrole ticket submission",
                 stream_id=stream_id,
@@ -182,7 +180,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
     def res_intercept(self, stream_id: int, client: NodeConnection) -> Bool:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
-        if buffer[1:] == b"":
+        if buffer == b"":
             logger.info(
                 "Safrole ticket acknowledgement received",
                 stream_id=stream_id,

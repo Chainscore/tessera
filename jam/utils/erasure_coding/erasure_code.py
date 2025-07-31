@@ -104,7 +104,9 @@ class ErasureCode:
             split_c.append(symbols)
 
         # transpose
-        transposed = [[split_c[j][i] for j in range(len(split_c))] for i in range(len(split_c[0]))]
+        transposed = [
+            [split_c[j][i] for j in range(len(split_c))] for i in range(len(split_c[0]))
+        ]
 
         # reed solomon decoding
         for i in transposed:

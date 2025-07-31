@@ -20,4 +20,6 @@ class BlockHistory:
     reported: ReportedDictionary
 
 
-Beta = TypedVector[BlockHistory]
+# State key: 3
+class Beta(TypedVector[BlockHistory]):
+    ...

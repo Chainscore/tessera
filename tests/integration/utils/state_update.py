@@ -24,9 +24,14 @@ def update_state(state: State):
     service_code = Bytes(b"").encode() + bytecode
     code_hash = Hash.blake2b(service_code)
 
-    state.delta[ServiceId(42)].service = AccountMetadata(code_hash=code_hash, balance=Balance(1_000_000),
-                                                         gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
-                                                         num_o=Ao(0))
+    state.delta[ServiceId(42)].service = AccountMetadata(
+        code_hash=code_hash,
+        balance=Balance(1_000_000),
+        gas_limit=Gas(1_000),
+        min_gas=Gas(1_000),
+        num_i=Ai(0),
+        num_o=Ao(0),
+    )
     state.delta[ServiceId(42)].lookup[
         LookupTable(hash=code_hash, length=BlobLength(len(service_code)))] = Timestamps([state.tau])
     state.delta[ServiceId(42)].preimages[code_hash] = service_code
@@ -45,9 +50,14 @@ def update_state(state: State):
     wi_code_hash = Hash.blake2b(wi_service_code)
     wi_service = ServiceId(1)
 
-    state.delta[wi_service].service = AccountMetadata(code_hash=wi_code_hash, balance=Balance(1_000_000),
-                                                      gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0),
-                                                      num_o=Ao(0))
+    state.delta[wi_service].service = AccountMetadata(
+        code_hash=wi_code_hash,
+        balance=Balance(1_000_000),
+        gas_limit=Gas(1_000),
+        min_gas=Gas(1_000),
+        num_i=Ai(0),
+        num_o=Ao(0),
+    )
     state.delta[wi_service].lookup[
         LookupTable(hash=wi_code_hash, length=BlobLength(len(wi_service_code)))] = Timestamps([state.tau])
     state.delta[wi_service].preimages[wi_code_hash] = wi_service_code

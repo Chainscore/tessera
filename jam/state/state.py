@@ -150,6 +150,16 @@ class State:
 
     def _force_transition(self, block: Block):
         # 1. Push auth hash of every WR to self.alpha[0:1]
+
+        # TODO: We should remove this
+        # alpha = self.alpha
+        #
+        # for guarantee in block.extrinsic.guarantees:
+        #     report = guarantee.report
+        #     alpha[report.core_index][0] = report.authorizer_hash
+        #
+        # self.alpha = alpha
+
         return self.transition(block)
 
     def transition(self, block: Block) -> bool:
@@ -239,7 +249,7 @@ class State:
             Authorization.transition(pre_state, self, block)
 
             # Recent History
-            history_merkle = BMRFunctions().wb_merkle_fn(
+            history_merkle = BMRFunctions().wb_merklize(
                 TypedVector[Bytes[32]](
                     sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map])
                 ),
@@ -272,8 +282,9 @@ class State:
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                 Finality.finalise(header_hash, _set.main_db, False)
                 block.extrinsic.clear_from_stores()
+                # asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs))
                 self._lock = False
-                return True 
+                return True
             else:
                 raise JamError(JamErrorCode.INVALID_BLOCK)
 
