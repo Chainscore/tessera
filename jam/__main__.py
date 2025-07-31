@@ -61,7 +61,7 @@ async def main(
     main_db = settings.main_db
 
     logger.info(
-        "Starting JAM node",
+        "Starting Jam Node!",
         name=name,
         port=port,
         ts=init_ts,
@@ -76,6 +76,8 @@ async def main(
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
+
+        # TODO: Remove Later
         update_state(state)
 
         settings.update()

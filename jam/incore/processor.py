@@ -1,6 +1,8 @@
 import asyncio
 from typing import Tuple
 import time
+from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32
+
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
@@ -62,7 +64,9 @@ from jam.utils.constants import (
     X,
 )
 from jam.incore.error import ProcessorError, ProcessorErrorCode as Code
+
 from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap
+
 from jam.utils.merkle import BMRFunctions
 
 from jam.incore.bundler import Bundler
@@ -79,10 +83,10 @@ logger = get_logger("in_core")
 
 class Processor:
     """ "Refinement Engine. Synced upto GP v0.7.0"""
-    merkle: BMRFunctions
+    merklizer: BMRFunctions
 
     def __init__(self):
-        self.merkle = BMRFunctions()
+        self.merklizer = BMRFunctions()
 
     async def process(
         self,
@@ -144,7 +148,6 @@ class Processor:
             # Build Guaranteed WR
             guarantees = await guarantee_task
             logger.debug(f"Processing guarantees..", cnt=len(guarantees))
-
             guaranteed_wr = self.process_guarantees(wr, wr_hash, guarantees)
 
             # Distribute Guaranteed Work Report to other validators
@@ -360,7 +363,7 @@ class Processor:
             l = len(wp_bundle)
 
             # Segment Root, e
-            e = ExportsRoot(self.merkle.cd_merklize(export_segments))
+            e = ExportsRoot(self.merklizer.cd_merklize(export_segments))
             logger.debug(
                 f"Exports Root calculated - {e.hex()}",
                 wp_hash=package_hash.hex()[:16] + "...",
@@ -429,7 +432,7 @@ class Processor:
                     segment_index = SegmentIndex(sgi)
                     s_dict[segment_index] = SegmentShard(s)
 
-                ss_root = self.merkle.wb_merklize(ss)
+                ss_root = self.merklizer.wb_merklize(ss)
                 ss_dict[shard_index] = s_dict
                 ss_roots.append(ss_root)
 
@@ -448,7 +451,7 @@ class Processor:
                 shards_keys.append(Bytes(shards_key.encode()))
 
             # Erasure Root
-            u = self.merkle.wb_merklize(shards_keys)
+            u = self.merklizer.wb_merklize(shards_keys)
             logger.info(
                 f"Erasure Root calculated - {u.hex()}",
                 wp_hash=package_hash.hex()[:16] + "...",

@@ -152,6 +152,10 @@ class Assembler:
             return r
 
     def validate_bundle(self, wr: WorkReport, bundle: WorkPackageBundle):
+        from jam.incore import Validator
+
+        validator = Validator()
+
         wp = bundle.package
         segs = bundle.import_segments
         jfns = bundle.justifications
@@ -165,6 +169,14 @@ class Assembler:
             raise AssemblerError(
                 Code.FAULTY_BUNDLE,
                 "Work Package Hash mismatch"
+            )
+
+        # Validate Package Constraints
+        is_valid = validator.validate_wp(wp)
+        if not is_valid:
+            raise AssemblerError(
+                Code.FAULTY_BUNDLE,
+                "Invalid Work Package"
             )
 
         # Then validate extrinsics

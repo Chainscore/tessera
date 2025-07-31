@@ -8,7 +8,6 @@ from jam.logging import get_logger
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.node import QuicNode
 
 from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
@@ -62,7 +61,7 @@ class WorkPackageSubmission(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE133
 
-    async def transmit(self, data: CE133Data) -> tuple[bool, QuicNode | None] | None:
+    async def transmit(self, data: CE133Data) -> tuple[bool, NodeConnection | None] | None:
         """Transmit Work Package from Builder to Guarantor"""
         from jam.network.start import node
         if not node: return None
@@ -163,8 +162,7 @@ class WorkPackageSubmission(NetworkProtocol):
             data = cast(CE133Data, data)
 
             if not data.is_valid:
-                raise "Invalid data in ce_133"
-                # raise NetworkingError(Code.INVALID_DATA)
+                raise NetworkingError(Code.INVALID_DATA)
 
             wp = data.package_data.work_package
             ci = data.package_data.core_index
@@ -179,7 +177,6 @@ class WorkPackageSubmission(NetworkProtocol):
 
             # Start Refinement Process
             from jam.incore.processor import Processor
-
             processor = Processor()
 
             # wr, wr_hash = processor.process(wp, ci, data.extrinsics)

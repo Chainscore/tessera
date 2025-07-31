@@ -14,6 +14,7 @@ from jam.types.protocol.crypto import (
     BandersnatchVrfSignature,
     HeaderHash,
 )
+from jam.types.audit.tranche import TrancheIndex
 from typing import cast
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -23,14 +24,14 @@ logger = get_logger("network")
 
 
 @structure
-class Assign:
+class AssignedReport:
     core_index: CoreIndex
     report_hash: WorkReportHash
 
 
 @structure
 class Announcement:
-    assigned_report: TypedVector[Assign]
+    assigned_reports: TypedVector[AssignedReport]
     ed25519_signature: Ed25519Signature
 
 
@@ -48,24 +49,24 @@ class NoShow:
 @structure
 class SubsequentTrancheEvidence:
     bandersnatch_signature: BandersnatchVrfSignature
-    no_show: NoShow
+    no_show: TypedVector[NoShow]
 
 
 @structure
-class Transmit:
+class TrancheAnnouncement:
     header_hash: HeaderHash
-    tranches: U8
+    tranche: TrancheIndex
     announcement: Announcement
 
 class Evidence(Choice):
     first_tranche: FirstTrancheEvidence
-    Subsequent_tranche: SubsequentTrancheEvidence
+    subsequent_tranche: TypedVector[SubsequentTrancheEvidence]
 
 
 @structure
 class CE144Data:
     len_a: Uint[32]
-    tranche_announcement: Transmit
+    tranche_announcement: TrancheAnnouncement
     len_b: Uint[32]
     evidence: Evidence
 
@@ -102,7 +103,7 @@ class AuditAnnouncement(NetworkProtocol):
     async def transmit(self, data: CE144Data):
         """Transmit Announcement of assign Work report for auditing from Auditor to Other Validators(Auditors)"""
 
-        from jam.operations.tranche_store import tranche_store, Tranche
+        from jam.storage.tranche_store import tranche_store, Tranche
         from jam.network.start import node
         from jam.settings import settings
 
@@ -125,9 +126,12 @@ class AuditAnnouncement(NetworkProtocol):
         v_r1[settings.validator_index] = {assign.report_hash for assign in data.tranche_announcement.announcement.assigned_report}
 
         tranche = Tranche(
-            tranche_index=data.tranche_announcement.tranches,
+            tranche_index=data.tranche_announcement.tranche,
             header_hash=data.tranche_announcement.header_hash
         )
+
+        tranche_store.add_set_announcement(tranche=tranche, validator_index=node.validator_index, assign_r=data.tranche_announcement.announcement.assigned_report)
+
 
         for v, r_hash in v_r1.items():
             for value in r_hash:
@@ -183,7 +187,7 @@ class AuditAnnouncement(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
-        from jam.operations.tranche_store import tranche_store, Tranche
+        from jam.storage.tranche_store import tranche_store, Tranche
 
         v_r: dict[ValidatorIndex, set[WorkReportHash]] = {}
 
@@ -195,7 +199,7 @@ class AuditAnnouncement(NetworkProtocol):
 
             get_v_assign = data.tranche_announcement.announcement.assigned_report
             v_index = server.validator_index
-            tranche_idx = data.tranche_announcement.tranches
+            tranche_idx = data.tranche_announcement.tranche
             header_hash = data.tranche_announcement.header_hash
 
             v_r[v_index] = {assign.report_hash for assign in get_v_assign}
@@ -205,10 +209,17 @@ class AuditAnnouncement(NetworkProtocol):
                 header_hash=header_hash
             )
 
+            tranche_store.add_set_announcement(tranche=tranche, validator_index=v_index,
+                                               assign_r=data.tranche_announcement.announcement.assigned_report)
+
             for v, r_hash in v_r.items():
                 for value in r_hash:
                     tranche_store.add_announce(tranche=tranche, wr_hash=value, validator_index=v_index)
 
+            tranche = Tranche(
+                tranche_index=TrancheIndex(0),
+                header_hash=header_hash,
+            )
 
             logger.debug(
                 "Received Audit's Announcement from other Auditors",

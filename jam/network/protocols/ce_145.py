@@ -1,6 +1,6 @@
 import asyncio
 from typing import cast
-from tsrkit_types import structure, Uint, U8, Bool
+from tsrkit_types import structure, Uint, Bool
 
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
 
@@ -111,7 +111,7 @@ class JudgmentPublication(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept individual Judgment from other Auditors for their assigned Work Reports """
-        from jam.operations.tranche_store import tranche_store, Tranche
+        from jam.storage.tranche_store import tranche_store, Tranche
         from jam.finality.finality import Finality
         from jam.settings import settings
         latest_block = Finality.load_latest(kv=settings.main_db)

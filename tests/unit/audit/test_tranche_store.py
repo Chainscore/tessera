@@ -1,11 +1,10 @@
 import pytest
 from jam.types.protocol.core import TrancheIndex
 from jam.types.protocol.crypto import HeaderHash
-from jam.types.work.report import WorkReport
-from jam.operations.tranche_store import (
+from jam.storage.tranche_store import (
     Tranche,
     TrancheStore,
-    JudgmentRecord,
+    AuditRecord,
     tranche_store,
 )
 from jam.audit.q import sample_work_reports_with_nulls
@@ -36,7 +35,7 @@ def another_dummy_work_report():
 @pytest.fixture
 def dummy_judgment_record():
     """Returns a dummy JudgmentRecord object for testing."""
-    return JudgmentRecord.dummy()
+    return AuditRecord.dummy()
 
 # Test class for TrancheStore
 class TestTrancheStore:

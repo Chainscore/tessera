@@ -1,11 +1,10 @@
 import asyncio
 import math
 import time
-from typing import Callable, List, Tuple
+from typing import List, Tuple
 
 from jam.logging import get_logger
 from .handlers import WPBuilder, assurer, BlockProducer, Conductor, Forwarding
-from jam.operations.audit_engine import AuditEngine
 from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from ..finality.finality import Finality
@@ -18,9 +17,9 @@ def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
         return [(0, WPBuilder)]
 
     return [
-        # (0, BlockProducer),
-        # (2, None),  # audit
-        # (4, assurer),  # transmit assurances
+        (0, BlockProducer),
+        (2, None),  # audit
+        (4, assurer),  # transmit assurances
     ]
 
 
@@ -52,20 +51,18 @@ async def operate(is_builder = False):
         logger.info(f"New Time Slot #{ts}", slot_index=(ts % EPOCH_LENGTH), peers=len(node.active_peers), connections=len(node.all_connected))
         # Schedule tasks to run immediately
 
-        # TODO: uncomment this when pushing
+        from jam.settings import settings
+        main_db = settings.main_db
+        finality_block = Finality.load_final(main_db)
+        finality_time_slot = finality_block.header.slot
 
-        # from jam.settings import settings
-        # main_db = settings.main_db
-        # finality_block = Finality.load_final(main_db)
-        # finality_time_slot = finality_block.header.slot
+        if conductor_ts <= (finality_time_slot%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2) and not ticket_generated:
+            logger.info("Tickets announcement to proxies")
+            asyncio.create_task(schedule_run(0, Conductor, ts, finality_time_slot))
+            ticket_generated = True
 
-        # if conductor_ts <= (finality_time_slot%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2) and not ticket_generated:
-        #     logger.info("Tickets announcement to proxies")
-        #     asyncio.create_task(schedule_run(0, Conductor, ts, finality_time_slot))
-        #     ticket_generated = True
-        #
-        # if forwarding_s <= (finality_time_slot%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2):
-        #     asyncio.create_task(schedule_run(0, Forwarding, finality_time_slot%EPOCH_LENGTH, finality_time_slot))
+        if forwarding_s <= (finality_time_slot%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2):
+            asyncio.create_task(schedule_run(0, Forwarding, finality_time_slot%EPOCH_LENGTH, finality_time_slot))
 
         for dispatch in dispatch_fns(is_builder):
             (task_ts, runner) = dispatch

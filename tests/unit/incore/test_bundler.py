@@ -50,8 +50,8 @@ async def node_task():
         from jam.network.node import node
 
         if node:
-            bundler = Bundler(node)
-            refiner = Processor(node)
+            bundler = Bundler()
+            refiner = Processor()
             wp_iter = (ts - init_ts)
 
             # NOTE: Use this for testing refinement / bundler

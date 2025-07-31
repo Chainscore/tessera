@@ -5,10 +5,10 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.types.protocol.core import CoreIndex, Gas, TimeSlot
+from jam.types.protocol.core import CoreIndex, Gas
 from jam.types.protocol.crypto import (
     OpaqueHash,
-    WorkReportHash,
+    WorkReportHash, Hash
 )
 from jam.types.work.execution import WorkResults, RefineContext
 from jam.types.work.package import WorkPackageSpec
@@ -35,6 +35,9 @@ class WorkReport:
     results: WorkResults
     # g
     auth_gas_used: Uint
+
+    def hash(self) -> bytes:
+        return Hash.blake2b(self.encode())
 
     @classmethod
     def empty(cls, **overrides) -> "WorkReport":
