@@ -13,6 +13,10 @@ from jam.network.start import start_node
 from jam.state.state import setup_state
 from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
+from jam.api.rpc.app import rpc
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
+from jam.api.rpc.app import rpc
 from jam.operations.ticket_queue import setup_ticket_queue
 from tests.integration.utils.state_update import update_state
 
@@ -77,6 +81,8 @@ async def main(
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
 
+        # Genesis specs
+        dev_spec = json.load(open(genesis_path))
         # TODO: Remove Later
         update_state(state)
 
@@ -90,6 +96,15 @@ async def main(
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db, True)
+
+        #       RPC/WebSocket server setup
+        rpc_port = int(os.environ.get("RPC_PORT", 5000))
+        rpc_config = Config()
+        rpc_config.bind = [f"{host}:{port}"]
+        rpc_config.debug = True
+        rpc_config.use_reloader = False
+
+        logger.info("📡 Starting RPC/WebSocket server", host=host, port=rpc_port)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:

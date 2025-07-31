@@ -64,6 +64,7 @@ class RpcResponse(BaseModel):
 
 def parse_data(data_types: list[Type[Codable]], data: list) -> list[Codable]:
     ret = []
-    for d, i in enumerate(data):
-        ret.append(data_types[i].from_json(d))
+    for i, d in enumerate(data):
+        ret.append(data_types[i](d))
+
     return ret

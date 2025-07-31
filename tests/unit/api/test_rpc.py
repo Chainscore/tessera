@@ -1,344 +1,339 @@
+# jam/tests/unit/api/test_rpc.py
 import pytest
+import json
+from pathlib import Path
 from jam.settings import setup_setting
 from jam.api.rpc.app import rpc
-from jam.state.state import setup_state
-from jam.block import Block
-from jam.finality.finality import Finality
+from jam.state.state import setup_state, set_state, State
+from jam.state.utils import construct_state_key
+from jam.types.block import Block
+from jam.consensus.grandpa.finality import Finality
+from jam.consensus.bp_engine import BlockProducer
 from jam.network.node import Node
-from jam.types.protocol.core import TimeSlot
+from jam.state.accounts import DeltaView, AccountData, StorageView, PreImageView, TimestampsView
+from jam.types.state.delta import LookupTable, ServiceCodeHash, Ao, Ai, Timestamps
+from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot
+from jam.utils.dummy.dummy_block import create_dummy_block
+from jam.types.protocol.crypto import HeaderHash, OpaqueHash, Hash
+from jam.types.state.delta import LookupTable, Timestamps
+from tsrkit_types import U32, ByteArray, Bytes, TypedArray
+from jam.utils.dummy.utils import create_dummy_bytes
 
 
-# @pytest.mark.asyncio
-# async def test_best_block(db_path):
-#     settings = setup_setting(db_path, 0, "alice", 0)
-#     state = setup_state(settings.state_db)
-#
-#     block = Block.genesis()
-#     hh = block.save(settings.main_db)  # Save to test-specific DB
-#     Finality.finalise(hh, settings.main_db)
-#     Finality.set_head(hh, settings.main_db)
-#
-#     b1 = BlockProducer(node=Node("", "", 0, settings.val, [], False, False), db=settings.main_db)._produce_block(state, TimeSlot(1))
-#     state.transition(b1)
-#
-#     # Simulate the best block handler
-#     payload = {
-#         "method": "bestBlock",
-#         "jsonrpc": "2.0",
-#         "params": [],
-#         "id": 3
-#     }
-#
-#     response = await rpc.test_client().post("/rpc", json=payload)
-#     assert response.status_code == 200
-#     data = await response.get_json()
-#     assert data["jsonrpc"] == "2.0"
-#     assert data["id"] == 3
-#     assert isinstance(data["result"], list)
-#     assert len(data["result"]) == 2
-#     assert data["result"][0] == list(b1.header.hash())
-#     assert data["result"][1] == int(b1.header.slot)
+def get_gen_state(db_path):
+    # Load genesis state
+    setting = setup_setting(db_path, None)
+    genesis_state_json = json.load(open(Path(__file__).parents[3] / "dev-spec.json"))[
+        "genesis_state"
+    ]
+    state = State.from_keyvals(genesis_state_json, setting.state_db)
+    state.store.enable_cache()
+    state.store.enable_writes()
+    return state, setting
 
-# @pytest.mark.asyncio
-# async def test_finalized_block(test_client, temp_db):
-#     # Simulate the finalized block
-#     # Create a block and finalize it
-#     block = Block.from_random()
-#     Finality.finalise(block.header.slot, temp_db)
-#     block.save(temp_db)
-#
-#     # Load the finalized block to check the finality
-#     finalized_block = Finality.load_final(temp_db)
-#     # Simulate the finalized block handler
-#     payload = {
-#         "method": "finalizedBlock",
-#         "jsonrpc": "2.0",
-#         "params": {},
-#         "id": 3
-#     }
-#
-#     response = await test_client.post("/rpc", json=payload)
-#     assert response.status_code == 200
-#     data = await response.get_json()
-#     assert data["jsonrpc"] == "2.0"
-#     assert data["id"] == 3
-#     assert isinstance(data["result"], list)
-#     assert len(data["result"]) == 2
-#     assert data["result"][0] == Header.__hash__(finalized_block.header)
-#     assert data["result"][1] == int(finalized_block.header.slot)
-#
-# @pytest.mark.asyncio
-# async def test_parent_block(test_client, temp_db):
-#
-#     setup_state(GhostState.genesis(), temp_db)
-#     from jam.state.state import state as updated_state
-#
-#     node = Node("0", "test_node", "0.0.0.0", 30333, updated_state.kappa[0], [], False, True)
-#     producer = BlockProducer(node, temp_db)
-#     # First block production
-#     block_1 = producer._produce_block(updated_state, TimeSlot(1))
-#     block_1.save(temp_db)
-#     updated_state.tau = TimeSlot(1)
-#
-#    #second block
-#     block_2 = producer._produce_block(updated_state, TimeSlot(2))
-#     block_2.save(temp_db)
-#     updated_state.tau = TimeSlot(2)
-#
-#
-#     # Simulate the parent block handler
-#     payload = {
-#         "method": "parent",
-#         "jsonrpc": "2.0",
-#         "params": {
-#             "Hash": Header.__hash__(block_2.header),
-#         },
-#         "id": 3
-#     }
-#     response = await test_client.post("/rpc", json=payload)
-#     assert response.status_code == 200
-#     data = await response.get_json()
-#     assert data["jsonrpc"] == "2.0"
-#     assert data["id"] == 3
-#     assert isinstance(data["result"], list)
-#     assert len(data["result"]) == 2
-#     assert data["result"][0] == Header.__hash__(block_1.header)
-#     assert data["result"][1] == int(block_1.header.slot)
-#
-# @pytest.mark.asyncio
-# async def test_state_root(test_client, temp_db):
-#
-#     setup_state(GhostState.genesis(), temp_db)
-#     from jam.state.state import state as updated_state
-#     block = Block.from_random()
-#
-#       # Simulate the state root handler
-#     payload = {
-#         "method": "stateRoot",
-#         "jsonrpc": "2.0",
-#         "params": {
-#             "Hash": Header.__hash__(block.header),
-#         },
-#         "id": 3
-#     }
-#     response = await test_client.post("/rpc", json=payload)
-#     assert response.status_code == 200
-#     data = await response.get_json()
-#     assert data["jsonrpc"] == "2.0"
-#     assert data["id"] == 3
-#     assert isinstance(data["result"], list)
-#     assert len(data["result"]) == 1
-#     assert data["result"][0] == bytes(state.root).hex()
-#
-#
-# @pytest.mark.asyncio
-# async def test_statistics(test_client, temp_db):
-#
-#     setup_state(GhostState.genesis(), temp_db)
-#     from jam.state.state import state as updated_state
-#
-#     block = Block.from_random()
-#
-#     # Simulate the statistics handler
-#     payload = {
-#         "method": "statistics",
-#         "jsonrpc": "2.0",
-#         "params": {
-#             "Hash" : Header.__hash__(block.header)
-#         },
-#         "id": 3
-#     }
-#
-#     response = await test_client.post("/rpc", json=payload)
-#     assert response.status_code == 200
-#     data = await response.get_json()
-#     assert data["jsonrpc"] == "2.0"
-#     assert data["id"] == 3
-#     assert data["result"][0] == str(updated_state.pi)
-#
-#
-# @pytest.mark.asyncio
-# async def test_service_data(test_client, temp_db):
-#     from jam.state.state import state
-#
-# #   Dummy account data
-#     dummy_account = AccountData(
-#         code_hash=ServiceCodeHash(b'\x00' * 32),
-#         balance=Balance(1000),
-#         gas_limit=Gas(100000),
-#         min_gas=Gas(100),
-#         num_o=Ao(1),
-#         num_i=Ai(2)
-#     )
-#     service_id = ServiceId(33)
-#     state.delta[service_id] = dummy_account
-#
-#     # Fetch to verify
-#     account = state.delta[service_id]
-#
-#     # Simulate the service data handler
-#     payload = {
-#         "method": "serviceData",
-#         "jsonrpc": "2.0",
-#         "params": {
-#             "Hash": Header.__hash__(dummy_account),
-#             "ServiceId": 33
-#         },
-#         "id": 3
-#     }
-#     response = await test_client.post("/rpc", json=payload)
-#     assert response.status_code == 200
-#     data = await response.get_json()
-#     assert data["jsonrpc"] == "2.0"
-#     assert data["id"] == 3
-#     assert isinstance(data["result"], list)
-#     assert len(data["result"]) == 1
-#     assert data["result"][0] == str(state.delta[ServiceId(33)].data)
-#
-#
-# @pytest.mark.asyncio
-# async def test_service_value(test_client, temp_db):
-#     from jam.state.state import state
-#
-#     dummy_account = AccountData(
-#         code_hash=ServiceCodeHash(b'\x00' * 32),
-#         balance=Balance(1000),
-#         gas_limit=Gas(100000),
-#         min_gas=Gas(100),
-#         num_o=Ao(1),
-#         num_i=Ai(2)
-#     )
-#     service_id = ServiceId(42)
-#     state.delta[service_id] = dummy_account  # <-- Set before handler call
-#
-#     block = Block.from_random()
-#
-#  # Choose a service ID (must be ServiceId type, not int)
-#     storage = StorageView(service_id, temp_db, state.TRIE)
-#
-#     # Create a dummy key and value
-#     key = ByteArray32(b'\x01' * 32)
-#     value = Bytes(b"hello world")
-#
-#     # Set the value in storage
-#     storage[key] = value
-#
-#     # Retrieve the value
-#     retrieved = bytes(storage[key])
-#
-#     # Simulate the service value handler
-#     payload = {
-#         "method": "serviceValue",
-#         "jsonrpc": "2.0",
-#         "params": {
-#             "Hash": Header.__hash__(block.header),
-#             "ServiceId": 42,
-#             "Blob": str(ByteArray32(b'\x01' * 32))
-#         },
-#         "id": 3
-#     }
-#     response = await test_client.post("/rpc", json=payload)
-#     assert response.status_code == 200
-#     data = await response.get_json()
-#     assert data["jsonrpc"] == "2.0"
-#     assert data["id"] == 3
-#     assert len(data["result"]) == 1
-#     assert data["result"][0] == str(retrieved)
-#
-#
-# @pytest.mark.asyncio
-# async def test_service_preimage(test_client, temp_db):
-#     from jam.state.state import state
-#
-#     dummy_account = AccountData(
-#         code_hash=ServiceCodeHash(b'\x00' * 32),
-#         balance=Balance(1000),
-#         gas_limit=Gas(100000),
-#         min_gas=Gas(100),
-#         num_o=Ao(1),
-#         num_i=Ai(2)
-#     )
-#     service_id = ServiceId(42)
-#     state.delta[service_id] = dummy_account
-#
-#     block = Block.from_random()
-#
-#     # Initialize the preimage view
-#     preimage = PreImageView(service_id, temp_db, state.TRIE)
-#
-#     # Create a dummy key and value
-#     key = ByteArray32(b'\x01' * 32)
-#     value = Bytes(b"hello world")
-#
-#     # Set the value in storage
-#     preimage[key] = value
-#
-#     # Retrieve the value
-#     retrieved = bytes(preimage[key])
-#
-#     # Simulate the service preimage handler
-#     payload = {
-#         "method": "servicePreimage",
-#         "jsonrpc": "2.0",
-#         "params": {
-#             "Hash": Header.__hash__(block.header),
-#             "ServiceId": 42,
-#             "Blob": str(ByteArray32(b'\x01' * 32))
-#         },
-#         "id": 3
-#     }
-#     response = await test_client.post("/rpc", json=payload)
-#     assert response.status_code == 200
-#     data = await response.get_json()
-#     assert data["jsonrpc"] == "2.0"
-#     assert data["id"] == 3
-#     assert len(data["result"]) == 1
-#     assert data["result"][0] == str(retrieved)
-#
-# @pytest.mark.asyncio
-# async def test_service_request(test_client, temp_db):
-#     from jam.state.state import state
-#
-#     dummy_account = AccountData(
-#         code_hash=ServiceCodeHash(b'\x00' * 32),
-#         balance=Balance(1000),
-#         gas_limit=Gas(100000),
-#         min_gas=Gas(100),
-#         num_o=Ao(1),
-#         num_i=Ai(2)
-#     )
-#     service_id = ServiceId(42)
-#     state.delta[service_id] = dummy_account
-#
-#     block = Block.from_random()
-#
-#
-#     timestamps = TimestampsView(service_id, temp_db, state.TRIE)
-#     hash_bytes = ByteArray32(b'\x01' * 32)
-#     length = 2
-#     lookup_key = LookupTable(hash_bytes, U32(length))
-#     dummy_timestamps = Timestamps([U32(123456789), U32(987654321)])
-#     timestamps[lookup_key] = dummy_timestamps
-#
-#     retrieved = timestamps[lookup_key]
-#     print(f"Retrieved value: {retrieved}")
-#     # Simulate the service request handler
-#     payload = {
-#         "method": "serviceRequest",
-#         "jsonrpc": "2.0",
-#         "params": {
-#             "Hash": Header.__hash__(block.header),
-#             "ServiceId": 42,
-#             "hash": str(hash_bytes),
-#             "u32": int(length)
-#         },
-#         "id": 3
-#     }
-#
-#     response = await test_client.post("/rpc", json=payload)
-#     assert response.status_code == 200
-#     data = await response.get_json()
-#     assert data["jsonrpc"] == "2.0"
-#     assert data["id"] == 3
-#     assert len(data["result"]) == 1
-#     assert data["result"][0] == str(retrieved)
+
+def produce_chain(state, db, length, starting_parent=None):
+    """
+    Execute `length` dummy blocks onto `db`, each with consecutive
+    TimeSlot(0), TimeSlot(1), …
+    Returns the HeaderHash of the last block.
+    """
+    parent = starting_parent or HeaderHash([0] * 32)
+    last_hh = None
+    for i in range(length):
+        blk = Block.genesis()
+        blk.header.parent = parent
+        blk.header.slot = TimeSlot(i)
+        hh = HeaderHash(blk.header.hash())
+        state.transition(blk)
+        parent = hh
+        last_hh = hh
+    return last_hh
+
+
+@pytest.mark.asyncio
+async def test_best_block(db_path):
+    settings = setup_setting(db_path, 0, "alice", 0)
+    state = setup_state(settings.state_db)
+
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+    b1 = BlockProducer(
+        node=Node("", "", 0, settings.val, [], False, False), db=settings.main_db
+    )._produce_block(state, TimeSlot(1))
+    state.transition(b1)
+
+    # Simulate the best block handler
+    payload = {"method": "bestBlock", "jsonrpc": "2.0", "params": [], "id": 3}
+
+    response = await rpc.test_client().post("/", json=payload)
+    assert response.status_code == 200
+    data = await response.get_json()
+
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 3
+    assert data["result"]["header_hash"] == list(b1.header.hash())
+    assert data["result"]["slot"] == int(b1.header.slot)
+
+
+@pytest.mark.asyncio
+async def test_finalized_block(db_path):
+    settings = setup_setting(db_path, 0, "alice", 0)
+    state = setup_state(settings.state_db)
+
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+
+    finalized_block = Finality.load_final(settings.main_db)
+
+    # Simulate the finalized block handler
+    payload = {"method": "finalizedBlock", "jsonrpc": "2.0", "params": [], "id": 3}
+
+    response = await rpc.test_client().post("/", json=payload)
+    assert response.status_code == 200
+    data = await response.get_json()
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 3
+    assert data["result"]["header_hash"] == list(finalized_block.header.hash())
+    assert data["result"]["slot"] == int(finalized_block.header.slot)
+
+
+@pytest.mark.asyncio
+async def test_parent_block(db_path):
+    settings = setup_setting(db_path, 0, "alice", 0)
+    state = setup_state(settings.state_db)
+
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+
+    b1 = BlockProducer(
+        node=Node("", "", 0, settings.val, [], False, False), db=settings.main_db
+    )._produce_block(state, TimeSlot(1))
+    state.transition(b1)
+    b2 = BlockProducer(
+        node=Node("", "", 0, settings.val, [], False, False), db=settings.main_db
+    )._produce_block(state, TimeSlot(2))
+    state.transition(b2)
+
+    # Simulate the parent block handler
+    payload = {"method": "parent", "jsonrpc": "2.0", "params": [list(b2.header.hash())], "id": 3}
+    response = await rpc.test_client().post("/", json=payload)
+    assert response.status_code == 200
+    data = await response.get_json()
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 3
+    assert data["result"]["header_hash"] == list(b1.header.hash())
+    assert data["result"]["slot"] == int(b1.header.slot)
+
+
+@pytest.mark.asyncio
+async def test_state_root(db_path):
+    # setup: get a State
+    settings = setup_setting(db_path, None)
+    state = setup_state(settings.state_db)
+    db = settings.main_db
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+
+    # churn 5 blocks (slots 1–5)
+    produce_chain(state, settings.main_db, length=5)
+
+    # hash of slot‐4’s block
+    hh4 = db.get(Block.get_storage_key_slot(TimeSlot(2)))
+
+    # Call the RPC
+    payload = {"method": "stateRoot", "jsonrpc": "2.0", "params": [list(hh4)], "id": 3}
+    resp = await rpc.test_client().post("/", json=payload)
+    assert resp.status_code == 200
+    data = await resp.get_json()
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 3
+    assert data["result"]["header_hash"] == list(bytes(State.load(hh4).root).hex())
+
+
+@pytest.mark.asyncio
+async def test_statistics(db_path):
+    settings = setup_setting(db_path, None)
+    state = setup_state(settings.state_db)
+    db = settings.main_db
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+
+    # churn 5 blocks (slots 1–5)
+    produce_chain(state, settings.main_db, length=5)
+
+    hh2 = db.get(Block.get_storage_key_slot(TimeSlot(2)))
+    # Call the RPC
+    payload = {"method": "statistics", "jsonrpc": "2.0", "params": [list(hh2)], "id": 3}
+
+    resp = await rpc.test_client().post("/", json=payload)
+    assert resp.status_code == 200
+    data = await resp.get_json()
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 3
+    assert data["result"]["result"] == list(((State.load(hh2).pi).encode()).hex())
+
+
+@pytest.mark.asyncio
+async def test_service_data_rpc(db_path):
+    state, settings = get_gen_state(db_path)
+    db = settings.main_db
+
+    # Make updates
+    sid = ServiceId(2)
+    state.delta[sid] = AccountData()
+
+    assert state.delta[sid].service.code_hash == Bytes(32)
+
+    # hash of slot‐2’s block
+    parent = HeaderHash([0] * 32)
+    for i in range(5):
+        blk = create_dummy_block()
+        blk.header.parent = parent
+        blk.header.slot = TimeSlot(i)
+        hh = HeaderHash(blk.header.hash())
+        state.transition(blk)
+        state.settle(hh)
+        blk.save(db)
+        Finality.set_head(hh, db)
+        Finality.finalise(hh, db)
+        parent = hh
+
+    hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
+    service_store = state.delta[sid].service.store
+    expected_data = service_store.get(bytes(construct_state_key((255, sid))))
+
+    # call the RPC
+    payload = {"method": "serviceData", "jsonrpc": "2.0", "params": [list(hh), int(sid)], "id": 7}
+    resp = await rpc.test_client().post("/", json=payload)
+    assert resp.status_code == 200
+    data = await resp.get_json()
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 7
+    assert data["result"]["result"] == list(expected_data)
+
+
+@pytest.mark.asyncio
+async def test_service_value_rpc(db_path):
+    settings = setup_setting(db_path, None)
+    state = setup_state(settings.state_db)
+    db = settings.main_db
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+
+    # pick a service and store a value under some key
+    data = create_dummy_bytes(100)
+
+    state.delta[ServiceId(1)] = AccountData()
+    sid = ServiceId(1)
+    key = Bytes[32]([0xA] * 32)
+    value = Bytes[32]([0xB] * 32)
+    state.delta[sid].storage[key] = value
+
+    produce_chain(state, settings.main_db, length=5)
+    hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
+
+    payload = {
+        "method": "serviceValue",
+        "jsonrpc": "2.0",
+        "params": [list(hh), int(1), list(key)],
+        "id": 8,
+    }
+
+    resp = await rpc.test_client().post("/", json=payload)
+    data = await resp.get_json()
+    assert resp.status_code == 200
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 8
+    assert data["result"]["result"] == list(str(value.hex()))
+
+
+@pytest.mark.asyncio
+async def test_service_preimage_rpc(db_path):
+    settings = setup_setting(db_path, None)
+    state = setup_state(settings.state_db)
+    db = settings.main_db
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+
+    sid = ServiceId(9)
+    state.delta[sid] = AccountData()
+    blob = b"hello, there!"
+    # hash function as above
+    hsh = blob  # replace with real blake2b(blob)
+    state.delta[sid].preimages[hsh] = blob
+
+    # hash of slot‐2’s block
+    produce_chain(state, settings.main_db, 5)
+    hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
+
+    payload = {
+        "method": "servicePreimage",
+        "jsonrpc": "2.0",
+        "params": [list(hh), int(sid), list(hsh)],
+        "id": 9,
+    }
+    resp = await rpc.test_client().post("/", json=payload)
+    data = await resp.get_json()
+    assert resp.status_code == 200
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 9
+    assert data["result"]["result"] == list(blob.hex())
+
+
+@pytest.mark.asyncio
+async def test_service_request_handler_rpc(db_path):
+    settings = setup_setting(db_path, None)
+    state = setup_state(settings.state_db)
+    db = settings.main_db
+    block = Block.genesis()
+    hh = block.save(settings.main_db)  # Save to test-specific DB
+    Finality.finalise(hh, settings.main_db)
+    Finality.set_head(hh, settings.main_db)
+
+    set_state(state)
+    db = settings.main_db
+
+    sid = ServiceId(1)
+    data = create_dummy_bytes(100)
+
+    hash = Hash.blake2b(data)
+
+    len = 100
+    state.delta[sid] = AccountData()
+    state.delta[sid].lookup[LookupTable(hash=hash, length=len)] = Timestamps(
+        [U32(1752078176), U32(1752078177)]
+    )
+
+    state.settle(header_hash=Bytes([1] * 32))
+
+    # hash of slot‐2’s block
+    produce_chain(state, settings.main_db, 5)
+    hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
+
+    payload = {
+        "method": "serviceRequest",
+        "jsonrpc": "2.0",
+        "params": [list(hh), int(sid), list(hash), int(len)],
+        "id": 9,
+    }
+    resp = await rpc.test_client().post("/", json=payload)
+    data = await resp.get_json()
+    assert resp.status_code == 200
+    assert data["jsonrpc"] == "2.0"
+    assert data["id"] == 9
+    assert data["result"]["result"] == [U32(1752078176), U32(1752078177)]
