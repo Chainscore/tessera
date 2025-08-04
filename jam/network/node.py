@@ -335,6 +335,7 @@ class QuicNode(asyncio.DatagramProtocol):
         await protocol.wait_connected()
         logger.info(f"➡️ Created client connection with {addr[1]}", cid=quic.host_cid.hex())
 
+        # FIX: Only if neighbor
         protocol.up0_stream = 0
         protocol.stream_and_keep_open(bytes(1), protocol.up0_stream)
         asyncio.create_task(self.keep_pinging(protocol))
