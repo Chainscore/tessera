@@ -1,3 +1,4 @@
+from typing import TYPE_CHECKING
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.integers import U8
@@ -5,7 +6,6 @@ from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.struct import structure
 from tsrkit_types.option import Option
 
-from jam.network.protocols.ce_144 import Announcement
 from jam.types.protocol.crypto import HeaderHash, Hash
 from jam.types.protocol.core import ValidatorIndex
 from jam.types.work.report import WorkReport, WorkReportHash, WorkReports
@@ -16,6 +16,8 @@ ValidatorList=TypedVector[ValidatorIndex]
 TrancheIndex = U8
 OptionalReport = Option[WorkReport]
 
+if TYPE_CHECKING:
+    from jam.network.protocols.ce_144 import Announcement
 
 @structure
 class AuditRecord:
@@ -32,7 +34,7 @@ class AuditRecord:
 @structure
 class TrancheState:
     unaudited_list: TypedVector[OptionalReport] # Corpus of reports (q), a_n will be calculated from this.
-    announcements: Dictionary[ValidatorIndex, Announcement] # Announcements received in this tranche
+    announcements: Dictionary[ValidatorIndex, "Announcement"] # Announcements received in this tranche
     assigned_wrs: WorkReports
     records: Dictionary[WorkReportHash, AuditRecord] # A_n, J_t, J_f mappings.
 
@@ -56,6 +58,9 @@ class TrancheState:
 class Tranche:
     tranche_index: TrancheIndex
     header_hash: HeaderHash
+
+    def __repr__(self):
+        return f"Tranche: {self.header_hash.hex()[:16]}@{int(self.tranche_index)}"
 
     def __hash__(self):
         return Hash.blake2b(self.encode())

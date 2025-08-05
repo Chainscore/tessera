@@ -22,10 +22,6 @@ class WPBuilder:
     WP Engine: Continuously produces work packages and transmits them.
     Work Package is shared $SLOT_PERIOD seconds apart.
     A builder node produces a work package and share it with the guarantors.
-
-    Args:
-        node (Node): The network node for communications
-        settings (Settings): Settings related to node
     """
 
     @classmethod

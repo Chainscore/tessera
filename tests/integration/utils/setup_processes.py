@@ -5,6 +5,8 @@ from multiprocessing import Process
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Optional
+
+from jam.utils.benchmark import write_json
 from .run_node import run_node_process
 from .run_polkajam import run_polkajam
 
@@ -20,7 +22,7 @@ class Client:
     role: Role
     # Port in case of validator/builder, else validator index
     idx: int
-    theme = "default"
+    theme: str = "default"
     genesis = True
 
 async def setup_processes(clients: list[Client], node_tasks: list[Optional[Callable]], max_time = 20):
@@ -71,6 +73,10 @@ async def setup_processes(clients: list[Client], node_tasks: list[Optional[Calla
         p.terminate()
     for p in processes:
         p.join()
+
+    print("!!!!!!!!!SAVING VECTORS!!!!!!!!!!!!")
+    from ..jamnp.test_full import b_vectors
+    write_json("vectors/combined-full", b_vectors.to_json())
 
     print("END OF TEST")
 

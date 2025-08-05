@@ -76,10 +76,12 @@ from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
 from jam.incore.validator import Validator
 from jam.storage.da.mappings import ReportHashAssurerMap, ErasureAssurerMap
 from jam.network.connection import NodeConnection
+from tests.unit.incore.types import FullVector
 
 # Module-specific logger
 logger = get_logger("in_core")
 
+vector: FullVector = FullVector()
 
 class Processor:
     """ "Refinement Engine. Synced upto GP v0.7.0"""
@@ -96,6 +98,12 @@ class Processor:
         share_guarantee: bool = True,
         save_assurance: bool = True,
     ):
+        global vector
+        vector = FullVector()
+        vector.core_index = core
+        vector.work_package = package
+        vector.extrinsics = extrinsics
+
         ts = int((time.time() - GENESIS_TS) //  SLOT_PERIOD)
         from jam.network.protocols.ce_134 import (
             CoreSegment,
@@ -117,6 +125,8 @@ class Processor:
         # Build Work Package Bundle
         logger.debug("Building work package bundle..")
         bundle = await bundler.build_bundle(package, extrinsics)
+        vector.bundle = bundle
+        vector.import_segs = bundle.import_segments
 
         guarantee_task = None
         if share_guarantee:
@@ -175,6 +185,8 @@ class Processor:
                 slot=ts,
             )
 
+        vector.work_rep = wr
+        vector.rep_hash = wr_hash
         return wr, wr_hash
 
     @staticmethod
@@ -352,6 +364,7 @@ class Processor:
         Returns:
             s: Availability specifier
         """
+        global vector
 
         from jam.utils.erasure_coding.erasure_code import ErasureCode
         from jam.incore.utils import Utils
@@ -492,6 +505,13 @@ class Processor:
                 erasure_root=u.hex(),
                 exports_root=e.hex(),
             )
+
+            vector.export_segs = justified_segments
+            vector.shards = shards_keys
+            vector.ss_roots = ss_roots
+            vector.bs_hashes = bs_hashes
+            vector.seg_shards = segments_shards
+            vector.bun_shards = bundle_shards
 
             return spec
         except Exception as e:

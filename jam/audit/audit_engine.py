@@ -47,31 +47,6 @@ class AuditEngine:
             logger.info("Block must be finalized or invalid.")
             return
 
-        # ------------- Initialize tranche and processed --------------
-        tranche_index = TrancheIndex(0)
-
-        # ----------------------------- initialized state for node and saved -----------------------
-        tranche_zero = Tranche(
-            header_hash=header_hash,
-            tranche_index=tranche_index
-        )
-
-        unaudited_list = List[Option[WorkReport]]([])
-        announcements = Dictionary[ValidatorIndex, Announcement]({})
-        valid_set = TypedVector[WorkReport]([])
-        invalid_set = TypedVector[WorkReportHash]([])
-        judgments = Dictionary[WorkReportHash, AuditRecord]({})
-
-        tranche_state = TrancheState(
-            unaudited_list=unaudited_list,
-            announcements=announcements,
-            judgments=judgments,
-            valid_set=valid_set,
-            invalid_set=invalid_set,
-        )
-
-        tranche_store.save_state(tranche=tranche_zero, tranche_state=tranche_state)
-
         # -------------- Fetch Pending Reports --------------
         prior_state = State.load(block.header.parent)
         auditable_reports = List[Option[WorkReport]]([])
@@ -82,8 +57,6 @@ class AuditEngine:
                 auditable_reports.append(Option[WorkReport](r.report))
             else:
                 auditable_reports.append(Option[WorkReport](Null))
-
-        tranche_store.add_to_unaudited(tranche=tranche_zero, unaudit_reports=auditable_reports)
 
         while True:
             tranche_index = utils.tranche_index(block=block)
@@ -170,28 +143,6 @@ class AuditEngine:
             tranche_store._save_state(curr_tranche, tranche_state)
             asyncio.create_task(auditor.audit(block, tranche_index))
 
-
-        """
-        TODO:
-            - We receive a valid block (valid w.r.t state transition).
-            - we check whether it is finalized or not.
-            - if new, we start audit engine.
-            
-            - In first round (tranche):
-                - we fetch initial q
-                - then kickoff tranche 0
-                
-                ...
-                
-            - In subsequent tranche:
-                - we have to find out unaudited list of reports.
-                - we have to find all those validators who announced audit of that report but didn't send judgement for 
-                 that report
-                - then from all those reports we have to find which reports to audit
-                
-            at the end of tranche / just at start of new tranche we have to check whether the report is audited or not.
-            this must be done by checking that there must not be any unaudited report left. 
-        """
 
     @classmethod
     def assigned_report(cls, block: Block, tranche: Tranche):

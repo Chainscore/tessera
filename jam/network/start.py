@@ -74,6 +74,7 @@ async def start_node(
         sock=sock
     )
 
+    # if not is_builder:
     proto.set_neighbors()
     proto.port = port
 
@@ -84,14 +85,18 @@ async def start_node(
     from jam.settings import settings
     index = settings.validator_index
     peers = set(state.kappa)
-    peers.add(state.lambda_[index])
-    peers.add(state.gamma.k[index])
-    peers.add(state.iota[index])
+    print("INDEX", index)
+    if index != 7:
+        peers.add(state.lambda_[index])
+        peers.add(state.gamma.k[index])
+        peers.add(state.iota[index])
 
     tasks = []
     for peer in peers:
         if peer.metadata.port == port:
             continue
+        if port == 40006:
+            print("BUILDER CONNECTING TO PEER", peer)
         # TODO: reconnect in 6 secs if still not connected
         tasks.append(asyncio.create_task(proto.connect(peer)))
 

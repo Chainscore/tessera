@@ -4,22 +4,18 @@ from typing import List, Tuple
 
 from tsrkit_types import structure, U8, U32, TypedVector, Option, Null, Bool
 
-from jam.block import Block
-from jam.types import ValidatorIndex, Ed25519Signature, WorkReports
+from jam.block.block import Block
 
 from jam.finality.finality import Finality
-from jam.state.state import State
 
 from jam.types.audit.tranche import TrancheIndex, Tranche
-from jam.types.protocol.core import CoreIndex, EpochIndex
-from jam.types.protocol.crypto import Hash, BandersnatchVrfSignature
-from jam.types.state.rho import WorkReportState
-from jam.types.work.report import WorkReport, WorkReportHash
+from jam.types.protocol.core import CoreIndex, EpochIndex, ValidatorIndex
+from jam.types.protocol.crypto import Hash, BandersnatchVrfSignature, Ed25519Signature
+from jam.types.work.report import WorkReport, WorkReportHash, WorkReports
 
 from jam.logging import get_logger
 from jam.utils.constants import EPOCH_LENGTH
 from jam.network.protocols.ce_144 import NoShow, AssignedReport
-from jam.storage.tranche_store import TrancheStore, Tranche
 
 
 # Module-specifier logger
@@ -32,13 +28,13 @@ class Auditor:
     async def audit(cls, block: Block, tranche: Tranche):
         from jam.audit.utils import Utils
         from jam.audit.audit_engine import AuditEngine
-        from jam.storage.tranche_store import tranche_store, Tranche
 
         audit = Utils()
         engine = AuditEngine()
 
         try:
 
+            # Fetch reports to audit in this tranche
             assigned_reports = engine.assigned_report(block=block, tranche=tranche)
 
             asyncio.create_task(cls.announce_judgment(assign_wrs=assigned_reports, tranche=tranche))
@@ -76,7 +72,7 @@ class Auditor:
         header_hash = latest_block.header.hash()
         entropy_source = latest_block.header.entropy_source
 
-        from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, TrancheAnnouncement, FirstTrancheEvidence, Announcement, Assign, Evidence, SubsequentTrancheEvidence, NoShow
+        from jam.network.protocols.ce_144 import CE144Data, AuditAnnouncement, TrancheAnnouncement, FirstTrancheEvidence, Announcement, AssignedReport, Evidence, SubsequentTrancheEvidence, NoShow
         CE144 = AuditAnnouncement()
 
         # ------------------------------------- Validator Announcement and Statement ---------------------------------------
@@ -94,7 +90,7 @@ class Auditor:
             bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=settings.bandersnatch_public)
             evidence = Evidence(FirstTrancheEvidence(bandersnatch_sign))
         else:
-            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=settings.bandersnatch_public, tranche_index=tranche_idx, w_r=WorkReport())
+            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=settings.bandersnatch_public, tranche_index=tranche_index, w_r=WorkReport())
             evidence = Evidence(
                 TypedVector[SubsequentTrancheEvidence]([
                     SubsequentTrancheEvidence(
@@ -155,16 +151,18 @@ class Auditor:
         slot = latest_block.header.slot
         epoch_idx = EpochIndex(math.floor(slot / EPOCH_LENGTH))
 
+        # TODO: Here find those reports which have negative judgements
+        # If any of those reports is not audit by us then append it to the assigned_wrs
+
         logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)} ")
 
 
         try:
             for c, r in assign_wrs:
-                wr_hash = Hash.blake2b(r.encode())
+                wr_hash = r.hash()
 
-                package, core, extrinsic  = get_work_package_by_rep_hash(filepath="jam/combine.json", rep_hash=wr_hash)
-
-                result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=settings.validator_index)
+                logger.debug("Refining report", wr_hash=wr_hash.hex(), tranche=tranche)
+                result = await audit.refine(r)
 
                 # STORE JUDGMENT HERE ONLY FOR TRANSMITTING
                 tranche_store.update_judgment(tranche=tranche, wr_hash=wr_hash, judgment=result, validator_index=settings.validator_index)

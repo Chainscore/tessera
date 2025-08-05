@@ -82,12 +82,13 @@ async def run_node(
     try:
         # Set genesis state
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
-        setup_state(settings.state_db, "dev-spec.json")
+        state = setup_state(settings.state_db, "dev-spec.json")
 
         # This fucks up syncing with polkajam, update this elsewhere
         # update_state(state)
 
         settings.update()
+        update_state(state)
 
         # setup ticket queue
         setup_ticket_queue()

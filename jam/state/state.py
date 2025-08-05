@@ -1,4 +1,5 @@
-import json 
+import asyncio
+import json
 from typing import Type
 from jam.error import JamError, JamErrorCode
 from jam.utils.merkle import BMRFunctions
@@ -277,6 +278,12 @@ class State:
                 )
 
                 block.save(_set.main_db)
+
+                from jam.operations.handlers.assurer import assurer
+                for ext in block.extrinsic.guarantees:
+                    logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                    asyncio.create_task(assurer._req_shard(ext))
+
                 # Set local chain head to produced block
                 Finality.set_head(header_hash, _set.main_db)
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented

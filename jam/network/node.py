@@ -119,9 +119,10 @@ class QuicNode(asyncio.DatagramProtocol):
             k for i, k in enumerate(state.kappa)
             if (i // w == row or i % w == col) and i != index
         ])
-        neighbors.add(state.lambda_[index])
-        neighbors.add(state.gamma.k[index])
-        neighbors.add(state.iota[index])
+        if index != 7:
+            neighbors.add(state.lambda_[index])
+            neighbors.add(state.gamma.k[index])
+            neighbors.add(state.iota[index])
 
         neighbors = [n for n in neighbors if n.ed25519 != settings.ed25519_public]
         logger.info("🏠 Neighbors set", neighbors=[n.metadata.port for n in neighbors], count=len(neighbors))

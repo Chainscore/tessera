@@ -9,6 +9,7 @@ from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.ticket import TicketBody
 from jam.types.state.gamma import GammaS, GammaSFallback, GammaSTickets
+from jam.utils.benchmark import write_json
 from jam.utils.constants import (
     EPOCH_LENGTH,
     SLOT_PERIOD,
@@ -17,7 +18,10 @@ from jam.utils.constants import (
 )
 from jam.logging import get_logger
 from jam.utils.util_fns import outside_in
+from tests.unit.incore.types import BlockVector
+from tests.unit.safrole.data import deepcopy
 
+b_vector = BlockVector()
 # Logger for Block Production / Authoring module
 logger = get_logger("author")
 
@@ -82,9 +86,22 @@ class BlockProducer(NodeDispatcher):
             logger.debug("⏭ Skipping BP: Not our fallback", expected=entry, our_key=settings.bandersnatch_public.hex())
             return
 
+        global b_vector
+        from tests.integration.jamnp.test_full import b_vectors, full_vectors
+
+        b_vector = BlockVector()
+        pre_state = deepcopy(state)
+
         block = latest.produce(TimeSlot(time_slot), ticket)
+        b_vector.pre_state = pre_state
+        b_vector.block = block
+        b_vector.vectors = full_vectors
 
         if state.transition(block):
+            post_state = state
+            b_vector.post_state = post_state
+            write_json("vectors/blocks", b_vector.to_json())
+
             if ticket:
                 logger.info("⛏ Produced block using ticket", hash=block.header.hash().hex()[:16] + "...", slot=time_slot)
             else:
@@ -92,4 +109,6 @@ class BlockProducer(NodeDispatcher):
             asyncio.create_task(up0.transmit(BlockAnnouncement.block_to_announcement(block)))
         else:
             logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block)
+
+        b_vectors.append(b_vector)
 
