@@ -18,7 +18,7 @@ cryptography = "45.0.2"
 pycryptodome = "^3.21.0"
 numpy = "2.2.3"
 structlog = "^25.2.0"
-aioquic = {path = "../aioquic"}
+aioquic = { path = "../aioquic" }
 pytest = "^8.3.5"
 pytest-asyncio = "^0.26.0"
 quart = "^0.20.0"
@@ -50,7 +50,14 @@ jam = "jam:run_jam"
 
 [tool.ruff]
 line-length = 100
-select = ["E", "F", "I", "B", "W", "UP"]  # Errors, pyflakes, isort, bugbear, warnings, upgrades
+select = [
+    "E",
+    "F",
+    "I",
+    "B",
+    "W",
+    "UP",
+] # Errors, pyflakes, isort, bugbear, warnings, upgrades
 exclude = ["migrations", ".venv"]
 
 [tool.black]

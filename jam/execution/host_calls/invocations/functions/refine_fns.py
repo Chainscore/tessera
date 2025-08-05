@@ -87,7 +87,7 @@ class RefineFunctions(INVF):
     ):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
-        if memory.is_accessible(address=p, length=z, for_write=True):
+        if memory.is_accessible(address=p, length=z, for_write=True): #TODO: need to change to readable only
             from jam.incore.processor import Processor
 
             x = Processor.zero_padding(
@@ -96,7 +96,7 @@ class RefineFunctions(INVF):
         else:
             raise PvmError(PANIC)
         if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:
-            registers[7] = HostStatus.HUH.value
+            registers[7] = HostStatus.FULL.value
             return CONTINUE, gas, registers, memory, context
         else:
             context.e.append(Segment(x))
@@ -207,7 +207,7 @@ class RefineFunctions(INVF):
     @staticmethod
     @INVF.register(25, gas_cost=10)
     def invoke(gas: Gas, registers: list, memory: Memory, context: RefineContext):
-        [n, o] = registers[7, 8]
+        [n, o] = registers[7:9]
         if not memory.is_accessible(o, 112, True):
             raise PvmError(PANIC)
         if n not in context.m:

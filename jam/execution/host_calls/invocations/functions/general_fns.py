@@ -352,8 +352,8 @@ class GeneralFunctions(INVF):
         if not memory.is_accessible(key_start, key_len):
             logger.error(
                 "Host call read: memory not accessible for key",
-                key_offset=ko,
-                key_size=kz,
+                key_offset=key_start,
+                key_size=key_len,
             )
             raise PvmError(PANIC)
 
@@ -379,7 +379,7 @@ class GeneralFunctions(INVF):
                 logger.error(
                     "Host call read: memory not accessible for output",
                     output_offset=o,
-                    required_size=l,
+                    required_size=length,
                 )
                 raise PvmError(PANIC)
             registers[7] = Register(len(value))

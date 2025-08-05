@@ -59,6 +59,11 @@ class ValidatorData:
     bls: BlsPublic
     metadata: ValidatorMetadata
 
+    @classmethod
+    def decode_from(cls, data: bytes) -> "ValidatorData":
+        """Decode validator data from bytes."""
+        return cls.decode(data)
+
     def __hash__(self):
         return hash(self.encode())
 
@@ -69,4 +74,4 @@ class ValidatorsData(TypedArray[ValidatorData, VALIDATOR_COUNT]):
         for i, validator in enumerate(self):
             if validator.bandersnatch == key or validator.ed25519 == key:
                 return i, validator
-        return -1, None  
+        return -1, None
