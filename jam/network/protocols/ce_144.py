@@ -110,7 +110,6 @@ class AuditAnnouncement(NetworkProtocol):
 
         from jam.storage.tranche_store import tranche_store, Tranche
 
-
         len_a = data.len_a.encode()
         msg_a = data.tranche_announcement.encode()
         len_b = data.len_b.encode()

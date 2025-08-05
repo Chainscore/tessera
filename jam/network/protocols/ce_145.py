@@ -136,6 +136,7 @@ class JudgmentPublication(NetworkProtocol):
 
             tranche_store.update_judgment( tranche=tranche, wr_hash=wr_hash, judgment=judge, validator_index=vi_judgment)
 
+
             logger.debug(
                 "Received Judgment from other Auditors",
                 stream_id=stream_id,
