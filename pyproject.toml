@@ -31,6 +31,8 @@ python-dotenv = "^1.1.0"
 asyncio = "^3.4.3"
 dot_ring = { path = "../dot-ring", develop = true }
 py-ark-vrf = "0.2.3"
+tsrkit-pvm = {path = "../tsrkit-pvm"}
+tsrkit-asm = {path = "../tsrkit-asm"}
 
 [tool.pyrefly]
 project-includes = ["**/*"]

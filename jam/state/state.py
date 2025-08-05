@@ -227,7 +227,7 @@ class State:
                 logger.critical(
                     "Newly available WRs",
                     count=len(newly_avail_wrs),
-                    wrs=[wr.hex()[:16] + "..." for wr in newly_avail_wrs],
+                    wrs=[wr.encode().hex()[:16] + "..." for wr in newly_avail_wrs],
                 )
 
             # Accumulation

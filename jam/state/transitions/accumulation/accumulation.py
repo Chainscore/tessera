@@ -1,6 +1,6 @@
 from copy import deepcopy
 from typing import Tuple, Set
-from jam.execution.host_calls.invocations.accumulate import PsiA
+from jam.execution.invocations.accumulate import PsiA
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
 from tsrkit_types.null import Null

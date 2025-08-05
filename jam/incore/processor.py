@@ -6,8 +6,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32
 from jam.utils.chainspec import chain_config
 from jam.logging import get_logger
-from jam.execution.host_calls.invocations.is_authorized import PsiI
-from jam.execution.host_calls.invocations.refine import PsiR
+from jam.execution.invocations.is_authorized import PsiI
+from jam.execution.invocations.refine import PsiR
 
 from jam.block.extrinsics.guarantees import (
     ReportGuarantee,
