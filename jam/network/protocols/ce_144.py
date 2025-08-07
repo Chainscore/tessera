@@ -14,6 +14,7 @@ from jam.types.protocol.crypto import (
     BandersnatchVrfSignature,
     HeaderHash,
 )
+from jam.types.audit.tranche import TrancheIndex
 from typing import cast
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -21,7 +22,6 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 # Module-specific logger
 logger = get_logger("network")
 
-TrancheIndex = U8
 @structure
 class AssignedReport:
     core_index: CoreIndex

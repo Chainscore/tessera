@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from tsrkit_types import structure, Null, TypedVector, Bytes, Uint, Option
+from tsrkit_types import Null, TypedVector, Bytes, Uint, Option
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -16,14 +16,14 @@ from jam.utils.constants import (
 from jam.utils.shuffle import shuffle
 from jam.types.protocol.crypto import Hash, BandersnatchPublic, HeaderHash
 from jam.block.block import Block
-from jam.types import BandersnatchVrfSignature, Ed25519Signature
+from jam.types import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash
 from jam.types.audit.tranche import TrancheIndex, Tranche
-from jam.block.header import Header
 from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR
-from jam.network.protocols.ce_144 import NoShow, AssignedReport
+from jam.network.protocols.ce_144 import AssignedReport
 
 from jam.logging import get_logger
 from py_ark_vrf import prove_ietf, vrf_output
+
 
 # Module-specifier logger
 logger = get_logger("in_core")
@@ -115,7 +115,7 @@ class Utils:
 
         # ------------------------------------------ take initial 10 reports -------------------------------------------
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-        shuffle_not_null = list[Tuple[CoreIndex, WorkReport]]([(c, w) for (c, w) in updated_array if w is not Null][:10])
+        shuffle_not_null = List[Tuple[CoreIndex, WorkReport]]([(c, w) for (c, w) in updated_array if w is not Null][:10])
 
         return shuffle_not_null
 
@@ -140,7 +140,7 @@ class Utils:
     @staticmethod
     def validator_announcement_statement(
             assign_report: List[Tuple[CoreIndex, WorkReport]],
-            header: Header,
+            header_hash: HeaderHash,
             tranche: Tranche
     ) -> Ed25519Signature:
         """
@@ -149,7 +149,7 @@ class Utils:
 
         Args:
             assign_report: Assigned Reports to the validator
-            header: latest Block's Header
+            header_hash: latest Block's Header
             tranche: Current tranche
 
         Returns:
@@ -162,8 +162,6 @@ class Utils:
         tranche_index = tranche.tranche_index
 
         signing_context = Bytes(SIGNING_CONTEXTS["announce"])
-
-        header_hash = HeaderHash(Hash.blake2b(header.encode()))
 
         set_value: set[Bytes] = set()
 
@@ -187,9 +185,10 @@ class Utils:
     def vrf_tranche(
             cls,
             header_hash: HeaderHash,
-            no_shows: TypedVector[NoShow],
             tranche: Tranche,
-            entropy: BandersnatchVrfSignature
+            entropy: BandersnatchVrfSignature,
+            unaudited_wrs: TypedVector[Option[WorkReport]]
+
     ) -> TypedVector[AssignedReport]:
         """
         Equation: 17.14, 17.15
@@ -197,33 +196,26 @@ class Utils:
 
         Args:
             header_hash: Current Tranche Header hash
-            no_shows: List of Work Reports ( No judgment or Negative judgment)
             tranche: Current Tranche
             entropy: Entropy source
+            unaudited_wrs: List of Work Reports will audit (for this tranche)
 
         Return:
             Assigned report for
 
         Source: https://graypaper.fluffylabs.dev/#/1c979cb/1f3d001fb900?v=0.7.1
         """
-        from jam.network.node import node
+        from jam.network.start import node
         from jam.storage.tranche_store import tranche_store
-        from jam.storage.da.reports import ReportsDA
-        from jam.settings import settings
         from jam.network.protocols.ce_144 import AssignedReport
 
-        d3l = settings.d3l
-
-        assigned_wr = TypedVector[AssignedReport]([])
         tranche_index = tranche.tranche_index
 
-        for no_show in no_shows:
-            for c, wr_hash in no_show.announcement.assigned_report:
+        # DEFINE EMPTY LIST
+        assigned_wr = TypedVector[AssignedReport]([])
 
-                # FETCH WORK-REPORT CORRESPONDING OF WORK-REPORT-HASH
-                rep_da = ReportsDA(d3l)
-                wr = rep_da.get(wr_hash=wr_hash)
-
+        for c, wr in enumerate(unaudited_wrs):
+            if wr != Null:
                 random_quantity = cls.vrf_signature_bandersnatch(
                     bandersnatch_key=node.b_key,
                     entropy_source=entropy,
@@ -234,15 +226,17 @@ class Utils:
                 # HERE WE CHECK VRF CONDITION
                 vrf_check = (VALIDATOR_COUNT / (256 * AUDIT_BIAS_FACTOR)) * vrf_output(random_quantity)[1:]
 
-                # NEGATIVE AND NO-JUDGMENT FOR THAT WORK REPORT
-                last_tranche_idx = tranche_index - TrancheIndex(1)
+                # NO-JUDGMENT FOR THAT WORK REPORT
+                prev_tranche_index = tranche_index - TrancheIndex(1)
 
-                tranche = Tranche(
-                    tranche_index=last_tranche_idx,
+                prev_tranche = Tranche(
+                    tranche_index=prev_tranche_index,
                     header_hash=header_hash
                 )
 
-                state = tranche_store.get_state(tranche=tranche)
+                wr_hash = WorkReportHash(Hash.blake2b(wr.encode()))
+
+                state = tranche_store.get_state(tranche=prev_tranche)
 
                 records = state.judgments.get(wr_hash)
 

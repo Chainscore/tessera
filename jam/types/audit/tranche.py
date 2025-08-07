@@ -28,8 +28,12 @@ class AuditRecord:
 
     @staticmethod
     def empty() -> "AuditRecord":
-        return AuditRecord(announces=ValidatorList([]), true_votes=ValidatorList([]), false_votes=ValidatorList([]),
-                           no_votes=ValidatorList([]))
+        return AuditRecord(
+            announces=ValidatorList([]),
+            true_votes=ValidatorList([]),
+            false_votes=ValidatorList([]),
+            no_votes=ValidatorList([])
+        )
 
 @structure
 class TrancheState:
@@ -37,7 +41,6 @@ class TrancheState:
     announcements: Dictionary[ValidatorIndex, "Announcement"] # Announcements received in this tranche
     assigned_wrs: WorkReports
     records: Dictionary[WorkReportHash, AuditRecord] # A_n, J_t, J_f mappings.
-
     valid_set: TypedVector[WorkReportHash] # Already validated_wrs [wr,1,2,3,4]
     invalid_set: TypedVector[WorkReportHash] # Already invalid_wrs
 
@@ -47,9 +50,7 @@ class TrancheState:
             unaudited_list=TypedVector[OptionalReport]([]),
             announcements=Dictionary[ValidatorIndex, Announcement]({}),
             assigned_wrs=WorkReports([]),
-
             records=Dictionary[WorkReportHash, AuditRecord]({}),
-
             valid_set=TypedVector[WorkReportHash]([]),
             invalid_set=TypedVector[WorkReportHash]([])
         )

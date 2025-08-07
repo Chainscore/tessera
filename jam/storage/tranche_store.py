@@ -1,5 +1,5 @@
 from typing import Dict
-from tsrkit_types import Bool, Option
+from tsrkit_types import Bool, Option, TypedVector
 
 from jam.logging import get_logger
 
@@ -18,14 +18,15 @@ class TrancheStore:
     def __init__(self) -> None:
         self._tranche_store = {}
 
+    # -------------------- RELATED STATES ----------------------------------
     def get_state(self, tranche: Tranche) -> TrancheState:
-        """Retrieve a TrancheState by Tranche object."""
+        """ Retrieve a TrancheState by Tranche object. """
         state = self._tranche_store.get(tranche)
         return state if state is not None else TrancheState.empty()
 
 
     def save_state(self, tranche: Tranche, state: TrancheState):
-        """Store TrancheState under its tranche key automatically."""
+        """ Store TrancheState under its tranche key automatically."""
         self._tranche_store[tranche] = state
 
     # ----------------------------------- RELATED TRANCHE (HEADER AND TRANCHE_INDEX) --------------------------------------------------------------
@@ -47,32 +48,20 @@ class TrancheStore:
 
 
     # ---------------------------------- UNAUDITED LIST -----------------------------------
-    def add_to_unaudited(self, tranche: Tranche, unaudited_reports: list[Option[WorkReport]]):
+    # done
+    def add_to_unaudited(self, tranche: Tranche, unaudited_reports: TypedVector[Option[WorkReport]]):
         state = self.get_state(tranche)
 
-        if tranche.tranche_index == 0:
-            state.unaudited_list = unaudited_reports
-            self.save_state(tranche=tranche, state=state)
-            return
+        state.unaudited_list = unaudited_reports
+        self.save_state(tranche=tranche, state=state)
+        logger.info(f"Updated unaudited list for specific tranches {tranche.tranche_index}")
 
-        # for wr in p_a_r:
-        #     if wr == Null:
-        #         state.unaudited_list.append(Null)
-        #     elif wr is not Null and wr in state.unaudited_list:
-        #         logger.warning("Work report already in unaudited list", wr_hash=WorkReportHash)
-        #         return
-        #     else:
-        #         state.unaudited_list.append(wr)
-        #
-        # self.save_state(tranche, state)
-        # logger.info("Added work report to unaudited list", wr_hash=WorkReportHash)
-
-    def get_unaudit_list(self, tranche: Tranche):
+    def get_unaudited_list(self, tranche: Tranche):
         state = self._tranche_store.get(tranche)
         if state:
             return state.unaudited_list
         else:
-            logger.info("Empty unaudit list")
+            logger.info("Empty unaudited list")
 
     # ----------------------------------------------------------------------------------------
 
