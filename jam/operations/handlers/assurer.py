@@ -1,6 +1,7 @@
 import asyncio
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from jam.block.extrinsics.assurances import AvailAssurance
 from jam.block.extrinsics.guarantees import ReportGuarantee
 from jam.logging import get_logger
 
@@ -47,24 +48,43 @@ class Assurer:
             # All the assurances must be recorded and transmitted for the reports mentioned in block
             latest_block = Finality.load_latest(kv=settings.main_db)
 
+            bitfield= AvailBitField(self._collected)
             header_hash = latest_block.header.hash()
-            sign_data = header_hash.encode() + Bytes.from_bits(self._collected)
+            sign_data = header_hash.encode() + bitfield.encode()
 
             signr = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private).sign(
-                pref + Hash.blake2b(sign_data)
+                pref + Hash.blake2b(sign_data).encode()
             )
 
             # TODO: Construct & Transmit Ea
             CE141 = AssuranceDistribution()
             assurance = Assurance(
                 anchor_hash=HeaderHash(header_hash),
-                bitfield=AvailBitField(self._collected),
+                bitfield=bitfield,
                 ed25519_signature=Ed25519Signature(signr),
             )
+
+            assr_ext = AvailAssurance(
+                anchor=HeaderHash(header_hash),
+                bitfield=bitfield,
+                validator_index=settings.validator_index,
+                signature=Ed25519Signature(signr),
+            )
+
+            logger.info(
+                "[EXTRINSICS]: STORING SELF ASSURANCE",
+                validator=settings.validator_index,
+                assurance=assr_ext.to_json(),
+            )
+
+            # Store self-assurance
+            from jam.block.extrinsics.assurances import asr_store
+            asr_store.store(assr_ext)
+
             data = CE141Data(assurance=assurance, len=U32(len(assurance.encode())))
             asyncio.create_task(CE141.transmit(data=data))
         except Exception as e:
-            logger.error("Failed to record assurance", error=e, time_slot=time_slot)
+            logger.error("Failed to transmit assurance", error=e, time_slot=time_slot)
         self.clear()
 
     def clear(self):
@@ -72,8 +92,7 @@ class Assurer:
 
     async def _req_shard(self, data: ReportGuarantee):
         from jam.settings import settings
-
-        print('re_shard node', settings.validator_index)
+        validator_index = settings.validator_index
 
         slot = data.slot
         signatures = data.signatures
@@ -81,7 +100,8 @@ class Assurer:
 
         report = data.report
         wr_hash = report.hash()
-        if settings.validator_index not in assurers:
+
+        if validator_index not in assurers:
             er_root = report.package_spec.erasure_root
 
             shard_index = settings.get_shard_index(report.core_index)
@@ -94,15 +114,16 @@ class Assurer:
 
             CE137 = ShardDistributionProtocol()
 
-            query = Query(shard_index=shard_index, erasure_root=er_root)
-            data = CE137Data(len=U32(len(query.encode())), query=query)
-
-            logger.debug(
-                "Requesting Shard",
-                shard_index=shard_index,
-                erasure_root=er_root.hex()[:16] + "...",
-            )
             try:
+                query = Query(shard_index=shard_index, erasure_root=er_root)
+                data = CE137Data(len=U32(len(query.encode())), query=query)
+
+                logger.debug(
+                    "Requesting Shard",
+                    shard_index=shard_index,
+                    erasure_root=er_root.hex()[:16] + "...",
+                )
+
                 responses = await CE137.transmit(data=data, assurers=assurers)
                 for shard in responses:
                     # Save Shard
@@ -152,6 +173,7 @@ class Assurer:
                                 f"📩 Assured work report (Assurer)",
                                 wr_hash=wr_hash.hex()[:16] + "...",
                                 slot=slot,
+                                validator_ind=validator_index
                             )
 
                             break
@@ -166,9 +188,10 @@ class Assurer:
             self.record_shard_assr(report.core_index)
 
             logger.info(
-                f"📩 Assured work report (Secondary Guarantor)",
+                f"📩 Assured work report (Core Guarantor)",
                 wr_hash=wr_hash.hex()[:16] + "...",
                 slot=slot,
+                validator_ind=validator_index
             )
 
             # saving justification for shard assigned to itself

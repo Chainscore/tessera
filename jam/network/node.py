@@ -20,9 +20,9 @@ import os
 from functools import partial
 from typing import Callable, Optional, Text, Union, cast
 from jam.logging import get_logger
-from jam.network.base.protocol import PrefixType
 from jam.types.protocol.crypto import Ed25519Public
 from jam.utils.constants import VALIDATOR_COUNT
+from .base.certificate import generate_san
 from .connection import NodeConnection
 from jam.types.protocol.validators import ValidatorData
 
@@ -56,7 +56,7 @@ class QuicNode(asyncio.DatagramProtocol):
     def __init__(
         self,
         *,
-        id: str,
+        _id: str,
         cfg: QuicConfiguration,
         create_protocol: Callable = NodeConnection,
         session_ticket_fetcher: Optional[SessionTicketFetcher] = None,
@@ -86,7 +86,7 @@ class QuicNode(asyncio.DatagramProtocol):
           created. It must accept two arguments: a :class:`asyncio.StreamReader`
           and a :class:`asyncio.StreamWriter`.
         """
-        self._id = id
+        self._id = _id
         self._cfg = cfg
         self._create_protocol = create_protocol
         self._loop = asyncio.get_running_loop()
@@ -227,7 +227,7 @@ class QuicNode(asyncio.DatagramProtocol):
                 session_ticket_fetcher=self._session_ticket_fetcher,
                 session_ticket_handler=self._session_ticket_handler,
             )
-            protocol = self._create_protocol(id=self._id, quic=connection, is_initiating=False, port=addr[1])
+            protocol = self._create_protocol(_id=self._id, quic=connection, is_initiating=False, port=addr[1])
             protocol.connection_made(self._transport)
 
             # register callbacks
@@ -317,7 +317,10 @@ class QuicNode(asyncio.DatagramProtocol):
             return None
 
         quic = QuicConnection(configuration=self._cfg)
-        protocol: NodeConnection = self._create_protocol(self._id, quic=quic, is_initiating=True, port=peer.metadata.port)
+        protocol: NodeConnection = self._create_protocol(
+            generate_san(peer.ed25519),  # register peer's san
+            quic=quic, is_initiating=True, port=peer.metadata.port
+        )
         protocol.connection_made(self._transport)       # share transport
         self.connection_ids[quic.host_cid] = protocol   # register protocol
         self.conns[peer.ed25519] = quic.host_cid        # register connection ID

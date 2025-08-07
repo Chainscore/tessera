@@ -55,8 +55,9 @@ class WorkReportDistribution(NetworkProtocol):
         )
 
         tasks = []
-        try:
-            for client in node.all_connected:
+        for client in node.all_connected:
+
+            try:
                 logger.debug("Transmitting report", peer=client)
 
                 # Send Protocol Prefix
@@ -77,17 +78,18 @@ class WorkReportDistribution(NetworkProtocol):
                     port=client.port,
                 )
 
-            responses = list[bool](await gather_with_exceptions(tasks))
+            except Exception as e:
+                logger.error(
+                    "Failed to distribute report.",
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
 
-            if responses is not None:
-                return responses
+        responses = list[bool](await gather_with_exceptions(tasks))
 
-        except Exception as e:
-            logger.error(
-                "Failed to distribute report.",
-                error=str(e),
-                error_type=type(e).__name__,
-            )
+        if responses is not None:
+            return responses
+
 
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Work Report on Validator"""
@@ -101,10 +103,6 @@ class WorkReportDistribution(NetworkProtocol):
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
-
-            # Save extrinsic
-            from jam.block.extrinsics.guarantees import wrg_store
-            wrg_store.store(data.guaranteed_wr)
 
             # Save Mappings
             from jam.incore.processor import Processor

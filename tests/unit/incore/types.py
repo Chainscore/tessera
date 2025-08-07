@@ -1,17 +1,17 @@
 from tsrkit_types import structure, TypedVector, Bytes, Vector
 
 from jam.block import Block
-from jam.state.state import State
+from jam.state.state import Rho
 from jam.types import (
     WorkPackage,
     CoreIndex,
     WorkReport,
     WorkReportHash,
     WorkPackageBundle,
-    Segments,
+    Segments, HeaderHash, ValidatorIndex, StateRoot
 )
 from jam.types.work.manifest import Extrinsics, MultiSegments
-from jam.types.work.shard import SegmentsShards, BundleShards, BundleShardHashes, SegmentsShardRoots
+from jam.types.work.shard import SegmentsShards, BundleShardHashes, SegmentsShardRoots
 
 
 @structure
@@ -64,10 +64,12 @@ FullVectors = TypedVector[FullVector]
 
 @structure
 class BlockVector:
-    pre_state: State
+    pre_rho: Rho
     block: Block
-    post_state: State
-    vectors: FullVectors
+    header_hash: HeaderHash
+    post_rho: Rho
+    author: ValidatorIndex
+    new_root: StateRoot
 
     def __init__(self):
         ...

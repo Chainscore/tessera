@@ -26,7 +26,7 @@ class Assurances:
     """State transition function for the processing of Assurances."""
 
     @staticmethod
-    def transition(pre_state: Sigma, state: Sigma, block: Block) -> (Sigma, List):
+    def transition(state: Sigma, block: Block) -> (Sigma, List):
         """
         Process the assurances extrinsic.
 

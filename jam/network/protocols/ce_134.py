@@ -1,9 +1,8 @@
 import asyncio
-import time
 
-from typing import cast, TYPE_CHECKING
+from typing import cast
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from tsrkit_types import TypedVector, Option, Uint, structure, Null, U32, U8
+from tsrkit_types import Option, Uint, structure, U8
 
 from jam.logging import get_logger
 
@@ -94,6 +93,8 @@ class WorkPackageSharing(NetworkProtocol):
     async def transmit(self, data: CE134Data):
         """Request Work Report from Node"""
         from jam.network.start import node
+        from jam.state.state import state
+
         msg_a = data.core_segment.encode()
         len_a = data.map_len.encode()
         msg_b = data.work_package_bundle.encode()
@@ -106,6 +107,7 @@ class WorkPackageSharing(NetworkProtocol):
 
         mapping = assign_guarantors()
         guarantors = mapping[0][ci]
+        logger.debug("Fetched Assigned Guarantors (134)", mapping=mapping[1], tau=state.tau, root=state.root.hex())
 
         logger.info(
             "Transmitting work package bundle to guarantors",
@@ -120,12 +122,8 @@ class WorkPackageSharing(NetworkProtocol):
         responses = []
         transmitted_count = 0
 
-        try:
-            for client in node.all_connected:
-                # For hardcoded testing
-                # if peer.port != 40000:
-                #     continue
-
+        for client in node.all_connected:
+            try:
                 if client.val not in guarantors:
                     continue
 
@@ -155,26 +153,27 @@ class WorkPackageSharing(NetworkProtocol):
                     core=ci,
                 )
 
-            if transmitted_count > 2:
-                raise ValueError(
-                    "Trying to transmit work package bundle to more than 2 guarantors"
+
+            except Exception as e:
+                logger.error(
+                    "Failed to transmit work package bundle to guarantor",
+                    error=str(e),
+                    error_type=type(e).__name__,
                 )
 
-            responses = await gather_with_exceptions(tasks)
-
-            logger.info(
-                "Work package bundle transmission completed",
-                transmitted_to=transmitted_count,
-                guarantors=guarantors,
-                core=ci,
+        if transmitted_count > 2:
+            raise ValueError(
+                "Trying to transmit work package bundle to more than 2 guarantors"
             )
 
-        except Exception as e:
-            logger.error(
-                "Failed to transmit work package bundle to guarantor",
-                error=str(e),
-                error_type=type(e).__name__,
-            )
+        responses = await gather_with_exceptions(tasks)
+
+        logger.info(
+            "Work package bundle transmission completed",
+            transmitted_to=transmitted_count,
+            guarantors=guarantors,
+            core=ci,
+        )
 
         return responses
 

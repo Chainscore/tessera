@@ -14,20 +14,16 @@ from aioquic.quic.events import (
     StreamReset,
     StopSendingReceived,
 )
-from cryptography.x509 import Certificate
 from tsrkit_types import U8
-
 from jam.logging import get_logger
-from jam.network.base.certificate import verify_certificate
+from jam.network.base.certificate import verify_certificate, generate_san
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import PrefixType
+
+from jam.types.protocol.core import CoreIndex, ValidatorIndex
 from jam.types.protocol.crypto import Ed25519Public
-from jam.types.protocol.validators import ValidatorData
-from jam.utils.constants import NODE_ALPN
-from jam.types.protocol.core import CoreIndex
 from jam.types.work.shard import ShardIndex
-from jam.utils.constants import VALIDATOR_COUNT
-from ..types import ValidatorIndex
+from jam.utils.constants import VALIDATOR_COUNT, NODE_ALPN
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -39,7 +35,7 @@ logger = get_logger("network")
 class NodeConnection(QuicConnectionProtocol):
     """JAMNP-spec QUIC Connection handler"""
     # SAN
-    id: str
+    _id: str
     # Common UP0 Stream ID. 
     # If not None, we have connected UP0 
     up0_stream: Optional[int] = None
@@ -57,20 +53,19 @@ class NodeConnection(QuicConnectionProtocol):
 
     def __repr__(self):
         return (
-            f"host={str(self.val.metadata.host)}, port={int(self.val.metadata.port)}, san={str(self.id)}"
+            f"Node(host={str(self.val.metadata.host)}, port={int(self.val.metadata.port)}, san={str(self._id)})"
         )
-
 
     def __init__(
         self, 
-        id: str,
+        _id: str,
         quic: QuicConnection, 
         is_initiating: bool,
         port: int,
         stream_handler: QuicStreamHandler|None = None
     ) -> None:
         super().__init__(quic=quic, stream_handler=stream_handler)
-        self.id = id
+        self._id = _id
         self.waiter = {}
         self.stream_buffer = {}
         self.stream_prefix = {}
@@ -101,7 +96,7 @@ class NodeConnection(QuicConnectionProtocol):
             logger.info(f"🔗 Handshake completed with {pk.hex()}.")
 
             self.ed25519_public = pk 
-            
+            self._id = generate_san(pk)
             return pk 
         
         except Exception as e:

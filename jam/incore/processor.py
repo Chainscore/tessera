@@ -8,17 +8,19 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
     Ed25519PrivateKey,
 )
-from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32
-from jam.network.protocols.ce_134 import Credential
-from jam.utils.chainspec import chain_config
-from jam.logging import get_logger
-from jam.execution.host_calls.invocations.is_authorized import PsiI
-from jam.execution.host_calls.invocations.refine import PsiR
+
 from jam.block.extrinsics.guarantees import (
     ReportGuarantee,
     ValidatorSignatures,
     ValidatorSignature,
 )
+
+from jam.network.connection import NodeConnection
+from jam.network.protocols.ce_134 import Credential
+
+from jam.logging import get_logger
+from jam.execution.host_calls.invocations.is_authorized import PsiI
+from jam.execution.host_calls.invocations.refine import PsiR
 
 from jam.types.protocol.core import (
     CoreIndex,
@@ -28,9 +30,10 @@ from jam.types.protocol.core import (
     ValidatorIndex,
 )
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
-from jam.types.work import WorkReport, SegmentRootLookup, WorkPackageSpec, WorkResults
+from jam.types.work.execution import WorkResult, WorkExecResult, RefineLoad, WorkResults
+
 from jam.types.work.item import WorkItem
-from jam.types.work.package import WorkPackage, WorkPackageBundle
+from jam.types.work.package import WorkPackage, WorkPackageBundle, WorkPackageSpec
 from jam.types.work.manifest import (
     Segments,
     Segment,
@@ -39,7 +42,9 @@ from jam.types.work.manifest import (
     ProvedSegments,
     SegmentIndex,
     Assurers,
+    SegmentRootLookup,
 )
+from jam.types.work.report import WorkReport
 from jam.types.work.shard import (
     BundleShardHashes,
     SegmentsShards,
@@ -53,8 +58,18 @@ from jam.types.work.shard import (
     SegShardsDict,
     SegShardDict,
 )
-from jam.types.work.execution import WorkResult, WorkExecResult, RefineLoad
-from jam.utils.benchmark import benchmark
+
+from jam.incore.bundler import Bundler
+from jam.incore.error import ProcessorError, ProcessorErrorCode as Code
+from jam.incore.validator import Validator
+
+from jam.storage.da.audits import AuditShardsDA
+from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap, ReportHashAssurerMap, ErasureAssurerMap
+from jam.storage.da.reports import ReportsDA
+from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
+
+from jam.utils.merkle import BMRFunctions
+from jam.utils.chainspec import chain_config
 from jam.utils.constants import (
     BASIC_ERASURE_SIZE,
     GENESIS_TS,
@@ -63,19 +78,7 @@ from jam.utils.constants import (
     SLOT_PERIOD,
     X,
 )
-from jam.incore.error import ProcessorError, ProcessorErrorCode as Code
 
-from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap
-
-from jam.utils.merkle import BMRFunctions
-
-from jam.incore.bundler import Bundler
-from jam.storage.da.audits import AuditShardsDA
-from jam.storage.da import ReportsDA
-from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
-from jam.incore.validator import Validator
-from jam.storage.da.mappings import ReportHashAssurerMap, ErasureAssurerMap
-from jam.network.connection import NodeConnection
 from tests.unit.incore.types import FullVector
 
 # Module-specific logger
@@ -96,7 +99,6 @@ class Processor:
         core: CoreIndex,
         extrinsics: Extrinsics,
         share_guarantee: bool = True,
-        save_assurance: bool = True,
     ):
         global vector
         vector = FullVector()
@@ -174,19 +176,9 @@ class Processor:
             logger.debug("Saving guaranteed work report mappings..")
             self.process_guaranteed_report(guaranteed_wr)
 
-        if save_assurance:
-            # Record assurance for this core & this validator
-            from jam.operations.handlers.assurer import assurer
-            assurer.record_shard_assr(wr.core_index)
-
-            logger.info(
-                f"📩 Assured work report (Primary Guarantor)",
-                wr_hash=wr_hash.hex()[:16] + "...",
-                slot=ts,
-            )
-
         vector.work_rep = wr
         vector.rep_hash = wr_hash
+
         return wr, wr_hash
 
     @staticmethod
@@ -288,7 +280,7 @@ class Processor:
                 zero_segments = Segments([segment for _ in range(segment_count)])
                 z = len(o) + s_result
 
-                if r._choice_key != "ok":
+                if r.get_key() != "ok":
                     return r, u, zero_segments
                 elif z + len(r.unwrap()) > MAX_WORK_REPORT_SIZE:
                     return WorkExecResult({"result_oversize": Null}), u, zero_segments
@@ -533,7 +525,7 @@ class Processor:
             logger.debug("Building Work Report..")
             report = self.build_report(bundle, core, sr_lookup, store)
 
-            wr_hash = Hash.blake2b(report.encode())
+            wr_hash = WorkReportHash(Hash.blake2b(report.encode()))
             logger.info(
                 f"Report compiled", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex()
             )
@@ -563,6 +555,10 @@ class Processor:
     @staticmethod
     def process_guaranteed_report(report_guarantee: ReportGuarantee):
         from jam.settings import settings
+
+        # Store Extrinsic
+        from jam.block.extrinsics.guarantees import wrg_store
+        wrg_store.store(report_guarantee)
 
         wr = report_guarantee.report
         wr_hash = Hash.blake2b(wr.encode())

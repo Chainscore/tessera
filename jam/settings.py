@@ -5,6 +5,8 @@ from py_ark_vrf import  secret_from_seed
 from typing import Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import U32, Bytes, Bytes32, Uint
+
+from jam.types import ValidatorIndex
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import BlsPublic, Ed25519Public, Hash, OpaqueHash
 from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata
@@ -181,9 +183,8 @@ class Settings:
         if time()//(6)//EPOCH_LENGTH != self._last_recorded_epoch:
             raise ValueError("Validator index is not updated, call update() first.")
         if isinstance(self._validator_index, NoneType):
-            return 7
-            # raise ValueError("Validator index is not set, check if the node is registered in the state.")
-        return self._validator_index
+            raise ValueError("Validator index is not set, check if the node is registered in the state.")
+        return ValidatorIndex(self._validator_index)
 
     def get_shard_index(self, core_index: CoreIndex):
         from jam.utils.chainspec import chain_config

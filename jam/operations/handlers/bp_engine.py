@@ -1,14 +1,17 @@
 import asyncio
 
 from py_ark_vrf import prove_ietf, vrf_output
+
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.operations.dispatcher import NodeDispatcher
 from jam.finality.finality import Finality
+
+from jam.state.ghost import GhostState
 from jam.state.transitions.safrole.safrole import Safrole
-from jam.types.protocol.core import TimeSlot
-from jam.types.protocol.crypto import Hash
+
+from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.ticket import TicketBody
-from jam.types.state.gamma import GammaS, GammaSFallback, GammaSTickets
+
 from jam.utils.benchmark import write_json
 from jam.utils.constants import (
     EPOCH_LENGTH,
@@ -18,10 +21,10 @@ from jam.utils.constants import (
 )
 from jam.logging import get_logger
 from jam.utils.util_fns import outside_in
-from tests.unit.incore.types import BlockVector
-from tests.unit.safrole.data import deepcopy
+from tests.unit.incore.types import BlockVector, FullVectors
 
 b_vector = BlockVector()
+
 # Logger for Block Production / Authoring module
 logger = get_logger("author")
 
@@ -86,29 +89,29 @@ class BlockProducer(NodeDispatcher):
             logger.debug("⏭ Skipping BP: Not our fallback", expected=entry, our_key=settings.bandersnatch_public.hex())
             return
 
+        block = latest.produce(TimeSlot(time_slot), ticket)
+
+        # TODO: Remove Vectorization
         global b_vector
-        from tests.integration.jamnp.test_full import b_vectors, full_vectors
 
         b_vector = BlockVector()
-        pre_state = deepcopy(state)
 
-        block = latest.produce(TimeSlot(time_slot), ticket)
-        b_vector.pre_state = pre_state
+        b_vector.pre_rho = state.rho
         b_vector.block = block
-        b_vector.vectors = full_vectors
+        b_vector.header_hash = block.header.hash()
+        b_vector.author = ValidatorIndex(settings.validator_index)
 
-        if state.transition(block):
-            post_state = state
-            b_vector.post_state = post_state
-            write_json("vectors/blocks", b_vector.to_json())
+        is_valid = state._force_transition(block)
 
+        b_vector.post_rho = state.rho
+        b_vector.new_root = state.root
+        write_json("vectors/blocks", b_vector.to_json())
+
+        if is_valid:
             if ticket:
                 logger.info("⛏ Produced block using ticket", hash=block.header.hash().hex()[:16] + "...", slot=time_slot)
             else:
                 logger.info("⛏ Produced block", hash=block.header.hash().hex()[:16]+"...", slot=time_slot)
             asyncio.create_task(up0.transmit(BlockAnnouncement.block_to_announcement(block)))
         else:
-            logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block)
-
-        b_vectors.append(b_vector)
-
+            logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block.to_json())

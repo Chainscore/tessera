@@ -390,7 +390,7 @@ class Accumulation:
         return service_transfers
 
     @classmethod
-    def transition(cls, pre_state: Sigma, state: Sigma, block: Block, newly_avail_wrs: WorkReports):
+    def transition(cls, state: Sigma, block: Block, newly_avail_wrs: WorkReports):
         """
         Transition the state's Delta, Xi, Nu, Chi, Iota, Phi components, calculate BEEFY Commitment Map.
         Includes 4 steps

@@ -16,7 +16,6 @@ from jam.types.state.sigma import Sigma
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.work import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, LOOKUP_ANCHOR_MAX_AGE, X
-from .error import ReportingError, ReportingErrorCode
 from jam.utils.merkle import MMRFunctions
 from jam.utils.constants import (
     VALIDATOR_COUNT,
@@ -32,7 +31,7 @@ logger = get_logger("import")
 class Reporting:
     @staticmethod
     def transition(
-        state: Sigma, block: Block, known_packages: List[OpaqueHash] = []
+        state: Sigma, block: Block, known_packages: List[OpaqueHash] = [],
     ) -> Sigma:
         """
         Description:

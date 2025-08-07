@@ -153,13 +153,13 @@ class State:
         # 1. Push auth hash of every WR to self.alpha[0:1]
 
         # TODO: We should remove this
-        # alpha = self.alpha
-        #
-        # for guarantee in block.extrinsic.guarantees:
-        #     report = guarantee.report
-        #     alpha[report.core_index][0] = report.authorizer_hash
-        #
-        # self.alpha = alpha
+        alpha = self.alpha
+
+        for guarantee in block.extrinsic.guarantees:
+            report = guarantee.report
+            alpha[report.core_index][0] = report.authorizer_hash
+
+        self.alpha = alpha
 
         return self.transition(block)
 
@@ -229,21 +229,21 @@ class State:
             # Disputes
             Disputes.transition(pre_state, self, block)
 
-            # Reporting
-            Reporting.transition(pre_state, self, block, [])
-
             # Assurances
-            _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
+            _, newly_avail_wrs = Assurances.transition(self, block)
             if len(newly_avail_wrs) > 0:
-                logger.critical(
+                logger.info(
                     "Newly available WRs",
                     count=len(newly_avail_wrs),
-                    wrs=[wr.hex()[:16] + "..." for wr in newly_avail_wrs],
+                    wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
                 )
+
+            # Reporting
+            Reporting.transition(self, block, [])
 
             # Accumulation
             _, commitment_map = Accumulation.transition(
-                pre_state, self, block, newly_avail_wrs=newly_avail_wrs
+                self, block, newly_avail_wrs=newly_avail_wrs
             )
 
             # Authorization
@@ -268,6 +268,7 @@ class State:
             vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
             Safrole.transition(pre_state, self, block, vrf_output)
 
+            logger.debug("Validating block")
             if block.validate():
                 state.settle(header_hash)
                 logger.info(
