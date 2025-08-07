@@ -3,6 +3,7 @@ import math
 from typing import List, Tuple
 
 from tsrkit_types import U8, U32, TypedVector, Option, Null, Bool
+
 from jam.types import ValidatorIndex, Ed25519Signature, HeaderHash
 from jam.finality.finality import Finality
 from jam.types.audit.tranche import TrancheIndex, Tranche
@@ -35,7 +36,7 @@ class Auditor:
         """
 
         from jam.audit.utils import Utils
-        from jam.network.start import node
+        from jam.settings import settings
 
         audit = Utils()
 
@@ -55,7 +56,7 @@ class Auditor:
 
         # ------------------------------------- VALIDATOR ANNOUNCEMENT AND STATEMENT -----------------------------------
         assignments = TypedVector[AssignedReport]([
-            AssignedReport(core_index=core_idx, report_hash=Hash.blake2b(r.encode()))
+            AssignedReport(core_index=core_idx, report_hash=r.hash())
             for core_idx, r in assigned_wrs
         ])
 
@@ -65,10 +66,10 @@ class Auditor:
         bandersnatch_sign  = BandersnatchVrfSignature(b"")
 
         if tranche_index == TrancheIndex(0):
-            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=node.b_key)
+            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=settings.bandersnatch_private, tranche=tranche)
             evidence = Evidence(FirstTrancheEvidence(bandersnatch_sign))
         else:
-            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=node.b_ke, tranche=tranche)
+            bandersnatch_sign = audit.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=settings.bandersnatch_private, tranche=tranche)
             evidence = Evidence(
                 TypedVector[SubsequentTrancheEvidence]([
                     SubsequentTrancheEvidence(
@@ -96,7 +97,7 @@ class Auditor:
 
         try:
 
-            responses = await CE144.transmit(node=node, data=data)
+            responses = await CE144.transmit(data=data)
 
             if responses:
                 await cls.judgment_process(assign_wrs=assigned_wrs, tranche=tranche)
@@ -114,7 +115,7 @@ class Auditor:
     async def judgment_process(cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche:Tranche):
         from jam.audit.utils import Utils
         from jam.settings import settings
-        from jam.network.node import node
+        from jam.network.start import node
         from jam.storage.tranche_store import tranche_store, Tranche
 
 
@@ -132,23 +133,21 @@ class Auditor:
 
         try:
             for c, r in assign_wrs:
-                wr_hash = Hash.blake2b(r.encode())
+                wr_hash = r.hash()
 
-                package, core, extrinsic = get_work_package_by_rep_hash(filepath="jam/combine.json", rep_hash=wr_hash)
-
-                result = await audit.audit_refine(p=package, c=core, e=extrinsic, wr=r, node_index=node.validator_index)
+                is_valid = await audit.refine(r)
 
                 # STORE JUDGMENT HERE ONLY FOR TRANSMITTING
-                tranche_store.update_judgment(tranche=tranche, wr_hash=wr_hash, judgment=result, validator_index=node.validator_index)
+                tranche_store.update_judgment(tranche=tranche, wr_hash=wr_hash, judgment=is_valid, validator_index=settings.validator_index)
 
-                judgment_sign = audit.judgment_signature(wr=r, refine=result)
+                judgment_sign = audit.judgment_signature(wr=r, refine=is_valid)
 
                 from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
                 CE145 = JudgmentPublication()
 
                 judgment = Judgment(
                     epoch_index=epoch_idx,
-                    validator_index=ValidatorIndex(node.validator_index),
+                    validator_index=settings.validator_index,
                     validity=Bool(True),
                     work_report_hash=WorkReportHash(wr_hash),
                     ed25519_signature=Ed25519Signature(judgment_sign),
@@ -156,7 +155,7 @@ class Auditor:
 
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
 
-                response = await CE145.transmit(node=node, data=data)
+                response = await CE145.transmit(data=data)
 
             logger.debug(f"Judgment transmitted and intercept successfully")
 

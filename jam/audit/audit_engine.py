@@ -86,7 +86,7 @@ class AuditEngine:
 
         assigned_wr = utils.verifiable_random_selection(
             entropy_source=entropy,
-            bandersnatch_key=node.b_key,
+            bandersnatch_key=settings.bandersnatch_private,
             unaudited_report=auditable_reports,
             tranche=tranche_zero
         )
@@ -112,6 +112,7 @@ class AuditEngine:
 
         tranche_index = tranche.tranche_index
         header_hash = HeaderHash(block.header.hash())
+        entropy = block.header.entropy_source
 
         while True:
 

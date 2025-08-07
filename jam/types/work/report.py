@@ -36,8 +36,8 @@ class WorkReport:
     # g
     auth_gas_used: Uint
 
-    def hash(self) -> bytes:
-        return Hash.blake2b(self.encode())
+    def hash(self) -> WorkReportHash:
+        return WorkReportHash(Hash.blake2b(self.encode()))
 
     @classmethod
     def empty(cls, **overrides) -> "WorkReport":
