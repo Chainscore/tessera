@@ -1,4 +1,5 @@
 import asyncio
+import time
 from typing import List, Tuple
 from tsrkit_types import Option, TypedVector, Null
 from tsrkit_types.dictionary import Dictionary
@@ -13,8 +14,7 @@ from jam.types.audit.tranche import TrancheIndex, Tranche, TrancheState, AuditRe
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.state.rho import WorkReportState
 from jam.types.work.report import WorkReport, WorkReportHash, WorkReports
-from jam.storage.tranche_store import tranche_store
-from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME
+from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
 from jam.network.protocols.ce_144 import Announcement
 
 
@@ -26,11 +26,14 @@ class AuditEngine:
     """
     Audit engine initiates auditing and manages tranches for newly available reports
     """
+    is_audited: bool
 
-    @classmethod
-    async def run(cls, block: Block, new_wr: WorkReports, tranche_index: TrancheIndex):
+    def __init__(self):
+        self.is_audited = False
+
+    async def run(self, block: Block, new_wr: WorkReports):
         from jam.settings import settings
-
+        from jam.storage.tranche_store import tranche_store
         from jam.network.start import node
 
         auditor = Auditor()
@@ -38,7 +41,7 @@ class AuditEngine:
 
         entropy = block.header.entropy_source
 
-        # --------------------------------- Fetch Last Finalized Block -----------------------------------------
+        # -------------- Fetch Last Finalized Block --------------
         last_finalized_block = Finality.load_final(settings.main_db)
         header_hash = block.header.hash()
 
@@ -46,29 +49,7 @@ class AuditEngine:
             logger.info("Block must be finalized or invalid.")
             return
 
-        # ----------------------------- initialized state for node and saved ---------------------------------
-        tranche_zero = Tranche(
-            header_hash=header_hash,
-            tranche_index=tranche_index
-        )
-
-        unaudited_list = List[Option[WorkReport]]([])
-        announcements = Dictionary[ValidatorIndex, Announcement]({})
-        valid_set = TypedVector[WorkReport]([])
-        invalid_set = TypedVector[WorkReportHash]([])
-        judgments = Dictionary[WorkReportHash, AuditRecord]({})
-
-        tranche_state = TrancheState(
-            unaudited_list=unaudited_list,
-            announcements=announcements,
-            judgments=judgments,
-            valid_set=valid_set,
-            invalid_set=invalid_set,
-        )
-
-        tranche_store.save_state(tranche=tranche_zero, tranche_state=tranche_state)
-
-        # -------------------------- Fetch Pending Reports and calculate "q" and update state -------------------
+        # -------------- Fetch Pending Reports --------------
         prior_state = State.load(block.header.parent)
         auditable_reports = List[Option[WorkReport]]([])
 
@@ -79,7 +60,47 @@ class AuditEngine:
             else:
                 auditable_reports.append(Option[WorkReport](Null))
 
-        tranche_store.add_to_unaudited(tranche=tranche_zero, unaudit_reports=auditable_reports)
+        curr_ts = SLOT_PERIOD * int(block.header.slot)
+        while not self.is_audited:
+            next_ts = curr_ts + AUDIT_PERIOD
+
+            tranche_index = TrancheIndex(
+                (CURRENT_TIME() - (SLOT_PERIOD * int(block.header.slot))) // AUDIT_PERIOD
+            )
+
+            if tranche_index == TrancheIndex(0):
+                tranche_state = TrancheState.empty()
+                tranche_state.unaudited_list = TypedVector[Option[WorkReport]](auditable_reports)
+
+            else:
+                prev_tranche = Tranche(TrancheIndex(tranche_index - 1), header_hash)
+                prev_state = tranche_store.get_state(prev_tranche)
+
+                # Validation logic
+                old_queue = prev_state.unaudited_list
+
+                tranche_state = TrancheState.empty()
+                tranche_state.judgment_map = prev_state.judgment_map
+                tranche_state.valid_set = prev_state.valid_set
+                tranche_state.invalid_set = prev_state.invalid_set
+
+                # Audit check
+
+
+                logger.info(
+                    "New tranche started", header_hash=header_hash.hex(), tranche=tranche_index
+                )
+
+            await asyncio.sleep(next_ts - CURRENT_TIME())
+            curr_ts += AUDIT_PERIOD
+
+            # Do mapping stuff
+            curr_tranche = Tranche(tranche_index, header_hash)
+            tranche_store._save_state(curr_tranche, tranche_state)
+            asyncio.create_task(auditor.audit(block, tranche_index))
+
+            # Check for noshows at the end
+            break
 
         # -------------------------- Assigned report for TRANCHE = 0 -----------------------------------
         assigned_wr = List[Tuple[CoreIndex, WorkReport]]([])
@@ -113,6 +134,7 @@ class AuditEngine:
         tranche_index = tranche.tranche_index
         header_hash = HeaderHash(block.header.hash())
         entropy = block.header.entropy_source
+
 
         while True:
 

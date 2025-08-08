@@ -1,7 +1,10 @@
 import asyncio
 import json
 from typing import Type
+
+from jam.audit.audit_engine import AuditEngine
 from jam.error import JamError, JamErrorCode
+from jam.types.audit.tranche import TrancheIndex
 from jam.utils.merkle import BMRFunctions
 from rockstore import RockStore
 from jam.state.accounts import DeltaView
@@ -285,12 +288,17 @@ class State:
                     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
                     asyncio.create_task(assurer._req_shard(ext))
 
+                # Start Auditing for new block received
+                audit_engine = AuditEngine()
+                asyncio.create_task(audit_engine.run(block, newly_avail_wrs, TrancheIndex(0)))
+
+                # TODO: Move this logic in audit engine
                 # Set local chain head to produced block
                 Finality.set_head(header_hash, _set.main_db)
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                 Finality.finalise(header_hash, _set.main_db, False)
                 block.extrinsic.clear_from_stores()
-                # asyncio.create_task(AuditProcess.audit_process(newly_avail_wrs))
+
                 self._lock = False
                 return True
             else:

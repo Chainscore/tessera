@@ -17,7 +17,7 @@ from jam.utils.shuffle import shuffle
 from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.block.block import Block
 from jam.types import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash
-from jam.types.audit.tranche import TrancheIndex, Tranche
+from jam.types.audit.tranche import TrancheIndex, Tranche, TrancheState
 from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR
 from jam.network.protocols.ce_144 import AssignedReport
 
@@ -321,13 +321,75 @@ class Utils:
 
         return Ed25519Signature(signature)
 
-    def audited_report(
-        self, pre_audit: List[Option[WorkReport]]
+    @staticmethod
+    def is_audited(
+        prev_state: TrancheState,
+        curr_tranche: Tranche,
+        curr_state: TrancheState
     ) -> TypedVector[Option[WorkReport]]:
         """
         Equation: 17.19, 17.20
+
+        # Args:
+        #     pre_audit: Previous work report queue
+
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1fa9011fd301?v=0.7.0
         """
 
         # condition 1 => on that core all the judgment should be true and A_n(r) ⊂ J_T(r
         # condition 2 => if in tranche all the judgment of the validator should be > 2/3
+        all_audited = True
+        new_queue = pre_audit
+        for i, r in enumerate(pre_audit):
+            rep = r.unwrap()
+            if isinstance(rep, WorkReport):
+                wr_hash = rep.hash()
+
+                # TODO: KeyError handling
+                audit_record = tranche_state.records[wr_hash]
+                true_judgments = audit_record.true_votes
+                false_judgments = audit_record.false_votes
+
+                announcement_map = prev_state.announcement_map[wr_hash]
+
+                first_cond = len(false_judgments) == 0 and set(announcement_map).issubset(
+                    set(true_judgments)
+                )
+                second_cond = len(true_judgments) > (2 * VALIDATOR_COUNT // 3)
+
+                if first_cond or second_cond:
+                    new_queue[i] = Option[WorkReport](Null)
+                    logger.debug(
+                        "Report audited!",
+                        header_hash=tranche.header_hash.hex(),
+                        tranche=tranche.tranche_index - 1,
+                        wr_hash=wr_hash.hex(),
+                    )
+                elif len(false_judgments) >= VALIDATOR_COUNT * 1 // 3:
+                    # TODO: Block will be ban-listed
+                    tranche_state.invalid_set.append(r)
+                    all_audited = False
+                    logger.debug(
+                        "Report invalid!",
+                        header_hash=header_hash.hex(),
+                        tranche=tranche_index,
+                        wr_hash=wr_hash.hex(),
+                    )
+                else:
+                    logger.debug(
+                        "Report moving to next tranche!",
+                        header_hash=header_hash.hex(),
+                        tranche=tranche_index,
+                        wr_hash=wr_hash.hex(),
+                    )
+                    all_audited = False
+
+        if all_audited:
+            logger.info(
+                "Block audited successfully!",
+                header_hash=header_hash.hex(),
+                tranche=tranche_index - 1,
+            )
+            return
+
+        tranche_state.unaudited_list = new_queue
