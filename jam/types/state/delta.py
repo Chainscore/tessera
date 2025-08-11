@@ -67,18 +67,18 @@ class AccountStorage(Dictionary[Bytes[32], Bytes, "key", "value"]):
     def __setitem__(self, key, value):
         if hasattr(self, "_meta"):
             is_new = key not in self
-            original_num_i = self._meta.num_i
-            original_num_o = self._meta.num_o
+            # original_num_i = self._meta.num_i
+            # original_num_o = self._meta.num_o
             if is_new:
                 self._meta.num_i = self._meta.num_i + 1
                 self._meta.num_o = self._meta.num_o + len(value) + 32
             else:
                 self._meta.num_o = self._meta.num_o + len(value) - len(self[key])
 
-            if self._meta.t > self._meta.balance:
-                self._meta.num_i = original_num_i
-                self._meta.num_o = original_num_o
-                raise ValueError("Insufficient balance for storage operation")
+            # if self._meta.t > self._meta.balance:
+            #     self._meta.num_i = original_num_i
+            #     self._meta.num_o = original_num_o
+            #     raise ValueError("Insufficient balance for storage operation")
         super().__setitem__(key, value)
 
     def __delitem__(self, key):
@@ -148,7 +148,10 @@ class AccountData:
     def m_c(self) -> Union[Tuple[bytes, bytes], None]:
         img = self.preimages.get(self.service.code_hash)
         if img:
-            return decode_code_hash(img)
+            try:
+                return decode_code_hash(img)
+            except:
+                return None
         else:
             return None
 

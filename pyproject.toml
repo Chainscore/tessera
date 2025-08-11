@@ -18,7 +18,7 @@ cryptography = "45.0.2"
 pycryptodome = "^3.21.0"
 numpy = "2.2.3"
 structlog = "^25.2.0"
-aioquic = { path = "../aioquic" }
+aioquic = "^1.2.0"
 pytest = "^8.3.5"
 pytest-asyncio = "^0.26.0"
 quart = "^0.20.0"
@@ -30,7 +30,9 @@ reed-solomon-leopard = "^0.2.1"
 python-dotenv = "^1.1.0"
 asyncio = "^3.4.3"
 dot_ring = { path = "../dot-ring", develop = true }
-py-ark-vrf = "0.2.3"
+# py-ark-vrf = "0.2.3"
+py-ark-vrf = { path = "../py-ark-vrf", develop = true }
+
 
 [tool.pyrefly]
 project-includes = ["**/*"]

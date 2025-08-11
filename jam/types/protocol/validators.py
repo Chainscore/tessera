@@ -59,11 +59,6 @@ class ValidatorData:
     bls: BlsPublic
     metadata: ValidatorMetadata
 
-    @classmethod
-    def decode_from(cls, data: bytes) -> "ValidatorData":
-        """Decode validator data from bytes."""
-        return cls.decode(data)
-
     def __hash__(self):
         return hash(self.encode())
 

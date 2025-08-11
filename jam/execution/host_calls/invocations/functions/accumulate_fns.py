@@ -320,6 +320,9 @@ class AccumulateFunctions(INVF):
         if not memory.is_accessible(preimage_hash_addr, 32):
             raise PvmError(PANIC)
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
+        from jam.state.state import state
+
+        state.store.save_n_clear_cache()
 
         # Account
         account: AccountData = context.x.partial_state.service_accounts[context.x.s_index]
@@ -343,6 +346,7 @@ class AccumulateFunctions(INVF):
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
         if account.service.balance < account.service.t:
+            state.store.clear()
             registers[7] = HostStatus.FULL.value
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 

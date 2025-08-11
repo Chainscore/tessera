@@ -51,13 +51,18 @@ class PsiM:
                 pc=pc,
             )
             return Gas(0), PANIC, context
+        try:
+            program = Program.decode(code)
 
-        program = Program.decode(code)
+            host_return = PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context),
+        except:
+            host_return = HostCallReturn(ExecutionStatus.PANIC, pc, gas, registers, memory, context)
+        finally:
+            return PsiM.R(
+                gas,
+                host_return
+            )
 
-        return PsiM.R(
-            gas,
-            PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context),
-        )
 
     @staticmethod
     def R(g: Gas, grouped: HostCallReturn) -> ArgInvokeReturn:

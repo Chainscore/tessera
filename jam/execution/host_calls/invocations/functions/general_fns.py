@@ -1,4 +1,3 @@
-from re import M
 from typing import Any, Optional, List
 
 from jam.logging import get_logger
@@ -15,6 +14,7 @@ from jam.execution.pvm.status import (
     PvmError,
 )
 from tsrkit_types import U64, U32, U16, Bytes, Uint
+from jam.state.storage import StateStorage
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.state.delta import AccountData
 from jam.types.protocol.core import Gas, ServiceId, Register
@@ -423,9 +423,12 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-        k = Hash.blake2b(service_index.encode() + memory.read(ko, kz))
+        from jam.state.state import state
 
+        state.store.save_n_clear_cache()
+        k = Hash.blake2b(service_index.encode() + memory.read(ko, kz))
         a = service_data.storage
+        # origin_account_storage = copy.deepcopy(a)
 
         curr_value = a.get(k)
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
@@ -440,18 +443,30 @@ class GeneralFunctions(INVF):
                     value_size=vz,
                 )
                 raise PvmError(PANIC)
-            try:
-                a[k] = Bytes(memory.read(vo, vz))
-                logger.debug(
-                    "Host call write: storage updated",
-                    storage_key=k.hex()[:16] + "...",
-                    value_size=vz,
-                )
-            except PvmError:
-                # TODO - Handle ONLY storage full
+
+             #Possible implementations
+             # deepcopy------delete what inserted------handled on the service insertion itself----journaling all the actions done on the state
+
+            # try:
+            #     a[k] = Bytes(memory.read(vo, vz))
+            #     logger.debug(
+            #         "Host call write: storage updated",
+            #         storage_key=k.hex()[:16] + "...",
+            #         value_size=vz,
+            #     )
+            # except PvmError:
+            #     # Handle ONLY storage full
+            #     registers[7] = HostStatus.FULL.value
+            #     logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
+            #     return CONTINUE, gas, registers, memory, service_data
+
+            a[k] = Bytes(memory.read(vo, vz))
+            if service_data.service.t>service_data.service.balance:
+                state.store.clear()
                 registers[7] = HostStatus.FULL.value
                 logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
                 return CONTINUE, gas, registers, memory, service_data
+
 
         registers[7] = storage_len
         return CONTINUE, gas, registers, memory, context
