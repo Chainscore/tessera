@@ -90,4 +90,4 @@ class Tranche:
         return f"Tranche: {self.header_hash.hex()[:16]}@{int(self.tranche_index)}"
 
     def __hash__(self):
-        return Hash.blake2b(self.encode())
+        return int.from_bytes(Hash.blake2b(self.encode()))
