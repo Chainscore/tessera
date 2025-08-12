@@ -1,6 +1,6 @@
 import asyncio
 from typing import cast
-from tsrkit_types import structure, Uint, Bool
+from tsrkit_types import structure, Uint, Bool, U8
 
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
 
@@ -114,6 +114,8 @@ class JudgmentPublication(NetworkProtocol):
         from jam.storage.tranche_store import tranche_store, Tranche
         from jam.finality.finality import Finality
         from jam.settings import settings
+
+        # TODO: FIX THIS
         latest_block = Finality.load_latest(kv=settings.main_db)
         header_hash = latest_block.header.hash()
 

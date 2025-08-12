@@ -44,6 +44,7 @@ class NoShow:
     validator_index: ValidatorIndex
     announcement: Announcement
 
+NoShows = TypedVector[NoShow]
 
 @structure
 class SubsequentTrancheEvidence:

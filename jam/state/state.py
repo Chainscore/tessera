@@ -290,7 +290,7 @@ class State:
 
                 # Start Auditing for new block received
                 audit_engine = AuditEngine()
-                asyncio.create_task(audit_engine.run(block, newly_avail_wrs, TrancheIndex(0)))
+                asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
 
                 # TODO: Move this logic in audit engine
                 # Set local chain head to produced block

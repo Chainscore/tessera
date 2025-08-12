@@ -24,6 +24,12 @@ class Block:
     header: Header
     extrinsic: Extrinsic
 
+    def __str__(self):
+        return (f"Block(hh={self.header.hash().hex()}, "
+                f"parent={self.header.parent.hex()}, "
+                f"slot={self.header.slot}, "
+                f"author={self.header.author_index})")
+
     @staticmethod
     def from_random(seed: int = 0, n_et=3, n_ep=3, n_ea=3, n_eg=3, n_ed=2) -> "Block":
         """
@@ -100,7 +106,7 @@ class Block:
     def validate(self) -> bool:
         return self.header.validate() and self.extrinsic.validate(self.header)
 
-    def produce(self, time_slot: TimeSlot, ticket: TicketEnvelope|None) -> "Block":
+    def produce(self, time_slot: TimeSlot, ticket: TicketEnvelope | None) -> "Block":
         extrinsic = Extrinsic.from_collected(time_slot)
 
         # Produce a new header from previous header

@@ -17,7 +17,7 @@ from jam.utils.shuffle import shuffle
 from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.block.block import Block
 from jam.types import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash
-from jam.types.audit.tranche import TrancheIndex, Tranche, TrancheState
+from jam.types.audit.tranche import TrancheIndex, Tranche, TrancheState, OptionalReports
 from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR
 from jam.network.protocols.ce_144 import AssignedReport
 
@@ -30,7 +30,6 @@ logger = get_logger("in_core")
 
 
 class Utils:
-
     @staticmethod
     def vrf_signature_bandersnatch(
         entropy_source: BandersnatchVrfSignature,
@@ -63,10 +62,7 @@ class Utils:
         if tranche_index != TrancheIndex(0):
             context += w_r.hash().encode() + tranche_index.encode()
 
-        signature = prove_ietf(
-                bandersnatch_key,
-                context, b""
-        )
+        signature = prove_ietf(bandersnatch_key, context, b"")
 
         return BandersnatchVrfSignature(signature)
 
@@ -76,7 +72,7 @@ class Utils:
         entropy_source: BandersnatchVrfSignature,
         bandersnatch_key: Bytes[32],
         unaudited_report: List[Option[WorkReport]],
-        tranche: Tranche
+        tranche: Tranche,
     ) -> List[Tuple[CoreIndex, WorkReport]]:
         """
         Equation: 17.5, 17.6
@@ -94,7 +90,14 @@ class Utils:
         Source: https://graypaper.fluffylabs.dev/#/1c979cb/1efb001e4701?v=0.7.1
         """
 
-        entropy = vrf_output(cls.vrf_signature_bandersnatch(entropy_source=entropy_source, bandersnatch_key=bandersnatch_key, tranche=tranche, w_r=None))
+        entropy = vrf_output(
+            cls.vrf_signature_bandersnatch(
+                entropy_source=entropy_source,
+                bandersnatch_key=bandersnatch_key,
+                tranche=tranche,
+                w_r=None,
+            )
+        )
 
         # ---------------------------- mapping q's reports as tuple[CoreIndex, Option[WorkReport]] ---------------------
         core_report = list[Tuple[CoreIndex, Option[WorkReport]]]([])
@@ -115,7 +118,9 @@ class Utils:
 
         # ------------------------------------------ take initial 10 reports -------------------------------------------
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-        shuffle_not_null = List[Tuple[CoreIndex, WorkReport]]([(c, w) for (c, w) in updated_array if w is not Null][:10])
+        shuffle_not_null = List[Tuple[CoreIndex, WorkReport]](
+            [(c, w) for (c, w) in updated_array if w is not Null][:10]
+        )
 
         return shuffle_not_null
 
@@ -134,14 +139,14 @@ class Utils:
         Source: https://graypaper.fluffylabs.dev/#/1c979cb/1e51011e6501?v=0.7.1
         """
 
-        tranche_index =  TrancheIndex((CURRENT_TIME() - (SLOT_PERIOD * int(block.header.slot))) // AUDIT_PERIOD)
+        tranche_index = TrancheIndex(
+            (CURRENT_TIME() - (SLOT_PERIOD * int(block.header.slot))) // AUDIT_PERIOD
+        )
         return tranche_index
 
     @staticmethod
     def validator_announcement_statement(
-            assign_report: List[Tuple[CoreIndex, WorkReport]],
-            header_hash: HeaderHash,
-            tranche: Tranche
+        assign_report: List[Tuple[CoreIndex, WorkReport]], header_hash: HeaderHash, tranche: Tranche
     ) -> Ed25519Signature:
         """
         Equations: 17.9, 17.10, 17.11
@@ -183,13 +188,12 @@ class Utils:
 
     @classmethod
     def vrf_tranche(
-            cls,
-            header_hash: HeaderHash,
-            tranche: Tranche,
-            entropy: BandersnatchVrfSignature,
-            unaudited_wrs: TypedVector[Option[WorkReport]]
-
-    ) -> TypedVector[AssignedReport]:
+        cls,
+        header_hash: HeaderHash,
+        tranche: Tranche,
+        entropy: BandersnatchVrfSignature,
+        unaudited_wrs: OptionalReports,
+    ) -> List[Tuple[CoreIndex, WorkReport]]:
         """
         Equation: 17.14, 17.15
         This function define a_n beyond the initial tranche through a new vrf which acts upon the set of no-show validators (for n (tranche) > 0).
@@ -207,34 +211,33 @@ class Utils:
         """
         from jam.settings import settings
         from jam.storage.tranche_store import tranche_store
-        from jam.network.protocols.ce_144 import AssignedReport
 
         tranche_index = tranche.tranche_index
 
         # DEFINE EMPTY LIST
-        assigned_wr = TypedVector[AssignedReport]([])
+        assigned_wrs = List[Tuple[CoreIndex, WorkReport]]([])
 
-        for c, wr in enumerate(unaudited_wrs):
-            if wr != Null:
+        for wr in unaudited_wrs:
+            rep = wr.unwrap()
+            if isinstance(rep, WorkReport):
                 random_quantity = cls.vrf_signature_bandersnatch(
                     bandersnatch_key=settings.bandersnatch_private,
                     entropy_source=entropy,
                     tranche=tranche,
-                    w_r=wr
+                    w_r=rep,
                 )
 
                 # HERE WE CHECK VRF CONDITION
-                vrf_check = (VALIDATOR_COUNT / (256 * AUDIT_BIAS_FACTOR)) * vrf_output(random_quantity)[1:]
+                vrf_check = (VALIDATOR_COUNT / (256 * AUDIT_BIAS_FACTOR)) * vrf_output(
+                    random_quantity
+                )[1:]
 
                 # NO-JUDGMENT FOR THAT WORK REPORT
                 prev_tranche_index = tranche_index - TrancheIndex(1)
 
-                prev_tranche = Tranche(
-                    tranche_index=prev_tranche_index,
-                    header_hash=header_hash
-                )
+                prev_tranche = Tranche(tranche_index=prev_tranche_index, header_hash=header_hash)
 
-                wr_hash = WorkReportHash(Hash.blake2b(wr.encode()))
+                wr_hash = rep.hash()
 
                 state = tranche_store.get_state(tranche=prev_tranche)
 
@@ -244,13 +247,10 @@ class Utils:
                 m_n = len(records.announces) - len(records.true_votes)
 
                 if vrf_check < m_n:
-                    assigned_report = AssignedReport(
-                        core_index=c,
-                        report_hash=wr_hash
-                    )
-                    assigned_wr.append(assigned_report)
+                    assigned_report = (rep.core_index, rep)
+                    assigned_wrs.append(assigned_report)
 
-        return assigned_wr
+        return assigned_wrs
 
     @staticmethod
     async def refine(wr: WorkReport) -> bool:
@@ -278,9 +278,15 @@ class Utils:
             bundle = await assembler.assemble(wr)
 
             logger.debug("Reprocessing bundle...", wr_hash=wr_hash.hex())
-            new_wr, new_wr_hash = processor.process_bundle(wr.core_index, bundle, wr.segment_root_lookup, False)
+            new_wr, new_wr_hash = processor.process_bundle(
+                wr.core_index, bundle, wr.segment_root_lookup, False
+            )
 
-            logger.info("✒️ Audited report successfully!", wr_hash=wr_hash.hex(), is_valid=(wr_hash == new_wr_hash))
+            logger.info(
+                "✒️ Audited report successfully!",
+                wr_hash=wr_hash.hex(),
+                is_valid=(wr_hash == new_wr_hash),
+            )
             assert wr_hash == new_wr_hash
 
             return True
@@ -290,7 +296,7 @@ class Utils:
                 "Auditing failed..",
                 err=str(NO_REFINE),
                 err_type=type(NO_REFINE).__name__,
-                wr_hash=wr_hash.hex()
+                wr_hash=wr_hash.hex(),
             )
 
             return False
@@ -320,76 +326,3 @@ class Utils:
         signature = ed25519_pvt.sign(message)
 
         return Ed25519Signature(signature)
-
-    @staticmethod
-    def is_audited(
-        prev_state: TrancheState,
-        curr_tranche: Tranche,
-        curr_state: TrancheState
-    ) -> TypedVector[Option[WorkReport]]:
-        """
-        Equation: 17.19, 17.20
-
-        # Args:
-        #     pre_audit: Previous work report queue
-
-        Source: https://graypaper.fluffylabs.dev/#/38c4e62/1fa9011fd301?v=0.7.0
-        """
-
-        # condition 1 => on that core all the judgment should be true and A_n(r) ⊂ J_T(r
-        # condition 2 => if in tranche all the judgment of the validator should be > 2/3
-        all_audited = True
-        new_queue = pre_audit
-        for i, r in enumerate(pre_audit):
-            rep = r.unwrap()
-            if isinstance(rep, WorkReport):
-                wr_hash = rep.hash()
-
-                # TODO: KeyError handling
-                audit_record = tranche_state.records[wr_hash]
-                true_judgments = audit_record.true_votes
-                false_judgments = audit_record.false_votes
-
-                announcement_map = prev_state.announcement_map[wr_hash]
-
-                first_cond = len(false_judgments) == 0 and set(announcement_map).issubset(
-                    set(true_judgments)
-                )
-                second_cond = len(true_judgments) > (2 * VALIDATOR_COUNT // 3)
-
-                if first_cond or second_cond:
-                    new_queue[i] = Option[WorkReport](Null)
-                    logger.debug(
-                        "Report audited!",
-                        header_hash=tranche.header_hash.hex(),
-                        tranche=tranche.tranche_index - 1,
-                        wr_hash=wr_hash.hex(),
-                    )
-                elif len(false_judgments) >= VALIDATOR_COUNT * 1 // 3:
-                    # TODO: Block will be ban-listed
-                    tranche_state.invalid_set.append(r)
-                    all_audited = False
-                    logger.debug(
-                        "Report invalid!",
-                        header_hash=header_hash.hex(),
-                        tranche=tranche_index,
-                        wr_hash=wr_hash.hex(),
-                    )
-                else:
-                    logger.debug(
-                        "Report moving to next tranche!",
-                        header_hash=header_hash.hex(),
-                        tranche=tranche_index,
-                        wr_hash=wr_hash.hex(),
-                    )
-                    all_audited = False
-
-        if all_audited:
-            logger.info(
-                "Block audited successfully!",
-                header_hash=header_hash.hex(),
-                tranche=tranche_index - 1,
-            )
-            return
-
-        tranche_state.unaudited_list = new_queue
