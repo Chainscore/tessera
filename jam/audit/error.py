@@ -9,6 +9,7 @@ class AuditingError(JamError):
 class AuditingErrorCode(Enum):
     """Error codes for the Reporting"""
 
+
 class AssemblerError(JamError):
     ...
 

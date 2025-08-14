@@ -1,9 +1,10 @@
 import asyncio
+from typing import TYPE_CHECKING, cast
+from tsrkit_types import TypedVector, Uint, structure, Choice
 
 from jam.utils.gather import gather_with_exceptions
 
 from jam.logging import get_logger
-from tsrkit_types import TypedVector, Uint, structure, Choice
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.types.protocol.core import CoreIndex, ValidatorIndex
@@ -14,14 +15,15 @@ from jam.types.protocol.crypto import (
     BandersnatchVrfSignature,
     HeaderHash,
 )
-from typing import cast
+
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
+if TYPE_CHECKING:
+    from jam.types.audit.tranche import TrancheIndex
 
 # Module-specific logger
 logger = get_logger("network")
 
-TrancheIndex = U8
 @structure
 class AssignedReport:
     core_index: CoreIndex
@@ -44,6 +46,7 @@ class NoShow:
     validator_index: ValidatorIndex
     announcement: Announcement
 
+NoShows = TypedVector[NoShow]
 
 @structure
 class SubsequentTrancheEvidence:
@@ -54,7 +57,7 @@ class SubsequentTrancheEvidence:
 @structure
 class TrancheAnnouncement:
     header_hash: HeaderHash
-    tranche: TrancheIndex
+    tranche: "TrancheIndex"
     announcement: Announcement
 
 class Evidence(Choice):
@@ -186,7 +189,8 @@ class AuditAnnouncement(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
-        from jam.storage.tranche_store import tranche_store, Tranche
+        from jam.storage.tranche_store import tranche_store
+        from jam.types.audit.tranche import Tranche, TrancheIndex
 
         v_r: dict[ValidatorIndex, set[WorkReportHash]] = {}
 

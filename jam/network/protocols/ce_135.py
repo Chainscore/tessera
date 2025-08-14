@@ -12,16 +12,6 @@ from jam.block.extrinsics.guarantees import ReportGuarantee
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.protocol.crypto import Hash
-
-from jam.types.work.manifest import Assurers, Justification
-from jam.types.work.shard import SegmentsShard, ShardKey
-
-from jam.storage.da.audits import AuditShardsDA, JustificationsDA
-from jam.storage.da.segments import SegmentShardsDA
-
-from jam.utils.merkle import BMRFunctions
-from jam.utils.chainspec import chain_config
 from jam.utils.gather import gather_with_exceptions
 
 @structure
@@ -65,8 +55,9 @@ class WorkReportDistribution(NetworkProtocol):
         )
 
         tasks = []
-        try:
-            for client in node.all_connected:
+        for client in node.all_connected:
+
+            try:
                 logger.debug("Transmitting report", peer=client)
 
                 # Send Protocol Prefix
@@ -87,17 +78,18 @@ class WorkReportDistribution(NetworkProtocol):
                     port=client.port,
                 )
 
-            responses = list[bool](await gather_with_exceptions(tasks))
+            except Exception as e:
+                logger.error(
+                    "Failed to distribute report.",
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
 
-            if responses is not None:
-                return responses
+        responses = list[bool](await gather_with_exceptions(tasks))
 
-        except Exception as e:
-            logger.error(
-                "Failed to distribute report.",
-                error=str(e),
-                error_type=type(e).__name__,
-            )
+        if responses is not None:
+            return responses
+
 
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Work Report on Validator"""
@@ -112,10 +104,6 @@ class WorkReportDistribution(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            # Save extrinsic
-            from jam.block.extrinsics.guarantees import wrg_store
-            wrg_store.store(data.guaranteed_wr)
-
             # Save Mappings
             from jam.incore.processor import Processor
             Processor.process_guaranteed_report(data.guaranteed_wr)
@@ -125,9 +113,6 @@ class WorkReportDistribution(NetworkProtocol):
             server.stream_and_close(ack, stream_id)
 
             logger.info("Sent acknowledgement back to guarantor")
-
-            logger.debug("Fetching assigned shard")
-            asyncio.create_task(self._req_shard(data.guaranteed_wr))
 
         except Exception as e:
             # Stop Streaming
@@ -155,153 +140,3 @@ class WorkReportDistribution(NetworkProtocol):
 
         return False
 
-    @staticmethod
-    async def _req_shard(data: ReportGuarantee):
-        from jam.settings import settings
-
-        print('re_shard node', settings.validator_index)
-
-        slot = data.slot
-        signatures = data.signatures
-        assurers = Assurers([sign.validator_index for sign in signatures])
-
-        report = data.report
-        if settings.validator_index not in assurers:
-            er_root = report.package_spec.erasure_root
-
-            shard_index = settings.get_shard_index(report.core_index)
-
-            from jam.network.protocols.ce_137 import (
-                ShardDistributionProtocol,
-                CE137Data,
-                Query,
-            )
-
-            CE137 = ShardDistributionProtocol()
-
-            query = Query(shard_index=shard_index, erasure_root=er_root)
-            data = CE137Data(len=U32(len(query.encode())), query=query)
-
-            logger.debug(
-                "Requesting Shard",
-                shard_index=shard_index,
-                erasure_root=er_root.hex()[:16] + "...",
-            )
-            try:
-                responses = await CE137.transmit(data=data, assurers=assurers)
-                for shard in responses:
-                    # Save Shard
-                    if shard is not None:
-                        merklizer = BMRFunctions()
-
-                        bundle_shard = shard[0]
-                        segments_shard = shard[1]
-                        justification = shard[2]
-
-                        # creating leaf
-                        bundle_shard_hash = Hash.blake2b(bundle_shard.encode())
-                        segments_shard_root = merklizer.wb_merklize(
-                            values=segments_shard
-                        )
-                        shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
-                        s = Bytes(shards_key.encode())
-
-                        # verifying justification
-                        verification = merklizer.verify_wb_tree(
-                            leaf=s,
-                            index=shard_index,
-                            justification=justification,
-                            erasure_root=er_root,
-                        )
-
-                        # if verification == True save shards, justification and break out of loop else move to shards provided by other guarantors
-                        if verification:
-                            # Store Bundle Shard
-                            audits = settings.audit_da
-                            bs_da = AuditShardsDA(audits)
-                            bs_da.put(er_root, shard_index, shard[0])
-
-                            # Store Segments Shard
-                            d3l = settings.d3l
-                            ss_da = SegmentShardsDA(d3l)
-                            ss_da.put(er_root, shard_index, shard[1])
-
-                            # store justification
-                            justification_da = JustificationsDA(audits)
-                            justification_da.put(er_root, shard_index, justification)
-
-                            # give assurance for this core & this validator
-                            from jam.operations.handlers.assurer import assurer
-                            assurer.record_shard_assr(report.core_index)
-
-                            wr_hash = Hash.blake2b(report.encode())
-
-                            logger.info(
-                                f"📩 Assured work report (Assurer)",
-                                wr_hash=wr_hash.hex()[:16] + "...",
-                                slot=slot,
-                            )
-
-                            break
-            except Exception as e:
-                logger.error(
-                    "Failed to request Full Shard (CE137)",
-                    error=str(e),
-                    error_type=type(e).__name__,
-                )
-        else:
-            # give assurance for this core & this validator
-            from jam.operations.handlers.assurer import assurer
-            assurer.record_shard_assr(report.core_index)
-            wr_hash = Hash.blake2b(report.encode())
-
-            logger.info(
-                f"📩 Assured work report (Secondary Guarantor)",
-                wr_hash=wr_hash.hex()[:16] + "...",
-                slot=slot,
-            )
-
-            # saving justification for shard assigned to itself
-            from jam.settings import settings
-
-            er_root = report.package_spec.erasure_root
-            shard_index = settings.get_shard_index(report.core_index)
-            d3l = settings.d3l
-            audit = settings.audit_da
-
-            # Fetch Bundle Shard
-            bs_da = AuditShardsDA(audit)
-            bs_dict = bs_da.get(er_root)
-
-            # Fetch Segments Shard
-            ss_da = SegmentShardsDA(d3l)
-            ss_dict = ss_da.get(er_root)
-            if shard_index not in ss_dict:
-                raise "Shard not found"
-
-            bundle_shard_indices = bs_dict.keys()
-            segment_shard_indices = ss_dict.keys()
-
-            if (
-                len(bundle_shard_indices) != chain_config.num_validators
-                or len(segment_shard_indices) != chain_config.num_validators
-            ):
-                raise ValueError(
-                    f"Length of both type of shards should be {chain_config.num_validators}"
-                )
-
-            merklizer = BMRFunctions()
-            s = TypedVector[Bytes]([])
-            for i in range(chain_config.num_validators):
-                bundle_shard_hash = Hash.blake2b(bs_dict[i].encode())
-                segment_shard = SegmentsShard(ss_dict[i].shard)
-                segments_shard_root = merklizer.wb_merklize(values=segment_shard)
-                shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
-                s.append(Bytes(shards_key.encode()))
-
-            justification = Justification(
-                merklizer.trace_fn(values=s, index=shard_index).unwrap()
-            )
-
-            justification_da = JustificationsDA(audit)
-            justification_da.put(er_root, shard_index, justification)

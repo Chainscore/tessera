@@ -47,8 +47,8 @@ class Header:
     def encode_unsigned(self) -> bytes:
         return self.encode()[:-96]
 
-    def hash(self) -> bytes:
-        return Hash.blake2b(self.encode())
+    def hash(self) -> HeaderHash:
+        return HeaderHash(Hash.blake2b(self.encode()))
 
     @staticmethod
     def genesis(path="dev-spec.json") -> "Header":

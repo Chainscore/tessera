@@ -109,7 +109,7 @@ async def main(
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
             # Networking - Block Imports, WP Processing, etc
-            tg.create_task(start_node(str(host), int(port)))
+            tg.create_task(start_node(str(host), int(port), is_builder))
             # RPC
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc

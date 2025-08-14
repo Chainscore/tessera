@@ -64,6 +64,7 @@ class WorkPackageSubmission(NetworkProtocol):
     async def transmit(self, data: CE133Data) -> tuple[bool, NodeConnection | None] | None:
         """Transmit Work Package from Builder to Guarantor"""
         from jam.network.start import node
+        from jam.state.state import state
         if not node: return None
 
         msg_a = data.package_data.encode()
@@ -76,6 +77,8 @@ class WorkPackageSubmission(NetworkProtocol):
         # Fetch guarantors mapping
         mapping = assign_guarantors()
         guarantors = mapping[0][ci]
+        logger.debug("Fetched Assigned Guarantors (133)", mapping=mapping[1], tau=state.tau, root=state.root.hex())
+
         wp_hash = data.package_data.work_package.hash().hex()
         logger.info(
             "Trying transmitting work package",

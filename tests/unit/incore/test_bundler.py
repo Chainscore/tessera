@@ -47,7 +47,7 @@ async def node_task():
 
     # while True:
     while ts-init_ts != min(len(vectors), 100):
-        from jam.network.node import node
+        from jam.network.start import node
 
         if node:
             bundler = Bundler()

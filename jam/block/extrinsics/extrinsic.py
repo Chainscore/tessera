@@ -71,11 +71,20 @@ class Extrinsic:
         from .assurances import asr_store
         from .preimages import preimg_store
 
+        # Sort Assurances
+        ea = AssurancesExtrinsic(sorted(asr_store._store, key=lambda a: a.validator_index))
+
+        # Filter Guarantees
+        rg_cores = set()
         for rg in wrg_store._store:
-            # TODO: Filtering - Take only one WR per core [?]
-            eg.append(rg)
+            if rg.report.core_index not in rg_cores:
+                eg.append(rg)
+                rg_cores.add(rg.report.core_index)
+
             if len(eg) >= CORE_COUNT:
                 break
+        rg_cores.clear()
+
         ep = PreimagesExtrinsic(preimg_store._store[:])
 
         def sort_fn(ticket: TicketEnvelope) -> int:
@@ -91,7 +100,7 @@ class Extrinsic:
         else:
             print(f"Tickets are not allowed in block after TICKET_SUBMISSION_END, time_slot={time_slot}, slot={time_slot%EPOCH_LENGTH}")
             et = TicketsExtrinsic([])
-        ea = AssurancesExtrinsic(asr_store._store)
+
         return Extrinsic(
             tickets=et,
             preimages=ep,

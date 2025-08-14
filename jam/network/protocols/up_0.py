@@ -261,7 +261,7 @@ class BlockAnnouncement(NetworkProtocol):
                 return None
             return await self._process_header(anc, None)
 
-        _valid = state.transition(blocks[0][0])
+        _valid = state._force_transition(blocks[0][0])
         if _valid:
             await self.transmit(anc)
 
@@ -285,7 +285,7 @@ class BlockAnnouncement(NetworkProtocol):
         logger.debug(f"Received {len(blocks_to_import)} blocks. Importing...")
 
         for block in reversed(blocks_to_import):
-            state.transition(block)
+            state._force_transition(block)
 
         logger.info("Sync complete!", state_root=state.root)
         return

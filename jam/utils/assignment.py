@@ -4,6 +4,7 @@ from collections import deque
 from tsrkit_types import TypedVector, U32
 
 from jam.block import Block
+from jam.logging import get_logger
 
 from jam.state.state import State
 from jam.types.protocol.core import TimeSlot
@@ -16,6 +17,7 @@ from jam.utils.constants import (
     ROTATION_PERIOD,
 )
 
+logger = get_logger()
 
 def assign_guarantors(slot: TimeSlot = None, epoch=0):
     """
@@ -89,12 +91,6 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
     values = deque(values)
     values.rotate(-rotation_phase)
 
-    # assignment = {
-    #     core: set((vi, validator_set[vi]) for vi in values[core])
-    #     for core in keys
-    # }
-    # return assignment
-
     index_map = {}
     val_map = {}
 
@@ -107,4 +103,5 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
             index_map[core].append(vi)
             val_map[core].append(validator_set[vi])
 
+    logger.debug("Guarantors Mapping", state_root=state.root.hex(), tau=slot, mapping=index_map)
     return val_map, index_map

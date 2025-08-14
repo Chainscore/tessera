@@ -22,6 +22,12 @@ class Block:
     header: Header
     extrinsic: Extrinsic
 
+    def __str__(self):
+        return (f"Block(hh={self.header.hash().hex()}, "
+                f"parent={self.header.parent.hex()}, "
+                f"slot={self.header.slot}, "
+                f"author={self.header.author_index})")
+
     @staticmethod
     def from_random(seed: int = 0, n_et=3, n_ep=3, n_ea=3, n_eg=3, n_ed=2) -> "Block":
         """

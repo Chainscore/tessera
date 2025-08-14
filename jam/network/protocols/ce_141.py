@@ -48,7 +48,6 @@ class AssuranceDistribution(NetworkProtocol):
 
     """
 
-    # TODO: Reimplement 141 properly
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE141
@@ -63,6 +62,7 @@ class AssuranceDistribution(NetworkProtocol):
         logger.info(
             f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node.all_connected)}  validators"
         )
+
         try:
             tasks = []
 
@@ -122,14 +122,18 @@ class AssuranceDistribution(NetworkProtocol):
                 peer=server,
                 assurance=assurance_extrinsic.to_json(),
             )
+
+            # Store Assurance Extrinsic
             asr_store.store(assurance_extrinsic)
+
             # Return acknowledgment to Builder
             ack = b""
             server.stream_and_close(ack, stream_id)
-
             logger.debug(
-                "Assurance sent to other validators", stream_id=stream_id, ack_size=len(ack)
+                "Assurance Acknowledgement sent back to validator",
+                validator=server, stream_id=stream_id, ack_size=len(ack)
             )
+
         except Exception as e:
             # Stop Streaming
             server.stop_stream(stream_id, 1)

@@ -1,14 +1,18 @@
 import asyncio
 
 from py_ark_vrf import prove_ietf, vrf_output
+
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.operations.dispatcher import NodeDispatcher
 from jam.finality.finality import Finality
+
+from jam.state.ghost import GhostState
 from jam.state.transitions.safrole.safrole import Safrole
-from jam.types.protocol.core import TimeSlot
-from jam.types.protocol.crypto import Hash
+
+from jam.types.protocol.core import TimeSlot, ValidatorIndex
 from jam.types.protocol.ticket import TicketBody
-from jam.types.state.gamma import GammaS, GammaSFallback, GammaSTickets
+
+from jam.utils.benchmark import write_json
 from jam.utils.constants import (
     EPOCH_LENGTH,
     SLOT_PERIOD,
@@ -17,6 +21,9 @@ from jam.utils.constants import (
 )
 from jam.logging import get_logger
 from jam.utils.util_fns import outside_in
+from tests.unit.incore.types import BlockVector, FullVectors
+
+b_vector = BlockVector()
 
 # Logger for Block Production / Authoring module
 logger = get_logger("author")
@@ -84,12 +91,27 @@ class BlockProducer(NodeDispatcher):
 
         block = latest.produce(TimeSlot(time_slot), ticket)
 
-        if state.transition(block):
+        # TODO: Remove Vectorization
+        global b_vector
+
+        b_vector = BlockVector()
+
+        b_vector.pre_rho = state.rho
+        b_vector.block = block
+        b_vector.header_hash = block.header.hash()
+        b_vector.author = ValidatorIndex(settings.validator_index)
+
+        is_valid = state._force_transition(block)
+
+        b_vector.post_rho = state.rho
+        b_vector.new_root = state.root
+        # write_json("vectors/blocks", b_vector.to_json())
+
+        if is_valid:
             if ticket:
                 logger.info("⛏ Produced block using ticket", hash=block.header.hash().hex()[:16] + "...", slot=time_slot)
             else:
                 logger.info("⛏ Produced block", hash=block.header.hash().hex()[:16]+"...", slot=time_slot)
             asyncio.create_task(up0.transmit(BlockAnnouncement.block_to_announcement(block)))
         else:
-            logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block)
-
+            logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block.to_json())

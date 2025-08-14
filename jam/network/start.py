@@ -1,17 +1,20 @@
 import ssl
+import socket
+import asyncio
+
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.logger import QuicLogger
+
+from jam.logging import get_logger
 from jam.network.base.certificate import generate_keys
 from jam.network.base.sessions import SessionTicketStore
 from jam.network.connection import NodeConnection
 from jam.network.node import QuicNode
-from jam.types.protocol.validators import ValidatorData
-import socket 
-import asyncio
 
 from jam.utils.constants import NODE_ALPN
 
 node: None|QuicNode = None
+logger = get_logger("nodeops")
 
 async def start_node(
     host: str,
@@ -63,7 +66,7 @@ async def start_node(
     # --- Start Peer --- #
     _, proto = await loop.create_datagram_endpoint(
         lambda: QuicNode(
-            id=san,
+            _id=san,
             cfg=cfg,
             create_protocol=lambda *args, **kwargs: NodeConnection(*args, **kwargs),
             session_ticket_fetcher=session_ticket_store.pop,
@@ -74,6 +77,7 @@ async def start_node(
         sock=sock
     )
 
+    # if not is_builder:
     proto.set_neighbors()
     proto.port = port
 
@@ -84,9 +88,11 @@ async def start_node(
     from jam.settings import settings
     index = settings.validator_index
     peers = set(state.kappa)
-    peers.add(state.lambda_[index])
-    peers.add(state.gamma.k[index])
-    peers.add(state.iota[index])
+    print("INDEX", index)
+    if index != 7:
+        peers.add(state.lambda_[index])
+        peers.add(state.gamma.k[index])
+        peers.add(state.iota[index])
 
     tasks = []
     for peer in peers:
@@ -95,6 +101,7 @@ async def start_node(
         # TODO: reconnect in 6 secs if still not connected
         tasks.append(asyncio.create_task(proto.connect(peer)))
 
+    logger.info("Initialized Node", id=san, host=host, port=port)
     await asyncio.gather(*tasks)
 
     return proto
