@@ -81,7 +81,7 @@ async def test_tiny_tsr():
         Client(Role.VAL, 40000 + 5),
     ]
     
-    await setup_processes(CLIENTS, [operate], 80)
+    await setup_processes(CLIENTS, [operate], 2400)
 
 
 @pytest.mark.asyncio
@@ -111,5 +111,34 @@ async def test_tiny_tsr_5_pjam():
         Client(Role.PJAM, 5),
     ]
     
+    await setup_processes(CLIENTS, [operate], 2400)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_tiny_2_tsr_4_pjam():
+    CLIENTS = [
+        Client(Role.VAL, 40000 + 0),
+        Client(Role.VAL, 40000 + 1),
+        Client(Role.PJAM, 2),
+        Client(Role.PJAM, 3),
+        Client(Role.PJAM, 4),
+        Client(Role.PJAM, 5),
+    ]
+
+    await setup_processes(CLIENTS, [operate], 2400)
+
+@pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_tiny_3_tsr_3_pjam():
+    CLIENTS = [
+        Client(Role.VAL, 40000 + 0),
+        Client(Role.VAL, 40000 + 1),
+        Client(Role.VAL, 40000 + 2),
+        Client(Role.PJAM, 3),
+        Client(Role.PJAM, 4),
+        Client(Role.PJAM, 5),
+    ]
+
     await setup_processes(CLIENTS, [operate], 2400)
 

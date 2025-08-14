@@ -48,18 +48,18 @@ class BlockProducer(NodeDispatcher):
         latest = Finality.load_latest(settings.main_db)
         if not latest:
             logger.error("Latest not found, node is not configrued", ts=time_slot)
-            return 
-        
-        # If we have already imported a block for this slot 
+            return
+
+        # If we have already imported a block for this slot
         if state.tau > TimeSlot(time_slot):
             return 
 
         slot_index = time_slot % EPOCH_LENGTH
         entry = state.gamma.s.unwrap()[slot_index]
 
-        ticket = None
+        ticket: TicketBody | None = None
         if state.tau // EPOCH_LENGTH != time_slot // EPOCH_LENGTH:
-            if time_slot // EPOCH_LENGTH == (state.tau // EPOCH_LENGTH) + 1 and len(state.gamma.a) == EPOCH_LENGTH and slot_index >= TICKET_SUBMISSION_END:
+            if time_slot // EPOCH_LENGTH == (state.tau // EPOCH_LENGTH) + 1 and len(state.gamma.a) == EPOCH_LENGTH and slot_index == 0:
                 entry = outside_in(state.gamma.a)[slot_index]
             else:
                 entry = Safrole.arrange_fallback(state.eta[1], state.gamma.k).unwrap()[slot_index]
@@ -69,7 +69,7 @@ class BlockProducer(NodeDispatcher):
             our_id = vrf_output(
                 prove_ietf(
                     settings.bandersnatch_private,
-                    X.TICKET.value + eta.encode() + entry.attempt.encode(), b""
+                    X.TICKET.value + eta + entry.attempt.encode(), b""
                 )
             )
             entry_id = entry.id
@@ -79,7 +79,7 @@ class BlockProducer(NodeDispatcher):
             else:
                 ticket = entry
         elif entry != settings.bandersnatch_public:
-            logger.debug("⏭ Skipping BP: Not our fallback", expected=entry, our_key=settings.bandersnatch_public.hex())
+            logger.debug("⏭ Skipping BP: Not our fallback", expected=entry.hex(), our_key=settings.bandersnatch_public.hex())
             return
 
         block = latest.produce(TimeSlot(time_slot), ticket)
