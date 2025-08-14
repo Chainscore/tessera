@@ -105,7 +105,7 @@ class BlockProducer(NodeDispatcher):
 
         b_vector.post_rho = state.rho
         b_vector.new_root = state.root
-        # write_json("vectors/blocks", b_vector.to_json())
+        write_json("vectors/blocks", b_vector.to_json())
 
         if is_valid:
             if ticket:

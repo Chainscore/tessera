@@ -6,7 +6,7 @@ from typing import cast
 import pytest
 import os
 
-from tsrkit_types import U32
+from tsrkit_types import U32, Null
 
 from jam.block import Block
 from jam.logging import get_logger
@@ -54,12 +54,12 @@ async def node_task():
     from jam.settings import settings
     from jam.utils.merkle.mountain_merkle import MMRFunctions
 
-
-    for wp_iter, vector in enumerate(vectors):
+    wp_iter = 0
+    while wp_iter < len(vectors):
 
         settings.update()
-
         if node.port == 40004:
+            vector = vectors[wp_iter]
             merklizer = MMRFunctions()
             logger = get_logger()
 
@@ -92,6 +92,10 @@ async def node_task():
                 ext_len = U32(len(ext.encode()))
                 wp_data = CE133Data(wp_len, wpc, ext_len, ext)
 
+                if state.rho[vector.core_index].unwrap() != Null:
+                    logger.debug("CORE ENGAGED, SLEEPING", wp_iter=wp_iter)
+                    await asyncio.sleep(6)
+                    continue
                 acks = await CE133.transmit(wp_data)
 
                 logger.info(
@@ -115,6 +119,8 @@ async def node_task():
                 ts += 1
 
             await asyncio.sleep(6)
+
+        wp_iter += 1
 
 
 @pytest.mark.asyncio

@@ -39,6 +39,7 @@ class Assurer:
         from jam.network.protocols.ce_141 import CE141Data, AssuranceDistribution
         from jam.finality.finality import Finality
         from jam.network.protocols.ce_141 import Assurance
+        from jam.state.state import state
 
         from jam.block.extrinsics.assurances import AvailBitField
         from jam.types.protocol.crypto import Ed25519Signature, HeaderHash, Hash
@@ -48,6 +49,13 @@ class Assurer:
             # All the assurances must be recorded and transmitted for the reports mentioned in block
             latest_block = Finality.load_latest(kv=settings.main_db)
 
+            # TODO: Fix Assurances Check Per Block
+            pending_reps = state.rho.pending_reps()
+            if len(pending_reps) == 0:
+                logger.info("No Pending Reports. Skipping assurances.", slot=state.tau)
+                self.clear()
+                return
+
             bitfield= AvailBitField(self._collected)
             header_hash = latest_block.header.hash()
             sign_data = header_hash.encode() + bitfield.encode()
@@ -56,7 +64,6 @@ class Assurer:
                 pref + Hash.blake2b(sign_data).encode()
             )
 
-            # TODO: Construct & Transmit Ea
             CE141 = AssuranceDistribution()
             assurance = Assurance(
                 anchor_hash=HeaderHash(header_hash),

@@ -80,11 +80,12 @@ class StateStorage:
         while curr_head != header:
             data = kv.get(self.get_storage_key(curr_head))
             if data is None:
-                raise ValueError("Updates missing for", curr_head)
+                raise ValueError("Updates missing for", curr_head.hex())
             _curr_updates = StateRecord.decode(data)
+            print(f"[{settings.NODE_NAME}] CURR HEAD", curr_head.hex())
             block = Block.load(curr_head, kv)
             if block is None:
-                raise JamError("Block missing for header hash:", curr_head)
+                raise JamError("Block missing for header hash:", curr_head.hex())
             curr_head = block.header.parent
 
             # 2. Join them one after another (overwriting) to get one cache record

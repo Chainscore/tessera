@@ -1,4 +1,6 @@
 import asyncio
+
+from pydantic.v1.color import r_hsl
 from tsrkit_types import Null
 
 from jam.audit.auditor import Auditor
@@ -18,7 +20,7 @@ from jam.types.work.report import WorkReports
 from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
 
 # Logger for Auditing module
-logger = get_logger("audit")
+logger = get_logger("auditor")
 
 
 class AuditEngine:
@@ -33,8 +35,15 @@ class AuditEngine:
 
     async def run(self, block: Block, new_wr: WorkReports):
         from jam.settings import settings
+        header_hash = block.header.hash()
+
+        if len(new_wr) == 0:
+            logger.info("No New Reports to audit, finalizing block!", block=str(block))
+            Finality.finalise(header_hash, settings.main_db, False)
+            return
+
         from jam.storage.tranche_store import tranche_store
-        from jam.state.state import State
+        from jam.state.state import State, state
 
         auditor = Auditor()
 
@@ -42,22 +51,29 @@ class AuditEngine:
 
         # -------------- Fetch Last Finalized Block --------------
         last_finalized_block = Finality.load_final(settings.main_db)
-        header_hash = block.header.hash()
 
+        logger.info(
+            "Block Auditing started 🔍🪛",
+            block=str(block),
+            reports=new_wr
+        )
         if block.header.slot < last_finalized_block.header.slot:
             logger.info("Block must be finalized or invalid.")
             return
 
         # -------------- Fetch Pending Reports --------------
-        prior_state = State.load(block.header.parent)
+        logger.debug("Fetching prior state", ph=block.header.parent.hex())
+        prior_state = state.load(block.header.parent)
         auditable_reports = OptionalReports([])
-
+        print("PRIOR STATE", settings.NODE_NAME, block.header.parent.hex(),  prior_state.root.hex(), prior_state.rho.to_json(), header_hash.hex(), state.root.hex(), state.rho.to_json())
         for r in prior_state.rho:
             report_state: (WorkReportState | Null) = r.unwrap()
-            if isinstance(report_state, WorkReportState) and r.report in new_wr:
-                auditable_reports.append(OptionalReport(r.report))
+            if isinstance(report_state, WorkReportState) and report_state.report in new_wr:
+                auditable_reports.append(OptionalReport(report_state.report))
             else:
                 auditable_reports.append(OptionalReport(Null))
+
+        logger.debug("Fetched prior state", rho=prior_state.rho.to_json(), reps=auditable_reports)
 
         curr_ts = SLOT_PERIOD * int(block.header.slot)
 
@@ -75,6 +91,7 @@ class AuditEngine:
                 tranche_state = TrancheState.empty()
                 tranche_state.unaudited_list = auditable_reports
                 tranche_store.save_state(curr_tranche, tranche_state)
+                print("CURR TRANCHE STATE", tranche_state.to_json())
                 no_shows = None
 
             else:
@@ -96,6 +113,7 @@ class AuditEngine:
                         block_slot=block.header.slot,
                         tranche=prev_tranche,
                     )
+                    Finality.finalise(header_hash, settings.main_db, False)
                     return
 
                 logger.info(
