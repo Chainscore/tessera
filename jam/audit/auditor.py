@@ -35,12 +35,14 @@ class Auditor:
         curr_state = tranche_store.get_state(tranche)
 
         if tranche.tranche_index == TrancheIndex(0):
+            print("FETCHED STATE", curr_state.to_json())
             assigned_wrs = utils.verifiable_random_selection(
                 entropy_source=entropy,
                 bandersnatch_key=settings.bandersnatch_private,
                 unaudited_report=curr_state.unaudited_list,
                 tranche=tranche,
             )
+            print("ASSIGNED REPORTS", assigned_wrs)
         else:
             assigned_wrs = utils.vrf_tranche(
                 header_hash=tranche.header_hash,
@@ -48,6 +50,10 @@ class Auditor:
                 entropy=entropy,
                 unaudited_wrs=curr_state.unaudited_list,
             )
+
+        if len(assigned_wrs) == 0:
+            logger.debug("No Reports to audit", block=str(block), tranche=tranche, tranche_state=curr_state.to_json())
+            return
 
         await self.announce(block, tranche, assigned_wrs, no_shows)
         ...
@@ -110,7 +116,7 @@ class Auditor:
         )
 
         announcement_sign = audit.validator_announcement_statement(
-            assign_report=assigned_wrs, header_hash=header_hash, tranche=U8(0)
+            assign_report=assigned_wrs, header_hash=header_hash, tranche=tranche
         )
 
         # -------------------- Handling Evidence based on Tranche Index --------------------------
@@ -145,7 +151,8 @@ class Auditor:
             header_hash=header_hash,
             tranche=tranche_index,
             announcement=Announcement(
-                assigned_report=assignments, ed25519_signature=announcement_sign
+                assigned_reports=assignments,
+                ed25519_signature=announcement_sign
             ),
         )
 
@@ -220,7 +227,7 @@ class Auditor:
 
                 response = await CE145.transmit(data=data)
 
-            logger.debug(f"Judgment transmitted and intercept successfully")
+            logger.debug(f"Judgment transmitted successfully")
 
         except Exception as e:
             logger.error(
@@ -244,6 +251,7 @@ class Auditor:
         """
         from jam.storage.tranche_store import Tranche, tranche_store
 
+        logger.debug("Checking whether the block is audited or not.")
         header_hash = tranche.header_hash
         tranche_index = tranche.tranche_index
 

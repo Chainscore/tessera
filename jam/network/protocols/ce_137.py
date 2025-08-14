@@ -94,7 +94,8 @@ class ShardDistributionProtocol(NetworkProtocol):
         msg_a = query.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Requesting shard from {len(node.all_connected)} guarantors")
+        req_from = len(assurers) if assurers is not None else len(node.all_connected)
+        logger.info(f"Requesting shard from {req_from} guarantors")
 
         tasks = TypedVector([])
         try:
