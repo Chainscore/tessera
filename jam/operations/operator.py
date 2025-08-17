@@ -19,7 +19,7 @@ def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
     return [
         (0, BlockProducer),
         (2, None),  # audit
-        (4, assurer),  # transmit assurances
+        (4, assurer),  # transmit assurances             #============>>>>>>>>>>   why
     ]
 
 

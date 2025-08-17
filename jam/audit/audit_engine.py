@@ -47,8 +47,6 @@ class AuditEngine:
 
         auditor = Auditor()
 
-        entropy = block.header.entropy_source
-
         # -------------- Fetch Last Finalized Block --------------
         last_finalized_block = Finality.load_final(settings.main_db)
 
@@ -75,37 +73,37 @@ class AuditEngine:
 
         logger.debug("Fetched prior state", rho=prior_state.rho.to_json(), reps=auditable_reports)
 
-        curr_ts = SLOT_PERIOD * int(block.header.slot)
+        curr_ts = SLOT_PERIOD * int(block.header.slot)           #============================= Check current tranche
 
         # Run Tranches continuously until block is audited
         while not self.is_audited:
             next_ts = curr_ts + AUDIT_PERIOD
 
-            tranche_index = TrancheIndex(
+            tranche_index = TrancheIndex(                        #============================== Current tranche index whole explanation
                 (CURRENT_TIME() - (SLOT_PERIOD * int(block.header.slot))) // AUDIT_PERIOD
             )
 
             curr_tranche = Tranche(tranche_index, header_hash)
-            if tranche_index == TrancheIndex(0):
+            if tranche_index == TrancheIndex(0):                 # ============================ Checking current tranche
                 # Handle 0 Tranche Case
-                tranche_state = TrancheState.empty()
+                tranche_state = TrancheState.empty()             # ============================ Initialized state
                 tranche_state.unaudited_list = auditable_reports
                 tranche_store.save_state(curr_tranche, tranche_state)
                 print("CURR TRANCHE STATE", tranche_state.to_json())
-                no_shows = None
+                no_shows = None                                  # ============================ if there is no_show , return
 
-            else:
+            else:                                                # ============================ Tranche >> 0
                 # Handle > 0 Tranche Case
-                prev_tranche = Tranche(TrancheIndex(tranche_index - 1), header_hash)
-                prev_state = tranche_store.get_state(prev_tranche)
+                prev_tranche = Tranche(TrancheIndex(tranche_index - 1), header_hash)   # ============== Initialized prev_tranche
+                prev_state = tranche_store.get_state(prev_tranche)                     # ============== Get previous tranche state
 
-                tranche_state = prev_state.carry_forward()
-                tranche_store.save_state(curr_tranche, tranche_state)
+                tranche_state = prev_state.carry_forward()                       # ============== Previous state things transfer
+                tranche_store.save_state(curr_tranche, tranche_state)            # ============== Save previous tranche state
 
                 # Audit check
-                no_shows = auditor.is_audited(block, curr_tranche)
+                no_shows = auditor.is_audited(block, curr_tranche)            # ============== check No_show
 
-                if len(no_shows) == 0:
+                if len(no_shows) == 0:                                   # ==============  Audit complete start finalized
                     self.is_audited = True
                     logger.info(
                         f"Block Audited 🔍",
@@ -115,6 +113,8 @@ class AuditEngine:
                     )
                     Finality.finalise(header_hash, settings.main_db, False)
                     return
+
+                # New tranche strat, here ======================
 
                 logger.info(
                     "New tranche started", header_hash=header_hash.hex(), tranche=tranche_index

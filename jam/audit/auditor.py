@@ -251,16 +251,19 @@ class Auditor:
         """
         from jam.storage.tranche_store import Tranche, tranche_store
 
+        # Define tranche here for
         logger.debug("Checking whether the block is audited or not.")
         header_hash = tranche.header_hash
         tranche_index = tranche.tranche_index
 
-        no_shows = NoShows([])
+        no_shows = NoShows([])  # ============== initialize empty tranche
 
+        # ====================== previous tranche here
         prev_tranche = Tranche(
             header_hash=header_hash, tranche_index=tranche_index - TrancheIndex(1)
         )
 
+        # get previous tranche ===========
         prev_state = tranche_store.get_state(tranche=prev_tranche)
 
         # GET Q FROM PREVIOUS TRANCHE

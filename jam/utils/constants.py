@@ -10,7 +10,7 @@ from jam.utils.chainspec import chain_config
 # ───────────────────────────────────────
 GENESIS_HASH = "b5af8edad70d962097eefa2cef92c8284cf0a7578b70a6b7554cf53ae6d51222"
 JAMNP_VERSION = "0"
-NODE_ALPN = f"jamnp-s/{JAMNP_VERSION}/{GENESIS_HASH[:8]}" 
+NODE_ALPN = f"jamnp-s/{JAMNP_VERSION}/{GENESIS_HASH[:8]}"
 
 # ───────────────────────────────────────
 # Constants (I.4.4, JAM Graypaper Order)
