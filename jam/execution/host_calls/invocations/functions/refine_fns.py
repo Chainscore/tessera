@@ -253,8 +253,11 @@ class RefineFunctions(INVF):
     def expunge(gas: Gas, registers: list, memory: Memory, context: RefineContext):
         n = registers[7]
         if n not in context.m:
-            return (HostStatus.WHO, context.m)
+            registers[7] = HostStatus.WHO.value
+            return CONTINUE, gas, registers, memory, context
         else:
-            i_c = context.m.instruction_counter
+            i_c = context.m[n].instruction_counter
             context.m.pop(n)
-            return (i_c, context.m)
+            registers[7] = n
+            # registers[8] = i_c
+            return CONTINUE, gas, registers, memory, context
