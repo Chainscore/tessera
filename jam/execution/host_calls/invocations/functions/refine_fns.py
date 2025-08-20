@@ -42,7 +42,7 @@ class RefineFunctions(INVF):
     @staticmethod
     @INVF.register(17, gas_cost=10)
     def historical_lookup(
-        gas: int,
+        gas: Gas,
         registers: list,
         memory: Memory,
         context: RefineContext,
@@ -50,30 +50,45 @@ class RefineFunctions(INVF):
         delta: Delta,
         timeslot: TimeSlot,
     ):
+        # Select account: if w7 == 2^64-1 use the explicit `service_id` arg, else w7 holds the sid
         a = None
         if delta[service_id] is not None and registers[7] == 2**64 - 1:
             a = delta[service_id]
         elif delta[registers[7]] is not None:
             a = delta[registers[7]]
 
-        [h, o] = registers[8:10]
+        h, o = registers[8], registers[9]  # h: ptr to 32-byte hash, o: output ptr (0 = probe)
 
+        # Must be able to read the 32-byte hash
         if not memory.is_accessible(h, 32):
             raise PvmError(PANIC)
-        elif a is None:
+
+        # No such account → signal “none” as the u64 sentinel (not an enum object!)
+        if a is None:
             registers[7] = HostStatus.NONE
-            return CONTINUE, registers, memory
-        else:
-            v = a.historical_lookup(timeslot, Bytes[32](memory.read(h, 32)))
+            return CONTINUE, gas, registers, memory, context
 
+        # Lookup preimage
+        preimage = a.historical_lookup(timeslot, Bytes[32](memory.read(h, 32)))
+        if preimage is None:
+            registers[7] = 2**64 - 1
+            return CONTINUE, gas, registers, memory, context
+
+        v = bytes(preimage)
+
+        # Off/len: req==0 means "rest of blob"
         f = min(int(registers[10]), len(v))
-        l = min(int(registers[11]), len(v) - f)
+        req = int(registers[11])
+        l = min(req if req != 0 else len(v), max(0, len(v) - f))
 
-        if not memory.is_accessible(o, l, True):
-            raise PvmError(PANIC)
+        # Two-phase contract: if o==0, it's a size probe — don't write, just return total length.
+        if o != 0 and l > 0:
+            if not memory.is_accessible(o, l, True):
+                raise PvmError(PANIC)
+            memory.write(o, v[f:f + l])
 
-        registers[7] = Register(len(v))
-        memory.write(f, v[f:l])
+        # w7 returns the FULL preimage length, not the number written
+        registers[7] = len(v)
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -96,7 +111,7 @@ class RefineFunctions(INVF):
         else:
             raise PvmError(PANIC)
         if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:
-            registers[7] = HostStatus.FULL.value
+            registers[7] = HostStatus.FULL
             return CONTINUE, gas, registers, memory, context
         else:
             context.e.append(Segment(x))
@@ -253,7 +268,7 @@ class RefineFunctions(INVF):
     def expunge(gas: Gas, registers: list, memory: Memory, context: RefineContext):
         n = registers[7]
         if n not in context.m:
-            registers[7] = HostStatus.WHO.value
+            registers[7] = HostStatus.WHO
             return CONTINUE, gas, registers, memory, context
         else:
             i_c = context.m[n].instruction_counter
