@@ -84,7 +84,6 @@ class WorkPackage:
         )
 
     def m_c(self, delta: "Delta") -> Tuple[bytes, bytes]:
-        print("SERVICE AH ID", self.auth_code_host)
         service_data = delta[self.auth_code_host].historical_lookup(
             self.context.lookup_anchor_slot, self.authorizer.code_hash
         )

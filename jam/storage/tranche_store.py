@@ -16,9 +16,11 @@ logger = get_logger("tranche")
 class TrancheStore:
     """Persistent store for Tranches"""
     _tranche_store: Dict[Tranche, TrancheState]
+    _lock: bool
 
     def __init__(self) -> None:
         self._tranche_store = {}
+        self._lock = False
 
     # --------------------- State Access Operations ---------------------
 
@@ -81,22 +83,27 @@ class TrancheStore:
 
     # --------------------- Announcement Access Operations ---------------------
 
-    def add_announce(self, tranche: Tranche, wr_hash: WorkReportHash, validator_index: ValidatorIndex) :
+    def record_announcement(self, tranche: Tranche, validator_index: ValidatorIndex, ann: Announcement):
+        from jam.settings import settings
         state = self.get_state(tranche)
-        if wr_hash not in state.records:
-            state.records[wr_hash] = AuditRecord.empty()
-
-        state.records[wr_hash].announces.append(validator_index)
-        state.records[wr_hash].no_votes.append(validator_index)
-        self.save_state(tranche, state)
-        logger.info("Updated announcement for work report", wr_hash=wr_hash.hex())
-
-    def add_set_announcement(self, tranche: Tranche, validator_index: ValidatorIndex, ann: Announcement):
-        state = self.get_state(tranche)
+        print(settings.NODE_NAME, "Tranche State Fetched", state.records.to_json(), "\n\n")
         if validator_index not in state.announcements:
             state.announcements[validator_index] = ann
+
+        for rep in ann.assigned_reports:
+            wr_hash = rep.report_hash
+            if wr_hash not in state.records:
+                state.records[wr_hash] = AuditRecord.empty()
+
+            if validator_index not in state.records[wr_hash].announces:
+                state.records[wr_hash].announces.append(validator_index)
+
+            if validator_index not in state.records[wr_hash].no_votes:
+                state.records[wr_hash].no_votes.append(validator_index)
+
         self.save_state(tranche, state)
-        logger.info("Saved audit announcement", tranche=tranche, vi=validator_index, ann=ann)
+        print(settings.NODE_NAME, "Tranche State Saved", state.records.to_json(), "\n\n")
+        logger.info("Recorded audit announcement", tranche=tranche, vi=validator_index, ann=ann)
 
     def get_set_announcement(self, tranche: Tranche, validator_index: ValidatorIndex):
         state = self._tranche_store.get(tranche)
@@ -109,23 +116,31 @@ class TrancheStore:
     # --------------------- Judgement Access Operations ---------------------
 
     def update_judgment(self, tranche: Tranche, wr_hash: WorkReportHash, judgment: Bool, validator_index: ValidatorIndex):
+        from jam.settings import settings
         state = self.get_state(tranche)
+        print(settings.NODE_NAME, "Tranche State Fetched For J", state.records.to_json(), "\n\n")
 
         if wr_hash not in state.records:
-            state.records[wr_hash] = AuditRecord.empty()
-            state.records[wr_hash].no_votes.append(validator_index)
+            logger.debug("Unknown Report Judgement received", validator=validator_index)
+            return
 
+        logger.debug("")
         if judgment:
+            print("TRYING REMOVING 1")
             state.records[wr_hash].true_votes.append(validator_index)
             state.records[wr_hash].no_votes.remove(validator_index)
+            print("TRYING REMOVING 1 Pass")
 
 
         else:
+            print("TRYING REMOVING 2")
             state.records[wr_hash].false_votes.append(validator_index)
             state.records[wr_hash].no_votes.remove(validator_index)
+            print("TRYING REMOVING 2 Pass")
 
 
         self.save_state(tranche, state)
+        print(settings.NODE_NAME, "Tranche State Saved For J", state.records.to_json(), "\n\n")
         logger.debug("Updated judgment for work report", wr_hash=wr_hash.hex())
 
     def get_judgment(self, tranche: Tranche, wr_hash: WorkReportHash) -> AuditRecord | None:

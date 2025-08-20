@@ -35,14 +35,12 @@ class Auditor:
         curr_state = tranche_store.get_state(tranche)
 
         if tranche.tranche_index == TrancheIndex(0):
-            print("FETCHED STATE", curr_state.to_json())
             assigned_wrs = utils.verifiable_random_selection(
                 entropy_source=entropy,
                 bandersnatch_key=settings.bandersnatch_private,
                 unaudited_report=curr_state.unaudited_list,
                 tranche=tranche,
             )
-            print("ASSIGNED REPORTS", assigned_wrs)
         else:
             assigned_wrs = utils.vrf_tranche(
                 header_hash=tranche.header_hash,
@@ -55,6 +53,7 @@ class Auditor:
             logger.debug("No Reports to audit", block=str(block), tranche=tranche, tranche_state=curr_state.to_json())
             return
 
+        logger.debug("ASSIGNED REPORTS", block=str(block), tranche=tranche, tranche_state=curr_state.to_json(), assigned_reps=assigned_wrs)
         await self.announce(block, tranche, assigned_wrs, no_shows)
         ...
 

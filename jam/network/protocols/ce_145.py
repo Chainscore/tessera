@@ -104,7 +104,7 @@ class JudgmentPublication(NetworkProtocol):
 
         except Exception as e:
             logger.error(
-                "Failed to transmitting Judgment",
+                "Failed to transmit judgment",
                 error=str(e),
                 error_type=type(e).__name__,
             )
@@ -141,7 +141,7 @@ class JudgmentPublication(NetworkProtocol):
 
 
             logger.debug(
-                "Received Judgment from other Auditors",
+                "Received Judgment from auditor",
                 stream_id=stream_id,
                 peer=server,
                 buffer_size=len(buffer[1:]),
@@ -157,7 +157,7 @@ class JudgmentPublication(NetworkProtocol):
             # Stop Streaming
             server.stop_stream(stream_id, 1)
             logger.error(
-                "Error while intercepting Judgement'",
+                "Error while intercepting Judgement",
                 auditor=server,
                 stream_id=stream_id,
                 error=str(e),
