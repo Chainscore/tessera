@@ -1,5 +1,3 @@
-import time
-import asyncio
 from typing import cast
 from tsrkit_types import structure, Bool, U32, U8
 
@@ -59,14 +57,28 @@ class SafroleTicketDistribution(NetworkProtocol):
         if not node: return
 
         try:
-            curr_time = time.time()
-            ts = int((curr_time - GENESIS_TS) // 6)
-            current_slot = ts % EPOCH_LENGTH
-            if current_slot < TICKET_SUBMISSION_END:
+            # check finality using received epoch index
+            from jam.settings import settings
+            main_db = settings.main_db
+            finality_block = Finality.load_final(main_db)
+            finality_time_slot = finality_block.header.slot
+
+            expected_epoch_index = finality_time_slot // EPOCH_LENGTH
+            received_epoch_index = data.epoch_ticket.epoch_index
+
+            if int(expected_epoch_index) != int(received_epoch_index):
+                logger.error("Finality lagging", current=received_epoch_index, final=expected_epoch_index)
+                raise ValueError("Finality lagging")
+
+            if finality_time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
                 # storing ticket extrinsic
-                print(f"Storing ticket in extrinsic, time_slot={ts}, slot={current_slot}")
+                logger.debug(f"Storing ticket in extrinsic (transmit), time_slot={finality_time_slot}, slot={finality_time_slot % EPOCH_LENGTH} ticket={data.epoch_ticket.ticket.signature[:14]}")
                 from jam.block.extrinsics.tickets import ticket_store
                 ticket_store.store(data.epoch_ticket.ticket)
+
+            else:
+                logger.debug("Tickets are not allowed after TICKET_SUBMISSION_END")
+                raise ValueError("Tickets are not allowed after TICKET_SUBMISSION_END")
 
             stream_data = data.epoch_ticket_len.encode() + data.epoch_ticket.encode()
             tasks = []
@@ -140,6 +152,7 @@ class SafroleTicketDistribution(NetworkProtocol):
                 ticket_store.store(data.epoch_ticket.ticket)
             else:
                 logger.debug("Tickets are not allowed after TICKET_SUBMISSION_END")
+                raise ValueError("Tickets are not allowed after TICKET_SUBMISSION_END")
 
             # Return acknowledgment to validator
             ack = b""

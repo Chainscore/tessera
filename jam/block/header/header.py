@@ -4,7 +4,7 @@ import json
 from typing import Optional, Self
 from jam.block.errors import BlockError, BlockErrorCode
 from jam.block.extrinsics.extrinsic import Extrinsic
-from jam.block.extrinsics.tickets import TicketEnvelope
+from jam.types.protocol.ticket import TicketBody
 from jam.types.state.gamma import GammaSFallback
 from jam.utils.constants import EPOCH_LENGTH, X
 from tsrkit_types import Option, structure
@@ -58,7 +58,7 @@ class Header:
         self,
         time_slot: TimeSlot,
         extrinsic: Extrinsic,
-        ticket: Optional[TicketEnvelope],
+        ticket: TicketBody | None,
     ) -> Self | None:
         """
         Produces a child header of current header
@@ -85,7 +85,7 @@ class Header:
 
         # Fallback / Ticket context
         context = (
-            X.TICKET.value + eta.encode() + ticket.attempt.encode()
+            X.TICKET.value + eta + bytes([ticket.attempt])
             if ticket
             else X.FALLBACK.value + eta.encode()
         )
@@ -148,7 +148,7 @@ class Header:
 
         eta = state.eta[3]
         context = (
-            X.TICKET.value + eta.encode() + entry.attempt.encode()
+            X.TICKET.value + eta + bytes([entry.attempt])
             if isinstance(s_vals, GammaSTickets)
             else X.FALLBACK.value + eta.encode()
         )

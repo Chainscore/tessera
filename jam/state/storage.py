@@ -5,6 +5,8 @@ from jam.error import JamError
 from jam.finality.finality import Finality
 
 from rockstore import RockStore
+
+from jam.state.utils import construct_state_key
 from jam.types.protocol.crypto import OpaqueHash
 from tsrkit_types import Bytes, structure, Dictionary
 from jam.utils.trie.merkle import StateTrie
@@ -63,13 +65,12 @@ class StateStorage:
         from jam.settings import settings
 
         kv = settings.main_db
-
         latest_block = Finality.load_latest(kv)
         if latest_block is None:
             return {}
             # raise JamError("LoadUpdates: Not is not yet initialized")
 
-        curr_head = latest_block.header.parent
+        curr_head = latest_block.header.hash()
 
         _updates = {}
 

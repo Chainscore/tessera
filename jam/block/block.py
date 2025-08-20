@@ -1,8 +1,6 @@
 from typing import Self
 
-from jam.block.errors import BlockError, BlockErrorCode
-from jam.block.extrinsics.tickets import TicketEnvelope
-from jam.utils.constants import EPOCH_LENGTH
+from jam.types.protocol.ticket import TicketBody
 from tsrkit_types.struct import structure
 from rockstore import RockStore
 from jam.logging import get_logger
@@ -106,7 +104,7 @@ class Block:
     def validate(self) -> bool:
         return self.header.validate() and self.extrinsic.validate(self.header)
 
-    def produce(self, time_slot: TimeSlot, ticket: TicketEnvelope | None) -> "Block":
+    def produce(self, time_slot: TimeSlot, ticket: TicketBody|None) -> "Block":
         extrinsic = Extrinsic.from_collected(time_slot)
 
         # Produce a new header from previous header

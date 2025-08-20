@@ -274,7 +274,12 @@ class State:
             logger.debug("Validating block")
             if block.validate():
                 logger.info("SETTLING STATE", block=str(block), pre_state=pre_state.rho.to_json(), post_state=state.rho.to_json())
+
                 state.settle(header_hash)
+
+                # Set local chain head to produced block
+                block.save(_set.main_db)
+                Finality.set_head(header_hash, _set.main_db)
                 logger.info(
                     "Block imported!",
                     new_wrs=newly_avail_wrs,
@@ -283,7 +288,6 @@ class State:
                     final_state_root=self.root.hex()[:16] + "...",
                 )
 
-                block.save(_set.main_db)
 
                 from jam.operations.handlers.assurer import assurer
                 for ext in block.extrinsic.guarantees:
@@ -295,8 +299,6 @@ class State:
                 asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
 
                 # TODO: Move this logic in audit engine
-                # Set local chain head to produced block
-                Finality.set_head(header_hash, _set.main_db)
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                 block.extrinsic.clear_from_stores()
 
