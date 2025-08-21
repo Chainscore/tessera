@@ -98,6 +98,7 @@ class GeneralFunctions(INVF):
         elif lookup_key in accounts:
             a = accounts[lookup_key]
 
+        # Must be able to read the 32-byte hash
         if not memory.is_accessible(hash_addr, 32):
             logger.error(
                 "Host call lookup: memory not accessible for hash",
@@ -465,7 +466,7 @@ class GeneralFunctions(INVF):
                 state.store.clear()
                 registers[7] = HostStatus.FULL.value
                 logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
-                return CONTINUE, gas, registers, memory, service_data
+                return CONTINUE, gas, registers, memory, context
 
 
         registers[7] = storage_len

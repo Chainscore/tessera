@@ -65,7 +65,7 @@ class RefineFunctions(INVF):
 
         # No such account → signal “none” as the u64 sentinel (not an enum object!)
         if a is None:
-            registers[7] = HostStatus.NONE
+            registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
         # Lookup preimage
@@ -111,7 +111,7 @@ class RefineFunctions(INVF):
         else:
             raise PvmError(PANIC)
         if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:
-            registers[7] = HostStatus.FULL
+            registers[7] = HostStatus.FULL.value
             return CONTINUE, gas, registers, memory, context
         else:
             context.e.append(Segment(x))
@@ -141,7 +141,7 @@ class RefineFunctions(INVF):
             registers[7] = n
             return CONTINUE, gas, registers, memory, context
         except:
-            registers[7] = HostStatus.HUH
+            registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, context, context
 
     @staticmethod
@@ -151,15 +151,15 @@ class RefineFunctions(INVF):
         if not memory.is_accessible(o, z, True):
             raise PvmError(PANIC)
         elif n not in context.m:
-            registers[7] = HostStatus.WHO
-            return CONTINUE, gas, registers, memory
+            registers[7] = HostStatus.WHO.value
+            return CONTINUE, gas, registers, memory,context
         elif not context.m[n].memory.is_accessible(s, z):
-            registers[7] = HostStatus.OOB
-            return CONTINUE, gas, registers, memory
+            registers[7] = HostStatus.OOB.value
+            return CONTINUE, gas, registers, memory,context
         else:
             memory.write(o, context.m[n].memory.read(s, z))
             registers[7] = HostStatus.OK
-            return CONTINUE, gas, registers, memory
+            return CONTINUE, gas, registers, memory,context
 
     @staticmethod
     @INVF.register(22, gas_cost=10)
@@ -169,11 +169,11 @@ class RefineFunctions(INVF):
         if not memory.is_accessible(s, z):
             raise PvmError(PANIC)
         elif n not in context.m:
-            registers[7] = HostStatus.WHO
-            return CONTINUE, gas, registers, memory
+            registers[7] = HostStatus.WHO.value
+            return CONTINUE, gas, registers, memory,context
         elif not context.m[n].memory.is_accessible(o, z, True):
-            registers[7] = HostStatus.OOB
-            return CONTINUE, gas, registers, memory
+            registers[7] = HostStatus.OOB.value
+            return CONTINUE, gas, registers, memory,context
         else:
             context.m[n].memory.write(o, memory.read(s, z))
             registers[7] = n
@@ -192,11 +192,11 @@ class RefineFunctions(INVF):
             return CONTINUE, gas, registers, memory, context
 
         if p < 16 or p + c >= 2**32 / PVM_MEMORY_PAGE_SIZE:
-            registers[7] = HostStatus.HUH
+            registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
         else:
             context.m[n].memory = u
-            registers[7] = HostStatus.OK
+            registers[7] = HostStatus.OK.value
             return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -208,15 +208,15 @@ class RefineFunctions(INVF):
             u.zero_memory_range(p * PVM_MEMORY_PAGE_SIZE, c * PVM_MEMORY_PAGE_SIZE)
             u.alter_accessibility(p, c, Accessibility.NULL)
         else:
-            registers[7] = HostStatus.WHO
+            registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
 
         if p < 16 or p + c >= 2 * 32 / PVM_MEMORY_PAGE_SIZE or not u.is_accessible(p, c):
-            registers[7] = HostStatus.HUH
+            registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
         else:
             context.m[n].memory = u
-            registers[7] = HostStatus.OK
+            registers[7] = HostStatus.OK.value
             return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -226,7 +226,7 @@ class RefineFunctions(INVF):
         if not memory.is_accessible(o, 112, True):
             raise PvmError(PANIC)
         if n not in context.m:
-            registers[7] = HostStatus.WHO
+            registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         m_bytes = memory.read(o, 112)
         # bytes->14size array of 8elements each 0->gas(g) 1-13->register_data(w)
@@ -246,7 +246,7 @@ class RefineFunctions(INVF):
             context.m[n].instruction_counter = i_dash + 1
             registers[7] = U64(ExecutionStatus.HOST)  # NOTE: Saving the ExecValu on register[7]
             registers[8] = c.value.register
-            return CONTINUE, gas, registers, memory, context
+            return CONTINUE, registers, memory, context
         else:
             context.m[n].instruction_counter = i_dash
             if c == ExecutionStatus.PAGE_FAULT:
@@ -268,7 +268,7 @@ class RefineFunctions(INVF):
     def expunge(gas: Gas, registers: list, memory: Memory, context: RefineContext):
         n = registers[7]
         if n not in context.m:
-            registers[7] = HostStatus.WHO
+            registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         else:
             i_c = context.m[n].instruction_counter

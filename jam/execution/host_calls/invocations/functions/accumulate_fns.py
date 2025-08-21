@@ -72,10 +72,10 @@ class AccumulateFunctions(INVF):
             g = U64.decode_from(chunk[4:12], offset=0)  # next   8 bytes
             g_dict[s] = g
         if not all(isinstance(x, U32) for x in (m, a, v)):
-            registers[7] = HostStatus.WHO
+            registers[7] = HostStatus.WHO.value
             return (CONTINUE, registers, memory, context)
         else:
-            registers[7] = HostStatus.OK
+            registers[7] = HostStatus.OK.value
             context.x.partial_state.privileges = Chi(chi_m=m, chi_a=a, chi_v=v, chi_g=g_dict)
             return (CONTINUE, registers, memory, context)
 
@@ -95,7 +95,7 @@ class AccumulateFunctions(INVF):
             return CONTINUE, registers, memory, context
         else:
             context.x.partial_state.authorizer_keys[registers[7]]= c
-            registers[7] = HostStatus.OK
+            registers[7] = HostStatus.OK.value
             return CONTINUE, registers, memory, context
 
     @staticmethod
@@ -112,7 +112,7 @@ class AccumulateFunctions(INVF):
         v = TypedArray([ValidatorData.decode_from(buf[i:i+336]) for i in range(0, len(buf), 336)])
 
         context.x.partial_state.validator_keys = v
-        registers[7] = HostStatus.OK
+        registers[7] = HostStatus.OK.value
         return CONTINUE, registers, memory, context
 
     @staticmethod
@@ -167,7 +167,7 @@ class AccumulateFunctions(INVF):
         """
 
         if s.balance - a.service.t < s.t:
-            registers[7] = HostStatus.CASH
+            registers[7] = HostStatus.CASH.value
             return CONTINUE, registers, memory, context
         else:
             x_i = check(
@@ -189,7 +189,7 @@ class AccumulateFunctions(INVF):
         X_s.service.code_hash = memory.read(o, 32)
         X_s.service.gas = g
         X_s.service.min_gas = m
-        registers[7] = HostStatus.OK
+        registers[7] = HostStatus.OK.value
         return CONTINUE, registers, memory, context
 
     # TODO: Need to update the gas with registers[9]
@@ -211,17 +211,17 @@ class AccumulateFunctions(INVF):
         b = delta[context.x.s_index].balance
 
         if delta[d] is None:
-            registers[7] = HostStatus.WHO
+            registers[7] = HostStatus.WHO.value
             return CONTINUE, registers, memory, context
         elif l < delta[d].min_gas:
-            registers[7] = HostStatus.LOW
+            registers[7] = HostStatus.LOW.value
 
             return CONTINUE, registers, memory, context
         elif (b - a) < delta[context.x.s_index].service.t:
-            registers[7] = HostStatus.CASH
+            registers[7] = HostStatus.CASH.value
             return CONTINUE, registers, memory, context
         else:
-            registers[7] = HostStatus.OK
+            registers[7] = HostStatus.OK.value
             context.x.deferred_transfers.append(t)
             delta[context.x.s_index].balance -= a
             return CONTINUE, registers, memory, context
@@ -244,26 +244,26 @@ class AccumulateFunctions(INVF):
         if d != context.x.s_index and context.x.partial_state.service_accounts[d] is not None:
             account = delta[d]
         else:
-            registers[7] = HostStatus.WHO
+            registers[7] = HostStatus.WHO.value
             return CONTINUE, registers, memory, context
 
         l = BlobLength(max(81, account.service.num_o) - 81)
         if account.service.code_hash != context.x.s_index.encode():
-            registers[7] = HostStatus.WHO
+            registers[7] = HostStatus.WHO.value
             return CONTINUE, registers, memory, context
         elif account.service.num_i != 2 or account.lookup[LookupTable( hash = h , length = l )] is None:
-            registers[7] = HostStatus.HUH
+            registers[7] = HostStatus.HUH.value
             return CONTINUE, registers, memory, context
         elif (
             len(account.lookup[LookupTable( hash = h , length = l )]) == 2
             and account.lookup[LookupTable( hash = h , length = l )][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS
         ):  # [1] refers to x 2nd timestamp which should be smaller than Block Timeslot - PreImage Eviction Timeslot
-            registers[7] = HostStatus.OK
+            registers[7] = HostStatus.OK.value
             del context.x.partial_state.service_accounts[d]
             context.x.partial_state.service_accounts[context.x.s_index].balance += account.balance
             return CONTINUE, registers, memory, context
         else:
-            registers[7] = HostStatus.HUH
+            registers[7] = HostStatus.HUH.value
             return CONTINUE, registers, memory, context
 
     @staticmethod
@@ -402,7 +402,7 @@ class AccumulateFunctions(INVF):
         if not memory.is_accessible(o, 32):
             raise PvmError(PANIC)
         context.x.hash = OptionHash(OpaqueHash(memory.read(o, 32)))
-        registers[7] = HostStatus.OK
+        registers[7] = HostStatus.OK.value
         return CONTINUE, registers, memory, context
 
     @staticmethod
@@ -423,16 +423,16 @@ class AccumulateFunctions(INVF):
             raise PvmError(PANIC)
         i = Bytes(memory.read(o, z))
         if d[s_star] is None:
-            registers[7] = HostStatus.WHO
+            registers[7] = HostStatus.WHO.value
             return CONTINUE, registers, memory, context
         a = d[s_star]
         if a.lookup[LookupTable(hash = Hash.blake2b(i) , length = z)] != []:
-            registers[7] = HostStatus.HUH
+            registers[7] = HostStatus.HUH.value
             return CONTINUE, registers, memory, context
         elif (s_star, i) in context.x.preimage:
-            registers[7] = HostStatus.HUH
+            registers[7] = HostStatus.HUH.value
             return CONTINUE, registers, memory, context
         else:
             context.x.preimage.add((s_star, i))
-            registers[7] = HostStatus.OK
+            registers[7] = HostStatus.OK.value
             return CONTINUE, registers, memory, context
