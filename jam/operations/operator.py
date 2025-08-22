@@ -8,6 +8,7 @@ from .handlers import WPBuilder, assurer, BlockProducer, Conductor, Forwarding
 from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from ..finality.finality import Finality
+from jam.api.rpc.broker import broker
 
 logger = get_logger("nodeops")
 
@@ -43,6 +44,8 @@ async def operate(is_builder = False):
         curr_time = time.time()
         if curr_time < ts_start_time:
             await asyncio.sleep(ts_start_time - curr_time)
+
+        asyncio.create_task(broker.publish("subscribeSyncStatus", "Completed"))
 
         from jam.network.start import node
         if not node:

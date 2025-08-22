@@ -13,7 +13,6 @@ from jam.network.start import start_node
 from jam.state.state import setup_state
 from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
-from jam.api.rpc.app import rpc
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 from jam.api.rpc.app import rpc
@@ -100,7 +99,7 @@ async def main(
         #       RPC/WebSocket server setup
         rpc_port = int(os.environ.get("RPC_PORT", 5000))
         rpc_config = Config()
-        rpc_config.bind = [f"{host}:{port}"]
+        rpc_config.bind = [f"{host}:{rpc_port}"]
         rpc_config.debug = True
         rpc_config.use_reloader = False
 
@@ -114,6 +113,8 @@ async def main(
             # tg.create_task(rpc.run_task(debug=True, host="0.0.0.0", port=5001))
             # Node Ops - Block Prod, Audit, Assurances, etc
             tg.create_task(operate(is_builder))
+            # using the Hypercorn server to serve the RPC API
+            tg.create_task(serve(rpc, rpc_config))
 
     except Exception as e:
         logger.critical("Fatal error", e=e, error_type=type(e).__name__)

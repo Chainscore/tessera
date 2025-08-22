@@ -1,8 +1,12 @@
+import asyncio
+
+from jam.api.rpc.broker import broker
+from jam.finality.finality import Finality
 from jam.types.state.pi import ServiceStat
 from copy import deepcopy
 from tsrkit_types import Bytes
 from jam.state.transitions.preimages.errors import PreimageError, PreimageErrorEnum
-from jam.types.state.delta import LookupTable
+from jam.types.state.delta import LookupTable, Timestamps
 from jam.types.state.sigma import Sigma
 from jam.block import Block
 from jam.block.extrinsics.preimages import Preimage, PreimagesExtrinsic
@@ -38,6 +42,20 @@ class Preimages:
                     PreimageErrorEnum.PREIMAGE_UNNEEDED,
                     "Preimage metadata does not exist",
                 )
+            lookup_val: Timestamps | None = account.lookup[lookup_key]
+            preimage_len = len(preimage.blob)
+
+            method = f"subscribeServiceRequest:{preimage.requester}:{list(hashed_blob)}:{preimage_len}:{False}"
+            method2 = f"subscribeServiceRequest:{preimage.requester}:{list(hashed_blob)}:{preimage_len}:{True}"
+            from jam.settings import settings
+            final = Finality.load_final(settings.main_db)
+            asyncio.create_task(broker.publish(method,
+                                               {"header_hash": list(final.header.hash()),
+                                                "slot": int(final.header.slot), "value": lookup_val}))
+            best = Finality.load_latest(settings.main_db)
+            asyncio.create_task(broker.publish(method2,
+                                               {"header_hash": list(best.header.hash()), "slot": int(best.header.slot),
+                                                "value": lookup_val}))
 
         pi = state.pi
         for preimage in block.extrinsic.preimages:

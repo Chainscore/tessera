@@ -20,6 +20,9 @@ from jam.block import Block
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.logging import get_logger
 from jam.operations.ticket_queue import setup_ticket_queue
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
+from jam.api.rpc.app import rpc
 
 # Logger for Node test
 logger = get_logger("test")
@@ -100,8 +103,17 @@ async def run_node(
 
         settings.update()
 
+        #       RPC/WebSocket server setup
+        rpc_port = int(os.environ.get("RPC_PORT", 5000))
+        rpc_config = Config()
+        rpc_config.bind = [f"{host}:{rpc_port}"]
+        rpc_config.debug = True
+        rpc_config.use_reloader = False
+        logger.info("📡 Starting RPC/WebSocket server", host=host, port=rpc_port)
+
         async with asyncio.TaskGroup() as tg:
             tg.create_task(start_node(host, int(port)))
+            tg.create_task(serve(rpc, rpc_config))
             for node_task in node_tasks:
                 if node_task:
                     tg.create_task(node_task())

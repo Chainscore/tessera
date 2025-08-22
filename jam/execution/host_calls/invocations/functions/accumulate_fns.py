@@ -1,3 +1,7 @@
+import asyncio
+
+from jam.api.rpc.broker import broker
+from jam.finality.finality import Finality
 from jam.types.state.accumulation.types import (
     DeferredTransfer,
     AccumulationContext,
@@ -336,6 +340,21 @@ class AccumulateFunctions(INVF):
 
         account.lookup[lookup_key] = lookup_val
         registers[7] = HostStatus.OK.value
+
+        method = f"subscribeServiceRequest:{context.x.s_index}:{list(preimage_hash.hex())}:{preimage_len}:{False}"
+
+        from jam.settings import settings
+        final = Finality.load_final(settings.main_db)
+        asyncio.create_task(broker.publish(method,
+                                           {"header_hash": list(final.header.hash()), "slot": int(final.header.slot), "value": lookup_val}))
+
+        method2 = f"subscribeServiceRequest:{context.x.s_index}:{list(preimage_hash.hex())}:{preimage_len}:{True}"
+
+        from jam.settings import settings
+        best = Finality.load_latest(settings.main_db)
+        asyncio.create_task(broker.publish(method2,
+                                           {"header_hash": list(best.header.hash()), "slot": int(best.header.slot), "value": lookup_val}))
+
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
     @staticmethod
