@@ -18,7 +18,7 @@ class BlockHistory:
     mmr: MMR
     state_root: StateRoot
     reported: ReportedDictionary
-
+q
 
 # State key: 3
 class Beta(TypedVector[BlockHistory]):

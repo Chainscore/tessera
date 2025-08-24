@@ -1,3 +1,4 @@
+import asyncio
 import math
 from typing import List, Tuple
 
@@ -32,7 +33,7 @@ class Auditor:
 
         entropy = block.header.entropy_source
 
-        curr_state = tranche_store.get_state(tranche)
+        curr_state = await tranche_store.get_state(tranche)
 
         if tranche.tranche_index == TrancheIndex(0):
             assigned_wrs = utils.verifiable_random_selection(
@@ -42,7 +43,7 @@ class Auditor:
                 tranche=tranche,
             )
         else:
-            assigned_wrs = utils.vrf_tranche(
+            assigned_wrs = await utils.vrf_tranche(
                 header_hash=tranche.header_hash,
                 tranche=tranche,
                 entropy=entropy,
@@ -80,7 +81,7 @@ class Auditor:
         from jam.settings import settings
 
         audit = Utils()
-
+        await asyncio.sleep(1)
         # --------------------------------------------- CONDITION CHECK ------------------------------------------------
         if HeaderHash(block.header.hash()) != HeaderHash(tranche.header_hash):
             logger.info("Block's header_has and tranche header_hash are different")
@@ -164,11 +165,11 @@ class Auditor:
 
         try:
             responses = await CE144.transmit(data=data)
+            logger.debug(f"Assign Work Reports announcement transmitted successfully", responses=responses)
 
             if responses:
                 await cls.judgment_process(assign_wrs=assigned_wrs, tranche=tranche)
 
-            logger.debug(f"Assign Work Reports announcement transmitted successfully")
 
         except Exception as e:
             logger.error(
@@ -200,14 +201,6 @@ class Auditor:
 
                 is_valid = await audit.refine(r)
 
-                # STORE JUDGMENT HERE ONLY FOR TRANSMITTING
-                tranche_store.update_judgment(
-                    tranche=tranche,
-                    wr_hash=wr_hash,
-                    judgment=is_valid,
-                    validator_index=settings.validator_index,
-                )
-
                 judgment_sign = audit.judgment_signature(wr=r, refine=is_valid)
 
                 from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
@@ -220,6 +213,12 @@ class Auditor:
                     validity=Bool(True),
                     work_report_hash=WorkReportHash(wr_hash),
                     ed25519_signature=Ed25519Signature(judgment_sign),
+                )
+
+                # Update self judgement
+                await tranche_store.update_judgment(
+                    tranche=tranche,
+                    judgment=judgment
                 )
 
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
@@ -236,7 +235,7 @@ class Auditor:
             )
 
     @classmethod
-    def is_audited(cls, block: Block, tranche: Tranche) -> NoShows:
+    async def is_audited(cls, block: Block, tranche: Tranche) -> NoShows:
         """
         Function to check whether the block is audited or not.
         Builds new queue to audit and corresponding no shows
@@ -260,7 +259,7 @@ class Auditor:
             header_hash=header_hash, tranche_index=tranche_index - TrancheIndex(1)
         )
 
-        prev_state = tranche_store.get_state(tranche=prev_tranche)
+        prev_state = await tranche_store.get_state(tranche=prev_tranche)
 
         # GET Q FROM PREVIOUS TRANCHE
         unaudited_reports = prev_state.unaudited_list
@@ -311,7 +310,7 @@ class Auditor:
                             and len(no_votes) != 0
                         ):
                             for v in no_votes:
-                                ann_list = tranche_store.get_set_announcement(
+                                ann_list = await tranche_store.get_set_announcement(
                                     tranche=prev_tranche, validator_index=v
                                 )
                                 if v not in [no_show.validator_index for no_show in no_shows]:
@@ -324,7 +323,7 @@ class Auditor:
         # UPDATE WORK REPORTS IN Q ANDB
         current_tranche = Tranche(header_hash=header_hash, tranche_index=tranche_index)
 
-        tranche_store.add_to_unaudited(
+        await tranche_store.add_to_unaudited(
             tranche=current_tranche, unaudited_reports=updated_unaudited_list
         )
 

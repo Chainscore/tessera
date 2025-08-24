@@ -2,12 +2,13 @@ import asyncio
 from typing import cast
 from tsrkit_types import structure, Uint, Bool, U8
 
+from jam.network.protocols.ce_144 import Announcement
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.logging import get_logger
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature
+from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, HeaderHash
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
@@ -115,30 +116,14 @@ class JudgmentPublication(NetworkProtocol):
         from jam.finality.finality import Finality
         from jam.settings import settings
 
-        # TODO: FIX THIS
-        latest_block = Finality.load_latest(kv=settings.main_db)
-        header_hash = latest_block.header.hash()
-
         buffer = server.stream_buffer[stream_id][1:]
 
         try:
             data = CE145Data.decode(buffer)
             data = cast(CE145Data, data)
 
-            # JUDGMENT RECEIVED FROM WHICH VALIDATOR THAT INDEX, JUDGMENT, WR_HASH
-            vi_judgment = data.judgment.validator_index
-            judge = data.judgment.validity
-            wr_hash = data.judgment.work_report_hash
-
-            tranche_idx = tranche_store.get_tranche_index(header_hash=header_hash)
-
-            tranche=Tranche(
-                tranche_index=tranche_idx,
-                header_hash=header_hash
-            )
-
-            tranche_store.update_judgment( tranche=tranche, wr_hash=wr_hash, judgment=judge, validator_index=vi_judgment)
-
+            # Handle received judgment
+            asyncio.create_task(self.handle_judgment(data.judgment))
 
             logger.debug(
                 "Received Judgment from auditor",
@@ -177,3 +162,24 @@ class JudgmentPublication(NetworkProtocol):
             return True
 
         return False
+
+    @staticmethod
+    async def handle_judgment(judgment: Judgment):
+        from jam.storage.tranche_store import tranche_store
+
+        try:
+            # Fetch Report's Tranche
+            tranche = await tranche_store.fetch_rep_tranche(judgment)
+            if not tranche:
+                raise ValueError(f"Tranche not found for report {judgment.work_report_hash.hex()}")
+
+            # Handle Judgement
+            await tranche_store.update_judgment(tranche=tranche, judgment=judgment)
+
+        except Exception as JERR:
+            logger.error(
+                "Error Handling Judgment",
+                judgment=judgment.to_json(),
+                err=str(JERR),
+                err_type=type(JERR).__name__
+            )

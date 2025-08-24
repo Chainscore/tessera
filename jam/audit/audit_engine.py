@@ -1,12 +1,12 @@
 import asyncio
 
-from pydantic.v1.color import r_hsl
 from tsrkit_types import Null
 
 from jam.audit.auditor import Auditor
 from jam.block.block import Block
 from jam.finality.finality import Finality
 from jam.logging import get_logger
+from jam.network.protocols.ce_144 import NoShows
 
 from jam.types.audit.tranche import (
     TrancheIndex,
@@ -89,20 +89,20 @@ class AuditEngine:
                 # Handle 0 Tranche Case
                 tranche_state = TrancheState.empty()
                 tranche_state.unaudited_list = auditable_reports
-                tranche_store.save_state(curr_tranche, tranche_state)
+                await tranche_store.save_state(curr_tranche, tranche_state)
                 print("CURR TRANCHE STATE", tranche_state.to_json())
                 no_shows = None
 
             else:
                 # Handle > 0 Tranche Case
                 prev_tranche = Tranche(TrancheIndex(tranche_index - 1), header_hash)
-                prev_state = tranche_store.get_state(prev_tranche)
+                prev_state = await tranche_store.get_state(prev_tranche)
 
                 tranche_state = prev_state.carry_forward()
-                tranche_store.save_state(curr_tranche, tranche_state)
+                await tranche_store.save_state(curr_tranche, tranche_state)
 
                 # Audit check
-                no_shows = auditor.is_audited(block, curr_tranche)
+                no_shows: NoShows = await auditor.is_audited(block, curr_tranche)
 
                 if len(no_shows) == 0:
                     self.is_audited = True
@@ -113,6 +113,7 @@ class AuditEngine:
                         tranche=prev_tranche,
                     )
                     Finality.finalise(header_hash, settings.main_db, False)
+                    tranche_store.remove_block_history(header_hash)
                     return
 
                 logger.info(

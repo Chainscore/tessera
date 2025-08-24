@@ -127,7 +127,7 @@ class AuditAnnouncement(NetworkProtocol):
             header_hash=data.tranche_announcement.header_hash
         )
 
-        tranche_store.record_announcement(tranche, settings.validator_index, data.tranche_announcement.announcement)
+        await tranche_store.record_announcement(tranche, settings.validator_index, data.tranche_announcement.announcement)
 
         tasks = []
         responses = []
@@ -185,6 +185,13 @@ class AuditAnnouncement(NetworkProtocol):
 
         buffer = server.stream_buffer[stream_id][1:]
 
+        logger.debug(
+            "Received Audit's Announcement from other Auditors",
+            stream_id=stream_id,
+            peer=server,
+            buffer_size=len(buffer[1:]),
+        )
+
         try:
             data = CE144Data.decode(buffer)
             data = cast(CE144Data, data)
@@ -198,13 +205,10 @@ class AuditAnnouncement(NetworkProtocol):
                 header_hash=header_hash
             )
 
-            tranche_store.record_announcement(tranche, v_index, data.tranche_announcement.announcement)
-            logger.debug(
-                "Received Audit's Announcement from other Auditors",
-                stream_id=stream_id,
-                peer=server,
-                buffer_size=len(buffer[1:]),
+            asyncio.create_task(
+                tranche_store.record_announcement(tranche, v_index, data.tranche_announcement.announcement)
             )
+
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)

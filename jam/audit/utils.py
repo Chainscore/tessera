@@ -187,7 +187,7 @@ class Utils:
         return Ed25519Signature(signature)
 
     @classmethod
-    def vrf_tranche(
+    async def vrf_tranche(
         cls,
         header_hash: HeaderHash,
         tranche: Tranche,
@@ -239,7 +239,7 @@ class Utils:
 
                 wr_hash = rep.hash()
 
-                state = tranche_store.get_state(tranche=prev_tranche)
+                state = await tranche_store.get_state(tranche=prev_tranche)
 
                 records = state.judgments.get(wr_hash)
 

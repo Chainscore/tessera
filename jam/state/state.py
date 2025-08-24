@@ -298,8 +298,6 @@ class State:
                 audit_engine = AuditEngine()
                 asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
 
-                # TODO: Move this logic in audit engine
-                # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                 block.extrinsic.clear_from_stores()
 
                 self._lock = False
