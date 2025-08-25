@@ -90,7 +90,6 @@ class AuditEngine:
                 tranche_state = TrancheState.empty()
                 tranche_state.unaudited_list = auditable_reports
                 await tranche_store.save_state(curr_tranche, tranche_state)
-                print("CURR TRANCHE STATE", tranche_state.to_json())
                 no_shows = None
 
             else:

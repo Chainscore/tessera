@@ -121,7 +121,6 @@ class Utils:
             [(c, w) for (c, w) in updated_array if w is not Null][:10]
         )
 
-        logger.debug("FINAL REPS", reps=shuffle_not_null)
         return shuffle_not_null
 
     @staticmethod

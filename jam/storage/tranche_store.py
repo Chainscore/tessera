@@ -142,7 +142,6 @@ class TrancheStore:
                 logger.warning("No state for given tranche", tranche=tranche)
                 return
 
-            print(settings.NODE_NAME, "Tranche State Fetched", state.records.to_json(), "\n\n")
             if validator_index not in state.announcements:
                 state.announcements[validator_index] = ann
 
@@ -158,7 +157,6 @@ class TrancheStore:
                     state.records[wr_hash].no_votes.append(validator_index)
 
             self._tranche_store[tranche] = state
-            print(settings.NODE_NAME, "Tranche State Saved", state.records.to_json(), "\n\n")
             logger.info("Recorded audit announcement", tranche=tranche, vi=validator_index, ann=ann.to_json())
 
     async def get_set_announcement(self, tranche: Tranche, validator_index: ValidatorIndex):
@@ -184,29 +182,20 @@ class TrancheStore:
                 logger.warning("No state for given tranche", tranche=tranche)
                 return
 
-            print(settings.NODE_NAME, "Tranche State Fetched For J", state.records.to_json(), "\n\n")
-
             if wr_hash not in state.records:
                 logger.debug("Unknown Report Judgement received", validator=validator_index)
                 return
 
-            logger.debug("")
             if judgment.validity:
-                print(f"TRYING REMOVING aa {validator_index}")
                 state.records[wr_hash].true_votes.append(validator_index)
                 state.records[wr_hash].no_votes.remove(validator_index)
-                print(f"TRYING REMOVING aa {validator_index}")
 
 
             else:
-                print(f"TRYING REMOVING bb {validator_index}")
                 state.records[wr_hash].false_votes.append(validator_index)
                 state.records[wr_hash].no_votes.remofve(validator_index)
-                print(f"TRYING REMOVING bb {validator_index}")
-
 
             self._tranche_store[tranche] = state
-            print(settings.NODE_NAME, "Tranche State Saved For J", state.records.to_json(), "\n\n")
             logger.debug("Updated judgment for work report", judgment=judgment.to_json())
 
     async def get_judgment(self, tranche: Tranche, wr_hash: WorkReportHash) -> AuditRecord | None:
