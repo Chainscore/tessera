@@ -156,6 +156,7 @@ class State:
         # 1. Push auth hash of every WR to self.alpha[0:1]
 
         # TODO: We should remove this
+        logger.warning("Force State Transition: ON")
         alpha = self.alpha
 
         for guarantee in block.extrinsic.guarantees:
