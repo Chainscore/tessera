@@ -28,9 +28,9 @@ rockstore = "^0.1.2"
 reed-solomon-leopard = "^0.2.1"
 python-dotenv = "^1.1.0"
 asyncio = "^3.4.3"
-dot_ring = { path = "../dot-ring", develop = true }
-# py-ark-vrf = "0.2.3"
-py-ark-vrf = { path = "../py-ark-vrf", develop = true }
+# dot_ring = { path = "../dot-ring", develop = true }
+py-ark-vrf = "0.2.3"
+# py-ark-vrf = { path = "../py-ark-vrf", develop = true }
 
 
 [tool.pyrefly]
