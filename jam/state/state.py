@@ -229,7 +229,6 @@ class State:
                     count=len(newly_avail_wrs),
                     wrs=[wr.encode().hex()[:16] + "..." for wr in newly_avail_wrs],
                 )
-
             # Accumulation
             _, commitment_map = Accumulation.transition(
                 pre_state, self, block, newly_avail_wrs=newly_avail_wrs
@@ -271,9 +270,10 @@ class State:
                 Finality.set_head(header_hash, _set.main_db)
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                 Finality.finalise(header_hash, _set.main_db)
+
                 block.extrinsic.clear_from_stores()
                 self._lock = False
-                return True 
+                return True
             else:
                 raise JamError(JamErrorCode.INVALID_BLOCK)
 

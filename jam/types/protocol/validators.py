@@ -69,4 +69,4 @@ class ValidatorsData(TypedArray[ValidatorData, VALIDATOR_COUNT]):
         for i, validator in enumerate(self):
             if validator.bandersnatch == key or validator.ed25519 == key:
                 return i, validator
-        return -1, None  
+        return -1, None

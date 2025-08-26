@@ -45,7 +45,7 @@ class PsiR(InvocationProtocol):
         from jam.settings import settings
 
         return {
-            0: (GeneralFunctions, ()),
+            0: (GeneralFunctions, {}),
             17: (
                 RefineFunctions,
                 {

@@ -313,7 +313,7 @@ class Accumulation:
             Gas: Actual gas utilized in PVM.
         """
 
-        g = 0
+        g = Gas(0)
         p = OperandTuples([])
 
         if service_id in services:
@@ -363,7 +363,7 @@ class Accumulation:
                     "[Accumulation] Unexpected: Received preimage for a service that does not exist"
                 )
             key_hash = Hash.blake2b(blobs)
-            lookup = LookupTable(key_hash, len(blobs))
+            lookup = LookupTable(hash=key_hash,length= len(blobs))
             if len(service.timestamps[lookup]) == 0:
                 service.timestamps[lookup] = Timestamps([timeslot])
                 service.lookup[key_hash] = blobs
