@@ -1,6 +1,7 @@
 from typing import Dict
 
-from jam.types.protocol.ticket import TicketBody
+from jam.settings import Settings
+from jam.types.protocol.ticket import TicketAttempt, TicketBody, TicketId
 from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
 from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
@@ -13,9 +14,37 @@ from jam.types.state.delta import (
     AccountLookup,
     AccountPreimages,
     ServiceCodeHash,
-    Timestamps, AccountMetadata, Ao, Ai, LookupTable,
+    Timestamps,
+    AccountMetadata,
+    Ao,
+    Ai,
+    LookupTable,
 )
-from jam.types import Eta, Iota, Kappa, Lambda_, AuthorizationQueue, Phi, AllValidatorStats, Pi, ValidatorStat, AllCoreStats, CoreStat, AllServiceStats, Psi, PsiB, PsiG, PsiO, PsiW, OptionalWorkReportState, Rho, Tau, AllReadyWRs, Nu, Xi
+from jam.types import (
+    Eta,
+    Iota,
+    Kappa,
+    Lambda_,
+    AuthorizationQueue,
+    Phi,
+    AllValidatorStats,
+    Pi,
+    ValidatorStat,
+    AllCoreStats,
+    CoreStat,
+    AllServiceStats,
+    Psi,
+    PsiB,
+    PsiG,
+    PsiO,
+    PsiW,
+    OptionalWorkReportState,
+    Rho,
+    Tau,
+    AllReadyWRs,
+    Nu,
+    Xi,
+)
 
 from jam.state.state import State
 from tsrkit_types.bytes import Bytes
@@ -23,7 +52,7 @@ from tsrkit_types.integers import U16, U32, U8, Uint
 from tsrkit_types.null import Null
 
 from jam.types.protocol.crypto import (
-	BlsPublic,
+    BlsPublic,
     Ed25519Public,
     HeaderHash,
     OpaqueHash,
@@ -77,24 +106,28 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["beta"] = Beta([block for _ in range(3)])
 
     # Create dummy validator data
+    key_set = [Settings(data_path=None, seed=i) for i in range(VALIDATOR_COUNT)]
     dummy_validator_data = [
         ValidatorData(
-            bandersnatch=BandersnatchPublic(create_dummy_bytes32()),
-            ed25519=Ed25519Public(create_dummy_bytes32()),
+            bandersnatch=BandersnatchPublic(key.bandersnatch_public),
+            ed25519=Ed25519Public(key.ed25519_public),
             bls=BlsPublic(create_dummy_bytes(144)),
-            metadata=ValidatorMetadata(name=Bytes(10), protocol=Uint[16](2**16 - 1), host=IPAddress([U8(127), U8(0), U8(0), U8(1)]), port=U16(0)),
+            metadata=ValidatorMetadata.from_json(bytes(128).hex()),
         )
-        for _ in range(VALIDATOR_COUNT)
+        for key in key_set
     ]
 
     # Gamma - Validator set
     validator_set = GammaK(dummy_validator_data)
     ring_root = BandersnatchRingRoot(create_dummy_bytes(144))
     slot_sealers = GammaSTickets(
-        [TicketBody(create_dummy_bytes32(), i) for i in range(EPOCH_LENGTH)]
+        [
+            TicketBody(TicketId(create_dummy_bytes32()), TicketAttempt(i))
+            for i in range(EPOCH_LENGTH)
+        ]
     )
     ticket_accumulator = GammaA(
-        [TicketBody(create_dummy_bytes32(), i) for i in range(3)]
+        [TicketBody(TicketId(create_dummy_bytes32()), TicketAttempt(i)) for i in range(3)]
     )
     components["gamma"] = Gamma(
         k=validator_set,
@@ -112,7 +145,9 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     timestamps = AccountLookup(
         {
-            LookupTable(hash=create_dummy_bytes32(), length=Uint[32](0)): Timestamps([U32(i) for i in range(3)])
+            LookupTable(hash=Bytes[32](create_dummy_bytes32()), length=Uint[32](0)): Timestamps(
+                [U32(i) for i in range(3)]
+            )
             for _ in range(2)
         }
     )
@@ -126,8 +161,8 @@ def create_dummy_state_components() -> Dict[str, object]:
             gas_limit=Gas(5000),
             min_gas=Gas(100),
             num_o=Ao(0),
-            num_i=Ai(0)
-        )
+            num_i=Ai(0),
+        ),
     )
     components["delta"] = Delta({ServiceId(i): account for i in range(3)})
 
@@ -136,9 +171,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["iota"] = Iota(dummy_validator_data)
     components["kappa"] = Kappa(dummy_validator_data)
     components["lambda_"] = Lambda_(dummy_validator_data)
-    components["rho"] = Rho(
-        [OptionalWorkReportState(Null) for _ in range(CORE_COUNT)]
-    )
+    components["rho"] = Rho([OptionalWorkReportState(Null) for _ in range(CORE_COUNT)])
     components["tau"] = Tau(0)
 
     # Phi - Authorization queue
@@ -158,58 +191,18 @@ def create_dummy_state_components() -> Dict[str, object]:
         PsiW([]),  # Empty array for wonky work reports
         PsiO([]),  # Empty array for offenders
     )
-    # components["psi"] = Psi(
-    #     PsiG([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-    #     PsiB([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-    #     PsiW([WorkReportHash(create_dummy_bytes32()) for _ in range(3)]),
-    #     PsiO([Ed25519Public(create_dummy_bytes32()) for _ in range(3)]),
-    # )
 
     # Pi
-    all_validator_stats = AllValidatorStats(
-        [
-            ValidatorStat(
-                blocks=Uint(1),
-                tickets=Uint(1),
-                pre_images=Uint(1),
-                pre_images_size=Uint(1),
-                guarantees=Uint(1),
-                assurances=Uint(1),
-            )
-            for _ in range(VALIDATOR_COUNT)
-        ]
-    )
-    all_core_stats = AllCoreStats(
-        [
-            CoreStat(
-                gas_used=Uint(1),
-                imports=Uint(1),
-                extrinsic_count=Uint(1),
-                extrinsic_size=Uint(1),
-                exports=Uint(1),
-                bundle_size=Uint(1),
-                da_load=Uint(1),
-                popularity=Uint(1),
-            )
-            for _ in range(CORE_COUNT)
-        ]
-    )
-    all_service_stats = AllServiceStats()
-
     components["pi"] = Pi(
-        vals_current=all_validator_stats,
-        vals_last=all_validator_stats,
-        cores=all_core_stats,
-        services=all_service_stats
+        vals_current=AllValidatorStats.empty(),
+        vals_last=AllValidatorStats.empty(),
+        cores=AllCoreStats.empty(),
+        services=AllServiceStats({}),
     )
 
     # Nu and Xi
     components["nu"] = Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
-
-
-    components["xi"] = Xi(
-        [WorkDependencies([]) for _ in range(EPOCH_LENGTH)]
-    )
+    components["xi"] = Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)])
 
     return components
 

@@ -4,4 +4,3 @@ from jam.utils.constants import EPOCH_LENGTH
 
 
 Xi = TypedArray[WorkDependencies, EPOCH_LENGTH]
-

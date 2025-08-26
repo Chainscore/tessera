@@ -1,166 +1,185 @@
-from typing import cast, TYPE_CHECKING
+import enum
+from math import e
+from typing import List, cast, TYPE_CHECKING
 
-from tsrkit_types import TypedVector, Enum
+from tsrkit_types import Bytes32, TypedArray, TypedVector, Enum
 
-from jam.config.data_stores import data_stores
-from jam.config.logging import get_logger
-from jam.consensus.grandpa.finality import Finality
-from jam.network.base.quic import QuicProtocol
-from jam.types import HeaderHash, Block, TimeSlot
+from jam.logging import get_logger
+from jam.finality.finality import Finality
+from jam.network.base.error import NetworkingErrorCode
+from jam.network.connection import NodeConnection
+from jam.types import HeaderHash 
 
-if TYPE_CHECKING:
-	from jam.network.node import Node
 
 from tsrkit_types.integers import U32
 from tsrkit_types.struct import structure
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.types.protocol.core import TimeSlot
+from jam.utils.constants import GENESIS_HASH
 
 # Module-specific logger
 logger = get_logger("network")
 
+
 class Direction(Enum):
-	AscExc = 0
-	DesInc = 1
+    AscExc = 0
+    DesInc = 1
+
 
 @structure
 class CE128Data:
-	def __init__(self):
-		self.start = None
-
-	header: HeaderHash
-	dir: Direction
-	max_blocks: U32
+    header: HeaderHash
+    dir: Direction
+    max_blocks: U32
 
 
 class BlockRequest(NetworkProtocol):
-	"""
-	CE 128 Protocol for handling Block requests
+    """
+    CE 128 Protocol for handling Block requests
 
-	Protocol Flow:
-		Node -> Node
+    Protocol Flow:
+        Node -> Node
 
-		--> Header Hash ++ Direction ++ Maximum Blocks
-		--> FIN
-		<-- [Block]
-		<-- FIN
-	Source:
-		https://github.com/zdave-parity/jam-np/blob/main/simple.md#ce-128-block-request
-	"""
+        --> Header Hash ++ Direction ++ Maximum Blocks
+        --> FIN
+        <-- [Block]
+        <-- FIN
+    Source:
+        https://github.com/zdave-parity/jam-np/blob/main/simple.md#ce-128-block-request
+    """
 
-	def __init__(self):
-		super().__init__()
-		self._prefix = PrefixType.CE128
+    def __init__(self):
+        super().__init__()
+        self._prefix = PrefixType.CE128
 
-	async def transmit(self, node: "Node", data: CE128Data):
-		"""Transmit State Request"""
+    async def transmit(self, data: CE128Data, peers: List[NodeConnection]|None = None):
+        """Transmit Block Request"""
+        from jam.network.start import node 
+        if not node: return
 
-		stream_data = data.encode()
+        stream_data = U32(len(data.encode())).encode() + data.encode()
+        logger.debug("Transmitting block request to node", num=len(node.connection_ids), max_blocks=data.max_blocks)
 
-		logger.info(
-			"Transmitting block request to node", header_hash=data.header, direction=data.dir, max_blocks=data.max_blocks,
-		)
+        transmitted_count = 0
+        responses = []
 
-		transmitted_count = 0
-		responses = []
-		for peer in node.peer_conn:
-			_, client = node.peer_conn[peer]
+        if not peers:
+            # If no specific peers are provided, use all connected nodes
+            peers = node.all_connected 
 
-			try:
-				stream_id = client.stream_and_keep_open(message=self._prefix.encode())
-				data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
+        for client in peers:
+            try:
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                client.stream_prefix[stream_id] = self._prefix
+                client.stream_buffer[stream_id] = b""
+                data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
 
-				transmitted_count += 1
-				responses.append(data)
+                transmitted_count += 1
+                responses.append(data)
 
-				logger.debug(
-					"Block request transmitted to node",
-					stream_id=stream_id
-				)
-			except Exception as e:
-				responses.append(None)
-				logger.error(
-					"Failed to transmit state request",
-					node_name=node.name,
-					error=str(e),
-					error_type=type(e).__name__
-				)
+                logger.debug("Block request transmitted to node", stream_id=stream_id)
+            except Exception as e:
+                responses.append(None)
+                logger.error("Failed to transmit state request", error=e)
 
-		logger.info(
-			"Block request transmission completed",
-			transmitted_to=transmitted_count,
-		)
+        logger.debug(
+            "Block request transmission completed",
+            transmitted_to=transmitted_count,
+        )
 
-		return responses
+        return responses
 
-	def req_intercept(self, stream_id: int, server: QuicProtocol):
-		"""Intercept & Process Work Package on Guarantor (server)"""
-		node = server.node
-		buffer = server.stream_buffer[stream_id]
+    def req_intercept(self, stream_id: int, server: NodeConnection):
+        """Process Block Request"""
+        buffer = server.stream_buffer[stream_id][1:]
 
-		try:
-			logger.debug(
-				"Received block request",
-				stream_id=stream_id,
-				buffer_size=len(buffer)
-			)
+        from jam.settings import settings
+        from jam.block.block import Block
 
-			data, offset = CE128Data.decode_from(buffer)
-			data = cast(CE128Data, data)
+        data = CE128Data.decode(buffer[4:])
 
-			logger.info(
-				"Processing block request", stream_id=stream_id,
-				header_hash=data.header, direction=data.dir, max_blocks=data.max_blocks,
-			)
+        logger.debug(
+            "Processing block request",
+            stream_id=stream_id,
+            header_hash=data.header.hex(),
+            direction=data.dir,
+            max_blocks=data.max_blocks,
+        )
 
-			# TODO - Here we assume no gaps blocks, which is likely incorrect
-			# To be thought upon
+        # Get the start block
+        start_block = Block.load(data.header, settings.main_db)
+        if not start_block:
+            logger.info("Block not found", hh=data.header.hex()[:16]+"...")
+            server.stream_and_close(b"", stream_id)
+            return
 
-			# Get the start block
-			start_block = Block.load(data.header, data_stores.main_db)
-			start_timeslot = start_block.header.slot
-
-			latest = Finality.load_latest(data_stores.main_db)
-
-			end_timeslot = max(0, start_timeslot - data.max_blocks) if data.dir == Direction.DesInc else min(latest.header.slot, start_timeslot + data.max_blocks)
-			# Get all header hashes in between
-			all_blocks = TypedVector[Block]([])
-			for ts in range(start_timeslot, end_timeslot):
-				_header_hash = data_stores.main_db.get(TimeSlot(ts).encode())
-				if _header_hash:
-					_block = data_stores.main_db.get(_header_hash)
-					if _block:
-						all_blocks.append(_block)
-					else:
-						logger.error("Block not found against recorded header_hash", header_hash=_header_hash, timeslot=ts)
-				else:
-					logger.warning("Block missing", timeslot=ts)
-
-			blocks_enc = all_blocks.encode()
-			server.stream_and_close(stream_id=stream_id, message=blocks_enc)
-
-			logger.info(
-				"Blocks request completed successfully. Closed stream",
-				stream_id=stream_id,
-				len=len(blocks_enc)
-			)
-
-		except Exception as e:
-			logger.error(
-				"Error processing block request",
-				stream_id=stream_id,
-				buffer_size=len(buffer),
-				error=str(e),
-				error_type=type(e).__name__
-			)
-
-	def res_intercept(self, stream_id: int, client: QuicProtocol):
-		"""Intercept Acknowledgement"""
-		buffer = client.stream_buffer[stream_id]
-
-		logger.info(
-			"Block request ack received",
-			stream_id=stream_id,
-			buffer_size=len(buffer)
-		)
+        start_timeslot = start_block.header.slot
+        if data.dir == Direction.AscExc:
+            start_key = Block.get_storage_key_slot(start_timeslot + 1)
+            end_key = Block.get_storage_key_slot(TimeSlot(2**32 - 1))
+            limit = int(data.max_blocks)
+        else:
+            start_key = Block.get_storage_key_slot(TimeSlot(0))
+            end_key = Block.get_storage_key_slot(start_timeslot)
+            limit = 2**32 - 1 
 
 
+        hhs = settings.main_db.get_range(
+            start_key, 
+            end_key,
+            limit=limit
+        )
+
+        # If desc, take last max_blocks
+        if data.dir == Direction.DesInc:
+            hhs = dict(list(hhs.items())[-data.max_blocks:])
+
+        # Get all header hashes in between
+        all_blocks = []
+        for hh in hhs.values():
+            _data = settings.main_db.get(Block.get_storage_key_block(hh))
+            if _data:
+                all_blocks.append(Block.decode(_data))
+            else:
+                logger.error("Block not found against recorded header_hash", header_hash=hh.hex())
+                break
+
+
+        # It has to be an array and not a vector 
+        msg = TypedArray[Block, len(all_blocks)](all_blocks).encode()
+        data = U32(len(msg)).encode() + msg
+        
+        CHUNK_SIZE = 1200 
+        offset = 0
+        # Manually chunk it up, aioquic twrow invalid payload error 
+        while offset < len(data):
+            chunk = data[offset: offset+CHUNK_SIZE]
+            if len(chunk) < CHUNK_SIZE:
+                server.stream_and_close(chunk, stream_id)
+            else:
+                server.stream_and_keep_open(chunk, stream_id)
+            offset += len(chunk)
+        
+        logger.debug(
+            "Blocks request completed successfully. Closed stream",
+            stream_id=stream_id,
+            len=len(all_blocks),
+        )
+
+    def res_intercept(self, stream_id: int, client: NodeConnection):
+        """Intercept Acknowledgement"""
+        from jam.block.block import Block
+
+        buffer = client.stream_buffer[stream_id]
+
+        logger.debug("Block request ack received", stream_id=stream_id, buffer_size=len(buffer))
+
+        # try:
+        b_len = U32.decode(buffer)
+        blocks = []
+        offset = 0
+        while offset < b_len:
+            data, off_ = Block.decode_from(buffer[4:], offset)
+            offset += off_
+            blocks.append(data)
+        return blocks 

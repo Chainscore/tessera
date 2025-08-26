@@ -6,7 +6,8 @@ from jam.utils.conv_helper.string import StrConversion
 # Data that can be converted to sequence of bytes
 Bytable = Union[int, bool, bytes, str, bytearray, memoryview, Sequence]
 
-class ConversionHelper(HexConversion,StrConversion):
+
+class ConversionHelper(HexConversion, StrConversion):
     @staticmethod
     def to_bytes(value: Bytable, byteorder: Literal["big", "little"] = "big") -> bytearray:
         """Convert [str (hex_string), int, bool, bytes, memoryview] to bytearray"""
@@ -21,7 +22,9 @@ class ConversionHelper(HexConversion,StrConversion):
                 byt = bytes(value)
             except Exception as e:
                 """Catch any other error"""
-                raise TypeError(f"ByteUtils.to_bytes: Failed to convert {value} to bytes. Full Error: {e}")
+                raise TypeError(
+                    f"ByteUtils.to_bytes: Failed to convert {value} to bytes. Full Error: {e}"
+                )
         return bytearray(byt)
 
     @staticmethod
@@ -29,20 +32,22 @@ class ConversionHelper(HexConversion,StrConversion):
         return ConversionHelper.bytes_to_int(ConversionHelper.to_bytes(value))
 
     @staticmethod
-    def to_string(value:Bytable)->str:
+    def to_string(value: Bytable) -> str:
         return StrConversion.bytes_to_str(ConversionHelper.to_bytes(value))
 
     @staticmethod
-    def to_hex(value:Bytable)->str:
+    def to_hex(value: Bytable) -> str:
         return HexConversion.bytes_to_hex(ConversionHelper.to_bytes(value))
 
     @staticmethod
-    def to_hash(value: bytes)->  bytes:
+    def to_hash(value: bytes) -> bytes:
         return hashlib.sha512(value).digest()
-    
+
     # Convert everything to bytes
     @staticmethod
-    def int_to_bytes(value: int, length: int = None, byteorder: Literal["big", "little"] = "big") -> bytes:
+    def int_to_bytes(
+        value: int, length: int = None, byteorder: Literal["big", "little"] = "big"
+    ) -> bytes:
         """Convert integer to bytes with optional fixed length"""
         if length is None:
             length = (value.bit_length() + 7) // 8

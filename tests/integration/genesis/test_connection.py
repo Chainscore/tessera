@@ -1,44 +1,59 @@
-# TODO: Work in Progress
-
 import pytest
 import asyncio
-import json
 import logging
+import signal
 import os
 import time
-import sys
-import subprocess
+from multiprocessing import Process
 
 from dotenv import load_dotenv
 from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
+from tsrkit_types.integers import U16, Uint
 
-from jam.config.keys import setup_keys
-from jam.config.logging import setup_logging, logger
-from jam.config.chainspec import chain_config
+from jam.logging import setup_logging, logger
+from jam.utils.chainspec import chain_config
 
-from jam.consensus.grandpa.finality import Finality
-from jam.config.settings import setup_setting
+from jam.finality.finality import Finality
+from jam.settings import setup_setting
 
 from jam.network.peer import Peer
 from jam.network.node import Node
 
-from jam.consensus.bp_engine import BlockProducer
-from jam.operations import Builder
-from jam.operations.utils.state_update import update_state
+from jam.operations.handlers.bp_engine import BlockProducer
+from jam.network.protocols.ce_201 import GhostProtocol
+
+# from jam.operations.utils.state_update import update_state
 from jam.state.state import setup_state
 from jam.types.protocol.crypto import BlsPublic
-from jam.types.block import Block
+from jam.block import Block
 from jam.types.protocol.validators import (
     IPAddress,
     ValidatorData,
     ValidatorMetadata,
 )
 
-from jam.types.state.delta import AccountMetadata
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 
 clients = [40000, 40001]
+
+
+# DEFINE NODE TASKS
+async def start_node(node: Node):
+    # TEMP FIX: Wait for node to initialize
+    await asyncio.sleep(5)
+
+    for peer in node.peer_conn:
+        up_stream, conn = node.peer_conn[peer]
+
+        protocol = GhostProtocol()
+        message = f"Hello {peer.name}"
+
+        responses = await protocol.transmit(node, message)
+        expected_message = f"DATA RECEIVED: {message}"
+
+        for response in responses:
+            assert response == expected_message
+
 
 async def run_node(
     genesis_path: str,
@@ -46,12 +61,12 @@ async def run_node(
     start_genesis: bool,
     theme: str,
     is_builder: bool,
-    is_validator: bool
+    is_validator: bool,
 ):
     # ---------- SETUP LOGGING ----------
     genesis_ts = GENESIS_TS  # Actual Genesis time for JAM Common Era
-    init_ts = (time.time() - genesis_ts) / SLOT_PERIOD
-    init_ep = init_ts // EPOCH_LENGTH
+    init_ts = int((time.time() - genesis_ts) / SLOT_PERIOD)
+    init_ep = int(init_ts // EPOCH_LENGTH)
 
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
@@ -60,9 +75,10 @@ async def run_node(
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
     seed = os.environ["SEED"]
+    host = os.environ["HOST"]
 
-    if not name or not port:
-        raise ValueError(f"Name or Port not found in {env}")
+    if not name or not port or not host or not seed:
+        raise ValueError(f"Missing node info in {env}")
 
     # ---------- SETUP LOGGING ----------
     environment = os.environ.get("ENVIRONMENT", "development")
@@ -72,13 +88,13 @@ async def run_node(
         theme=theme,
         node_name=name,
         environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None
+        min_level=getattr(logging, log_level.upper()) if log_level else None,
     )
 
     # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(name, int(port))
+    settings = setup_setting(name=name, port=int(port), seed=int(seed), data_path="data/")
 
-    main_db = settings.db
+    main_db = settings.main_db
 
     logger.info(
         "Starting JAM node",
@@ -89,7 +105,7 @@ async def run_node(
         spec=chain_config.name,
         environment=environment,
         is_builder=is_builder,
-        is_validator=is_validator
+        is_validator=is_validator,
     )
 
     try:
@@ -97,35 +113,29 @@ async def run_node(
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, "dev-spec.json")
         state.store.disable_cache()
-        update_state(state)
-
-        keys = setup_keys(int(seed))
-
-        # Genesis specs
-        dev_spec = json.load(open(genesis_path))
+        # update_state(state)
 
         peers = [
-            Peer(
-                id=bytes.decode(val.metadata.name, 'utf-8'),
-                data=val
-            )
+            Peer(id=bytes.decode(val.metadata.name, "utf-8"), data=val)
             for val in state.kappa
             if val.metadata.port != port
         ]
 
+        ip = IPAddress.from_str(host)
+
         tsr_node = Node(
             node_name=name,
-            host="127.0.0.1",
+            host=str(host),
             port=int(port),
             peers=peers,
             validator_data=ValidatorData(
-                keys.bandersnatch_public,
-                keys.ed25519_public,
+                settings.bandersnatch_public,
+                settings.ed25519_public,
                 BlsPublic(bytes(144)),
                 ValidatorMetadata(
                     name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2 ** 16 - 1),
-                    host=IPAddress([U8(127), U8(0), U8(0), U8(1)]),
+                    protocol=Uint[16](2**16 - 1),
+                    host=ip,
                     port=U16(port),
                 ),
             ),
@@ -139,18 +149,14 @@ async def run_node(
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(tsr_node.initialize())
-            # tg.create_task(sync(state))
-            if tsr_node.is_builder:
-                tg.create_task(Builder(tsr_node, settings).run())
-            else:
-                tg.create_task(BlockProducer(tsr_node, main_db).run())
+            tg.create_task(start_node(tsr_node))
 
     except KeyboardInterrupt:
         logger.info(
             "JAM node shutting down gracefully",
             node_name=name,
             port=port,
-            reason="keyboard_interrupt"
+            reason="keyboard_interrupt",
         )
     except Exception as e:
         logger.critical(
@@ -158,31 +164,53 @@ async def run_node(
             node_name=name,
             port=port,
             error=str(e)[:200],
-            error_type=type(e).__name__
+            error_type=type(e).__name__,
         )
+
         # Close db connections
-        from jam.config.data_stores import data_stores
-        data_stores.shutdown()
+        settings.clear()
 
         raise
 
-session_name = "jam_test"
+
+def run_node_process(
+    genesis_path: str,
+    env: str,
+    start_genesis: bool,
+    theme: str,
+    is_builder: bool,
+    is_validator: bool,
+):
+    # Handle clean termination
+    def handle_sigterm(signum, frame):
+        exit(0)
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
+    asyncio.run(run_node(genesis_path, env, start_genesis, theme, is_builder, is_validator))
+
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_connection():
     tasks = []
-    from jam.__main__ import main
 
-    for client in clients:
-        tasks.append(
-            main(
-                genesis_path="dev-spec.json",
-                env=f"envs/{client}.env",
-                start_genesis=True,
-                theme="matrix",
-                is_builder=False,
-                is_validator=True,
-            )
-        )
-    await asyncio.gather(*tasks)
+    p_alice = Process(
+        target=run_node_process, args=("", "envs/40000.env", True, "matrix", False, True)
+    )
+    p_bob = Process(
+        target=run_node_process, args=("", "envs/40001.env", True, "polkadot", False, True)
+    )
+
+    p_alice.start()
+    p_bob.start()
+
+    # KEEP TEST ALIVE FOR SOME TIME
+    await asyncio.sleep(20)
+
+    print("END OF TEST")
+
+    p_alice.terminate()
+    p_bob.terminate()
+    p_alice.join()
+    p_bob.join()

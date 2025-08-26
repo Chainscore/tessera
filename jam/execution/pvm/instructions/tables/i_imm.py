@@ -18,10 +18,7 @@ class InstructionsWArgs1Imm(InstructionTable):
         start = self.counter + 1
         end = start + self.lx
         return chi(
-            int.from_bytes(
-                self.program.zeta[start:end],
-                "little"
-            ),
+            int.from_bytes(self.program.zeta[start:end], "little"),
             self.lx,
         )
 
@@ -31,9 +28,7 @@ class InstructionsWArgs1Imm(InstructionTable):
             10: OpCode(name="ecalli", fn=cls.ecalli, gas=1, is_terminating=False),
         }
 
-    def ecalli(
-        self, registers: list, memory: Memory
-    ) -> OpReturn:
+    def ecalli(self, registers: list, memory: Memory) -> OpReturn:
         """
         OPC10: Ecalli.
         """

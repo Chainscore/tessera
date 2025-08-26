@@ -1,4 +1,4 @@
-from jam.state.merkle import StateTrie
+from jam.utils.trie.merkle import StateTrie
 from jam.types.state.delta import Delta
 from jam.state.ghost import GhostState as State
 from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32
