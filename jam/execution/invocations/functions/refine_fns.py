@@ -253,22 +253,22 @@ class RefineFunctions(INVF):
             context.m[n].instruction_counter = i_dash + 1
             registers[7] = U64(ExecutionStatus.HOST)  # NOTE: Saving the ExecValu on register[7]
             registers[8] = c.value.register
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         else:
             context.m[n].instruction_counter = i_dash
             if c == ExecutionStatus.PAGE_FAULT:
                 registers[7] = U64(ExecutionStatus.PAGE_FAULT)
                 registers[8] = c.value.register
-                return CONTINUE, registers, memory, context
+                return CONTINUE, gas, registers, memory, context
             elif c == ExecutionStatus.OUT_OF_GAS:
                 registers[7] = U64(ExecutionStatus.OUT_OF_GAS)
-                return CONTINUE, registers, memory, context
+                return CONTINUE, gas, registers, memory, context
             elif c == ExecutionStatus.PANIC:
                 registers[7] = U64(ExecutionStatus.PANIC)
-                return CONTINUE, registers, memory, context
+                return CONTINUE, gas, registers, memory, context
             elif c == ExecutionStatus.HALT:
                 registers[7] = U64(ExecutionStatus.HALT)
-                return CONTINUE, registers, memory, context
+                return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(26, gas_cost=10)
