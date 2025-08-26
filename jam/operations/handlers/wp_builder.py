@@ -1,7 +1,7 @@
 import os
 from tsrkit_types import Bytes, U16, Uint
 
-from jam.execution.pvm.code import Code
+from tsrkit_pvm import Code
 from jam.types import WorkPackage
 from jam.types.protocol.crypto import Hash
 from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec

@@ -19,8 +19,8 @@ from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_134 import Credential
 
 from jam.logging import get_logger
-from jam.execution.host_calls.invocations.is_authorized import PsiI
-from jam.execution.host_calls.invocations.refine import PsiR
+from jam.execution.invocations.is_authorized import PsiI
+from jam.execution.invocations.refine import PsiR
 
 from jam.types.protocol.core import (
     CoreIndex,
@@ -259,7 +259,7 @@ class Processor:
                 Function I defined in Eqn 14.12
                 Performs Ordered Accumulation of work items in a package p
 
-                https://graypaper.fluffylabs.dev/#/38c4e62/1b92031b5104?v=0.7.0
+                https://graypaper.fluffylabs.dev/#/cc517d7/1b3f011b8d01?v=0.6.5
                 """
 
                 nonlocal s_result

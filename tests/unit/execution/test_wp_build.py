@@ -2,14 +2,12 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
 
 from jam.settings import setup_setting
-from jam.execution.host_calls.invocations.is_authorized import PsiI
-from jam.execution.host_calls.invocations.refine import PsiR
-from jam.execution.pvm.code import Code
-from jam.execution.pvm.status import ExecutionStatus
+from jam.execution.invocations.refine import PsiR
+from tsrkit_pvm import Code, ExecutionStatus
 from jam.state.accounts import AccountMetadata
 from jam.state.ghost import GhostState
 from jam.state.state import setup_state
-from jam.types.protocol.core import Balance, Gas, CoreIndex, BlobLength, ServiceId
+from jam.types.protocol.core import Balance, Gas, BlobLength, ServiceId
 from jam.types.protocol.crypto import Hash
 from jam.types.state.delta import Ao, Ai, LookupTable, Timestamps
 from jam.types.work import WorkItem, ImportSpecs, ExtrinsicSpecs
@@ -59,7 +57,7 @@ def test_basic_wp_building(db_path):
     # Checks core_index == 1
     # pc = bytes([0,0,21,124,121,81,9,6,40,2,0,149,17,255,70,1,1,100,23,51,8,1,50,0,165,73,9])
 
-    code = Code(code=pc, read=b"", r_write=b"", z=0, s=100)
+    code = Code(code=pc, read=b"", r_write=b"", z=0, s=10)
     bytecode = code.encode()
     service_code = Bytes(b"").encode() + bytecode
     code_hash = Hash.blake2b(service_code)
@@ -81,10 +79,10 @@ def test_basic_wp_building(db_path):
 
     print("\nPackage", package)
     print("-------------------")
-    print("Authorizing Package...")
-    auth_trace, u = PsiI(p=package, c=CoreIndex(1)).execute()
-    print(f"Authorization Complete >> Output: {auth_trace} | Gas consumed: {u}")
-    print("\n-------------------")
+    # print("Authorizing Package...")
+    # auth_trace, u = PsiI(p=package, c=CoreIndex(1)).execute()
+    # print(f"Authorization Complete >> Output: {auth_trace} | Gas consumed: {u}")
+    # print("\n-------------------")
 
     print("Creating Work Item #1")
     wi_pc = bytes(
@@ -226,6 +224,7 @@ def test_basic_wp_building(db_path):
     )
     package.items.append(wi)
     print("Items:", package.items)
+    auth_trace = b""
     r, e, u = PsiR(
         0,
         p=package,
@@ -233,42 +232,43 @@ def test_basic_wp_building(db_path):
         i_segments=[[bytes.fromhex("626f6261626f6261676d676d676d676d676d")]],
         e_offset=0,
     ).execute()
-    print(f"🎉 Work Item executed | Status: {r} | Gas consumed {u} | Exported Segments {e}")
+    print(f"🎉 Work Item executed | Status: {r} | Gas consumed {u} | Exported Segments {e.to_json()}")
+
+    assert len(e) == 1
     assert r != ExecutionStatus.PANIC
 
+from pathlib import Path
 
-# from pathlib import Path
-#
-# def test_refine(db_path):
-#     # service = "hello"
-#     # payload = b"Prasad"
-#
-#     service = "counter"
-#     payload = b"inc"
-#
-#     settings = setup_setting("data/god_mode", 3000, 2**16 - 1, db_path)
-#     state = setup_state(settings.state_db, GhostState.genesis())
-#
-#     package = create_dummy_package()
-#     wi_service_code = open(Path(__file__).parents[4] / "test-suite" / "playground" / "builds" / f"{service}-service.jam", "rb").read()
-#     wi_code_hash = Hash.blake2b(wi_service_code)
-#     wi_service = ServiceId(1)
-#
-#     state.delta[wi_service].service = AccountMetadata(code_hash=wi_code_hash, balance=Balance(1_000_000), gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0), num_o=Ao(0))
-#     state.delta[wi_service].preimages[wi_code_hash] = Bytes(wi_service_code)
-#     state.delta[wi_service].lookup[LookupTable(hash=wi_code_hash, length=BlobLength(len(wi_service_code)))] = Timestamps([state.tau])
-#     wi = WorkItem(
-#             service=wi_service,
-#             code_hash=wi_code_hash,
-#             payload=Bytes(payload),
-#             refine_gas_limit=Gas(1_000),
-#             accumulate_gas_limit=Gas(1_000),
-#             import_segments=ImportSpecs([]),
-#             extrinsic=ExtrinsicSpecs([]),
-#             export_count=Uint[16](1)
-#     )
-#     package.items.append(wi)
-#     print("Items:", package.items)
-#     r, e, u = PsiR(0, p=package, auth_trace=b"", i_segments=[[]], e_offset=0).execute()
-#     print(f"🎉 Work Item executed | Status: {r} | Gas consumed {u} | Exported Segments {e}")
-#
+def test_refine(db_path):
+    service = "hello"
+    payload = b"Prasad"
+
+    # service = "counter"
+    # payload = b"inc"
+
+    settings = setup_setting("data/god_mode", 3000, 2**16 - 1, db_path)
+    state = setup_state(settings.state_db, GhostState.genesis())
+
+    package = create_dummy_package()
+    wi_service_code = open(Path(__file__).parents[4] / "test-suite" / "playground" / "builds" / f"{service}-service.jam", "rb").read()
+    wi_code_hash = Hash.blake2b(wi_service_code)
+    wi_service = ServiceId(1)
+
+    state.delta[wi_service].service = AccountMetadata(code_hash=wi_code_hash, balance=Balance(1_000_000), gas_limit=Gas(1_000), min_gas=Gas(1_000), num_i=Ai(0), num_o=Ao(0))
+    state.delta[wi_service].preimages[wi_code_hash] = Bytes(wi_service_code)
+    state.delta[wi_service].lookup[LookupTable(hash=wi_code_hash, length=BlobLength(len(wi_service_code)))] = Timestamps([state.tau])
+    wi = WorkItem(
+            service=wi_service,
+            code_hash=wi_code_hash,
+            payload=Bytes(payload),
+            refine_gas_limit=Gas(1_000),
+            accumulate_gas_limit=Gas(1_000),
+            import_segments=ImportSpecs([]),
+            extrinsic=ExtrinsicSpecs([]),
+            export_count=Uint[16](1)
+    )
+    package.items.append(wi)
+    print("Items:", package.items)
+    r, e, u = PsiR(0, p=package, auth_trace=b"", i_segments=[[]], e_offset=0).execute()
+    print(f"🎉 Work Item executed | Status: {r} | Gas consumed {u} | Exported Segments {e}")
+

@@ -1,23 +1,23 @@
 from typing import Tuple
 
 from tsrkit_types import Bytes, Null
-
-from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
-from jam.execution.host_calls.invocations.arg_invoke import PsiM
-from jam.execution.host_calls.invocations.functions.refine_fns import (
+import time 
+from jam.execution.invocations.functions.general_fns import GeneralFunctions
+from jam.execution.invocations.arg_invoke import PsiM
+from jam.execution.invocations.functions.refine_fns import (
     RefineFunctions,
     RefineContext,
     RefinementMap,
 )
-from jam.execution.host_calls.invocations.protocol import InvocationProtocol
-from jam.execution.pvm.status import OUT_OF_GAS, PANIC
+from jam.execution.invocations.protocol import InvocationProtocol
+from tsrkit_pvm import OUT_OF_GAS, PANIC
 from jam.execution.utils import decode_code_hash
 from tsrkit_types.integers import Uint
 
 from jam.types.work import WorkExecResult, Segments, WorkPackage
 from jam.types.protocol.core import ProgramCounter, Gas
 from jam.types.protocol.crypto import OpaqueHash, Hash
-from jam.utils.constants import IS_AUTHORIZED_GAS
+from jam.utils.constants import REFINE_GAS
 
 
 class PsiR(InvocationProtocol):
@@ -45,7 +45,7 @@ class PsiR(InvocationProtocol):
         from jam.settings import settings
 
         return {
-            0: (GeneralFunctions, ()),
+            0: (GeneralFunctions, {}),
             17: (
                 RefineFunctions,
                 {
@@ -99,13 +99,18 @@ class PsiR(InvocationProtocol):
             + self.work_package.context.encode()
             + self.work_package.authorizer.code_hash.encode()
         )
+        print("Executing PsiR with args:", args.hex())
+        start = time.time()
         u, r, context = PsiM.execute(
             pc,
             ProgramCounter(0),
-            IS_AUTHORIZED_GAS,
+            REFINE_GAS,
             args,
             self.dispatch,
             RefineContext(m=RefinementMap({}), e=Segments([])),
+        )
+        print(
+            f"PsiR execution completed in {time.time() - start:.2f} seconds, gas used: {u}, result: {r.hex() if isinstance(r, bytes) else r}"
         )
         if r == PANIC:
             return WorkExecResult(Null, key="panic"), Segments([]), Gas(u)

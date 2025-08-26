@@ -1,6 +1,5 @@
 from typing import Dict, Protocol
-from jam.execution.pvm.memory import Memory
-from jam.execution.pvm.status import ExecutionStatus
+from tsrkit_pvm import Memory, ExecutionStatus
 
 
 class InvocationFunctions(Protocol):

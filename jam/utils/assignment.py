@@ -6,7 +6,6 @@ from tsrkit_types import TypedVector, U32
 from jam.block import Block
 from jam.logging import get_logger
 
-from jam.state.state import State
 from jam.types.protocol.core import TimeSlot
 
 from jam.utils.shuffle import shuffle
@@ -39,6 +38,7 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
 
         ts_key = Block.get_storage_key_slot(slot)
         hh = settings.main_db.get(ts_key)
+        from jam.state.state import State
         state = State.load(hh)
 
     else:

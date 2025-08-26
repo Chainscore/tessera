@@ -156,6 +156,7 @@ class State:
         # 1. Push auth hash of every WR to self.alpha[0:1]
 
         # TODO: We should remove this
+        # Comment these lines to turn off force transition
         logger.warning("Force State Transition: ON")
         alpha = self.alpha
 
@@ -272,10 +273,7 @@ class State:
             vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
             Safrole.transition(pre_state, self, block, vrf_output)
 
-            logger.debug("Validating block")
             if block.validate():
-                logger.info("SETTLING STATE", block=str(block), pre_state=pre_state.rho.to_json(), post_state=state.rho.to_json())
-
                 state.settle(header_hash)
 
                 # Set local chain head to produced block
@@ -295,9 +293,14 @@ class State:
                     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
                     asyncio.create_task(assurer._req_shard(ext))
 
-                # Start Auditing for new block received
+                # TODO: Test Auditing & Refining with PJ
+                # # Start Auditing for new block received
                 audit_engine = AuditEngine()
                 asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
+
+                # TODO: Remove Direct Finality
+                # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
+                # Finality.finalise(header_hash, _set.main_db)
 
                 block.extrinsic.clear_from_stores()
 

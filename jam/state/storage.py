@@ -116,7 +116,7 @@ class StateStorage:
             elif v != curr_val:
                 self._DB.put(k, v)
                 self._TRIE.update(Bytes(k), Bytes(v))
-        
+
         # Save the cache to DB
         self._updates = {}
         # State cache to store in DB

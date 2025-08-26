@@ -1,6 +1,6 @@
-from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
-from jam.execution.host_calls.invocations.arg_invoke import PsiM
-from jam.execution.host_calls.invocations.protocol import InvocationProtocol
+from jam.execution.invocations.functions.general_fns import GeneralFunctions
+from jam.execution.invocations.arg_invoke import PsiM
+from jam.execution.invocations.protocol import InvocationProtocol
 from jam.types.protocol.core import CoreIndex, ProgramCounter
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.work import WorkPackage

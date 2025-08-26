@@ -1,20 +1,21 @@
 from math import ceil
 
-from jam.utils.merkle.simple_merkle import Merklizer, node, print_tree
+from jam.utils.merkle.simple_merkle import Merklizer, MerkleVisualizer
 
 
 def test_merklizer():
     merklizer = Merklizer()
+    visualizer = MerkleVisualizer()
 
     print("")
     values = [i for i in range(129)]
     og = merklizer.cd_merkle_fn(values)
 
-    root, tree = node(merklizer.preprocess(values))
+    root, tree = visualizer.node(merklizer.preprocess(values))
 
     # root = merklizer.print_nodes(values)
     print("ROOT", root, og == root)
-    print_tree(tree)
+    visualizer.print_tree(tree)
     #
 
     index = 34

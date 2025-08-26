@@ -1,21 +1,20 @@
 from time import time
 from types import NoneType
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from py_ark_vrf import  secret_from_seed
 from typing import Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from tsrkit_types import U32, Bytes, Bytes32, Uint
+from tsrkit_types import U32, Bytes, Bytes32
 
 from jam.types import ValidatorIndex
 from jam.types.protocol.core import CoreIndex
-from jam.types.protocol.crypto import BlsPublic, Ed25519Public, Hash, OpaqueHash
-from jam.types.protocol.validators import IPAddress, ValidatorData, ValidatorMetadata
+from jam.types.protocol.crypto import Hash
+from jam.types.protocol.validators import ValidatorData
 from rockstore import RockStore
 import random
 
 from jam.types.work.shard import ShardIndex
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
-from jam.utils.merkle.binary_merkle import OpaqueHashes
 
 if TYPE_CHECKING:
     from jam.state.state import State
@@ -95,7 +94,6 @@ class Settings:
             )
             self.bandersnatch_seed = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed))
             pub, ss = secret_from_seed(self.bandersnatch_seed)
-            # print(f"my pub {pub.hex()}, ss {ss.hex()}")
             self.bandersnatch_public = Bytes32(pub)
             self.bandersnatch_private = Bytes32(ss)
 
@@ -157,18 +155,15 @@ class Settings:
         return self._state_db
 
     def clear(self):
+        print(self.NODE_NAME, "Closing DB")
         if hasattr(self, "_main_db") and self._main_db:
             self._main_db.close()
-            print("Closing main db")
         if hasattr(self, "_d3l") and self._d3l:
             self._d3l.close()
-            print("Closing d3l db")
         if hasattr(self, "_audit_db") and self._audit_db:
             self._audit_db.close()
-            print("Closing audits db")
         if hasattr(self, "_state_db") and self._state_db:
             self._state_db.close()
-            print("Closing state db")
 
     @property
     def val(self) -> ValidatorData:

@@ -1,6 +1,6 @@
 from tsrkit_types import Bytes
 
-from jam.execution.pvm.code import Code
+from tsrkit_pvm import Code
 
 from jam.state.state import State
 from jam.state.accounts import AccountMetadata
