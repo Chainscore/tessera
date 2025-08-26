@@ -18,12 +18,11 @@ cryptography = "45.0.2"
 pycryptodome = "^3.21.0"
 numpy = "2.2.3"
 structlog = "^25.2.0"
-aioquic = {path = "../aioquic"}
+aioquic = "^1.2.0"
 pytest = "^8.3.5"
 pytest-asyncio = "^0.26.0"
 quart = "^0.20.0"
 py-ecc = "^8.0.0"
-# tsrkit-types = { path = "../tsrkit-types", develop = true }
 tsrkit-types = "^0.1.8"
 rockstore = "^0.1.2"
 reed-solomon-leopard = "^0.2.1"
