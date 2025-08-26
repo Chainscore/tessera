@@ -22,6 +22,8 @@ lib/
 lib64/
 venv/
 
+dist-obf/
+
 # Poetry
 poetry.lock
 
