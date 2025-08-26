@@ -1,20 +1,26 @@
 from tsrkit_types import structure, Dictionary, Uint, Bytes, U64, ByteArray
 
-from jam.execution.host_calls.invocations.functions.protocol import (
+from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
-from jam.execution.pvm.program import Program
-from jam.execution.pvm.pvm import PVM
-from jam.execution.pvm.status import (
+
+import os
+
+if os.environ.get("PVM_MODE") == "recompiler":
+    from tsrkit_pvm import REC_Memory as Memory, REC_Program as Program, Recompiler as PVM
+else:
+    from tsrkit_pvm import INT_Memory as Memory, INT_Program as Program, Interpreter as PVM 
+
+
+from tsrkit_pvm import (
+    Accessibility,
     PANIC,
     CONTINUE,
     ExecutionStatus,
     HostStatus,
-    PvmError,
+    PvmError
 )
-from jam.execution.pvm.types import Accessibility
 from jam.types.protocol.core import Gas, Register, ProgramCounter
-from jam.execution.pvm.memory import Memory
 from jam.types.protocol.core import ServiceId, TimeSlot
 from jam.types.state.delta import Delta
 from jam.types.work import Segment, Segments
@@ -94,6 +100,7 @@ class RefineFunctions(INVF):
                 value=ByteArray(memory.read(address=p, length=z)), n=Uint(SEGMENT_SIZE)
             )
         else:
+            print("Memory is not accessible for export. (address, size) = ", p, z)
             raise PvmError(PANIC)
         if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:
             registers[7] = HostStatus.HUH.value

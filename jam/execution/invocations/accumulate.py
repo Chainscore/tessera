@@ -7,19 +7,19 @@ from jam.types.state.accumulation.types import (
     AccumulationContext,
     PreimageDict,
 )
-from jam.execution.host_calls.invocations.arg_invoke import PsiM
-from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
-from jam.execution.host_calls.invocations.protocol import InvocationProtocol
+from jam.execution.invocations.arg_invoke import PsiM
+from jam.execution.invocations.functions.general_fns import GeneralFunctions
+from jam.execution.invocations.protocol import InvocationProtocol
 from tsrkit_types.null import Null
 from tsrkit_types.integers import Uint
 from jam.types.protocol.core import Gas, ServiceId, TimeSlot
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.protocol.merkle import OptionHash
-from jam.execution.host_calls.invocations.functions.accumulate_fns import (
+from jam.execution.invocations.functions.accumulate_fns import (
     AccumulateFunctions,
     check,
 )
-from jam.execution.pvm.status import ExecutionStatus
+from tsrkit_pvm import ExecutionStatus
 from jam.utils.constants import MAX_SERVICE_CODE_SIZE
 
 

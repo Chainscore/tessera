@@ -1,9 +1,9 @@
 from typing import Any, Callable, Dict, Protocol, Tuple, Union
 
 from jam.logging import get_logger
-from jam.execution.host_calls.invocations.functions.protocol import InvocationFunctions
-from jam.execution.pvm.memory import Memory
-from jam.execution.pvm.status import (
+from jam.execution.invocations.functions.protocol import InvocationFunctions
+from tsrkit_pvm import (
+    Memory,
     CONTINUE,
     HALT,
     OUT_OF_GAS,
@@ -36,6 +36,7 @@ class InvocationProtocol(Protocol):
     def dispatch(
         self, host_call: int, gas: int, registers: list, memory: Memory, x: Context
     ) -> DispatchReturn:
+        print(f">> Dispatching host call {host_call}")
         if host_call not in self.table():
             registers[7] = HostStatus.WHAT.value
             return ExecutionStatus.CONTINUE, gas - 10, registers, memory, x

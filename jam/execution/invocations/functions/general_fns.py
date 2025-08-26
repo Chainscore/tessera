@@ -1,13 +1,12 @@
-from re import M
 from typing import Any, Optional, List
 
 from jam.logging import get_logger
-from jam.execution.host_calls.invocations.functions.protocol import (
+from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
-from jam.execution.host_calls.invocations.protocol import Context, DispatchNormalReturn
-from jam.execution.pvm.memory import Memory
-from jam.execution.pvm.status import (
+from jam.execution.invocations.protocol import Context, DispatchNormalReturn
+from tsrkit_pvm import (
+    Memory,
     ExecutionStatus,
     PANIC,
     HostStatus,
@@ -484,7 +483,6 @@ class GeneralFunctions(INVF):
         o = registers[8]
 
         if t is not None:
-            print("t.service", t.service.balance)
             m = (
                 bytes(t.service.code_hash)
                 + Uint(t.service.balance).encode()
