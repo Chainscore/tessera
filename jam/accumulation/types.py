@@ -51,7 +51,7 @@ class StateContext:
     validator_keys: Iota
     # q
     authorizer_keys: Phi
-    # x
+    # m, a, v, z
     privileges: Chi
 
 

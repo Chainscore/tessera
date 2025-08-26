@@ -12,9 +12,10 @@ from jam.state.state_storage import StateStorage
 from jam.state.utils import construct_state_key
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.itf.codable import Codable
-from jam.types import Block, Hash, Alpha, Eta, Nu, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma, \
+from jam.types import Block, Hash, Alpha, Eta, Omega, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma, \
     HeaderHash
 from jam.config.logging import get_logger
+from jam.types.state.theta import Theta
 
 logger = get_logger("import")
 
@@ -53,8 +54,9 @@ class State:
     tau         = make_state_prop(11, Tau)
     chi         = make_state_prop(12, Chi)
     pi          = make_state_prop(13, Pi)
-    nu          = make_state_prop(14, Nu)
+    omega       = make_state_prop(14, Omega)
     xi          = make_state_prop(15, Xi)
+    theta       = make_state_prop(16, Theta)
 
     @property
     def delta(self) -> "DeltaView":
@@ -133,10 +135,10 @@ class State:
         # Offenders mark - make sure offenders are present in psi.offenders
 
 
-        beta = self.beta
-        # Step 1
-        if len(beta):
-            beta[-1].state_root = block.header.parent_state_root
+        # Handle Parent's Block Posterior State Root (β† h)
+        beta: Beta = self.beta
+        if len(beta.h):
+            beta.h[-1].state_root = block.header.parent_state_root
         self.beta = beta
 
         # Disputes
@@ -153,19 +155,15 @@ class State:
 
         # Accumulation
         logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
-        _, commitment_map = Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
+        Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
 
         # Authorization
         logger.debug("Processing authorization...")
         Authorization.transition(self, block)
 
         # Recent History
-        logger.debug("Processing recent history...", commitment_count=len(commitment_map))
-        history_merkle = BMRFunctions().wb_merkle_fn(
-            sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map]),
-            Hash.keccak256
-        )
-        RecentHistory.transition(self, block, history_merkle)
+        logger.debug("Processing recent history...", commitment_count=len(self.theta))
+        RecentHistory.transition(self, block)
 
         # Preimages
         logger.debug("Processing preimages...")

@@ -33,16 +33,16 @@ class Reporting:
         Args:
             state: This is the state on which transition happen or another state to get previous and curr data (like validators)
             block: This is the recent block added on-chain and to get all information(like header, slot, extrinsic)
-            known_packages: Packages from known queue (Nu), accumulation history (Xi)
+            known_packages: Packages from known queue (Omega), accumulation history (Xi)
 
         Returns:
             Returns the updated Rho(workreport, timeslot)
         """
 
-        # Work package hashes form Nu and Xi
+        # Work package hashes form Omega and Xi
         known_packages.extend([
             queue_el.report.context.prerequisites
-            for epoch_queue in state.nu
+            for epoch_queue in state.omega
             for queue_el in epoch_queue
         ])
         known_packages.extend([

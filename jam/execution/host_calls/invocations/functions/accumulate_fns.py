@@ -25,6 +25,7 @@ logger = get_logger("host_calls")
 
 class AccumulateFunctions(INVF):
 
+    # TODO: Fix Type Changes
     @staticmethod
     @INVF.register(5, gas_cost=10)
     def bless(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
@@ -46,7 +47,7 @@ class AccumulateFunctions(INVF):
             return(CONTINUE,registers,memory,context)
         else:
             registers=HostStatus.OK
-            context.x.partial_state.privileges=Chi(chi_m=m,chi_a=a,chi_v=v,chi_g=g_dict)
+            context.x.partial_state.privileges=Chi(chi_m=m,chi_a=a,chi_v=v,chi_z=g_dict)
             return(CONTINUE,registers,memory,context)
 
 

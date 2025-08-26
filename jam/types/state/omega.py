@@ -12,4 +12,4 @@ class ReadyWR:
 
 AllReadyWRs = TypedVector[ReadyWR]
 
-Nu = TypedArray[AllReadyWRs, EPOCH_LENGTH]
+Omega = TypedArray[AllReadyWRs, EPOCH_LENGTH]

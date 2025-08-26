@@ -19,8 +19,8 @@ from jam.types.state.pi import ServiceStat
 from jam.types.state.sigma import Sigma
 from jam.types.state.delta import Delta, LookupTable, Timestamps
 from jam.types.state.tau import Tau
-from jam.types.state.chi import ChiG
-from jam.types.state.nu import AllReadyWRs, ReadyWR
+from jam.types.state.chi import ChiZ
+from jam.types.state.omega import AllReadyWRs, ReadyWR
 from jam.utils.constants import EPOCH_LENGTH,TOTAL_GAS,ACCUMULATION_GAS,CORE_COUNT
 from jam.types.protocol.merkle import OptionHash
 from jam.types.protocol.core import Gas, ServiceId
@@ -36,11 +36,10 @@ class Accumulation:
     def filter_wr_fn(work_reports: WorkReports) -> WorkReports:
         """
         Utility Function for W!
-        Takes work reports & returns filtered reports
+        Takes work reports & returns filtered reports, Eq 12.4
 
         Args:
-            work_reports: All work reports
-
+            work_reports: All newly available work reports
         Returns:
             Filtered WRs
         """
@@ -56,14 +55,13 @@ class Accumulation:
         return filtered_reports
 
     @staticmethod
-    def queue_creator_fn(work_report: WorkReport) -> ReadyWR:
+    def fetch_dependencies(work_report: WorkReport) -> ReadyWR:
         """
         Function D defined in Eq 12.6
         Takes work report & returns ready work report with dependencies
 
         Args:
             work_report: work report
-
         Returns:
             Ready WR
         """
@@ -160,7 +158,7 @@ class Accumulation:
         gas_limit: Gas,
         work_reports: WorkReports,
         partial_state: StateContext,
-        services: ChiG,
+        services: ChiZ,
         timeslot: Tau,
     ) -> Tuple[int, StateContext, DeferredTransfers, BeefyMap, GasConsumed]:
         """
@@ -213,7 +211,7 @@ class Accumulation:
 
         j, partial_state, r_transfers, r_outputs, r_gas_consumed = (
             Accumulation.seq_accumulation(
-                gas_diff, work_reports_end, partial_state, ChiG({}), timeslot
+                gas_diff, work_reports_end, partial_state, ChiZ({}), timeslot
             )
         )
 
@@ -227,7 +225,7 @@ class Accumulation:
     def parallel_accumulation(
         partial_state: StateContext,
         work_reports: WorkReports,
-        privileged_services: ChiG,
+        privileged_services: ChiZ,
         timeslot: Tau,
     ) -> Tuple[StateContext, DeferredTransfers, BeefyMap, GasConsumed]:
         """
@@ -252,6 +250,9 @@ class Accumulation:
 
         # All service IDs to accumulate
         # s in 12.17
+
+        # TODO: Check From here
+
         services: Set[ServiceId] = {
             result.service_id
             for report in work_reports
@@ -292,7 +293,7 @@ class Accumulation:
     def single_accumulation(
         initial_state: StateContext,
         work_reports: WorkReports,
-        services: ChiG,
+        services: ChiZ,
         service_id: ServiceId,
         timeslot: Tau,
     ) -> Tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]:
@@ -395,7 +396,7 @@ class Accumulation:
     @classmethod
     def transition(cls, state: Sigma, block: Block, newly_avail_wrs: WorkReports):
         """
-        Transition the state's Delta, Xi, Nu, Chi, Iota, Phi components, calculate BEEFY Commitment Map.
+        Transition the state's Delta, Xi, Omega, Chi, Iota, Phi components, calculate BEEFY Commitment Map.
         Includes 4 steps
 
         Step 1:
@@ -411,11 +412,11 @@ class Accumulation:
             Defined in eqn 12.21 - 12.24
 
         Step 4:
-            Update accumulation and ready queues, i.e., Xi, Nu state components
+            Update accumulation and ready queues, i.e., Xi, Omega state components
             Defined in eqn 12.25 - 12.27
 
         Source:
-            https://graypaper.fluffylabs.dev/#/85129da/159902159902?v=0.6.3
+            https://graypaper.fluffylabs.dev/#/38c4e62/167d00167e00?v=0.7.0
 
         Args:
             state: State
@@ -431,7 +432,7 @@ class Accumulation:
         # ----------------------
 
         # Ready Queue
-        nu = state.nu
+        omega = state.omega
 
         # Accumulated Queue
         xi_union = WorkDependencies([])
@@ -451,10 +452,10 @@ class Accumulation:
             if len(
                 wr.context.prerequisites
             ) > 0 or len(wr.segment_root_lookup) > 0:
-                rq = cls.queue_creator_fn(wr)
+                rq = cls.fetch_dependencies(wr)
                 queued_wr.append(rq)
 
-        # Reports to be queued, Eq 12.5
+        # Reports to be queued, Rq, Eq 12.5
         queued_reports = cls.queue_edit_fn(queued_wr, xi_union)
 
         # Calculate current timeslot index, Eq 12.10
@@ -462,8 +463,8 @@ class Accumulation:
 
         accumulatable_wr = AllReadyWRs([])
 
-        q_right = nu[m:]
-        q_left = nu[:m]
+        q_right = omega[m:]
+        q_left = omega[:m]
 
         for wrs in q_right:
             accumulatable_wr.extend(wrs)
@@ -491,15 +492,19 @@ class Accumulation:
         # Section 12.2 Execution (Step 3)
         # ----------------------
 
+        # prior state context, e, Eqn 12.23
         partial_state = StateContext(service_accounts=state.delta, validator_keys=state.iota, authorizer_keys=state.phi, privileges=state.chi)
 
-        # accumulated_gas accumulated from ChiG_services
+        # accumulation_gas for Chi_z_services (that automatically accumulates), Eqn 12.22
         service_gas=0
-        for i in state.chi.chi_g:
-            service_gas+=state.chi.chi_g[i]
+        for i in state.chi.chi_z:
+            service_gas+=state.chi.chi_z[i]
 
-        gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT)+service_gas))
-        [num_accumulated, updated_state, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, state.chi.chi_g, block.header.slot)
+        gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT) + service_gas))
+
+
+
+        [num_accumulated, updated_state, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, state.chi.chi_z, block.header.slot)
 
         accumulation_stats = {}
         for ga in gas_accumulations:
@@ -562,21 +567,21 @@ class Accumulation:
         timeslot_difference = block.header.slot - state.tau
 
         # Update Ready Queue, Nu
-        nu = state.nu
+        omega = state.nu
         for i in range(EPOCH_LENGTH):
             ind = (m + EPOCH_LENGTH - i) % EPOCH_LENGTH
             if i == 0:
-                nu[ind] = cls.queue_edit_fn(
+                omega[ind] = cls.queue_edit_fn(
                     queued_reports, xi[EPOCH_LENGTH - 1]
                 )
             elif 1 <= i < timeslot_difference:
-                nu[ind] = AllReadyWRs([])
+                omega[ind] = AllReadyWRs([])
             elif i >= timeslot_difference:
-                nu[ind] = cls.queue_edit_fn(
-                    nu[ind], xi[EPOCH_LENGTH - 1]
+                omega[ind] = cls.queue_edit_fn(
+                    omega[ind], xi[EPOCH_LENGTH - 1]
                 )
         state.xi = xi
-        state.nu = nu
+        state.nu = omega
 
         # TODO: Remove this redundancy
         # We are aleady doing this in Safrol STF, but this is expected to be updated

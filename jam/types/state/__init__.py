@@ -6,9 +6,9 @@ from jam.types.state.kappa import Kappa
 from jam.types.state.lambda_ import Lambda_
 from jam.types.state.rho import OptionalWorkReportState, Rho
 from jam.types.state.tau import Tau
-from jam.types.state.chi import Chi, ChiG
+from jam.types.state.chi import Chi, ChiZ
 from jam.types.state.iota import Iota
-from jam.types.state.nu import AllReadyWRs, Nu
+from jam.types.state.omega import AllReadyWRs, Omega
 from jam.types.state.xi import Xi
 from jam.types.state.beta import Beta
 from jam.types.state.phi import AuthorizationQueue, AuthorizerHash, Phi
@@ -36,10 +36,10 @@ __all__ = [
     "OptionalWorkReportState",
     "Rho",
     "Tau",
-    "Chi", "ChiG",
+    "Chi", "ChiZ",
     "Iota",
     "AllReadyWRs",
-    "Nu",
+    "Omega",
     "Xi",
     "Delta",
     "Beta",
