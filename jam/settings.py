@@ -94,7 +94,6 @@ class Settings:
             )
             self.bandersnatch_seed = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed))
             pub, ss = secret_from_seed(self.bandersnatch_seed)
-            print(f"my pub {pub.hex()}, ss {ss.hex()}")
             self.bandersnatch_public = Bytes32(pub)
             self.bandersnatch_private = Bytes32(ss)
 
@@ -148,18 +147,15 @@ class Settings:
         return self._state_db
 
     def clear(self):
+        logger.info("Closing DB")
         if hasattr(self, "_main_db") and self._main_db:
             self._main_db.close()
-            print("Closing main db")
         if hasattr(self, "_d3l") and self._d3l:
             self._d3l.close()
-            print("Closing d3l db")
         if hasattr(self, "_audit_db") and self._audit_db:
             self._audit_db.close()
-            print("Closing audits db")
         if hasattr(self, "_state_db") and self._state_db:
             self._state_db.close()
-            print("Closing state db")
 
     @property
     def val(self) -> ValidatorData:
