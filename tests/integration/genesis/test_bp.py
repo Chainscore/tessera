@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 from jam.logging import setup_logging, logger
 from jam.finality.finality import Finality
 from jam.settings import setup_setting
-from jam.network.peer import Peer
 from jam.network.node import Node
 
 # from jam.operations.utils.state_update import update_state
