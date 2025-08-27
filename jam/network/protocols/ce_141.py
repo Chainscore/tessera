@@ -1,13 +1,14 @@
-from tsrkit_types import structure, TypedVector, U32
+import asyncio
+from tsrkit_types import structure, U32, U8
 from jam.logging import get_logger
 from typing import cast
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types import ValidatorIndex
-from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField
+from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField, asr_store
 from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-
+from jam.utils.gather import gather_with_exceptions
 
 logger = get_logger("network")
 
@@ -47,71 +48,110 @@ class AssuranceDistribution(NetworkProtocol):
 
     """
 
-    # TODO: Reimplement 141 properly
     def __init__(self):
         super().__init__()
         self._prefix = PrefixType.CE141
 
     async def transmit(self, data: CE141Data):
         """Transmit assurance, From Assurer (client) to Validator (server)"""
-        from jam.network.start import node 
+        from jam.network.start import node
 
         msg = data.assurance.encode()
         len_a = data.len.encode()
 
         logger.info(
-            f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node.connection_ids)}  validators"
+            f"Transmitting assurance of HH {data.assurance.anchor_hash.hex()} to {len(node.all_connected)}  validators"
         )
-        responses = TypedVector([])
 
-        for client in node.connection_ids.values():
-            # Send Protocol Prefix
-            stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+        try:
+            tasks = []
 
-            # Append prefix to stream buffer so that we know the stream for handling respons
-            client.stream_buffer[stream_id] = self._prefix.encode()
+            for client in node.all_connected:
 
-            client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-            res = await client.close_and_wait(message=msg, stream_id=stream_id)
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-            responses.append(res)
+                # set prefix and buffer
+                client.stream_prefix[stream_id] = U8(self._prefix)
+                client.stream_buffer[stream_id] = b""
 
-        return responses
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg, stream_id=stream_id)
+                task = asyncio.create_task(res)
+                tasks.append(task)
+
+            responses = await gather_with_exceptions(tasks)
+
+            return responses
+
+        except Exception as e:
+            logger.error(
+                "Failed to transmit assurance",
+                hash=data.assurance.anchor_hash.hex()[16:],
+                error=str(e),
+                error_type=type(e).__name__,
+            )
 
     def req_intercept(self, stream_id: int, server: NodeConnection):
-        from jam.block.extrinsics.assurances import asr_store
 
-        buffer = server.stream_buffer[stream_id]
+        try:
+            buffer = server.stream_buffer[stream_id][1:]
 
-        logger.debug("Received assurance", stream_id=stream_id, buffer_size=len(buffer[1:]))
+            logger.debug(
+                "Received assurance", stream_id=stream_id, buffer_size=len(buffer)
+            )
 
-        data = CE141Data.decode_from(buffer[1:])
+            data = CE141Data.decode(buffer)
+            data = cast(CE141Data, data)
 
-        if not data.is_valid:
-            raise NetworkingError(Code.INVALID_DATA)
+            if not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
 
-        assurance = data.assurance
-        vi = ValidatorIndex(server.peer.peer_index)
+            assurance = data.assurance
+            vi = ValidatorIndex(server.validator_index)
 
-        assurance_extrinsic = AvailAssurance(
-            anchor=assurance.anchor_hash,
-            bitfield=assurance.bitfield,
-            validator_index=vi,
-            signature=assurance.ed25519_signature,
-        )
+            assurance_extrinsic = AvailAssurance(
+                anchor=assurance.anchor_hash,
+                bitfield=assurance.bitfield,
+                validator_index=vi,
+                signature=assurance.ed25519_signature,
+            )
 
-        asr_store.store(assurance_extrinsic)
+            logger.info(
+                "[EXTRINSICS]: RECEIVED ASSURANCE",
+                peer=server,
+                assurance=assurance_extrinsic.to_json(),
+            )
 
-        # Return acknowledgment to Builder
-        ack = b""
-        server.stream_and_close(ack, stream_id)
+            # Store Assurance Extrinsic
+            asr_store.store(assurance_extrinsic)
 
-        logger.debug("Assurance sent to other validators", stream_id=stream_id, ack_size=len(ack))
+            # Return acknowledgment to Builder
+            ack = b""
+            server.stream_and_close(ack, stream_id)
+            logger.debug(
+                "Assurance Acknowledgement sent back to validator",
+                validator=server, stream_id=stream_id, ack_size=len(ack)
+            )
+
+        except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
+            logger.error(
+                "Failed to process assurances",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
 
     def res_intercept(self, stream_id: int, client: NodeConnection):
         buffer = client.stream_buffer[stream_id]
-        if buffer[1:] == b"":
-            logger.info("Assurance ack received", stream_id=stream_id, buffer_size=len(buffer))
+        if buffer == b"":
+            logger.info(
+                "Assurance acknowledgement received",
+                stream_id=stream_id,
+                buffer_size=len(buffer),
+            )
             return True
 
         return False

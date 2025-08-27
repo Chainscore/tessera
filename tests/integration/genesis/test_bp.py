@@ -1,4 +1,6 @@
 import json
+import math
+
 import pytest
 import asyncio
 import logging
@@ -10,6 +12,7 @@ from multiprocessing import Process
 from dotenv import load_dotenv
 from jam.logging import setup_logging, logger
 from jam.finality.finality import Finality
+from jam.network.start import start_node
 from jam.settings import setup_setting
 from jam.network.node import Node
 
@@ -69,22 +72,6 @@ async def run_node(env: str, theme: str, height: int, db_path: str, is_requester
     state = setup_state(settings.state_db, "dev-spec.json")
     # # update_state(state)
 
-    peers = [
-        Peer(id=bytes.decode(val.metadata.name, "utf-8"), data=val)
-        for val in state.kappa
-        if val.metadata.port != port
-    ]
-
-    tsr_node = Node(
-        node_name=name,
-        host=str(host),
-        port=int(port),
-        peers=peers,
-        validator_data=settings.val,
-        is_builder=False,
-        is_validator=True,
-    )
-
     block = Block.decode(bytes.fromhex(genesis["genesis_header"]))
     header_hash = block.save(main_db)
     Finality.set_head(header_hash, main_db)
@@ -92,18 +79,21 @@ async def run_node(env: str, theme: str, height: int, db_path: str, is_requester
 
     # Generate random blocks upto height
     for i in range(1, height + 1):
-        i_block = BlockProducer(tsr_node, main_db)._produce_block(state, TimeSlot(i))
+        i_block = BlockProducer()._produce_block(state, TimeSlot(i))
         state.transition(i_block)
         i_block.save(main_db)
 
         hh = HeaderHash(i_block.header.hash())
 
         Finality.set_head(hh, main_db)
-        Finality.finalise(hh, main_db)
+        Finality.finalise(hh, main_db, True)
+
+    curr_time = time.time()
+    ts = math.ceil((curr_time - GENESIS_TS) / 6)
 
     async with asyncio.TaskGroup() as tg:
-        tg.create_task(tsr_node.initialize())
-        tg.create_task(BlockProducer(tsr_node, main_db).run())
+        tg.create_task(start_node(str(host), int(port)))
+        tg.create_task(BlockProducer().run(ts))
 
 
 session_name = "jam_test"
@@ -116,7 +106,7 @@ def run_node_process(env: str, theme: str, db_path: str, height=0, req=False):
 
     signal.signal(signal.SIGTERM, handle_sigterm)
 
-    asyncio.run(run_node(env, theme, height, req, db_path))
+    asyncio.run(run_node(env, theme, height, db_path, req))
 
 
 @pytest.mark.asyncio

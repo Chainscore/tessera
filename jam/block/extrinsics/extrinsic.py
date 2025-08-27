@@ -2,13 +2,19 @@ from typing import TYPE_CHECKING
 from tsrkit_types import Bytes, Uint
 from jam.block.errors import BlockError, BlockErrorCode
 from jam.types.protocol.crypto import Hash
-from jam.utils.constants import CORE_COUNT, MAX_TICKETS_PER_EXTRINSIC
+from jam.utils.constants import CORE_COUNT, MAX_TICKETS_PER_EXTRINSIC, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from tsrkit_types.struct import structure
-from jam.block.extrinsics.tickets import TicketsExtrinsic
+from jam.block.extrinsics.tickets import TicketsExtrinsic, TicketEnvelope
 from jam.block.extrinsics.preimages import PreimagesExtrinsic
 from jam.block.extrinsics.guarantees import GuaranteesExtrinsic
 from jam.block.extrinsics.assurances import AssurancesExtrinsic
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Culprits, Faults, Verdicts
+from jam.types.protocol.crypto import (
+    BandersnatchRingVrfSignature,
+    Hash,
+    OpaqueHash,
+)
+from py_ark_vrf import vrf_output
 
 if TYPE_CHECKING:
     from jam.block.header.header import Header
@@ -51,8 +57,13 @@ class Extrinsic:
             + bytes(Hash.blake2b(self.disputes.encode()))
         )
 
+    @staticmethod
+    def get_vrf_output(signature: BandersnatchRingVrfSignature) -> OpaqueHash:
+        # return Bytes[32](RingVrf.pedersen_proof_to_hash(signature))
+        return OpaqueHash(vrf_output(signature)[:32])
+
     @classmethod
-    def from_collected(cls):
+    def from_collected(cls, time_slot):
         # --- Extrinsic Collection --- #
         eg, et, ea, ep = GuaranteesExtrinsic([]), [], [], PreimagesExtrinsic([])
         from .tickets import ticket_store
@@ -60,14 +71,36 @@ class Extrinsic:
         from .assurances import asr_store
         from .preimages import preimg_store
 
+        # Sort Assurances
+        ea = AssurancesExtrinsic(sorted(asr_store._store, key=lambda a: a.validator_index))
+
+        # Filter Guarantees
+        rg_cores = set()
         for rg in wrg_store._store:
-            # TODO: Filtering - Take only one WR per core [?]
-            eg.append(rg)
+            if rg.report.core_index not in rg_cores:
+                eg.append(rg)
+                rg_cores.add(rg.report.core_index)
+
             if len(eg) >= CORE_COUNT:
                 break
+        rg_cores.clear()
+
         ep = PreimagesExtrinsic(preimg_store._store[:])
-        et = TicketsExtrinsic(ticket_store._store[:MAX_TICKETS_PER_EXTRINSIC])
-        ea = AssurancesExtrinsic(asr_store._store)
+
+        def sort_fn(ticket: TicketEnvelope) -> int:
+            # Take VRF output of the signature and sort by it
+            return int.from_bytes(Extrinsic.get_vrf_output(ticket.signature))
+
+        if time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
+            print(f"Including tickets in block, time_slot={time_slot}, slot={time_slot%EPOCH_LENGTH}")
+            et = TicketsExtrinsic(ticket_store._store[:MAX_TICKETS_PER_EXTRINSIC])
+            et.sort(key=sort_fn)
+            print("Number of tickets included", len(et))
+
+        else:
+            print(f"Tickets are not allowed in block after TICKET_SUBMISSION_END, time_slot={time_slot}, slot={time_slot%EPOCH_LENGTH}")
+            et = TicketsExtrinsic([])
+
         return Extrinsic(
             tickets=et,
             preimages=ep,

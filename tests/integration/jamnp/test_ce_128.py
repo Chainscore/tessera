@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 from jam.logging import setup_logging, logger
 from jam.finality.finality import Finality
 from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
+from jam.network.start import start_node
 from jam.settings import setup_setting
-from jam.network.peer import Peer
 from jam.network.node import Node
 
 # from jam.operations.utils.state_update import update_state
@@ -28,10 +28,13 @@ clients = [40000, 40001]
 TENTH_HH = "a18affdfdcf9ab1959e58a826d8b34aa65a9106b2efef0eaa59dda2085ee6599"
 
 
-async def _test_blocks_requests(node: Node, main_db):
+async def _test_blocks_requests(main_db):
+
+    from jam.network.start import node
     await asyncio.sleep(5)
 
-    for peer in node.peer_conn:
+
+    for client in node.all_connected:
         num_blocks = 5
 
         protocol = BlockRequest()
@@ -41,20 +44,20 @@ async def _test_blocks_requests(node: Node, main_db):
             max_blocks=U32(num_blocks),
         )
 
-        responses = await protocol.transmit(node, message)
+        responses = await protocol.transmit(message)
         print(
             f"ASC {message.header.hex()} [max={num_blocks}] {[bl.header.hash().hex() for bl in responses[0]]}"
         )
         assert len(responses[0]) == min(num_blocks, 10)
 
-    for peer in node.peer_conn:
+    for client in node.all_connected:
         num_blocks = 5
 
         protocol = BlockRequest()
         message = CE128Data(
             header=HeaderHash.fromhex(TENTH_HH), dir=Direction.DesInc, max_blocks=U32(num_blocks)
         )
-        responses = await protocol.transmit(node, message)
+        responses = await protocol.transmit(message)
         print(
             f"DSC {TENTH_HH} [max={num_blocks}] {[bl.header.hash().hex() for bl in responses[0]]}"
         )
@@ -106,22 +109,6 @@ async def run_node(env: str, theme: str, height: int, is_requester=False):
     state = setup_state(settings.state_db, "dev-spec.json")
     # # update_state(state)
 
-    peers = [
-        Peer(id=bytes.decode(val.metadata.name, "utf-8"), data=val)
-        for val in state.kappa
-        if val.metadata.port != port
-    ]
-
-    tsr_node = Node(
-        node_name=name,
-        host=str(host),
-        port=int(port),
-        peers=peers,
-        validator_data=settings.val,
-        is_builder=False,
-        is_validator=True,
-    )
-
     block = Block.genesis()
     header_hash = block.save(main_db)
     Finality.set_head(header_hash, main_db)
@@ -129,18 +116,18 @@ async def run_node(env: str, theme: str, height: int, is_requester=False):
 
     # Generate random blocks upto height
     for i in range(1, height + 1):
-        i_block = BlockProducer(tsr_node, main_db)._produce_block(state, TimeSlot(i))
+        i_block = BlockProducer()._produce_block(state, TimeSlot(i))
         i_block.save(main_db)
 
         hh = HeaderHash(i_block.header.hash())
 
         Finality.set_head(hh, main_db)
-        Finality.finalise(hh, main_db)
+        Finality.finalise(hh, main_db, True)
 
     async with asyncio.TaskGroup() as tg:
-        tg.create_task(tsr_node.initialize())
+        tg.create_task(start_node(str(host), int(port)))
         if is_requester:
-            tg.create_task(_test_blocks_requests(tsr_node, settings.main_db))
+            tg.create_task(_test_blocks_requests(settings.main_db))
 
 
 session_name = "jam_test"

@@ -13,12 +13,10 @@ SegmentIndex = U16
 Segment = Bytes[SEGMENT_SIZE]
 Segments = TypedVector[Segment]
 MultiSegments = TypedVector[Segments]
-
 SegmentDict = Dictionary[ExportsRoot, Segments]
 SegmentRootLookup = Dictionary[
     WorkPackageHash, SegmentRoot, "work_package_hash", "segment_tree_root"
 ]
-
 
 @structure
 class ProvedSegments:

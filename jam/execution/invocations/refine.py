@@ -90,6 +90,8 @@ class PsiR(InvocationProtocol):
                 self.work_package.context.lookup_anchor_slot, self.wi.code_hash
             )
         )
+
+        # 0.6.6 Sync.
         args = (
             Uint(self.wi.service).encode()
             + self.wi.payload.encode()

@@ -31,8 +31,12 @@ def create_tmux_windows_for_nodes():
     )
 
     # Send to tmux panes
-    subprocess.run(["tmux", "send-keys", "-t", f"{TMUX_SESSION_NAME}:0.0", cmd_40000, "Enter"])
-    subprocess.run(["tmux", "send-keys", "-t", f"{TMUX_SESSION_NAME}:0.1", cmd_40001, "Enter"])
+    subprocess.run(
+        ["tmux", "send-keys", "-t", f"{TMUX_SESSION_NAME}:0.0", cmd_40000, "Enter"]
+    )
+    subprocess.run(
+        ["tmux", "send-keys", "-t", f"{TMUX_SESSION_NAME}:0.1", cmd_40001, "Enter"]
+    )
 
     # TODO: Fix this. For now run this command in separate terminal window.
     subprocess.Popen(["gnome-shell", "--", "tmux", "attach", "-t", TMUX_SESSION_NAME])

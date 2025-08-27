@@ -14,6 +14,7 @@ from jam.operations.operator import operate
 from tsrkit_types import U32, TypedVector, U64, Dictionary
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, Uint
+from jam.network.start import start_node as start_global_node
 
 from jam.logging import setup_logging
 from jam.network.base.certificate import generate_san
@@ -42,9 +43,6 @@ from jam.utils.chainspec import chain_config
 
 from jam.finality.finality import Finality
 from jam.settings import setup_setting
-
-from jam.network.peer import Peer
-from jam.network.node import Node, setup_node
 
 # from jam.operations.utils.state_update import update_state
 from jam.state.state import setup_state
@@ -173,9 +171,9 @@ wc = WorkPackageCore(wp, CoreIndex(1))
 ext = Extrinsics([])
 
 
-async def start_node(node: Node):
+async def start_node():
     """Define Node tasks"""
-
+    from jam.network.start import node
     # Wait for node to initialize
     await asyncio.sleep(2)
     print("NODE STARTED", ": Builder" if node.is_builder else "node")
@@ -193,7 +191,7 @@ async def start_node(node: Node):
             package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext
         )
 
-        responses = await protocol.transmit(node, data)
+        responses = await protocol.transmit(data)
 
         # expected_message = Bool(True)
 
@@ -323,20 +321,17 @@ async def run_node(
         state.store.disable_cache()
         # # update_state(state)
 
-        peers = [
-            Peer(id=generate_san(val.ed25519), data=val)
-            for val in state.kappa
-            if val.metadata.port != port
-        ]
-
-        tsr_node = setup_node(name, int(port), peers, is_bd=is_builder, is_val=is_validator)
+        settings.update()
 
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db)
+        Finality.finalise(header_hash, main_db, True)
+
+        settings.update()
+
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(tsr_node.initialize())
+            tg.create_task(start_global_node(host, int(port)))
             tg.create_task(operate(is_builder))
             # tg.create_task(start_node(tsr_node))
 

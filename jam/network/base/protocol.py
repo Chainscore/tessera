@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from jam.network.base.quic import QuicProtocol
-    from jam.network.node import Node
+    from jam.network.connection import NodeConnection
 
 from tsrkit_types.enum import Uint
 
@@ -52,7 +51,7 @@ class NetworkProtocol(ABC):
     max_buffer_size: int
 
     @abstractmethod
-    async def transmit(self, node: "Node", data: Any):
+    async def transmit(self, data: Any):
         """
         Function to transmit data to connected node.
         Must be implemented by subclasses.
@@ -60,7 +59,7 @@ class NetworkProtocol(ABC):
         ...
 
     @abstractmethod
-    def req_intercept(self, stream_id: int, server: "QuicProtocol"):
+    def req_intercept(self, stream_id: int, server: "NodeConnection"):
         """
         Function to intercept & process data / query from connected node.
         And sends acknowledgement / response to the node.
@@ -69,7 +68,7 @@ class NetworkProtocol(ABC):
         ...
 
     @abstractmethod
-    def res_intercept(self, stream_id: int, client: "QuicProtocol"):
+    def res_intercept(self, stream_id: int, client: "NodeConnection"):
         """
         Function to intercept & process returned data from connected node.
         Must be implemented by subclasses.

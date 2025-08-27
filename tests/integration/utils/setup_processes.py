@@ -1,10 +1,12 @@
 import os
 import asyncio
-import shutil 
+import shutil
 from multiprocessing import Process
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Optional
+
+from jam.utils.benchmark import write_json
 from .run_node import run_node_process
 from .run_polkajam import run_polkajam
 
@@ -17,14 +19,13 @@ class Role(Enum):
 
 @dataclass
 class Client:
-    role: Role 
-    # Port in case of validator/builder, else validator index 
+    role: Role
+    # Port in case of validator/builder, else validator index
     idx: int
-    theme = "default"
+    theme: str = "default"
     genesis = True
 
-
-async def setup_processes(clients: list[Client], node_task: Optional[Callable], max_time = 20):
+async def setup_processes(clients: list[Client], node_tasks: list[Optional[Callable]], max_time = 20):
     processes = []
 
     for client in clients:
@@ -35,7 +36,7 @@ async def setup_processes(clients: list[Client], node_task: Optional[Callable], 
             )
         else:
             env_path = f"envs/{client.idx}.env"
-            is_validator = client.role == Role.VAL 
+            is_validator = client.role == Role.VAL
             is_builder = client.role == Role.BUILDER
 
             dir_path = f"/data/{client.idx}"
@@ -46,7 +47,15 @@ async def setup_processes(clients: list[Client], node_task: Optional[Callable], 
 
             p = Process(
                 target=run_node_process,
-                args=("", env_path, client.genesis, client.theme, is_builder, is_validator, node_task)
+                args=(
+                    "",
+                    env_path,
+                    client.genesis,
+                    client.theme,
+                    is_builder,
+                    is_validator,
+                    node_tasks,
+                ),
             )
         processes.append(p)
 
@@ -64,6 +73,10 @@ async def setup_processes(clients: list[Client], node_task: Optional[Callable], 
         p.terminate()
     for p in processes:
         p.join()
+
+    print("!!!!!!!!!SAVING VECTORS!!!!!!!!!!!!")
+    from ..jamnp.test_full import b_vectors
+    write_json("vectors/combined-full", b_vectors.to_json())
 
     print("END OF TEST")
 

@@ -12,7 +12,6 @@ from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpe
 from jam.network.node import Node
 from jam.incore.processor import Processor
 from tsrkit_types.integers import U16, U8, Uint
-from jam.network.peer import Peer
 from jam.settings import settings, setup_setting
 from jam.utils.benchmark import benchmark
 from dotenv import load_dotenv
@@ -272,7 +271,7 @@ def wp_bench():
 
     start = time.perf_counter()
 
-    process = Processor(node)
+    process = Processor()
     with benchmark("work package processing"):
         process.process(package=wp, core=CoreIndex(1), extrinsics=[Bytes(b"2172636nds")])
 

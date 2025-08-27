@@ -2,6 +2,7 @@ from typing import List
 from jam.types.protocol.validators import ValidatorsData
 from tsrkit_types.integers import Uint
 from jam.types.protocol.crypto import OpaqueHash
+from jam.logging import get_logger
 
 # Simple type aliases
 TimeSlot = Uint[32]
@@ -14,6 +15,8 @@ class ValidatorIndex(Uint[16]):
         Get block producer's author index from the state
         """
         from jam.network.start import node
+        from jam.state.state import state
+        logger = get_logger()
 
         for i, validator in enumerate(state.kappa):
             if validator.bandersnatch == node.validator_data.bandersnatch:
@@ -27,6 +30,7 @@ class ValidatorIndex(Uint[16]):
 
 
 CoreIndex = Uint[16]
+EpochIndex = Uint[32]
 Gas = Uint[64]
 RemainingGas = int
 ServiceId = Uint[32]

@@ -2,6 +2,7 @@
 
 from tsrkit_types import Enum
 
+from datetime import datetime, timezone
 from jam.utils.chainspec import chain_config
 
 # ───────────────────────────────────────
@@ -76,7 +77,7 @@ MAX_DEPENDENCIES = 8
 J = MAX_DEPENDENCIES
 
 # K — Max number of tickets that can be submitted in a single extrinsic.
-MAX_TICKETS_PER_EXTRINSIC = 16
+MAX_TICKETS_PER_EXTRINSIC = chain_config.max_tickets_per_extrinsic
 K = MAX_TICKETS_PER_EXTRINSIC
 
 # L — Max age (in timeslots) of the lookup anchor.
@@ -84,7 +85,7 @@ LOOKUP_ANCHOR_MAX_AGE = 14_400
 L = LOOKUP_ANCHOR_MAX_AGE
 
 # N — Ticket entries per validator.
-TICKET_ENTRIES_PER_VALIDATOR = 2
+TICKET_ENTRIES_PER_VALIDATOR = chain_config.tickets_per_validator
 N = TICKET_ENTRIES_PER_VALIDATOR
 
 # O — Max number of items in the authorizations pool.
@@ -198,3 +199,10 @@ REGISTER_COUNT = 13
 VALIDATORS_SUPER_MAJORITY = 1 + 2 * VALIDATOR_COUNT // 3
 VALIDATORS_WONKY = VALIDATOR_COUNT // 3
 GENESIS_TS = 1735732800  # January 1, 2025 12:00 UTC
+
+
+# Jam Common‐Era epoch (2025-01-01 12:00 UTC)
+JCE_EPOCH = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+
+# T — current seconds since JCE_EPOCH
+CURRENT_TIME = lambda: int((datetime.now(timezone.utc) - JCE_EPOCH).total_seconds())

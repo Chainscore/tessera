@@ -73,7 +73,7 @@ async def work_report_producer(node: Node, db: RockStore):
                 core_index=int(report.core_index),
             )
 
-            ReportProtocol.transmit(node, report_data)
+            ReportProtocol.transmit(report_data)
 
             logger.debug(
                 "Work report transmitted",

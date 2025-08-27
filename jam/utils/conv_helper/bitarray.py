@@ -3,7 +3,9 @@ from typing import List, Literal, Optional, Sequence, Union
 
 class BitArrayConversion:
     @staticmethod
-    def bitarray_to_bytes(bits: List[bool], bitorder: Literal["msb", "lsb"] = "msb") -> bytes:
+    def bitarray_to_bytes(
+        bits: List[bool], bitorder: Literal["msb", "lsb"] = "msb"
+    ) -> bytes:
         """Convert bit array to bytes
 
         Args:

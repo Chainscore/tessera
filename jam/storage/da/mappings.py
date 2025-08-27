@@ -112,3 +112,38 @@ class ErasureAssurerMap(DA):
     def delete(self, root: ErasureRoot) -> None:
         key = self.prefix + root.encode()
         self.db.delete(key)
+
+
+class ReportHashAssurerMap(DA):
+    """
+    ReportHashAssurerMap Maps all the report hash to their assurers.
+
+    Key: Report Hash
+    Value: Assurers
+    """
+
+    def __init__(self, db: RockStore):
+        self.prefix = bytes("WRH-A", "utf-8")
+        self.db = db
+
+    def put(self, report: WorkReport, assurers: Assurers) -> None:
+        report_hash = Hash.blake2b(report.encode())
+
+        key = self.prefix + report_hash.encode()
+        data = assurers
+
+        self.db.put(key, data.encode())
+
+    def get(self, report_hash: WorkReportHash) -> Assurers:
+        key = self.prefix + report_hash.encode()
+        data = self.db.get(key)
+        if data is None:
+            raise KeyError("Assurers not found in DA")
+
+        data, _ = Assurers.decode_from(data)
+
+        return data
+
+    def delete(self, report_hash: WorkReportHash) -> None:
+        key = self.prefix + report_hash.encode()
+        self.db.delete(key)

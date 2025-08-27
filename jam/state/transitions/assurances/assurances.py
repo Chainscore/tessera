@@ -6,11 +6,13 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from tsrkit_types import Null
 
-from jam.state.transitions.assurances.errors import AssurancesError, AssurancesErrorCode
-from jam.types.state.rho import OptionalWorkReportState
-from jam.types.state.sigma import Sigma
 from jam.block import Block
 from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField
+
+from jam.state.transitions.assurances.errors import AssurancesError, AssurancesErrorCode
+
+from jam.types.state.rho import OptionalWorkReportState
+from jam.types.state.sigma import Sigma
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, Hash, OpaqueHash
 from jam.types.work import WorkReports
 from jam.utils.constants import (
@@ -24,7 +26,7 @@ class Assurances:
     """State transition function for the processing of Assurances."""
 
     @staticmethod
-    def transition(pre_state: Sigma, state: Sigma, block: Block) -> (Sigma, List):
+    def transition(state: Sigma, block: Block) -> (Sigma, List):
         """
         Process the assurances extrinsic.
 
@@ -91,7 +93,8 @@ class Assurances:
                     rho[i] = OptionalWorkReportState(Null)
                 if (
                     core_assurances[i] > super_majority
-                    or block.header.slot >= rho[i].unwrap().timeout + UNAVAILABLE_WORK_EXPIRY
+                    or block.header.slot
+                    >= rho[i].unwrap().timeout + UNAVAILABLE_WORK_EXPIRY
                 ):
                     rho[i] = OptionalWorkReportState(Null)
 
@@ -141,7 +144,9 @@ class Assurances:
     @staticmethod
     def ensure_assurances_unique(assurances: List[AvailAssurance]) -> None:
         """Ensure the assurances are unique using Python's set"""
-        if len(assurances) != len(set(assurance.validator_index for assurance in assurances)):
+        if len(assurances) != len(
+            set(assurance.validator_index for assurance in assurances)
+        ):
             raise AssurancesError(
                 AssurancesErrorCode.NOT_SORTED_OR_UNIQUE_ASSURERS,
                 "Assurances are not unique by validator index",

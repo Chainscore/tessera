@@ -5,10 +5,9 @@ import signal
 import os
 import time
 from multiprocessing import Process
+from jam.network.start import start_node as start_global_node
 
 from dotenv import load_dotenv
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, Uint
 
 from jam.logging import setup_logging, logger
 from jam.utils.chainspec import chain_config
@@ -16,21 +15,11 @@ from jam.utils.chainspec import chain_config
 from jam.finality.finality import Finality
 from jam.settings import setup_setting
 
-from jam.network.peer import Peer
-from jam.network.node import Node
-
-from jam.operations.handlers.bp_engine import BlockProducer
 from jam.network.protocols.ce_201 import GhostProtocol
 
 # from jam.operations.utils.state_update import update_state
 from jam.state.state import setup_state
-from jam.types.protocol.crypto import BlsPublic
 from jam.block import Block
-from jam.types.protocol.validators import (
-    IPAddress,
-    ValidatorData,
-    ValidatorMetadata,
-)
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 
@@ -38,17 +27,17 @@ clients = [40000, 40001]
 
 
 # DEFINE NODE TASKS
-async def start_node(node: Node):
+async def start_node():
     # TEMP FIX: Wait for node to initialize
+    from jam.network.start import node
     await asyncio.sleep(5)
 
-    for peer in node.peer_conn:
-        up_stream, conn = node.peer_conn[peer]
+    for client in node.all_connected:
 
         protocol = GhostProtocol()
-        message = f"Hello {peer.name}"
+        message = f"Hello {client.port}"
 
-        responses = await protocol.transmit(node, message)
+        responses = await protocol.transmit(message)
         expected_message = f"DATA RECEIVED: {message}"
 
         for response in responses:
@@ -115,41 +104,13 @@ async def run_node(
         state.store.disable_cache()
         # update_state(state)
 
-        peers = [
-            Peer(id=bytes.decode(val.metadata.name, "utf-8"), data=val)
-            for val in state.kappa
-            if val.metadata.port != port
-        ]
-
-        ip = IPAddress.from_str(host)
-
-        tsr_node = Node(
-            node_name=name,
-            host=str(host),
-            port=int(port),
-            peers=peers,
-            validator_data=ValidatorData(
-                settings.bandersnatch_public,
-                settings.ed25519_public,
-                BlsPublic(bytes(144)),
-                ValidatorMetadata(
-                    name=Bytes[10](bytes(10)),
-                    protocol=Uint[16](2**16 - 1),
-                    host=ip,
-                    port=U16(port),
-                ),
-            ),
-            is_builder=is_builder,
-            is_validator=is_validator,
-        )
-
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
 
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(tsr_node.initialize())
-            tg.create_task(start_node(tsr_node))
+            tg.create_task(start_global_node(str(host), int(port)))
+            tg.create_task(start_node())
 
     except KeyboardInterrupt:
         logger.info(
