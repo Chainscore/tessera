@@ -18,6 +18,7 @@ from tsrkit_pvm import (
     HostStatus,
     PvmError,
     ExecutionStatus,
+    Accessibility
 )
 from jam.types import Timestamps
 from jam.types.protocol.crypto import Hash, OpaqueHash
@@ -55,7 +56,7 @@ logger = get_logger("host_calls")
 
 class AccumulateFunctions(INVF):
     @staticmethod
-    @INVF.register(5, gas_cost=10)
+    @INVF.register(14, gas_cost=10)
     def bless(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [m, a, v, o, n] = registers[7:7 + 5]
         if not memory.is_accessible(o, 12 * n):
@@ -72,14 +73,14 @@ class AccumulateFunctions(INVF):
             g_dict[s] = g
         if not all(isinstance(x, U32) for x in (m, a, v)):
             registers[7] = HostStatus.WHO.value
-            return (CONTINUE, registers, memory, context)
+            return (CONTINUE, gas, registers, memory, context)
         else:
             registers[7] = HostStatus.OK.value
             context.x.partial_state.privileges = Chi(chi_m=m, chi_a=a, chi_v=v, chi_g=g_dict)
-            return (CONTINUE, registers, memory, context)
+            return (CONTINUE, gas, registers, memory, context)
 
     @staticmethod
-    @INVF.register(6, gas_cost=10)
+    @INVF.register(15, gas_cost=10)
     def assign(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         o = registers[8]
         if not memory.is_accessible(o, 32 * MAX_AUTH_QUEUE_ITEMS):
@@ -98,7 +99,7 @@ class AccumulateFunctions(INVF):
             return CONTINUE, registers, memory, context
 
     @staticmethod
-    @INVF.register(7, gas_cost=10)
+    @INVF.register(16, gas_cost=10)
     def designate(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         o = registers[7]
         if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
@@ -115,14 +116,14 @@ class AccumulateFunctions(INVF):
         return CONTINUE, registers, memory, context
 
     @staticmethod
-    @INVF.register(8, gas_cost=10)
+    @INVF.register(17, gas_cost=10)
     def checkpoint(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         context.y = context.x
         registers[7] = gas
         return CONTINUE, registers, memory, context
 
     @staticmethod
-    @INVF.register(9, gas_cost=10)
+    @INVF.register(18, gas_cost=10)
     def new(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [o, l, g, m] = registers[7 : 7 + 4]
         delta = context.x.partial_state.service_accounts
@@ -179,7 +180,7 @@ class AccumulateFunctions(INVF):
             return CONTINUE, registers, memory, context
 
     @staticmethod
-    @INVF.register(10, gas_cost=10)
+    @INVF.register(19, gas_cost=10)
     def upgrade(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [o, g, m] = registers[7 : 7 + 3]
         if not memory.is_accessible(o, 32):
@@ -193,7 +194,7 @@ class AccumulateFunctions(INVF):
 
     # TODO: Need to update the gas with registers[9]
     @staticmethod
-    @INVF.register(11, gas_cost=10)
+    @INVF.register(20, gas_cost=10)
     def transfer(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
 
         [d, a, l, o] = registers[7 : 7 + 4]
@@ -226,7 +227,7 @@ class AccumulateFunctions(INVF):
             return CONTINUE, registers, memory, context
 
     @staticmethod
-    @INVF.register(12, gas_cost=10)
+    @INVF.register(21, gas_cost=10)
     def eject(
         gas: Gas,
         registers: list,
@@ -244,7 +245,7 @@ class AccumulateFunctions(INVF):
             account = delta[d]
         else:
             registers[7] = HostStatus.WHO.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
 
         l = BlobLength(max(81, account.service.num_o) - 81)
         if account.service.code_hash != context.x.s_index.encode():
@@ -252,7 +253,7 @@ class AccumulateFunctions(INVF):
             return CONTINUE, registers, memory, context
         elif account.service.num_i != 2 or account.lookup[LookupTable( hash = h , length = l )] is None:
             registers[7] = HostStatus.HUH.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         elif (
             len(account.lookup[LookupTable( hash = h , length = l )]) == 2
             and account.lookup[LookupTable( hash = h , length = l )][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS
@@ -260,13 +261,13 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.OK.value
             del context.x.partial_state.service_accounts[d]
             context.x.partial_state.service_accounts[context.x.s_index].balance += account.balance
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         else:
             registers[7] = HostStatus.HUH.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
-    @INVF.register(13, gas_cost=10)
+    @INVF.register(22, gas_cost=10)
     def query(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         preimage_hash_addr, preimage_len = registers[7], registers[8]
         if not memory.is_accessible(preimage_hash_addr, 32):
@@ -305,7 +306,7 @@ class AccumulateFunctions(INVF):
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
     @staticmethod
-    @INVF.register(14, gas_cost=10)
+    @INVF.register(23, gas_cost=10)
     def solicit(
         gas: Gas,
         registers: list,
@@ -354,7 +355,7 @@ class AccumulateFunctions(INVF):
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
     @staticmethod
-    @INVF.register(15, gas_cost=10)
+    @INVF.register(24, gas_cost=10)
     def forget(
         gas: Gas,
         registers: list,
@@ -364,7 +365,7 @@ class AccumulateFunctions(INVF):
     ):
         preimage_hash_addr, preimage_len = registers[7], registers[8]
 
-        if not memory.is_accessible(preimage_hash_addr, 32, for_write=False):
+        if not memory.is_accessible(preimage_hash_addr, 32):
             raise PvmError(PANIC)
 
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
@@ -395,17 +396,17 @@ class AccumulateFunctions(INVF):
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
     @staticmethod
-    @INVF.register(16, gas_cost=10)
+    @INVF.register(25, gas_cost=10)
     def yield_(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         o = registers[7]
         if not memory.is_accessible(o, 32):
             raise PvmError(PANIC)
         context.x.hash = OptionHash(OpaqueHash(memory.read(o, 32)))
         registers[7] = HostStatus.OK.value
-        return CONTINUE, registers, memory, context
+        return CONTINUE, gas, registers, memory, context
 
     @staticmethod
-    @INVF.register(27, gas_cost=10)
+    @INVF.register(26, gas_cost=10)
     def provide(
         gas: Gas,
         registers: list,
@@ -423,15 +424,15 @@ class AccumulateFunctions(INVF):
         i = Bytes(memory.read(o, z))
         if d[s_star] is None:
             registers[7] = HostStatus.WHO.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         a = d[s_star]
         if a.lookup[LookupTable(hash = Hash.blake2b(i) , length = z)] != []:
             registers[7] = HostStatus.HUH.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         elif (s_star, i) in context.x.preimage:
             registers[7] = HostStatus.HUH.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         else:
             context.x.preimage.add((s_star, i))
             registers[7] = HostStatus.OK.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context

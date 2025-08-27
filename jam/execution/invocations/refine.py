@@ -46,15 +46,7 @@ class PsiR(InvocationProtocol):
 
         return {
             0: (GeneralFunctions, {}),
-            17: (
-                RefineFunctions,
-                {
-                    "service_id": self.wi.service,
-                    "delta": state.delta,
-                    "timeslot": self.work_package.context.lookup_anchor_slot,
-                },
-            ),
-            18: (
+            1: (
                 GeneralFunctions,
                 {
                     "package": self.work_package,
@@ -67,14 +59,21 @@ class PsiR(InvocationProtocol):
                     "t": None,
                 },
             ),
-            19: (RefineFunctions, {"export_segment_offset": self.e_offset}),
-            20: (RefineFunctions, {}),
-            21: (RefineFunctions, {}),
-            22: (RefineFunctions, {}),
-            23: (RefineFunctions, {}),
-            24: (RefineFunctions, {}),
-            25: (RefineFunctions, {}),
-            26: (RefineFunctions, {}),
+            6: (
+                RefineFunctions,
+                {
+                    "service_id": self.wi.service,
+                    "delta": state.delta,
+                    "timeslot": self.work_package.context.lookup_anchor_slot,
+                },
+            ), # Historial lookup 
+            7: (RefineFunctions, {"export_segment_offset": self.e_offset}),
+            8: (RefineFunctions, {}),
+            9: (RefineFunctions, {}),
+            10: (RefineFunctions, {}),
+            11: (RefineFunctions, {}),
+            12: (RefineFunctions, {}),
+            13: (RefineFunctions, {}),
             # TODO: Add core_index [we'll probably be storing core_index in node info]
             100: (
                 GeneralFunctions,
