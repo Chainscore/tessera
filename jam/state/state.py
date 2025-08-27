@@ -295,12 +295,12 @@ class State:
 
                 # TODO: Test Auditing & Refining with PJ
                 # # Start Auditing for new block received
-                audit_engine = AuditEngine()
-                asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
+                # audit_engine = AuditEngine()
+                # asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
 
                 # TODO: Remove Direct Finality
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-                # Finality.finalise(header_hash, _set.main_db)
+                Finality.finalise(header_hash, _set.main_db, True)
 
                 block.extrinsic.clear_from_stores()
 
