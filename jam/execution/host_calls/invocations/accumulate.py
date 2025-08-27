@@ -15,12 +15,12 @@ from jam.utils.constants import MAX_SERVICE_CODE_SIZE
 
 class PsiA(InvocationProtocol):
 
-    def __init__(self, u: StateContext, t:TimeSlot, s:ServiceId, g:Gas, o:OperandTuples):
+    def __init__(self, u: StateContext, t:TimeSlot, s:ServiceId, g:Gas, i:OperandTuples):
         self.partial_state = u
         self.timeslot = t
         self.service_id = s
         self.gas = g
-        self.operandTuples = o
+        self.operandTuples = i
         self.context = AccumulationContext(x=self.initializer_fn(s, u), y=self.initializer_fn(s, u))
 
     def table(self):

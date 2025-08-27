@@ -5,7 +5,7 @@ from jam.types.work.execution import (
     WorkExecResult,
     ExecResults,
     RefineLoad,
-    WorkResult, WorkResults,
+    WorkDigest, WorkDigests,
 )
 
 # Item types
@@ -53,7 +53,7 @@ __all__ = [
     "WorkExecResult",
     "ExecResults", 
     "RefineLoad",
-    "WorkResult",
+    "WorkDigest",
     # Item types
     "ImportSpec",
     "ExtrinsicSpec", 
@@ -84,6 +84,6 @@ __all__ = [
     "Justifications",
     "MultiJustifications",
     # Collection types
-    "WorkResults",
+    "WorkDigests",
     "WorkReports",
 ] 

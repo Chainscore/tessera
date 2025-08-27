@@ -268,28 +268,28 @@ class Reporting:
                 )
             )
             core_index = report.core_index
-            for result in report.results:
-                pi_core[core_index].imports += Uint(result.refine_load.imports)
-                pi_core[core_index].exports += Uint(result.refine_load.exports)
-                pi_core[core_index].gas_used += Uint(result.refine_load.gas_used)
-                pi_core[core_index].extrinsic_count += Uint(result.refine_load.extrinsic_count)
-                pi_core[core_index].extrinsic_size += Uint(result.refine_load.extrinsic_size)
+            for digest in report.digests:
+                pi_core[core_index].imports += Uint(digest.refine_load.imports)
+                pi_core[core_index].exports += Uint(digest.refine_load.exports)
+                pi_core[core_index].gas_used += Uint(digest.refine_load.gas_used)
+                pi_core[core_index].extrinsic_count += Uint(digest.refine_load.extrinsic_count)
+                pi_core[core_index].extrinsic_size += Uint(digest.refine_load.extrinsic_size)
             pi_core[core_index].bundle_size = Uint(report.package_spec.length)
 
-            for work_result in report.results:
-                if work_result.service_id not in pi_service:
-                    pi_service[work_result.service_id] = ServiceStat.empty()
-                pi_service[work_result.service_id].refinement_count += 1
-                pi_service[work_result.service_id].refinement_gas_used += Uint(
-                    work_result.refine_load.gas_used
+            for work_digest in report.digests:
+                if work_digest.service_id not in pi_service:
+                    pi_service[work_digest.service_id] = ServiceStat.empty()
+                pi_service[work_digest.service_id].refinement_count += 1
+                pi_service[work_digest.service_id].refinement_gas_used += Uint(
+                    work_digest.refine_load.gas_used
                 )
-                pi_service[work_result.service_id].imports += Uint(work_result.refine_load.imports)
-                pi_service[work_result.service_id].exports += Uint(work_result.refine_load.exports)
-                pi_service[work_result.service_id].extrinsic_count += Uint(
-                    work_result.refine_load.extrinsic_count
+                pi_service[work_digest.service_id].imports += Uint(work_digest.refine_load.imports)
+                pi_service[work_digest.service_id].exports += Uint(work_digest.refine_load.exports)
+                pi_service[work_digest.service_id].extrinsic_count += Uint(
+                    work_digest.refine_load.extrinsic_count
                 )
-                pi_service[work_result.service_id].extrinsic_size += Uint(
-                    work_result.refine_load.extrinsic_size
+                pi_service[work_digest.service_id].extrinsic_size += Uint(
+                    work_digest.refine_load.extrinsic_size
                 )
 
         pi = state.pi
@@ -338,9 +338,9 @@ class Reporting:
 
         """
         work_report_output = len(report.auth_output)
-        for result in report.results:
+        for digest in report.digests:
             # TODO - Test this with non-OK results
-            work_report_output += len(result.result.unwrap())
+            work_report_output += len(digest.result.unwrap())
 
         if work_report_output > MAX_WORK_REPORT_SIZE:
             raise ReportingError(
@@ -366,7 +366,7 @@ class Reporting:
 
         for x in results:
             total_accumulate_gas = 0
-            for y in x.report.results:
+            for y in x.report.digests:
                 # --------------- bad_service_id -------------------
                 if y.service_id not in state.delta:
                     raise ReportingError(

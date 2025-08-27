@@ -10,7 +10,7 @@ from jam.types.protocol.crypto import (
     OpaqueHash,
     WorkReportHash,
 )
-from jam.types.work.execution import WorkResults, RefineContext
+from jam.types.work.execution import WorkDigests, RefineContext
 from jam.types.work.package import WorkPackageSpec
 from jam.types.work.manifest import SegmentRootLookup
 
@@ -31,8 +31,8 @@ class WorkReport:
     auth_output: Bytes
     # l
     segment_root_lookup: SegmentRootLookup
-    # r
-    results: WorkResults
+    # d
+    digests: WorkDigests
     # g
     auth_gas_used: Uint
 
@@ -40,7 +40,7 @@ class WorkReport:
     def empty(cls, **overrides) -> "WorkReport":
         from jam.types.work.package import WorkPackageSpec
         from jam.types.work.manifest import SegmentRootLookup
-        from jam.types.work import WorkResults
+        from jam.types.work import WorkDigests
         
         defaults = {
             "package_spec": WorkPackageSpec.empty(),
@@ -49,7 +49,7 @@ class WorkReport:
             "authorizer_hash": OpaqueHash(bytes([0] * 32)),
             "auth_output": Bytes(b""),
             "segment_root_lookup": SegmentRootLookup({}),
-            "results": WorkResults([]),
+            "digests": WorkDigests([]),
             "auth_gas_used": Gas(0),
         }
         # merge in anything the caller wants to override:

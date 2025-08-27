@@ -6,7 +6,7 @@ from tsrkit_types.integers import Uint
 from tsrkit_types.null import Null
 from jam.types.block import Block
 from jam.accumulation.types import (
-    PreimageDict,
+    AccumulationOutput,
     DeferredTransfers,
     StateContext,
     OperandTuples,
@@ -171,12 +171,12 @@ class Accumulation:
             gas_limit (Gas): The total gas available for the accumulation process.
             work_reports (WorkReports): A collection of work reports that are ready to be accumulated.
             partial_state (StateContext): The state context before accumulation, which includes service accounts and other mutable components.
-            services (ChiG): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
+            services (ChiZ): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
             timeslot (Tau): Curr TimeSlot τ′
 
         Returns:
             A tuple (int, StateContext, DeferredTransfers, BeefyMap, GasConsumed) where:
-            Integer: Number of work results successfully accumulated.
+            Integer: Number of work digests successfully accumulated.
             StateContext: The updated state context after applying accumulation.
             DeferredTransfer: A list of transfers that are deferred.
             BeefyMap: A mapping of service indices to their corresponding accumulation outputs.
@@ -186,7 +186,7 @@ class Accumulation:
         index = 0
         report_gas = 0
         for i in work_reports:
-            for j in i.results:
+            for j in i.digests:
                 report_gas += j.accumulate_gas
             if report_gas > gas_limit:
                 break
@@ -237,7 +237,7 @@ class Accumulation:
         Args:
             partial_state (StateContext): The state context before accumulation, which includes service accounts and other mutable components.
             work_reports (WorkReports): A collection of work reports that are ready to be accumulated.
-            privileged_services (ChiG): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
+            privileged_services (ChiZ): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
             timeslot (Tau): Curr TimeSlot τ′
 
         Returns:
@@ -254,9 +254,9 @@ class Accumulation:
         # TODO: Check From here
 
         services: Set[ServiceId] = {
-            result.service_id
+            digest.service_id
             for report in work_reports
-            for result in report.results
+            for digest in report.digests
         }
         services.update(privileged_services.keys())
 
@@ -296,7 +296,7 @@ class Accumulation:
         services: ChiZ,
         service_id: ServiceId,
         timeslot: Tau,
-    ) -> Tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]:
+    ) -> AccumulationOutput:
         """
         Single-Service accumulation function ∆1 defined in Eq 12.19
         Transforms Initial Partial State, Sequence of Work Reports, Dictionary of services (free, privileged accumulation), and Service index
@@ -305,7 +305,7 @@ class Accumulation:
         Args:
             initial_state (StateContext): The state context before accumulation, which includes service accounts and other mutable components.
             work_reports (WorkReports): A collection of work reports that are ready to be accumulated.
-            services (ChiG): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
+            services (ChiZ): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
             service_id (ServiceId): Index of Particular Service
             timeslot (Tau): Curr TimeSlot τ′
 
@@ -318,29 +318,28 @@ class Accumulation:
         """
 
         g = 0
-        p = OperandTuples([])
+        i = OperandTuples([])
 
         if service_id in services:
             g = services[service_id]
 
-        for i in work_reports:
-            for j in i.results:
-                if j.service_id == service_id:
-                    g += j.accumulate_gas
-                    p.append(
+        for w in work_reports:
+            for r in w.digests:
+                if r.service_id == service_id:
+                    g += r.accumulate_gas
+                    i.append(
                         OperandTuple(
-                            d=j.result,
-                            g=Uint(j.accumulate_gas),
-                            y=j.payload_hash,
-                            o=i.auth_output,
-                            e=i.package_spec.exports_root,
-                            h=i.package_spec.hash,
-                            a=i.authorizer_hash
+                            p=w.package_spec.hash,
+                            e=w.package_spec.exports_root,
+                            a=w.authorizer_hash,
+                            y=r.payload_hash,
+                            g=Uint(r.accumulate_gas),
+                            t=w.auth_output,
+                            l=r.result,
                         )
                     )
 
-        posterior_state, transfers, optional_hash, gas, preimage = PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=p).execute()
-        return posterior_state, transfers, optional_hash, gas, preimage
+        return PsiA(u=initial_state, t=timeslot, s=service_id, g=g, i=i).execute()
 
     @staticmethod
     def preimage_integration(
@@ -375,13 +374,13 @@ class Accumulation:
         delta: Delta
     ) -> DeferredTransfers:
         """
-        Selection function R defined in Eq 12.23
+        Selection function X defined in Eq 12.29
         Maps a sequence of deferred transfers & a desired destination service index
         into sequence of transfers targeting said service
 
         Args:
             deferred_transfers (DeferredTransfers): Sequence of deferred transfers.
-            service_id (ServiceId): Index of Particular Service
+            delta (ServiceId): Index of Particular Service
 
         Returns:
             DeferredTransfers: A list of ordered, deferred transfers.
@@ -502,16 +501,14 @@ class Accumulation:
 
         gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT) + service_gas))
 
-
-
         [num_accumulated, updated_state, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, partial_state, state.chi.chi_z, block.header.slot)
 
         accumulation_stats = {}
         for ga in gas_accumulations:
             accumulation_stats[ga[0]] = [ga[1], 0]
         for i in range(num_accumulated):
-            for wr in star_work_reports[i].results:
-                accumulation_stats[wr.service_id][1] += 1
+            for d in star_work_reports[i].digests:
+                accumulation_stats[d.service_id][1] += 1
 
         # Update Statistics
         pi = state.pi
@@ -524,7 +521,9 @@ class Accumulation:
         pi.services = pi_service
         state.pi = pi
 
-        # Update Delta Dagger, Chi, Iota, Phi
+        # Update Delta Dagger, Chi, Iota, Phi, Theta
+        # TODO: Fix this
+        state.theta = commitment_map
         state.chi = updated_state.privileges
         state.iota = updated_state.validator_keys
         state.phi = updated_state.authorizer_keys

@@ -16,7 +16,7 @@ from jam.types.block.extrinsics.guarantees import ValidatorSignatures, Validator
 from jam.types.protocol.core import CoreIndex, Gas, TimeSlot, ExportsRoot, ValidatorIndex
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
 
-from jam.types.work import WorkReport, SegmentRootLookup, WorkPackageSpec, WorkResults
+from jam.types.work import WorkReport, SegmentRootLookup, WorkPackageSpec, WorkDigests
 from jam.types.work.item import WorkItem
 from jam.types.work.package import WorkPackage, WorkPackageBundle
 from jam.types.work.manifest import (
@@ -34,7 +34,7 @@ from jam.types.work.shard import (
     ShardKey, BundleShard, ShardIndex, SegmentShard, BundleShardsDict, SegShardsDict, SegShardDict
 )
 from jam.types.work.execution import (
-    WorkResult,
+    WorkDigest,
     WorkExecResult,
     RefineLoad
 )
@@ -118,7 +118,7 @@ class Processor:
         return pages
 
     @staticmethod
-    def item_to_digest(item: WorkItem, result: WorkExecResult, gas: Gas) -> WorkResult:
+    def item_to_digest(item: WorkItem, result: WorkExecResult, gas: Gas) -> WorkDigest:
         """
         Item to Digest function C defined in Eqn 14.8
 
@@ -144,9 +144,9 @@ class Processor:
         refine_load = RefineLoad(gas_used=Uint(gas), imports=imports_count, exports=exports_count,
                                  extrinsic_count=extrinsic_count, extrinsic_size=extrinsic_size)
 
-        result = WorkResult(service_id=item.service, code_hash=item.code_hash, payload_hash=payload_hash,
-                          accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)
-        return result
+        digest = WorkDigest(service_id=item.service, code_hash=item.code_hash, payload_hash=payload_hash,
+                            accumulate_gas=item.accumulate_gas_limit, result=result, refine_load=refine_load)
+        return digest
 
     def build_report(self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup):
         """
@@ -212,8 +212,8 @@ class Processor:
                     return r, u, e
 
 
-            # Work Results, r
-            r_list = WorkResults([])
+            # Work Digests, r
+            r_list = WorkDigests([])
 
             # Exported Segments
             e_list = MultiSegments([])
@@ -242,7 +242,7 @@ class Processor:
                 specs = self.availability_specifier(package_hash=h, wp_bundle=b.encode(), export_segments=e_bar_cap)
 
             logger.info(f"Compiling Report..")
-            report = WorkReport(package_spec=specs, context=p.context, core_index=Uint(c), authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, results=r_list, auth_gas_used=Uint(g))
+            report = WorkReport(package_spec=specs, context=p.context, core_index=Uint(c), authorizer_hash=p.a, auth_output=Bytes(o), segment_root_lookup=sr_lookup, digests=r_list, auth_gas_used=Uint(g))
 
             return report
 

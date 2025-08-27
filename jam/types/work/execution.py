@@ -34,10 +34,15 @@ ExecResults = TypedVector[WorkExecResult]
 class RefineLoad:
     """Refine load structure."""
 
+    # u
     gas_used: Uint
+    # i
     imports: Uint
+    # x
     extrinsic_count: Uint
+    # z
     extrinsic_size: Uint
+    # e
     exports: Uint
 
 
@@ -67,20 +72,20 @@ class RefineContext:
 
 
 @structure
-class WorkResult:
+class WorkDigest:
     """Work result structure."""
     # s
     service_id: ServiceId
-    # h
+    # c
     code_hash: OpaqueHash
     # y
     payload_hash: OpaqueHash
     # g
     accumulate_gas: Gas
-    # d
+    # l
     result: WorkExecResult
-    # x
+    # u, i, x, z, e
     refine_load: RefineLoad
 
 
-WorkResults = TypedVector[WorkResult]  # Vector of Work Results
+WorkDigests = TypedVector[WorkDigest]  # Vector of Work Results

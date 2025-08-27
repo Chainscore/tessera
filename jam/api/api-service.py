@@ -32,7 +32,7 @@ from jam.types.work import RefineContext
 from jam.types.work import WorkItem
 from jam.types.work import WorkPackage
 from jam.types.work import WorkReport
-from jam.types.work import WorkResult
+from jam.types.work import WorkDigest
 
 # Initialize FastAPI with metadata for Swagger UI
 app = FastAPI(
@@ -328,7 +328,7 @@ async def json_to_codec(request_data: RequestDataCodec):
             return {"data": work_report.encode().hex(), "status": "Ok"}
 
         elif label == "work_result":
-            work_result = WorkResult.from_json(request_data.input.file)
+            work_result = WorkDigest.from_json(request_data.input.file)
             return {"data": work_result.encode().hex(), "status": "Ok"}
 
     except Exception as e:
@@ -425,7 +425,7 @@ async def codec_to_json(request_data: RequestDataJson):
             return {"data": work_report.to_json(), "status": "Ok"}
 
         elif label == "work_result":
-            work_result, _ = WorkResult.decode_from(data)
+            work_result, _ = WorkDigest.decode_from(data)
             return {"data": work_result.to_json(), "status": "Ok"}
 
     except Exception as e:
