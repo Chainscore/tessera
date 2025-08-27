@@ -21,20 +21,20 @@ class WorkReport:
 
     # s
     package_spec: WorkPackageSpec
-    # x
+    # bold c
     context: RefineContext
     # c
     core_index: Uint
     # a
     authorizer_hash: OpaqueHash
-    # o
-    auth_output: Bytes
-    # l
-    segment_root_lookup: SegmentRootLookup
-    # d
-    digests: WorkDigests
     # g
     auth_gas_used: Uint
+    # bold t
+    auth_output: Bytes
+    # bold l
+    segment_root_lookup: SegmentRootLookup
+    # bold d
+    digests: WorkDigests
 
     def hash(self) -> WorkReportHash:
         return WorkReportHash(Hash.blake2b(self.encode()))

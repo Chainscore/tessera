@@ -25,6 +25,7 @@ class BundlerErrorCode(Enum):
     SEG_ERROR = "Unable to fetch import segments"
     JFN_ERROR = "Unable to fetch justification"
     EXT_ERROR = "Unable to fetch extrinsics"
+    LOOKUP_ERROR = "Package hash not found in segment root lookup"
 
 
 class ProcessorError(JamError):

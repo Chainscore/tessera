@@ -21,6 +21,7 @@ from jam.types.state.delta import Delta, LookupTable, Timestamps
 from jam.types.state.tau import Tau
 from jam.types.state.chi import ChiZ
 from jam.types.state.omega import AllReadyWRs, ReadyWR
+from jam.types.state.theta import Commitment, Theta
 from jam.utils.constants import EPOCH_LENGTH, TOTAL_GAS, ACCUMULATION_GAS, CORE_COUNT
 from jam.types.protocol.merkle import OptionHash
 from jam.types.protocol.core import Gas, ServiceId
@@ -519,9 +520,13 @@ class Accumulation:
         pi.services = pi_service
         state.pi = pi
 
-        # Update Delta Dagger, Chi, Iota, Phi, Theta
-        # TODO: Fix this
-        state.theta = commitment_map
+        # Update Chi, Iota, Phi, Theta
+        theta = Theta([])
+        for service_id, op in commitment_map:
+            commitment = Commitment(service_id, op)
+            theta.append(commitment)
+
+        state.theta = theta
         state.chi = updated_state.privileges
         state.iota = updated_state.validator_keys
         state.phi = updated_state.authorizer_keys

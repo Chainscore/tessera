@@ -22,8 +22,8 @@ class OperandTuple:
     a: AuthorizerHash
     y: OpaqueHash # payload_hash
     g: Uint # accumulate_gas of a work result / digest
-    t: Bytes # auth_output of work report
     l: WorkExecResult
+    t: Bytes # auth_output of work report
 
 
 class OperandTuples(TypedVector[OperandTuple]):

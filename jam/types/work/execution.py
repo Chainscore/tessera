@@ -19,12 +19,12 @@ class WorkExecResult(Choice):
     panic: NullType
     # circle dot
     bad_exports: NullType
+    # circle minus
+    result_oversize: NullType
     # BAD
     bad_code: NullType
     # BIG
     code_oversize: NullType
-    # circle minus
-    result_oversize: NullType
 
 
 ExecResults = TypedVector[WorkExecResult]
@@ -50,11 +50,17 @@ class RefineLoad:
 class RefineContext:
     """Refine context structure."""
 
+    # a
     anchor: HeaderHash
+    # s
     state_root: StateRoot
+    # b
     beefy_root: BeefyRoot
+    # l
     lookup_anchor: HeaderHash
+    # t
     lookup_anchor_slot: TimeSlot
+    # p
     prerequisites: TypedVector[OpaqueHash]
 
     @staticmethod

@@ -30,7 +30,7 @@ from jam.types.protocol.core import (
     ValidatorIndex,
 )
 from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
-from jam.types.work.execution import WorkResult, WorkExecResult, RefineLoad, WorkResults
+from jam.types.work.execution import WorkDigest, WorkExecResult, RefineLoad, WorkDigests
 
 from jam.types.work.item import WorkItem
 from jam.types.work.package import WorkPackage, WorkPackageBundle, WorkPackageSpec
@@ -182,7 +182,7 @@ class Processor:
         return wr, wr_hash
 
     @staticmethod
-    def item_to_digest(item: WorkItem, result: WorkExecResult, gas: Gas) -> WorkResult:
+    def item_to_digest(item: WorkItem, result: WorkExecResult, gas: Gas) -> WorkDigest:
         """
         Item to Digest function C defined in Eqn 14.9
 
@@ -214,7 +214,7 @@ class Processor:
             extrinsic_size=extrinsic_size,
         )
 
-        result = WorkResult(
+        result = WorkDigest(
             service_id=item.service,
             code_hash=item.code_hash,
             payload_hash=payload_hash,
