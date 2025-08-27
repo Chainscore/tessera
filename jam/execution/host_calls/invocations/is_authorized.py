@@ -28,7 +28,9 @@ class PsiI(InvocationProtocol):
                     "t": None,
                 },
             ),
-            100: (GeneralFunctions, {}),  # log
+            100: (GeneralFunctions,
+                  {"core_index": 0, "service_id": 42}
+                ),  # log
         }
 
     def execute(self):
