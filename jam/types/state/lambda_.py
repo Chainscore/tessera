@@ -3,4 +3,6 @@ from jam.types.protocol.validators import ValidatorData
 from jam.utils.constants import VALIDATOR_COUNT
 
 
-Lambda_ = TypedArray[ValidatorData, VALIDATOR_COUNT]
+# State key: 9
+class Lambda_(TypedArray[ValidatorData, VALIDATOR_COUNT]):
+    ...

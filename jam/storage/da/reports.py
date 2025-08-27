@@ -4,6 +4,7 @@ from jam.types.work.report import WorkReport, WorkReportHash
 from jam.storage.da.store import DA
 
 
+
 class ReportsDA(DA):
     """
     Reports DA Stores all the reports compiled / received by a node

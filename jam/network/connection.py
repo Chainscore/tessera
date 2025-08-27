@@ -14,16 +14,16 @@ from aioquic.quic.events import (
     StreamReset,
     StopSendingReceived,
 )
-from cryptography.x509 import Certificate
 from tsrkit_types import U8
-
 from jam.logging import get_logger
-from jam.network.base.certificate import verify_certificate
+from jam.network.base.certificate import verify_certificate, generate_san
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import PrefixType
+
+from jam.types.protocol.core import CoreIndex, ValidatorIndex
 from jam.types.protocol.crypto import Ed25519Public
-from jam.types.protocol.validators import ValidatorData
-from jam.utils.constants import NODE_ALPN
+from jam.types.work.shard import ShardIndex
+from jam.utils.constants import VALIDATOR_COUNT, NODE_ALPN
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -34,7 +34,8 @@ logger = get_logger("network")
 
 class NodeConnection(QuicConnectionProtocol):
     """JAMNP-spec QUIC Connection handler"""
-
+    # SAN
+    _id: str
     # Common UP0 Stream ID. 
     # If not None, we have connected UP0 
     up0_stream: Optional[int] = None
@@ -48,15 +49,23 @@ class NodeConnection(QuicConnectionProtocol):
     handshake_completed = False
     # If we are initiating the connection
     is_initiating = False
+    port = None
 
+    def __repr__(self):
+        return (
+            f"Node(host={str(self.val.metadata.host)}, port={int(self.val.metadata.port)}, san={str(self._id)})"
+        )
 
     def __init__(
         self, 
+        _id: str,
         quic: QuicConnection, 
         is_initiating: bool,
+        port: int,
         stream_handler: QuicStreamHandler|None = None
     ) -> None:
         super().__init__(quic=quic, stream_handler=stream_handler)
+        self._id = _id
         self.waiter = {}
         self.stream_buffer = {}
         self.stream_prefix = {}
@@ -66,6 +75,7 @@ class NodeConnection(QuicConnectionProtocol):
         self.ed25519_public = None
         self.handshake_completed = False
         self.is_initiating = is_initiating
+        self.port = port
 
     def verify_cert(self) -> Ed25519Public|None:
         """
@@ -86,13 +96,16 @@ class NodeConnection(QuicConnectionProtocol):
             logger.info(f"🔗 Handshake completed with {pk.hex()}.")
 
             self.ed25519_public = pk 
-            
+            self._id = generate_san(pk)
             return pk 
         
         except Exception as e:
             logger.error(f"❌ Error during certificate verification: {e}")
             self._quic.close(error_code=0xA, reason_phrase="Certificate verification failed.")
             return None
+
+    def stop_stream(self, stream_id: int, error_code: int):
+        self._quic.stop_stream(stream_id, error_code)
 
     def stream_and_keep_open(self, message: bytes, stream_id: Optional[int] = None) -> int:
         """function for streaming data without end stream (FIN) bit."""
@@ -101,7 +114,7 @@ class NodeConnection(QuicConnectionProtocol):
 
         if stream_id is None:
             stream_id = self._quic.get_next_available_stream_id()
-            if stream_id == self.up0_stream or (self.up0_stream == None and stream_id == 0):
+            if stream_id == self.up0_stream or (self.up0_stream is None and stream_id == 0):
                 stream_id += 4
 
         logger.debug(
@@ -283,3 +296,29 @@ class NodeConnection(QuicConnectionProtocol):
 
                 # Clear buffer
                 self.stream_buffer.pop(stream_id, None)
+
+    @property
+    def validator_index(self):
+        from jam.state.state import state
+        for i, val in enumerate(state.kappa):
+            if val.ed25519 == self.ed25519_public:
+                return ValidatorIndex(i)
+
+        raise ValueError("No validator found with matching ed25519 key.")
+
+    @property
+    def val(self):
+        from jam.state.state import state
+        validator_index = self.validator_index
+        return state.kappa[validator_index]
+
+    def get_shard_index(self, core_index: CoreIndex):
+        from jam.utils.chainspec import chain_config
+
+        vi = self.validator_index
+        shard_index = ShardIndex(
+            (core_index * chain_config.recovery_threshold + vi)
+            % VALIDATOR_COUNT
+        )
+
+        return shard_index

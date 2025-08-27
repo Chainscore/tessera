@@ -3,4 +3,7 @@ from jam.types.protocol.crypto import OpaqueHash
 
 """Fixed-size array of entropy values with size 4."""
 
-Eta = TypedArray[OpaqueHash, 4]
+
+# State key: 6
+class Eta(TypedArray[OpaqueHash, 4]):
+    ...

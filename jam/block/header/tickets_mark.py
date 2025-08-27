@@ -24,11 +24,10 @@ class TicketsMark(Option[TicketsMarkData]):
         """
         if (
             (len(state.gamma.a) == EPOCH_LENGTH)
-            and (
-                state.tau % EPOCH_LENGTH > TICKET_SUBMISSION_END
-                and TICKET_SUBMISSION_END <= slot % EPOCH_LENGTH
-            )
-            and (slot // EPOCH_LENGTH == state.tau // EPOCH_LENGTH)
+            and
+            (state.tau % EPOCH_LENGTH < TICKET_SUBMISSION_END <= slot % EPOCH_LENGTH)
+            and
+            (int(slot // EPOCH_LENGTH) == int(state.tau // EPOCH_LENGTH))
         ):
             return cls(TicketsMarkData(outside_in(state.gamma.a)))
         else:

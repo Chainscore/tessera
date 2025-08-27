@@ -62,6 +62,11 @@ class ValidatorData:
     def __hash__(self):
         return hash(self.encode())
 
+    def __repr__(self):
+        return (
+            f"Validator(host={str(self.metadata.host)}, port={int(self.metadata.port)})"
+        )
+
 
 """Fixed-size array of validator data with size VALIDATOR_COUNT."""
 class ValidatorsData(TypedArray[ValidatorData, VALIDATOR_COUNT]):

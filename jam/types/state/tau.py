@@ -1,4 +1,6 @@
 from tsrkit_types.integers import Uint
 
 
-Tau = Uint[32]
+# State key: 11
+class Tau(Uint[32]):
+    ...

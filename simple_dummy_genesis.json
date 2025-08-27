@@ -1,0 +1,9 @@
+{
+  "genesis_state": {},
+  "metadata": {
+    "chain_spec": "tiny",
+    "core_count": 2,
+    "created_with": "simple_dummy_genesis",
+    "error": "'int' object has no attribute 'encode_size'"
+  }
+}

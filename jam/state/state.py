@@ -1,6 +1,10 @@
-import json 
+import asyncio
+import json
 from typing import Type
+
+from jam.audit.audit_engine import AuditEngine
 from jam.error import JamError, JamErrorCode
+from jam.types.audit.tranche import TrancheIndex
 from jam.utils.merkle import BMRFunctions
 from rockstore import RockStore
 from jam.state.accounts import DeltaView
@@ -150,6 +154,18 @@ class State:
 
     def _force_transition(self, block: Block):
         # 1. Push auth hash of every WR to self.alpha[0:1]
+
+        # TODO: We should remove this
+        # Comment these lines to turn off force transition
+        logger.warning("Force State Transition: ON")
+        alpha = self.alpha
+
+        for guarantee in block.extrinsic.guarantees:
+            report = guarantee.report
+            alpha[report.core_index][0] = report.authorizer_hash
+
+        self.alpha = alpha
+
         return self.transition(block)
 
     def transition(self, block: Block) -> bool:
@@ -218,27 +234,28 @@ class State:
             # Disputes
             Disputes.transition(pre_state, self, block)
 
-            # Reporting
-            Reporting.transition(pre_state, self, block, [])
-
             # Assurances
-            _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
+            _, newly_avail_wrs = Assurances.transition(self, block)
             if len(newly_avail_wrs) > 0:
-                logger.critical(
+                logger.info(
                     "Newly available WRs",
                     count=len(newly_avail_wrs),
-                    wrs=[wr.encode().hex()[:16] + "..." for wr in newly_avail_wrs],
+                    wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
                 )
+
+            # Reporting
+            Reporting.transition(self, block, [])
+
             # Accumulation
             _, commitment_map = Accumulation.transition(
-                pre_state, self, block, newly_avail_wrs=newly_avail_wrs
+                self, block, newly_avail_wrs=newly_avail_wrs
             )
 
             # Authorization
             Authorization.transition(pre_state, self, block)
 
             # Recent History
-            history_merkle = BMRFunctions().wb_merkle_fn(
+            history_merkle = BMRFunctions().wb_merklize(
                 TypedVector[Bytes[32]](
                     sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map])
                 ),
@@ -258,20 +275,35 @@ class State:
 
             if block.validate():
                 state.settle(header_hash)
+
+                # Set local chain head to produced block
+                block.save(_set.main_db)
+                Finality.set_head(header_hash, _set.main_db)
                 logger.info(
                     "Block imported!",
+                    new_wrs=newly_avail_wrs,
                     header=header_hash.hex()[:16] + "...",
                     timeslot=self.tau,
                     final_state_root=self.root.hex()[:16] + "...",
                 )
 
-                block.save(_set.main_db)
-                # Set local chain head to produced block
-                Finality.set_head(header_hash, _set.main_db)
+
+                from jam.operations.handlers.assurer import assurer
+                for ext in block.extrinsic.guarantees:
+                    logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                    asyncio.create_task(assurer._req_shard(ext))
+
+                # TODO: Test Auditing & Refining with PJ
+                # # Start Auditing for new block received
+                # audit_engine = AuditEngine()
+                # asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
+
+                # TODO: Remove Direct Finality
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-                Finality.finalise(header_hash, _set.main_db)
+                Finality.finalise(header_hash, _set.main_db, True)
 
                 block.extrinsic.clear_from_stores()
+
                 self._lock = False
                 return True
             else:

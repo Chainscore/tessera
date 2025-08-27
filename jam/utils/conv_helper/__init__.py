@@ -9,7 +9,9 @@ Bytable = Union[int, bool, bytes, str, bytearray, memoryview, Sequence]
 
 class ConversionHelper(HexConversion, StrConversion):
     @staticmethod
-    def to_bytes(value: Bytable, byteorder: Literal["big", "little"] = "big") -> bytearray:
+    def to_bytes(
+        value: Bytable, byteorder: Literal["big", "little"] = "big"
+    ) -> bytearray:
         """Convert [str (hex_string), int, bool, bytes, memoryview] to bytearray"""
         if isinstance(value, str):
             byt = HexConversion.hex_to_bytes(value)

@@ -1,10 +1,10 @@
 from typing import Callable, Final
 
 import asyncio
-import signal 
+import signal
 import logging
 import os
-import time 
+import time
 from dotenv import load_dotenv
 
 from jam.logging import setup_logging
@@ -12,13 +12,14 @@ from jam.utils.chainspec import chain_config
 from .state_update import update_state
 
 from jam.finality.finality import Finality
-from jam.settings import setup_setting 
+from jam.settings import setup_setting
 from jam.network.start import start_node
-from jam.state.state import setup_state 
+from jam.state.state import setup_state
 from jam.block import Block
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.logging import get_logger
+from jam.operations.ticket_queue import setup_ticket_queue
 
 # Logger for Node test
 logger = get_logger("test")
@@ -30,7 +31,7 @@ async def run_node(
     theme: str,
     is_builder: bool,
     is_validator: bool,
-    node_task
+    node_tasks
 ):
     """Main fn to start the node"""
     # ---------- SETUP LOGGING ----------
@@ -81,24 +82,29 @@ async def run_node(
     try:
         # Set genesis state
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
-        setup_state(settings.state_db, "dev-spec.json")
+        state = setup_state(settings.state_db, "dev-spec.json")
 
         # This fucks up syncing with polkajam, update this elsewhere
         # update_state(state)
 
         settings.update()
+        update_state(state)
+
+        # setup ticket queue
+        setup_ticket_queue()
 
         block = Block.genesis()
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db)
-        
+        Finality.finalise(header_hash, main_db, True)
+
         settings.update()
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(start_node(host, int(port)))
-            if node_task:
-                tg.create_task(node_task())
+            for node_task in node_tasks:
+                if node_task:
+                    tg.create_task(node_task())
 
     except Exception as e:
         logger.critical(
@@ -121,7 +127,7 @@ def run_node_process(
         theme: str,
         is_builder: bool,
         is_validator: bool,
-        node_task
+        node_tasks
 ):
     # Handle clean termination
     def handle_sigterm(signum, frame):
@@ -136,7 +142,7 @@ def run_node_process(
         theme,
         is_builder,
         is_validator,
-        node_task
+        node_tasks
     ))
 
 

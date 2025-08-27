@@ -64,6 +64,9 @@ mydb/
 db/
 god_mode/
 
+# Ignore all sdk tests fro now
+tests/sdk
+
 # Ignore all folders in /seeds, but not the keys.json
 /seeds/*
 !/seeds/keys.json

@@ -9,7 +9,7 @@ import os
 if os.environ.get("PVM_MODE") == "recompiler":
     from tsrkit_pvm import REC_Memory as Memory, REC_Program as Program, Recompiler as PVM
 else:
-    from tsrkit_pvm import INT_Memory as Memory, INT_Program as Program, Interpreter as PVM 
+    from tsrkit_pvm import INT_Memory as Memory, INT_Program as Program, Interpreter as PVM
 
 
 from tsrkit_pvm import (
@@ -108,11 +108,10 @@ class RefineFunctions(INVF):
     ):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
-        if memory.is_accessible(address=p, length=z, Accessibility.READ): #TODO: need to change to readable only
-            from jam.incore.processor import Processor
-
-            x = Processor.zero_padding(
-                value=ByteArray(memory.read(address=p, length=z)), n=Uint(SEGMENT_SIZE)
+        if memory.is_accessible(address=p, length=z, for_write=True): #TODO: need to change to readable only
+            from jam.incore.utils import Utils
+            x = Utils.zero_padding(
+                value=ByteArray(memory.read(address=p, length=z)), n=SEGMENT_SIZE
             )
         else:
             print("Memory is not accessible for export. (address, size) = ", p, z)
@@ -144,7 +143,9 @@ class RefineFunctions(INVF):
         try:
             Program.decode_from(p)
             # TODO: Updating the commitment map, need to see how the dict is appended
-            context.m[n] = IntegratedPVM(program_code=p, memory=u, instruction_counter=i)
+            context.m[n] = IntegratedPVM(
+                program_code=p, memory=u, instruction_counter=i
+            )
             registers[7] = n
             return CONTINUE, gas, registers, memory, context
         except:

@@ -3,7 +3,7 @@ from typing import cast, TYPE_CHECKING
 from tsrkit_types import Bytes, TypedVector, Dictionary
 
 from jam.logging import get_logger
-from jam.network.base.quic import QuicProtocol
+from jam.network.connection import NodeConnection
 from jam.state.state import state
 from jam.types import HeaderHash
 
@@ -53,7 +53,6 @@ class StateRequest(NetworkProtocol):
 
         logger.info(
             "Transmitting state request to node",
-            node_name=node.name,
             header_hash=data.header,
             start=data.start,
             end=data.end,
@@ -67,33 +66,32 @@ class StateRequest(NetworkProtocol):
 
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
-                data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
+                data = await client.close_and_wait(
+                    message=stream_data, stream_id=stream_id
+                )
                 transmitted_count += 1
                 responses.append(data)
 
                 logger.debug(
-                    "State request transmitted to node",
-                    node_name=node.name,
-                    stream_id=stream_id,
+                    "State request transmitted to node", peer=peer, stream_id=stream_id
                 )
             except Exception as e:
                 responses.append(None)
                 logger.error(
                     "Failed to transmit state request",
-                    node_name=node.name,
+                    peer=peer,
                     error=str(e),
                     error_type=type(e).__name__,
                 )
 
         logger.info(
             "State request transmission completed",
-            node_name=node.name,
             transmitted_to=transmitted_count,
         )
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: QuicProtocol):
+    def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Work Package on Guarantor (server)"""
         from jam.settings import settings
 
@@ -101,7 +99,12 @@ class StateRequest(NetworkProtocol):
         buffer = server.stream_buffer[stream_id]
 
         try:
-            logger.debug("Received state request", stream_id=stream_id, buffer_size=len(buffer))
+            logger.debug(
+                "Received state request",
+                peer=server.peer,
+                stream_id=stream_id,
+                buffer_size=len(buffer),
+            )
 
             data, offset = CE129Data.decode_from(buffer)
             data = cast(CE129Data, data)
@@ -128,6 +131,7 @@ class StateRequest(NetworkProtocol):
 
             logger.debug(
                 "Start and End boundaries shared successfully",
+                peer=server.peer,
                 stream_id=stream_id,
                 len=len(boundaries_data),
             )
@@ -145,6 +149,7 @@ class StateRequest(NetworkProtocol):
             logger.info(
                 "State response complete. Closed stream",
                 stream_id=stream_id,
+                peer=server.peer,
                 size=len(key_val_data),
             )
 
@@ -152,13 +157,19 @@ class StateRequest(NetworkProtocol):
             logger.error(
                 "Error processing state request",
                 stream_id=stream_id,
+                peer=server.peer,
                 buffer_size=len(buffer),
                 error=str(e),
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: QuicProtocol):
+    def res_intercept(self, stream_id: int, client: NodeConnection):
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
 
-        logger.info("State request ack received", stream_id=stream_id, buffer_size=len(buffer))
+        logger.info(
+            "State request ack received",
+            stream_id=stream_id,
+            peer=client.peer,
+            buffer_size=len(buffer),
+        )

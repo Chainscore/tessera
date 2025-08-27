@@ -1,13 +1,18 @@
 import asyncio
 
 from py_ark_vrf import prove_ietf, vrf_output
+
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.operations.dispatcher import NodeDispatcher
 from jam.finality.finality import Finality
+
+from jam.state.ghost import GhostState
 from jam.state.transitions.safrole.safrole import Safrole
-from jam.types.protocol.core import TimeSlot
-from jam.types.protocol.crypto import Hash
-from jam.types.state.gamma import GammaS, GammaSFallback, GammaSTickets
+
+from jam.types.protocol.core import TimeSlot, ValidatorIndex
+from jam.types.protocol.ticket import TicketBody
+
+from jam.utils.benchmark import write_json
 from jam.utils.constants import (
     EPOCH_LENGTH,
     SLOT_PERIOD,
@@ -16,6 +21,9 @@ from jam.utils.constants import (
 )
 from jam.logging import get_logger
 from jam.utils.util_fns import outside_in
+from tests.unit.incore.types import BlockVector, FullVectors
+
+b_vector = BlockVector()
 
 # Logger for Block Production / Authoring module
 logger = get_logger("author")
@@ -47,44 +55,63 @@ class BlockProducer(NodeDispatcher):
         latest = Finality.load_latest(settings.main_db)
         if not latest:
             logger.error("Latest not found, node is not configrued", ts=time_slot)
-            return 
-        
-        # If we have already imported a block for this slot 
+            return
+
+        # If we have already imported a block for this slot
         if state.tau > TimeSlot(time_slot):
             return 
 
         slot_index = time_slot % EPOCH_LENGTH
-        entry = state.gamma.s.unwrap()[slot_index] 
-        ticket = None
+        entry = state.gamma.s.unwrap()[slot_index]
+
+        ticket: TicketBody | None = None
         if state.tau // EPOCH_LENGTH != time_slot // EPOCH_LENGTH:
-            if time_slot // EPOCH_LENGTH == (state.tau // EPOCH_LENGTH) + 1 and len(state.gamma.a) == EPOCH_LENGTH and slot_index >= TICKET_SUBMISSION_END:
+            if time_slot // EPOCH_LENGTH == (state.tau // EPOCH_LENGTH) + 1 and len(state.gamma.a) == EPOCH_LENGTH and slot_index == 0:
                 entry = outside_in(state.gamma.a)[slot_index]
             else:
                 entry = Safrole.arrange_fallback(state.eta[1], state.gamma.k).unwrap()[slot_index]
         
-        if isinstance(entry, TicketEnvelope):
+        if isinstance(entry, TicketBody):
             eta = state.eta[2] if time_slot % EPOCH_LENGTH == 0 else state.eta[3]
             our_id = vrf_output(
                 prove_ietf(
                     settings.bandersnatch_private,
-                    X.TICKET.value + eta.encode() + entry.attempt.encode(), b""
+                    X.TICKET.value + eta + entry.attempt.encode(), b""
                 )
             )
-            entry_id = vrf_output(entry.signature)
+            entry_id = entry.id
             if our_id != entry_id:
-                logger.debug("⏭ Skipping BP: Not our ticket", sig=entry.signature.hex(), our_id=our_id.hex(), entry_id=entry_id.hex())
+                logger.debug("⏭ Skipping BP: Not our ticket", sig=entry.id.hex(), our_id=our_id.hex(), entry_id=entry_id.hex())
                 return 
             else:
                 ticket = entry
         elif entry != settings.bandersnatch_public:
             logger.debug("⏭ Skipping BP: Not our fallback", expected=entry.hex(), our_key=settings.bandersnatch_public.hex())
-            return 
-            
+            return
+
         block = latest.produce(TimeSlot(time_slot), ticket)
 
-        if state.transition(block):
-            logger.info("⛏ Produced block", hash=block.header.hash().hex()[:16]+"...", slot=time_slot)
+        # TODO: Remove Vectorization
+        global b_vector
+
+        b_vector = BlockVector()
+
+        b_vector.pre_rho = state.rho
+        b_vector.block = block
+        b_vector.header_hash = block.header.hash()
+        b_vector.author = ValidatorIndex(settings.validator_index)
+
+        is_valid = state._force_transition(block)
+
+        b_vector.post_rho = state.rho
+        b_vector.new_root = state.root
+        # write_json("vectors/blocks", b_vector.to_json())
+
+        if is_valid:
+            if ticket:
+                logger.info("⛏ Produced block using ticket", hash=block.header.hash().hex()[:16] + "...", slot=time_slot)
+            else:
+                logger.info("⛏ Produced block", hash=block.header.hash().hex()[:16]+"...", slot=time_slot)
             asyncio.create_task(up0.transmit(BlockAnnouncement.block_to_announcement(block)))
         else:
-            logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block)
-
+            logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block.to_json())

@@ -1,5 +1,4 @@
 """Shard related types for the JAM protocol."""
-
 from typing import List, Tuple
 
 from tsrkit_types import Uint, Bytes, TypedVector, structure, Dictionary, TypedArray
@@ -14,7 +13,9 @@ ShardIndex = Uint[16]
 # SegmentShard = Bytes[SEGMENT_SIZE / chain_config.recovery_threshold] # Single Segment Shard 12 Bytes for full spec
 SegmentShard = Bytes  # Single Segment Shard
 SegmentsShard = TypedVector[SegmentShard]  # Vector of Segment Shard
-SegmentsShards = TypedVector[SegmentsShard]  # Vector of Vector of Segment Shard (Matrix)
+SegmentsShards = TypedVector[
+    SegmentsShard
+]  # Vector of Vector of Segment Shard (Matrix)
 
 # Segments Shard Root
 SegmentsShardRoot = OpaqueHash  # Root of SegmentsShard (Vector of Segment Shard)
@@ -22,7 +23,9 @@ SegmentsShardRoots = TypedVector[SegmentsShardRoot]
 
 
 # Segments Shards Storage Dictionaries
-class SegShardDict(Dictionary[SegmentIndex, SegmentShard, "seg_index", "segment_shard"]):
+class SegShardDict(
+    Dictionary[SegmentIndex, SegmentShard, "seg_index", "segment_shard"]
+):
     @property
     def shard(self) -> SegmentsShard:
         s = SegmentsShard([])
@@ -33,7 +36,9 @@ class SegShardDict(Dictionary[SegmentIndex, SegmentShard, "seg_index", "segment_
         return s
 
 
-class SegShardsDict(Dictionary[ShardIndex, SegShardDict, "shard_index", "seg_shard_dict"]):
+class SegShardsDict(
+    Dictionary[ShardIndex, SegShardDict, "shard_index", "seg_shard_dict"]
+):
     @property
     def shards(self) -> SegmentsShards:
         ss = SegmentsShards([])
@@ -59,7 +64,7 @@ class SegShardsDict(Dictionary[ShardIndex, SegShardDict, "shard_index", "seg_sha
 
     def get_shard_tuple(
         self, segment_index: SegmentIndex, sort=False
-    ) -> List[Tuple[ShardIndex, SegmentShard]]:
+    ) -> List[Tuple[SegmentShard, ShardIndex]]:
         """returns list for all the shards of a particular segment index as tuple"""
         s = []
 
@@ -71,7 +76,7 @@ class SegShardsDict(Dictionary[ShardIndex, SegShardDict, "shard_index", "seg_sha
                     f"Shard with Segment Index {shard_index} and Shard Index {segment_index} not present."
                 )
             seg_shard = shard[segment_index]
-            s.append((shard_index, seg_shard))
+            s.append((seg_shard, shard_index))
 
         return s
 
@@ -86,7 +91,9 @@ BundleShardHashes = TypedVector[BundleShardHash]
 
 
 # Bundle Shards Storage Dictionary
-class BundleShardsDict(Dictionary[ShardIndex, BundleShard, "shard_index", "bundle_shard"]):
+class BundleShardsDict(
+    Dictionary[ShardIndex, BundleShard, "shard_index", "bundle_shard"]
+):
     @property
     def shards(self) -> BundleShards:
         """returns sorted list for all the bundle shards"""
@@ -97,14 +104,14 @@ class BundleShardsDict(Dictionary[ShardIndex, BundleShard, "shard_index", "bundl
 
         return bs
 
-    def get_shard_tuple(self, sort=False) -> List[Tuple[ShardIndex, BundleShard]]:
+    def get_shard_tuple(self, sort=False) -> List[Tuple[BundleShard, ShardIndex]]:
         """returns list for all the bundle shards as tuple"""
         bs = []
 
         shard_dict = sorted(self) if sort else self
         for shard_index in shard_dict:
             shard = self[shard_index]
-            bs.append((shard_index, shard))
+            bs.append((shard, shard_index))
 
         return bs
 
