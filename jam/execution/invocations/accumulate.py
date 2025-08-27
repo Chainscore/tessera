@@ -38,7 +38,7 @@ class PsiA(InvocationProtocol):
         xs = self.context.x.s_index
         delta = self.context.x.partial_state.service_accounts
         return {
-            18: (
+            1: (
                 GeneralFunctions,
                 {  # fetch (Updates context[x]_hash)
                     "package": None,
@@ -53,50 +53,47 @@ class PsiA(InvocationProtocol):
                 },
             ),
             0: (GeneralFunctions, {}),  # gas (Returns the gas remaining)
-            1: (
-                GeneralFunctions,
-                {"service_data": delta[xs], "service_index": xs, "accounts": delta},
-            ),  # lookup
             2: (
                 GeneralFunctions,
                 {"service_data": delta[xs], "service_index": xs, "accounts": delta},
-            ),  # read
+            ),  # lookup
             3: (
+                GeneralFunctions,
+                {"service_data": delta[xs], "service_index": xs, "accounts": delta},
+            ),  # read
+            4: (
                 GeneralFunctions,
                 {"service_data": delta[xs], "service_index": xs},
             ),  # write
-            4: (GeneralFunctions, {"service_index": xs, "accounts": delta}),  # info
-            5: (AccumulateFunctions, {}),  # bless (Updates previlaged accounts)
-            6: (AccumulateFunctions, {}),  # assign (Updates authorizer_keys/Phi)
-            7: (AccumulateFunctions, {}),  # designate (Updates validator_keys/Iota)
-            8: (
-                AccumulateFunctions,
-                {},
-            ),  # checkpoint (Special function to update the context[y])
-            9: (AccumulateFunctions, {}),  # new (Updates the delta with a new service)
-            10: (AccumulateFunctions, {}),  # upgrade (Updates the service account)
-            11: (
+            5: (GeneralFunctions, {"service_index": xs, "accounts": delta}),  # info
+            14: (AccumulateFunctions, {}),  # bless (Updates previlaged accounts)
+            15: (AccumulateFunctions, {}),  # assign (Updates authorizer_keys/Phi)
+            16: (AccumulateFunctions, {}),  # designate (Updates validator_keys/Iota)
+            17: (AccumulateFunctions, {}),  # checkpoint (fn to update the context[y])
+            18: (AccumulateFunctions, {}),  # new (Updates the delta with a new service)
+            19: (AccumulateFunctions, {}),  # upgrade (Updates the service account)
+            20: (
                 AccumulateFunctions,
                 {},
             ),  # transfer (Updates service deferred transfers & balance)
-            12: (
+            21: (
                 AccumulateFunctions,
                 {"block_timeslot": self.timeslot},
             ),  # eject (Removal of service account)
-            13: (
+            22: (
                 AccumulateFunctions,
                 {},
             ),  # query (Updates registers[7,8] wrt AccountLookup)
-            14: (
+            23: (
                 AccumulateFunctions,
                 {"block_timeslot": self.timeslot},
             ),  # solicit (Updated the AccountLookup)
-            15: (
+            24: (
                 AccumulateFunctions,
                 {"block_timeslot": self.timeslot},
             ),  # forget (Updates lookupTimestamp & preimage)
-            16: (AccumulateFunctions, {}),  # yield_ (Updates context[x]_hash)
-            27: (AccumulateFunctions, {}),  # provide (Updates preimage)
+            25: (AccumulateFunctions, {}),  # yield_ (Updates context[x]_hash)
+            26: (AccumulateFunctions, {}),  # provide (Updates preimage)
             # TODO: Add core_index
             100: (
                 GeneralFunctions,
