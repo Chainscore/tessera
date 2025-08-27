@@ -39,6 +39,7 @@ class Hash:
     def sha512(data: bytes) -> Bytes[64]:
         """SHA512 hash function"""
         from hashlib import sha512
+
         if not isinstance(data, bytes):
             data = bytes(data)
         return Bytes[64](sha512(data).digest())
@@ -63,9 +64,25 @@ class Hash:
 
 
 # Hash types
-HeaderHash = Bytes[32]  # ByteArray32 equivalent
-StateRoot = Bytes[32]  # ByteArray32 equivalent
-BeefyRoot = Bytes[32]  # ByteArray32 equivalent
-OpaqueHash = Bytes[32]  # ByteArray32 equivalent
-Entropy = Bytes[32]  # ByteArray32 equivalent
-WorkReportHash = Bytes[32]  # ByteArray32 equivalent
+class HeaderHash(Bytes[32]):
+    ...
+
+
+class StateRoot(Bytes[32]):
+    ...
+
+
+class BeefyRoot(Bytes[32]):
+    ...
+
+
+class OpaqueHash(Bytes[32]):
+    ...
+
+
+class Entropy(Bytes[32]):
+    ...
+
+
+class WorkReportHash(Bytes[32]):
+    ...

@@ -4,25 +4,27 @@ from typing import Optional, List
 
 from tsrkit_types import U8, U16, U32
 
-from jam.config.logging import get_logger
-from jam.network.protocols.ce_145 import JudgmentPublication, Judgment, CE145Data, create_judgment, create_ce145_data
+from jam.logging import get_logger
+from jam.network.protocols.ce_145 import JudgmentPublication, Judgment, CE145Data
 from jam.types.protocol.crypto import Hash, Ed25519Signature, WorkReportHash
-from jam.types.protocol.core import ValidatorIndex, EpochIndex
+from jam.types.protocol.core import ValidatorIndex
 
 # Module-specific logger
 logger = get_logger("judgment")
+
 
 def create_dummy_signature() -> Ed25519Signature:
     """Create dummy Ed25519 signature for testing"""
     dummy_sig = b"dummy_judgment_signature_" + b"0" * 38  # Make it 64 bytes
     return Ed25519Signature(dummy_sig[:64])
 
+
 def create_dummy_judgment(
     epoch_index: int = None,
     validator_index: int = None,
     validity: bool = True,
     work_report_hash: WorkReportHash = None,
-    signature: Optional[Ed25519Signature] = None
+    signature: Optional[Ed25519Signature] = None,
 ) -> Judgment:
     """
     Create a dummy judgment for testing purposes.
@@ -58,7 +60,7 @@ def create_dummy_judgment(
         validator_index=validator_index,
         validity=validity,
         work_report_hash=work_report_hash,
-        signature=signature
+        signature=signature,
     )
 
     logger.debug(
@@ -66,10 +68,11 @@ def create_dummy_judgment(
         epoch_index=epoch_index,
         validator_index=validator_index,
         validity="valid" if validity else "invalid",
-        work_report_hash=work_report_hash.hex()[:16] + "..."
+        work_report_hash=work_report_hash.hex()[:16] + "...",
     )
 
     return judgment
+
 
 async def publish_judgment(node, judgment: Judgment):
     """
@@ -87,8 +90,7 @@ async def publish_judgment(node, judgment: Judgment):
 
     if not node.is_validator:
         logger.warning(
-            "Node is not a validator - cannot publish judgments",
-            node_name=node.name
+            "Node is not a validator - cannot publish judgments", node_name=node.name
         )
         return
 
@@ -98,7 +100,7 @@ async def publish_judgment(node, judgment: Judgment):
         epoch_index=int(judgment.epoch_index),
         validator_index=int(judgment.validator_index),
         validity="valid" if judgment.is_valid else "invalid",
-        work_report_hash=judgment.work_report_hash.hex()[:16] + "..."
+        work_report_hash=judgment.work_report_hash.hex()[:16] + "...",
     )
 
     # Create CE145Data
@@ -106,16 +108,17 @@ async def publish_judgment(node, judgment: Judgment):
 
     # Use CE145 protocol to transmit
     ce145 = JudgmentPublication()
-    responses = await ce145.transmit(node, ce145_data)
+    responses = await ce145.transmit(ce145_data)
 
     logger.info(
         "Judgment publication completed",
         node_name=node.name,
         epoch_index=int(judgment.epoch_index),
-        response_count=len(responses) if responses else 0
+        response_count=len(responses) if responses else 0,
     )
 
     return responses
+
 
 async def simulate_auditing_workflow(node):
     """
@@ -134,14 +137,11 @@ async def simulate_auditing_workflow(node):
     if not node.is_validator:
         logger.info(
             "Node is not a validator - skipping auditing simulation",
-            node_name=node.name
+            node_name=node.name,
         )
         return
 
-    logger.info(
-        "Starting auditing workflow simulation",
-        node_name=node.name
-    )
+    logger.info("Starting auditing workflow simulation", node_name=node.name)
 
     # Simulate current epoch
     current_epoch = int(time()) // 600  # New epoch every 10 minutes for demo
@@ -159,7 +159,7 @@ async def simulate_auditing_workflow(node):
         node_name=node.name,
         current_epoch=current_epoch,
         validator_index=validator_index,
-        work_report_count=len(work_reports)
+        work_report_count=len(work_reports),
     )
 
     # Process each work-report and create individual judgments
@@ -169,7 +169,7 @@ async def simulate_auditing_workflow(node):
             "Processing work-report for audit",
             node_name=node.name,
             work_report_number=i + 1,
-            work_report_hash=wr_hash.hex()[:16] + "..."
+            work_report_hash=wr_hash.hex()[:16] + "...",
         )
 
         # Create individual judgment
@@ -177,7 +177,7 @@ async def simulate_auditing_workflow(node):
             epoch_index=current_epoch,
             validator_index=validator_index,
             validity=True,  # Always valid for demo
-            work_report_hash=wr_hash
+            work_report_hash=wr_hash,
         )
         judgments.append(judgment)
 
@@ -191,8 +191,9 @@ async def simulate_auditing_workflow(node):
         "Auditing workflow simulation completed",
         node_name=node.name,
         total_judgments=len(judgments),
-        current_epoch=current_epoch
+        current_epoch=current_epoch,
     )
+
 
 async def judgment_producer(node):
     """
@@ -212,13 +213,13 @@ async def judgment_producer(node):
     logger.info(
         "Starting judgment producer",
         node_name=node.name,
-        is_validator=node.is_validator
+        is_validator=node.is_validator,
     )
 
     if not node.is_validator:
         logger.info(
             "Node is not a validator - judgment producer will not run",
-            node_name=node.name
+            node_name=node.name,
         )
         return
 
@@ -229,7 +230,7 @@ async def judgment_producer(node):
             logger.debug(
                 "Network not initialized - skipping judgment production",
                 node_name=node.name,
-                iteration=judgment_iter
+                iteration=judgment_iter,
             )
             await asyncio.sleep(10)
             continue
@@ -243,7 +244,7 @@ async def judgment_producer(node):
             node_name=node.name,
             iteration=judgment_iter,
             current_epoch=current_epoch,
-            validator_index=validator_index
+            validator_index=validator_index,
         )
 
         # Create a dummy work-report hash to judge
@@ -255,7 +256,7 @@ async def judgment_producer(node):
             node_name=node.name,
             iteration=judgment_iter,
             work_report_hash=work_report_hash.hex()[:16] + "...",
-            epoch_index=current_epoch
+            epoch_index=current_epoch,
         )
 
         # Create and publish individual judgment
@@ -263,7 +264,7 @@ async def judgment_producer(node):
             epoch_index=current_epoch,
             validator_index=validator_index,
             validity=True,  # Always valid for demo
-            work_report_hash=work_report_hash
+            work_report_hash=work_report_hash,
         )
 
         await publish_judgment(node, judgment)
@@ -272,7 +273,10 @@ async def judgment_producer(node):
         # Wait before next judgment (simulate realistic auditing intervals)
         await asyncio.sleep(30)  # 30 seconds between judgments
 
-def create_sample_judgments(node_name: str = "test_node", count: int = 5) -> List[Judgment]:
+
+def create_sample_judgments(
+    node_name: str = "test_node", count: int = 5
+) -> List[Judgment]:
     """Create a variety of sample judgments for testing."""
 
     judgments = []
@@ -291,7 +295,7 @@ def create_sample_judgments(node_name: str = "test_node", count: int = 5) -> Lis
             epoch_index=current_epoch,
             validator_index=validator_index,
             validity=validity,
-            work_report_hash=wr_hash
+            work_report_hash=wr_hash,
         )
         judgments.append(judgment)
 
@@ -301,10 +305,11 @@ def create_sample_judgments(node_name: str = "test_node", count: int = 5) -> Lis
         judgment_count=len(judgments),
         epoch_index=current_epoch,
         valid_count=sum(1 for j in judgments if j.is_valid),
-        invalid_count=sum(1 for j in judgments if j.is_invalid)
+        invalid_count=sum(1 for j in judgments if j.is_invalid),
     )
 
     return judgments
+
 
 async def test_judgment_publication(node):
     """
@@ -319,10 +324,7 @@ async def test_judgment_publication(node):
         logger.error("Invalid node type provided to test_judgment_publication")
         return
 
-    logger.info(
-        "Testing CE 145 judgment publication protocol",
-        node_name=node.name
-    )
+    logger.info("Testing CE 145 judgment publication protocol", node_name=node.name)
 
     # Create sample judgments
     sample_judgments = create_sample_judgments(node.name)
@@ -335,7 +337,7 @@ async def test_judgment_publication(node):
             test_number=i + 1,
             total_tests=len(sample_judgments),
             validity="valid" if judgment.is_valid else "invalid",
-            work_report_hash=judgment.work_report_hash.hex()[:16] + "..."
+            work_report_hash=judgment.work_report_hash.hex()[:16] + "...",
         )
 
         await publish_judgment(node, judgment)
@@ -344,8 +346,9 @@ async def test_judgment_publication(node):
     logger.info(
         "CE 145 judgment publication protocol testing completed",
         node_name=node.name,
-        total_tests=len(sample_judgments)
+        total_tests=len(sample_judgments),
     )
+
 
 async def simulate_negative_judgment_scenario(node):
     """
@@ -357,18 +360,17 @@ async def simulate_negative_judgment_scenario(node):
     from jam.network.node import Node
 
     if not isinstance(node, Node):
-        logger.error("Invalid node type provided to simulate_negative_judgment_scenario")
+        logger.error(
+            "Invalid node type provided to simulate_negative_judgment_scenario"
+        )
         return
 
-    logger.info(
-        "Simulating negative judgment scenario",
-        node_name=node.name
-    )
+    logger.info("Simulating negative judgment scenario", node_name=node.name)
 
     if not node.is_validator:
         logger.info(
             "Node is not a validator - skipping negative judgment simulation",
-            node_name=node.name
+            node_name=node.name,
         )
         return
 
@@ -387,14 +389,14 @@ async def simulate_negative_judgment_scenario(node):
             epoch_index=current_epoch,
             validator_index=validator_index,
             validity=False,  # Invalid judgment
-            work_report_hash=work_report_hash
+            work_report_hash=work_report_hash,
         )
         negative_scenarios.append(judgment)
 
     logger.info(
         "Created negative judgment scenarios",
         node_name=node.name,
-        scenario_count=len(negative_scenarios)
+        scenario_count=len(negative_scenarios),
     )
 
     # Publish negative judgments
@@ -403,16 +405,14 @@ async def simulate_negative_judgment_scenario(node):
             "Publishing negative judgment",
             node_name=node.name,
             scenario_number=i + 1,
-            work_report_hash=judgment.work_report_hash.hex()[:16] + "..."
+            work_report_hash=judgment.work_report_hash.hex()[:16] + "...",
         )
 
         await publish_judgment(node, judgment)
         await asyncio.sleep(5)  # Longer pause for negative judgments
 
-    logger.info(
-        "Negative judgment scenario simulation completed",
-        node_name=node.name
-    )
+    logger.info("Negative judgment scenario simulation completed", node_name=node.name)
+
 
 # Main function for standalone testing
 async def main():
@@ -426,8 +426,9 @@ async def main():
         "Judgment utility test completed",
         sample_count=len(sample_judgments),
         valid_count=sum(1 for j in sample_judgments if j.is_valid),
-        invalid_count=sum(1 for j in sample_judgments if j.is_invalid)
+        invalid_count=sum(1 for j in sample_judgments if j.is_invalid),
     )
+
 
 if __name__ == "__main__":
     asyncio.run(main())

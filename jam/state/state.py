@@ -1,20 +1,39 @@
+import asyncio
 import json
 from typing import Type
-from tsrkit_types import Dictionary
-from jam.config.data_stores import data_stores
-from jam.consensus.grandpa.finality import Finality
-from jam.merklization import BMRFunctions
+
+from jam.audit.audit_engine import AuditEngine
+from jam.error import JamError, JamErrorCode
+from jam.types.audit.tranche import TrancheIndex
+from jam.utils.merkle import BMRFunctions
 from rockstore import RockStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
-from jam.state.merkle import StateTrie
-from jam.state.state_storage import StateStorage
+from jam.utils.trie.merkle import StateTrie
+from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.itf.codable import Codable
-from jam.types import Block, Hash, Alpha, Eta, Omega, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Xi, Beta, Phi, Gamma, \
-    HeaderHash
-from jam.config.logging import get_logger
+from tsrkit_types import Bytes, Codable, Dictionary, TypedVector
+from jam.types import (
+    Hash,
+    Alpha,
+    Eta,
+    Omega,
+    Pi,
+    Psi,
+    Kappa,
+    Lambda_,
+    Rho,
+    Tau,
+    Chi,
+    Iota,
+    Xi,
+    Beta,
+    Phi,
+    Gamma,
+    HeaderHash,
+)
+from jam.block.block import Block
+from jam.logging import get_logger
 from jam.types.state.theta import Theta
 
 logger = get_logger("import")
@@ -29,15 +48,26 @@ def make_state_prop(state_key: int, cl: Type[Codable]):
     def fset(self, value):
         k, v = construct_state_key(state_key), value.encode()
         self.store.put(bytes(k), v)
-        logger.debug("State component updated", component=cl.__name__, state_key=state_key, value_size=len(v))
+        logger.debug(
+            "State component updated",
+            component=cl.__name__,
+            state_key=state_key,
+            value_size=len(v),
+        )
 
     return property(fget, fset)
+
 
 class State:
     """
     State implementation that uses dynamic components fetched from Db
     Here we retain and update merkle trie as cache
     """
+
+    # STF Lock, we can only process only Block at a time
+    _lock = False
+
+    # DB + Trie + Cache
     store: StateStorage
 
     # State Components
@@ -82,112 +112,212 @@ class State:
 
         return cls(StateStorage(trie, db, {}))
 
-    def load(self, header: HeaderHash) -> "State":
-        # 1. Load all caches from current head to mentioned header
-        kv = data_stores.main_db
-        curr_head = Finality.load_latest(kv).header.parent
-        _updates = {}
-        while curr_head != header:
-            data = kv.get(self.store.get_storage_key(curr_head))
-            if data is None:
-                raise ValueError("Updates missing for", curr_head)
-            _curr_updates = Dictionary[Bytes[31], Bytes].decode(data)
-            block = Block.load(curr_head, kv)
-            curr_head = block.header.parent
-
-            # 2. Join them one after another (overwriting) to get one cache record
-            for k, v in _curr_updates.items():
-                _updates[k] = v
-
-        return State(StateStorage(self.store._TRIE, self.store._DB, _updates))
-
     @property
     def root(self):
         return self.store._TRIE.root_hash
 
+    def revert(self, header_hash):
+        """
+        Revert the node to a previous header_hash
+
+        1. Collect all updates from latest -> header_hash
+        2. Apply these to Trie + DB
+        3. Clear cache
+        """
+        self.store._updates = self.store._load_updates(header_hash)
+        self.store.save_n_clear_cache()
+
+    @classmethod
+    def load(cls, header_hash=HeaderHash(Hash.blake2b(b"empty"))) -> "State":
+        """
+        Load a readable instance of state. Made for serving API data.
+        Create a cloned state (RO DB + Trie Clone w applied updates[do we really need trie?])
+
+        Args;
+            - `header_hash`: Loads state at point in time when this header was imported.
+            If this is not provided, we assume the request is just to have a readable instance of latest state
+        """
+        from jam.settings import settings
+
+        # Empty trie -I dont think we need past trie data anywhere
+        trie = StateTrie()
+        # Create a Read-Only instance
+        db = RockStore(settings._data_path + "/state", options={"read_only": True})
+        # Load past updates
+        cache = state.store._load_updates(header_hash)
+
+        return State(StateStorage(trie, db, cache))
+
     def settle(self, header_hash: HeaderHash):
         """Settles a set of state changes cached in store. Marks off the settlement with an unique header hash"""
-        self.store.save_n_clear_cache(data_stores.main_db, header_hash)
+        from jam.settings import settings
 
-    def transition(self, block: Block):
+        self.store.save_n_clear_cache(header_hash, settings.main_db)
+
+    def _force_transition(self, block: Block):
+        # 1. Push auth hash of every WR to self.alpha[0:1]
+
+        # TODO: We should remove this
+        # Comment these lines to turn off force transition
+        logger.warning("Force State Transition: ON")
+        alpha = self.alpha
+
+        for guarantee in block.extrinsic.guarantees:
+            report = guarantee.report
+            alpha[report.core_index][0] = report.authorizer_hash
+
+        self.alpha = alpha
+
+        return self.transition(block)
+
+    def transition(self, block: Block) -> bool:
         """
         Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
 
         Args:
             block: Incoming block
         """
-        from jam.accumulation.accumulation import Accumulation
-        from jam.report.reporting import Reporting
-        from jam.authorization.authorization import Authorization
-        from jam.recent_history.recent_history import RecentHistory
-        from jam.consensus.safrole.safrole import Safrole
-        from jam.assurances.assurances import Assurances
-        from jam.disputes.disputes import Disputes
-        from jam.preimages.preimages import Preimages
-        from jam.statistics.statistics import Statistics
+        if self._lock:
+            logger.error("Lock detected, skipping transition")
+            return False
 
-        header_hash = block.header.hash()
-        logger.info("Starting state transition on block", header_hash=header_hash.hex(), block_slot=int(block.header.slot), parent_hash= block.header.parent.hex()[:16] + "...", state_root= block.header.parent_state_root.hex()[:16] + "...", author_index=int(block.header.author_index))
+        self._lock = True
 
-        # TODO: Validate block headers
-        # Epoch markers - make sure eta0_1 are the same as current etas
-        # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
-        # Offenders mark - make sure offenders are present in psi.offenders
-
-
-        # Handle Parent's Block Posterior State Root (β† h)
-        beta: Beta = self.beta
-        if len(beta.h):
-            beta.h[-1].state_root = block.header.parent_state_root
-        self.beta = beta
-
-        # Disputes
-        logger.debug("Processing disputes...")
-        Disputes.transition(self, block)
-
-        # Reporting
-        logger.debug("Processing reporting...")
-        Reporting.transition(self, block, [])
-
-        # Assurances
-        logger.debug("Processing assurances...")
-        _, newly_avail_wrs = Assurances.transition(self, block)
-
-        # Accumulation
-        logger.debug("Processing accumulation...", newly_available_count=len(newly_avail_wrs))
-        Accumulation.transition(self, block, newly_avail_wrs=newly_avail_wrs)
-
-        # Authorization
-        logger.debug("Processing authorization...")
-        Authorization.transition(self, block)
-
-        # Recent History
-        logger.debug("Processing recent history...", commitment_count=len(self.theta))
-        RecentHistory.transition(self, block)
-
-        # Preimages
-        logger.debug("Processing preimages...")
-        Preimages.transition(self, block)
-
-        # Statistics
-        logger.debug("Processing statistics...")
-        Statistics.transition(self, block, newly_avail_wrs)
-
-        # Safrole
-        logger.debug("Processing safrole...")
-        vrf_output = Safrole.vrf_output(block.header.entropy_source)
-        Safrole.transition(self, block, vrf_output)
-
-        state.settle(header_hash)
-        
-        logger.info(
-            "Block imported successfully",
-            timeslot=self.tau,
-            final_state_root=self.root.hex()[:16] + "..."
+        from jam.state.transitions import (
+            Accumulation,
+            Reporting,
+            Authorization,
+            RecentHistory,
+            Safrole,
+            Assurances,
+            Disputes,
+            Preimages,
+            Statistics,
         )
+        from jam.settings import settings as _set
+        from jam.finality.finality import Finality
 
+        try:
+            header_hash = HeaderHash(block.header.hash())
+            logger.debug(
+                "Starting state transition on block",
+                header_hash=header_hash.hex(),
+                block_slot=int(block.header.slot),
+                parent_hash=block.header.parent.hex()[:16] + "...",
+                state_root=block.header.parent_state_root.hex()[:16] + "...",
+                author_index=int(block.header.author_index),
+                preimages=len(block.extrinsic.preimages),
+                wrs=len(block.extrinsic.guarantees),
+                assurances=len(block.extrinsic.assurances),
+            )
+
+            # TODO: Validate block headers
+            # Epoch markers - make sure eta0_1 are the same as current etas
+            # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
+            # Offenders mark - make sure offenders are present in psi.offenders
+            if block.header.slot == 0:
+                logger.debug("Found genesis block, skipping", hh=header_hash.hex())
+                self._lock = False
+                return False
+
+            if _set.main_db.get(Block.get_storage_key_block(header_hash)) is not None:
+                logger.debug("Duplicate block found, skipping", hh=header_hash.hex())
+                self._lock = False
+                return False
+
+            pre_state = self.load()
+
+            # Handle Parent's Block Posterior State Root (β† h)
+            beta: Beta = self.beta
+            if len(beta.h):
+                beta.h[-1].state_root = block.header.parent_state_root
+            self.beta = beta
+
+            # Disputes
+            Disputes.transition(pre_state, self, block)
+
+            # Assurances
+            _, newly_avail_wrs = Assurances.transition(self, block)
+            if len(newly_avail_wrs) > 0:
+                logger.info(
+                    "Newly available WRs",
+                    count=len(newly_avail_wrs),
+                    wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
+                )
+
+            # Reporting
+            Reporting.transition(pre_state, self, block, [])
+
+            # Accumulation
+            _, commitment_map = Accumulation.transition(
+                pre_state, self, block, newly_avail_wrs=newly_avail_wrs
+            )
+
+            # Authorization
+            Authorization.transition(pre_state, self, block)
+
+            # Recent History
+            RecentHistory.transition(pre_state, self, block)
+
+            # Preimages
+            Preimages.transition(pre_state, self, block)
+
+            # Statistics
+            Statistics.transition(pre_state, self, block, newly_avail_wrs)
+
+            # Safrole
+            vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
+            Safrole.transition(pre_state, self, block, vrf_output)
+
+            if block.validate():
+                state.settle(header_hash)
+
+                # Set local chain head to produced block
+                block.save(_set.main_db)
+                Finality.set_head(header_hash, _set.main_db)
+                logger.info(
+                    "Block imported!",
+                    new_wrs=newly_avail_wrs,
+                    header=header_hash.hex()[:16] + "...",
+                    timeslot=self.tau,
+                    final_state_root=self.root.hex()[:16] + "...",
+                )
+
+
+                from jam.operations.handlers.assurer import assurer
+                for ext in block.extrinsic.guarantees:
+                    logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                    asyncio.create_task(assurer._req_shard(ext))
+
+                # TODO: Test Auditing & Refining with PJ
+                # # Start Auditing for new block received
+                # audit_engine = AuditEngine()
+                # asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
+
+                # TODO: Remove Direct Finality
+                # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
+                Finality.finalise(header_hash, _set.main_db, True)
+
+                block.extrinsic.clear_from_stores()
+
+                self._lock = False
+                return True
+            else:
+                raise JamError(JamErrorCode.INVALID_BLOCK)
+
+        except JamError as jam_e:
+            logger.error(
+                "Invalid block", error=jam_e,
+                hh=block.header.hash().hex(),
+                slot=block.header.slot,
+            )
+            self.store.clear()
+        self._lock = False
+
+        return False
 
 state = State(None)
+
 
 def set_state(new_state: State):
     global state
@@ -197,11 +327,12 @@ def set_state(new_state: State):
     state = new_state
     return state
 
-def setup_state(db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"):
+
+def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"):
     logger.info(
         "Setting up state from genesis",
         genesis_type=type(genesis).__name__,
-        genesis_source=genesis if isinstance(genesis, str) else "GhostState"
+        genesis_source=genesis if isinstance(genesis, str) else "GhostState",
     )
 
     if isinstance(genesis, str):
@@ -213,11 +344,15 @@ def setup_state(db: RockStore, genesis: GhostState | str | dict = "dev-spec.json
     else:
         data = genesis
 
-    new_state = State.from_keyvals(data, db)
+    new_state = State.from_keyvals(data, state_db)
     new_state.store.enable_writes()
     new_state.store.enable_cache()
 
-    logger.info("State setup completed", state_root=new_state.root.hex()[:16] + "...", data_entries=len(data))
+    logger.info(
+        "State setup completed",
+        state_root=new_state.root.hex()[:16] + "...",
+        data_entries=len(data),
+    )
 
     global state
     state = new_state

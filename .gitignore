@@ -1,3 +1,5 @@
+.hypothesis
+
 # Python
 __pycache__/
 */__pycache__/
@@ -20,6 +22,8 @@ lib/
 lib64/
 venv/
 
+dist-obf/
+
 # Poetry
 poetry.lock
 
@@ -36,6 +40,7 @@ data/d3l
 data/audit
 
 benchmarks/
+vectors/
 
 *.log
 .coverage
@@ -57,6 +62,10 @@ azure_logs/
 
 mydb/
 db/
+god_mode/
+
+# Ignore all sdk tests fro now
+tests/sdk
 
 # Ignore all folders in /seeds, but not the keys.json
 /seeds/*
@@ -70,3 +79,6 @@ logs/
 
 # Ignore Packets
 packets/
+
+# Ignore polkajam binary
+polkajam

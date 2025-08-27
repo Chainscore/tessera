@@ -15,7 +15,6 @@ from jam.types.protocol.core import (
     RemainingGas,
 )
 
-from jam.types.protocol.epoch import EpochMark
 
 from jam.types.protocol.validators import (
     ValidatorMetadata,
@@ -43,7 +42,6 @@ from jam.types.protocol.crypto import (
 
 from jam.types.protocol.merkle import MMR, OptionHash
 
-from .ticket import TicketId, TicketAttempt, TicketBody, TicketsMark
 
 __all__ = [
     # Core types
@@ -61,8 +59,6 @@ __all__ = [
     "Register",
     "ProgramCounter",
     "RemainingGas",
-    # Epoch types
-    "EpochMark",
     # Validator types
     "ValidatorMetadata",
     "ValidatorData",

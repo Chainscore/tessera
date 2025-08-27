@@ -3,9 +3,10 @@ from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 from jam.types.protocol.crypto import HeaderHash, StateRoot, BeefyRoot
-from jam.merklization.mountain_merkle import MMR
+from jam.types.protocol.merkle import MMR
 
-ReportedDictionary = Dictionary[Bytes[32], Bytes[32], "hash", "exports_root"]
+class ReportedDictionary(Dictionary[Bytes[32], Bytes[32], "hash", "exports_root"]):
+    ...
 
 @structure
 class BlockHistory:
@@ -21,6 +22,7 @@ class BetaHistory(TypedVector[BlockHistory]):
 
 BeefyBelt = MMR
 
+# State key: 3
 @structure
 class Beta:
     h: BetaHistory

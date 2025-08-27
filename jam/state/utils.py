@@ -4,9 +4,7 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U8, U32, Uint
 
 
-def construct_state_key(
-    input: Union[U8, Tuple[U32, Bytes], Tuple[U8, U32]]
-) -> Bytes:
+def construct_state_key(input: Union[U8, Tuple[U32, Bytes], Tuple[U8, U32]]) -> Bytes:
     """
     State key constructor function C as defined in Appendix D.
     Maps inputs to a 31-byte hash according to three cases:
@@ -33,7 +31,7 @@ def construct_state_key(
         elif isinstance(input[0], (U32, int)) and isinstance(input[1], (Bytes, bytes)):
             # Case 3: (ServiceId, Bytes[0:27])
             service_id, hash_bytes = input
-            service_id_encoded = service_id.encode()
+            service_id_encoded = Uint[32](service_id).encode()
             seq_pointer = 0
             h_pointer = 0
             while seq_pointer < 31:

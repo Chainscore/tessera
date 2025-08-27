@@ -12,4 +12,7 @@ class ReadyWR:
 
 AllReadyWRs = TypedVector[ReadyWR]
 
-Omega = TypedArray[AllReadyWRs, EPOCH_LENGTH]
+
+# State key: 14
+class Omega(TypedArray[AllReadyWRs, EPOCH_LENGTH]):
+    ...

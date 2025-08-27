@@ -5,20 +5,20 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.types.protocol.core import CoreIndex, Gas, TimeSlot
+from jam.types.protocol.core import CoreIndex, Gas
 from jam.types.protocol.crypto import (
     OpaqueHash,
-    WorkReportHash,
+    WorkReportHash, Hash
 )
 from jam.types.work.execution import WorkDigests, RefineContext
 from jam.types.work.package import WorkPackageSpec
 from jam.types.work.manifest import SegmentRootLookup
 
 
-
 @structure
 class WorkReport:
     """Work report structure."""
+
     # s
     package_spec: WorkPackageSpec
     # x
@@ -35,6 +35,9 @@ class WorkReport:
     digests: WorkDigests
     # g
     auth_gas_used: Uint
+
+    def hash(self) -> WorkReportHash:
+        return WorkReportHash(Hash.blake2b(self.encode()))
 
     @classmethod
     def empty(cls, **overrides) -> "WorkReport":
