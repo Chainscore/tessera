@@ -214,7 +214,7 @@ class Processor:
             extrinsic_size=extrinsic_size,
         )
 
-        result = WorkDigest(
+        digest = WorkDigest(
             service_id=item.service,
             code_hash=item.code_hash,
             payload_hash=payload_hash,
@@ -222,7 +222,7 @@ class Processor:
             result=result,
             refine_load=refine_load,
         )
-        return result
+        return digest
 
     def build_report(
         self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup, store: bool = True
@@ -259,7 +259,7 @@ class Processor:
                 Function I defined in Eqn 14.12
                 Performs Ordered Accumulation of work items in a package p
 
-                https://graypaper.fluffylabs.dev/#/cc517d7/1b3f011b8d01?v=0.6.5
+                https://graypaper.fluffylabs.dev/#/38c4e62/1b92031b9203?v=0.7.0
                 """
 
                 nonlocal s_result
@@ -290,8 +290,8 @@ class Processor:
                     s_result += len(r.unwrap())
                     return r, u, e
 
-            # Work Results, r
-            r_list = WorkResults([])
+            # Work Digests, r
+            r_list = WorkDigests([])
 
             # Exported Segments
             e_list = MultiSegments([])
