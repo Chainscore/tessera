@@ -34,26 +34,35 @@ At = Balance
 class AccountMetadata:
     code_hash: ServiceCodeHash  # code_hash
     balance: Balance  # balance
+    gratis_offset: Balance
     gas_limit: Gas = field(metadata={"name": "min_item_gas"})
     min_gas: Gas = field(metadata={"name": "min_memo_gas"})
+    created_at: TimeSlot
+    accumulated_at: TimeSlot
+    parent_service: ServiceId
     num_o: Ao = field(metadata={"name": "bytes"})
     num_i: Ai = field(metadata={"name": "items"})
 
     @property
     def t(self):
-        return Balance(
+        return max(Balance(0), Balance(
             BASIC_MINIMUM_BALANCE
             + ADDITIONAL_BALANCE_PER_ITEM * self.num_i
             + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
-        )
+            - self.gratis_offset
+        ))
 
     @staticmethod
     def empty() -> "AccountMetadata":
         return AccountMetadata(
             code_hash=Bytes[32](32),
             balance=Balance(0),
+            gratis_offset=Balance(0),
             gas_limit=Gas(0),
             min_gas=Gas(0),
+            created_at=TimeSlot(0),
+            accumulated_at=TimeSlot(0),
+            parent_service=ServiceId(1),
             num_i=Ai(0),
             num_o=Ao(0),
         )
@@ -71,7 +80,8 @@ class AccountStorage(Dictionary[Bytes[32], Bytes, "key", "value"]):
             # original_num_o = self._meta.num_o
             if is_new:
                 self._meta.num_i = self._meta.num_i + 1
-                self._meta.num_o = self._meta.num_o + len(value) + 32
+                self._meta.num_o = self._meta.num_o + len(value) + 34 + len(key)
+                # self._meta.num_o = self._meta.num_o + len(value) + 32
             else:
                 self._meta.num_o = self._meta.num_o + len(value) - len(self[key])
 
@@ -85,7 +95,8 @@ class AccountStorage(Dictionary[Bytes[32], Bytes, "key", "value"]):
         exists = key in self
         if exists:
             self._meta.num_i = self._meta.num_i - 1
-            self._meta.num_o = self._meta.num_o - len(self[key]) - 32
+            self._meta.num_o = self._meta.num_o - len(self[key]) - 34 - len(key)
+            # self._meta.num_o = self._meta.num_o - len(self[key]) - 32
         super().__delitem__(key)
 
 

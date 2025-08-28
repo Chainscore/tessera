@@ -1,4 +1,5 @@
 """Work report types for the JAM protocol."""
+from dataclasses import field
 
 from tsrkit_types.integers import Uint
 from tsrkit_types.bytes import Bytes
@@ -34,7 +35,7 @@ class WorkReport:
     # bold l
     segment_root_lookup: SegmentRootLookup
     # bold d
-    digests: WorkDigests
+    digests: WorkDigests = field(metadata={"name": "results"})
 
     def hash(self) -> WorkReportHash:
         return WorkReportHash(Hash.blake2b(self.encode()))
