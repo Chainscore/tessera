@@ -125,7 +125,7 @@ MAX_AUTH_CODE_SIZE = 64_000
 W_A = MAX_AUTH_CODE_SIZE
 
 # W_B — Max encoded size of a work-package (extrinsics + imports), in octets.
-MAX_ENCODED_WORK_PACKAGE_SIZE = 12 * (2**20)  # 12 * 2^20 octets
+MAX_ENCODED_WORK_PACKAGE_SIZE = 13_794_305
 W_B = MAX_ENCODED_WORK_PACKAGE_SIZE
 
 # W_C — Max size of service code, in octets.
