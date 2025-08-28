@@ -1,4 +1,5 @@
 import asyncio
+from keyword import kwlist
 from typing import Tuple
 from jam.api.rpc.broker import broker
 from jam.execution.utils import decode_code_hash
@@ -59,15 +60,20 @@ class AccountDataView:
     gas_limit = make_account_prop("gas_limit")  # min_item_gas
     min_gas = make_account_prop("min_gas")  # min_memo_gas
     num_o = make_account_prop("num_o")
+    gratis_offset = make_account_prop("gratis_offset")
     num_i = make_account_prop("num_i")
+    created_at = make_account_prop("created_at")
+    accumulated_at = make_account_prop("accumulated_at")
+    parent_service = make_account_prop("parent_service")
 
     @property
     def t(self):
-        return Balance(
+        return max(Balance(0), Balance(
             BASIC_MINIMUM_BALANCE
             + ADDITIONAL_BALANCE_PER_ITEM * self.num_i
             + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
-        )
+            - self.gratis_offset
+        ))
 
 
 class Account:
@@ -77,11 +83,12 @@ class Account:
 
     @property
     def t(self):
-        return Balance(
+        return max(Balance(0), Balance(
             BASIC_MINIMUM_BALANCE
             + ADDITIONAL_BALANCE_PER_ITEM * self.service.num_i
             + ADDITIONAL_BALANCE_PER_OCTET * self.service.num_o
-        )
+            - self.service.gratis_offset
+        ))
 
     @property
     def service(self):
@@ -173,23 +180,26 @@ class StorageView:
         self.id = id
         self.store = store
 
-    def __getitem__(self, key: Bytes[32]):
-        data = self.store.get(bytes(construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23])))) 
+    def __getitem__(self, key: Bytes):
+        data = self.store.get(self.get_key(key))
         return Bytes(data) if data else data
 
     def get(self, key):
         return self.__getitem__(key)
 
-    def __setitem__(self, key: Bytes[32], value: Bytes):
+    def get_key(self, key: Bytes):
+        return bytes(construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key)))
+
+    def __setitem__(self, key: Bytes, value: Bytes):
         # TODO - check for gas before adding, throw error if insufficient. This is supposed to be handled in relevent invocation
-        key = construct_state_key((self.id, Bytes(U32(2**32 - 1).encode()) + key[0:23]))
+        key = self.get_key(key)
         curr_data = self.store.get(bytes(key))
         meta_view = AccountDataView(self.id, self.store)
         if curr_data is None:
             meta_view.num_i = meta_view.num_i + 1
-            meta_view.num_o = meta_view.num_o + len(value) + 32
+            meta_view.num_o = meta_view.num_o + len(value) + 34 + len(key)
         else:
-            meta_view.num_o =meta_view.num_o + len(value) - len(curr_data)
+            meta_view.num_o = meta_view.num_o + len(value) - len(curr_data)
             #websocket broadcast for service value
 
         self.store.put(key, value)
@@ -197,17 +207,17 @@ class StorageView:
         # Publishes updates of the service value. On every setitem, the value is broadcasted to all subscribers
         asyncio.create_task(broker.publish("subscribeServiceValue", list(value.hex())))
 
-    def __delitem__(self, key: Bytes[32]):
+    def __delitem__(self, key: Bytes):
         curr_value = self[key]
         if curr_value:
             meta_view = AccountDataView(self.id, self.store)
             meta_view.num_i = meta_view.num_i - 1
-            meta_view.num_o = meta_view.num_o - len(curr_value) - 32
+            meta_view.num_o = meta_view.num_o - len(curr_value) - 34 - len(key)
 
         # Publishes updates of the service value. On every delitem, the value is broadcasted to all subscribers
         asyncio.create_task(broker.publish("subscribeServiceValue", list(curr_value)))
     
-        storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 1).encode()) + key[0:23]))
+        storage_key = self.get_key(key)
         self.store.delete(storage_key)
 
 
@@ -217,24 +227,24 @@ class PreImageView:
         self.store = store
 
     def __getitem__(self, key: Bytes[32]):
-        data = Bytes(U32(2**32 - 2).encode() + bytes(key)[1:24])
-        data = self.store.get(construct_state_key((self.id, data)))
+        data = self.store.get(self.get_key(key))
         return Bytes(data) if data else data
 
     def get(self, key):
         return self.__getitem__(key)
 
+    def get_key(self, key: Bytes):
+        return bytes(construct_state_key((self.id, Bytes(U32(2**32 - 2).encode()) + key)))
+
     def __setitem__(self, key: Bytes[32], value: Bytes):
-        k = construct_state_key((self.id, Bytes(U32(2**32 - 2).encode()) + key[1:24]))
+        k = self.get_key(key)
         self.store.put(k, value)
 
         # Publishes updates of the service preimage. On every setitem, the value is broadcasted to all subscribers
         asyncio.create_task(broker.publish("subscribeServicePreimage", list(value)))
 
-
-
     def __delitem__(self, key: Bytes[32]):
-        storage_key = construct_state_key((self.id, Bytes(U32(2 ** 32 - 2).encode()) + key[1:24]))
+        storage_key = self.get_key(key)
 
         # Publishes updates of the service preimage. On every delitem, the value is broadcasted to all subscribers
         asyncio.create_task(broker.publish("subscribeServicePreimage", list(storage_key)))
@@ -248,25 +258,18 @@ class TimestampsView:
         self.store = store
 
     def __getitem__(self, key: LookupTable):
-        storage_key = construct_state_key(
-            (
-                self.id,
-                Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25],
-            )
-        )
+        storage_key = self.get_key(key)
         data = self.store.get(storage_key)
         return Timestamps.decode(data) if data else data
 
     def get(self, key):
         return self.__getitem__(key)
 
+    def get_key(self, key: LookupTable):
+        return bytes(construct_state_key((self.id, Bytes(U32(key.length).encode()) + Bytes(key.encode()))))
+
     def __setitem__(self, key: LookupTable, value: Timestamps):
-        storage_key = construct_state_key(
-            (
-                self.id,
-                Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25],
-            )
-        )
+        storage_key = self.get_key(key)
         v = value.encode()
 
         curr_data = self.store.get(storage_key)
@@ -282,12 +285,7 @@ class TimestampsView:
         self.store.put(storage_key, v)
 
     def __delitem__(self, key: LookupTable):
-        storage_key = construct_state_key(
-            (
-                self.id,
-                Bytes(U32(key.length).encode()) + Hash.blake2b(bytes(key.hash))[2:25],
-            )
-        )
+        storage_key = self.get_key(key)
         curr_data = self.store.get(storage_key)
         if curr_data is not None:
             meta_view = AccountDataView(self.id, self.store)

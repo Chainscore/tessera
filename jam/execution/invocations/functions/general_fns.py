@@ -360,7 +360,7 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
 
         value: None | Bytes = None
-        key = Hash.blake2b(s_star.encode() + memory.read(key_start, key_len))
+        key = memory.read(key_start, key_len)
 
         if a is not None:
             # Directly get data, returns None if not found
@@ -428,7 +428,7 @@ class GeneralFunctions(INVF):
         from jam.state.state import state
 
         state.store.save_n_clear_cache()
-        k = Hash.blake2b(service_index.encode() + memory.read(ko, kz))
+        k = memory.read(ko, kz)
         a = service_data.storage
         # origin_account_storage = copy.deepcopy(a)
 

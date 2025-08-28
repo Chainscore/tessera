@@ -32,16 +32,16 @@ At = Balance
 
 @structure
 class AccountMetadata:
-    code_hash: ServiceCodeHash  # code_hash
-    balance: Balance  # balance
-    gratis_offset: Balance
-    gas_limit: Gas = field(metadata={"name": "min_item_gas"})
-    min_gas: Gas = field(metadata={"name": "min_memo_gas"})
-    created_at: TimeSlot
-    accumulated_at: TimeSlot
-    parent_service: ServiceId
-    num_o: Ao = field(metadata={"name": "bytes"})
-    num_i: Ai = field(metadata={"name": "items"})
+    code_hash: ServiceCodeHash  # code_hash, c
+    balance: Balance  # balance, b
+    gas_limit: Gas = field(metadata={"name": "min_item_gas"}) # g
+    min_gas: Gas = field(metadata={"name": "min_memo_gas"}) # m
+    num_o: Ao = field(metadata={"name": "bytes"}) # o
+    gratis_offset: Balance # f
+    num_i: Ai = field(metadata={"name": "items"}) # i
+    created_at: TimeSlot # r
+    accumulated_at: TimeSlot # a
+    parent_service: ServiceId # p
 
     @property
     def t(self):
@@ -68,7 +68,7 @@ class AccountMetadata:
         )
 
 
-class AccountStorage(Dictionary[Bytes[32], Bytes, "key", "value"]):
+class AccountStorage(Dictionary[Bytes, Bytes, "key", "value"]):
     """Storage dictionary"""
 
     _meta: AccountMetadata

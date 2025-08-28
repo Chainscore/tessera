@@ -1,4 +1,6 @@
 from typing import Tuple, Union
+
+from jam.types import Hash
 from jam.types.protocol.core import ServiceId
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U8, U32, Uint
@@ -30,7 +32,8 @@ def construct_state_key(input: Union[U8, Tuple[U32, Bytes], Tuple[U8, U32]]) -> 
 
         elif isinstance(input[0], (U32, int)) and isinstance(input[1], (Bytes, bytes)):
             # Case 3: (ServiceId, Bytes[0:27])
-            service_id, hash_bytes = input
+            service_id, key = input
+            hash_bytes = Hash.blake2b(key)
             service_id_encoded = Uint[32](service_id).encode()
             seq_pointer = 0
             h_pointer = 0
