@@ -63,7 +63,7 @@ class Reporting:
         for guarantee in block.extrinsic.guarantees:
             report = guarantee.report
             # -------- Too Many Dependencies ---------
-            # As defined in - https://graypaper.fluffylabs.dev/#/85129da/13ab0013b600?v=0.6.3
+            # As defined in - https://graypaper.fluffylabs.dev/#/38c4e62/137b02137b02?v=0.7.0
             segment_root = len(report.segment_root_lookup)
             prerequisite = len(report.context.prerequisites)
             if (segment_root + prerequisite) > MAX_DEPENDENCIES:
@@ -91,12 +91,12 @@ class Reporting:
                 )
 
             # --------- If the guarantee has enough signatures ------------
-            # https://graypaper.fluffylabs.dev/#/85129da/147002149002?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/150c01152601?v=0.7.0
             credential_len = len(guarantee.signatures)
             if credential_len < 2:
                 raise ReportingError(
                     ReportingErrorCode.INSUFFICIENT_GUARANTEE,
-                    "Work report doesn't has enough validator",
+                    "Work report doesn't has enough validator guarantees",
                 )
 
             # -------- If the validator index is valid ------------
@@ -109,7 +109,7 @@ class Reporting:
 
             # --------- Guarantees must be sorted ---------
             # 11.25
-            # https://graypaper.fluffylabs.dev/#/85129da/14b80214df02?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/155c01155c01?v=0.7.0
             for j in range(len(guarantee.signatures) - 1):
                 if (
                     guarantee.signatures[j].validator_index
@@ -121,7 +121,7 @@ class Reporting:
                     )
 
             # --------- not-authorized -----------------
-            # https://graypaper.fluffylabs.dev/#/85129da/15ea0015f700?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/157602158602?v=0.7.0
             # Ensure authorizer hash is present in core's Authorizer Pool
             if report.authorizer_hash not in state.alpha[int(report.core_index)]:
                 raise ReportingError(
@@ -145,13 +145,13 @@ class Reporting:
                     )
 
             # --------------- duplicated_package_in_recent_history ----------------------------
-            # https://graypaper.fluffylabs.dev/#/85129da/157a0115c901?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/154a03158303?v=0.7.0
             wp_hash_set.add(report.package_spec.hash)
             all_reports.append(report)
 
         # ------------- out_of_order_guarantee ---------------------
         # 11.23
-        # https://graypaper.fluffylabs.dev/#/85129da/146802146902?v=0.6.3
+        # https://graypaper.fluffylabs.dev/#/38c4e62/15fb00152801?v=0.7.0
         guarantee_length = len(block.extrinsic.guarantees)
         if guarantee_length > 1:
             for i in range(len(block.extrinsic.guarantees) - 1):
@@ -167,7 +167,7 @@ class Reporting:
         recent_exports_roots = {}
         beta_wp_hashes = []
 
-        for x in state.beta:
+        for x in state.beta.h:
             for wp_hash in x.reported:
                 beta_wp_hashes.append(wp_hash)
             recent_exports_roots.update(x.reported)
@@ -184,7 +184,7 @@ class Reporting:
             for pending_wr in state.rho
         ]
         for p in wp_hash_set:
-            # Ensure this WP is not previously executed - checking Beta, Nu, Rho, Xi
+            # Ensure this WP is not previously executed - checking Beta, Omega, Rho, Xi
             # 11.38
             if p in beta_wp_hashes or p in known_packages or p in rho_package_hashes:
                 logger.error(
@@ -209,11 +209,9 @@ class Reporting:
             context = report.context
 
             found_anchor = False
-            for recent_block in state.beta:
+            for recent_block in state.beta.h:
                 if recent_block.header_hash == context.anchor:
-                    if context.beefy_root != MMRFunctions().super_peak(
-                        recent_block.mmr
-                    ):
+                    if context.beefy_root != recent_block.beefy_root:
                         raise ReportingError(ReportingErrorCode.BAD_BEEFY_MMR_ROOT)
                     if recent_block.state_root != context.state_root:
                         raise ReportingError(ReportingErrorCode.BAD_STATE_ROOT, f"")
@@ -234,7 +232,7 @@ class Reporting:
 
             # --------------- segment_root_lookup_invalid -------------------
             # 11.40
-            # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/158d03159003?v=0.7.0
             for lookup, exports_root in report.segment_root_lookup.items():
                 if (
                     lookup not in recent_exports_roots
@@ -246,7 +244,7 @@ class Reporting:
                     )
 
             # --------------- dependency_missing -------------------
-            # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/158d03159003?v=0.7.0
             # Eq 11.39
             all_prerequisites = [
                 *report.segment_root_lookup.keys(),
@@ -263,15 +261,8 @@ class Reporting:
                         "prerequisite's hash should match the package_specification's hash of any of the reports",
                     )
 
-        # for i in state.beta:
-        #     if any(key in hashes for key in i.packages.keys()):
-        #         raise ReportingError(
-        #             ReportingErrorCode.DUPLICATE_PACKAGE,
-        #             "Work package is already executed in recent-block's history"
-        #         )
-
         # --------------------------duplicated_package_in_reports----------------------------
-        # https://graypaper.fluffylabs.dev/#/85129da/151e01152501?v=0.6.3
+        # https://graypaper.fluffylabs.dev/#/38c4e62/15bd0215ce02?v=0.7.0
         if len(block.extrinsic.guarantees) > 1:
             for x in range(len(block.extrinsic.guarantees)):
                 for y in range(x + 1, len(block.extrinsic.guarantees)):
@@ -337,7 +328,7 @@ class Reporting:
         """
         Description : This function make sure that signature for the work_report is valid (ensure that report are signed by correct validators which are assigned, to that particular core, through guarantor assignment).
 
-        Sources :  https://graypaper.fluffylabs.dev/#/85129da/15250015af00?v=0.6.3
+        Sources :  https://graypaper.fluffylabs.dev/#/38c4e62/158501154502?v=0.7.0
         """
         for x in block.extrinsic.guarantees:
             for y in x.signatures:
@@ -359,7 +350,7 @@ class Reporting:
                     Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
                         bytes(signature),
                         X.GUARANTEE.value
-                        + bytes(Hash.blake2b(x.report.encode())),
+                        + bytes(x.report.hash()),
                     )
                 except InvalidSignature:
                     raise ReportingError(
@@ -372,13 +363,14 @@ class Reporting:
         """
         Description: ensure that work report (authorizer output + sum of report output ) size always should be <= 48*(2**10)
 
-        Source: https://graypaper.fluffylabs.dev/#/85129da/141d00144500?v=0.6.3
+        Source: https://graypaper.fluffylabs.dev/#/38c4e62/14b20014dd00?v=0.7.0
 
         """
         work_report_output = len(report.auth_output)
         for digest in report.digests:
-            # TODO - Test this with non-OK results
-            work_report_output += len(digest.result.unwrap())
+            op = digest.result.unwrap()
+            if isinstance(op, Bytes):
+                work_report_output += len(op)
 
         if work_report_output > MAX_WORK_REPORT_SIZE:
             raise ReportingError(
@@ -412,7 +404,7 @@ class Reporting:
                     )
 
                 # --------------- bad_code_hash -------------------
-                # https://graypaper.fluffylabs.dev/#/85129da/153302153502?v=0.6.3
+                # https://graypaper.fluffylabs.dev/#/38c4e62/161300162600?v=0.7.0
                 # Eq 11.42
                 if y.code_hash != state.delta[y.service_id].service.code_hash:
                     raise ReportingError(
@@ -421,7 +413,7 @@ class Reporting:
                     )
 
                 # --------------- service_item_gas_too_low -------------------
-                # https://graypaper.fluffylabs.dev/#/85129da/15f80015fa00?v=0.6.3
+                # https://graypaper.fluffylabs.dev/#/38c4e62/158b0215a302?v=0.7.0
                 # Eq 11.30
                 if y.accumulate_gas < state.delta[y.service_id].service.min_gas:
                     raise ReportingError(
@@ -432,7 +424,7 @@ class Reporting:
                 total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
 
             # --------------- work_report_gas_too_high -------------------
-            # https://graypaper.fluffylabs.dev/#/85129da/15fa0015fd00?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/158b0215a302?v=0.7.0
             # Eq 11.30
             if total_accumulate_gas > ACCUMULATION_GAS:
                 raise ReportingError(
