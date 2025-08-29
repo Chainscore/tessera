@@ -1,3 +1,5 @@
+from dataclasses import field
+
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.sequences import TypedVector
@@ -17,8 +19,7 @@ class BlockHistory:
     beefy_root: BeefyRoot
     reported: ReportedDictionary
 
-class BetaHistory(TypedVector[BlockHistory]):
-    ...
+BetaHistory = TypedVector[BlockHistory]
 
 BeefyBelt = MMR
 
@@ -30,5 +31,5 @@ class Beta:
 
     Source: https://graypaper.fluffylabs.dev/#/38c4e62/0f19020f1902?v=0.7.0
     """
-    h: BetaHistory
-    b: BeefyBelt
+    h: BetaHistory = field(metadata={"name": "history"})
+    b: BeefyBelt = field(metadata={"name": "mmr"})

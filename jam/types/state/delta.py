@@ -37,10 +37,10 @@ class AccountMetadata:
     gas_limit: Gas = field(metadata={"name": "min_item_gas"}) # g
     min_gas: Gas = field(metadata={"name": "min_memo_gas"}) # m
     num_o: Ao = field(metadata={"name": "bytes"}) # o
-    gratis_offset: Balance # f
+    gratis_offset: Balance = field(metadata={"name": "deposit_offset"}) # f
     num_i: Ai = field(metadata={"name": "items"}) # i
-    created_at: TimeSlot # r
-    accumulated_at: TimeSlot # a
+    created_at: TimeSlot = field(metadata={"name": "creation_slot"}) # r
+    accumulated_at: TimeSlot = field(metadata={"name": "last_accumulation_slot"}) # a
     parent_service: ServiceId # p
 
     @property

@@ -1,8 +1,5 @@
-from copy import deepcopy
-
-from tsrkit_types import TypedVector
-
-from jam.types.state.beta import BlockHistory, Beta
+from jam.types import OpaqueHash, HeaderHash
+from jam.types.state.beta import BlockHistory, Beta, BetaHistory
 from jam.types.state.sigma import Sigma
 from jam.block import Block
 from jam.block import GuaranteesExtrinsic
@@ -28,7 +25,7 @@ def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
 class RecentHistory:
 
     @staticmethod
-    def transition(pre_state: Sigma, state: Sigma, block: Block) -> Sigma:
+    def transition(pre_state: Sigma, state: Sigma, block: Block, acc_root: OpaqueHash, header_hash: HeaderHash) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
 
@@ -43,29 +40,24 @@ class RecentHistory:
         """
 
         beta = state.beta
+        if len(beta.h):
+            beta.h[-1].state_root = block.header.parent_state_root
 
         # Length Check
         if len(beta.h) > RECENT_HISTORY_SIZE:
             raise ValueError(f"Invalid beta length, must be equal to {RECENT_HISTORY_SIZE}, got {len(beta.h)}")
 
         mmr_merklizer = MMRFunctions()
-        bmr_merklizer = BMRFunctions()
-
-        # Calculate Merkle root of Accumulation Outputs
-        accumulate_root = bmr_merklizer.wb_merklize(
-            TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in state.theta])),
-            Hash.keccak256
-        )
 
         # Append Accumulate root in MMR (β′b)
-        beta.b = mmr_merklizer.append_fn(beta.b, accumulate_root, Hash.keccak256)
+        beta.b = mmr_merklizer.append_fn(beta.b, acc_root, Hash.keccak256)
 
         # Calculate beefy root
         beefy_root = mmr_merklizer.super_peak(beta.b)
 
         # Build and append block history in beta
         n = BlockHistory(
-            block.header.hash(),
+            header_hash,
             Bytes[32]([0] * 32),
             beefy_root,
             package(block.extrinsic.guarantees)
@@ -74,9 +66,9 @@ class RecentHistory:
         beta.h.append(n)
 
         # β′h
-        beta.h = beta.h[-8:]
+        beta.h = BetaHistory(beta.h[-8:])
 
-        state.beta = Beta(beta)
+        state.beta = beta
 
         # Return State
         return state

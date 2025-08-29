@@ -93,6 +93,6 @@ class Statistics:
         state.pi = pi
 
         # Publishes updates of the statistics stored in chain state returns blob
-        asyncio.create_task(broker.publish("subscribeStatistics", list(pi.encode())))
+        # asyncio.create_task(broker.publish("subscribeStatistics", list(pi.encode())))
 
         return state

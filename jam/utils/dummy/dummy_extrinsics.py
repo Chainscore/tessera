@@ -73,7 +73,7 @@ def create_dummy_work_report() -> WorkReport:
         authorizer_hash=create_dummy_bytes32(),
         auth_output=Bytes.fromhex("0102030405"),
         segment_root_lookup=SegmentRootLookup({}),
-        results=WorkDigests([create_dummy_work_digest()]),
+        digests=WorkDigests([create_dummy_work_digest()]),
         auth_gas_used=Uint(0)
     )
 
