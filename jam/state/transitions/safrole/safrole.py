@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import List
 
 from jam.types.protocol.ticket import TicketBody
@@ -28,9 +27,9 @@ from jam.types.protocol.crypto import (
     Hash,
     OpaqueHash,
 )
-from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
+from jam.types.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
-from dot_ring.vrf.ring.ring_vrf import RingVrf
+# from dot_ring.vrf.ring.ring_vrf import RingVrf
 from py_ark_vrf import verify_ring, get_ring_root, vrf_output
 
 logger = get_logger("import")
@@ -39,10 +38,10 @@ logger = get_logger("import")
 class Safrole:
     @staticmethod
     def verify_vrf(
-        message: bytes, ring_root: bytes, gamma_k: list[bytes], proof: BandersnatchRingVrfSignature
+        message: bytes, ring_root: bytes, gamma_p: list[bytes], proof: BandersnatchRingVrfSignature
     ) -> bool:
         # return RingVrf.ring_vrf_proof_verify(message, ring_root, proof)
-        return verify_ring(message, proof, gamma_k, b"")  # Input Data  # Proof  # Ring  # AD
+        return verify_ring(message, proof, gamma_p, b"")  # Input Data  # Proof  # Ring  # AD
 
     @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> GammaZ:
@@ -110,7 +109,7 @@ class Safrole:
         if new_epoch > old_epoch:
             # 4.1. Rotate validators
             state.lambda_ = Lambda_(state.kappa)
-            state.kappa = Kappa(gamma.k)
+            state.kappa = Kappa(gamma.p)
             filtered_validators = []
 
             for k in state.iota:
@@ -128,7 +127,7 @@ class Safrole:
                     # Not an offender, keep the original validator data
                     filtered_validators.append(k)
 
-            gamma.k = GammaK(filtered_validators)
+            gamma.p = GammaP(filtered_validators)
 
             # 4.2 . Shift entropy
             eta = Eta([eta[0], eta[0], eta[1], eta[2]])
@@ -151,14 +150,14 @@ class Safrole:
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
             # 4. 4. Update ring root using gamma k
-            gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in gamma.k])
+            gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in gamma.p])
 
         for ticket in block.extrinsic.tickets:
             # Signature must be valid Ring-VRF proof
             if not Safrole.verify_vrf(
                 X.TICKET.value + eta[2] + bytes([ticket.attempt]),
                 gamma.z,
-                [k.bandersnatch for k in gamma.k],
+                [k.bandersnatch for k in gamma.p],
                 ticket.signature,
             ):
                 raise SafroleError(

@@ -47,7 +47,7 @@ class Conductor:
         from jam.settings import settings
 
         eta = state.eta[2]
-        vals = [k.bandersnatch for k in state.gamma.k]
+        vals = [k.bandersnatch for k in state.gamma.p]
 
         try:
             return TicketEnvelope(

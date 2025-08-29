@@ -18,7 +18,7 @@ from jam.types.state.theta import Theta
 from jam.types.state.xi import Xi
 from jam.types.state.beta import Beta, BetaHistory, BeefyBelt
 from jam.types.state.phi import Phi
-from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ
+from jam.types.state.gamma import Gamma, GammaA, GammaP, GammaZ
 from jam.types.state.delta import (
     Delta,
     AccountData,
@@ -238,7 +238,7 @@ class GhostState(Sigma):
             alpha=Alpha.from_json(gen["state"]["auth_pool"]),
             beta=Beta(h=BetaHistory([]), b=BeefyBelt([])),
             theta=Theta([]),
-            gamma=Gamma(a=GammaA([]), k=GammaK(peers), s=fallback, z=GammaZ(bytes(144))),
+            gamma=Gamma(a=GammaA([]), k=GammaP(peers), s=fallback, z=GammaZ(bytes(144))),
             delta=Delta.from_json(gen["state"]["accounts"]),
             eta=Eta.from_json(gen["state"]["entropy"]),
             iota=Iota(peers),

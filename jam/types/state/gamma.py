@@ -12,7 +12,7 @@ from jam.types.protocol.validators import ValidatorData
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 
 
-class GammaK(TypedArray[ValidatorData, VALIDATOR_COUNT]):
+class GammaP(TypedArray[ValidatorData, VALIDATOR_COUNT]):
     ...
 
 
@@ -38,12 +38,16 @@ class GammaS(Choice):
     keys: GammaSFallback
 
 
-# State key: 4
 @structure
 class Gamma:
-    """Gamma state"""
+    """
+    Component: γ
+    Key: 4
 
-    k: GammaK = field(metadata={"name": "gamma_k"})
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/0ddb000ddb00?v=0.7.0
+    """
+
+    p: GammaP = field(metadata={"name": "gamma_k"})
     z: GammaZ = field(metadata={"name": "gamma_z"})
     s: GammaS = field(metadata={"name": "gamma_s"})
     a: GammaA = field(metadata={"name": "gamma_a"})

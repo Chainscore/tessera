@@ -2,7 +2,7 @@ from typing import Dict
 
 from jam.settings import Settings
 from jam.types.protocol.ticket import TicketAttempt, TicketBody, TicketId
-from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
+from jam.types.state.gamma import Gamma, GammaA, GammaP, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
 from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
 from jam.types.state.beta import Beta, BlockHistory, BetaHistory, BeefyBelt
@@ -119,7 +119,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     ]
 
     # Gamma - Validator set
-    validator_set = GammaK(dummy_validator_data)
+    validator_set = GammaP(dummy_validator_data)
     ring_root = BandersnatchRingRoot(create_dummy_bytes(144))
     slot_sealers = GammaSTickets(
         [

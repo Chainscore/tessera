@@ -42,7 +42,7 @@ class EpochMark(Option[EpochMarkData]):
                     validators=ValidatorArray(
                         [
                             MinValidatorData(bandersnatch=val.bandersnatch, ed25519=val.ed25519)
-                            for val in state.gamma.k
+                            for val in state.gamma.p
                         ]
                     ),
                 )

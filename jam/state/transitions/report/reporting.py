@@ -458,7 +458,7 @@ class Reporting:
             state.eta,
             state.kappa,
             state.lambda_,
-            state.gamma.k,
+            state.gamma.p,
             block.header.slot,
             report_slot,
             state.tau,

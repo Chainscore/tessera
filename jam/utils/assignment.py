@@ -68,7 +68,7 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
         validator_set = state.lambda_
     elif epoch == 1:
         epoch_entropy = state.eta[1]
-        validator_set = state.gamma.k
+        validator_set = state.gamma.p
     else:
         raise ValueError("Epoch value can be 0, 1 or -1.")
 

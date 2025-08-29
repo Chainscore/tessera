@@ -64,7 +64,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
         # select validator from next epochs validator list using index
         from jam.state.state import state
-        proxy_validator = state.gamma.k[proxy_validator_index]
+        proxy_validator = state.gamma.p[proxy_validator_index]
 
         logger.debug(f"Proxy validator port {proxy_validator.metadata.port}")
 
@@ -141,11 +141,11 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             proxy_validator_index = Uint.from_bytes(vrf[-4:], 'big') % VALIDATOR_COUNT
 
             from jam.state.state import state
-            proxy_validator = state.gamma.k[proxy_validator_index]
+            proxy_validator = state.gamma.p[proxy_validator_index]
 
             # verifying the received ticket
             eta = state.eta[2]
-            vals = [k.bandersnatch for k in state.gamma.k]
+            vals = [k.bandersnatch for k in state.gamma.p]
             attempt = U8(data.epoch_ticket.ticket.attempt)
             ad = b''
 
