@@ -58,6 +58,11 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(14, gas_cost=10)
     def bless(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+        # TODO: Sync this from 0.6.6 -> 0.6.7
+        # 0.6.6: https://graypaper.fluffylabs.dev/#/9a08063/366700366700?v=0.6.6
+        # 0.6.7: https://graypaper.fluffylabs.dev/#/7e6ff6a/360e00367600?v=0.6.7
+        # change_log: https://github.com/gavofyork/graypaper/pull/393/files#diff-41f3b6a0435c4f16eceda600672b2e6a38411745d9f0277a9bffdf25911d5287
+
         [m, a, v, o, n] = registers[7:7 + 5]
         if not memory.is_accessible(o, 12 * n):
             raise PvmError(PANIC)

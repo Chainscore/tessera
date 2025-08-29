@@ -338,7 +338,7 @@ class Accumulation:
                         )
                     )
 
-        return PsiA(u=initial_state, t=timeslot, s=service_id, g=g, i=i).execute()
+        return PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=i).execute()
 
     @staticmethod
     def preimage_integration(
