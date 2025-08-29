@@ -1,8 +1,12 @@
 import asyncio
-from typing import cast
-from tsrkit_types import structure, Uint, Bool, U8
+import math
 
-from jam.types.protocol.core import ValidatorIndex, EpochIndex
+from typing import cast
+
+from flask import Flask
+from tsrkit_types import structure, Uint, Bool, U8, U32
+from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY
+from jam.types.protocol.core import ValidatorIndex, EpochIndex, TrancheIndex
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
@@ -11,6 +15,8 @@ from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
+from jam.types.work.report import WorkReport, WorkReportHash, WorkReports
+
 
 # Module-specific logger
 logger = get_logger("network")
@@ -42,7 +48,7 @@ class JudgmentPublication(NetworkProtocol):
     CE 145 (Judgement Publication) protocol for sharing Judgment to other Auditors
 
     Protocol Flow:
-        Auditor -> Auditor
+        Auditor -> Validator
 
         --> Epoch_index ++ Validator_Index ++ Validity ++ Work_Report_Hash ++ Ed25519_Signature
         --> FIN
@@ -109,11 +115,14 @@ class JudgmentPublication(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept individual Judgment from other Auditors for their assigned Work Reports """
         from jam.storage.tranche_store import tranche_store, Tranche
         from jam.finality.finality import Finality
         from jam.settings import settings
+        from jam.audit.auditor import Auditor
+
+        auditor = Auditor()
 
         # TODO: FIX THIS
         latest_block = Finality.load_latest(kv=settings.main_db)
@@ -125,20 +134,45 @@ class JudgmentPublication(NetworkProtocol):
             data = CE145Data.decode(buffer)
             data = cast(CE145Data, data)
 
-            # JUDGMENT RECEIVED FROM WHICH VALIDATOR THAT INDEX, JUDGMENT, WR_HASH
-            vi_judgment = data.judgment.validator_index
-            judge = data.judgment.validity
-            wr_hash = data.judgment.work_report_hash
-
+            # ------------------------- find out tranche -------------------------
             tranche_idx = tranche_store.get_tranche_index(header_hash=header_hash)
 
-            tranche=Tranche(
+            tranche = Tranche(
                 tranche_index=tranche_idx,
                 header_hash=header_hash
             )
 
-            tranche_store.update_judgment( tranche=tranche, wr_hash=wr_hash, judgment=judge, validator_index=vi_judgment)
+            # ----------------------- break received judgment -----------------
+            epoch_index = data.judgment.epoch_index
+            validator_index = data.judgment.validator_index
+            validity = data.judgment.validity
+            wr_hash = data.judgment.work_report_hash
+            edd2519_signature = data.judgment.ed25519_signature
 
+            # ------------------- Save judgment in Tranche State ---------------------------------------------
+            # if tranche.tranche_index >= TrancheIndex(1):
+            #     # get previous state
+            #     prev_tranche = Tranche(
+            #         TrancheIndex=tranche.tranche_index - TrancheIndex(1),
+            #         header_hash=tranche.header_hash
+            #     )
+            #
+            #     get_prev_state = tranche_store.get_state(tranche=prev_tranche)
+
+            # state = tranche_store.get_state(tranche=tranche)
+            #
+            # audit_record = state.records[wr_hash]
+            #
+            # if len(audit_record.true_votes) <= VALIDATORS_SUPER_MAJORITY or len(audit_record.true_votes) <= VALIDATORS_SUPER_MAJORITY:
+
+            tranche_store.update_judgment(
+                tranche=tranche,
+                validator_index=validator_index,
+                judgment=validity,
+                wr_hash=wr_hash,
+                edd2519_signature=edd2519_signature,
+                ed25519_public=settings.ed25519_public
+            )
 
             logger.debug(
                 "Received Judgment from auditor",

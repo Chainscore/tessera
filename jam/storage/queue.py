@@ -14,7 +14,7 @@ class StorageQueueMetadata:
 
 class StorageQueue:
     """
-    Storeage queue for storing and fetching sequencial data from KV store.
+    Storage queue for storing and fetching sequential data from KV store.
     """
 
     queue_name: str

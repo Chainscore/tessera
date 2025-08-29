@@ -31,6 +31,7 @@ class ValidatorIndex(Uint[16]):
 
 CoreIndex = Uint[16]
 EpochIndex = Uint[32]
+TrancheIndex = Uint[8]
 Gas = Uint[64]
 RemainingGas = int
 ServiceId = Uint[32]

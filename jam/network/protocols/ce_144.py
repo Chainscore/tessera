@@ -7,7 +7,7 @@ from jam.utils.gather import gather_with_exceptions
 from jam.logging import get_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
-from jam.types.protocol.core import CoreIndex, ValidatorIndex
+from jam.types.protocol.core import CoreIndex, ValidatorIndex, TrancheIndex
 from tsrkit_types import U8
 from jam.types.protocol.crypto import (
     WorkReportHash,
@@ -22,7 +22,6 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 # Module-specific logger
 logger = get_logger("network")
 
-TrancheIndex = U8
 
 @structure
 class AssignedReport:
@@ -122,13 +121,6 @@ class AuditAnnouncement(NetworkProtocol):
             stream_b_size=data.len_b,
         )
 
-        tranche = Tranche(
-            tranche_index=data.tranche_announcement.tranche,
-            header_hash=data.tranche_announcement.header_hash
-        )
-
-        tranche_store.record_announcement(tranche, settings.validator_index, data.tranche_announcement.announcement)
-
         tasks = []
         responses = []
         transmitted_count = 0
@@ -198,7 +190,8 @@ class AuditAnnouncement(NetworkProtocol):
                 header_hash=header_hash
             )
 
-            tranche_store.record_announcement(tranche, v_index, data.tranche_announcement.announcement)
+            tranche_store.records_announcement(tranche, v_index, data.tranche_announcement.announcement)
+
             logger.debug(
                 "Received Audit's Announcement from other Auditors",
                 stream_id=stream_id,
@@ -224,15 +217,4 @@ class AuditAnnouncement(NetworkProtocol):
                 err_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: NodeConnection):
-        """Intercept Announcement Acknowledgement"""
-        buffer = client.stream_buffer[stream_id]
-        if buffer == b"":
-            logger.info(
-                "Announcement acknowledge received",
-                stream_id=stream_id,
-                buffer_size=len(buffer),
-            )
-            return True
 
-        return False

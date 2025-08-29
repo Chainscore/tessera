@@ -146,7 +146,9 @@ class Utils:
 
     @staticmethod
     def validator_announcement_statement(
-        assign_report: List[Tuple[CoreIndex, WorkReport]], header_hash: HeaderHash, tranche: Tranche
+        assign_report: List[Tuple[CoreIndex, WorkReport]],
+        header_hash: HeaderHash,
+        tranche: Tranche
     ) -> Ed25519Signature:
         """
         Equations: 17.9, 17.10, 17.11
@@ -302,14 +304,14 @@ class Utils:
             return False
 
     @staticmethod
-    def judgment_signature(wr: WorkReport, refine: bool) -> Bytes[96]:
+    def judgment_signature(wr: WorkReport, validity: bool) -> Bytes[96]:
         """
         Equations: 17.17
         This function just build the ed25519 signature(Judgment Signature) for the particular work report.
 
         Args:
             wr: Work Report
-            refine: Boolean value (True/False)
+            validity: Boolean value (True/False)
 
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f6f011f9801?v=0.7.0
 
@@ -317,7 +319,7 @@ class Utils:
         from jam.settings import settings
 
         wr_hash = wr.hash()
-        if refine:
+        if validity:
             message = X.VALID.value + wr_hash.encode()
         else:
             message = X.INVALID.value + wr_hash.encode()

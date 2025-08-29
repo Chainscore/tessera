@@ -1,27 +1,35 @@
 import math
 from typing import List, Tuple
 
-from tsrkit_types import U8, U32, TypedVector, Null, Bool
-
+from tsrkit_types import U8, U32, TypedVector, Null, Bool, Bytes
 from jam.audit.utils import Utils
 from jam.types import Ed25519Signature, HeaderHash
 from jam.finality.finality import Finality
-from jam.types.audit.tranche import TrancheIndex, Tranche, OptionalReports, OptionalReport
-from jam.types.protocol.core import CoreIndex, EpochIndex
-from jam.types.protocol.crypto import BandersnatchVrfSignature
+from jam.types.audit.tranche import TrancheIndex, Tranche, OptionalReports, OptionalReport, TrancheState, CoreReport
+from jam.types.protocol.core import CoreIndex, EpochIndex, ValidatorIndex
+from jam.types.protocol.crypto import BandersnatchVrfSignature, Ed25519Public
 from jam.types.work.report import WorkReport, WorkReportHash
 from jam.block.block import Block
-
 from jam.logging import get_logger
-from jam.utils.constants import EPOCH_LENGTH
+from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY
 from jam.network.protocols.ce_144 import NoShow, NoShows
+from jam.block.extrinsics.disputes import Verdict, Culprit, Fault, JudgementVotes, Judgement
+
+
 
 # Module-specifier logger
 logger = get_logger("auditor")
 
 
 class Auditor:
-    async def audit(self, block: Block, tranche: Tranche, no_shows: NoShows = None):
+    async def assignment_wrs(
+        self,
+        block: Block,
+        tranche: Tranche,
+        no_shows: NoShows = None,
+        # negative_wrs: TypedVector[CoreReport] = None
+
+    ):
         """
         Main Function to trigger auditing for nth tranche (n >= 0)
         """
@@ -31,10 +39,12 @@ class Auditor:
         utils = Utils()
 
         entropy = block.header.entropy_source
+        tranche_index = tranche.tranche_index
+        header_hash = tranche.header_hash
 
-        curr_state = tranche_store.get_state(tranche)
+        curr_state = tranche_store.get_state(tranche=tranche)
 
-        if tranche.tranche_index == TrancheIndex(0):
+        if tranche_index == TrancheIndex(0):
             assigned_wrs = utils.verifiable_random_selection(
                 entropy_source=entropy,
                 bandersnatch_key=settings.bandersnatch_private,
@@ -54,16 +64,17 @@ class Auditor:
             return
 
         logger.debug("ASSIGNED REPORTS", block=str(block), tranche=tranche, tranche_state=curr_state.to_json(), assigned_reps=assigned_wrs)
-        await self.announce(block, tranche, assigned_wrs, no_shows)
+        await self.announcement(block, tranche, assigned_wrs, no_shows, negative_wrs)
         ...
 
     @classmethod
-    async def announce(
+    async def announcement(
         cls,
         block: Block,
         tranche: Tranche,
         assigned_wrs: List[Tuple[CoreIndex, WorkReport]],
         no_shows: TypedVector[NoShow] = None,
+        # negative_wrs : TypedVector[Tuple[CoreIndex, WorkReportHash]] = None
     ):
         """
         This function just take a list of report which is available for auditing and assign random 10 reports to tha validator then create announcement for them.
@@ -78,18 +89,15 @@ class Auditor:
 
         from jam.audit.utils import Utils
         from jam.settings import settings
+        from jam.storage.tranche_store import tranche_store
 
         audit = Utils()
-
-        # --------------------------------------------- CONDITION CHECK ------------------------------------------------
-        if HeaderHash(block.header.hash()) != HeaderHash(tranche.header_hash):
-            logger.info("Block's header_has and tranche header_hash are different")
-            return
 
         # ---------------------------------------------- DEFINES VALUE --------------------------------------------------
         tranche_index = tranche.tranche_index
         header_hash = HeaderHash(block.header.hash())
         entropy_source = BandersnatchVrfSignature(block.header.entropy_source)
+        bandersnatch_private = settings.bandersnatch_private
 
         # ------------------------------------------ BUILDING PROTOCOL DATA --------------------------------------------
         from jam.network.protocols.ce_144 import (
@@ -101,37 +109,40 @@ class Auditor:
             AssignedReport,
             Evidence,
             SubsequentTrancheEvidence,
-            NoShow,
         )
 
         CE144 = AuditAnnouncement()
 
         # ------------------------------------- VALIDATOR ANNOUNCEMENT AND STATEMENT -----------------------------------
-        assignments = TypedVector[AssignedReport](
+        announcement_wrs = TypedVector[AssignedReport](
             [
-                AssignedReport(core_index=core_idx, report_hash=r.hash())
+                AssignedReport(
+                    core_index=core_idx,
+                    report_hash=r.hash()
+                )
                 for core_idx, r in assigned_wrs
             ]
         )
 
         announcement_sign = audit.validator_announcement_statement(
-            assign_report=assigned_wrs, header_hash=header_hash, tranche=tranche
+            assign_report=assigned_wrs,
+            header_hash=header_hash,
+            tranche=tranche
         )
 
         # -------------------- Handling Evidence based on Tranche Index --------------------------
-        bandersnatch_sign = BandersnatchVrfSignature(b"")
 
         if tranche_index == TrancheIndex(0):
             bandersnatch_sign = audit.vrf_signature_bandersnatch(
                 entropy_source=entropy_source,
-                bandersnatch_key=settings.bandersnatch_private,
+                bandersnatch_key=bandersnatch_private,
                 tranche=tranche,
             )
             evidence = Evidence(FirstTrancheEvidence(bandersnatch_sign))
         else:
             bandersnatch_sign = audit.vrf_signature_bandersnatch(
                 entropy_source=entropy_source,
-                bandersnatch_key=settings.bandersnatch_private,
+                bandersnatch_key=bandersnatch_private,
                 tranche=tranche,
             )
             evidence = Evidence(
@@ -145,12 +156,24 @@ class Auditor:
                 )
             )
 
+        # ------------------- Save Announcement in Tranche State ---------------------------------------------
+        curr_tranche = tranche
+
+        tranche_store.records_announcement(
+            tranche=curr_tranche,
+            validator_index=settings.validator_index,
+            announce=Announcement(
+                assigned_reports=announcement_wrs,
+                ed25519_signature=announcement_sign
+            ),
+        )
+
         # ---------------------- Data to be transmitted ----------------------------------------
         tranche_announce = TrancheAnnouncement(
             header_hash=header_hash,
             tranche=tranche_index,
             announcement=Announcement(
-                assigned_reports=assignments,
+                assigned_reports=announcement_wrs,
                 ed25519_signature=announcement_sign
             ),
         )
@@ -166,7 +189,7 @@ class Auditor:
             responses = await CE144.transmit(data=data)
 
             if responses:
-                await cls.judgment_process(assign_wrs=assigned_wrs, tranche=tranche)
+                await cls.judgment_process(block=block, tranche=tranche,assign_wrs=assigned_wrs)
 
             logger.debug(f"Assign Work Reports announcement transmitted successfully")
 
@@ -177,49 +200,66 @@ class Auditor:
 
     @classmethod
     async def judgment_process(
-        cls, assign_wrs: List[Tuple[CoreIndex, WorkReport]], tranche: Tranche
+        cls,
+        block: Block,
+        tranche: Tranche,
+        assign_wrs: List[Tuple[CoreIndex, WorkReport]] = None,
+        negative_wrs: TypedVector[CoreReport] = None
     ):
+        """
+        description come
+        """
         from jam.audit.utils import Utils
         from jam.settings import settings
         from jam.storage.tranche_store import tranche_store
 
         audit = Utils()
 
-        latest_block = Finality.load_latest(kv=settings.main_db)
-        header_hash = latest_block.header.hash()
+        # --------- unwrap Tranche -------------
+        curr_tranche = tranche
+        tranche_index = tranche.tranche_index
+        header_hash = tranche.header_hash
 
-        # ------ JUDGMENT EPOCH INDEX ------
-        slot = latest_block.header.slot
-        epoch_idx = EpochIndex(math.floor(slot / EPOCH_LENGTH))
+        validator_index = settings.validator_index
+        # latest_block = Finality.load_latest(kv=settings.main_db)
+        # header_hash = latest_block.header.hash()
 
         logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)} ")
 
         try:
             for c, r in assign_wrs:
+
                 wr_hash = r.hash()
 
-                is_valid = await audit.refine(r)
+                validity = await cls.process_refine(block=block, wr=r, tranche=curr_tranche)
 
-                # STORE JUDGMENT HERE ONLY FOR TRANSMITTING
-                tranche_store.update_judgment(
-                    tranche=tranche,
-                    wr_hash=wr_hash,
-                    judgment=is_valid,
-                    validator_index=settings.validator_index,
-                )
+                ed25519_signature = audit.judgment_signature(wr=r, validity=validity)
 
-                judgment_sign = audit.judgment_signature(wr=r, refine=is_valid)
-
+                # ------------------------------------------ BUILDING PROTOCOL DATA --------------------------------------------
                 from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
 
                 CE145 = JudgmentPublication()
 
+                # ------------------- Save judgment in Tranche State ---------------------------------------------
+                tranche_store.update_judgment(
+                    tranche=curr_tranche,
+                    validator_index=validator_index,
+                    judgment=validity,
+                    wr_hash=wr_hash,
+                    edd2519_signature=ed25519_signature,
+                    ed25519_public=settings.ed25519_public
+                )
+
+                # --------------------------- JUDGMENT EPOCH INDEX ----------------------------------------------
+                from jam.state.state import state
+                epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
+
                 judgment = Judgment(
-                    epoch_index=epoch_idx,
-                    validator_index=settings.validator_index,
-                    validity=Bool(True),
+                    epoch_index=epoch_index,
+                    validator_index=validator_index,
+                    validity=Bool(validity),
                     work_report_hash=WorkReportHash(wr_hash),
-                    ed25519_signature=Ed25519Signature(judgment_sign),
+                    ed25519_signature=Ed25519Signature(ed25519_signature),
                 )
 
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
@@ -236,41 +276,41 @@ class Auditor:
             )
 
     @classmethod
-    def is_audited(cls, block: Block, tranche: Tranche) -> NoShows:
+    def is_tranche(cls,
+        block: Block,
+        curr_tranche: Tranche,
+        prev_state: TrancheState,
+        ) -> Tuple[NoShows, TypedVector[CoreReport]]:
         """
-        Function to check whether the block is audited or not.
-        Builds new queue to audit and corresponding no shows
+        Function to check whether the block is tranche will be continued or not.
+        Builds new queue to audit and corresponding no shows and false judgments
 
         Args:
             block: Block to be audited
-            tranche: Tranche in which the block is currently in
+            curr_tranche: Tranche in which the block is currently in
+            prev_state: last tranche state
 
         Returns:
             NoShows
         """
         from jam.storage.tranche_store import Tranche, tranche_store
+        from jam.state.state import state
 
         # Define tranche here for
-        logger.debug("Checking whether the block is audited or not.")
-        header_hash = tranche.header_hash
-        tranche_index = tranche.tranche_index
+        header_hash = curr_tranche.header_hash
+        tranche_index = curr_tranche.tranche_index
 
-        no_shows = NoShows([])  # ============== initialize empty tranche
-
-        # ====================== previous tranche here
-        prev_tranche = Tranche(
-            header_hash=header_hash, tranche_index=tranche_index - TrancheIndex(1)
-        )
-
-        # get previous tranche ===========
-        prev_state = tranche_store.get_state(tranche=prev_tranche)
-
-        # GET Q FROM PREVIOUS TRANCHE
+        # ------------------------------------ GET UNAUDITED LIST (q) FROM LAST TRANCHE --------------------------------
         unaudited_reports = prev_state.unaudited_list
 
-        updated_unaudited_list = OptionalReports([])
+        # ---------------- Initialized NO_SHOW, UNAUDITED and NEGATIVE WR  list for this tranche -----------------------
+        updated_unaudited_list = OptionalReports([])                                                                    # unaudited work reports list to be audited for this tranche
+        global_no_shows = NoShows([])                                                                                   # global no show has validator who did give judgment in lat tranche
+        negative_wrs = TypedVector[CoreReport]([])                                                # Reports which receiver at least one single negative judgment
 
-        for wr in unaudited_reports:
+       # ------------------------------------ Iterate previous tranche unaudited work reports --------------------------
+        for core_index, wr in enumerate(unaudited_reports):
+
             rep = wr.unwrap()
 
             if rep == Null:
@@ -280,55 +320,289 @@ class Auditor:
                 wr_hash = rep.hash()
 
                 if wr_hash in prev_state.records:
-                    audit_record = prev_state.records[wr_hash]
 
+                    # ----------------------------------- WORK REPORT RECORDS FOR AUDITING  ----------------------------
+                    audit_record = prev_state.records[wr_hash]
+                    announces = audit_record.announces
                     true_votes = audit_record.true_votes
                     false_votes = audit_record.false_votes
-                    announces = audit_record.announces
-                    no_votes = audit_record.no_votes
+                    no_shows = audit_record.no_shows
 
-                    # GENERATE Q (UN_AUDITED_LIST FOR NEXT TRANCHES)
-                    # HERE WE WRITE LOGIC FOR NO_SHOW and IT'S CONDITION
-                    # 1. validator index exist in no_votes
-                    # 2. validator index exist in false votes (just by limited validators)
-                    # 3. false_votes audit by all the validators
+                    # ------------------------------------- Tranche handling -------------------------------------
+                    # No need to update state here because there is no False judgments
+                    if len(false_votes) == 0:
+                        if len(no_shows) == 0:
+                            if len(announces) <= len(true_votes):
+                                updated_unaudited_list.append(OptionalReport(Null))
+                                tranche_store.add_to_valid_set(tranche=curr_tranche, c_w=Tuple[core_index, wr_hash])
 
-                    # TODO: Possible issues: instead of length, properly check subsets
-                    if (
-                        len(true_votes) == len(announces)
-                        and len(false_votes) == 0
-                        and len(no_votes) == 0
-                    ):
-                        updated_unaudited_list.append(OptionalReport(Null))
+                            else:
+                                logger.debug(f"false_votes = no_show = 0, and Error in => check true_votes >= announcement")
 
-                    elif (
-                        len(true_votes) != len(announces)
-                        and len(no_votes) != 0
-                        or len(false_votes) != 0
-                    ):
-                        updated_unaudited_list.append(OptionalReport(rep))
+                        else:
+                            if len(no_shows) != 0:
+                                updated_unaudited_list.append(OptionalReport(OptionalReport(wr_hash)))
+                                for no_show in no_shows:
+                                    if no_show not in global_no_shows:
+                                        global_no_shows.append(no_show)
 
-                        # BUILD NO_SHOW HERE
-                        if (
-                            len(announces) > len(true_votes) + len(false_votes)
-                            and len(no_votes) != 0
-                        ):
-                            for v in no_votes:
-                                ann_list = tranche_store.get_set_announcement(
-                                    tranche=prev_tranche, validator_index=v
-                                )
-                                if v not in [no_show.validator_index for no_show in no_shows]:
-                                    no_shows.append(
-                                        NoShow(validator_index=v, announcement=ann_list)
+                    # ------------------------------------- Dispute handling -------------------------------------
+                    else:
+                        if tranche_index == TrancheIndex(1):
+                            updated_unaudited_list.append(OptionalReport(wr_hash))
+                            negative_wrs.append(Tuple[core_index, wr_hash])
+
+                        else:
+                            # ---------- Handling Dispute with state ------------------------------------------
+                            before_prev = Tranche(
+                                tranche_index=tranche_index- TrancheIndex(2),
+                                header_hash=header_hash
+                            )
+                            before_prev_state = tranche_store.get_state(tranche=before_prev)
+                            before_prev_records = before_prev_state.records[wr_hash]
+
+                            #   VERY RARE CASE
+                            if len(before_prev_records.false_votes) == 0:
+                                updated_unaudited_list.append(OptionalReport(wr_hash))
+                                negative_wrs.append(wr_hash)
+
+                            else:
+                                # ======================================================= Verdict = True =======================================================
+                                if len(true_votes) >= VALIDATORS_SUPER_MAJORITY:
+                                # change with len(true_votes) = VALIDATORS_SUPER_MAJORITY:
+
+                                    # leans one valid entry in faults sequence
+                                    if len(false_votes) >= 1:
+
+                                        # epoch Index
+                                        age = state.tau // EPOCH_LENGTH
+
+
+                                        updated_unaudited_list.append(OptionalReport(Null))
+                                        tranche_store.add_to_valid_set(tranche=curr_tranche, c_w=Tuple[core_index, wr_hash])
+
+                                        # E_v => verdict
+                                        judgments = JudgementVotes([])
+                                        for validator_index, public_key, signature in true_votes:
+
+                                            judgment = Judgement(
+                                                vote=Bool(True),
+                                                index=ValidatorIndex(validator_index),
+                                                signature=Ed25519Signature(signature)
+                                            )
+
+                                            judgments.append(Judgement=judgment)
+
+                                        verdict = Verdict(
+                                            target= WorkReportHash(wr_hash),
+                                            age= U32(age),
+                                            votes= judgments
+                                        )
+                                        tranche_store.add_verdict(tranche=curr_tranche, verdict=verdict)
+
+                                        # E_f => fault
+                                        for validator_index, public_key, signature in false_votes:
+
+                                            fault = Fault(
+                                                target=WorkReportHash(wr_hash),
+                                                vote=Bool(False),
+                                                key=Ed25519Public(public_key),
+                                                signature=Ed25519Signature(signature)
+                                            )
+
+                                            tranche_store.add_fault(tranche=curr_tranche, fault=fault)
+
+                                # ================================================ Verdict = False =====================================================
+                                elif len(false_votes) >= VALIDATORS_SUPER_MAJORITY:
+                                # change with len(true_votes) = VALIDATORS_SUPER_MAJORITY:
+
+                                    updated_unaudited_list.append(OptionalReport(Null))
+                                    tranche_store.add_to_invalid_set(tranche=curr_tranche, c_w=Tuple[core_index, wr_hash])
+
+                                    age = state.tau // EPOCH_LENGTH
+
+                                    # E_v => verdict
+                                    judgments = JudgementVotes([])
+                                    for validator_index, public_key, signature in false_votes:
+                                        judgment = Judgement(
+                                            vote=Bool(False),
+                                            index=ValidatorIndex(validator_index),
+                                            signature=Ed25519Signature(signature)
+                                        )
+
+                                        judgments.append(Judgement=judgment)
+
+                                    verdict = Verdict(
+                                        target=WorkReportHash(wr_hash),
+                                        age=U32(age),
+                                        votes=judgments
                                     )
-                else:
-                    logger.warning(" Report not exist in audit records of Tranche state !!")
 
-        # UPDATE WORK REPORTS IN Q ANDB
-        current_tranche = Tranche(header_hash=header_hash, tranche_index=tranche_index)
+                                    tranche_store.add_verdict(tranche=curr_tranche, verdict=verdict)
 
-        tranche_store.add_to_unaudited(
-            tranche=current_tranche, unaudited_reports=updated_unaudited_list
+                                    # E_c ==>> culprit : True votes
+                                    for validator_index, public_key, signature in true_votes:
+                                        guarantee_ext = block.extrinsic.guarantees
+                                        for report, slot, val_sign in guarantee_ext:
+                                            if report.hash() == wr_hash:
+                                                # leans two valid entry in culprits sequence
+                                                if len(val_sign) >= 2:
+                                                    for g_validator_index, g_signature in val_sign:
+                                                        signature = g_signature
+                                                        culprit = Culprit(
+                                                            target=WorkReportHash(wr_hash),
+                                                            key=Ed25519Public(public_key),
+                                                            signature=Ed25519Signature(signature)
+                                                        )
+                                                        tranche_store.add_culprit(tranche=curr_tranche, culprit=culprit)
+
+                                # ========================= NO-VERDICT =================================================
+                                elif len(true_votes) == VALIDATORS_WONKY:        # WONKY CONDITION: NONE RECEIVED VERDICT
+                                    updated_unaudited_list.append(OptionalReport(Null))
+                                    tranche_store.add_to_wonky_set(tranche=curr_tranche, c_w=Tuple[core_index, wr_hash])
+
+                                    age = state.tau // EPOCH_LENGTH
+
+                                    judgments = JudgementVotes([])
+                                    for validator_index, public_key, signature in true_votes:
+                                        judgment = Judgement(
+                                            vote=Bool(True),
+                                            index=ValidatorIndex(validator_index),
+                                            signature=Ed25519Signature(signature)
+                                        )
+                                        judgments.append(Judgement=judgment)
+
+
+                                    for validator_index, public_key, signature in false_votes:
+                                        judgment = Judgement(
+                                            vote=Bool(False),
+                                            index=ValidatorIndex(validator_index),
+                                            signature=Ed25519Signature(signature)
+                                        )
+                                        judgments.append(Judgement=judgment)
+
+
+                                    verdict = Verdict(
+                                        target=WorkReportHash(wr_hash),
+                                        age=U32(age),
+                                        votes=judgments
+                                    )
+                                    tranche_store.add_verdict(tranche=curr_tranche, verdict=verdict)
+
+
+        # UPDATE WORK REPORTS IN Q AND
+        tranche_store.update_unaudited_list(
+            tranche=curr_tranche,
+            unaudited_reports=updated_unaudited_list
         )
 
-        return no_shows
+        # ---------------------------------------------- FETCH CURRENT STATE -------------------------------------------
+        curr_state = tranche_store.get_state(tranche=curr_tranche)
+        tranche_store.save_state(tranche=curr_tranche, state=curr_state)
+
+        return global_no_shows, negative_wrs
+
+    """
+    
+    i think here i m talking about no_show
+    want to return sorted no_showdata = [[3, []], [1, []], [6, []]]
+
+    sorted_data = sorted(data, key=lambda x: x[0])
+    print(sorted_data)
+    data = [[3, []], [1, []], [6, []]]
+    
+    sorted_data = sorted(data, key=lambda x: x[0])
+    print(sorted_data)
+
+    """
+
+    @classmethod
+    async def getting_report(cls, wr_hash: WorkReportHash) -> WorkReport | bool:
+        """
+        fetch Work Report if it is not exist in Report
+        1. check in ReportDA
+        2. using protocol 136
+        """
+        # 1. check in ReportDA
+        from jam.settings import settings
+        from jam.storage.da.reports import ReportsDA
+        from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data, CE136Response
+
+        CE136 = WorkReportRequest()
+
+        d3l = settings.d3l
+        reports_da = ReportsDA(d3l)
+        report = reports_da.get(wr_hash=wr_hash)
+
+        # 2. using protocol 136
+        if type(report) == WorkReportHash:
+            return report
+        else:
+            logger.info("Work Report Not found in RepostDA, Now request to the other Auditor via protocol 136")
+            report_hash = WorkReportHash(wr_hash)
+
+            data = CE136Data(len=U32(len(report_hash.encode())), work_report_hash=report_hash)
+
+            response = await CE136.transmit(data=data)
+
+            if type(response) ==  WorkReportHash:
+                return response
+            else:
+                logger.debud(
+                    "No work report was found in ReportDA and under protocol 136."
+                )
+                return False
+
+
+    @classmethod
+    async def process_refine(cls, block: Block, wr: WorkReport, tranche: Tranche) -> bool:
+        """ Check previously refine or not"""
+
+        from jam.settings import settings
+        from jam.audit.utils import Utils
+        from jam.storage.tranche_store import tranche_store
+
+
+        audit = Utils()
+
+        curr_tranche = tranche
+        tranche_index = curr_tranche.tranche_index
+        validator_index = settings.validator_index
+
+        wr_hash = wr.hash()
+
+        # ---------------------------- Check => already refine or not ----------------------------------------
+        # 1. Guarantee refine check
+        guarantee_refine = False
+        guarantee_ext = block.extrinsic.guarantees
+        for report, slot, signature in guarantee_ext:
+            if report.hash() == wr_hash:
+                logger.info(f"already judgment given for Work report: {wr_hash}")
+                guarantee_refine = True
+                break
+
+        if guarantee_refine:
+            return True
+
+        elif guarantee_refine == False and tranche_index > 0:
+            # 2. previous tranche refine check
+            curr_state = tranche_store.get_state(tranche=curr_tranche)  # WHY CURRENT STATE BECAUSE WE CARRY FORWARD PREVIOUS JUDGMENT TO NEXT TRANCHE STATE
+            records = curr_state.records[wr_hash]
+            true_votes = records.no_shows
+            false_votes = records.false_votes
+            if validator_index in true_votes:
+                logger.info(f"already true judgment given in prev tranche for Work report: {wr_hash}")
+                return True
+
+            elif validator_index in false_votes:
+                logger.info(f"already false judgment given in prev tranche for Work report: {wr_hash}")
+                return False
+            else:
+                validity = await audit.refine(wr=wr)
+                return validity
+
+        else:
+            logger.info(f" Work Report hsa not been refine via validator: {validator_index} => {wr_hash},")
+            logger.info(f"Process refine for Work Report : {wr_hash}")
+            validity = await audit.refine(wr=wr)
+            return validity
