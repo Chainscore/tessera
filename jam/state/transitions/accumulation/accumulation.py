@@ -540,6 +540,10 @@ class Accumulation:
         # Update Delta Double Dagger
         # specific_transfers = Accumulation.selection_fn(deferred_transfers, state.delta)
 
+        # TODO: Calculate delta dagger, using a'
+        # link: https://graypaper.fluffylabs.dev/#/7e6ff6a/184e03184e03?v=0.6.7
+        # change_log: https://github.com/gavofyork/graypaper/pull/400/files#diff-abd897abe27e05cd5f28779d326efc03bf180542b29bc1a02d039a53a2996444
+
         # for s in new_state.delta:
             # specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
             # delta_double_dagger

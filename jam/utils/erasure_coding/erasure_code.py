@@ -13,6 +13,11 @@ class ErasureCode:
         self.original_shards = chain_config.erasure_coding_original_shards
         self.recovery_shards = chain_config.erasure_coding_recovery_shards
 
+    # TODO: Sync EC
+    # Prior: https://graypaper.fluffylabs.dev/#/7e6ff6a/3f19003f1900?v=0.6.7
+    # Posterior: https://graypaper.fluffylabs.dev/#/38c4e62/3f68003f6800?v=0.7.0
+    # Changelog: https://github.com/gavofyork/graypaper/pull/429/files#diff-78584eb56cdef34f354d848f8d42b0f77980d693984265ebddd0f94f9c649f31
+
     @staticmethod
     def unzip(data: Bytes, n: int, k: int) -> Vector[Bytes]:
         """

@@ -87,6 +87,7 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(15, gas_cost=10)
     def assign(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+        # TODO: Sync: https://github.com/gavofyork/graypaper/pull/400/files#diff-41f3b6a0435c4f16eceda600672b2e6a38411745d9f0277a9bffdf25911d5287
         o = registers[8]
         if not memory.is_accessible(o, 32 * MAX_AUTH_QUEUE_ITEMS):
             raise PvmError(PANIC)
@@ -106,6 +107,7 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(16, gas_cost=10)
     def designate(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+        # TODO: Sync: https://github.com/gavofyork/graypaper/pull/400/files#diff-41f3b6a0435c4f16eceda600672b2e6a38411745d9f0277a9bffdf25911d5287
         o = registers[7]
         if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
             raise PvmError(PANIC)
@@ -129,7 +131,8 @@ class AccumulateFunctions(INVF):
 
     @staticmethod
     @INVF.register(18, gas_cost=10)
-    def new(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+    def new(gas: Gas, registers: list, memory: Memory, context: AccumulationContext, slot: TimeSlot):
+        # TODO: Sync: https://github.com/gavofyork/graypaper/pull/400/files#diff-41f3b6a0435c4f16eceda600672b2e6a38411745d9f0277a9bffdf25911d5287
         [o, l, g, m] = registers[7 : 7 + 4]
         delta = context.x.partial_state.service_accounts
         if not (memory.is_accessible(o, 32) and isinstance(l, U32)):

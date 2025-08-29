@@ -233,6 +233,7 @@ class RefineFunctions(INVF):
         # bytes->14size array of 8elements each 0->gas(g) 1-13->register_data(w)
         m_array = [m_bytes[i : i + 8] for i in range(0, len(m_bytes), 8)]
         g, _ = U64.decode_from(bytes(m_array[0]))
+        # TODO: Concat fix: https://github.com/gavofyork/graypaper/pull/438/files#diff-41f3b6a0435c4f16eceda600672b2e6a38411745d9f0277a9bffdf25911d5287
         w = [U64.decode_from(bytes(m_array[i]))[0] for i in range(1, 14)]
         [c, i_dash, g_dash, w_dash, u_dash] = PVM.execute(
             context.m[n].program_code,
