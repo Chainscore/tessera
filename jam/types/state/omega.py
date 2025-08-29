@@ -12,7 +12,12 @@ class ReadyWR:
 
 AllReadyWRs = TypedVector[ReadyWR]
 
-
-# State key: 14
 class Omega(TypedArray[AllReadyWRs, EPOCH_LENGTH]):
+    """
+    Component: ω
+    Key: 14
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/16e70016e700?v=0.7.0
+    """
+
     ...
