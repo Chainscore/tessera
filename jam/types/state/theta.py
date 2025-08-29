@@ -8,7 +8,12 @@ class Commitment:
     service_id: ServiceId
     output: OpaqueHash
 
-# State Key: 16
-# Stores Most Recent Accumulated Outputs / Commitments
 class Theta(TypedVector[Commitment]):
+    """
+    Component: θ
+    Key: 16
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/0f6b020f7702?v=0.7.0
+    """
+
     ...

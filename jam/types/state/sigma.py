@@ -6,7 +6,11 @@ from .theta import Theta
 
 @structure
 class Sigma:
-    """Overall system state combining all components (σ). Defined in Graypaper section 4.2."""
+    """
+    Overall system state combining all components (σ). Defined in Graypaper section 4.2.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/087601087601?v=0.7.0
+    """
 
     # Core authorizations pool tracking allowed authorizers for each core (α ∈ C⟦H⟧:OH C)
     # Defined in section 8.1
@@ -16,7 +20,7 @@ class Sigma:
     # Defined in section 7.1
     beta: Beta
 
-    # Accumulation Output Sequence of Block
+    # Most Recent Accumulated Outputs Sequence
     # Defined in section 7.4
     theta: Theta
 
