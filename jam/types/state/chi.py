@@ -16,11 +16,14 @@ ChiV = ServiceId
 
 ChiZ = Dictionary[ServiceId, Gas]
 
-
-# State key: 12
 @structure
 class Chi:
-    """Chi state"""
+    """
+    Component: χ
+    Key: 12
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/121d00121d00?v=0.7.0
+    """
 
     chi_m: ChiM = field(metadata={"name": "bless"})
     chi_a: ChiA = field(metadata={"name": "assign"})

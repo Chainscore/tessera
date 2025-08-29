@@ -36,7 +36,7 @@ class WorkPackageSpec:
 
     # h
     hash: WorkPackageHash
-    # l
+    # l, bundle length
     length: Uint[32]
     # u
     erasure_root: ErasureRoot
