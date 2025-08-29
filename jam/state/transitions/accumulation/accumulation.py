@@ -585,7 +585,7 @@ class Accumulation:
                     omega[ind], xi[EPOCH_LENGTH - 1]
                 )
         state.xi = xi
-        state.nu = omega
+        state.omega = omega
 
         # TODO: Remove this redundancy
         # We are aleady doing this in Safrol STF, but this is expected to be updated

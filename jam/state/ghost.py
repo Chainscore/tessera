@@ -238,7 +238,7 @@ class GhostState(Sigma):
             alpha=Alpha.from_json(gen["state"]["auth_pool"]),
             beta=Beta(h=BetaHistory([]), b=BeefyBelt([])),
             theta=Theta([]),
-            gamma=Gamma(a=GammaA([]), k=GammaP(peers), s=fallback, z=GammaZ(bytes(144))),
+            gamma=Gamma(a=GammaA([]), p=GammaP(peers), s=fallback, z=GammaZ(bytes(144))),
             delta=Delta.from_json(gen["state"]["accounts"]),
             eta=Eta.from_json(gen["state"]["entropy"]),
             iota=Iota(peers),
