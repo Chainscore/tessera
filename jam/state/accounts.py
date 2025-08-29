@@ -119,7 +119,7 @@ class Account:
 
     def historical_lookup(self, timeslot: TimeSlot, preimage_hash: Bytes[32]):
         """
-        https://graypaper.fluffylabs.dev/#/cc517d7/11c70011e000?v=0.6.5
+        https://graypaper.fluffylabs.dev/#/38c4e62/11fa0011fa00?v=0.7.0
         """
         if self.preimages[preimage_hash] is not None and self.is_preimage_valid(
             self.lookup[
@@ -137,7 +137,7 @@ class Account:
     @classmethod
     def is_preimage_valid(cls, lookup_ts: Timestamps, current_ts: TimeSlot):
         """
-        https://graypaper.fluffylabs.dev/#/cc517d7/11e700111201?v=0.6.5
+        https://graypaper.fluffylabs.dev/#/38c4e62/114301114301?v=0.7.0
         """
         if len(lookup_ts) == 0:
             return False
