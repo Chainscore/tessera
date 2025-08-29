@@ -507,7 +507,6 @@ class GeneralFunctions(INVF):
                 + U64(t.service.min_gas).encode()
                 + U64(t.service.num_o).encode()
                 + U32(t.service.num_i).encode()
-                # TODO: Update + U64(af) + U32(ar) + U32(aa) + U32(ap)
                 + U64(t.service.gratis_offset).encode()
                 + U32(t.service.created_at).encode()
                 + U32(t.service.accumulated_at).encode()
