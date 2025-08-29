@@ -18,7 +18,12 @@ from jam.types.work.manifest import SegmentRootLookup
 
 @structure
 class WorkReport:
-    """Work report structure."""
+    """
+    Set R
+    Work report structure.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/133f02133f02?v=0.7.0
+    """
 
     # s
     package_spec: WorkPackageSpec

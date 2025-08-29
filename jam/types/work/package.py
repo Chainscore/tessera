@@ -27,7 +27,12 @@ T = TypeVar("T")
 
 @structure
 class WorkPackageSpec:
-    """Work package specification structure."""
+    """
+    Set Y
+    Work package specification structure.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/13e40213f502?v=0.7.0
+    """
 
     # h
     hash: WorkPackageHash
@@ -63,10 +68,14 @@ class Authorizer:
 
 WorkItems = TypedVector[WorkItem]
 
-
 @structure
 class WorkPackage:
-    """Work package structure."""
+    """
+    Set P
+    Work package structure.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/1a82001a9000?v=0.7.0
+    """
 
     # h
     auth_code_host: ServiceId
@@ -89,12 +98,7 @@ class WorkPackage:
         service_data = delta[self.auth_code_host].historical_lookup(
             self.context.lookup_anchor_slot, self.authorizer.code_hash
         )
-        return decode_code_hash@structure
-class ImportSpec:
-    """Import specification structure."""
-
-    tree_root: OpaqueHash
-    index: Uint[16](service_data)
+        return decode_code_hash(service_data)
 
     def hash(self) -> Bytes[32]:
         return Hash.blake2b(self.encode())

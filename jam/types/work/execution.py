@@ -12,7 +12,12 @@ from jam.types.protocol.crypto import OpaqueHash, HeaderHash, StateRoot, BeefyRo
 
 
 class WorkExecResult(Choice):
-    """Work execution result choice."""
+    """
+    Set B U E
+    Work execution result choice.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/148e00149800?v=0.7.0
+    """
 
     ok: Bytes
     out_of_gas: NullType
@@ -48,7 +53,12 @@ class RefineLoad:
 
 @structure
 class RefineContext:
-    """Refine context structure."""
+    """
+    Set C
+    Refine context structure.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/13950213db02?v=0.7.0
+    """
 
     # a
     anchor: HeaderHash
@@ -74,10 +84,14 @@ class RefineContext:
             prerequisites=TypedVector[OpaqueHash]([]),
         )
 
-
 @structure
 class WorkDigest:
-    """Work result structure."""
+    """
+    Set D
+    Work result structure.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/142300147b00?v=0.7.0
+    """
 
     # s
     service_id: ServiceId

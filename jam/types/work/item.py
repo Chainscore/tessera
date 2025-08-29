@@ -61,7 +61,12 @@ ExtrinsicSpecs = TypedVector[ExtrinsicSpec]
 
 @structure
 class WorkItem:
-    """Work item structure."""
+    """
+    Set W
+    Work item structure.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/1ab0001ae900?v=0.7.0
+    """
 
     # s
     service: ServiceId
