@@ -52,7 +52,7 @@ class RecentHistory:
         bmr_merklizer = BMRFunctions()
 
         # Calculate Merkle root of Accumulation Outputs
-        accumulate_root = bmr_merklizer.wb_merkle_fn(
+        accumulate_root = bmr_merklizer.wb_merklize(
             TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in state.theta])),
             Hash.keccak256
         )
