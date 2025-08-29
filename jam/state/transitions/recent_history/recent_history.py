@@ -32,8 +32,7 @@ class RecentHistory:
         """
         Transition the state's Beta Component and update Recent History.
 
-        Source:
-            https://graypaper.fluffylabs.dev/#/38c4e62/0f0c020f0c02?v=0.7.0
+        Source: https://graypaper.fluffylabs.dev/#/38c4e62/0f0c020f0c02?v=0.7.0
 
         Args:
             state: State before transition

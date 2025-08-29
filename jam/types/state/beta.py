@@ -22,8 +22,13 @@ class BetaHistory(TypedVector[BlockHistory]):
 
 BeefyBelt = MMR
 
-# State key: 3
 @structure
 class Beta:
+    """
+    Component: β
+    Key: 3
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/0f19020f1902?v=0.7.0
+    """
     h: BetaHistory
     b: BeefyBelt
