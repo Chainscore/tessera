@@ -18,7 +18,6 @@ from tsrkit_pvm import (
     HostStatus,
     PvmError,
     ExecutionStatus,
-    Accessibility
 )
 from jam.types import Timestamps
 from jam.types.protocol.crypto import Hash, OpaqueHash
@@ -131,7 +130,7 @@ class AccumulateFunctions(INVF):
 
     @staticmethod
     @INVF.register(18, gas_cost=10)
-    def new(gas: Gas, registers: list, memory: Memory, context: AccumulationContext, slot: TimeSlot):
+    def new(gas: Gas, registers: list, memory: Memory, context: AccumulationContext, block_timeslot: TimeSlot):
         # TODO: Sync: https://github.com/gavofyork/graypaper/pull/400/files#diff-41f3b6a0435c4f16eceda600672b2e6a38411745d9f0277a9bffdf25911d5287
         [o, l, g, m] = registers[7 : 7 + 4]
         delta = context.x.partial_state.service_accounts
@@ -176,7 +175,7 @@ class AccumulateFunctions(INVF):
 
         if s.balance - a.service.t < s.t:
             registers[7] = HostStatus.CASH.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         else:
             x_i = check(
                 u=context.x.partial_state,
@@ -185,7 +184,7 @@ class AccumulateFunctions(INVF):
             context.x.partial_state.service_accounts[x_i] = a
             s.balance -= a.service.t
             context.x.partial_state.service_accounts[context.x.s_index] = s  # might not require
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(19, gas_cost=10)
@@ -198,7 +197,7 @@ class AccumulateFunctions(INVF):
         X_s.service.gas = g
         X_s.service.min_gas = m
         registers[7] = HostStatus.OK.value
-        return CONTINUE, registers, memory, context
+        return CONTINUE, gas, registers, memory, context
 
     # TODO: Need to update the gas with registers[9]
     @staticmethod
@@ -220,19 +219,19 @@ class AccumulateFunctions(INVF):
 
         if delta[d] is None:
             registers[7] = HostStatus.WHO.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         elif l < delta[d].min_gas:
             registers[7] = HostStatus.LOW.value
 
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         elif (b - a) < delta[context.x.s_index].service.t:
             registers[7] = HostStatus.CASH.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         else:
             registers[7] = HostStatus.OK.value
             context.x.deferred_transfers.append(t)
             delta[context.x.s_index].balance -= a
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(21, gas_cost=10)
