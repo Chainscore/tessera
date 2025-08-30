@@ -1,4 +1,5 @@
 from jam.types import OpaqueHash, HeaderHash
+from jam.types.protocol.core import SegmentRoot, WorkPackageHash
 from jam.types.state.beta import BlockHistory, Beta, BetaHistory
 from jam.types.state.sigma import Sigma
 from jam.block import Block
@@ -17,7 +18,7 @@ def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
 
     for p in packages:
         spec = p.report.package_spec
-        package_dict[spec.hash] = spec.exports_root
+        package_dict[WorkPackageHash(spec.hash)] = SegmentRoot(spec.exports_root)
 
     return package_dict
 

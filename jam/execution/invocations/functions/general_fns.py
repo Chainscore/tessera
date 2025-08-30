@@ -426,11 +426,12 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
 
         from jam.state.state import state
+    
+        # TODO: Handle out of balance using temp caches
+        # state.store.save_n_clear_cache()
 
-        state.store.save_n_clear_cache()
-        k = memory.read(ko, kz)
+        k = Bytes(memory.read(ko, kz))
         a = service_data.storage
-        # origin_account_storage = copy.deepcopy(a)
 
         curr_value = a.get(k)
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
@@ -445,26 +446,10 @@ class GeneralFunctions(INVF):
                     value_size=vz,
                 )
                 raise PvmError(PANIC)
-
-             #Possible implementations
-             # deepcopy------delete what inserted------handled on the service insertion itself----journaling all the actions done on the state
-
-            # try:
-            #     a[k] = Bytes(memory.read(vo, vz))
-            #     logger.debug(
-            #         "Host call write: storage updated",
-            #         storage_key=k.hex()[:16] + "...",
-            #         value_size=vz,
-            #     )
-            # except PvmError:
-            #     # Handle ONLY storage full
-            #     registers[7] = HostStatus.FULL.value
-            #     logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
-            #     return CONTINUE, gas, registers, memory, service_data
-
+            
             a[k] = Bytes(memory.read(vo, vz))
             if service_data.service.t>service_data.service.balance:
-                state.store.clear()
+                # state.store.clear()
                 registers[7] = HostStatus.FULL.value
                 logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
                 return CONTINUE, gas, registers, memory, context

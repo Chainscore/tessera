@@ -237,11 +237,10 @@ class State:
             Disputes.transition(pre_state, self, block)
 
             # Assurances
-            _, newly_avail_wrs = Assurances.transition(self, block)
+            _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
             if len(newly_avail_wrs) > 0:
                 logger.info(
-                    "Newly available WRs",
-                    count=len(newly_avail_wrs),
+                    "Newly available WRs", count=len(newly_avail_wrs),
                     wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
                 )
 

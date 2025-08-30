@@ -3,7 +3,6 @@ from typing import Self, Union, Tuple
 
 from tsrkit_types import Bytes
 
-# from jam.execution.utils import decode_code_hash
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.integers import Uint, U32
 from tsrkit_types.sequences import TypedVector, TypedArray, TypedBoundedVector
@@ -76,18 +75,12 @@ class AccountStorage(Dictionary[Bytes, Bytes, "key", "value"]):
     def __setitem__(self, key, value):
         if hasattr(self, "_meta"):
             is_new = key not in self
-            # original_num_i = self._meta.num_i
-            # original_num_o = self._meta.num_o
             if is_new:
                 self._meta.num_i = Ai(self._meta.num_i + 1)
                 self._meta.num_o = Ao(self._meta.num_o + len(value) + 34 + len(key))
             else:
-                self._meta.num_o = Ao(self._meta.num_o + len(value) - len(self[key]))
-
-            # if self._meta.t > self._meta.balance:
-            #     self._meta.num_i = original_num_i
-            #     self._meta.num_o = original_num_o
-            #     raise ValueError("Insufficient balance for storage operation")
+                diff = len(value) - len(self[key])
+                self._meta.num_o = Ao(self._meta.num_o + diff)
         super().__setitem__(key, value)
 
     def __delitem__(self, key):

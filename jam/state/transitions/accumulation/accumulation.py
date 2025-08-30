@@ -517,6 +517,7 @@ class Accumulation:
                 pi_service[service_id] = ServiceStat.empty()
             pi_service[service_id].accumulate_gas_used = Uint(accumulation_stats[service_id][0])
             pi_service[service_id].accumulate_count = Uint(accumulation_stats[service_id][1])
+            state.delta[service_id].service.accumulated_at = block.header.slot
         pi.services = pi_service
         state.pi = pi
 
