@@ -15,8 +15,8 @@ class BlockHistory:
     """Block history item"""
 
     header_hash: HeaderHash
-    state_root: StateRoot
     beefy_root: BeefyRoot
+    state_root: StateRoot
     reported: ReportedDictionary
 
 BetaHistory = TypedVector[BlockHistory]

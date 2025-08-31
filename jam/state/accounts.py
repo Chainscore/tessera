@@ -1,6 +1,8 @@
 import asyncio
 from keyword import kwlist
 from typing import Tuple
+
+from rockstore import store
 from jam.api.rpc.broker import broker
 from jam.execution.utils import decode_code_hash
 from jam.state.storage import StateStorage
@@ -68,7 +70,7 @@ class AccountDataView:
 
     @property
     def t(self):
-        return max(Balance(0), Balance(
+        return Balance(max(0, 
             BASIC_MINIMUM_BALANCE
             + ADDITIONAL_BALANCE_PER_ITEM * self.num_i
             + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
@@ -83,7 +85,7 @@ class Account:
 
     @property
     def t(self):
-        return max(Balance(0), Balance(
+        return Balance(max(0, 
             BASIC_MINIMUM_BALANCE
             + ADDITIONAL_BALANCE_PER_ITEM * self.service.num_i
             + ADDITIONAL_BALANCE_PER_OCTET * self.service.num_o
@@ -192,8 +194,8 @@ class StorageView:
 
     def __setitem__(self, key: Bytes, value: Bytes):
         # TODO - check for gas before adding, throw error if insufficient. This is supposed to be handled in relevent invocation
-        key = self.get_key(key)
-        curr_data = self.store.get(bytes(key))
+        storage_key = self.get_key(key)
+        curr_data = self[key]
         meta_view = AccountDataView(self.id, self.store)
         if curr_data is None:
             meta_view.num_i = meta_view.num_i + 1
@@ -202,22 +204,22 @@ class StorageView:
             meta_view.num_o = meta_view.num_o + len(value) - len(curr_data)
             #websocket broadcast for service value
 
-        self.store.put(key, value)
+        self.store.put(storage_key, value)
        
         # Publishes updates of the service value. On every setitem, the value is broadcasted to all subscribers
-        asyncio.create_task(broker.publish("subscribeServiceValue", list(value.hex())))
+        asyncio.create_task(broker.publish("subscribeServiceValue", list(value)))
 
     def __delitem__(self, key: Bytes):
         curr_value = self[key]
+        storage_key = self.get_key(key)
         if curr_value:
             meta_view = AccountDataView(self.id, self.store)
             meta_view.num_i = meta_view.num_i - 1
             meta_view.num_o = meta_view.num_o - len(curr_value) - 34 - len(key)
 
         # Publishes updates of the service value. On every delitem, the value is broadcasted to all subscribers
-        asyncio.create_task(broker.publish("subscribeServiceValue", list(curr_value)))
+        asyncio.create_task(broker.publish("subscribeServiceValue", []))
     
-        storage_key = self.get_key(key)
         self.store.delete(storage_key)
 
 

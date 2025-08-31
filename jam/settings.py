@@ -6,6 +6,7 @@ from typing import Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import U32, Bytes, Bytes32
 
+from jam.logging import get_logger
 from jam.types import ValidatorIndex
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import Hash
@@ -18,6 +19,8 @@ from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 
 if TYPE_CHECKING:
     from jam.state.state import State
+
+logger = get_logger()
 
 class Settings:
     # Node settings
@@ -176,7 +179,9 @@ class Settings:
     @property
     def validator_index(self):
         if time()//(6)//EPOCH_LENGTH != self._last_recorded_epoch:
-            raise ValueError("Validator index is not updated, call update() first.")
+            logger.warning("Validator index is not updated, call update() first.")
+            from jam.state.state import state
+            self._validator_index, _ = state.kappa.find(self.bandersnatch_public)
         if isinstance(self._validator_index, NoneType):
             raise ValueError("Validator index is not set, check if the node is registered in the state.")
         return ValidatorIndex(self._validator_index)

@@ -41,7 +41,7 @@ EPOCH_LENGTH = chain_config.epoch_duration
 E = EPOCH_LENGTH
 
 # D — Timeslot count after which an unreferenced preimage may be expunged.
-PREIMAGE_EVICTION_TIMESLOTS = 32  # TODO: 32 * EPOCH_LENGTH
+PREIMAGE_EVICTION_TIMESLOTS = chain_config.preimage_expunge_period
 D = PREIMAGE_EVICTION_TIMESLOTS
 
 # F — Audit bias factor; expected # of additional validators who will audit due to prior no-show.
@@ -57,11 +57,11 @@ IS_AUTHORIZED_GAS = 50_000_000
 G_I = IS_AUTHORIZED_GAS
 
 # G_R — Gas allocated to invoke a work-package’s Refine logic.
-REFINE_GAS = 5_000_000_000
+REFINE_GAS = chain_config.max_refine_gas
 G_R = REFINE_GAS
 
 # G_T — Total gas allocated across all accumulation. Must satisfy: G_T ≥ G_A ⋅ C + Σ_gas(vkg)
-TOTAL_GAS = 3_500_000_000
+TOTAL_GAS = chain_config.max_block_gas
 G_T = TOTAL_GAS
 
 # H — Size of recent block history, in blocks.

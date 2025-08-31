@@ -425,9 +425,9 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-        from jam.state.state import state
     
         # TODO: Handle out of balance using temp caches
+        # from jam.state.state import state
         # state.store.save_n_clear_cache()
 
         k = Bytes(memory.read(ko, kz))
@@ -497,8 +497,8 @@ class GeneralFunctions(INVF):
                 + U32(t.service.accumulated_at).encode()
                 + U32(t.service.parent_service).encode()
             )
-            f = min(registers[11], len(m))
-            l = min(registers[12], len(m) - f)
+            f = min(registers[9], len(m))
+            l = min(registers[10], len(m) - f)
 
             if memory.is_accessible(output_offset, l, Accessibility.WRITE):
                 registers[7] = len(m)
