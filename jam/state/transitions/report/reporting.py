@@ -326,14 +326,6 @@ class Reporting:
         return state
 
     @staticmethod
-    def check_offenders(state: Sigma, block: Block):
-        """
-        This function makes sure that signatures for the work_reports are not from offenders.
-        """
-
-        ...
-
-    @staticmethod
     def ensure_signature(state: Sigma, block: Block):
         """
         Description : This function make sure that signature for the work_report is valid (ensure that report are signed by correct validators which are assigned, to that particular core, through guarantor assignment).
@@ -354,6 +346,14 @@ class Reporting:
                     (block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH
                 ) != floor(block.header.slot / EPOCH_LENGTH):
                     public_key = state.lambda_[y.validator_index].ed25519
+
+                # Handle Offenders
+                if public_key in state.psi.offenders:
+                    raise ReportingError(
+                        ReportingErrorCode.BANNED_VALIDATOR,
+                        "Banned validators are not authorized to sign reports.",
+                    )
+
                 signature = y.signature
 
                 try:
