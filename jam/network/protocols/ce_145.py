@@ -3,20 +3,24 @@ import math
 
 from typing import cast
 
+from docutils.nodes import header
 from flask import Flask
+from numpy.ma.core import empty
 from tsrkit_types import structure, Uint, Bool, U8, U32
+
 from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY
 from jam.types.protocol.core import ValidatorIndex, EpochIndex, TrancheIndex
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.logging import get_logger
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature
+from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, HeaderHash
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
 from jam.types.work.report import WorkReport, WorkReportHash, WorkReports
-
+from tests.unit.test_judgment import judgment
+from jam.block import Block, Header
 
 # Module-specific logger
 logger = get_logger("network")
@@ -121,14 +125,13 @@ class JudgmentPublication(NetworkProtocol):
         from jam.finality.finality import Finality
         from jam.settings import settings
         from jam.audit.auditor import Auditor
+        from jam.state.state import state
 
         auditor = Auditor()
 
-        # TODO: FIX THIS
-        latest_block = Finality.load_latest(kv=settings.main_db)
-        header_hash = latest_block.header.hash()
-
         buffer = server.stream_buffer[stream_id][1:]
+
+        latest_block = Finality.load_latest(kv=settings.main_db)
 
         try:
             data = CE145Data.decode(buffer)
@@ -149,21 +152,19 @@ class JudgmentPublication(NetworkProtocol):
             wr_hash = data.judgment.work_report_hash
             edd2519_signature = data.judgment.ed25519_signature
 
-            # ------------------- Save judgment in Tranche State ---------------------------------------------
-            # if tranche.tranche_index >= TrancheIndex(1):
-            #     # get previous state
-            #     prev_tranche = Tranche(
-            #         TrancheIndex=tranche.tranche_index - TrancheIndex(1),
-            #         header_hash=tranche.header_hash
-            #     )
-            #
-            #     get_prev_state = tranche_store.get_state(tranche=prev_tranche)
+            # as soon as we false judgment we discard after tranche all block process build a new chain
+            if not validity:
+                # 1. find report => block header, from which block he exist
+                wr_header = self.find_report_header(block=latest_block, wr_hash=wr_hash)
+                # 2 save state hash
+                state.revert(wr_header.hash())  # asking for cache
+                # 3. save extrinsic
 
-            # state = tranche_store.get_state(tranche=tranche)
-            #
-            # audit_record = state.records[wr_hash]
-            #
-            # if len(audit_record.true_votes) <= VALIDATORS_SUPER_MAJORITY or len(audit_record.true_votes) <= VALIDATORS_SUPER_MAJORITY:
+
+                # 3. terminate all node further process and process further block
+
+
+                # stop further process start new chain here
 
             tranche_store.update_judgment(
                 tranche=tranche,
@@ -211,3 +212,40 @@ class JudgmentPublication(NetworkProtocol):
             return True
 
         return False
+
+    @staticmethod
+    def find_report_header(block: Block, wr_hash: WorkReportHash) -> Header:
+        """ """
+        from jam.state.state import state, State
+        from jam.settings import settings
+
+        kv = settings.main_db
+
+        parent_hash = block.header.parent
+
+        curr_available_wrs = state.rho
+        found = False
+        for r in curr_available_wrs:
+            if r.hash() == wr_hash:
+                found = True
+                break
+
+        if found:
+            return block.header
+
+        else:
+            while True:
+                curr_block = block
+                parent_block = curr_block.load_parent(kv)
+                # check only upto unaudited block, stop iteration if we find audited, finalized block
+                if block.extrinsic.disputes != empty():
+                    guarantee_ext = parent_block.extrinsic.guarantees
+                    for report, slot, signature in guarantee_ext:
+                        if report.hash() == wr_hash:
+                            return parent_block.header
+                    # if not found we come here
+                    block = parent_block
+
+                else:
+                    # if dispute not in block, skip that block iterations
+                    block = parent_block.load_parent(kv)

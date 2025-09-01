@@ -27,8 +27,6 @@ class Auditor:
         block: Block,
         tranche: Tranche,
         no_shows: NoShows = None,
-        # negative_wrs: TypedVector[CoreReport] = None
-
     ):
         """
         Main Function to trigger auditing for nth tranche (n >= 0)
@@ -64,7 +62,7 @@ class Auditor:
             return
 
         logger.debug("ASSIGNED REPORTS", block=str(block), tranche=tranche, tranche_state=curr_state.to_json(), assigned_reps=assigned_wrs)
-        await self.announcement(block, tranche, assigned_wrs, no_shows, negative_wrs)
+        await self.announcement(block, tranche, assigned_wrs, no_shows)
         ...
 
     @classmethod
@@ -306,7 +304,7 @@ class Auditor:
         # ---------------- Initialized NO_SHOW, UNAUDITED and NEGATIVE WR  list for this tranche -----------------------
         updated_unaudited_list = OptionalReports([])                                                                    # unaudited work reports list to be audited for this tranche
         global_no_shows = NoShows([])                                                                                   # global no show has validator who did give judgment in lat tranche
-        negative_wrs = TypedVector[CoreReport]([])                                                # Reports which receiver at least one single negative judgment
+        negative_wrs = TypedVector[CoreReport]([])                                                                      # Reports which receiver at least one single negative judgment
 
        # ------------------------------------ Iterate previous tranche unaudited work reports --------------------------
         for core_index, wr in enumerate(unaudited_reports):
@@ -361,7 +359,7 @@ class Auditor:
                             before_prev_state = tranche_store.get_state(tranche=before_prev)
                             before_prev_records = before_prev_state.records[wr_hash]
 
-                            #   VERY RARE CASE
+                            #   VERY RARE CASE  =>
                             if len(before_prev_records.false_votes) == 0:
                                 updated_unaudited_list.append(OptionalReport(wr_hash))
                                 negative_wrs.append(wr_hash)
@@ -504,7 +502,7 @@ class Auditor:
 
     """
     
-    i think here i m talking about no_show
+    i think here i m talking about no_show, sorting in based on validator index 
     want to return sorted no_showdata = [[3, []], [1, []], [6, []]]
 
     sorted_data = sorted(data, key=lambda x: x[0])
@@ -515,94 +513,3 @@ class Auditor:
     print(sorted_data)
 
     """
-
-    @classmethod
-    async def getting_report(cls, wr_hash: WorkReportHash) -> WorkReport | bool:
-        """
-        fetch Work Report if it is not exist in Report
-        1. check in ReportDA
-        2. using protocol 136
-        """
-        # 1. check in ReportDA
-        from jam.settings import settings
-        from jam.storage.da.reports import ReportsDA
-        from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data, CE136Response
-
-        CE136 = WorkReportRequest()
-
-        d3l = settings.d3l
-        reports_da = ReportsDA(d3l)
-        report = reports_da.get(wr_hash=wr_hash)
-
-        # 2. using protocol 136
-        if type(report) == WorkReportHash:
-            return report
-        else:
-            logger.info("Work Report Not found in RepostDA, Now request to the other Auditor via protocol 136")
-            report_hash = WorkReportHash(wr_hash)
-
-            data = CE136Data(len=U32(len(report_hash.encode())), work_report_hash=report_hash)
-
-            response = await CE136.transmit(data=data)
-
-            if type(response) ==  WorkReportHash:
-                return response
-            else:
-                logger.debud(
-                    "No work report was found in ReportDA and under protocol 136."
-                )
-                return False
-
-
-    @classmethod
-    async def process_refine(cls, block: Block, wr: WorkReport, tranche: Tranche) -> bool:
-        """ Check previously refine or not"""
-
-        from jam.settings import settings
-        from jam.audit.utils import Utils
-        from jam.storage.tranche_store import tranche_store
-
-
-        audit = Utils()
-
-        curr_tranche = tranche
-        tranche_index = curr_tranche.tranche_index
-        validator_index = settings.validator_index
-
-        wr_hash = wr.hash()
-
-        # ---------------------------- Check => already refine or not ----------------------------------------
-        # 1. Guarantee refine check
-        guarantee_refine = False
-        guarantee_ext = block.extrinsic.guarantees
-        for report, slot, signature in guarantee_ext:
-            if report.hash() == wr_hash:
-                logger.info(f"already judgment given for Work report: {wr_hash}")
-                guarantee_refine = True
-                break
-
-        if guarantee_refine:
-            return True
-
-        elif guarantee_refine == False and tranche_index > 0:
-            # 2. previous tranche refine check
-            curr_state = tranche_store.get_state(tranche=curr_tranche)  # WHY CURRENT STATE BECAUSE WE CARRY FORWARD PREVIOUS JUDGMENT TO NEXT TRANCHE STATE
-            records = curr_state.records[wr_hash]
-            true_votes = records.no_shows
-            false_votes = records.false_votes
-            if validator_index in true_votes:
-                logger.info(f"already true judgment given in prev tranche for Work report: {wr_hash}")
-                return True
-
-            elif validator_index in false_votes:
-                logger.info(f"already false judgment given in prev tranche for Work report: {wr_hash}")
-                return False
-            else:
-                validity = await audit.refine(wr=wr)
-                return validity
-
-        else:
-            logger.info(f" Work Report hsa not been refine via validator: {validator_index} => {wr_hash},")
-            logger.info(f"Process refine for Work Report : {wr_hash}")
-            validity = await audit.refine(wr=wr)
-            return validity

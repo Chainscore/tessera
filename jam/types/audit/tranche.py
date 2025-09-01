@@ -37,8 +37,8 @@ class CoreReport:
 @structure
 class AuditRecord:
     announces: ValidatorList            # A_n
-    true_votes: judgments               # J_t(wr)(t and sign) => Carry Forward
-    false_votes: judgments              # J_f(wr)(t and sign) => Carry Forward
+    true_votes: judgments               # J_t(wr)(t, key and sign) => Carry Forward
+    false_votes: judgments              # J_f(wr)(t, key and sign) => Carry Forward
     no_shows: NoShows
 
 
@@ -76,9 +76,8 @@ class TrancheState:
     """ Represents the tranche state, which maintains audit records associated with each tranche. """
     unaudited_list: OptionalReports                                             # Corpus of reports (q), a_n will be calculated from this.
     records: Records                                                            # A_n, J_t, J_f mappings.
-    valid_set: TypedVector[CoreReport]                    # Already validated_wrs [(1, wr1), (4, wr4), ....]
-    invalid_set: TypedVector[CoreReport]                  # Already invalid_wrs [(2, wr1), (5, wr4), ....]
-    wonky_set: TypedVector[CoreReport]                    # Reports with no verdict [(2, wr1), (5, wr4), ....]
+    valid_set: TypedVector[CoreReport]                                          # Already validated_wrs [(1, wr1), (4, wr4), ....]
+    invalid_set: TypedVector[CoreReport]                                        # Already invalid_wrs [(2, wr1), (5, wr4), ....]
     dispute: DisputesExtrinsic
 
 
@@ -90,7 +89,6 @@ class TrancheState:
             records=Records({}),
             valid_set=TypedVector[WorkReportHash]([]),
             invalid_set=TypedVector[WorkReportHash]([]),
-            wonky_set=TypedVector[WorkReportHash]([]),
             dispute=DisputesExtrinsic(
                 verdicts=Verdicts([]),
                 culprits=Culprits([]),

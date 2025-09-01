@@ -33,7 +33,7 @@ class AuditEngine:
     def __init__(self):
         self.is_audited = False
 
-    async def run(self, block: Block, new_wr: WorkReports):
+    async def run(self, block: Block, new_wrs: WorkReports):
         from jam.settings import settings
         header_hash = block.header.hash()
 
@@ -54,11 +54,11 @@ class AuditEngine:
         prior_state = State.load(block.header.parent)
         auditable_reports = OptionalReports([])
 
-        print("PRIOR STATE", settings.NODE_NAME, block.header.parent.hex(),  prior_state.root.hex(), prior_state.rho.to_json(), header_hash.hex(), state.root.hex(), state.rho.to_json())
+        # print("PRIOR STATE", settings.NODE_NAME, block.header.parent.hex(),  prior_state.root.hex(), prior_state.rho.to_json(), header_hash.hex(), state.root.hex(), state.rho.to_json())
 
         for r in prior_state.rho:
             report_state: (WorkReportState | Null) = r.unwrap()
-            if isinstance(report_state, WorkReportState) and report_state.report in new_wr:
+            if isinstance(report_state, WorkReportState) and report_state.report in new_wrs:
                 auditable_reports.append(OptionalReport(report_state.report))
             else:
                 auditable_reports.append(OptionalReport(Null))
