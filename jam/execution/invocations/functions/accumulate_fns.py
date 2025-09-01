@@ -286,10 +286,10 @@ class AccumulateFunctions(INVF):
         lookup_value = context.x.partial_state.service_accounts[context.x.s_index].lookup[
             lookup_key
         ] # a' s value
-        if not lookup_value:
+        if lookup_value == None:
             registers[7] = HostStatus.NONE.value
             registers[8] = 0
-        if len(lookup_value) == 0:
+        elif len(lookup_value) == 0:
             registers[7] = 0
             registers[8] = 0
         elif len(lookup_value) == 1:
