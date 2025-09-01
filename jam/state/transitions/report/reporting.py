@@ -1,3 +1,5 @@
+from jam.types import ValidatorIndex
+from jam.utils.assignment import assign_guarantors
 from math import floor
 from typing import Dict, Set, List
 
@@ -9,7 +11,7 @@ from jam.block import Block
 from jam.logging import get_logger
 from jam.state.transitions.report.error import ReportingError, ReportingErrorCode
 from jam.state.transitions.report.guarantee_assignment import guarantor_assignment
-from jam.types.protocol.core import CoreIndex
+from jam.types.protocol.core import CoreIndex, TimeSlot
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
@@ -324,6 +326,14 @@ class Reporting:
         return state
 
     @staticmethod
+    def check_offenders(state: Sigma, block: Block):
+        """
+        This function makes sure that signatures for the work_reports are not from offenders.
+        """
+
+        ...
+
+    @staticmethod
     def ensure_signature(state: Sigma, block: Block):
         """
         Description : This function make sure that signature for the work_report is valid (ensure that report are signed by correct validators which are assigned, to that particular core, through guarantor assignment).
@@ -439,37 +449,36 @@ class Reporting:
 
         """
         if len(block.extrinsic.guarantees) == 0:
-            # Return if no gurantees to check
+            # Return if no guarantees to check
             return
 
-        report_slot = None
+        cache: Dict[TimeSlot, Dict[CoreIndex, Set[ValidatorIndex]]] = {}
         for x in block.extrinsic.guarantees:
             report_slot = x.slot
 
-        guarantors_assigned = guarantor_assignment(
-            state.eta,
-            state.kappa,
-            state.lambda_,
-            state.gamma.p,
-            block.header.slot,
-            report_slot,
-            state.tau,
-        )
+            if report_slot in cache:
+                guarantors_assigned = cache[report_slot]
+            else:
+                guarantors_assigned = guarantor_assignment(
+                    state.eta,
+                    state.kappa,
+                    state.lambda_,
+                    state.gamma.p,
+                    block.header.slot,
+                    report_slot,
+                    state.tau,
+                )
+                cache[report_slot] = guarantors_assigned
 
-        # array of assign validator for each core
-        current_assigned: Dict[CoreIndex, Set] = {}
-        for x in block.extrinsic.guarantees:
-            key = x.report.core_index
-            value = set()
+            core_assignment = guarantors_assigned[x.report.core_index]
+            val_assignment: Set[ValidatorIndex] = set()
             for y in x.signatures:
-                value.add(y.validator_index)
-            current_assigned[key] = value
+                val_assignment.add(y.validator_index)
 
-        # Iterate through current gurantee assignments, match them against ideal gurantor assigned
-        for core, vals in current_assigned.items():
-            for validator in vals:
-                if validator not in guarantors_assigned[core]:
+            for v in x.signatures:
+                if v.validator_index not in core_assignment:
                     raise ReportingError(
                         ReportingErrorCode.WRONG_ASSIGNMENT,
-                        f"Assign wrong validator to the core. Assignments: {guarantors_assigned}, Reported: {current_assigned}",
+                        f"Assigned wrong validators to core {x.report.core_index}. "
+                        f"Expected: {core_assignment}, Reported: {val_assignment}",
                     )

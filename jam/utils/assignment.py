@@ -86,7 +86,7 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
 
     # ------- Rotate Validators -------
     rotation_phase = floor((slot % EPOCH_LENGTH) / ROTATION_PERIOD)
-    keys = list(mapping.keys())
+    keys = sorted(list(mapping.keys()))
     values = [mapping[k] for k in keys]
     values = deque(values)
     values.rotate(-rotation_phase)

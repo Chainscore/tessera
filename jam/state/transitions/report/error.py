@@ -34,3 +34,4 @@ class ReportingErrorCode(Enum):
     WORK_REPORT_TOO_BIG = "work_report_too_big"
     WRONG_ASSIGNMENT = "wrong_assignment"
     BAD_SIGNATURE = "bad_signature"
+    BANNED_VALIDATOR = "banned_validator"
