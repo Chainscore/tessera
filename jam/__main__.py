@@ -4,12 +4,23 @@ import logging
 import os
 import time
 from dotenv import load_dotenv
-from jam.operations import operate
-from jam.logging import setup_logging, logger
-from jam.utils.chainspec import chain_config
-from jam.settings import setup_setting
-from jam.finality.finality import Finality
-from jam.network.start import start_node
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U16, U8, Uint
+
+from jam.config.keys import setup_keys
+from jam.config.logging import setup_logging, logger
+from jam.config.chainspec import chain_config,get_chain_config
+
+from jam.consensus.bp_engine import BlockProducer
+from jam.consensus.grandpa.finality import Finality
+from jam.config.settings import setup_setting
+
+from jam.network.peer import Peer
+from jam.network.node import Node
+
+from jam.operations import Builder
+from jam.operations.utils.state_update import update_state
+
 from jam.state.state import setup_state
 from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
@@ -34,9 +45,11 @@ async def main(
     init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
     init_ep = int(init_ts // EPOCH_LENGTH)
 
+    if not is_builder and not is_validator:
+        is_validator=True
     # ---------- LOAD ENVIRONMENT ----------
-    load_dotenv(".env")
-    load_dotenv(env, override=True)
+    # load_dotenv(".env")
+    # load_dotenv(env,override=True)
 
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
@@ -81,10 +94,8 @@ async def main(
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
 
-        # Genesis specs
-        dev_spec = json.load(open(genesis_path))
-        # TODO: Remove Later
-        update_state(state)
+
+        # dev_spec = json.load(open(genesis_path))
 
         settings.update()
 
