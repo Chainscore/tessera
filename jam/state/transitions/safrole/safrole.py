@@ -220,7 +220,7 @@ class Safrole:
         Entry index should be a natural number less than N
         https://graypaper.fluffylabs.dev/#/5b732de/0f22000f2400
         """
-        if 0 <= ticket.attempt > TICKET_ENTRIES_PER_VALIDATOR:
+        if ticket.attempt < 0 or ticket.attempt >= TICKET_ENTRIES_PER_VALIDATOR:
             raise SafroleError(
                 SafroleErrorCode.BAD_TICKET_ATTEMPT,
                 f"Ticket attempt {ticket.attempt} is invalid",
