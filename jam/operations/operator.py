@@ -19,7 +19,7 @@ def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
     return [
         (0, BlockProducer),
         (2, None),  # audit
-        (4, assurer),  # transmit assurances
+        (4, assurer),  # transmit assurances             #============>>>>>>>>>>   why
     ]
 
 
@@ -74,9 +74,11 @@ async def operate(is_builder = False):
             from jam.block.extrinsics.tickets import ticket_store
             from jam.block.extrinsics.guarantees import wrg_store
             from jam.block.extrinsics.assurances import asr_store
+            from jam.block.extrinsics.disputes import dpt_store
             ticket_store.clear()
             wrg_store.clear()
             asr_store.clear()
+            dpt_store.clear()
 
         if ts%EPOCH_LENGTH == 0:
             from jam.settings import settings
