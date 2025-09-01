@@ -268,7 +268,7 @@ class TimestampsView:
         return self.__getitem__(key)
 
     def get_key(self, key: LookupTable):
-        return bytes(construct_state_key((self.id, Bytes(U32(key.length).encode()) + Bytes(key.encode()))))
+        return bytes(construct_state_key((self.id, Bytes(U32(key.length).encode()) + key.hash)))
 
     def __setitem__(self, key: LookupTable, value: Timestamps):
         storage_key = self.get_key(key)

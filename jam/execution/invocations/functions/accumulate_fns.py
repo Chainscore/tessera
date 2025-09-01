@@ -333,7 +333,7 @@ class AccumulateFunctions(INVF):
 
         # Account
         account: AccountData = context.x.partial_state.service_accounts[context.x.s_index]
-        lookup_key = LookupTable(hash=preimage_hash,length= preimage_len)
+        lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         # storing the initial lookup value
         lookup_val: Timestamps | None = account.lookup[lookup_key]
         # Updated t

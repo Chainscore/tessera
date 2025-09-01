@@ -1,10 +1,7 @@
 from jam.types import ValidatorIndex
-from jam.utils.assignment import assign_guarantors
 from math import floor
 from typing import Dict, Set, List
-
 from tsrkit_types import Bytes, Uint, Null
-
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 from jam.block import Block
@@ -18,7 +15,6 @@ from jam.types.state.sigma import Sigma
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.work import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, LOOKUP_ANCHOR_MAX_AGE, X
-from jam.utils.merkle import MMRFunctions
 from jam.utils.constants import (
     VALIDATOR_COUNT,
     CORE_COUNT,

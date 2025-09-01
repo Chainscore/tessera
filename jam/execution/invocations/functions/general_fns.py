@@ -269,50 +269,50 @@ class GeneralFunctions(INVF):
             a = service_data
         elif lookup_key in accounts:
             a = accounts[lookup_key]
-
-        # Must be able to read the 32-byte hash
+        
+        # Must be able to read the 32-byte hash_addr
         if not memory.is_accessible(hash_addr, 32):
             logger.error(
-                "Host call lookup: memory not accessible for hash",
-                hash_addr=hash_addr,
-                required_size=32,
+                "Host call lookup: memory not accessible to read preimage key",
+                hash_addr=hash_addr
             )
             raise PvmError(PANIC)
 
-        v: None | Bytes = None
-        data = memory.read(int(hash_addr), 32)
-        if a is not None:
-            # Directly get data, returns None if not found
-            v = a.lookup.get(OpaqueHash(data))
+        hash_key = OpaqueHash(memory.read(int(hash_addr), 32))
+        if a is not None and a.preimages[hash_key]:
+            # Directly get data
+            v = a.preimages[hash_key]
+            if not v:
+                logger.error("Failed key check")
+                raise PvmError(PANIC)
 
-        f = min(int(registers[10]), len(v) if v else 0)
-        l = min(int(registers[11]), (len(v) if v else 0) - f)
+            f = min(int(registers[10]), len(v))
+            l = min(int(registers[11]), len(v) - f)
 
-        if not memory.is_accessible(output_addr, l):
-            logger.error(
-                "Host call lookup: memory not accessible for output",
-                output_addr=output_addr,
-                required_size=l,
-            )
-            raise PvmError(PANIC)
+            if not memory.is_accessible(output_addr, l, Accessibility.WRITE):
+                logger.error(
+                    "Host call lookup: memory not accessible for output",
+                    output_addr=output_addr,
+                    required_size=l,
+                )
+                raise PvmError(PANIC)
 
-        if v is None:
-            registers[7] = HostStatus.NONE
-            logger.debug(
-                "Host call lookup: value not found",
-                lookup_key=lookup_key,
-                hash_hex=data.hex()[:16] + "...",
-            )
-        else:
             registers[7] = Register(len(v))
-            memory.write(output_addr, memory.read(f, l))
+            memory.write(output_addr, v[f:f+l])
             logger.debug(
                 "Host call lookup: value found",
                 lookup_key=lookup_key,
                 value_length=len(v),
                 returned_length=l,
             )
-        return CONTINUE, gas, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
+        else:
+            registers[7] = HostStatus.NONE
+            logger.debug(
+                "Host call lookup: account or preimage",
+                lookup_key=lookup_key,
+                hash_hex=data.hex()[:16] + "...",
+            )
 
     @staticmethod
     @INVF.register(3, gas_cost=10)
