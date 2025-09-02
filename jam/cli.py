@@ -10,7 +10,7 @@ import asyncio
 from dotenv import load_dotenv
 from jam.__main__ import main as node_main
 from jam.utils.clihelpers  import show_help_topic
-from jam.config.logging import get_logger
+from jam.logging import get_logger
 
 logger=get_logger("cli")
 

@@ -4,23 +4,14 @@ import logging
 import os
 import time
 from dotenv import load_dotenv
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U16, U8, Uint
 
-from jam.config.keys import setup_keys
-from jam.config.logging import setup_logging, logger
-from jam.config.chainspec import chain_config,get_chain_config
-
-from jam.consensus.bp_engine import BlockProducer
-from jam.consensus.grandpa.finality import Finality
-from jam.config.settings import setup_setting
-
-from jam.network.peer import Peer
+from jam.finality.finality import Finality
+from jam.logging import setup_logging, logger
+from jam.network.start import start_node
+from jam.operations.operator import operate
+from jam.utils.chainspec import chain_config
+from jam.settings import setup_setting
 from jam.network.node import Node
-
-from jam.operations import Builder
-from jam.operations.utils.state_update import update_state
-
 from jam.state.state import setup_state
 from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
@@ -29,13 +20,11 @@ from hypercorn.asyncio import serve
 from hypercorn.config import Config
 from jam.api.rpc.app import rpc
 from jam.operations.ticket_queue import setup_ticket_queue
-from tests.integration.utils.state_update import update_state
 
 
 async def main(
     genesis_path: str,
     env: str,
-    start_genesis: bool,
     theme: str,
     is_builder: bool,
     is_validator: bool,
@@ -94,12 +83,7 @@ async def main(
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
 
-
-        # dev_spec = json.load(open(genesis_path))
-
-        settings.update()
-
-        # setup ticket queue
+        # FIX: setup ticket queue
         setup_ticket_queue()
 
         # ------------ SET GENESIS BLOCK ------------
@@ -108,7 +92,7 @@ async def main(
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db, True)
 
-        #       RPC/WebSocket server setup
+        # RPC/WebSocket server setup
         rpc_port = int(os.environ.get("RPC_PORT", 5000))
         rpc_config = Config()
         rpc_config.bind = [f"{host}:{port}"]

@@ -1,6 +1,6 @@
 # Tessera
 
-JAM blockchain client implementation in Python
+Clean-room JAM client implementation in Python
 
 ## 🚀 Quick Start
 
@@ -58,9 +58,9 @@ JAM blockchain client implementation in Python
   ./scripts/test.sh --vectors --module accumulate --spec full
   ```
 
-- **Update submodules:**
+- **Update internal dependencies:**
   ```bash
-  ./scripts/update-submodules.sh
+  ./scripts/update-deps.sh
   ```
 
 - **Update dependencies:**
