@@ -10,3 +10,4 @@
 [submodule "test-suites"]
 	path = test-suites
 	url = https://github.com/Chainscore/tessera-test-suites.git
+	branch = sync/0.7.0
