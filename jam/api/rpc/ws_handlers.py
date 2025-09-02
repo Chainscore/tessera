@@ -11,7 +11,7 @@ from jam.state.state import State
 from jam.types.protocol.core import ServiceId
 from tsrkit_types.bytes import Bytes
 from jam.api.rpc.utils import parse_data
-from jam.types.state.delta import AccountMetadata
+from jam.types.state.delta import AccountMetadata, LookupTable
 from jam.utils.merkle import MMRFunctions
 from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics, Extrinsic
@@ -77,6 +77,7 @@ async def initial_subscribe_service_request(sid, pi_hash, pi_len, finality):
     # block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(settings.main_db)
     block = Finality.load_final(settings.main_db)
     state_at_hh = State.load(block.header.hash())
+    print("subscribeServiceRequest called", pi_hash.hex())
     try:
         value = list(state_at_hh.delta[sid].preimages[pi_hash])
     except Exception:
@@ -160,6 +161,17 @@ def submit_work_package_handler(params: list):
     )
     responses = asyncio.create_task(CE133.transmit(data))
 
+def service_request_handler(params: list):
+    try:
+        hh, sid, pi_hash, pi_len = parse_data(
+            [HeaderHash, ServiceId, OpaqueHash, U32], params
+        )
+        state_at_hh = State.load(hh)
+
+        return list(state_at_hh.delta[sid].lookup[LookupTable(hash=pi_hash, length=pi_len)])
+    except Exception as e:
+        return None
+
 
 method_map: dict[str, Callable] = {
     "parameters": parameters,
@@ -171,6 +183,7 @@ method_map: dict[str, Callable] = {
     "beefyRoot": beefy_root_handler,
     "finalizedBlock": finalized_block_handler,
     "submitWorkPackage": submit_work_package_handler,
+    "serviceRequest": service_request_handler,
 }
 
 

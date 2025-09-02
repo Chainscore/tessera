@@ -9,12 +9,16 @@ from jam.types.protocol.core import Gas, Balance, BlobLength, ServiceId
 from jam.types.protocol.crypto import Hash
 
 from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
-from bootstrap_service import bootstrap_service
+from bootstrap_service import bootstrap_service as boot_service
+from service_blob import service
+from null_authorizer_blob import null_authorizer
 
 def update_state(state: State):
-    pc = bytes(
-        [0, 0, 22, 124, 121, 81, 25, 1, 7, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1, 50, 0, 69, 147,
-     18])
+    # pc = bytes(
+    #     [0, 0, 22, 124, 121, 81, 25, 1, 7, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1, 50, 0, 69, 147,
+    #  18])
+
+    pc = bytes(null_authorizer)
 
     c0_authorized_code = [0, 0, 21, 124, 121, 81, 9, 6, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1, 50,
                           0,
@@ -25,8 +29,8 @@ def update_state(state: State):
     service_code = Bytes(b"").encode() + bytecode
     code_hash = Hash.blake2b(service_code)
 
-    service_id = 42
-    state.delta[ServiceId(service_id)].service = AccountMetadata(
+    service_id = ServiceId(42)
+    state.delta[service_id].service = AccountMetadata(
         code_hash=code_hash,
         balance=Balance(1_000_000),
         gas_limit=Gas(1_000),
@@ -36,7 +40,7 @@ def update_state(state: State):
     )
     state.delta[ServiceId(service_id)].lookup[
         LookupTable(hash=code_hash, length=BlobLength(len(service_code)))] = Timestamps([state.tau])
-    state.delta[ServiceId(service_id)].preimages[code_hash] = service_code
+    state.delta[service_id].preimages[code_hash] = service_code
 
     wi_pc = bytes(
         [0, 0, 90, 51, 12, 149, 27, 0, 112, 254, 124, 117, 6, 40, 2, 200, 199, 3, 149, 51, 7, 200, 203, 4, 130,
@@ -46,10 +50,25 @@ def update_state(state: State):
          138, 84, 161, 66, 1]
     )
 
-    wi_service_code = bootstrap_service
-    # wi_service_code = service.encode()
+    bootstrap_service_code = boot_service
+    bootstrap_service_code_hash = Hash.blake2b(bootstrap_service_code)
+    bootstrap_service = ServiceId(0)
+
+    state.delta[bootstrap_service].service = AccountMetadata(
+        code_hash=bootstrap_service_code_hash,
+        balance=Balance(18446744073709551615),
+        gas_limit=Gas(10),
+        min_gas=Gas(10),
+        num_i=Ai(4),
+        num_o=Ao(161731),
+    )
+    state.delta[bootstrap_service].lookup[
+        LookupTable(hash=bootstrap_service_code_hash, length=BlobLength(len(bootstrap_service_code)))] = Timestamps([state.tau])
+    state.delta[bootstrap_service].preimages[bootstrap_service_code_hash] = bootstrap_service_code
+
+    wi_service_code = service
     wi_code_hash = Hash.blake2b(wi_service_code)
-    wi_service = ServiceId(0)
+    wi_service = ServiceId(1)
 
     state.delta[wi_service].service = AccountMetadata(
         code_hash=wi_code_hash,
@@ -62,3 +81,5 @@ def update_state(state: State):
     state.delta[wi_service].lookup[
         LookupTable(hash=wi_code_hash, length=BlobLength(len(wi_service_code)))] = Timestamps([state.tau])
     state.delta[wi_service].preimages[wi_code_hash] = wi_service_code
+
+    print("state updates finished")
