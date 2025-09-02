@@ -119,6 +119,34 @@ git submodule init
 git submodule update --recursive
 echo "✅ Submodules updated"
 
+# Build submodule dependencies
+echo "🔨 Building submodule dependencies..."
+
+# Build py-ark-vrf if it exists
+if [ -d "deps/py-ark-vrf" ]; then
+    echo "   Building py-ark-vrf..."
+    cd deps/py-ark-vrf
+    pip install -e . || echo "   ⚠️ Warning: py-ark-vrf build failed"
+    cd ../..
+fi
+
+# Install other submodule dependencies as editable
+if [ -d "deps/tsrkit-pvm" ]; then
+    echo "   Installing tsrkit-pvm as editable..."
+    cd deps/tsrkit-pvm
+    pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
+    cd ../..
+fi
+
+if [ -d "deps/tsrkit-asm" ]; then
+    echo "   Installing tsrkit-asm as editable..."
+    cd deps/tsrkit-asm
+    pip install -e . || echo "   ⚠️ Warning: tsrkit-asm install failed"
+    cd ../..
+fi
+
+echo "✅ Submodule dependencies built"
+
 # Configure Poetry to use virtual environment
 echo "⚙️  Configuring Poetry..."
 poetry config virtualenvs.create false
@@ -154,9 +182,10 @@ if [ -d "test-suites" ]; then
         # Configure poetry to use the parent venv
         poetry config virtualenvs.create false
         poetry config virtualenvs.in-project false
-        # Update lock file and install
-        poetry lock
-        poetry install
+        # Install in development mode to avoid the "current project could not be installed" error
+        pip install -e . --no-deps || echo "   ⚠️ Warning: test-suites editable install failed"
+        # Install just the dependencies from pyproject.toml
+        poetry install --only main || echo "   ⚠️ Warning: test-suites dependencies install failed"
         echo "✅ Test suites dependencies installed"
     fi
     
