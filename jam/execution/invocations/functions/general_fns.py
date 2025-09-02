@@ -446,11 +446,15 @@ class GeneralFunctions(INVF):
                     value_size=vz,
                 )
                 raise PvmError(PANIC)
-            
+            pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
-            if service_data.service.t>service_data.service.balance:
+            if service_data.service.t > service_data.service.balance:
                 # state.store.clear()
                 registers[7] = HostStatus.FULL.value
+                if pre_data is None:
+                    del a[k]
+                else:
+                    a[k] = pre_data
                 logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
                 return CONTINUE, gas, registers, memory, context
 

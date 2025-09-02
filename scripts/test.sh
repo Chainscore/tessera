@@ -22,29 +22,16 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 show_help() {
     echo "Tessera Test Runner - Platform-aware test execution"
     echo ""
-    echo "Usage: $0 [OPTIONS] [TEST_CATEGORY|TEST_PATH]"
-    echo ""
-    echo "Test Categories:"
-    echo "  pure       - Pure Python tests (always available)"
-    echo "  db         - Database tests (requires RocksDB)"
-    echo "  pvm        - PVM execution tests (Linux only)"
-    echo "  compatible - All tests compatible with current platform (default)"
-    echo "  all        - All tests (may fail on some platforms)"
-    echo ""
     echo "Options:"
     echo "  -v, --verbose     Verbose test output"
     echo "  -k PATTERN        Run tests matching pattern"
-    echo "  --unit            Run unit tests"
-    echo "  --vectors         Run test vector validation"
-    echo "  --traces          Run test traces validation"
+    echo "  unit            Run unit tests"
+    echo "  vectors         Run test vector validation"
+    echo "  traces          Run test traces validation"
     echo "  -h, --help        Show this help"
     echo ""
     echo "Examples:"
     echo "  $0                   # Run compatible tests"
-    echo "  $0 pure              # Run only pure Python tests"
-    echo "  $0 db                # Run database tests"
-    echo "  $0 tests/unit/types  # Run specific test path"
-    echo "  $0 --check           # Check what tests can run"
 }
 
 # Parse arguments
@@ -54,6 +41,7 @@ VECTORS=false
 TRACES=false
 MODULE=""
 SPEC=""
+PATTERN="'*.json'"
 
 # Construct pytest command
 PYTEST_ARGS=""
@@ -68,14 +56,22 @@ while [[ $# -gt 0 ]]; do
             TEST_PATTERN="$2"
             shift 2
             ;;
-        --unit)
+        unit)
             print_info "Running unit tests..."
             PYTEST_ARGS="tests/unit"
             UNIT=true
             shift
             ;;
-        --vectors)
-            VECTORS=true
+        vectors)
+            PYTEST_ARGS="test-suites/harness/w3f/stf"
+            shift
+            ;;
+        traces-linear)
+            PYTEST_ARGS="test-suites/harness/w3f/traces/test_traces_linear.py"
+            shift
+            ;;
+        traces)
+            PYTEST_ARGS="test-suites/harness/w3f/traces/test_traces.py"
             shift
             ;;
         --module)
@@ -86,11 +82,11 @@ while [[ $# -gt 0 ]]; do
             SPEC="$2"
             shift 2
             ;;
-        --traces-linear)
-            TRACES=true
-            PYTEST_ARGS="test-suites/harness/w3f/traces/test_traces_linear.py"
-            shift
+        --pattern)
+            PATTERN="$2"
+            shift 2
             ;;
+
         *)
             # If it doesn't match any option, treat as test path
             if [ -z "$PYTEST_ARGS" ]; then
@@ -102,21 +98,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Handle vectors with module and spec
-if [ "$VECTORS" = true ]; then
-    PYTEST_ARGS="test-suites/harness/w3f/stf"
-    if [ -n "$MODULE" ]; then
-        PYTEST_ARGS="$PYTEST_ARGS --module $MODULE"
-    fi
-    if [ -n "$SPEC" ]; then
-        PYTEST_ARGS="$PYTEST_ARGS --spec $SPEC"
-    fi
-    print_info "Running vector tests with module: $MODULE, spec: $SPEC"
+if [ -n "$MODULE" ]; then
+    print_info "Module: $MODULE"
+    PYTEST_ARGS="$PYTEST_ARGS --module $MODULE"
 fi
-
-# Default to unit tests if no specific test path given
-if [ -z "$PYTEST_ARGS" ]; then
-    PYTEST_ARGS="tests/unit"
-    print_info "No specific tests specified, running unit tests"
+if [ -n "$SPEC" ]; then
+    print_info "Spec: $SPEC"
+    PYTEST_ARGS="$PYTEST_ARGS --spec $SPEC"
+fi
+if [ -n "$PATTERN" ]; then
+    print_info "Pattern: \t $PATTERN"
+    PYTEST_ARGS="$PYTEST_ARGS --pattern $PATTERN"
 fi
 
 # Add verbose

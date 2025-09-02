@@ -30,6 +30,7 @@ py-ark-vrf = {path = "deps/py-ark-vrf", develop = true}
 tsrkit-pvm = {path = "deps/tsrkit-pvm", develop = true}
 tsrkit-asm = {path = "deps/tsrkit-asm", develop = true}
 deepdiff = "^8.5.0"
+pycryptodome = "^3.23.0"
 
 [tool.pyrefly]
 project-includes = ["**/*"]
