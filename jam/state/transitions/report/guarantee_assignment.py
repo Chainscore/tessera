@@ -15,7 +15,7 @@ from collections import deque
 
 
 def guarantor_assignment(
-    eta, kappa, lambda_, gamma_k, block_slot, report_slot, tau
+    eta, kappa, lambda_, gamma_p, block_slot, report_slot, tau
 ) -> Dict[CoreIndex, List]:
     """
     Description:
@@ -25,7 +25,7 @@ def guarantor_assignment(
         eta: define as entropy
         kappa:  help to get current validator data
         lambda_: help to get the previous validator data
-        gamma_k: gamma.k
+        gamma_p: gamma.p
         block_slot: through this we get the current block's slot
         report_slot: slot assigned to the work report
         tau: state timeslot
@@ -49,7 +49,7 @@ def guarantor_assignment(
     eta2_post = eta[1] if epoch_change else eta[2]
     eta3_post = eta[2] if epoch_change else eta[3]
 
-    kappa_post = gamma_k if epoch_change else kappa
+    kappa_post = gamma_p if epoch_change else kappa
     lambda_post = kappa if epoch_change else lambda_
 
     # <------------- Entropy for current epoch ------------------>

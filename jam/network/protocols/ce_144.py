@@ -18,11 +18,11 @@ from jam.types.protocol.crypto import (
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-if TYPE_CHECKING:
-    from jam.types.audit.tranche import TrancheIndex
 
 # Module-specific logger
 logger = get_logger("network")
+
+TrancheIndex = U8
 
 @structure
 class AssignedReport:
@@ -57,7 +57,7 @@ class SubsequentTrancheEvidence:
 @structure
 class TrancheAnnouncement:
     header_hash: HeaderHash
-    tranche: "TrancheIndex"
+    tranche: TrancheIndex
     announcement: Announcement
 
 class Evidence(Choice):
@@ -122,34 +122,25 @@ class AuditAnnouncement(NetworkProtocol):
             stream_b_size=data.len_b,
         )
 
-        v_r1: dict[ValidatorIndex, set[WorkReportHash]] = {}
-
-        # storing its report
-        v_r1[settings.validator_index] = {assign.report_hash for assign in data.tranche_announcement.announcement.assigned_report}
-
         tranche = Tranche(
             tranche_index=data.tranche_announcement.tranche,
             header_hash=data.tranche_announcement.header_hash
         )
 
-        tranche_store.add_set_announcement(tranche=tranche, validator_index=node.validator_index, assign_r=data.tranche_announcement.announcement.assigned_report)
-
-
-        for v, r_hash in v_r1.items():
-            for value in r_hash:
-                tranche_store.add_announce(tranche=tranche, wr_hash=value, validator_index=settings.validator_index)
-
+        await tranche_store.record_announcement(tranche, settings.validator_index, data.tranche_announcement.announcement)
 
         tasks = []
         responses = []
         transmitted_count = 0
 
-        try:
-            logger.info(
-                f"Transmitting Work report's announcement to {len(node.all_connected)} validators "
-            )
+        logger.info(
+            "Transmitting Audit announcement",
+            count=len(node.all_connected)
+        )
 
+        try:
             for client in node.all_connected:
+                logger.debug("Transmitting Announcement to", peer=client)
 
                 # send protocol prefix
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -192,44 +183,32 @@ class AuditAnnouncement(NetworkProtocol):
         from jam.storage.tranche_store import tranche_store
         from jam.types.audit.tranche import Tranche, TrancheIndex
 
-        v_r: dict[ValidatorIndex, set[WorkReportHash]] = {}
-
         buffer = server.stream_buffer[stream_id][1:]
+
+        logger.debug(
+            "Received Audit's Announcement from other Auditors",
+            stream_id=stream_id,
+            peer=server,
+            buffer_size=len(buffer[1:]),
+        )
 
         try:
             data = CE144Data.decode(buffer)
             data = cast(CE144Data, data)
 
-            get_v_assign = data.tranche_announcement.announcement.assigned_report
             v_index = server.validator_index
             tranche_idx = data.tranche_announcement.tranche
             header_hash = data.tranche_announcement.header_hash
-
-            v_r[v_index] = {assign.report_hash for assign in get_v_assign}
 
             tranche = Tranche(
                 tranche_index= tranche_idx,
                 header_hash=header_hash
             )
 
-            tranche_store.add_set_announcement(tranche=tranche, validator_index=v_index,
-                                               assign_r=data.tranche_announcement.announcement.assigned_report)
-
-            for v, r_hash in v_r.items():
-                for value in r_hash:
-                    tranche_store.add_announce(tranche=tranche, wr_hash=value, validator_index=v_index)
-
-            tranche = Tranche(
-                tranche_index=TrancheIndex(0),
-                header_hash=header_hash,
+            asyncio.create_task(
+                tranche_store.record_announcement(tranche, v_index, data.tranche_announcement.announcement)
             )
 
-            logger.debug(
-                "Received Audit's Announcement from other Auditors",
-                stream_id=stream_id,
-                peer=server,
-                buffer_size=len(buffer[1:]),
-            )
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)

@@ -1,22 +1,20 @@
+from jam.types import ValidatorIndex
 from math import floor
 from typing import Dict, Set, List
-
 from tsrkit_types import Bytes, Uint, Null
-
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 from jam.block import Block
 from jam.logging import get_logger
 from jam.state.transitions.report.error import ReportingError, ReportingErrorCode
 from jam.state.transitions.report.guarantee_assignment import guarantor_assignment
-from jam.types.protocol.core import CoreIndex
+from jam.types.protocol.core import CoreIndex, TimeSlot
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.work import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, LOOKUP_ANCHOR_MAX_AGE, X
-from jam.utils.merkle import MMRFunctions
 from jam.utils.constants import (
     VALIDATOR_COUNT,
     CORE_COUNT,
@@ -31,7 +29,7 @@ logger = get_logger("import")
 class Reporting:
     @staticmethod
     def transition(
-        state: Sigma, block: Block, known_packages: List[OpaqueHash] = [],
+        pre_state: Sigma, state: Sigma, block: Block, known_packages: List[OpaqueHash] = [],
     ) -> Sigma:
         """
         Description:
@@ -39,17 +37,17 @@ class Reporting:
         Args:
             state: This is the state on which transition happen or another state to get previous and curr data (like validators)
             block: This is the recent block added on-chain and to get all information(like header, slot, extrinsic)
-            known_packages: Packages from known queue (Nu), accumulation history (Xi)
+            known_packages: Packages from known queue (Omega), accumulation history (Xi)
 
         Returns:
             Returns the updated Rho(workreport, timeslot)
         """
 
-        # Work package hashes form Nu and Xi
+        # Work package hashes form Omega and Xi
         known_packages.extend(
             [
                 queue_el.report.context.prerequisites
-                for epoch_queue in state.nu
+                for epoch_queue in state.omega
                 for queue_el in epoch_queue
             ]
         )
@@ -63,7 +61,7 @@ class Reporting:
         for guarantee in block.extrinsic.guarantees:
             report = guarantee.report
             # -------- Too Many Dependencies ---------
-            # As defined in - https://graypaper.fluffylabs.dev/#/85129da/13ab0013b600?v=0.6.3
+            # As defined in - https://graypaper.fluffylabs.dev/#/38c4e62/137b02137b02?v=0.7.0
             segment_root = len(report.segment_root_lookup)
             prerequisite = len(report.context.prerequisites)
             if (segment_root + prerequisite) > MAX_DEPENDENCIES:
@@ -91,12 +89,12 @@ class Reporting:
                 )
 
             # --------- If the guarantee has enough signatures ------------
-            # https://graypaper.fluffylabs.dev/#/85129da/147002149002?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/150c01152601?v=0.7.0
             credential_len = len(guarantee.signatures)
             if credential_len < 2:
                 raise ReportingError(
                     ReportingErrorCode.INSUFFICIENT_GUARANTEE,
-                    "Work report doesn't has enough validator",
+                    "Work report doesn't has enough validator guarantees",
                 )
 
             # -------- If the validator index is valid ------------
@@ -109,7 +107,7 @@ class Reporting:
 
             # --------- Guarantees must be sorted ---------
             # 11.25
-            # https://graypaper.fluffylabs.dev/#/85129da/14b80214df02?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/155c01155c01?v=0.7.0
             for j in range(len(guarantee.signatures) - 1):
                 if (
                     guarantee.signatures[j].validator_index
@@ -121,7 +119,7 @@ class Reporting:
                     )
 
             # --------- not-authorized -----------------
-            # https://graypaper.fluffylabs.dev/#/85129da/15ea0015f700?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/157602158602?v=0.7.0
             # Ensure authorizer hash is present in core's Authorizer Pool
             if report.authorizer_hash not in state.alpha[int(report.core_index)]:
                 raise ReportingError(
@@ -145,13 +143,13 @@ class Reporting:
                     )
 
             # --------------- duplicated_package_in_recent_history ----------------------------
-            # https://graypaper.fluffylabs.dev/#/85129da/157a0115c901?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/154a03158303?v=0.7.0
             wp_hash_set.add(report.package_spec.hash)
             all_reports.append(report)
 
         # ------------- out_of_order_guarantee ---------------------
         # 11.23
-        # https://graypaper.fluffylabs.dev/#/85129da/146802146902?v=0.6.3
+        # https://graypaper.fluffylabs.dev/#/38c4e62/15fb00152801?v=0.7.0
         guarantee_length = len(block.extrinsic.guarantees)
         if guarantee_length > 1:
             for i in range(len(block.extrinsic.guarantees) - 1):
@@ -167,7 +165,7 @@ class Reporting:
         recent_exports_roots = {}
         beta_wp_hashes = []
 
-        for x in state.beta:
+        for x in state.beta.h:
             for wp_hash in x.reported:
                 beta_wp_hashes.append(wp_hash)
             recent_exports_roots.update(x.reported)
@@ -184,7 +182,7 @@ class Reporting:
             for pending_wr in state.rho
         ]
         for p in wp_hash_set:
-            # Ensure this WP is not previously executed - checking Beta, Nu, Rho, Xi
+            # Ensure this WP is not previously executed - checking Beta, Omega, Rho, Xi
             # 11.38
             if p in beta_wp_hashes or p in known_packages or p in rho_package_hashes:
                 logger.error(
@@ -209,11 +207,9 @@ class Reporting:
             context = report.context
 
             found_anchor = False
-            for recent_block in state.beta:
+            for recent_block in state.beta.h:
                 if recent_block.header_hash == context.anchor:
-                    if context.beefy_root != MMRFunctions().super_peak(
-                        recent_block.mmr
-                    ):
+                    if context.beefy_root != recent_block.beefy_root:
                         raise ReportingError(ReportingErrorCode.BAD_BEEFY_MMR_ROOT)
                     if recent_block.state_root != context.state_root:
                         raise ReportingError(ReportingErrorCode.BAD_STATE_ROOT, f"")
@@ -234,7 +230,7 @@ class Reporting:
 
             # --------------- segment_root_lookup_invalid -------------------
             # 11.40
-            # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/158d03159003?v=0.7.0
             for lookup, exports_root in report.segment_root_lookup.items():
                 if (
                     lookup not in recent_exports_roots
@@ -246,7 +242,7 @@ class Reporting:
                     )
 
             # --------------- dependency_missing -------------------
-            # https://graypaper.fluffylabs.dev/#/85129da/15ca0115cd01?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/158d03159003?v=0.7.0
             # Eq 11.39
             all_prerequisites = [
                 *report.segment_root_lookup.keys(),
@@ -263,15 +259,8 @@ class Reporting:
                         "prerequisite's hash should match the package_specification's hash of any of the reports",
                     )
 
-        # for i in state.beta:
-        #     if any(key in hashes for key in i.packages.keys()):
-        #         raise ReportingError(
-        #             ReportingErrorCode.DUPLICATE_PACKAGE,
-        #             "Work package is already executed in recent-block's history"
-        #         )
-
         # --------------------------duplicated_package_in_reports----------------------------
-        # https://graypaper.fluffylabs.dev/#/85129da/151e01152501?v=0.6.3
+        # https://graypaper.fluffylabs.dev/#/38c4e62/15bd0215ce02?v=0.7.0
         if len(block.extrinsic.guarantees) > 1:
             for x in range(len(block.extrinsic.guarantees)):
                 for y in range(x + 1, len(block.extrinsic.guarantees)):
@@ -300,36 +289,28 @@ class Reporting:
                 WorkReportState(report=report, timeout=block.header.slot)
             )
             core_index = report.core_index
-            for result in report.results:
-                pi_core[core_index].imports += Uint(result.refine_load.imports)
-                pi_core[core_index].exports += Uint(result.refine_load.exports)
-                pi_core[core_index].gas_used += Uint(result.refine_load.gas_used)
-                pi_core[core_index].extrinsic_count += Uint(
-                    result.refine_load.extrinsic_count
-                )
-                pi_core[core_index].extrinsic_size += Uint(
-                    result.refine_load.extrinsic_size
-                )
+            for digest in report.digests:
+                pi_core[core_index].imports += Uint(digest.refine_load.imports)
+                pi_core[core_index].exports += Uint(digest.refine_load.exports)
+                pi_core[core_index].gas_used += Uint(digest.refine_load.gas_used)
+                pi_core[core_index].extrinsic_count += Uint(digest.refine_load.extrinsic_count)
+                pi_core[core_index].extrinsic_size += Uint(digest.refine_load.extrinsic_size)
             pi_core[core_index].bundle_size = Uint(report.package_spec.length)
 
-            for work_result in report.results:
-                if work_result.service_id not in pi_service:
-                    pi_service[work_result.service_id] = ServiceStat.empty()
-                pi_service[work_result.service_id].refinement_count += 1
-                pi_service[work_result.service_id].refinement_gas_used += Uint(
-                    work_result.refine_load.gas_used
+            for work_digest in report.digests:
+                if work_digest.service_id not in pi_service:
+                    pi_service[work_digest.service_id] = ServiceStat.empty()
+                pi_service[work_digest.service_id].refinement_count += 1
+                pi_service[work_digest.service_id].refinement_gas_used += Uint(
+                    work_digest.refine_load.gas_used
                 )
-                pi_service[work_result.service_id].imports += Uint(
-                    work_result.refine_load.imports
+                pi_service[work_digest.service_id].imports += Uint(work_digest.refine_load.imports)
+                pi_service[work_digest.service_id].exports += Uint(work_digest.refine_load.exports)
+                pi_service[work_digest.service_id].extrinsic_count += Uint(
+                    work_digest.refine_load.extrinsic_count
                 )
-                pi_service[work_result.service_id].exports += Uint(
-                    work_result.refine_load.exports
-                )
-                pi_service[work_result.service_id].extrinsic_count += Uint(
-                    work_result.refine_load.extrinsic_count
-                )
-                pi_service[work_result.service_id].extrinsic_size += Uint(
-                    work_result.refine_load.extrinsic_size
+                pi_service[work_digest.service_id].extrinsic_size += Uint(
+                    work_digest.refine_load.extrinsic_size
                 )
 
         pi = state.pi
@@ -345,7 +326,7 @@ class Reporting:
         """
         Description : This function make sure that signature for the work_report is valid (ensure that report are signed by correct validators which are assigned, to that particular core, through guarantor assignment).
 
-        Sources :  https://graypaper.fluffylabs.dev/#/85129da/15250015af00?v=0.6.3
+        Sources :  https://graypaper.fluffylabs.dev/#/38c4e62/158501154502?v=0.7.0
         """
         for x in block.extrinsic.guarantees:
             for y in x.signatures:
@@ -361,13 +342,21 @@ class Reporting:
                     (block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH
                 ) != floor(block.header.slot / EPOCH_LENGTH):
                     public_key = state.lambda_[y.validator_index].ed25519
+
+                # Handle Offenders
+                if public_key in state.psi.offenders:
+                    raise ReportingError(
+                        ReportingErrorCode.BANNED_VALIDATOR,
+                        "Banned validators are not authorized to sign reports.",
+                    )
+
                 signature = y.signature
 
                 try:
                     Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
                         bytes(signature),
                         X.GUARANTEE.value
-                        + bytes(Hash.blake2b(x.report.encode())),
+                        + bytes(x.report.hash()),
                     )
                 except InvalidSignature:
                     raise ReportingError(
@@ -380,13 +369,14 @@ class Reporting:
         """
         Description: ensure that work report (authorizer output + sum of report output ) size always should be <= 48*(2**10)
 
-        Source: https://graypaper.fluffylabs.dev/#/85129da/141d00144500?v=0.6.3
+        Source: https://graypaper.fluffylabs.dev/#/38c4e62/14b20014dd00?v=0.7.0
 
         """
         work_report_output = len(report.auth_output)
-        for result in report.results:
-            # TODO - Test this with non-OK results
-            work_report_output += len(result.result.unwrap())
+        for digest in report.digests:
+            op = digest.result.unwrap()
+            if isinstance(op, Bytes):
+                work_report_output += len(op)
 
         if work_report_output > MAX_WORK_REPORT_SIZE:
             raise ReportingError(
@@ -411,7 +401,7 @@ class Reporting:
 
         for x in results:
             total_accumulate_gas = 0
-            for y in x.report.results:
+            for y in x.report.digests:
                 # --------------- bad_service_id -------------------
                 if y.service_id not in state.delta:
                     raise ReportingError(
@@ -420,7 +410,7 @@ class Reporting:
                     )
 
                 # --------------- bad_code_hash -------------------
-                # https://graypaper.fluffylabs.dev/#/85129da/153302153502?v=0.6.3
+                # https://graypaper.fluffylabs.dev/#/38c4e62/161300162600?v=0.7.0
                 # Eq 11.42
                 if y.code_hash != state.delta[y.service_id].service.code_hash:
                     raise ReportingError(
@@ -429,7 +419,7 @@ class Reporting:
                     )
 
                 # --------------- service_item_gas_too_low -------------------
-                # https://graypaper.fluffylabs.dev/#/85129da/15f80015fa00?v=0.6.3
+                # https://graypaper.fluffylabs.dev/#/38c4e62/158b0215a302?v=0.7.0
                 # Eq 11.30
                 if y.accumulate_gas < state.delta[y.service_id].service.min_gas:
                     raise ReportingError(
@@ -440,7 +430,7 @@ class Reporting:
                 total_accumulate_gas = total_accumulate_gas + y.accumulate_gas
 
             # --------------- work_report_gas_too_high -------------------
-            # https://graypaper.fluffylabs.dev/#/85129da/15fa0015fd00?v=0.6.3
+            # https://graypaper.fluffylabs.dev/#/38c4e62/158b0215a302?v=0.7.0
             # Eq 11.30
             if total_accumulate_gas > ACCUMULATION_GAS:
                 raise ReportingError(
@@ -455,37 +445,36 @@ class Reporting:
 
         """
         if len(block.extrinsic.guarantees) == 0:
-            # Return if no gurantees to check
+            # Return if no guarantees to check
             return
 
-        report_slot = None
+        cache: Dict[TimeSlot, Dict[CoreIndex, Set[ValidatorIndex]]] = {}
         for x in block.extrinsic.guarantees:
             report_slot = x.slot
 
-        guarantors_assigned = guarantor_assignment(
-            state.eta,
-            state.kappa,
-            state.lambda_,
-            state.gamma.k,
-            block.header.slot,
-            report_slot,
-            state.tau,
-        )
+            if report_slot in cache:
+                guarantors_assigned = cache[report_slot]
+            else:
+                guarantors_assigned = guarantor_assignment(
+                    state.eta,
+                    state.kappa,
+                    state.lambda_,
+                    state.gamma.p,
+                    block.header.slot,
+                    report_slot,
+                    state.tau,
+                )
+                cache[report_slot] = guarantors_assigned
 
-        # array of assign validator for each core
-        current_assigned: Dict[CoreIndex, Set] = {}
-        for x in block.extrinsic.guarantees:
-            key = x.report.core_index
-            value = set()
+            core_assignment = guarantors_assigned[x.report.core_index]
+            val_assignment: Set[ValidatorIndex] = set()
             for y in x.signatures:
-                value.add(y.validator_index)
-            current_assigned[key] = value
+                val_assignment.add(y.validator_index)
 
-        # Iterate through current gurantee assignments, match them against ideal gurantor assigned
-        for core, vals in current_assigned.items():
-            for validator in vals:
-                if validator not in guarantors_assigned[core]:
+            for v in x.signatures:
+                if v.validator_index not in core_assignment:
                     raise ReportingError(
                         ReportingErrorCode.WRONG_ASSIGNMENT,
-                        f"Assign wrong validator to the core. Assignments: {guarantors_assigned}, Reported: {current_assigned}",
+                        f"Assigned wrong validators to core {x.report.core_index}. "
+                        f"Expected: {core_assignment}, Reported: {val_assignment}",
                     )

@@ -6,7 +6,7 @@ from jam.state.state import State
 from tsrkit_types.integers import U32
 from jam.block import Block
 from jam.types.state.kappa import Kappa
-from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaZ
+from jam.types.state.gamma import GammaP, GammaA, GammaS, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
@@ -35,7 +35,7 @@ def create_state(
     eta: Eta,
     lambda_: Lambda_,
     kappa: Kappa,
-    gamma_k: GammaK,
+    gamma_p: GammaP,
     iota: Iota,
     gamma_a: GammaA,
     gamma_s: GammaS,
@@ -48,7 +48,7 @@ def create_state(
     state.eta = eta
     state.lambda_ = lambda_
     state.kappa = kappa
-    state.gamma.k = gamma_k
+    state.gamma.p = gamma_p
     state.iota = iota
     state.gamma.a = gamma_a
     state.gamma.s = gamma_s

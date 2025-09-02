@@ -9,14 +9,12 @@ class AuthorizationQueue(TypedArray[AuthorizerHash, MAX_AUTH_QUEUE_ITEMS]):
     ...
 
 
-# State key: 2
 class Phi(TypedArray[AuthorizationQueue, CORE_COUNT]):
-    ...
+    """
+    Component: ϕ
+    Key: 2
 
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/103a00104f00?v=0.7.0
+    """
 
-class AuthorizationVector(TypedVector[AuthorizerHash]):
-    ...
-
-
-class PhiVector(TypedVector[AuthorizationVector]):
     ...

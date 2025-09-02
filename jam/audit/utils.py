@@ -25,7 +25,7 @@ from py_ark_vrf import prove_ietf, vrf_output
 
 
 # Module-specifier logger
-logger = get_logger("in_core")
+logger = get_logger("auditor")
 
 
 class Utils:
@@ -54,7 +54,7 @@ class Utils:
         """
         tranche_index = tranche.tranche_index
 
-        entropy_vrf_proof = BandersnatchVrfSignature(proof=vrf_output(entropy_source.encode()))
+        entropy_vrf_proof = BandersnatchVrfSignature(vrf_output(entropy_source.encode()))
 
         context = X.AUDIT.value + entropy_vrf_proof
 
@@ -70,7 +70,7 @@ class Utils:
         cls,
         entropy_source: BandersnatchVrfSignature,
         bandersnatch_key: Bytes[32],
-        unaudited_report: List[Option[WorkReport]],
+        unaudited_report: OptionalReports,
         tranche: Tranche,
     ) -> List[Tuple[CoreIndex, WorkReport]]:
         """
@@ -99,7 +99,7 @@ class Utils:
         )
 
         # ---------------------------- mapping q's reports as tuple[CoreIndex, Option[WorkReport]] ---------------------
-        core_report = list[Tuple[CoreIndex, Option[WorkReport]]]([])
+        core_report = list[tuple[CoreIndex, Option[WorkReport]]]([])
         for c, w_r in enumerate(unaudited_report):
             core_report.append((CoreIndex(c), w_r))
 
@@ -113,11 +113,11 @@ class Utils:
 
         # ---------------------------------------- updated shuffle auditing list ---------------------------------------
         lookup = dict(core_report)
-        updated_array = [(CoreIndex(i), lookup[i]) for i in shuffle_array]
+        updated_array = [(CoreIndex(i), lookup[i].unwrap()) for i in shuffle_array]
 
         # ------------------------------------------ take initial 10 reports -------------------------------------------
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-        shuffle_not_null = List[Tuple[CoreIndex, WorkReport]](
+        shuffle_not_null = list[tuple[CoreIndex, WorkReport]](
             [(c, w) for (c, w) in updated_array if w is not Null][:10]
         )
 
@@ -186,7 +186,7 @@ class Utils:
         return Ed25519Signature(signature)
 
     @classmethod
-    def vrf_tranche(
+    async def vrf_tranche(
         cls,
         header_hash: HeaderHash,
         tranche: Tranche,
@@ -214,7 +214,7 @@ class Utils:
         tranche_index = tranche.tranche_index
 
         # DEFINE EMPTY LIST
-        assigned_wrs = List[Tuple[CoreIndex, WorkReport]]([])
+        assigned_wrs = list[tuple[CoreIndex, WorkReport]]([])
 
         for wr in unaudited_wrs:
             rep = wr.unwrap()
@@ -238,7 +238,7 @@ class Utils:
 
                 wr_hash = rep.hash()
 
-                state = tranche_store.get_state(tranche=prev_tranche)
+                state = await tranche_store.get_state(tranche=prev_tranche)
 
                 records = state.judgments.get(wr_hash)
 

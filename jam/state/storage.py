@@ -5,6 +5,8 @@ from jam.error import JamError
 from jam.finality.finality import Finality
 
 from rockstore import RockStore
+
+from jam.state.utils import construct_state_key
 from jam.types.protocol.crypto import OpaqueHash
 from tsrkit_types import Bytes, structure, Dictionary
 from jam.utils.trie.merkle import StateTrie
@@ -63,13 +65,12 @@ class StateStorage:
         from jam.settings import settings
 
         kv = settings.main_db
-
         latest_block = Finality.load_latest(kv)
         if latest_block is None:
             return {}
             # raise JamError("LoadUpdates: Not is not yet initialized")
 
-        curr_head = latest_block.header.parent
+        curr_head = latest_block.header.hash()
 
         _updates = {}
 
@@ -80,11 +81,12 @@ class StateStorage:
         while curr_head != header:
             data = kv.get(self.get_storage_key(curr_head))
             if data is None:
-                raise ValueError("Updates missing for", curr_head)
+                raise ValueError("Updates missing for", curr_head.hex())
             _curr_updates = StateRecord.decode(data)
+            print(f"[{settings.NODE_NAME}] CURR HEAD", curr_head.hex())
             block = Block.load(curr_head, kv)
             if block is None:
-                raise JamError("Block missing for header hash:", curr_head)
+                raise JamError("Block missing for header hash:", curr_head.hex())
             curr_head = block.header.parent
 
             # 2. Join them one after another (overwriting) to get one cache record
@@ -114,7 +116,7 @@ class StateStorage:
             elif v != curr_val:
                 self._DB.put(k, v)
                 self._TRIE.update(Bytes(k), Bytes(v))
-        
+
         # Save the cache to DB
         self._updates = {}
         # State cache to store in DB

@@ -17,8 +17,8 @@ from jam.types.work import WorkReport
 from jam.types.work import (
     SegmentRootLookup,
     WorkPackageSpec,
-    WorkResult,
-    WorkResults,
+    WorkDigest,
+    WorkDigests,
     WorkExecResult,
     RefineLoad,
 )
@@ -44,7 +44,7 @@ def create_dummy_package_spec() -> WorkPackageSpec:
     )
 
 
-def create_dummy_work_result() -> WorkResult:
+def create_dummy_work_digest() -> WorkDigest:
     """Create dummy work result"""
     refine_load = RefineLoad(
         gas_used=Uint(0),
@@ -54,7 +54,7 @@ def create_dummy_work_result() -> WorkResult:
         extrinsic_size=Uint(0),
     )
 
-    return WorkResult(
+    return WorkDigest(
         service_id=ServiceId(16909060),
         code_hash=create_dummy_bytes32(),
         payload_hash=create_dummy_bytes32(),
@@ -73,8 +73,8 @@ def create_dummy_work_report() -> WorkReport:
         authorizer_hash=create_dummy_bytes32(),
         auth_output=Bytes.fromhex("0102030405"),
         segment_root_lookup=SegmentRootLookup({}),
-        results=WorkResults([create_dummy_work_result()]),
-        auth_gas_used=Uint(0),
+        digests=WorkDigests([create_dummy_work_digest()]),
+        auth_gas_used=Uint(0)
     )
 
 

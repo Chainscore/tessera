@@ -1,8 +1,9 @@
+import asyncio
 from typing import Dict
-from tsrkit_types import Bool, Option, TypedVector
 
 from jam.logging import get_logger
 from jam.network.protocols.ce_144 import Announcement
+from jam.network.protocols.ce_145 import Judgment
 
 from jam.types.audit.tranche import Tranche, TrancheState, AuditRecord, OptionalReports
 
@@ -16,143 +17,223 @@ logger = get_logger("tranche")
 class TrancheStore:
     """Persistent store for Tranches"""
     _tranche_store: Dict[Tranche, TrancheState]
+    _lock: asyncio.Lock
 
     def __init__(self) -> None:
         self._tranche_store = {}
+        self._lock = asyncio.Lock()
 
-    # --------------------- State Access Operations ---------------------
+    # --------------------- State Access Operations (Lock Free) ---------------------
 
-    def get_state(self, tranche: Tranche) -> TrancheState:
+    async def get_state(self, tranche: Tranche) -> TrancheState:
         """ Retrieve a TrancheState by Tranche object. """
-        state = self._tranche_store.get(tranche)
-        return state if state is not None else TrancheState.empty()
+        async with self._lock:
+            state = self._tranche_store.get(tranche)
+            return state if state is not None else TrancheState.empty()
 
 
-    def save_state(self, tranche: Tranche, state: TrancheState):
+    async def save_state(self, tranche: Tranche, state: TrancheState):
         """ Store TrancheState under its tranche key automatically."""
-        self._tranche_store[tranche] = state
+        async with self._lock:
+            self._tranche_store[tranche] = state
 
 
     # --------------------- Tranche Access Operations ---------------------
 
-    def get_tranche_index(self, header_hash: HeaderHash):
-        for tranche in self._tranche_store:
-            if tranche.header_hash == header_hash:
-                return tranche.tranche_index
+    async def get_tranche_index(self, header_hash: HeaderHash):
+        async with self._lock:
+            for tranche in self._tranche_store:
+                if tranche.header_hash == header_hash:
+                    return tranche.tranche_index
+                else:
+                    logger.info("There is no header hash exist in tranche store")
+
+
+    async def delete_tranche(self, tranche: Tranche):
+        async with self._lock:
+            if tranche in self._tranche_store:
+                del self._tranche_store[tranche]
+                logger.info("Deleted tranche", tranche=tranche)
             else:
-                logger.info("There is no header hash exist in tranche store")
+                logger.warning("Attempted to delete non-existent tranche", tranche=tranche)
 
+    async def remove_block_history(self, header_hash: HeaderHash):
+        async with self._lock:
+            for tranche in self._tranche_store:
+                if tranche.header_hash == header_hash:
+                    del  self._tranche_store[tranche]
+                    logger.debug("Deleted Block's tranche history", tranche=tranche)
 
-    def delete_tranche(self, tranche: Tranche):
-        if tranche in self._tranche_store:
-            del self._tranche_store[tranche]
-            logger.info("Deleted tranche", tranche=tranche.to_json())
-        else:
-            logger.warning("Attempted to delete non-existent tranche", tranche=tranche.to_json())
+            logger.debug("Deleted Block's entire tranche history")
 
+    async def fetch_rep_tranche(self, judgment = Judgment):
+        wr_hash = judgment.work_report_hash
+        vi = judgment.validator_index
 
+        h_hash: HeaderHash | None = None
+        rep_tranche: Tranche | None = None
+
+        async with self._lock:
+            logger.debug("Fetching report tranche", judgment=judgment, store=self._tranche_store.items())
+            for tranche, tranche_state in self._tranche_store.items():
+                anns: Announcement | None  = tranche_state.announcements.get(vi, None)
+
+                if anns:
+                    for rep in anns.assigned_reports:
+                        if rep.report_hash == wr_hash:
+                            if h_hash and h_hash != tranche.header_hash:
+                                raise ValueError("Found report in multiple blocks tranche!")
+
+                            h_hash = tranche.header_hash
+                            if rep_tranche and rep_tranche.tranche_index < tranche.tranche_index:
+                                rep_tranche = tranche
+                            elif not rep_tranche:
+                                rep_tranche = tranche
+
+        if not rep_tranche:
+            logger.error("No audit tranche found for given judgement's report", judgment=judgment.to_json())
+
+        return rep_tranche
 
     # --------------------- WR Queue Access Operations ---------------------
 
-    def add_to_unaudited(self, tranche: Tranche, unaudited_reports: OptionalReports):
-        state = self.get_state(tranche)
+    async def add_to_unaudited(self, tranche: Tranche, unaudited_reports: OptionalReports):
+        async with self._lock:
+            state = self._tranche_store.get(tranche)
+            if not state:
+                logger.warning("No state for given tranche", tranche=tranche)
+                return
 
-        state.unaudited_list = unaudited_reports
-        self.save_state(tranche=tranche, state=state)
-        logger.info(f"Updated unaudited list for specific tranches {tranche.tranche_index}")
+            state.unaudited_list = unaudited_reports
+            self._tranche_store[tranche] = state
+            logger.info("Updated unaudited list.", tranche=tranche)
 
-    def get_unaudited_list(self, tranche: Tranche):
-        state = self._tranche_store.get(tranche)
-        if state:
-            return state.unaudited_list
-        else:
-            logger.debug("Empty unaudited list")
+    async def get_unaudited_list(self, tranche: Tranche):
+        async with self._lock:
+            state = self._tranche_store.get(tranche)
+            if state:
+                return state.unaudited_list
+            else:
+                logger.debug("State not found!")
 
-    def rm_from_unaudited(self, tranche: Tranche, wr_hash: WorkReportHash):
-        state = self.get_state(tranche)
-        try:
-            state.unaudited_list.remove(wr_hash)
-            self.save_state(tranche, state)
-            logger.debug("Removed work report from unaudited list", wr_hash=wr_hash.hex())
-        except ValueError:
-            logger.warning("Work report not found in unaudited list for removal", wr_hash=wr_hash.hex())
+    async def rm_from_unaudited(self, tranche: Tranche, wr_hash: WorkReportHash):
+        async with self._lock:
+            state = self._tranche_store.get(tranche)
+            if not state:
+                logger.warning("No state for given tranche", tranche=tranche)
+                return
+
+            try:
+                state.unaudited_list.remove(wr_hash)
+                self._tranche_store[tranche] = state
+                logger.debug("Removed work report from unaudited list", wr_hash=wr_hash.hex())
+            except ValueError:
+                logger.warning("Work report not found in unaudited list for removal", wr_hash=wr_hash.hex())
 
 
 
     # --------------------- Announcement Access Operations ---------------------
 
-    def add_announce(self, tranche: Tranche, wr_hash: WorkReportHash, validator_index: ValidatorIndex) :
-        state = self.get_state(tranche)
-        if wr_hash not in state.records:
-            state.records[wr_hash] = AuditRecord.empty()
+    async def record_announcement(self, tranche: Tranche, validator_index: ValidatorIndex, ann: Announcement):
+        from jam.settings import settings
+        async with self._lock:
+            state = self._tranche_store.get(tranche)
+            if not state:
+                logger.warning("No state for given tranche", tranche=tranche)
+                return
 
-        state.records[wr_hash].announces.append(validator_index)
-        state.records[wr_hash].no_votes.append(validator_index)
-        self.save_state(tranche, state)
-        logger.info("Updated announcement for work report", wr_hash=wr_hash.hex())
+            if validator_index not in state.announcements:
+                state.announcements[validator_index] = ann
 
-    def add_set_announcement(self, tranche: Tranche, validator_index: ValidatorIndex, ann: Announcement):
-        state = self.get_state(tranche)
-        if validator_index not in state.announcements:
-            state.announcements[validator_index] = ann
-        self.save_state(tranche, state)
-        logger.info("Saved audit announcement", tranche=tranche, vi=validator_index, ann=ann)
+            for rep in ann.assigned_reports:
+                wr_hash = rep.report_hash
+                if wr_hash not in state.records:
+                    state.records[wr_hash] = AuditRecord.empty()
 
-    def get_set_announcement(self, tranche: Tranche, validator_index: ValidatorIndex):
-        state = self._tranche_store.get(tranche)
-        if state:
-            return state.announcements.get(validator_index)
-        else:
-            logger.warning("No state for given tranche", tranche=tranche)
+                if validator_index not in state.records[wr_hash].announces:
+                    state.records[wr_hash].announces.append(validator_index)
+
+                if validator_index not in state.records[wr_hash].no_votes:
+                    state.records[wr_hash].no_votes.append(validator_index)
+
+            self._tranche_store[tranche] = state
+            logger.info("Recorded audit announcement", tranche=tranche, vi=validator_index, ann=ann.to_json())
+
+    async def get_set_announcement(self, tranche: Tranche, validator_index: ValidatorIndex):
+        async  with self._lock:
+            state = self._tranche_store.get(tranche)
+            if state:
+                return state.announcements.get(validator_index)
+            else:
+                logger.warning("No state for given tranche", tranche=tranche)
 
 
     # --------------------- Judgement Access Operations ---------------------
 
-    def update_judgment(self, tranche: Tranche, wr_hash: WorkReportHash, judgment: Bool, validator_index: ValidatorIndex):
-        state = self.get_state(tranche)
+    async def update_judgment(self, tranche: Tranche, judgment: Judgment):
+        from jam.settings import settings
 
-        if wr_hash not in state.records:
-            state.records[wr_hash] = AuditRecord.empty()
-            state.records[wr_hash].no_votes.append(validator_index)
+        validator_index = judgment.validator_index
+        wr_hash = judgment.work_report_hash
 
-        if judgment:
-            state.records[wr_hash].true_votes.append(validator_index)
-            state.records[wr_hash].no_votes.remove(validator_index)
+        async  with self._lock:
+            state = self._tranche_store.get(tranche)
+            if not state:
+                logger.warning("No state for given tranche", tranche=tranche)
+                return
+
+            if wr_hash not in state.records:
+                logger.debug("Unknown Report Judgement received", validator=validator_index)
+                return
+
+            if judgment.validity:
+                state.records[wr_hash].true_votes.append(validator_index)
+                state.records[wr_hash].no_votes.remove(validator_index)
 
 
-        else:
-            state.records[wr_hash].false_votes.append(validator_index)
-            state.records[wr_hash].no_votes.remove(validator_index)
+            else:
+                state.records[wr_hash].false_votes.append(validator_index)
+                state.records[wr_hash].no_votes.remofve(validator_index)
 
+            self._tranche_store[tranche] = state
+            logger.debug("Updated judgment for work report", judgment=judgment.to_json())
 
-        self.save_state(tranche, state)
-        logger.debug("Updated judgment for work report", wr_hash=wr_hash.hex())
-
-    def get_judgment(self, tranche: Tranche, wr_hash: WorkReportHash) -> AuditRecord | None:
-        state = self.get_state(tranche)
+    async def get_judgment(self, tranche: Tranche, wr_hash: WorkReportHash) -> AuditRecord | None:
+        state = await self.get_state(tranche)
         return state.records.get(wr_hash)
 
 
 
     # --------------------- Validity Access Operations ---------------------
 
-    def add_to_valid_set(self, tranche: Tranche, wr_hash: WorkReportHash):
-        state = self.get_state(tranche)
-        if wr_hash in state.valid_set:
-            logger.warning("Work report already in valid set", wr_hash=wr_hash.hex())
-            return
+    async def add_to_valid_set(self, tranche: Tranche, wr_hash: WorkReportHash):
+        async with self._lock:
+            state = self._tranche_store.get(tranche)
+            if not state:
+                logger.warning("No state for given tranche", tranche=tranche)
+                return
 
-        state.valid_set.append(wr_hash)
-        self.save_state(tranche, state)
-        logger.debug("Added work report to valid set", wr_hash=wr_hash.hex())
+            if wr_hash in state.valid_set:
+                logger.warning("Work report already in valid set", wr_hash=wr_hash.hex())
+                return
 
-    def add_to_invalid_set(self, tranche: Tranche, wr_hash: WorkReportHash):
-        state = self.get_state(tranche)
-        if wr_hash in state.invalid_set:
-            logger.warning("Work report already in invalid set", wr_hash=wr_hash.hex())
-            return
-        state.invalid_set.append(wr_hash)
-        self.save_state(tranche, state)
-        logger.debug("Added work report to invalid set", wr_hash=wr_hash.hex())
+            state.valid_set.append(wr_hash)
+            self._tranche_store[tranche] = state
+            logger.debug("Added work report to valid set", wr_hash=wr_hash.hex())
+
+    async def add_to_invalid_set(self, tranche: Tranche, wr_hash: WorkReportHash):
+        async with self._lock:
+            state = self._tranche_store.get(tranche)
+            if not state:
+                logger.warning("No state for given tranche", tranche=tranche)
+                return
+
+            if wr_hash in state.invalid_set:
+                logger.warning("Work report already in invalid set", wr_hash=wr_hash.hex())
+                return
+
+            state.invalid_set.append(wr_hash)
+            self._tranche_store[tranche] = state
+            logger.debug("Added work report to invalid set", wr_hash=wr_hash.hex())
 
 tranche_store = TrancheStore()

@@ -39,6 +39,7 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
 
         ts_key = Block.get_storage_key_slot(slot)
         hh = settings.main_db.get(ts_key)
+        from jam.state.state import State
         state = State.load(hh)
 
     else:
@@ -68,7 +69,7 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
         validator_set = state.lambda_
     elif epoch == 1:
         epoch_entropy = state.eta[1]
-        validator_set = state.gamma.k
+        validator_set = state.gamma.p
     else:
         raise ValueError("Epoch value can be 0, 1 or -1.")
 
@@ -86,7 +87,7 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
 
     # ------- Rotate Validators -------
     rotation_phase = floor((slot % EPOCH_LENGTH) / ROTATION_PERIOD)
-    keys = list(mapping.keys())
+    keys = sorted(list(mapping.keys()))
     values = [mapping[k] for k in keys]
     values = deque(values)
     values.rotate(-rotation_phase)

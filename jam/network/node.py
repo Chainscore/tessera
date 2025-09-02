@@ -121,7 +121,7 @@ class QuicNode(asyncio.DatagramProtocol):
         ])
         if index != 7:
             neighbors.add(state.lambda_[index])
-            neighbors.add(state.gamma.k[index])
+            neighbors.add(state.gamma.p[index])
             neighbors.add(state.iota[index])
 
         neighbors = [n for n in neighbors if n.ed25519 != settings.ed25519_public]

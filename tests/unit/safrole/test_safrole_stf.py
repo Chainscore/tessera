@@ -8,7 +8,7 @@ from jam.state.transitions import Safrole
 from jam.types.state.eta import Eta
 from tsrkit_types.integers import U32
 from jam.types.state.kappa import Kappa
-from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
+from jam.types.state.gamma import GammaP, GammaA, GammaS, GammaSFallback, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
@@ -29,7 +29,7 @@ def test_safrole_timekeeping():
     eta = Eta([Bytes[32](bytes(32)) for _ in range(4)])
     lambda_ = Lambda_(create_validator_data_from_keys())
     kappa = Kappa(create_validator_data_from_keys())
-    gamma_k = GammaK(create_validator_data_from_keys())
+    gamma_p = GammaP(create_validator_data_from_keys())
     gamma_a = GammaA([])
     gamma_s = GammaS(
         GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])
@@ -44,7 +44,7 @@ def test_safrole_timekeeping():
         eta=eta,
         lambda_=lambda_,
         kappa=kappa,
-        gamma_k=gamma_k,
+        gamma_p=gamma_p,
         iota=iota,
         gamma_a=gamma_a,
         gamma_s=gamma_s,
@@ -77,7 +77,7 @@ def test_safrole_entropy_accumulation():
         eta=eta,
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
-        gamma_k=GammaK(create_validator_data_from_keys()),
+        gamma_p=GammaP(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
         gamma_s=GammaS(
@@ -117,7 +117,7 @@ def test_safrole_ticket_accumulation():
         eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
-        gamma_k=GammaK(create_validator_data_from_keys()),
+        gamma_p=GammaP(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
         gamma_s=GammaS(
@@ -165,7 +165,7 @@ def test_safrole_ticket_submission_outside_period():
         eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
-        gamma_k=GammaK(create_validator_data_from_keys()),
+        gamma_p=GammaP(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
         gamma_s=GammaS(
@@ -210,7 +210,7 @@ def test_safrole_epoch_transition():
         eta=Eta([Bytes[32](bytes([i + 1] * 32)) for i in range(4)]),
         lambda_=Lambda_(validators),
         kappa=Kappa(validators),
-        gamma_k=GammaK(validators),
+        gamma_p=GammaP(validators),
         iota=Iota(validators),
         gamma_a=GammaA([]),
         gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in validators * 2])),
@@ -233,8 +233,8 @@ def test_safrole_epoch_transition():
     # Verify epoch transition effects
 
     # 1. Check key rotation (γ'ᵏ = Φ(ιota), κ' = γᵏ, λ' = κ)
-    assert new_state.gamma.k == initial_state.iota
-    assert new_state.kappa == initial_state.gamma.k
+    assert new_state.gamma.p == initial_state.iota
+    assert new_state.kappa == initial_state.gamma.p
     assert new_state.lambda_ == initial_state.kappa
 
     # 2. Check entropy rotation (η'₁ = η₀, η'₂ = η₁, η'₃ = η₂)
@@ -262,7 +262,7 @@ def test_safrole_fallback_mode():
         eta=Eta([Bytes[32](bytes([i + 1] * 32)) for i in range(4)]),
         lambda_=Lambda_(validators),
         kappa=Kappa(validators),
-        gamma_k=GammaK(validators),
+        gamma_p=GammaP(validators),
         iota=Iota(validators),
         gamma_a=GammaA([]),  # Empty ticket accumulator (insufficient ticket.py)
         gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in validators * 2])),
@@ -304,7 +304,7 @@ def test_safrole_offender_filtering():
         eta=Eta([Bytes[32](bytes([i + 1] * 32)) for i in range(4)]),
         lambda_=Lambda_(validators),
         kappa=Kappa(validators),
-        gamma_k=GammaK(validators),
+        gamma_p=GammaP(validators),
         iota=Iota(validators),
         gamma_a=GammaA([]),
         gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in validators * 2])),
@@ -324,8 +324,8 @@ def test_safrole_offender_filtering():
         Bytes[32](create_dummy_bytes(32)),
     )
 
-    # Check that the offender was replaced with a null key in gamma_k
-    filtered_validators = new_state.gamma.k
+    # Check that the offender was replaced with a null key in gamma_p
+    filtered_validators = new_state.gamma.p
     for i, validator in enumerate(filtered_validators):
         if i == 0:  # The first validator was the offender
             assert validator.bandersnatch == Bytes[32](

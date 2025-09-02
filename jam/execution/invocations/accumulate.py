@@ -7,19 +7,19 @@ from jam.types.state.accumulation.types import (
     AccumulationContext,
     PreimageDict,
 )
-from jam.execution.host_calls.invocations.arg_invoke import PsiM
-from jam.execution.host_calls.invocations.functions.general_fns import GeneralFunctions
-from jam.execution.host_calls.invocations.protocol import InvocationProtocol
+from jam.execution.invocations.arg_invoke import PsiM
+from jam.execution.invocations.functions.general_fns import GeneralFunctions
+from jam.execution.invocations.protocol import InvocationProtocol
 from tsrkit_types.null import Null
 from tsrkit_types.integers import Uint
 from jam.types.protocol.core import Gas, ServiceId, TimeSlot
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.protocol.merkle import OptionHash
-from jam.execution.host_calls.invocations.functions.accumulate_fns import (
+from jam.execution.invocations.functions.accumulate_fns import (
     AccumulateFunctions,
     check,
 )
-from jam.execution.pvm.status import ExecutionStatus
+from tsrkit_pvm import ExecutionStatus
 from jam.utils.constants import MAX_SERVICE_CODE_SIZE
 
 
@@ -38,9 +38,10 @@ class PsiA(InvocationProtocol):
         xs = self.context.x.s_index
         delta = self.context.x.partial_state.service_accounts
         return {
-            18: (
+            # fetch
+            1: (
                 GeneralFunctions,
-                {  # fetch (Updates context[x]_hash)
+                {  
                     "package": None,
                     # TODO: This should be posterier
                     "entropy": state.eta[0],
@@ -52,56 +53,65 @@ class PsiA(InvocationProtocol):
                     "t": None,
                 },
             ),
-            0: (GeneralFunctions, {}),  # gas (Returns the gas remaining)
-            1: (
-                GeneralFunctions,
-                {"service_data": delta[xs], "service_index": xs, "accounts": delta},
-            ),  # lookup
+            # gas (Returns the gas remaining)
+            0: (GeneralFunctions, {}),  
+            # lookup
             2: (
                 GeneralFunctions,
                 {"service_data": delta[xs], "service_index": xs, "accounts": delta},
-            ),  # read
+            ),  
+            # read
             3: (
                 GeneralFunctions,
+                {"service_data": delta[xs], "service_index": xs, "accounts": delta},
+            ),
+            # write
+            4: (
+                GeneralFunctions,
                 {"service_data": delta[xs], "service_index": xs},
-            ),  # write
-            4: (GeneralFunctions, {"service_index": xs, "accounts": delta}),  # info
-            5: (AccumulateFunctions, {}),  # bless (Updates previlaged accounts)
-            6: (AccumulateFunctions, {}),  # assign (Updates authorizer_keys/Phi)
-            7: (AccumulateFunctions, {}),  # designate (Updates validator_keys/Iota)
-            8: (
+            ),
+            5: (GeneralFunctions, {"service_index": xs, "accounts": delta}),  # info
+            # bless (Updates previlaged accounts)
+            14: (AccumulateFunctions, {}),
+            # assign (Updates authorizer_keys/Phi)
+            15: (AccumulateFunctions, {}),
+            # designate (Updates validator_keys/Iota)
+            16: (AccumulateFunctions, {}),
+            # checkpoint (fn to update the context[y])
+            17: (AccumulateFunctions, {}),
+             # new (Updates the delta with a new service)
+            18: (AccumulateFunctions, {"block_timeslot": self.timeslot}),
+            # upgrade (Updates the service account)
+            19: (AccumulateFunctions, {}),
+            # transfer (Updates service deferred transfers & balance)
+            20: (
                 AccumulateFunctions,
                 {},
-            ),  # checkpoint (Special function to update the context[y])
-            9: (AccumulateFunctions, {}),  # new (Updates the delta with a new service)
-            10: (AccumulateFunctions, {}),  # upgrade (Updates the service account)
-            11: (
+            ),  
+            # eject (Removal of service account)
+            21: (
+                AccumulateFunctions,
+                {"block_timeslot": self.timeslot},
+            ),  
+            # query (Updates registers[7,8] wrt AccountLookup)
+            22: (
                 AccumulateFunctions,
                 {},
-            ),  # transfer (Updates service deferred transfers & balance)
-            12: (
-                AccumulateFunctions,
-                {"block_timeslot": self.timeslot},
-            ),  # eject (Removal of service account)
-            13: (
-                AccumulateFunctions,
-                {},
-            ),  # query (Updates registers[7,8] wrt AccountLookup)
-            14: (
-                AccumulateFunctions,
-                {"block_timeslot": self.timeslot},
-            ),  # solicit (Updated the AccountLookup)
-            15: (
-                AccumulateFunctions,
-                {"block_timeslot": self.timeslot},
-            ),  # forget (Updates lookupTimestamp & preimage)
-            16: (AccumulateFunctions, {}),  # yield_ (Updates context[x]_hash)
-            27: (AccumulateFunctions, {}),  # provide (Updates preimage)
+            ),  
+            # solicit (Updated the AccountLookup)
+            23: (AccumulateFunctions, {"block_timeslot": self.timeslot}),  
+            # forget (Updates lookupTimestamp & preimage)
+            24: (AccumulateFunctions, {"block_timeslot": self.timeslot}),  
+            # yield_ (Updates context[x]_hash)
+            25: (AccumulateFunctions, {}),  
+            # provide (Updates preimage)
+            26: (AccumulateFunctions, {"service_id": xs}),  
+            # log
             # TODO: Add core_index
             100: (
                 GeneralFunctions,
                 {"core_index": 0, "service_id": self.service_id},
-            ),  # log
+            ),  
         }
 
     def execute(self):

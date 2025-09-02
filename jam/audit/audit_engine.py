@@ -1,10 +1,12 @@
 import asyncio
+
 from tsrkit_types import Null
 
 from jam.audit.auditor import Auditor
 from jam.block.block import Block
 from jam.finality.finality import Finality
 from jam.logging import get_logger
+from jam.network.protocols.ce_144 import NoShows
 
 from jam.types.audit.tranche import (
     TrancheIndex,
@@ -18,7 +20,7 @@ from jam.types.work.report import WorkReports
 from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
 
 # Logger for Auditing module
-logger = get_logger("audit")
+logger = get_logger("auditor")
 
 
 class AuditEngine:
@@ -33,8 +35,15 @@ class AuditEngine:
 
     async def run(self, block: Block, new_wr: WorkReports):
         from jam.settings import settings
+        header_hash = block.header.hash()
+
+        if len(new_wr) == 0:
+            logger.info("No New Reports to audit, finalizing block!", block=str(block))
+            Finality.finalise(header_hash, settings.main_db, False)
+            return
+
         from jam.storage.tranche_store import tranche_store
-        from jam.state.state import State
+        from jam.state.state import State, state
 
         auditor = Auditor()
 
@@ -42,22 +51,28 @@ class AuditEngine:
 
         # -------------- Fetch Last Finalized Block --------------
         last_finalized_block = Finality.load_final(settings.main_db)
-        header_hash = block.header.hash()
 
+        logger.info(
+            "Block Auditing started 🔍🪛",
+            block=str(block),
+            reports=new_wr
+        )
         if block.header.slot < last_finalized_block.header.slot:
             logger.info("Block must be finalized or invalid.")
             return
 
         # -------------- Fetch Pending Reports --------------
+        logger.debug("Fetching prior state", ph=block.header.parent.hex())
         prior_state = State.load(block.header.parent)
         auditable_reports = OptionalReports([])
-
         for r in prior_state.rho:
             report_state: (WorkReportState | Null) = r.unwrap()
-            if isinstance(report_state, WorkReportState) and r.report in new_wr:
-                auditable_reports.append(OptionalReport(r.report))
+            if isinstance(report_state, WorkReportState) and report_state.report in new_wr:
+                auditable_reports.append(OptionalReport(report_state.report))
             else:
                 auditable_reports.append(OptionalReport(Null))
+
+        logger.debug("Fetched prior state", rho=prior_state.rho.to_json(), reps=auditable_reports.to_json())
 
         curr_ts = SLOT_PERIOD * int(block.header.slot)
 
@@ -74,19 +89,19 @@ class AuditEngine:
                 # Handle 0 Tranche Case
                 tranche_state = TrancheState.empty()
                 tranche_state.unaudited_list = auditable_reports
-                tranche_store.save_state(curr_tranche, tranche_state)
+                await tranche_store.save_state(curr_tranche, tranche_state)
                 no_shows = None
 
             else:
                 # Handle > 0 Tranche Case
                 prev_tranche = Tranche(TrancheIndex(tranche_index - 1), header_hash)
-                prev_state = tranche_store.get_state(prev_tranche)
+                prev_state = await tranche_store.get_state(prev_tranche)
 
                 tranche_state = prev_state.carry_forward()
-                tranche_store.save_state(curr_tranche, tranche_state)
+                await tranche_store.save_state(curr_tranche, tranche_state)
 
                 # Audit check
-                no_shows = auditor.is_audited(block, curr_tranche)
+                no_shows: NoShows = await auditor.is_audited(block, curr_tranche)
 
                 if len(no_shows) == 0:
                     self.is_audited = True
@@ -96,6 +111,8 @@ class AuditEngine:
                         block_slot=block.header.slot,
                         tranche=prev_tranche,
                     )
+                    Finality.finalise(header_hash, settings.main_db, False)
+                    tranche_store.remove_block_history(header_hash)
                     return
 
                 logger.info(

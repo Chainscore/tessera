@@ -17,7 +17,7 @@ from jam.types import (
     Hash,
     Alpha,
     Eta,
-    Nu,
+    Omega,
     Pi,
     Psi,
     Kappa,
@@ -34,6 +34,7 @@ from jam.types import (
 )
 from jam.block.block import Block
 from jam.logging import get_logger
+from jam.types.state.theta import Theta
 
 logger = get_logger("import")
 
@@ -70,21 +71,22 @@ class State:
     store: StateStorage
 
     # State Components
-    alpha = make_state_prop(1, Alpha)
-    phi = make_state_prop(2, Phi)
-    beta = make_state_prop(3, Beta)
-    gamma = make_state_prop(4, Gamma)
-    psi = make_state_prop(5, Psi)
-    eta = make_state_prop(6, Eta)
-    iota = make_state_prop(7, Iota)
-    kappa = make_state_prop(8, Kappa)
-    lambda_ = make_state_prop(9, Lambda_)
-    rho = make_state_prop(10, Rho)
-    tau = make_state_prop(11, Tau)
-    chi = make_state_prop(12, Chi)
-    pi = make_state_prop(13, Pi)
-    nu = make_state_prop(14, Nu)
-    xi = make_state_prop(15, Xi)
+    alpha       = make_state_prop(1,  Alpha)
+    phi         = make_state_prop(2,  Phi)
+    beta        = make_state_prop(3,  Beta)
+    gamma       = make_state_prop(4,  Gamma)
+    psi         = make_state_prop(5,  Psi)
+    eta         = make_state_prop(6,  Eta)
+    iota        = make_state_prop(7,  Iota)
+    kappa       = make_state_prop(8,  Kappa)
+    lambda_     = make_state_prop(9,  Lambda_)
+    rho         = make_state_prop(10, Rho)
+    tau         = make_state_prop(11, Tau)
+    chi         = make_state_prop(12, Chi)
+    pi          = make_state_prop(13, Pi)
+    omega       = make_state_prop(14, Omega)
+    xi          = make_state_prop(15, Xi)
+    theta       = make_state_prop(16, Theta)
 
     @property
     def delta(self) -> "DeltaView":
@@ -156,6 +158,8 @@ class State:
         # 1. Push auth hash of every WR to self.alpha[0:1]
 
         # TODO: We should remove this
+        # Comment these lines to turn off force transition
+        logger.warning("Force State Transition: ON")
         alpha = self.alpha
 
         for guarantee in block.extrinsic.guarantees:
@@ -223,43 +227,43 @@ class State:
 
             pre_state = self.load()
 
-            beta = self.beta
-            # Step 1
-            if len(beta):
-                beta[-1].state_root = block.header.parent_state_root
+            # Handle Parent's Block Posterior State Root (β† h)
+            beta: Beta = self.beta
+            if len(beta.h):
+                beta.h[-1].state_root = block.header.parent_state_root
             self.beta = beta
 
             # Disputes
             Disputes.transition(pre_state, self, block)
 
             # Assurances
-            _, newly_avail_wrs = Assurances.transition(self, block)
+            _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
             if len(newly_avail_wrs) > 0:
                 logger.info(
-                    "Newly available WRs",
-                    count=len(newly_avail_wrs),
+                    "Newly available WRs", count=len(newly_avail_wrs),
                     wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
                 )
 
             # Reporting
-            Reporting.transition(self, block, [])
+            Reporting.transition(pre_state, self, block, [])
 
             # Accumulation
             _, commitment_map = Accumulation.transition(
-                self, block, newly_avail_wrs=newly_avail_wrs
+                pre_state, self, block, newly_avail_wrs=newly_avail_wrs
             )
 
             # Authorization
             Authorization.transition(pre_state, self, block)
 
             # Recent History
-            history_merkle = BMRFunctions().wb_merklize(
-                TypedVector[Bytes[32]](
-                    sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map])
-                ),
-                Hash.keccak256,
+            bmr_merklizer = BMRFunctions()
+
+            # Calculate Merkle root of Accumulation Outputs
+            accumulate_root = bmr_merklizer.wb_merklize(
+                TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in state.theta])),
+                Hash.keccak256
             )
-            RecentHistory.transition(pre_state, self, block, history_merkle)
+            RecentHistory.transition(pre_state, self, block, accumulate_root, header_hash)
 
             # Preimages
             Preimages.transition(pre_state, self, block)
@@ -271,32 +275,35 @@ class State:
             vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
             Safrole.transition(pre_state, self, block, vrf_output)
 
-            logger.debug("Validating block")
-            if block.validate():
+            if True: #block.validate():
                 state.settle(header_hash)
+
+                # Set local chain head to produced block
+                block.save(_set.main_db)
+                Finality.set_head(header_hash, _set.main_db)
                 logger.info(
                     "Block imported!",
+                    new_wrs=newly_avail_wrs,
                     header=header_hash.hex()[:16] + "...",
                     timeslot=self.tau,
                     final_state_root=self.root.hex()[:16] + "...",
                 )
 
-                block.save(_set.main_db)
 
-                from jam.operations.handlers.assurer import assurer
-                for ext in block.extrinsic.guarantees:
-                    logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
-                    asyncio.create_task(assurer._req_shard(ext))
+                # from jam.operations.handlers.assurer import assurer
+                # for ext in block.extrinsic.guarantees:
+                #     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                #     asyncio.create_task(assurer._req_shard(ext))
 
-                # Start Auditing for new block received
-                audit_engine = AuditEngine()
-                asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
+                # TODO: Test Auditing & Refining with PJ
+                # # Start Auditing for new block received
+                # audit_engine = AuditEngine()
+                # asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
 
-                # TODO: Move this logic in audit engine
-                # Set local chain head to produced block
-                Finality.set_head(header_hash, _set.main_db)
+                # TODO: Remove Direct Finality
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-                Finality.finalise(header_hash, _set.main_db, False)
+                Finality.finalise(header_hash, _set.main_db, True)
+
                 block.extrinsic.clear_from_stores()
 
                 self._lock = False

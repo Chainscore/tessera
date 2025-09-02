@@ -91,7 +91,7 @@ async def start_node(
     print("INDEX", index)
     if index != 7:
         peers.add(state.lambda_[index])
-        peers.add(state.gamma.k[index])
+        peers.add(state.gamma.p[index])
         peers.add(state.iota[index])
 
     tasks = []

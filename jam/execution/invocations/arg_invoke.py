@@ -1,13 +1,15 @@
-import time
 from typing import Any, Tuple
-from jam.execution.host_calls.host_call import HostCallReturn, PsiH
-from jam.execution.host_calls.invocations.protocol import Context, DispatchFunction
-from jam.execution.pvm.code import y_function
-from jam.execution.pvm.program import Program
-from jam.execution.pvm.status import PANIC, ExecutionStatus
+from jam.execution.host_call import HostCallReturn, PsiH
+from jam.execution.invocations.protocol import Context, DispatchFunction
+from tsrkit_pvm import PANIC, ExecutionStatus, y_function
 from tsrkit_types.bytes import Bytes
 from jam.types.protocol.core import Gas
 from jam.logging import get_logger
+import os
+if os.environ.get("PVM_MODE") == "recompiler":
+    from tsrkit_pvm import REC_Program as Program
+else:
+    from tsrkit_pvm import INT_Program as Program
 
 # Module-specific logger
 logger = get_logger("host_calls")
@@ -35,7 +37,7 @@ class PsiM:
         )
 
         try:
-            code, registers, memory = y_function(bytes(Bytes(blob)), arguments)
+            code, registers, memory = y_function(bytes(Bytes(blob)), arguments, os.environ.get("PVM_MODE", "interpreter"))
             logger.debug(
                 "Initialized program successfully",
                 code_size=len(code),
@@ -51,13 +53,24 @@ class PsiM:
                 pc=pc,
             )
             return Gas(0), PANIC, context
-
         program = Program.decode(code)
 
         return PsiM.R(
             gas,
             PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context),
         )
+        # try:
+        #     program = Program.decode(code)
+
+        #     host_return = PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context),
+        # except:
+        #     host_return = HostCallReturn(ExecutionStatus.PANIC, pc, gas, registers, memory, context)
+        # finally:
+        #     return PsiM.R(
+        #         gas,
+        #         host_return
+        #     )
+
 
     @staticmethod
     def R(g: Gas, grouped: HostCallReturn) -> ArgInvokeReturn:
@@ -107,6 +120,7 @@ class PsiM:
 
         logger.info(
             "Invocation completed",
+            status=str(status._value_),
             initial_gas=int(g),
             consumed_gas=int(u),
             result_type=type(result).__name__,

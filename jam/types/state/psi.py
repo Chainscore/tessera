@@ -22,9 +22,14 @@ class PsiO(TypedVector[Ed25519Public]):
 # State key: 5
 @structure
 class Psi:
-    """Disputes state"""
+    """
+    Component: ψ
+    Key: 5
 
-    good: PsiG
-    bad: PsiB
-    wonky: PsiW
-    offenders: PsiO
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/128c00129600?v=0.7.0
+    """
+
+    good: PsiG # g
+    bad: PsiB  # b
+    wonky: PsiW # w
+    offenders: PsiO # o

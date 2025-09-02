@@ -5,7 +5,7 @@ from tsrkit_types.bytes import Bytes
 from jam.types.state.eta import Eta
 from tsrkit_types.integers import U32
 from jam.types.state.kappa import Kappa
-from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
+from jam.types.state.gamma import GammaP, GammaA, GammaS, GammaSFallback, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
@@ -31,7 +31,7 @@ def test_key_rotation_at_epoch_boundary():
         eta=Eta([Bytes[32](bytes([i + 1] * 32)) for i in range(4)]),
         lambda_=Lambda_(validators),
         kappa=Kappa(validators),
-        gamma_k=GammaK(validators),
+        gamma_p=GammaP(validators),
         iota=Iota(validators),
         gamma_a=GammaA([]),
         gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in validators * 2])),
@@ -55,17 +55,17 @@ def test_key_rotation_at_epoch_boundary():
     # λ' = κ (lambda becomes previous kappa)
     assert new_state.lambda_ == initial_state.kappa
 
-    # κ' = γ_k (kappa becomes previous gamma_k)
-    assert new_state.kappa == initial_state.gamma.k
+    # κ' = γ_k (kappa becomes previous gamma_p)
+    assert new_state.kappa == initial_state.gamma.p
 
-    # γ'_k = ι (gamma_k becomes previous iota with offenders filtered)
-    assert len(new_state.gamma.k) == len(initial_state.iota)
-    for i in range(len(new_state.gamma.k)):
-        assert new_state.gamma.k[i] == initial_state.iota[i]
+    # γ'_k = ι (gamma_p becomes previous iota with offenders filtered)
+    assert len(new_state.gamma.p) == len(initial_state.iota)
+    for i in range(len(new_state.gamma.p)):
+        assert new_state.gamma.p[i] == initial_state.iota[i]
 
     # Verify that the ring root is updated
     new_ring_root = Bytes[144](
-        Safrole.compute_ring_root([keys.bandersnatch for keys in new_state.gamma.k])
+        Safrole.compute_ring_root([keys.bandersnatch for keys in new_state.gamma.p])
     )
     assert new_state.gamma.z == new_ring_root
 
@@ -85,7 +85,7 @@ def test_offender_filtering():
         eta=Eta([Bytes[32](bytes([i + 1] * 32)) for i in range(4)]),
         lambda_=Lambda_(validators),
         kappa=Kappa(validators),
-        gamma_k=GammaK(validators),
+        gamma_p=GammaP(validators),
         iota=Iota(validators),
         gamma_a=GammaA([]),
         gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in validators * 2])),
@@ -105,8 +105,8 @@ def test_offender_filtering():
         Bytes[32](create_dummy_bytes(32)),
     )
 
-    # Check that the offender was replaced with a null key in gamma_k
-    filtered_validators = new_state.gamma.k
+    # Check that the offender was replaced with a null key in gamma_p
+    filtered_validators = new_state.gamma.p
     for i, validator in enumerate(filtered_validators):
         if i == 0:  # The first validator was the offender
             assert validator.bandersnatch == Bytes[32](
@@ -136,7 +136,7 @@ def test_all_validators_are_offenders():
         eta=Eta([Bytes[32](bytes([i + 1] * 32)) for i in range(4)]),
         lambda_=Lambda_(validators),
         kappa=Kappa(validators),
-        gamma_k=GammaK(validators),
+        gamma_p=GammaP(validators),
         iota=Iota(validators),
         gamma_a=GammaA([]),
         gamma_s=GammaS(GammaSFallback([keys.bandersnatch for keys in validators * 2])),
@@ -156,7 +156,7 @@ def test_all_validators_are_offenders():
         Bytes[32](create_dummy_bytes(32)),
     )
 
-    # Verify all validators in gamma_k are replaced with null keys
-    for validator in new_state.gamma.k:
+    # Verify all validators in gamma_p are replaced with null keys
+    for validator in new_state.gamma.p:
         assert validator.bandersnatch == Bytes[32](bytes(32)), "All validators should be null keys"
         assert validator.ed25519 == Bytes[32](bytes(32)), "All validators should be null keys"

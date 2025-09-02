@@ -17,8 +17,6 @@ from jam.types import (
     TimeSlot,
     ValidatorIndex,
 )
-from dot_ring.vrf.ring.ring_vrf import RingVrf
-from dot_ring.vrf.ietf.ietf import IETF_VRF
 
 from .epoch_mark import EpochMark
 from .offenders_mark import OffendersMark
@@ -29,16 +27,25 @@ from py_ark_vrf import prove_ietf, vrf_output, verify_ietf
 @structure
 class Header:
     """Block header structure."""
-
+    # HP
     parent: HeaderHash
+    # HR
     parent_state_root: StateRoot
+    # HX
     extrinsic_hash: OpaqueHash
+    # HT
     slot: TimeSlot
+    # HE
     epoch_mark: EpochMark
+    # HT    
     tickets_mark: TicketsMark
-    offenders_mark: OffendersMark
+    # HA
     author_index: ValidatorIndex
+    # HV
     entropy_source: BandersnatchVrfSignature
+    # HO 
+    offenders_mark: OffendersMark
+    # HS
     seal: BandersnatchVrfSignature
 
     def __hash__(self) -> int:

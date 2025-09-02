@@ -10,7 +10,7 @@ from jam.state.transitions import Safrole
 from jam.types.state.eta import Eta
 from tsrkit_types.integers import U32
 from jam.types.state.kappa import Kappa
-from jam.types.state.gamma import GammaK, GammaA, GammaS, GammaSFallback, GammaZ
+from jam.types.state.gamma import GammaP, GammaA, GammaS, GammaSFallback, GammaZ
 from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
@@ -28,7 +28,7 @@ def test_ticket_accumulation():
         eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
-        gamma_k=GammaK(create_validator_data_from_keys()),
+        gamma_p=GammaP(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
         gamma_s=GammaS(
@@ -83,7 +83,7 @@ def test_ticket_submission_outside_period():
         eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
-        gamma_k=GammaK(create_validator_data_from_keys()),
+        gamma_p=GammaP(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
         gamma_s=GammaS(
@@ -125,7 +125,7 @@ def test_ticket_duplicate_rejection():
         eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
-        gamma_k=GammaK(create_validator_data_from_keys()),
+        gamma_p=GammaP(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
         gamma_s=GammaS(
@@ -168,7 +168,7 @@ def test_ticket_sorting():
         eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
         lambda_=Lambda_(create_validator_data_from_keys()),
         kappa=Kappa(create_validator_data_from_keys()),
-        gamma_k=GammaK(create_validator_data_from_keys()),
+        gamma_p=GammaP(create_validator_data_from_keys()),
         iota=Iota(create_validator_data_from_keys()),
         gamma_a=GammaA([]),
         gamma_s=GammaS(
