@@ -201,9 +201,6 @@ class AuditAnnouncement(NetworkProtocol):
                 tranche_store.records_announcement(tranche, v_index, data.tranche_announcement.announcement)
             )
 
-
-
-
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 

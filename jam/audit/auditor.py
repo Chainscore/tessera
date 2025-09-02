@@ -162,7 +162,7 @@ class Auditor:
         # ------------------- Save Announcement in Tranche State ---------------------------------------------
         curr_tranche = tranche
 
-        tranche_store.records_announcement(
+        await tranche_store.records_announcement(
             tranche=curr_tranche,
             validator_index=settings.validator_index,
             announce=Announcement(
@@ -244,16 +244,6 @@ class Auditor:
 
                 CE145 = JudgmentPublication()
 
-                # ------------------- Save judgment in Tranche State ---------------------------------------------
-                tranche_store.update_judgment(
-                    tranche=curr_tranche,
-                    validator_index=validator_index,
-                    judgment=validity,
-                    wr_hash=wr_hash,
-                    edd2519_signature=ed25519_signature,
-                    ed25519_public=settings.ed25519_public
-                )
-
                 # --------------------------- JUDGMENT EPOCH INDEX ----------------------------------------------
                 from jam.state.state import state
                 epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
@@ -264,6 +254,14 @@ class Auditor:
                     validity=Bool(validity),
                     work_report_hash=WorkReportHash(wr_hash),
                     ed25519_signature=Ed25519Signature(ed25519_signature),
+                )
+
+                # ------------------- Save judgment in Tranche State ---------------------------------------------
+
+                await tranche_store.update_judgment(
+                    tranche=curr_tranche,
+                    judgment=judgment,
+                    ed25519_public=settings.ed25519_public
                 )
 
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)

@@ -1,25 +1,18 @@
 import asyncio
-import math
-
 from typing import cast
-
-from docutils.nodes import header
-from flask import Flask
 from numpy.ma.core import empty
 from tsrkit_types import structure, Uint, Bool, U8, U32
-
-from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY
 from jam.types.protocol.core import ValidatorIndex, EpochIndex, TrancheIndex
-
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.logging import get_logger
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, HeaderHash
-
+from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, HeaderHash, Ed25519Public
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
-from jam.types.work.report import WorkReport, WorkReportHash, WorkReports
+from jam.types.work.report import WorkReportHash
 from jam.block import Block, Header
+from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
+
 
 # Module-specific logger
 logger = get_logger("network")
@@ -120,29 +113,14 @@ class JudgmentPublication(NetworkProtocol):
 
     async def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept individual Judgment from other Auditors for their assigned Work Reports """
-        from jam.storage.tranche_store import tranche_store, Tranche
-        from jam.finality.finality import Finality
-        from jam.settings import settings
-        from jam.audit.auditor import Auditor
         from jam.state.state import state
-
-        auditor = Auditor()
+        from jam.storage.tranche_store import tranche_store
 
         buffer = server.stream_buffer[stream_id][1:]
-
-        latest_block = Finality.load_latest(kv=settings.main_db)
 
         try:
             data = CE145Data.decode(buffer)
             data = cast(CE145Data, data)
-
-            # ------------------------- find out tranche -------------------------
-            tranche_idx = tranche_store.get_tranche_index(header_hash=header_hash)
-
-            tranche = Tranche(
-                tranche_index=tranche_idx,
-                header_hash=header_hash
-            )
 
             # ----------------------- break received judgment -----------------
             epoch_index = data.judgment.epoch_index
@@ -151,28 +129,26 @@ class JudgmentPublication(NetworkProtocol):
             wr_hash = data.judgment.work_report_hash
             edd2519_signature = data.judgment.ed25519_signature
 
-            # as soon as we false judgment we discard after tranche all block process build a new chain
-            if not validity:
-                # 1. find report => block header, from which block he exist
-                wr_header = self.find_report_header(block=latest_block, wr_hash=wr_hash)
-                # 2 save state hash
-                state.revert(wr_header.hash())  # asking for cache
-                # 3. save extrinsic
+            # Handle received judgment
+            tranche = await self.handle_judgment(data.judgment)
+            header_hash = tranche.header_hash
 
+            header_state = state.load(header_hash=header_hash)
+            ed25519_public = header_state.kappa[validator_index].ed25519
 
-                # 3. terminate all node further process and process further block
+            # fetch block by header_hash
+            asyncio.create_task(tranche_store.update_judgment(tranche=tranche, judgment=data.judgment, ed25519_public=ed25519_public))
 
+            # # as soon as we false judgment we discard after tranche all block process build a new chain
+            # if not validity:
+            #     # 1. save state hash
+            #     state.revert(header.hash())
+            #
+            #     # 2. save extrinsic
+            #     # 3. terminate all node further process and process further block
 
-                # stop further process start new chain here
+            #     # stop further process start new chain here
 
-            tranche_store.update_judgment(
-                tranche=tranche,
-                validator_index=validator_index,
-                judgment=validity,
-                wr_hash=wr_hash,
-                edd2519_signature=edd2519_signature,
-                ed25519_public=settings.ed25519_public
-            )
 
             logger.debug(
                 "Received Judgment from auditor",
@@ -213,38 +189,21 @@ class JudgmentPublication(NetworkProtocol):
         return False
 
     @staticmethod
-    def find_report_header(block: Block, wr_hash: WorkReportHash) -> Header:
-        """ """
-        from jam.state.state import state, State
-        from jam.settings import settings
+    async def handle_judgment(judgment: Judgment):
+        from jam.storage.tranche_store import tranche_store
 
-        kv = settings.main_db
+        try:
+            # Fetch Report's Tranche
+            tranche = await tranche_store.fetch_rep_tranche(judgment)
+            if not tranche:
+                raise ValueError(f"Tranche not found for report {judgment.work_report_hash.hex()}")
+            else:
+                return tranche
 
-        parent_hash = block.header.parent
-
-        curr_available_wrs = state.rho
-        found = False
-        for r in curr_available_wrs:
-            if r.hash() == wr_hash:
-                found = True
-                break
-
-        if found:
-            return block.header
-
-        else:
-            while True:
-                curr_block = block
-                parent_block = curr_block.load_parent(kv)
-                # check only upto unaudited block, stop iteration if we find audited, finalized block
-                if block.extrinsic.disputes != empty():
-                    guarantee_ext = parent_block.extrinsic.guarantees
-                    for report, slot, signature in guarantee_ext:
-                        if report.hash() == wr_hash:
-                            return parent_block.header
-                    # if not found we come here
-                    block = parent_block
-
-                else:
-                    # if dispute not in block, skip that block iterations
-                    block = parent_block.load_parent(kv)
+        except Exception as JERR:
+            logger.error(
+                "Error Handling Judgment, fetching tranche for work report",
+                judgment=judgment.to_json(),
+                err=str(JERR),
+                err_type=type(JERR).__name__
+            )
