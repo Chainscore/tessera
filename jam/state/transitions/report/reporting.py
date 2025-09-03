@@ -1,18 +1,19 @@
 from jam.types import ValidatorIndex
 from math import floor
-from typing import Dict, Set, List
+from typing import Set, List
+
 from tsrkit_types import Bytes, Uint, Null
+
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 from jam.block import Block
 from jam.logging import get_logger
 from jam.state.transitions.report.error import ReportingError, ReportingErrorCode
-from jam.state.transitions.report.guarantee_assignment import guarantor_assignment
-from jam.types.protocol.core import CoreIndex, TimeSlot
+from jam.state.transitions.report.guarantee_assignment import assign_fn
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
-from jam.types.protocol.crypto import Hash, OpaqueHash
+from jam.types.protocol.crypto import OpaqueHash
 from jam.types.work import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, LOOKUP_ANCHOR_MAX_AGE, X
 from jam.utils.constants import (
@@ -136,10 +137,12 @@ class Reporting:
 
             # -------- report_epoch_before_last ------------
             if guarantee.slot != block.header.slot:
-                if block.header.slot - guarantee.slot > 7:
+                # https://graypaper.fluffylabs.dev/#/38c4e62/15d80115e301?v=0.7.0
+                last_rotation_slot = ROTATION_PERIOD * ((block.header.slot // ROTATION_PERIOD) - 1)
+                if guarantee.slot < last_rotation_slot:
                     raise ReportingError(
                         ReportingErrorCode.REPORT_EPOCH_BEFORE_LAST,
-                        "Guarantee work report slot not in recent slots (block history)",
+                        "Report must be in current or prior rotation only",
                     )
 
             # --------------- duplicated_package_in_recent_history ----------------------------
@@ -448,23 +451,17 @@ class Reporting:
             # Return if no guarantees to check
             return
 
-        cache: Dict[TimeSlot, Dict[CoreIndex, Set[ValidatorIndex]]] = {}
+        mappings = assign_fn(state)
         for x in block.extrinsic.guarantees:
             report_slot = x.slot
 
-            if report_slot in cache:
-                guarantors_assigned = cache[report_slot]
+            report_rotation = report_slot // ROTATION_PERIOD
+            curr_rotation = state.tau // ROTATION_PERIOD
+
+            if curr_rotation == report_rotation:
+                guarantors_assigned = mappings[0]
             else:
-                guarantors_assigned = guarantor_assignment(
-                    state.eta,
-                    state.kappa,
-                    state.lambda_,
-                    state.gamma.p,
-                    block.header.slot,
-                    report_slot,
-                    state.tau,
-                )
-                cache[report_slot] = guarantors_assigned
+                guarantors_assigned = mappings[1]
 
             core_assignment = guarantors_assigned[x.report.core_index]
             val_assignment: Set[ValidatorIndex] = set()
