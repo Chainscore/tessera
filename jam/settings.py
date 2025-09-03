@@ -65,9 +65,6 @@ class Settings:
         random.seed(port)
         self.NODE_ID = random.randint(0, 2**16 - 1)
 
-        # Cleanup
-        self.clear()
-
         self._main_db = None
         self._audit_db = None
         self._d3l = None

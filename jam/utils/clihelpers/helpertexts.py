@@ -1,4 +1,7 @@
-from jam.config.logging import Theme, theme_choices
+from jam.logging import Theme
+
+# Create theme choices list
+theme_choices = [theme.name.lower() for theme in Theme]
 
 def help_theme():
     """Show help for the --theme option."""

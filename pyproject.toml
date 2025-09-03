@@ -68,13 +68,9 @@ line-length = 100
 target-version = ['py310']
 
 [tool.poe.tasks]
-build = "./scripts/build.sh"
+build = "./scripts/build-binary.sh"
 setup = "./scripts/setup.sh"
 test = "./scripts/test.sh"
-validate = "./scripts/validate.sh"
 testnet = "./scripts/testnet.sh"
-testnet-sync = "./scripts/testnet_sync.sh"
-testnet-tmux = "./scripts/testnet-tmux.sh"
-tsr-testnet = "./scripts/tsr_testnet.sh"
 update-deps = "./scripts/update-deps.sh"
 deploy-azure = "./scripts/deploy-to-azure.sh"
