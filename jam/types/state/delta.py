@@ -5,7 +5,6 @@ from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.integers import Uint, U32
 from tsrkit_types.sequences import TypedBoundedVector
 from tsrkit_types.struct import structure
-from jam.state.utils import construct_state_key
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId, TimeSlot
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import (
@@ -88,6 +87,7 @@ class AccountStorage(Dictionary[Bytes, Bytes, "key", "value"]):
         super().__delitem__(key)
         
     def transform(self, service_id: ServiceId):
+        from jam.state.utils import construct_state_key
         res = {}
         for k, v in self.items():
             res[construct_state_key((service_id, Bytes(U32(2**32 - 1).encode()) + k))] = v
@@ -98,6 +98,7 @@ class AccountStorage(Dictionary[Bytes, Bytes, "key", "value"]):
 class AccountPreimages(Dictionary[Bytes[32], Bytes, "hash", "blob"]):
     
     def transform(self, service_id: ServiceId):
+        from jam.state.utils import construct_state_key
         res = {}
         for k, v in self.items():
             res[construct_state_key((service_id, Bytes(U32(2**32 - 2).encode()) + k))] = v
@@ -145,6 +146,7 @@ class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
         super().__delitem__(key)
 
     def transform(self, service_id: ServiceId):
+        from jam.state.utils import construct_state_key
         res = {}
         for k, v in self.items():
             res[construct_state_key((service_id, Bytes(U32(k.length).encode()) + k.hash))] = v.encode()
@@ -170,6 +172,7 @@ class AccountData:
         
     def transform(self, service_id: ServiceId):
         res = {}
+        from jam.state.utils import construct_state_key
         res[construct_state_key((255, service_id))] = self.service.encode()
         res.update(self.storage.transform(service_id))
         res.update(self.preimages.transform(service_id))
