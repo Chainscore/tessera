@@ -143,7 +143,7 @@ jobs:
             Choose the appropriate binary for your platform:
             
             - **Linux x86_64**: `tessera-node-Linux-x64.tar.gz`
-            - **macOS Apple Silicon (M1/M2)**: `tessera-node-Darwin-arm64.tar.gz`  
+            - **macOS Apple Silicon (M-Series)**: `tessera-node-Darwin-arm64.tar.gz`  
             - **macOS Intel**: `tessera-node-Darwin-x64.tar.gz`
             
             ### 🚀 Quick Start
@@ -160,7 +160,6 @@ jobs:
             ### 📋 What's Included
             
             - `tessera-node`: Main executable binary
-            - `genesis.json`: Genesis configuration
             - `dev-spec.json`: Development specification  
             - `envs/`: Environment configurations
             

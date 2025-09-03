@@ -28,7 +28,7 @@ echo "[INFO] Installing dependencies..."
 poetry install --only=main
 
 echo "[INFO] Building binary..."
-poetry run pyinstaller tessera-final.spec --clean --noconfirm
+poetry run pyinstaller tessera.spec --clean --noconfirm
 
 # Test binary
 echo "[INFO] Testing binary..."
@@ -43,10 +43,9 @@ if ./dist/tessera-node --help > /dev/null 2>&1; then
     echo "[INFO] Creating package..."
     cd dist/
     # Copy config files to dist if they exist
-    [ -f "../genesis.json" ] && cp "../genesis.json" .
     [ -f "../dev-spec.json" ] && cp "../dev-spec.json" .
     [ -d "../envs" ] && cp -r "../envs" .
-    tar -czf "tessera-node-${PLATFORM_NAME}-${ARCH_NAME}.tar.gz" tessera-node $([ -f "genesis.json" ] && echo "genesis.json") $([ -f "dev-spec.json" ] && echo "dev-spec.json") $([ -d "envs" ] && echo "envs")
+    tar -czf "tessera-node-${PLATFORM_NAME}-${ARCH_NAME}.tar.gz" tessera-node $([ -f "dev-spec.json" ] && echo "dev-spec.json") $([ -d "envs" ] && echo "envs")
     cd ..
     
     echo "[INFO] ✅ BUILD COMPLETE!"

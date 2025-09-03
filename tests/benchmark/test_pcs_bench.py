@@ -2,7 +2,6 @@ import time
 import random
 import pytest
 import numpy as np
-from sympy import symbols
 
 from numpy.polynomial.polynomial import Polynomial
 
