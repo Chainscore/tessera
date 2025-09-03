@@ -1,0 +1,16 @@
+[submodule "deps/py-ark-vrf"]
+	path = deps/py-ark-vrf
+	url = https://github.com/chainscore/py-ark-vrf.git
+	branch = main
+[submodule "deps/tsrkit-pvm"]
+	path = deps/tsrkit-pvm
+	url = https://github.com/chainscore/tsrkit-pvm.git
+	branch = main
+[submodule "deps/tsrkit-asm"]
+	path = deps/tsrkit-asm
+	url = https://github.com/chainscore/tsrkit-asm.git
+	branch = main
+[submodule "test-suites"]
+	path = test-suites
+	url = https://github.com/Chainscore/tessera-test-suites.git
+	branch = sync/0.7.0

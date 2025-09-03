@@ -4,12 +4,14 @@ import logging
 import os
 import time
 from dotenv import load_dotenv
-from jam.operations import operate
+
+from jam.finality.finality import Finality
 from jam.logging import setup_logging, logger
+from jam.network.start import start_node
+from jam.operations.operator import operate
 from jam.utils.chainspec import chain_config
 from jam.settings import setup_setting
-from jam.finality.finality import Finality
-from jam.network.start import start_node
+from jam.network.node import Node
 from jam.state.state import setup_state
 from jam.block import Block
 from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
@@ -18,13 +20,11 @@ from hypercorn.asyncio import serve
 from hypercorn.config import Config
 from jam.api.rpc.app import rpc
 from jam.operations.ticket_queue import setup_ticket_queue
-from tests.integration.utils.state_update import update_state
 
 
 async def main(
     genesis_path: str,
     env: str,
-    start_genesis: bool,
     theme: str,
     is_builder: bool,
     is_validator: bool,
@@ -34,9 +34,11 @@ async def main(
     init_ts = int((time.time() - genesis_ts) // SLOT_PERIOD)
     init_ep = int(init_ts // EPOCH_LENGTH)
 
+    if not is_builder and not is_validator:
+        is_validator=True
     # ---------- LOAD ENVIRONMENT ----------
-    load_dotenv(".env")
-    load_dotenv(env, override=True)
+    # load_dotenv(".env")
+    # load_dotenv(env,override=True)
 
     name = os.environ["NODE_NAME"]
     port = os.environ["PORT"]
@@ -81,14 +83,7 @@ async def main(
         state = setup_state(settings.state_db, genesis_path)
         state.store.disable_cache()
 
-        # Genesis specs
-        dev_spec = json.load(open(genesis_path))
-        # TODO: Remove Later
-        update_state(state)
-
-        settings.update()
-
-        # setup ticket queue
+        # FIX: setup ticket queue
         setup_ticket_queue()
 
         # ------------ SET GENESIS BLOCK ------------
@@ -97,7 +92,7 @@ async def main(
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db, True)
 
-        #       RPC/WebSocket server setup
+        # RPC/WebSocket server setup
         rpc_port = int(os.environ.get("RPC_PORT", 5000))
         rpc_config = Config()
         rpc_config.bind = [f"{host}:{port}"]

@@ -1,17 +1,14 @@
-import asyncio
 import json
 from typing import Type
-
-from jam.audit.audit_engine import AuditEngine
 from jam.error import JamError, JamErrorCode
-from jam.types.audit.tranche import TrancheIndex
+from jam.state.partial import PartialState
 from jam.utils.merkle import BMRFunctions
 from rockstore import RockStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.utils.trie.merkle import StateTrie
 from jam.state.storage import StateStorage
-from jam.state.utils import construct_state_key
+from jam.state.utils import construct_state_key, make_state_prop
 from tsrkit_types import Bytes, Codable, Dictionary, TypedVector
 from jam.types import (
     Hash,
@@ -37,25 +34,6 @@ from jam.logging import get_logger
 from jam.types.state.theta import Theta
 
 logger = get_logger("import")
-
-def make_state_prop(state_key: int, cl: Type[Codable]):
-    def fget(self):
-        raw = self.store.get(construct_state_key(state_key))
-        if raw is None:
-            raise ValueError(f"State component missing from DB: {cl.__name__}")
-        return cl.decode_from(raw)[0]
-
-    def fset(self, value):
-        k, v = construct_state_key(state_key), value.encode()
-        self.store.put(bytes(k), v)
-        logger.debug(
-            "State component updated",
-            component=cl.__name__,
-            state_key=state_key,
-            value_size=len(v),
-        )
-
-    return property(fget, fset)
 
 
 class State:
@@ -142,7 +120,7 @@ class State:
         # Empty trie -I dont think we need past trie data anywhere
         trie = StateTrie()
         # Create a Read-Only instance
-        db = RockStore(settings._data_path + "/state", options={"read_only": True})
+        db = RockStore(state.store._DB.path.decode(), options={"read_only": True})
         # Load past updates
         cache = state.store._load_updates(header_hash)
 
@@ -322,6 +300,17 @@ class State:
         self._lock = False
 
         return False
+    
+    def to_partial(self) -> "PartialState":
+        return PartialState(
+            StateStorage(
+                StateTrie(), 
+                self.store._DB, 
+                self.store._updates.copy(),
+                True
+            )
+        )
+
 
 state = State(None)
 

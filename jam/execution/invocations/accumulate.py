@@ -1,9 +1,9 @@
 from typing import Tuple
+from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     DeferredTransfers,
     OperandTuples,
     AccuContextX,
-    StateContext,
     AccumulationContext,
     PreimageDict,
 )
@@ -24,13 +24,13 @@ from jam.utils.constants import MAX_SERVICE_CODE_SIZE
 
 
 class PsiA(InvocationProtocol):
-    def __init__(self, u: StateContext, t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples):
+    def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples):
         self.partial_state = u
         self.timeslot = t
         self.service_id = s
         self.gas = g
         self.operandTuples = o
-        self.context = AccumulationContext(x=self.initializer_fn(s, u), y=self.initializer_fn(s, u))
+        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone()), y=self.initializer_fn(s, u.clone()))
 
     def table(self):
         from jam.state.state import state
@@ -132,7 +132,7 @@ class PsiA(InvocationProtocol):
             return self.collapse(status, gas, context)
 
     @staticmethod
-    def initializer_fn(s: ServiceId, state_context: StateContext) -> AccuContextX:
+    def initializer_fn(s: ServiceId, state_context: GhostPartial) -> AccuContextX:
         """
         Take Service id and Account to yield a "mutator context" - this is to make sure no changes to actual state are made if we exit
         Args:
@@ -168,16 +168,16 @@ class PsiA(InvocationProtocol):
     @staticmethod
     def collapse(
         status: ExecutionStatus | bytes, gas: Gas, context: AccumulationContext
-    ) -> Tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]:
+    ) -> Tuple[GhostPartial, DeferredTransfers, OptionHash, Gas, PreimageDict]:
         """
-        Selects X / Y depending if HALT or PvmErrorc
+        Selects X / Y depending if HALT or PvmError
         Args:
             status: Execution status
             gas: Consumed Gas
             context: X, Y
 
         Returns:
-            StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict
+            GhostPartial, DeferredTransfers, OptionHash, Gas, PreimageDict
         """
         ctx = context.x
         commitment = ctx.hash

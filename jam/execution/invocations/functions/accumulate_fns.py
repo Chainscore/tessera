@@ -1,7 +1,6 @@
-from tsrkit_types.integers import Int
+from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     AccumulationContext,
-    StateContext,
 )
 from tsrkit_types import U32, U64, Bytes
 from tsrkit_types.sequences import TypedArray
@@ -25,10 +24,7 @@ from jam.types.protocol.merkle import OptionHash
 from jam.types.state.chi import Chi
 from jam.types.state.delta import (
     AccountData,
-    AccountStorage,
     LookupTable,
-    AccountLookup,
-    AccountPreimages,
     ServiceCodeHash,
 )
 from jam.types.protocol.core import BlobLength, Gas, ServiceId, TimeSlot
@@ -44,7 +40,7 @@ from jam.utils.constants import (
 )
 
 
-def check(u: StateContext, i: ServiceId):
+def check(u: GhostPartial, i: ServiceId):
     if i not in u.service_accounts:
         return i
     else:
@@ -329,14 +325,14 @@ class AccumulateFunctions(INVF):
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
         from jam.state.state import state
 
-        state.store.save_n_clear_cache()
+        # state.store.save_n_clear_cache()
 
         # Account
         account: AccountData = context.x.partial_state.service_accounts[context.x.s_index]
         lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         # storing the initial lookup value
         lookup_val: Timestamps | None = account.lookup[lookup_key]
-        # Updated t
+        # TODO: check updated t > balance
         at = account.service.t
 
         if not lookup_val:
@@ -353,7 +349,7 @@ class AccumulateFunctions(INVF):
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
         if account.service.balance < account.service.t:
-            state.store.clear()
+            # state.store.clear()
             registers[7] = HostStatus.FULL.value
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
@@ -376,18 +372,18 @@ class AccumulateFunctions(INVF):
             raise PvmError(PANIC)
 
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
-        lookup_key = LookupTable( hash = preimage_hash, length = preimage_len)
+        lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         a = context.x.partial_state.service_accounts[context.x.s_index]
         lookup_value = a.lookup[lookup_key]
-        if len(a.lookup[lookup_key]) == 0 or (
-            len(a.lookup[lookup_key]) == 2
-            and (a.lookup[lookup_key][1] < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS)
+        if len(a.lookup[lookup_key]) == 1:
+            lookup_value.append(block_timeslot)
+            a.lookup[lookup_key] = lookup_value
+        elif len(a.lookup[lookup_key]) == 0 or (
+            len(a.lookup[lookup_key]) == 2 and 
+            a.lookup[lookup_key][1] < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS
         ):
             del a.lookup[lookup_key]
             del a.preimages[preimage_hash]
-        elif len(a.lookup[lookup_key]) == 1:
-            lookup_value.append(block_timeslot)
-            a.lookup[lookup_key] = lookup_value
         elif (
             len(a.lookup[lookup_key]) == 3
             and a.lookup[lookup_key][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS
@@ -418,7 +414,7 @@ class AccumulateFunctions(INVF):
         gas: Gas,
         registers: list,
         memory: Memory,
-        context: "AccumulationContext",
+        context: AccumulationContext,
         service_id: ServiceId,
     ):
         [o, z] = registers[8: 10]

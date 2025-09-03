@@ -57,14 +57,14 @@ class AccountDataView:
         self.id = id
         self.store = store
 
-    code_hash = make_account_prop("code_hash")
-    balance = make_account_prop("balance")
-    gas_limit = make_account_prop("gas_limit")  # min_item_gas
-    min_gas = make_account_prop("min_gas")  # min_memo_gas
-    num_o = make_account_prop("num_o")
+    code_hash   = make_account_prop("code_hash")
+    balance     = make_account_prop("balance")
+    gas_limit   = make_account_prop("gas_limit")  # min_item_gas
+    min_gas     = make_account_prop("min_gas")  # min_memo_gas
+    num_o       = make_account_prop("num_o")
     gratis_offset = make_account_prop("gratis_offset")
-    num_i = make_account_prop("num_i")
-    created_at = make_account_prop("created_at")
+    num_i       = make_account_prop("num_i")
+    created_at  = make_account_prop("created_at")
     accumulated_at = make_account_prop("accumulated_at")
     parent_service = make_account_prop("parent_service")
 
@@ -117,7 +117,14 @@ class Account:
         return TimestampsView(self.id, self.store)
 
     def m_c(self) -> Tuple[bytes, bytes]:
-        return decode_code_hash(self.preimages[self.service.code_hash])
+        img = self.preimages.get(self.service.code_hash)
+        if img:
+            try:
+                return decode_code_hash(img)
+            except:
+                return None
+        else:
+            return None
 
     def historical_lookup(self, timeslot: TimeSlot, preimage_hash: Bytes[32]):
         """

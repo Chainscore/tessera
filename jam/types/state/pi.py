@@ -109,7 +109,6 @@ class AllCoreStats(TypedArray[CoreStat, CORE_COUNT]):
 
 class AllServiceStats(Dictionary[ServiceId, ServiceStat, "id", "record"]):
     """All service stats"""
-
     ...
 
 @structure
