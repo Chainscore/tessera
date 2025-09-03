@@ -83,9 +83,101 @@ jobs:
           echo "📏 Binary size: $(du -sh dist/tessera-node | cut -f1)"
           ls -la dist/
 
+      - name: 🏷️ Get version
+        id: version
+        run: |
+          VERSION=$(cat .version)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
       - name: 📤 Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tessera-node-${{ matrix.os }}-${{ matrix.arch }}
+          name: tessera-v${{ steps.version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}
           path: dist/tessera-node-*.tar.gz
           retention-days: 30
+
+  release:
+    name: 🚀 Create Public Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏷️ Get version
+        id: version
+        run: |
+          VERSION=$(cat .version)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: 📦 Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tessera-v${{ steps.version.outputs.version }}-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: 📋 List release assets
+        run: |
+          echo "🎯 Release assets:"
+          ls -la release-assets/
+          echo ""
+          echo "📊 Asset sizes:"
+          du -sh release-assets/*
+
+      - name: 🚀 Create Release in Public Repo
+        uses: softprops/action-gh-release@v1
+        with:
+          repository: Chainscore/tessera-releases  # Public releases repo
+          tag_name: v${{ steps.version.outputs.version }}
+          name: "Tessera Node v${{ steps.version.outputs.version }}"
+          body: |
+            ## 🚀 Tessera Node Binary Release v${{ steps.version.outputs.version }}
+            
+            ### 📦 Downloads
+            
+            Choose the appropriate binary for your platform:
+            
+            - **Linux x86_64**: `tessera-node-Linux-x64.tar.gz`
+            - **macOS Apple Silicon (M1/M2)**: `tessera-node-Darwin-arm64.tar.gz`  
+            - **macOS Intel**: `tessera-node-Darwin-x64.tar.gz`
+            
+            ### 🚀 Quick Start
+            
+            ```bash
+            # Download and extract
+            tar -xzf tessera-node-*.tar.gz
+            
+            # Run
+            ./tessera-node --help
+            ./tessera-node --port 40000
+            ```
+            
+            ### 📋 What's Included
+            
+            - `tessera-node`: Main executable binary
+            - `genesis.json`: Genesis configuration
+            - `dev-spec.json`: Development specification  
+            - `envs/`: Environment configurations
+            
+            ### 🔍 Build Info
+            
+            - **Python**: 3.12
+            - **PyInstaller**: Latest
+            - **Version**: v${{ steps.version.outputs.version }}
+            - **Build Date**: $(date +'%Y-%m-%d %H:%M:%S UTC')
+            
+            ---
+            
+            > **Note**: This is an automated release from the private Tessera repository.
+            > For support or issues, please contact the development team.
+          files: release-assets/*
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
