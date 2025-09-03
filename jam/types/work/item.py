@@ -63,13 +63,13 @@ class ImportSpec:
             return cls(
                 tree_root=sr_root,
                 index=index
-            )
+            ), offset + 34
         else:
             wp_hash = WorkPackageHash.decode(buffer[:32])
             return cls(
                 tree_root=wp_hash,
                 index=U16(index - 2**15)
-            )
+            ), offset + 34
 
 @structure
 class ExtrinsicSpec:
