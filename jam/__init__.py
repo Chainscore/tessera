@@ -11,15 +11,14 @@ def run_jam():
 
     # Args parse
     parser = argparse.ArgumentParser(description="Tessera JAM node")
-    parser.add_argument("--genesis", type=str, default="dev-spec.json", help="Path to genesis file")
-    parser.add_argument("--db", type=str, default="db", help="Path to database file")
+    parser.add_argument("--db", type=str, default="data/tmp", help="Path to database file")
     parser.add_argument(
         "--env",
         type=str,
         default="40000.env",
         help="Path to env file containing required environment variables",
     )
-    parser.add_argument("--theme", type=str, default="polkadot", help="Theme to use for logging")
+    parser.add_argument("--theme", type=str, default="bitcoin", help="Theme to use for logging")
     parser.add_argument("--builder", action="store_true", help="Flag for builders")
     parser.add_argument("--validator", action="store_true", help="Flag for validators")
 
@@ -27,8 +26,7 @@ def run_jam():
 
     asyncio.run(
         main(
-            args.genesis,
-            # args.db,
+            args.db,
             args.env,
             args.theme,
             args.builder,

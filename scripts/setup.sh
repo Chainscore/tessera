@@ -59,46 +59,6 @@ source venv/bin/activate
 VENV_PYTHON_VERSION=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
 echo "📍 Virtual environment Python version: $VENV_PYTHON_VERSION"
 
-# Install system dependencies based on platform
-echo "🏗️  Installing system dependencies..."
-case "$(uname -s)" in
-    Darwin)
-        echo "   Detected macOS"
-        if command -v brew >/dev/null 2>&1; then
-            echo "   Installing RocksDB..."
-            brew install rocksdb 2>/dev/null || echo "   RocksDB installation failed or already installed"
-            echo "   ✅ System dependencies installed"
-        else
-            echo "   ⚠️ Warning: Homebrew not found. Please install RocksDB manually:"
-            echo "      brew install rocksdb"
-        fi
-        
-        echo "   ⚠️ Note: PVM recompiler is not supported on macOS (requires Linux native libraries)"
-        echo "      Tests requiring PVM execution will be skipped."
-        ;;
-    Linux)
-        echo "   Detected Linux"
-        # Try to detect distro and install RocksDB
-        if command -v apt-get >/dev/null 2>&1; then
-            echo "   Installing RocksDB (Debian/Ubuntu)..."
-            sudo apt-get update && sudo apt-get install -y librocksdb-dev || echo "   RocksDB installation failed"
-        elif command -v dnf >/dev/null 2>&1; then
-            echo "   Installing RocksDB (Fedora)..."
-            sudo dnf install -y rocksdb rocksdb-devel || echo "   RocksDB installation failed"
-        elif command -v yum >/dev/null 2>&1; then
-            echo "   Installing RocksDB (RHEL/CentOS)..."
-            sudo yum install -y rocksdb rocksdb-devel || echo "   RocksDB installation failed"
-        else
-            echo "   ⚠️ Warning: Could not detect package manager. Please install RocksDB manually."
-        fi
-        echo "   ✅ Full functionality available on Linux"
-        ;;
-    *)
-        echo "   ⚠️ Warning: Unsupported platform $(uname -s)"
-        echo "      Please install RocksDB manually and check for compatibility issues."
-        ;;
-esac
-
 # Upgrade pip
 echo "⬆️  Upgrading pip..."
 pip install --upgrade pip
@@ -182,10 +142,9 @@ if [ -d "test-suites" ]; then
         # Configure poetry to use the parent venv
         poetry config virtualenvs.create false
         poetry config virtualenvs.in-project false
-        # Install in development mode to avoid the "current project could not be installed" error
-        pip install -e . --no-deps || echo "   ⚠️ Warning: test-suites editable install failed"
         # Install just the dependencies from pyproject.toml
-        poetry install --only main || echo "   ⚠️ Warning: test-suites dependencies install failed"
+        poetry lock
+        poetry install --only main --no-root || echo "   ⚠️ Warning: test-suites dependencies install failed"
         echo "✅ Test suites dependencies installed"
     fi
     
@@ -202,7 +161,7 @@ echo "✅ Pre-commit hooks installed"
 
 # Initialize database directory
 echo "💾 Initializing data directories..."
-mkdir -p data/db
+mkdir -p data/
 echo "✅ Data directories created"
 
 echo ""
@@ -210,13 +169,6 @@ echo "🎉 Setup completed successfully!"
 echo ""
 echo "📋 Next steps:"
 echo "   1. Activate the virtual environment: source venv/bin/activate"
-echo "   2. Run tests: poetry run pytest"
-echo "   3. Start development: poetry run python -m jam"
+echo "   2. Run tests: poetry run poe test vectors --module safrole --spec tiny"
+echo "   3. Start development: poetry run jam --env envs/40000.env"
 echo ""
-echo "💡 Useful commands:"
-echo "   • Activate venv: source venv/bin/activate"
-echo "   • Run tests: poetry run pytest"
-echo "   • Update submodules: ./scripts/update-deps.sh"
-echo "   • Update dependencies: poetry update"
-echo "   • Validate setup: ./scripts/validate.sh"
-echo "   • Check Python version: python --version"
