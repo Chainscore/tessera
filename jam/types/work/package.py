@@ -103,15 +103,23 @@ class WorkPackage:
     def hash(self) -> Bytes[32]:
         return Hash.blake2b(self.encode())
 
-    def encode(self):
-        return (
-            self.auth_code_host.encode() +
-            self.authorizer.code_hash.encode() +
-            self.context.encode() +
-            self.authorization.encode() +
-            self.authorizer.params.encode() +
-            self.items.encode()
-        )
+    def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
+        current_offset = offset
+
+        items = [
+            self.auth_code_host,
+            self.authorizer.code_hash,
+            self.context,
+            self.authorization,
+            self.authorizer.params,
+            self.items
+        ]
+
+        for item in items:
+            size = item.encode_into(buffer, current_offset)
+            current_offset += size
+
+        return current_offset - offset
 
     @classmethod
     def decode_from(

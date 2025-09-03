@@ -243,7 +243,7 @@ class State:
 
             # Calculate Merkle root of Accumulation Outputs
             accumulate_root = bmr_merklizer.wb_merklize(
-                TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in state.theta])),
+                TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in self.theta])),
                 Hash.keccak256
             )
             RecentHistory.transition(pre_state, self, block, accumulate_root, header_hash)

@@ -1,4 +1,5 @@
 """Work item types for the JAM protocol."""
+from dataclasses import fields
 from typing import Union, Tuple
 
 from tsrkit_types.integers import Uint, U16
@@ -19,13 +20,37 @@ class ImportSpec:
     tree_root: TreeRoot
     index: Uint[16]
 
-    def encode(self):
+    def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
         if isinstance(self.tree_root, SegmentRoot):
-            return self.tree_root.encode() + self.index.encode()
+            index = self.index
         elif isinstance(self.tree_root, WorkPackageHash):
-            return self.tree_root.encode() + U16(self.index + 2 ** 15).encode()
+            index = U16(self.index + 2 ** 15)
         else:
             raise ValueError(f"Unidentified Tree Root {type(self.tree_root)}")
+
+        current_offset = offset
+
+        items = [self.tree_root, index]
+        for item in items:
+            size = item.encode_into(buffer, current_offset)
+            current_offset += size
+
+        return current_offset - offset
+
+    @classmethod
+    def from_json(cls, data: dict) -> "ImportSpec":
+        init_data = {}
+        for field in fields(cls):
+            k = field.metadata.get("name", field.name)
+            v = data.get(k)
+
+            f_type = field.type
+            if field.name == "tree_root":
+                f_type = OpaqueHash
+
+            init_data[field.name] = f_type.from_json(v)
+
+        return cls(**init_data)
 
     @classmethod
     def decode_from(
@@ -34,13 +59,13 @@ class ImportSpec:
 
         index = U16.decode(buffer[32:34])
         if index < (2 ** 15):
-            sr_root = SegmentRoot.decode(buffer[:2])
+            sr_root = SegmentRoot.decode(buffer[:32])
             return cls(
                 tree_root=sr_root,
                 index=index
             )
         else:
-            wp_hash = WorkPackageHash.decode(buffer[:2])
+            wp_hash = WorkPackageHash.decode(buffer[:32])
             return cls(
                 tree_root=wp_hash,
                 index=U16(index - 2**15)
