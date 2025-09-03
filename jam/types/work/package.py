@@ -103,27 +103,46 @@ class WorkPackage:
     def hash(self) -> Bytes[32]:
         return Hash.blake2b(self.encode())
 
-    def encode(self):
-        return (
-            self.auth_code_host.encode() +
-            self.authorizer.code_hash.encode() +
-            self.context.encode() +
-            self.authorization.encode() +
-            self.authorizer.params.encode() +
-            self.items.encode()
-        )
+    def encode_into(self, buffer: bytes, offset=0) -> int:
+        current_offset = offset
+        item = self.auth_code_host
+        size = item.encode_into(buffer, current_offset)
+        current_offset += size
+        item = self.authorizer.code_hash
+        size = item.encode_into(buffer, current_offset)
+        current_offset += size
+        item = self.context
+        size = item.encode_into(buffer, current_offset)
+        current_offset += size
+        item = self.authorization
+        size = item.encode_into(buffer, current_offset)
+        current_offset += size
+        item = self.authorizer.params
+        size = item.encode_into(buffer, current_offset)
+        current_offset += size
+        item = self.items
+        size = item.encode_into(buffer, current_offset)
+        current_offset += size
+
+        return current_offset - offset
 
     @classmethod
     def decode_from(
             cls, buffer: Union[bytes, bytearray, memoryview], offset: int = 0
     ) -> Tuple["WorkPackage", int]:
-
-        auth_code_host, offset = ServiceId.decode_from(buffer, offset)
-        code_hash, offset = Authorizer.code_hash.decode_from(buffer, offset)
-        context, offset = RefineContext.decode_from(buffer, offset)
-        authorization, offset = Bytes.decode_from(buffer, offset)
-        params, offset = Authorizer.params.decode_from(buffer, offset)
-        items, offset = WorkItems.decode_from(buffer, offset)
+        curr_offset = offset
+        auth_code_host, size = ServiceId.decode_from(buffer, curr_offset)
+        curr_offset += size
+        code_hash, size = OpaqueHash.decode_from(buffer, curr_offset)
+        curr_offset += size
+        context, size = RefineContext.decode_from(buffer, curr_offset)
+        curr_offset += size
+        authorization, size = Bytes.decode_from(buffer, curr_offset)
+        curr_offset += size
+        params, size = Bytes.decode_from(buffer, curr_offset)
+        curr_offset += size
+        items, size = WorkItems.decode_from(buffer, curr_offset)
+        curr_offset += size
 
         authorizer = Authorizer(code_hash=code_hash, params=params)
 
@@ -135,7 +154,7 @@ class WorkPackage:
             items=items,
         )
 
-        return wp, offset
+        return wp, curr_offset - offset
 
 @structure
 class WorkPackageBundle:

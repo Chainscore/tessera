@@ -30,7 +30,7 @@ class Finality:
             asyncio.create_task(broker.publish("subscribeFinalizedBlock",
                                                {"header_hash": list(header_hash), "slot": int(block.header.slot)}))
         else:
-            # await asyncio.sleep(sch_ts)
+            await asyncio.sleep(sch_ts)
             logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
             kv.put(cls.FINAL_KEY, header_hash.encode())
             block = Block.load(header_hash, kv)

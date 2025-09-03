@@ -31,7 +31,7 @@ def parameters(params: list):
             "epoch_period": 12,
             "max_accumulate_gas": 1000000,
             "max_is_authorized_gas": 50000000,
-            "max_refine_gas": 1000000000,
+            "max_refine_gas": 100000000,
             "block_gas_limit": 20000000,
             "recent_block_count": 8,
             "max_work_items": 16,
@@ -99,6 +99,10 @@ def service_data_handler(params):
             min_gas=service.min_gas,
             num_i=service.num_i,
             num_o=service.num_o,
+            gratis_offset=service.gratis_offset,
+            created_at=service.created_at,
+            accumulated_at=service.accumulated_at,
+            parent_service=service.parent_service
         )
 
         return list(accountMetadata.encode())
@@ -125,12 +129,9 @@ def beefy_root_handler(params: list):
     hh = parse_data([HeaderHash], params)[0]
     from jam.state.state import state
 
-    mmr = MMRFunctions()
-
-    for i in state.beta:
+    for i in state.beta.h:
         if i.header_hash == hh:
-            beefy_root = mmr.super_peak(i.mmr)
-            return list(beefy_root)
+            return list(i.beefy_root)
 
     return None
 
@@ -143,7 +144,7 @@ def finalized_block_handler(params: list):
 def submit_work_package_handler(params: list):
     ci, encoded_wp, ext = parse_data([CoreIndex, Bytes, Extrinsics], params)
 
-    wp = WorkPackage.decode(encoded_wp)
+    wp, _ = WorkPackage.decode_from(encoded_wp)
 
     print("Received work package", wp.to_json())
     print("Received core index", ci)

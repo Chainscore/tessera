@@ -91,7 +91,7 @@ async def run_node(
         # update_state(state)
 
         settings.update()
-        update_state(state)
+        # update_state(state)
 
         # setup ticket queue
         setup_ticket_queue()
