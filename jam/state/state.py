@@ -236,6 +236,11 @@ class State:
             # Disputes
             Disputes.transition(pre_state, self, block)
 
+            # TODO: Ensure correct ordering of module transitions
+            # Safrole
+            vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
+            Safrole.transition(pre_state, self, block, vrf_output)
+
             # Assurances
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
             if len(newly_avail_wrs) > 0:
@@ -270,10 +275,6 @@ class State:
 
             # Statistics
             Statistics.transition(pre_state, self, block, newly_avail_wrs)
-
-            # Safrole
-            vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
-            Safrole.transition(pre_state, self, block, vrf_output)
 
             if True: #block.validate():
                 state.settle(header_hash)
