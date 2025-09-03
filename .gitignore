@@ -83,3 +83,6 @@ packets/
 
 # Ignore polkajam binary
 polkajam
+
+# Ignore fuzzer reports
+fuzzer_session.json

@@ -147,7 +147,7 @@ class Header:
         if isinstance(s_vals, GammaSFallback):
             if author.bandersnatch != s_vals[slot_entry]:
                 raise BlockError(
-                    BlockErrorCode.INVALID_AUTHOR, f"E: {s_vals[slot_entry]}, A: {author.bandersnatch}",
+                    BlockErrorCode.INVALID_AUTHOR, f"Expected: {s_vals[slot_entry].hex()}, Actual: {author.bandersnatch.hex()}",
                 )
         else:
             if s_vals[slot_entry].id != vrf_output(self.seal):

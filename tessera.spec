@@ -97,7 +97,7 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=None,
     noarchive=False,
-    optimize=2,  # Maximum optimization
+    optimize=1,  # Maximum optimization
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)

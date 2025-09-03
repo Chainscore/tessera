@@ -56,14 +56,6 @@ if ./dist/tessera-node --help > /dev/null 2>&1; then
     echo "[INFO]   ./dist/tessera-node --help"
     echo "[INFO]   ./dist/tessera-node --port 40000"
     
-    if [ "$PLATFORM_NAME" = "Darwin" ]; then
-        echo "[INFO] "
-        echo "[INFO] 📋 To build for Linux:"
-        echo "[INFO]   1. Run this script on a Linux machine (Ubuntu/Debian recommended)"
-        echo "[INFO]   2. Or use Docker: docker run -it --rm -v \$(pwd):/app ubuntu:22.04 bash"
-        echo "[INFO]   3. Then install deps and run: ./build-binary.sh"
-    fi
-    
 else
     echo "[ERROR] ❌ Binary test failed"
     exit 1

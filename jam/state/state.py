@@ -253,7 +253,7 @@ class State:
             vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
             Safrole.transition(pre_state, self, block, vrf_output)
 
-            if True: #block.validate():
+            if block.validate():
                 state.settle(header_hash)
 
                 # Set local chain head to produced block
@@ -266,7 +266,6 @@ class State:
                     timeslot=self.tau,
                     final_state_root=self.root.hex()[:16] + "...",
                 )
-
 
                 # from jam.operations.handlers.assurer import assurer
                 # for ext in block.extrinsic.guarantees:
