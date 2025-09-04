@@ -174,5 +174,4 @@ jobs:
           draft: false
           prerelease: false
           make_latest: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          token: ${{ secrets.PUBLIC_REPO_TOKEN }}
