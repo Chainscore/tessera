@@ -1,19 +1,7 @@
-# jam/cli.py
-
-from ast import arg
-from logging import Logger
 import sys
 import os
-import json
 import argparse
 import asyncio
-from dotenv import load_dotenv
-from jam.__main__ import main as node_main
-from jam.utils.clihelpers  import show_help_topic
-from jam.logging import get_logger
-
-logger=get_logger("cli")
-
 
 def detect_base_dir():
     """
@@ -25,110 +13,103 @@ def detect_base_dir():
     pkg_dir = os.path.dirname(__file__)            # .../tessera/jam
     return os.path.abspath(os.path.join(pkg_dir, os.pardir))
 
-def build_parser(base_dir: str):
+def build_parser():
     p = argparse.ArgumentParser(
-        prog="Tessera",
-        description="Tessera node CLI: specify node ID and options"
+        prog="tessera-node",
+        description="Tessera JAM client node. Performant, clean-room implementation in Python by Chainscore Labs",
+        epilog="Examples:\n"
+               "  tessera-node                    # Run as validator node (default)\n"
+               "  tessera-node --builder          # Run as builder node\n"
+               "  tessera-node --fuzzer           # Run as fuzzer target for testing\n"
+               "  tessera-node --port 40001       # Override port\n"
+               "  tessera-node --fuzzer --socket /tmp/custom.sock  # Custom fuzzer socket",
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    # positional validator index (e.g. 2)
+    p.add_argument("--db", type=str, default="data/tmp", help="Path to database directory")
     p.add_argument(
-        "--validator_index",
-        type=int,
-        metavar="Validator Index",
-        help="Validator index (e.g. 2). Port and env file derived as 4000{validator_index}."
-    )
-    p.add_argument(
-        "--port",
-        type=int,
-        help="Port for the node to run"
-    )
-    p.add_argument(
-        "--rpc_port",
-        help="RPC port for the rpc to running on that port"
-    )
-    p.add_argument(
-        "--genesis",
-        default=os.path.join(base_dir, "dev-spec.json"),
-        help="Path to genesis spec JSON"
-    )
-    p.add_argument(
-        "--chain_spec",
-        default="tiny",
-        help="Setting the chain Specifications"
-    )
-    p.add_argument(
-        "--start-genesis",
-        action="store_true",
-        help="Initialize chain from genesis"
-    )
-    p.add_argument(
-        "--theme",
+        "--env",
         type=str,
-        # choices=theme_choices,
-        default="polkadot",
-        help=f"Theme for logging."
+        default="envs/40000.env",
+        help="Path to env file containing required environment variables",
     )
-    p.add_argument(
-        "--temp_db",
-        action="store_true",
-        help="Create a temp database directory for the node datas to be stored temporarily"
-    )
-    # Mutually exclusive group: only one can be true
-    mode_group = p.add_mutually_exclusive_group()
-    mode_group.add_argument(
-        "--builder",
-        action="store_true",
-        help="Run in builder mode"
-    )
-    mode_group.add_argument(
-        "--validator",
-        action="store_true",
-        help="Run in validator mode (default)"
-    )
+    p.add_argument("--theme", type=str, default="bitcoin", help="Theme to use for logging")
+    p.add_argument("--builder", action="store_true", help="Run as a builder node")
+    p.add_argument("--validator", action="store_true", help="Run as a validator node (default)")
+    p.add_argument("--fuzzer", action="store_true", help="Run as a fuzzer target for conformance testing")
+    p.add_argument("--port", type=int, help="Override port from env file")
+    
+    # Fuzzer-specific options
+    p.add_argument("--socket", type=str, default="/tmp/jam_conformance.sock", 
+                   help="Unix socket path for fuzzer target (only used with --fuzzer)")
+    p.add_argument("--record", type=str, default="fuzzer_session.json",
+                   help="Path to record fuzzer session data (only used with --fuzzer)")
+    p.add_argument("--no-record", action="store_true",
+                   help="Disable session recording (only used with --fuzzer)")
+    
     return p
 
-def run_cmd(args):
-    # 1) Locate where dev-spec.json, genesis.json and envs/ lives:
-    base = detect_base_dir()
-
-    # 2) Change into that folder so bare filenames resolve:
-    os.chdir(base)
-    port=40000+args.validator_index
-
-    # 3) Load environment
-    load_dotenv(os.path.join(base, ".env"))
-    env_file = os.path.join(base, "envs", f"{port}.env")
-    load_dotenv(env_file, override=True)
-
-    os.environ["PORT"]=str(args.port if args.port is not None else port)
-    if args.temp_db:
-        os.environ["TEMPDB"]=str(args.temp_db)
-    os.environ["JAM_CHAIN_SPEC"]=str(args.chain_spec)
-    os.environ.setdefault("NODE_NAME", os.getenv("NODE_NAME", f"node-{port}"))
-    os.environ.setdefault("SEED",      os.getenv("SEED", port))
-    if args.rpc_port is not None:
-        os.environ.setdefault("RPC_PORT",os.getenv("RPC_PORT", args.rpc_port))
-    asyncio.run(
-        node_main(
-            args.genesis,
-            env_file,
-            args.start_genesis,
-            args.theme,
-            args.builder,
-            args.validator,
-        )
-    )
-
 def main():
+    # Change to base directory first for file resolution
     base_dir = detect_base_dir()
-    # Custom help handler before parser
-    if len(sys.argv) == 3 and sys.argv[1] == "help":
+    os.chdir(base_dir)
+    
+    parser = build_parser()
+    args = parser.parse_args()
+    
+    # Handle help topics (tessera-node help <topic>)
+    if len(sys.argv) >= 3 and sys.argv[1] == "help":
+        from jam.utils.clihelpers import show_help_topic
         show_help_topic(sys.argv[2])
         return
-
-    parser = build_parser(base_dir)
-    args = parser.parse_args()
-    run_cmd(args)
+    
+    # Check for fuzzer mode
+    if args.fuzzer:
+        print("🎯 Starting Tessera in fuzzer target mode...")
+        
+        # Import fuzzer functionality
+        from jam.fuzzer.target import run_fuzzer_target
+        
+        # Determine record path
+        record_path = None if args.no_record else args.record
+        
+        # Run fuzzer target
+        asyncio.run(
+            run_fuzzer_target(
+                db_path=args.db,
+                socket_path=args.socket,
+                record_path=record_path
+            )
+        )
+        return
+    
+    # Import main function only when needed (faster startup)
+    from jam.__main__ import main as node_main
+    
+    # Set defaults
+    if not args.builder and not args.validator and not args.fuzzer:
+        args.validator = True
+    
+    # Override port in environment if specified
+    if args.port:
+        os.environ["PORT"] = str(args.port)
+    
+    # Run the node
+    try:
+        asyncio.run(
+            node_main(
+                args.db,
+                args.env, 
+                args.theme,
+                args.builder,
+                args.validator,
+            )
+        )
+    except KeyboardInterrupt:
+        print("\n🛑 Tessera node stopped by user")
+        sys.exit(0)
+    except Exception as e:
+        print(f"❌ Fatal error: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

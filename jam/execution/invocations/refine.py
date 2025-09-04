@@ -90,13 +90,11 @@ class PsiR(InvocationProtocol):
             )
         )
 
-        # 0.6.6 Sync.
         args = (
-            Uint(self.wi.service).encode()
+            Uint(self.item_index).encode()
+            + Uint(self.wi.service).encode()
             + self.wi.payload.encode()
             + bytes(Hash.blake2b(self.work_package.encode()))
-            + self.work_package.context.encode()
-            + self.work_package.authorizer.code_hash.encode()
         )
         print("Executing PsiR with args:", args.hex())
         start = time.time()

@@ -14,8 +14,7 @@ from cryptography.hazmat.primitives.serialization import (
     NoEncryption,
     PublicFormat,
 )
-from pydantic.networks import import_email_validator
-from tsrkit_types import U32, Uint
+from tsrkit_types import Uint
 
 from jam.logging import get_logger
 from jam.types.protocol.crypto import Hash

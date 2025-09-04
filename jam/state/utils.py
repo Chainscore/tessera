@@ -28,9 +28,10 @@ def construct_state_key(input: Union[U8, Tuple[U32, Bytes], Tuple[U8, U32]]) -> 
             index, service_id = input
             service_id_encoded = Uint[32](service_id).encode()
             sequence[0] = index
+            start = 1
             for i, s_byte in enumerate(service_id_encoded):
-                sequence[i + 1] = s_byte
-                i += 2
+                sequence[start] = s_byte
+                start += 2
 
         elif isinstance(input[0], (U32, int)) and isinstance(input[1], (Bytes, bytes)):
             # Case 3: (ServiceId, Bytes[0:27])

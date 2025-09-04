@@ -4,20 +4,31 @@ import logging
 import os
 from pathlib import Path
 import shutil
-import time
+from typing import TYPE_CHECKING
 from dotenv import load_dotenv
-from jam.finality.finality import Finality
+
+if TYPE_CHECKING:
+    from jam.finality.finality import Finality
+    from jam.logging import setup_logging
+    from jam.network.start import start_node
+    from jam.operations.operator import operate
+    from jam.utils.chainspec import chain_config
+    from jam.settings import setup_setting
+    from jam.state.state import setup_state
+    from jam.block import Block
+    from jam.api.rpc.app import rpc
+    from jam.operations.ticket_queue import setup_ticket_queue
+
 from jam.logging import setup_logging, logger
 from jam.network.start import start_node
 from jam.operations.operator import operate
-from jam.utils.chainspec import chain_config
-from jam.settings import setup_setting
-from jam.state.state import setup_state
-from jam.block import Block
-from jam.utils.constants import GENESIS_TS, SLOT_PERIOD, EPOCH_LENGTH
-from hypercorn.config import Config
-from jam.api.rpc.app import rpc
 from jam.operations.ticket_queue import setup_ticket_queue
+from jam.state.state import setup_state
+from jam.settings import setup_setting
+from jam.finality.finality import Finality
+from jam.block import Block
+from jam.api.rpc.app import rpc
+from jam.utils.chainspec import chain_config
 
 
 async def main(
@@ -29,6 +40,7 @@ async def main(
 ) -> None:
     if not is_builder and not is_validator:
         is_validator=True
+    
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
     load_dotenv(env,override=True)
@@ -85,8 +97,6 @@ async def main(
 
         # RPC/WebSocket server setup
         rpc_port = int(os.environ.get("RPC_PORT", 5000))
-
-        logger.info("📡 Starting RPC/WebSocket server", host=host, port=rpc_port)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:

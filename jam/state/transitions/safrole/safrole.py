@@ -168,7 +168,6 @@ class Safrole:
         # Use entropy coming from vrf output of Hv once we have valid seals generated
         if int.from_bytes(entropy) > 0:
             eta[0] = Hash.blake2b(bytes(eta[0]) + bytes(entropy))
-            logger.debug("New Eta[0]", eta=eta[0].hex())
         state.eta = eta
 
         state.gamma = gamma

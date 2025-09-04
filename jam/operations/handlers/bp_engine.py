@@ -21,13 +21,9 @@ from jam.utils.constants import (
 )
 from jam.logging import get_logger
 from jam.utils.util_fns import outside_in
-from tests.unit.incore.types import BlockVector, FullVectors
-
-b_vector = BlockVector()
 
 # Logger for Block Production / Authoring module
 logger = get_logger("author")
-
 
 class BlockProducer(NodeDispatcher):
     """
@@ -91,21 +87,7 @@ class BlockProducer(NodeDispatcher):
 
         block = latest.produce(TimeSlot(time_slot), ticket)
 
-        # TODO: Remove Vectorization
-        global b_vector
-
-        b_vector = BlockVector()
-
-        b_vector.pre_rho = state.rho
-        b_vector.block = block
-        b_vector.header_hash = block.header.hash()
-        b_vector.author = ValidatorIndex(settings.validator_index)
-
         is_valid = state._force_transition(block)
-
-        b_vector.post_rho = state.rho
-        b_vector.new_root = state.root
-        # write_json("vectors/blocks", b_vector.to_json())
 
         if is_valid:
             if ticket:

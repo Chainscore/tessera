@@ -153,15 +153,15 @@ class AccumulateFunctions(INVF):
         #     gas_limit=g,
         #     min_gas=m,
         # )
-        a=AccountData()
-        a.service.code_hash=ServiceCodeHash(c)
-        a.lookup[LookupTable(hash=Hash.blake2b(c), length=l)] =Timestamps([])
-        a.service.gas_limit=g
-        a.service.min_gas=m
+        a = AccountData()
+        a.service.code_hash = ServiceCodeHash(c)
+        a.lookup[LookupTable(hash=Hash.blake2b(c), length=l)] = Timestamps([])
+        a.service.gas_limit = g
+        a.service.min_gas = m
 
         # TODO: Need to re-do it
         # s = delta[context.x.s_index]
-        s=context.x.partial_state.service_accounts[context.x.s_index]
+        s = context.x.partial_state.service_accounts[context.x.s_index]
         """
             NOTE: The use of `.replace()` is necessary here to return a modified copy,
             as per the state transition semantics described in the Gray Paper:

@@ -46,21 +46,21 @@ Clean-room JAM client implementation in Python
 - **Run tests:**
   ```bash
   # All tests (unit + integration + vectors)
-  ./scripts/test.sh --all
+  poetry run poe test
   
   # Just unit tests
-  ./scripts/test.sh --unit
+  poetry run poe test unit
   
   # Test vectors for specific module
-  ./scripts/test.sh --vectors --module safrole
+  poetry run poe test vectors --module safrole
   
-  # Test vectors with full spec
-  ./scripts/test.sh --vectors --module accumulate --spec full
+  # Test vectors with tiny spec
+  poetry run poe test vectors --module accumulate --spec tiny
   ```
 
 - **Update internal dependencies:**
   ```bash
-  ./scripts/update-deps.sh
+  poetry run poe update-deps
   ```
 
 - **Update dependencies:**
@@ -81,9 +81,7 @@ This project uses several external dependencies that are managed as Git submodul
 The repository includes comprehensive test suites as a submodule:
 
 - **W3F Test Vectors** - Official JAM protocol test vectors
-- **Jamduna Test Vectors** - Additional implementation test vectors  
 - **PVM Tests** - Polkavm execution tests
-- **Codec Tests** - Serialization/deserialization tests
 - **Trace Tests** - State transition trace validation
 - **Performance Tests** - Benchmarking and profiling tools
 
@@ -99,31 +97,20 @@ If you prefer to set up manually:
    cd tessera
    ```
 
-2. **Create virtual environment:**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-
-3. **Install Poetry:**
+2. **Install Poetry:**
    ```bash
    curl -sSL https://install.python-poetry.org | python3 -
    ```
 
-4. **Configure Poetry:**
+3. **Setup:**
    ```bash
-   poetry config virtualenvs.create false
-   poetry config virtualenvs.in-project false
+   poetry run poe setup
+   source venv/bin/activate
    ```
 
-5. **Install dependencies:**
+4. **Start Dev Node**
    ```bash
-   poetry install
-   ```
-
-6. **Setup pre-commit:**
-   ```bash
-   poetry run pre-commit install
+   poetry run jam --env envs/40000.env
    ```
 
 ## 🔧 Troubleshooting
@@ -133,6 +120,9 @@ If you prefer to set up manually:
 - Check your Python version: `python3 --version`
 
 ### Submodule Issues
+- Run update-deps: `poetry run poe update-deps`
+
+#### Alternate option:
 - Update submodules: `git submodule update --init --recursive`
 - Force update: `git submodule update --remote --merge`
 
@@ -174,5 +164,5 @@ poetry run poe build
 ## How to run the Binary
 
 ```bash
-./dist/Tessera --validator_index 0
+./dist/tessera-node --env envs/40000.env
 ```

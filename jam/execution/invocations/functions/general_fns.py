@@ -66,7 +66,7 @@ class GeneralFunctions(INVF):
     @INVF.register(0, gas_cost=10)
     def gas(gas: Gas, registers: list, memory: Memory, context: Context) -> DispatchNormalReturn:
         logger.debug("Host call: gas", gas_remaining=gas, gas_value_returned=gas)
-        registers[7] = gas
+        registers[7] = gas - 10
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
     @staticmethod
