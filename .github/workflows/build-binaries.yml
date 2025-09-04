@@ -102,7 +102,7 @@ jobs:
     name: 🚀 Create Public Release
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/hotfix'
+    # if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/hotfix'
 
     steps:
       - name: 📥 Checkout code
