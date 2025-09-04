@@ -56,11 +56,11 @@ class Safrole:
 
     @staticmethod
     def transition(pre_state: Sigma, state: Sigma, block: Block, entropy: OpaqueHash) -> Sigma:
-        pre_tau = state.tau
+        pre_tau = pre_state.tau
         # 1. Timekeeping
-        if block.header.slot > state.tau:
+        if block.header.slot > pre_state.tau:
             state.tau = block.header.slot
-        elif state.tau > 0:
+        elif pre_state.tau > 0:
             raise SafroleError(
                 SafroleErrorCode.BAD_SLOT,
                 f"Slot {block.header.slot} is less than current tau {state.tau}",
@@ -70,8 +70,8 @@ class Safrole:
         new_epoch = int(block.header.slot) // EPOCH_LENGTH
         epoch_jump = new_epoch - old_epoch
 
-        gamma = state.gamma
-        eta = state.eta
+        gamma = pre_state.gamma
+        eta = pre_state.eta
 
         if new_epoch > old_epoch:
             # 4.5. Empty the ticket acc for upcoming epoch
@@ -108,11 +108,11 @@ class Safrole:
         # 4. Epoch transition
         if new_epoch > old_epoch:
             # 4.1. Rotate validators
-            state.lambda_ = Lambda_(state.kappa)
+            state.lambda_ = Lambda_(pre_state.kappa)
             state.kappa = Kappa(gamma.p)
             filtered_validators = []
 
-            for k in state.iota:
+            for k in pre_state.iota:
                 if k.ed25519 in state.psi.offenders:
                     # Offender found, replace with default ValidatorData
                     filtered_validators.append(
@@ -149,7 +149,7 @@ class Safrole:
                 # Else fallback: use bandersnatch keys
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
-            # 4. 4. Update ring root using gamma k
+            # 4. 4. Update ring root using gamma p
             gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in gamma.p])
 
         for ticket in block.extrinsic.tickets:
@@ -167,7 +167,7 @@ class Safrole:
         # 2. Accumulate entropy
         # Use entropy coming from vrf output of Hv once we have valid seals generated
         if int.from_bytes(entropy) > 0:
-            eta[0] = Hash.blake2b(bytes(state.eta[0]) + bytes(entropy))
+            eta[0] = Hash.blake2b(bytes(eta[0]) + bytes(entropy))
             logger.debug("New Eta[0]", eta=eta[0].hex())
         state.eta = eta
 
