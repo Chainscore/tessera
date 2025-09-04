@@ -57,7 +57,7 @@ class Settings:
     def __init__(
         self,
         data_path: Optional[str],
-        seed=Optional[int],
+        seed: Optional[int] = None,
         name: str = "god_mode",
         port: int = 3000,
     ):
