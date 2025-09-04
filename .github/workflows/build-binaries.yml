@@ -2,7 +2,6 @@ name: 🚀 Binary Build
 
 on:
   push:
-    branches: [ 'hotfix/*' ]
     tags: [ 'v*' ]
   workflow_dispatch:
 
