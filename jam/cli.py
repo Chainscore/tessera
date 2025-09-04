@@ -18,25 +18,20 @@ def build_parser():
         prog="tessera-node",
         description="Tessera JAM client node. Performant, clean-room implementation in Python by Chainscore Labs",
         epilog="Examples:\n"
-               "  tessera-node                    # Run as validator node (default)\n"
-               "  tessera-node --builder          # Run as builder node\n"
-               "  tessera-node --fuzzer           # Run as fuzzer target for testing\n"
-               "  tessera-node --port 40001       # Override port\n"
-               "  tessera-node --fuzzer --socket /tmp/custom.sock  # Custom fuzzer socket",
+               "  tessera-node                                              # Run as validator node (default)\n"
+               "  tessera-node --fuzzer --socket /tmp/custom.sock           # Run as fuzzer target for testing\n"
+               "  tessera-node --env envs.40001.env                         # Override environment\n",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    p.add_argument("--db", type=str, default="data/tmp", help="Path to database directory")
     p.add_argument(
         "--env",
         type=str,
         default="envs/40000.env",
         help="Path to env file containing required environment variables",
     )
+    p.add_argument("--db", type=str, default="data/tmp", help="Path to database directory")
     p.add_argument("--theme", type=str, default="bitcoin", help="Theme to use for logging")
-    p.add_argument("--builder", action="store_true", help="Run as a builder node")
-    p.add_argument("--validator", action="store_true", help="Run as a validator node (default)")
     p.add_argument("--fuzzer", action="store_true", help="Run as a fuzzer target for conformance testing")
-    p.add_argument("--port", type=int, help="Override port from env file")
     
     # Fuzzer-specific options
     p.add_argument("--socket", type=str, default="/tmp/jam_conformance.sock", 
@@ -49,18 +44,47 @@ def build_parser():
     return p
 
 def main():
+    # Display ASCII art on startup
+    ascii_art = """
+                                                                             
+                                                                            
+                                                                            
+                                                                      
+                                 .......                              
+                                ...:::.....                           
+                               ..:......::...                      :-.
+                       .......   ..::......:.  ..    :.           -#- 
+                     ........:::-=-.......... ....   :*.        .==+. 
+                    ...::--====-::.  .-.....   ...:. :*+.      :+::+  
+                 ..:-===#*-::...     -%=       .-==. :=:+.   .-=. =-  
+          ..::-===---::.++....:.    :+-+     .-==:.:.-= :*. .+-  .+.  
+        .=+==-:..  .....-#:.::..   .+. +:  .-=-. .::.=-  -*:+:   .+   
+         ..        ...::.*-...     =-  :+:==:.   ....+:   -*:    :=   
+                     ....=+.      :+. .:**.        ..*.    .     =-   
+                         .*.     .+..-=-.+:        .:+           +:   
+                    ......*-     ==-=-.  :*.      ..+=          .+.   
+                   ..::::.-*... :%+-.     :+.   ..:.*:          .=    
+                   .:......*=...-*.        :.   .::.-.          :=    
+                   .:....:-+#:.. .             .::..            :=    
+                    .:-=+==::.:...            ..:..             :-    
+                 .:-===-:....:..   .......... ....              ::    
+             .:-===:.   ....... ....::::::::.                   ::    
+          .-===-..              .::::::::....                   ::    
+      .:-==-:.                  ..........                      ..    
+  ..-==-:.                        ...                           ..    
+.-==-.                                                           .    
+...                                                                   
+                                                                      
+                                                                      
+"""
+    print(ascii_art)
+    
     # Change to base directory first for file resolution
     base_dir = detect_base_dir()
     os.chdir(base_dir)
     
     parser = build_parser()
     args = parser.parse_args()
-    
-    # Handle help topics (tessera-node help <topic>)
-    if len(sys.argv) >= 3 and sys.argv[1] == "help":
-        from jam.utils.clihelpers import show_help_topic
-        show_help_topic(sys.argv[2])
-        return
     
     # Check for fuzzer mode
     if args.fuzzer:
@@ -82,16 +106,8 @@ def main():
         )
         return
     
-    # Import main function only when needed (faster startup)
+    # Import main function
     from jam.__main__ import main as node_main
-    
-    # Set defaults
-    if not args.builder and not args.validator and not args.fuzzer:
-        args.validator = True
-    
-    # Override port in environment if specified
-    if args.port:
-        os.environ["PORT"] = str(args.port)
     
     # Run the node
     try:
@@ -100,8 +116,8 @@ def main():
                 args.db,
                 args.env, 
                 args.theme,
-                args.builder,
-                args.validator,
+                False,
+                True,
             )
         )
     except KeyboardInterrupt:
