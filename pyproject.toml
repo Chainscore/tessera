@@ -71,6 +71,7 @@ target-version = ['py310']
 build = "./scripts/build.sh"
 setup = "./scripts/setup.sh"
 test = "./scripts/test.sh"
+tests = "sh ./scripts/tests.sh"
 validate = "./scripts/validate.sh"
 testnet = "./scripts/testnet.sh"
 testnet-sync = "./scripts/testnet_sync.sh"
