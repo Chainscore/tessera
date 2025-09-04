@@ -2,13 +2,13 @@
 import pytest
 import json
 from pathlib import Path
+from jam.finality.finality import Finality
+from jam.operations.handlers.bp_engine import BlockProducer
 from jam.settings import setup_setting
 from jam.api.rpc.app import rpc
 from jam.state.state import setup_state, set_state, State
 from jam.state.utils import construct_state_key
-from jam.types.block import Block
-from jam.consensus.grandpa.finality import Finality
-from jam.consensus.bp_engine import BlockProducer
+from jam.block.block import Block
 from jam.network.node import Node
 from jam.state.accounts import DeltaView, AccountData, StorageView, PreImageView, TimestampsView
 from jam.types.state.delta import LookupTable, ServiceCodeHash, Ao, Ai, Timestamps

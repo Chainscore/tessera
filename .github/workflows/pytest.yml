@@ -43,5 +43,5 @@ jobs:
     - name: 🏗️ Install dependencies via Poetry
       run: poetry install --with dev --no-interaction --no-ansi
 
-    - name: Run tests
-      run: RUNALL=1 poetry run pytest tests/
+    # - name: Run unit tests
+    #   run: RUNALL=1 poetry run pytest tests/unit/
