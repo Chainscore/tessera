@@ -17,11 +17,11 @@ cryptography = "45.0.2"
 structlog = "^25.2.0"
 aioquic = "^1.2.0"
 quart = "^0.20.0"
-tsrkit-types = "^0.1.8"
 rockstore = "^0.1.2"
 reed-solomon-leopard = "^0.2.1"
 python-dotenv = "^1.1.0"
 py-ark-vrf = {path = "deps/py-ark-vrf", develop = true}
+tsrkit-types = {path = "deps/tsrkit-types", develop = true}
 tsrkit-pvm = {path = "deps/tsrkit-pvm", develop = true}
 tsrkit-asm = {path = "deps/tsrkit-asm", develop = true}
 pycryptodome = "^3.23.0"
