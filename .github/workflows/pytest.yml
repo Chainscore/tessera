@@ -11,24 +11,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+        submodules: false
+
+    - name: 📦 Checkout submodules
+      run: |
+        git config --global url."https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        git submodule update --init deps/py-ark-vrf deps/tsrkit-pvm deps/tsrkit-asm
     
-    - name: Set up Python
-      uses: actions/setup-python@v3
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
       with:
         python-version: '3.12'
         
-    - name: Install system dependencies
+    - name: 📦 Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: '1.8.2'
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        
+    - name: 🔧 Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y librocksdb-dev
-        
-    - name: Install Poetry
-      run: pip install poetry
+        sudo apt-get install -y build-essential
 
-    - name: Install dependencies via Poetry
+    - name: 🏗️ Install dependencies via Poetry
       run: poetry install --with dev --no-interaction --no-ansi
 
-#   TODO: Uncomment tests
-#    - name: Run tests
-#      run: RUNALL=1 poetry run pytest tests/
+    - name: Run tests
+      run: RUNALL=1 poetry run pytest tests/

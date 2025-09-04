@@ -1,5 +1,16 @@
 #!/bin/bash
 # Script to build and deploy the JAM node to Azure Container Instances
+#
+# Usage:
+#   export GITHUB_TOKEN="your_github_token_here"  # Required for private submodules
+#   ./scripts/deploy-to-azure.sh
+#
+# Prerequisites:
+#   - Docker with buildx support
+#   - Azure CLI logged in
+#   - Access to tessera.azurecr.io
+#   - GitHub token with access to private submodules
+#
 set -e
 
 # Configuration
@@ -19,7 +30,17 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}Building Docker image for amd64 platform...${NC}"
 docker buildx create --use --name amd64builder || echo "Builder already exists"
-docker buildx build --no-cache --platform linux/amd64 -t $IMAGE_NAME --push .
+
+# Build with GitHub token for private submodules if available
+if [ -n "$GITHUB_TOKEN" ]; then
+    echo -e "${YELLOW}Using GitHub token for private submodules...${NC}"
+    docker buildx build --no-cache --platform linux/amd64 \
+        --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
+        -t $IMAGE_NAME --push .
+else
+    echo -e "${YELLOW}Warning: No GITHUB_TOKEN set, submodules may fail to initialize...${NC}"
+    docker buildx build --no-cache --platform linux/amd64 -t $IMAGE_NAME --push .
+fi
 
 echo -e "${GREEN}Pushing to Azure Container Registry...${NC}"
 az acr login --name $ACR_NAME

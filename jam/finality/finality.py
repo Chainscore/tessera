@@ -47,7 +47,7 @@ class Finality:
 
         #Subscribe's to updates of the head of the "best" chain, as returned by bestBlock.
         if block: asyncio.create_task(broker.publish("subscribeBestBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
-
+        else: logger.warning("Head published, but not found in store", header_hash=header_hash.hex())
         kv.put(cls.LATEST_KEY, header_hash.encode())
 
     @classmethod
