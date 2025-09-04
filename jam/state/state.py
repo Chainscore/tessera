@@ -253,10 +253,6 @@ class State:
             # Statistics
             Statistics.transition(pre_state, self, block, newly_avail_wrs)
 
-            # Safrole
-            vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
-            Safrole.transition(pre_state, self, block, vrf_output)
-
             if block.validate():
                 state.settle(header_hash)
 
