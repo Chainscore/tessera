@@ -214,7 +214,6 @@ class State:
             # Disputes
             Disputes.transition(pre_state, self, block)
 
-            # TODO: Ensure correct ordering of module transitions
             # Safrole
             vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
             Safrole.transition(pre_state, self, block, vrf_output)
