@@ -69,7 +69,7 @@ class BlockProducer(NodeDispatcher):
             if time_slot // EPOCH_LENGTH == (state.tau // EPOCH_LENGTH) + 1 and len(state.gamma.a) == EPOCH_LENGTH and slot_index == 0:
                 entry = outside_in(state.gamma.a)[slot_index]
             else:
-                entry = Safrole.arrange_fallback(state.eta[1], state.gamma.k).unwrap()[slot_index]
+                entry = Safrole.arrange_fallback(state.eta[1], state.gamma.p).unwrap()[slot_index]
         
         if isinstance(entry, TicketBody):
             eta = state.eta[2] if time_slot % EPOCH_LENGTH == 0 else state.eta[3]

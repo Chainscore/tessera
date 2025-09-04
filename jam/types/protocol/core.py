@@ -41,8 +41,8 @@ ProgramCounter = Uint[64]
 
 
 # Hash type aliases
-WorkPackageHash = OpaqueHash
+class WorkPackageHash(OpaqueHash): ...
 WorkReportHash = OpaqueHash
 ExportsRoot = OpaqueHash
 ErasureRoot = OpaqueHash
-SegmentRoot = OpaqueHash
+class SegmentRoot(OpaqueHash): ...

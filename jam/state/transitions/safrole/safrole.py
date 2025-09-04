@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import List
 
 from jam.types.protocol.ticket import TicketBody
@@ -28,9 +27,9 @@ from jam.types.protocol.crypto import (
     Hash,
     OpaqueHash,
 )
-from jam.types.state.gamma import GammaK, GammaSFallback, GammaA, GammaZ
+from jam.types.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
-from dot_ring.vrf.ring.ring_vrf import RingVrf
+# from dot_ring.vrf.ring.ring_vrf import RingVrf
 from py_ark_vrf import verify_ring, get_ring_root, vrf_output
 
 logger = get_logger("import")
@@ -39,10 +38,10 @@ logger = get_logger("import")
 class Safrole:
     @staticmethod
     def verify_vrf(
-        message: bytes, ring_root: bytes, gamma_k: list[bytes], proof: BandersnatchRingVrfSignature
+        message: bytes, ring_root: bytes, gamma_p: list[bytes], proof: BandersnatchRingVrfSignature
     ) -> bool:
         # return RingVrf.ring_vrf_proof_verify(message, ring_root, proof)
-        return verify_ring(message, proof, gamma_k, b"")  # Input Data  # Proof  # Ring  # AD
+        return verify_ring(message, proof, gamma_p, b"")  # Input Data  # Proof  # Ring  # AD
 
     @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> GammaZ:
@@ -57,11 +56,11 @@ class Safrole:
 
     @staticmethod
     def transition(pre_state: Sigma, state: Sigma, block: Block, entropy: OpaqueHash) -> Sigma:
-        pre_tau = state.tau
+        pre_tau = pre_state.tau
         # 1. Timekeeping
-        if block.header.slot > state.tau:
+        if block.header.slot > pre_state.tau:
             state.tau = block.header.slot
-        elif state.tau > 0:
+        elif pre_state.tau > 0:
             raise SafroleError(
                 SafroleErrorCode.BAD_SLOT,
                 f"Slot {block.header.slot} is less than current tau {state.tau}",
@@ -71,8 +70,8 @@ class Safrole:
         new_epoch = int(block.header.slot) // EPOCH_LENGTH
         epoch_jump = new_epoch - old_epoch
 
-        gamma = state.gamma
-        eta = state.eta
+        gamma = pre_state.gamma
+        eta = pre_state.eta
 
         if new_epoch > old_epoch:
             # 4.5. Empty the ticket acc for upcoming epoch
@@ -109,11 +108,11 @@ class Safrole:
         # 4. Epoch transition
         if new_epoch > old_epoch:
             # 4.1. Rotate validators
-            state.lambda_ = Lambda_(state.kappa)
-            state.kappa = Kappa(gamma.k)
+            state.lambda_ = Lambda_(pre_state.kappa)
+            state.kappa = Kappa(gamma.p)
             filtered_validators = []
 
-            for k in state.iota:
+            for k in pre_state.iota:
                 if k.ed25519 in state.psi.offenders:
                     # Offender found, replace with default ValidatorData
                     filtered_validators.append(
@@ -128,7 +127,7 @@ class Safrole:
                     # Not an offender, keep the original validator data
                     filtered_validators.append(k)
 
-            gamma.k = GammaK(filtered_validators)
+            gamma.p = GammaP(filtered_validators)
 
             # 4.2 . Shift entropy
             eta = Eta([eta[0], eta[0], eta[1], eta[2]])
@@ -150,15 +149,15 @@ class Safrole:
                 # Else fallback: use bandersnatch keys
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
-            # 4. 4. Update ring root using gamma k
-            gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in gamma.k])
+            # 4. 4. Update ring root using gamma p
+            gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in gamma.p])
 
         for ticket in block.extrinsic.tickets:
             # Signature must be valid Ring-VRF proof
             if not Safrole.verify_vrf(
                 X.TICKET.value + eta[2] + bytes([ticket.attempt]),
                 gamma.z,
-                [k.bandersnatch for k in gamma.k],
+                [k.bandersnatch for k in gamma.p],
                 ticket.signature,
             ):
                 raise SafroleError(
@@ -168,7 +167,7 @@ class Safrole:
         # 2. Accumulate entropy
         # Use entropy coming from vrf output of Hv once we have valid seals generated
         if int.from_bytes(entropy) > 0:
-            eta[0] = Hash.blake2b(bytes(state.eta[0]) + bytes(entropy))
+            eta[0] = Hash.blake2b(bytes(eta[0]) + bytes(entropy))
             logger.debug("New Eta[0]", eta=eta[0].hex())
         state.eta = eta
 
@@ -221,7 +220,7 @@ class Safrole:
         Entry index should be a natural number less than N
         https://graypaper.fluffylabs.dev/#/5b732de/0f22000f2400
         """
-        if 0 <= ticket.attempt > TICKET_ENTRIES_PER_VALIDATOR:
+        if ticket.attempt < 0 or ticket.attempt >= TICKET_ENTRIES_PER_VALIDATOR:
             raise SafroleError(
                 SafroleErrorCode.BAD_TICKET_ATTEMPT,
                 f"Ticket attempt {ticket.attempt} is invalid",

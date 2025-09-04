@@ -2,11 +2,11 @@ from typing import Dict
 
 from jam.settings import Settings
 from jam.types.protocol.ticket import TicketAttempt, TicketBody, TicketId
-from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaS, GammaSTickets
+from jam.types.state.gamma import Gamma, GammaA, GammaP, GammaS, GammaSTickets
 from jam.types.protocol.merkle import MMR
 from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
-from jam.types.state.beta import Beta, BlockHistory
-from jam.types.state.chi import Chi, ChiG
+from jam.types.state.beta import Beta, BlockHistory, BetaHistory, BeefyBelt
+from jam.types.state.chi import Chi, ChiZ, ChiA
 from jam.types.state.delta import (
     AccountData,
     AccountStorage,
@@ -42,8 +42,9 @@ from jam.types import (
     Rho,
     Tau,
     AllReadyWRs,
-    Nu,
+    Omega,
     Xi,
+    BeefyRoot,
 )
 
 from jam.state.state import State
@@ -99,11 +100,11 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     block = BlockHistory(
         header_hash=HeaderHash(create_dummy_bytes32()),
-        mmr=MMR([]),
         state_root=StateRoot(create_dummy_bytes32()),
+        beefy_root=BeefyRoot(create_dummy_bytes32()),
         reported=package_dict,
     )
-    components["beta"] = Beta([block for _ in range(3)])
+    components["beta"] = Beta(h=BetaHistory([block for _ in range(3)]), b=BeefyBelt([]))
 
     # Create dummy validator data
     key_set = [Settings(data_path=None, seed=i) for i in range(VALIDATOR_COUNT)]
@@ -118,7 +119,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     ]
 
     # Gamma - Validator set
-    validator_set = GammaK(dummy_validator_data)
+    validator_set = GammaP(dummy_validator_data)
     ring_root = BandersnatchRingRoot(create_dummy_bytes(144))
     slot_sealers = GammaSTickets(
         [
@@ -181,9 +182,10 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["phi"] = Phi([queue for _ in range(CORE_COUNT)])
 
     # Chi
-    chi_g = ChiG({ServiceId(i): Gas(100) for i in range(3)})
+    chi_z = ChiZ({ServiceId(i): Gas(100) for i in range(3)})
+    chi_a = ChiA([ServiceId(i) for i in range(CORE_COUNT)])
     components["chi"] = Chi(
-        chi_m=ServiceId(0), chi_a=ServiceId(1), chi_v=ServiceId(2), chi_g=chi_g
+        chi_m=ServiceId(0), chi_a=chi_a, chi_v=ServiceId(2), chi_g=chi_z
     )
 
     # Psi
@@ -202,8 +204,8 @@ def create_dummy_state_components() -> Dict[str, object]:
         services=AllServiceStats({}),
     )
 
-    # Nu and Xi
-    components["nu"] = Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
+    # Omega (ω) and Xi (ξ)
+    components["omega"] = Omega([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)])
     components["xi"] = Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)])
 
     return components

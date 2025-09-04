@@ -16,8 +16,13 @@ class WorkReportState:
 
 OptionalWorkReportState = Option[WorkReportState]
 
-# State key: 10
 class Rho(TypedArray[OptionalWorkReportState, CORE_COUNT]):
+    """
+    Component: ρ
+    Key: 10
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/131d02132d02?v=0.7.0
+    """
 
     def pending_reps(self):
         pending_reports = WorkReports([])

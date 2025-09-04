@@ -1,15 +1,10 @@
 from dataclasses import field
-from typing import Self, Union, Tuple
-
+from typing import Self
 from tsrkit_types import Bytes
-
-# from jam.execution.utils import decode_code_hash
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.integers import Uint, U32
-from tsrkit_types.sequences import TypedVector, TypedArray, TypedBoundedVector
+from tsrkit_types.sequences import TypedBoundedVector
 from tsrkit_types.struct import structure
-
-from jam.execution.utils import decode_code_hash
 from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId, TimeSlot
 from jam.types.protocol.crypto import Hash
 from jam.utils.constants import (
@@ -32,34 +27,43 @@ At = Balance
 
 @structure
 class AccountMetadata:
-    code_hash: ServiceCodeHash  # code_hash
-    balance: Balance  # balance
-    gas_limit: Gas = field(metadata={"name": "min_item_gas"})
-    min_gas: Gas = field(metadata={"name": "min_memo_gas"})
-    num_o: Ao = field(metadata={"name": "bytes"})
-    num_i: Ai = field(metadata={"name": "items"})
+    code_hash: ServiceCodeHash  # code_hash, c
+    balance: Balance  # balance, b
+    gas_limit: Gas = field(metadata={"name": "min_item_gas"}) # g
+    min_gas: Gas = field(metadata={"name": "min_memo_gas"}) # m
+    num_o: Ao = field(metadata={"name": "bytes"}) # o
+    gratis_offset: Balance = field(metadata={"name": "deposit_offset"}) # f
+    num_i: Ai = field(metadata={"name": "items"}) # i
+    created_at: TimeSlot = field(metadata={"name": "creation_slot"}) # r
+    accumulated_at: TimeSlot = field(metadata={"name": "last_accumulation_slot"}) # a
+    parent_service: ServiceId # p
 
     @property
     def t(self):
-        return Balance(
+        return max(Balance(0), Balance(
             BASIC_MINIMUM_BALANCE
             + ADDITIONAL_BALANCE_PER_ITEM * self.num_i
             + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
-        )
+            - self.gratis_offset
+        ))
 
     @staticmethod
     def empty() -> "AccountMetadata":
         return AccountMetadata(
             code_hash=Bytes[32](32),
             balance=Balance(0),
+            gratis_offset=Balance(0),
             gas_limit=Gas(0),
             min_gas=Gas(0),
+            created_at=TimeSlot(0),
+            accumulated_at=TimeSlot(0),
+            parent_service=ServiceId(1),
             num_i=Ai(0),
             num_o=Ao(0),
         )
 
 
-class AccountStorage(Dictionary[Bytes[32], Bytes, "key", "value"]):
+class AccountStorage(Dictionary[Bytes, Bytes, "key", "value"]):
     """Storage dictionary"""
 
     _meta: AccountMetadata
@@ -67,30 +71,39 @@ class AccountStorage(Dictionary[Bytes[32], Bytes, "key", "value"]):
     def __setitem__(self, key, value):
         if hasattr(self, "_meta"):
             is_new = key not in self
-            # original_num_i = self._meta.num_i
-            # original_num_o = self._meta.num_o
             if is_new:
-                self._meta.num_i = self._meta.num_i + 1
-                self._meta.num_o = self._meta.num_o + len(value) + 32
+                self._meta.num_i = Ai(self._meta.num_i + 1)
+                self._meta.num_o = Ao(self._meta.num_o + len(value) + 34 + len(key))
             else:
-                self._meta.num_o = self._meta.num_o + len(value) - len(self[key])
-
-            # if self._meta.t > self._meta.balance:
-            #     self._meta.num_i = original_num_i
-            #     self._meta.num_o = original_num_o
-            #     raise ValueError("Insufficient balance for storage operation")
+                diff = len(value) - len(self[key])
+                self._meta.num_o = Ao(self._meta.num_o + diff)
         super().__setitem__(key, value)
 
     def __delitem__(self, key):
         exists = key in self
         if exists:
-            self._meta.num_i = self._meta.num_i - 1
-            self._meta.num_o = self._meta.num_o - len(self[key]) - 32
+            self._meta.num_i = Ai(self._meta.num_i - 1)
+            self._meta.num_o = Ao(self._meta.num_o - len(self[key]) - 34 - len(key))
         super().__delitem__(key)
+        
+    def transform(self, service_id: ServiceId):
+        from jam.state.utils import construct_state_key
+        res = {}
+        for k, v in self.items():
+            res[construct_state_key((service_id, Bytes(U32(2**32 - 1).encode()) + k))] = v
+        return res
 
 
 """Preimage dictionary"""
-AccountPreimages = Dictionary[Bytes[32], Bytes, "hash", "blob"]
+class AccountPreimages(Dictionary[Bytes[32], Bytes, "hash", "blob"]):
+    
+    def transform(self, service_id: ServiceId):
+        from jam.state.utils import construct_state_key
+        res = {}
+        for k, v in self.items():
+            res[construct_state_key((service_id, Bytes(U32(2**32 - 2).encode()) + k))] = v
+        return res
+
 
 """Lookup timestamps"""
 Timestamps = TypedBoundedVector[U32, 0, 3]
@@ -113,7 +126,6 @@ class LookupTable:
             return cls(Bytes[32].from_json(data["hash"]), BlobLength(data["length"]))
         return cls.decode(bytes.fromhex(data))
 
-
 class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
     """Lookup timestamps"""
 
@@ -123,19 +135,32 @@ class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
         if hasattr(self, "_meta"):
             is_new = key not in self
             if is_new:
-                self._meta.num_i = self._meta.num_i + 2
-                self._meta.num_o = self._meta.num_o + key.length + 81
+                self._meta.num_i = Ai(self._meta.num_i + 2)
+                self._meta.num_o = Ao(self._meta.num_o + key.length + 81)
         super().__setitem__(key, value)
 
     def __delitem__(self, key: LookupTable):
         if key in self:
-            self._meta.num_i = self._meta.num_i - 2
-            self._meta.num_o = self._meta.num_o - key.length - 81
+            self._meta.num_i = Ai(self._meta.num_i - 2)
+            self._meta.num_o = Ao(self._meta.num_o - key.length - 81)
         super().__delitem__(key)
 
+    def transform(self, service_id: ServiceId):
+        from jam.state.utils import construct_state_key
+        res = {}
+        for k, v in self.items():
+            res[construct_state_key((service_id, Bytes(U32(k.length).encode()) + k.hash))] = v.encode()
+        return res
 
 @structure
 class AccountData:
+    """
+    Set A
+    Account Data Structure.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/10510110a401?v=0.7.0
+    """
+
     service: AccountMetadata = field(metadata={"default": AccountMetadata.empty()})
     storage: AccountStorage = field(metadata={"default": AccountStorage({})})
     preimages: AccountPreimages = field(metadata={"default": AccountPreimages({})})
@@ -144,49 +169,27 @@ class AccountData:
     def __post_init__(self):
         self.storage._meta = self.service
         self.lookup._meta = self.service
-
-    def m_c(self) -> Union[Tuple[bytes, bytes], None]:
-        img = self.preimages.get(self.service.code_hash)
-        if img:
-            try:
-                return decode_code_hash(img)
-            except:
-                return None
-        else:
-            return None
-
-    def historical_lookup(self, timeslot: TimeSlot, preimage_hash: Bytes[32]):
-        """
-        https://graypaper.fluffylabs.dev/#/cc517d7/11c70011e000?v=0.6.5
-        """
-        if self.preimages[preimage_hash] is not None and self.is_preimage_valid(
-            self.lookup[
-                LookupTable(
-                    hash=preimage_hash,
-                    length=BlobLength(len(self.lookup[preimage_hash])),
-                )
-            ],
-            timeslot,
-        ):
-            return self.preimages[preimage_hash]
-        else:
-            return None
-
-    @classmethod
-    def is_preimage_valid(cls, lookup_ts: Timestamps, current_ts: TimeSlot):
-        """
-        https://graypaper.fluffylabs.dev/#/cc517d7/11e700111201?v=0.6.5
-        """
-        if len(lookup_ts) == 0:
-            return False
-        elif len(lookup_ts) == 1:
-            return lookup_ts[0] <= current_ts
-        elif len(lookup_ts) == 2:
-            return lookup_ts[0] <= current_ts < lookup_ts[1]
-        elif len(lookup_ts) == 3:
-            return (lookup_ts[0] <= current_ts < lookup_ts[1]) or lookup_ts[2] <= current_ts
-        else:
-            raise ValueError("Invalid Timestamp data")
+        
+    def transform(self, service_id: ServiceId):
+        res = {}
+        from jam.state.utils import construct_state_key
+        res[construct_state_key((255, service_id))] = self.service.encode()
+        res.update(self.storage.transform(service_id))
+        res.update(self.preimages.transform(service_id))
+        res.update(self.lookup.transform(service_id))
+        return res
 
 
-Delta = Dictionary[ServiceId, AccountData, "id", "data"]
+class Delta(Dictionary[ServiceId, AccountData, "id", "data"]):
+    """
+    Component: δ
+    Key: Variable Keys
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/102601102601?v=0.7.0
+    """
+
+    def transform(self) -> dict:
+        res = {}
+        for sid, account in self.items():
+            res.update(account.transform(sid))
+        return res

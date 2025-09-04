@@ -1,7 +1,6 @@
-from tsrkit_types.integers import Int
+from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     AccumulationContext,
-    StateContext,
 )
 from tsrkit_types import U32, U64, Bytes
 from tsrkit_types.sequences import TypedArray
@@ -18,7 +17,6 @@ from tsrkit_pvm import (
     HostStatus,
     PvmError,
     ExecutionStatus,
-    Accessibility
 )
 from jam.types import Timestamps
 from jam.types.protocol.crypto import Hash, OpaqueHash
@@ -26,10 +24,7 @@ from jam.types.protocol.merkle import OptionHash
 from jam.types.state.chi import Chi
 from jam.types.state.delta import (
     AccountData,
-    AccountStorage,
     LookupTable,
-    AccountLookup,
-    AccountPreimages,
     ServiceCodeHash,
 )
 from jam.types.protocol.core import BlobLength, Gas, ServiceId, TimeSlot
@@ -45,7 +40,7 @@ from jam.utils.constants import (
 )
 
 
-def check(u: StateContext, i: ServiceId):
+def check(u: GhostPartial, i: ServiceId):
     if i not in u.service_accounts:
         return i
     else:
@@ -58,6 +53,11 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(14, gas_cost=10)
     def bless(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+        # TODO: Sync this from 0.6.6 -> 0.6.7
+        # 0.6.6: https://graypaper.fluffylabs.dev/#/9a08063/366700366700?v=0.6.6
+        # 0.6.7: https://graypaper.fluffylabs.dev/#/7e6ff6a/360e00367600?v=0.6.7
+        # change_log: https://github.com/gavofyork/graypaper/pull/393/files#diff-41f3b6a0435c4f16eceda600672b2e6a38411745d9f0277a9bffdf25911d5287
+
         [m, a, v, o, n] = registers[7:7 + 5]
         if not memory.is_accessible(o, 12 * n):
             raise PvmError(PANIC)
@@ -82,6 +82,7 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(15, gas_cost=10)
     def assign(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+        # TODO: Sync: https://github.com/gavofyork/graypaper/pull/400/files#diff-41f3b6a0435c4f16eceda600672b2e6a38411745d9f0277a9bffdf25911d5287
         o = registers[8]
         if not memory.is_accessible(o, 32 * MAX_AUTH_QUEUE_ITEMS):
             raise PvmError(PANIC)
@@ -101,6 +102,7 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(16, gas_cost=10)
     def designate(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+        # TODO: Sync: https://github.com/gavofyork/graypaper/pull/400/files#diff-41f3b6a0435c4f16eceda600672b2e6a38411745d9f0277a9bffdf25911d5287
         o = registers[7]
         if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
             raise PvmError(PANIC)
@@ -124,7 +126,8 @@ class AccumulateFunctions(INVF):
 
     @staticmethod
     @INVF.register(18, gas_cost=10)
-    def new(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+    def new(gas: Gas, registers: list, memory: Memory, context: AccumulationContext, block_timeslot: TimeSlot):
+        # TODO: Sync: https://github.com/gavofyork/graypaper/pull/400/files#diff-41f3b6a0435c4f16eceda600672b2e6a38411745d9f0277a9bffdf25911d5287
         [o, l, g, m] = registers[7 : 7 + 4]
         delta = context.x.partial_state.service_accounts
         if not (memory.is_accessible(o, 32) and isinstance(l, U32)):
@@ -168,7 +171,7 @@ class AccumulateFunctions(INVF):
 
         if s.balance - a.service.t < s.t:
             registers[7] = HostStatus.CASH.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         else:
             x_i = check(
                 u=context.x.partial_state,
@@ -177,7 +180,7 @@ class AccumulateFunctions(INVF):
             context.x.partial_state.service_accounts[x_i] = a
             s.balance -= a.service.t
             context.x.partial_state.service_accounts[context.x.s_index] = s  # might not require
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(19, gas_cost=10)
@@ -190,7 +193,7 @@ class AccumulateFunctions(INVF):
         X_s.service.gas = g
         X_s.service.min_gas = m
         registers[7] = HostStatus.OK.value
-        return CONTINUE, registers, memory, context
+        return CONTINUE, gas, registers, memory, context
 
     # TODO: Need to update the gas with registers[9]
     @staticmethod
@@ -212,19 +215,19 @@ class AccumulateFunctions(INVF):
 
         if delta[d] is None:
             registers[7] = HostStatus.WHO.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         elif l < delta[d].min_gas:
             registers[7] = HostStatus.LOW.value
 
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         elif (b - a) < delta[context.x.s_index].service.t:
             registers[7] = HostStatus.CASH.value
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         else:
             registers[7] = HostStatus.OK.value
             context.x.deferred_transfers.append(t)
             delta[context.x.s_index].balance -= a
-            return CONTINUE, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(21, gas_cost=10)
@@ -279,10 +282,10 @@ class AccumulateFunctions(INVF):
         lookup_value = context.x.partial_state.service_accounts[context.x.s_index].lookup[
             lookup_key
         ] # a' s value
-        if not lookup_value:
+        if lookup_value == None:
             registers[7] = HostStatus.NONE.value
             registers[8] = 0
-        if len(lookup_value) == 0:
+        elif len(lookup_value) == 0:
             registers[7] = 0
             registers[8] = 0
         elif len(lookup_value) == 1:
@@ -322,14 +325,14 @@ class AccumulateFunctions(INVF):
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
         from jam.state.state import state
 
-        state.store.save_n_clear_cache()
+        # state.store.save_n_clear_cache()
 
         # Account
         account: AccountData = context.x.partial_state.service_accounts[context.x.s_index]
-        lookup_key = LookupTable(hash=preimage_hash,length= preimage_len)
+        lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         # storing the initial lookup value
         lookup_val: Timestamps | None = account.lookup[lookup_key]
-        # Updated t
+        # TODO: check updated t > balance
         at = account.service.t
 
         if not lookup_val:
@@ -346,7 +349,7 @@ class AccumulateFunctions(INVF):
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
         if account.service.balance < account.service.t:
-            state.store.clear()
+            # state.store.clear()
             registers[7] = HostStatus.FULL.value
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
@@ -369,18 +372,18 @@ class AccumulateFunctions(INVF):
             raise PvmError(PANIC)
 
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
-        lookup_key = LookupTable( hash = preimage_hash, length = preimage_len)
+        lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         a = context.x.partial_state.service_accounts[context.x.s_index]
         lookup_value = a.lookup[lookup_key]
-        if len(a.lookup[lookup_key]) == 0 or (
-            len(a.lookup[lookup_key]) == 2
-            and (a.lookup[lookup_key][1] < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS)
+        if len(a.lookup[lookup_key]) == 1:
+            lookup_value.append(block_timeslot)
+            a.lookup[lookup_key] = lookup_value
+        elif len(a.lookup[lookup_key]) == 0 or (
+            len(a.lookup[lookup_key]) == 2 and 
+            a.lookup[lookup_key][1] < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS
         ):
             del a.lookup[lookup_key]
             del a.preimages[preimage_hash]
-        elif len(a.lookup[lookup_key]) == 1:
-            lookup_value.append(block_timeslot)
-            a.lookup[lookup_key] = lookup_value
         elif (
             len(a.lookup[lookup_key]) == 3
             and a.lookup[lookup_key][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS
@@ -411,7 +414,7 @@ class AccumulateFunctions(INVF):
         gas: Gas,
         registers: list,
         memory: Memory,
-        context: "AccumulationContext",
+        context: AccumulationContext,
         service_id: ServiceId,
     ):
         [o, z] = registers[8: 10]

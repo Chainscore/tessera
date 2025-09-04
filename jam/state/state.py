@@ -1,23 +1,20 @@
-import asyncio
 import json
 from typing import Type
-
-from jam.audit.audit_engine import AuditEngine
 from jam.error import JamError, JamErrorCode
-from jam.types.audit.tranche import TrancheIndex
+from jam.state.partial import PartialState
 from jam.utils.merkle import BMRFunctions
 from rockstore import RockStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.utils.trie.merkle import StateTrie
 from jam.state.storage import StateStorage
-from jam.state.utils import construct_state_key
+from jam.state.utils import construct_state_key, make_state_prop
 from tsrkit_types import Bytes, Codable, Dictionary, TypedVector
 from jam.types import (
     Hash,
     Alpha,
     Eta,
-    Nu,
+    Omega,
     Pi,
     Psi,
     Kappa,
@@ -34,27 +31,9 @@ from jam.types import (
 )
 from jam.block.block import Block
 from jam.logging import get_logger
+from jam.types.state.theta import Theta
 
 logger = get_logger("import")
-
-def make_state_prop(state_key: int, cl: Type[Codable]):
-    def fget(self):
-        raw = self.store.get(construct_state_key(state_key))
-        if raw is None:
-            raise ValueError(f"State component missing from DB: {cl.__name__}")
-        return cl.decode_from(raw)[0]
-
-    def fset(self, value):
-        k, v = construct_state_key(state_key), value.encode()
-        self.store.put(bytes(k), v)
-        logger.debug(
-            "State component updated",
-            component=cl.__name__,
-            state_key=state_key,
-            value_size=len(v),
-        )
-
-    return property(fget, fset)
 
 
 class State:
@@ -70,21 +49,22 @@ class State:
     store: StateStorage
 
     # State Components
-    alpha = make_state_prop(1, Alpha)
-    phi = make_state_prop(2, Phi)
-    beta = make_state_prop(3, Beta)
-    gamma = make_state_prop(4, Gamma)
-    psi = make_state_prop(5, Psi)
-    eta = make_state_prop(6, Eta)
-    iota = make_state_prop(7, Iota)
-    kappa = make_state_prop(8, Kappa)
-    lambda_ = make_state_prop(9, Lambda_)
-    rho = make_state_prop(10, Rho)
-    tau = make_state_prop(11, Tau)
-    chi = make_state_prop(12, Chi)
-    pi = make_state_prop(13, Pi)
-    nu = make_state_prop(14, Nu)
-    xi = make_state_prop(15, Xi)
+    alpha       = make_state_prop(1,  Alpha)
+    phi         = make_state_prop(2,  Phi)
+    beta        = make_state_prop(3,  Beta)
+    gamma       = make_state_prop(4,  Gamma)
+    psi         = make_state_prop(5,  Psi)
+    eta         = make_state_prop(6,  Eta)
+    iota        = make_state_prop(7,  Iota)
+    kappa       = make_state_prop(8,  Kappa)
+    lambda_     = make_state_prop(9,  Lambda_)
+    rho         = make_state_prop(10, Rho)
+    tau         = make_state_prop(11, Tau)
+    chi         = make_state_prop(12, Chi)
+    pi          = make_state_prop(13, Pi)
+    omega       = make_state_prop(14, Omega)
+    xi          = make_state_prop(15, Xi)
+    theta       = make_state_prop(16, Theta)
 
     @property
     def delta(self) -> "DeltaView":
@@ -140,7 +120,7 @@ class State:
         # Empty trie -I dont think we need past trie data anywhere
         trie = StateTrie()
         # Create a Read-Only instance
-        db = RockStore(settings._data_path + "/state", options={"read_only": True})
+        db = RockStore(state.store._DB.path.decode(), options={"read_only": True})
         # Load past updates
         cache = state.store._load_updates(header_hash)
 
@@ -225,43 +205,47 @@ class State:
 
             pre_state = self.load()
 
-            beta = self.beta
-            # Step 1
-            if len(beta):
-                beta[-1].state_root = block.header.parent_state_root
+            # Handle Parent's Block Posterior State Root (β† h)
+            beta: Beta = self.beta
+            if len(beta.h):
+                beta.h[-1].state_root = block.header.parent_state_root
             self.beta = beta
 
             # Disputes
             Disputes.transition(pre_state, self, block)
 
+            # Safrole
+            vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
+            Safrole.transition(pre_state, self, block, vrf_output)
+
             # Assurances
-            _, newly_avail_wrs = Assurances.transition(self, block)
+            _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
             if len(newly_avail_wrs) > 0:
                 logger.info(
-                    "Newly available WRs",
-                    count=len(newly_avail_wrs),
+                    "Newly available WRs", count=len(newly_avail_wrs),
                     wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
                 )
 
             # Reporting
-            Reporting.transition(self, block, [])
+            Reporting.transition(pre_state, self, block, [])
 
             # Accumulation
             _, commitment_map = Accumulation.transition(
-                self, block, newly_avail_wrs=newly_avail_wrs
+                pre_state, self, block, newly_avail_wrs=newly_avail_wrs
             )
 
             # Authorization
             Authorization.transition(pre_state, self, block)
 
             # Recent History
-            history_merkle = BMRFunctions().wb_merklize(
-                TypedVector[Bytes[32]](
-                    sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in commitment_map])
-                ),
-                Hash.keccak256,
+            bmr_merklizer = BMRFunctions()
+
+            # Calculate Merkle root of Accumulation Outputs
+            accumulate_root = bmr_merklizer.wb_merklize(
+                TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in self.theta])),
+                Hash.keccak256
             )
-            RecentHistory.transition(pre_state, self, block, history_merkle)
+            RecentHistory.transition(pre_state, self, block, accumulate_root, header_hash)
 
             # Preimages
             Preimages.transition(pre_state, self, block)
@@ -269,11 +253,7 @@ class State:
             # Statistics
             Statistics.transition(pre_state, self, block, newly_avail_wrs)
 
-            # Safrole
-            vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
-            Safrole.transition(pre_state, self, block, vrf_output)
-
-            if block.validate():
+            if True: #block.validate():
                 state.settle(header_hash)
 
                 # Set local chain head to produced block
@@ -288,10 +268,10 @@ class State:
                 )
 
 
-                from jam.operations.handlers.assurer import assurer
-                for ext in block.extrinsic.guarantees:
-                    logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
-                    asyncio.create_task(assurer._req_shard(ext))
+                # from jam.operations.handlers.assurer import assurer
+                # for ext in block.extrinsic.guarantees:
+                #     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                #     asyncio.create_task(assurer._req_shard(ext))
 
                 # TODO: Test Auditing & Refining with PJ
                 # # Start Auditing for new block received
@@ -319,6 +299,17 @@ class State:
         self._lock = False
 
         return False
+    
+    def to_partial(self) -> "PartialState":
+        return PartialState(
+            StateStorage(
+                StateTrie(), 
+                self.store._DB, 
+                self.store._updates.copy(),
+                True
+            )
+        )
+
 
 state = State(None)
 

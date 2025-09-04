@@ -1,11 +1,12 @@
 """Work package types for the JAM protocol."""
 
-from typing import Tuple, TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING, Union
 
 from tsrkit_types.integers import Uint
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
+from typing_extensions import TypeVar
 
 from jam.execution.utils import decode_code_hash
 from jam.types.protocol.core import (
@@ -22,14 +23,20 @@ from jam.types.work.manifest import MultiSegments, MultiExtrinsics, MultiJustifi
 if TYPE_CHECKING:
     from jam.types.state.delta import Delta
 
+T = TypeVar("T")
 
 @structure
 class WorkPackageSpec:
-    """Work package specification structure."""
+    """
+    Set Y
+    Work package specification structure.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/13e40213f502?v=0.7.0
+    """
 
     # h
     hash: WorkPackageHash
-    # l
+    # l, bundle length
     length: Uint[32]
     # u
     erasure_root: ErasureRoot
@@ -55,24 +62,28 @@ class Authorizer:
 
     # u
     code_hash: OpaqueHash
-    # p
+    # f, configuration blob
     params: Bytes
 
 
 WorkItems = TypedVector[WorkItem]
 
-
 @structure
 class WorkPackage:
-    """Work package structure."""
+    """
+    Set P
+    Work package structure.
 
-    # j
-    authorization: Bytes
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/1a82001a9000?v=0.7.0
+    """
+
     # h
     auth_code_host: ServiceId
-    # u, p
+    # j
+    authorization: Bytes
+    # u, f
     authorizer: Authorizer
-    # x
+    # c
     context: RefineContext
     # w
     items: WorkItems
@@ -92,6 +103,52 @@ class WorkPackage:
     def hash(self) -> Bytes[32]:
         return Hash.blake2b(self.encode())
 
+    def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
+        current_offset = offset
+
+        items = [
+            self.auth_code_host,
+            self.authorizer.code_hash,
+            self.context,
+            self.authorization,
+            self.authorizer.params,
+            self.items
+        ]
+
+        for item in items:
+            size = item.encode_into(buffer, current_offset)
+            current_offset += size
+
+        return current_offset - offset
+
+    @classmethod
+    def decode_from(
+            cls, buffer: Union[bytes, bytearray, memoryview], offset: int = 0
+    ) -> Tuple["WorkPackage", int]:
+        auth_code_host, size = ServiceId.decode_from(buffer, offset)
+        offset += size
+        code_hash, size = OpaqueHash.decode_from(buffer, offset)
+        offset += size
+        context, size = RefineContext.decode_from(buffer, offset)
+        offset += size
+        authorization, size = Bytes.decode_from(buffer, offset)
+        offset += size
+        params, size = Bytes.decode_from(buffer, offset)
+        offset += size
+        items, size = WorkItems.decode_from(buffer, offset)
+        offset += size
+
+        authorizer = Authorizer(code_hash=code_hash, params=params)
+
+        wp = cls(
+            auth_code_host=auth_code_host,
+            authorization=authorization,
+            authorizer=authorizer,
+            context=context,
+            items=items,
+        )
+
+        return wp, offset
 
 @structure
 class WorkPackageBundle:

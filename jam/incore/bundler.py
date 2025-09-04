@@ -20,7 +20,7 @@ from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap, Erasur
 from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
 from jam.storage.item_extrinsics import ItemExtrinsics
 
-from jam.types.work.item import WorkItem
+from jam.types.work.item import WorkItem, TreeRoot
 from jam.types.work.package import WorkPackage, WorkPackageBundle
 from jam.types.work.report import WorkReport
 from jam.types.work.shard import ShardIndex, SegmentShard
@@ -74,34 +74,48 @@ class Bundler:
             for spec in item.import_segments:
                 h = spec.tree_root
                 n = spec.index
+
+                if isinstance(h, SegmentRoot):
+                    continue
+
                 try:
                     s_root = map_da.get(h)
                     if s_root and len(sr_lookup) < 8:
                         sr_lookup[h] = s_root
                 except KeyError as e:
-                    logger.warn(f"Either h is not package hash or {e}")
+                    logger.warn(
+                        f"Work Package Hash not known.",
+                        err=str(e),
+                    )
 
         self.sr_lookup = sr_lookup
         return sr_lookup
 
-    def lookup_root(self, r: OpaqueHash) -> SegmentRoot:
+    def lookup_root(self, r: TreeRoot) -> SegmentRoot:
         """
-        Segment root lookup function L defined in Eqn 14.12
+        Segment root lookup function L defined in Eqn 14.13
         Collapses a union of segment-roots and work-package hashes into segment-roots using lookup dictionary
 
         Source:
-            https://graypaper.fluffylabs.dev/#/68eaa1f/1b7c011b9c01?v=0.6.4
+            https://graypaper.fluffylabs.dev/#/38c4e62/1c1a001c3700?v=0.7.0
         Args:
-            r: OpaqueHash
+            r: TreeRoot
         Returns:
-            r if r is already a segment root else Segment root from dictionary if r is a work package hash.
+            r, if r is already a segment root, else Segment root from dictionary if r is a work package hash.
         """
-        if self.sr_lookup is not None and r in self.sr_lookup.keys():
-            logger.debug("Lookup Hit", wp_hash=r.hex()[:16] + "...")
-            return self.sr_lookup[r]
-        else:
-            logger.debug("Lookup Miss", root=r.hex()[:16] + "...")
+        if isinstance(r, SegmentRoot):
+            logger.debug("Lookup Skip", sr_root=r.hex()[:16] + "...")
             return r
+        else:
+            if self.sr_lookup is not None and r in self.sr_lookup.keys():
+                logger.debug("Lookup Hit", wp_hash=r.hex()[:16] + "...")
+                return SegmentRoot(self.sr_lookup[r])
+            else:
+                logger.error(
+                    f"Exception occurred fetching root from lookup",
+                    wp_hash=r.hex(),
+                )
+                raise BundlerError(Code.LOOKUP_ERROR)
 
     @staticmethod
     def fetch_extrinsics(w: WorkItem, data: Bytes) -> Extrinsics:

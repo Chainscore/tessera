@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Self
 
 from jam.block.block import Block
 from jam.error import JamError
@@ -40,10 +40,11 @@ class StateStorage:
     _cache_mode = False
     _read_only = True
 
-    def __init__(self, trie: StateTrie, db: RockStore, _cache_updates={}):
+    def __init__(self, trie: StateTrie, db: RockStore, _cache_updates={}, cache_mode = False):
         self._TRIE = trie
         self._DB = db
         self._updates = _cache_updates
+        self._cache_mode = cache_mode
 
     @staticmethod
     def get_storage_key(header: HeaderHash):
@@ -59,6 +60,12 @@ class StateStorage:
         if len(self._updates) != 0:
             raise ValueError("Cache is not empty")
         self._cache_mode = False
+
+    def __add__(self, other: "StateStorage") -> Self:
+        if not isinstance(other, StateStorage):
+            raise TypeError("Can only add StateStorage instances")
+        self._updates.update(other._updates)
+        return self
 
     def _load_updates(self, header: HeaderHash) -> dict:
         # 1. Load all caches from current head to mentioned header

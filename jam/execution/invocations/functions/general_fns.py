@@ -269,50 +269,50 @@ class GeneralFunctions(INVF):
             a = service_data
         elif lookup_key in accounts:
             a = accounts[lookup_key]
-
-        # Must be able to read the 32-byte hash
+        
+        # Must be able to read the 32-byte hash_addr
         if not memory.is_accessible(hash_addr, 32):
             logger.error(
-                "Host call lookup: memory not accessible for hash",
-                hash_addr=hash_addr,
-                required_size=32,
+                "Host call lookup: memory not accessible to read preimage key",
+                hash_addr=hash_addr
             )
             raise PvmError(PANIC)
 
-        v: None | Bytes = None
-        data = memory.read(int(hash_addr), 32)
-        if a is not None:
-            # Directly get data, returns None if not found
-            v = a.lookup.get(OpaqueHash(data))
+        hash_key = OpaqueHash(memory.read(int(hash_addr), 32))
+        if a is not None and a.preimages[hash_key]:
+            # Directly get data
+            v = a.preimages[hash_key]
+            if not v:
+                logger.error("Failed key check")
+                raise PvmError(PANIC)
 
-        f = min(int(registers[10]), len(v) if v else 0)
-        l = min(int(registers[11]), (len(v) if v else 0) - f)
+            f = min(int(registers[10]), len(v))
+            l = min(int(registers[11]), len(v) - f)
 
-        if not memory.is_accessible(output_addr, l):
-            logger.error(
-                "Host call lookup: memory not accessible for output",
-                output_addr=output_addr,
-                required_size=l,
-            )
-            raise PvmError(PANIC)
+            if not memory.is_accessible(output_addr, l, Accessibility.WRITE):
+                logger.error(
+                    "Host call lookup: memory not accessible for output",
+                    output_addr=output_addr,
+                    required_size=l,
+                )
+                raise PvmError(PANIC)
 
-        if v is None:
-            registers[7] = HostStatus.NONE
-            logger.debug(
-                "Host call lookup: value not found",
-                lookup_key=lookup_key,
-                hash_hex=data.hex()[:16] + "...",
-            )
-        else:
             registers[7] = Register(len(v))
-            memory.write(output_addr, memory.read(f, l))
+            memory.write(output_addr, v[f:f+l])
             logger.debug(
                 "Host call lookup: value found",
                 lookup_key=lookup_key,
                 value_length=len(v),
                 returned_length=l,
             )
-        return CONTINUE, gas, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
+        else:
+            registers[7] = HostStatus.NONE
+            logger.debug(
+                "Host call lookup: account or preimage",
+                lookup_key=lookup_key,
+                hash_hex=data.hex()[:16] + "...",
+            )
 
     @staticmethod
     @INVF.register(3, gas_cost=10)
@@ -360,7 +360,7 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
 
         value: None | Bytes = None
-        key = Hash.blake2b(s_star.encode() + memory.read(key_start, key_len))
+        key = memory.read(key_start, key_len)
 
         if a is not None:
             # Directly get data, returns None if not found
@@ -425,12 +425,13 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-        from jam.state.state import state
+    
+        # TODO: Handle out of balance using temp caches
+        # from jam.state.state import state
+        # state.store.save_n_clear_cache()
 
-        state.store.save_n_clear_cache()
-        k = Hash.blake2b(service_index.encode() + memory.read(ko, kz))
+        k = Bytes(memory.read(ko, kz))
         a = service_data.storage
-        # origin_account_storage = copy.deepcopy(a)
 
         curr_value = a.get(k)
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
@@ -445,27 +446,15 @@ class GeneralFunctions(INVF):
                     value_size=vz,
                 )
                 raise PvmError(PANIC)
-
-             #Possible implementations
-             # deepcopy------delete what inserted------handled on the service insertion itself----journaling all the actions done on the state
-
-            # try:
-            #     a[k] = Bytes(memory.read(vo, vz))
-            #     logger.debug(
-            #         "Host call write: storage updated",
-            #         storage_key=k.hex()[:16] + "...",
-            #         value_size=vz,
-            #     )
-            # except PvmError:
-            #     # Handle ONLY storage full
-            #     registers[7] = HostStatus.FULL.value
-            #     logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
-            #     return CONTINUE, gas, registers, memory, service_data
-
+            pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
-            if service_data.service.t>service_data.service.balance:
-                state.store.clear()
+            if service_data.service.t > service_data.service.balance:
+                # state.store.clear()
                 registers[7] = HostStatus.FULL.value
+                if pre_data is None:
+                    del a[k]
+                else:
+                    a[k] = pre_data
                 logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
                 return CONTINUE, gas, registers, memory, context
 
@@ -507,10 +496,13 @@ class GeneralFunctions(INVF):
                 + U64(t.service.min_gas).encode()
                 + U64(t.service.num_o).encode()
                 + U32(t.service.num_i).encode()
-                # TODO: Update + U64(af) + U32(ar) + U32(aa) + U32(ap)
+                + U64(t.service.gratis_offset).encode()
+                + U32(t.service.created_at).encode()
+                + U32(t.service.accumulated_at).encode()
+                + U32(t.service.parent_service).encode()
             )
-            f = min(registers[11], len(m))
-            l = min(registers[12], len(m) - f)
+            f = min(registers[9], len(m))
+            l = min(registers[10], len(m) - f)
 
             if memory.is_accessible(output_offset, l, Accessibility.WRITE):
                 registers[7] = len(m)

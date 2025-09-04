@@ -1,3 +1,4 @@
+# WARN: Do not use, this is about to be removed
 import json
 from typing import List
 
@@ -5,19 +6,20 @@ from rockstore import RockStore
 from jam.types.protocol.validators import ValidatorsData
 from jam.types.state.alpha import Alpha
 from jam.types.state.eta import Eta
-from jam.types.state.nu import AllReadyWRs, Nu
+from jam.types.state.omega import AllReadyWRs, Omega
 from jam.types.state.pi import AllValidatorStats, Pi, AllServiceStats, AllCoreStats
 from jam.types.state.psi import Psi, PsiB, PsiG, PsiO, PsiW
 from jam.types.state.kappa import Kappa
 from jam.types.state.lambda_ import Lambda_
 from jam.types.state.rho import Rho, OptionalWorkReportState
 from jam.types.state.tau import Tau
-from jam.types.state.chi import Chi, ChiG
+from jam.types.state.chi import Chi, ChiZ, ChiA
 from jam.types.state.iota import Iota
+from jam.types.state.theta import Theta
 from jam.types.state.xi import Xi
-from jam.types.state.beta import Beta
+from jam.types.state.beta import Beta, BetaHistory, BeefyBelt
 from jam.types.state.phi import Phi
-from jam.types.state.gamma import Gamma, GammaA, GammaK, GammaZ
+from jam.types.state.gamma import Gamma, GammaA, GammaP, GammaZ
 from jam.types.state.delta import (
     Delta,
     AccountData,
@@ -104,8 +106,9 @@ class GhostState(Sigma):
             construct_state_key(11): Bytes(self.tau.encode()),
             construct_state_key(12): Bytes(self.chi.encode()),
             construct_state_key(13): Bytes(self.pi.encode()),
-            construct_state_key(14): Bytes(self.nu.encode()),
+            construct_state_key(14): Bytes(self.omega.encode()),
             construct_state_key(15): Bytes(self.xi.encode()),
+            construct_state_key(16): Bytes(self.theta.encode()),
             **services,
             **service_storage,
             **service_preimages,
@@ -150,9 +153,11 @@ class GhostState(Sigma):
                 elif int(key[0]) == 13:
                     pi, _ = Pi.decode_from(bytes(value))
                 elif int(key[0]) == 14:
-                    nu, _ = Nu.decode_from(bytes(value))
+                    omega, _ = Omega.decode_from(bytes(value))
                 elif int(key[0]) == 15:
                     xi, _ = Xi.decode_from(bytes(value))
+                elif int(key[0]) == 16:
+                    theta, _ = Theta.decode_from(bytes(value))
 
             # Then find all services (first byte is 255, rest is service id)
             elif int(key[0]) == 255:
@@ -205,6 +210,7 @@ class GhostState(Sigma):
             alpha=alpha,
             phi=phi,
             beta=beta,
+            theta=theta,
             gamma=gamma,
             psi=psi,
             eta=eta,
@@ -215,7 +221,7 @@ class GhostState(Sigma):
             tau=tau,
             chi=chi,
             pi=pi,
-            nu=nu,
+            omega=omega,
             xi=xi,
             delta=delta,
         )
@@ -231,8 +237,9 @@ class GhostState(Sigma):
 
         return GhostState(
             alpha=Alpha.from_json(gen["state"]["auth_pool"]),
-            beta=Beta([]),
-            gamma=Gamma(a=GammaA([]), k=GammaK(peers), s=fallback, z=GammaZ(bytes(144))),
+            beta=Beta(h=BetaHistory([]), b=BeefyBelt([])),
+            theta=Theta([]),
+            gamma=Gamma(a=GammaA([]), p=GammaP(peers), s=fallback, z=GammaZ(bytes(144))),
             delta=Delta.from_json(gen["state"]["accounts"]),
             eta=Eta.from_json(gen["state"]["entropy"]),
             iota=Iota(peers),
@@ -243,9 +250,9 @@ class GhostState(Sigma):
             phi=Phi.from_json(gen["state"]["auth_queue"]),
             chi=Chi(
                 chi_m=ServiceId(0),
-                chi_a=ServiceId(0),
+                chi_a=ChiA([ServiceId(0) for _ in range(CORE_COUNT)]),
                 chi_v=ServiceId(0),
-                chi_g=ChiG({}),
+                chi_z=ChiZ({})
             ),
             psi=Psi(good=PsiG([]), bad=PsiB([]), wonky=PsiW([]), offenders=PsiO([])),
             pi=Pi(
@@ -254,7 +261,7 @@ class GhostState(Sigma):
                 cores=AllCoreStats.empty(),
                 services=AllServiceStats({}),
             ),
-            nu=Nu([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)]),
+            omega=Omega([AllReadyWRs([]) for _ in range(EPOCH_LENGTH)]),
             xi=Xi([WorkDependencies([]) for _ in range(EPOCH_LENGTH)]),
         )
 

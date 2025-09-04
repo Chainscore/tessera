@@ -25,6 +25,7 @@ class JamConfig:
 
     name: str
     chain: ChainSpec
+    preimage_expunge_period: int
     num_validators: int
     num_cores: int
     slot_duration: int
@@ -37,6 +38,8 @@ class JamConfig:
     erasure_coding_original_shards: int  # RECOVERY THRESHOLD
     erasure_coding_recovery_shards: int
     recovery_threshold: int
+    max_block_gas: int
+    max_refine_gas: int 
 
     @classmethod
     def tiny(cls) -> "JamConfig":
@@ -56,6 +59,9 @@ class JamConfig:
             erasure_coding_original_shards=2,
             erasure_coding_recovery_shards=4,
             recovery_threshold=2,
+            preimage_expunge_period=32,
+            max_block_gas=20000000,
+            max_refine_gas=1000000000
         )
 
     @classmethod
@@ -76,6 +82,9 @@ class JamConfig:
             erasure_coding_original_shards=8,
             erasure_coding_recovery_shards=16,
             recovery_threshold=8,
+            preimage_expunge_period=32,
+            max_block_gas=20000000,
+            max_refine_gas=1000000000
         )
 
     @classmethod
@@ -96,6 +105,9 @@ class JamConfig:
             erasure_coding_original_shards=16,
             erasure_coding_recovery_shards=32,
             recovery_threshold=16,
+            preimage_expunge_period=32,
+            max_block_gas=20000000,
+            max_refine_gas=1000000000
         )
 
     @classmethod
@@ -116,6 +128,9 @@ class JamConfig:
             erasure_coding_original_shards=32,
             erasure_coding_recovery_shards=64,
             recovery_threshold=32,
+            preimage_expunge_period=32,
+            max_block_gas=20000000,
+            max_refine_gas=1000000000
         )
 
     @classmethod
@@ -136,6 +151,9 @@ class JamConfig:
             erasure_coding_original_shards=64,
             erasure_coding_recovery_shards=128,
             recovery_threshold=64,
+            preimage_expunge_period=32,
+            max_block_gas=20000000,
+            max_refine_gas=1000000000
         )
 
     @classmethod
@@ -156,6 +174,9 @@ class JamConfig:
             erasure_coding_original_shards=128,
             erasure_coding_recovery_shards=256,
             recovery_threshold=128,
+            preimage_expunge_period=32,
+            max_block_gas=20000000,
+            max_refine_gas=1000000000
         )
 
     @classmethod
@@ -176,6 +197,9 @@ class JamConfig:
             erasure_coding_original_shards=205,
             erasure_coding_recovery_shards=371,
             recovery_threshold=205,
+            preimage_expunge_period=32,
+            max_block_gas=20000000,
+            max_refine_gas=1000000000
         )
 
     @classmethod
@@ -190,12 +214,15 @@ class JamConfig:
             epoch_duration=600,
             ticket_submission_end=500,
             contest_duration=500,
-            tickets_per_validator=2,
+            tickets_per_validator=16,
             max_tickets_per_extrinsic=16,
             rotation_period=10,
             erasure_coding_original_shards=342,
             erasure_coding_recovery_shards=681,
             recovery_threshold=342,
+            preimage_expunge_period=19200,
+            max_block_gas=3500000000,
+            max_refine_gas=5000000000
         )
 
     @classmethod
@@ -218,8 +245,24 @@ class JamConfig:
 
 # Default to tiny chain if not specified
 DEFAULT_CHAIN = "tiny"
-# Load chain spec from environment variable
-CHAIN_SPEC = os.environ.get("JAM_CHAIN_SPEC", DEFAULT_CHAIN)
 
-# Create config from chain spec
-chain_config = JamConfig.from_chain(CHAIN_SPEC)
+# Internal cache for singleton-style lazy initialization
+_chain_config_instance: Optional[JamConfig] = None
+
+def get_chain_config() -> JamConfig:
+    global _chain_config_instance
+    chain = os.environ.get("JAM_CHAIN_SPEC", DEFAULT_CHAIN)
+    if _chain_config_instance is None or _chain_config_instance.name != chain:
+        _chain_config_instance = JamConfig.from_chain(chain)
+    return _chain_config_instance
+
+# ✅ chain_config acts like a JamConfig but loads lazily at runtime
+class _ChainConfigProxy:
+    def __getattr__(self, name):
+        return getattr(get_chain_config(), name)
+
+    def __repr__(self):
+        return repr(get_chain_config())
+
+# ✅ Exported name, compatible with existing imports
+chain_config = _ChainConfigProxy()

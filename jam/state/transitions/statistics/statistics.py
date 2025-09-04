@@ -32,7 +32,7 @@ class Statistics:
             State after transition
         """
 
-        e = state.tau // EPOCH_LENGTH
+        e = pre_state.tau // EPOCH_LENGTH
         e_dash = block.header.slot // EPOCH_LENGTH
 
         is_new_epoch = e_dash > e
@@ -56,12 +56,14 @@ class Statistics:
 
             for preimage in block.extrinsic.preimages:
                 pi_curr[author_index].pre_images_size += len(preimage.blob)
-
-        for guarantee in block.extrinsic.guarantees:
-            signatures = guarantee.signatures
-            for signature in signatures:
-                validator_index = signature.validator_index
-                pi_curr[validator_index].guarantees += 1
+        
+        reporter_set = set([
+            sig.validator_index
+            for guarantee in block.extrinsic.guarantees
+            for sig in guarantee.signatures
+        ])
+        for validator_index in reporter_set:
+            pi_curr[validator_index].guarantees += 1
 
         for assurance in block.extrinsic.assurances:
             validator_index = assurance.validator_index
@@ -93,6 +95,6 @@ class Statistics:
         state.pi = pi
 
         # Publishes updates of the statistics stored in chain state returns blob
-        asyncio.create_task(broker.publish("subscribeStatistics", list(pi.encode())))
+        # asyncio.create_task(broker.publish("subscribeStatistics", list(pi.encode())))
 
         return state

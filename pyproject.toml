@@ -15,8 +15,6 @@ packages = [{ include = "jam" }]
 python = "^3.12"
 sympy = "1.13.1"
 cryptography = "45.0.2"
-pycryptodome = "^3.21.0"
-numpy = "2.2.3"
 structlog = "^25.2.0"
 aioquic = "^1.2.0"
 pytest = "^8.3.5"
@@ -28,12 +26,12 @@ rockstore = "^0.1.2"
 reed-solomon-leopard = "^0.2.1"
 python-dotenv = "^1.1.0"
 asyncio = "^3.4.3"
-#py-ark-vrf = "^0.1.3"
-#dot_ring = {path = "../dot-ring", develop = true}
-#py-ark-vrf = {path = "../py-ark-vrf", develop = true}
-#tsrkit-pvm = {path = "../tsrkit-pvm", develop = true}
-#tsrkit-asm = {path = "../tsrkit-asm", develop = true}
+#TODO: Uncomment deps later
+#py-ark-vrf = {path = "deps/py-ark-vrf", develop = true}
+#tsrkit-pvm = {path = "deps/tsrkit-pvm", develop = true}
+#tsrkit-asm = {path = "deps/tsrkit-asm", develop = true}
 deepdiff = "^8.5.0"
+pycryptodome = "^3.23.0"
 
 [tool.pyrefly]
 project-includes = ["**/*"]
@@ -41,12 +39,15 @@ project-excludes = ["**/*venv/**/*"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
+pytest-asyncio = "^0.26.0"
 pytest-cov = "^6.0.0"
 flake8 = "4.0.1"
 black = "23.12.1"
 isort = "5.13.2"
 pre-commit = "4.0.1"
 sphinx = "8.1.3"
+pyinstaller = { version = "^6.14.2", markers = "python_version < '3.14'" }
+poethepoet = "^0.36.0"
 
 [tool.poetry.scripts]
 jam = "jam:run_jam"
@@ -66,3 +67,16 @@ exclude = ["migrations", ".venv"]
 [tool.black]
 line-length = 100
 target-version = ['py310']
+
+[tool.poe.tasks]
+build = "./scripts/build.sh"
+setup = "./scripts/setup.sh"
+test = "./scripts/test.sh"
+tests = "sh ./scripts/tests.sh"
+validate = "./scripts/validate.sh"
+testnet = "./scripts/testnet.sh"
+testnet-sync = "./scripts/testnet_sync.sh"
+testnet-tmux = "./scripts/testnet-tmux.sh"
+tsr-testnet = "./scripts/tsr_testnet.sh"
+update-deps = "./scripts/update-deps.sh"
+deploy-azure = "./scripts/deploy-to-azure.sh"

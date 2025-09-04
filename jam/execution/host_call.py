@@ -30,7 +30,7 @@ class PsiH:
         context: Any,
     ) -> HostCallReturn:
         status, pc, remaining_gas, registers, memory = PVM.execute(
-            program, pc, gas, registers, memory
+            program, pc, gas, registers, memory, logger
         )
         if (
             status == ExecutionStatus.PANIC
