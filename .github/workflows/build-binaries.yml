@@ -17,15 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - os: linux
-          #   arch: x64
-          #   runner: ubuntu-22.04
+          - os: linux
+            arch: x64
+            runner: ubuntu-22.04
           - os: darwin
             arch: arm64
             runner: macos-14
-          # - os: darwin
-          #   arch: x64
-          #   runner: macos-13
+          - os: darwin
+            arch: x64
+            runner: macos-13
 
     steps:
       - name: 📥 Checkout code
@@ -102,7 +102,7 @@ jobs:
     name: 🚀 Create Public Release
     needs: build
     runs-on: ubuntu-latest
-    # if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/hotfix'
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: 📥 Checkout code
