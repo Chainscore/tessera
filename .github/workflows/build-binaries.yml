@@ -2,10 +2,7 @@ name: 🚀 Binary Build
 
 on:
   push:
-    branches: [ main ]
     tags: [ 'v*' ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -175,3 +172,5 @@ jobs:
           prerelease: false
           make_latest: true
           token: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
