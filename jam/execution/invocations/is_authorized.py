@@ -30,7 +30,7 @@ class PsiI(InvocationProtocol):
                 },
             ),
             100: (GeneralFunctions,
-                  {"core_index": 0, "service_id": 42}
+                  {"core_index": self.core, "service_id": self.work_package.auth_code_host}
                 ),  # log
         }
 

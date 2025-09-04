@@ -325,7 +325,7 @@ class Processor:
                 authorizer_hash=p.a,
                 auth_output=Bytes(o),
                 segment_root_lookup=sr_lookup,
-                results=r_list,
+                digests=r_list,
                 auth_gas_used=Uint(g),
             )
 
