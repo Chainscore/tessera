@@ -1,237 +1,356 @@
-import asyncio
-import json
-import ssl
-from typing import Dict, cast, Tuple
-
-from aioquic.asyncio import serve, connect
-from aioquic.asyncio.server import QuicServer
+from typing import List, Set
+import math
+from _pytest.nodes import Node
+from aioquic.quic.retry import QuicRetryTokenHandler
+from aioquic.quic.connection import NetworkAddress
+from aioquic._buffer import Buffer
+from aioquic.quic.packet import pull_quic_header
+from aioquic.quic.packet import encode_quic_version_negotiation
+from aioquic.quic.packet import QuicPacketType
+from aioquic.quic.configuration import SMALLEST_MAX_DATAGRAM_SIZE
+from aioquic.quic.packet import encode_quic_retry
+from aioquic.quic.connection import QuicConnection
+from aioquic.asyncio.protocol import QuicStreamHandler
+from aioquic.asyncio.protocol import QuicConnectionProtocol
+from aioquic.tls import SessionTicketHandler
+from aioquic.tls import SessionTicketFetcher
 from aioquic.quic.configuration import QuicConfiguration
-from jam.config.logging import get_logger
+import asyncio
+import os
+from functools import partial
+from typing import Callable, Optional, Text, Union, cast
+from jam.logging import get_logger
+from jam.types.protocol.crypto import Ed25519Public
+from jam.utils.constants import VALIDATOR_COUNT
+from .base.certificate import generate_san
+from .connection import NodeConnection
 from jam.types.protocol.validators import ValidatorData
-from .certificate import generate_keys
-from .peer import Peer
-from .quic.client import QuicClientProtocol
-from .quic.server import QuicServerProtocol
-from .sessions import SessionTicketStore
 
-logger = get_logger("network")
 
-genesis_hash = "476243ad"
-protocol_version = "0"
+logger = get_logger("quic")
 
-class Node:
-    """
-    Represents a node in the network.
-    Args:
-        node_id (str): Id of the node
-        node_name (str): Name of the node
-        host (str): Host address
-        port (int): Running port of the node
-        validator_data (ValidatorData): Public keys and metadata of the node
-        peers (list[Peer]): List of all the peers of the node.
-    """
-    __id: str
-    name: str
-    host: str
+# AIOQUIC - Patch to recieve certificates
+_original_initialize = QuicConnection._initialize
+
+def _initialize(self, peer_cid: bytes) -> None:
+    _original_initialize(self, peer_cid)
+    self.tls._request_client_certificate = True
+
+QuicConnection._initialize = _initialize
+
+
+class QuicNode(asyncio.DatagramProtocol):
+    # SAN
+    _id: str
+    # (cached) List of neighbor validator keys
+    neighbors: List[Ed25519Public]
+    # Ed25519 key to Connection ID
+    # : Needed for when we want to send data to a specific validator
+    conns: dict[Ed25519Public, bytes]
+    # Connection ID -> Validator index mapping
+    # : Essential for fast access from datagram_received
+    connection_ids: dict[bytes, NodeConnection]
+    # port
     port: int
-    validator_data: ValidatorData
-    seed: bytes
 
-    peers: list[Peer]
-
-    dns: str
-    server: QuicServer
-
-    is_initialized: bool = False
-    is_builder: bool = False
-    is_validator: bool = True
-
-    # state: State
-
-    peer_conn: Dict[Peer, Tuple[int, QuicClientProtocol]] = {}
-    connections: list[QuicClientProtocol] = []
-
-    def __init__(self, node_id: str, node_name: str, host: str, port: int, validator_data, peers: list[Peer], is_builder: bool, is_validator: bool):
-        self.__id = node_id
-        self.name = node_name
-        self.host = host
-        self.port = port
-        self.validator_data = validator_data
-        self.peers = peers
-        self.is_builder = is_builder
-        self.is_validator = is_validator
-        self.connections = []
-        self.peer_conn = {}
-
-        if is_validator and is_builder:
-            raise ValueError("Node can't be validator and builder at same time!")
-
-        logger.debug("Initializing node", node_id=node_id, node_name=node_name, host=host, port=port, is_builder=is_builder, is_validator=is_validator, peer_count=len(peers))
-
-        self.dns = generate_keys(port)
-        
-        logger.info("Node initialized successfully", node_id=node_id, node_name=node_name, dns=self.dns, endpoint=f"{host}:{port}")
-
-    def configuration(self, is_client: bool = True) -> QuicConfiguration:
+    def __init__(
+        self,
+        *,
+        _id: str,
+        cfg: QuicConfiguration,
+        create_protocol: Callable = NodeConnection,
+        session_ticket_fetcher: Optional[SessionTicketFetcher] = None,
+        session_ticket_handler: Optional[SessionTicketHandler] = None,
+        retry: bool = False,
+        stream_handler: Optional[QuicStreamHandler] = None,
+    ) -> None:
         """
-        Utility function to build quic configuration.
-        Args:
-            is_client (bool): Flag indicating node is a client
-        Returns:
-            config (QuicConfiguration): A QUIC Configuration
+        QuicPeer requires a :class:`~aioquic.quic.configuration.QuicConfiguration`
+        containing TLS certificate and private key as the ``configuration`` argument.
+
+        This also accepts the following arguments:
+
+        * ``create_protocol`` allows customizing the :class:`~asyncio.Protocol` that
+          manages the connection. It should be a callable or class accepting the same
+          arguments as :class:`~aioquic.asyncio.QuicConnectionProtocol` and returning
+          an instance of :class:`~aioquic.asyncio.QuicConnectionProtocol` or a subclass.
+        * ``session_ticket_fetcher`` (Optional) is a callback which is invoked by the TLS
+          engine when a session ticket is presented by the peer. It should return
+          the session ticket with the specified ID or `None` if it is not found.
+        * ``session_ticket_handler`` (Optional) is a callback which is invoked by the TLS
+          engine when a new session ticket is issued. It should store the session
+          ticket for future lookup.
+        * ``retry`` (Optional) specifies whether client addresses should be validated prior to
+          the cryptographic handshake using a retry packet.
+        * ``stream_handler`` (Optional) is a callback which is invoked whenever a stream is
+          created. It must accept two arguments: a :class:`asyncio.StreamReader`
+          and a :class:`asyncio.StreamWriter`.
         """
-        properties = {
-            "is_client": is_client,
-        }
+        self._id = _id
+        self._cfg = cfg
+        self._create_protocol = create_protocol
+        self._loop = asyncio.get_running_loop()
+        self.connection_ids = {}
+        self.conns = {}
+        self.neighbors = []
 
-        configuration = QuicConfiguration(**properties)
-        configuration.load_cert_chain(f"seeds/{self.port}/cert.pem", f"seeds/{self.port}/key.pem")
-        configuration.load_verify_locations(cafile=f"seeds/{self.port}/cert.pem")
-        configuration.verify_mode = ssl.CERT_NONE
+        self._session_ticket_fetcher = session_ticket_fetcher
+        self._session_ticket_handler = session_ticket_handler
+        self._transport: Optional[asyncio.DatagramTransport] = None
 
-        configuration.max_data = 104857600  # 100 MB
-        configuration.max_stream_data = 10485760  # 10 MB per stream
-        configuration.max_datagram_size = 1350
+        self._stream_handler = stream_handler
 
-        if is_client:
-            configuration.server_name = self.dns
-
-        if self.is_builder:
-            configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
+        if retry:
+            self._retry = QuicRetryTokenHandler()
         else:
-            configuration.alpn_protocols = [f"jamnp-s/{protocol_version}/{genesis_hash}", f"jamnp-s/{protocol_version}/{genesis_hash}/builder"]
+            self._retry = None
 
-        logger.debug("QUIC configuration created", node_name=self.name, is_client=is_client, is_builder=self.is_builder, max_data_mb=configuration.max_data / (1024*1024), alpn_protocols=configuration.alpn_protocols)
-
-        return configuration
-    
-    async def run_server(self):
+    def set_neighbors(self) -> None:
         """
-        Function to initialize server connection of the node.
+        Set our neighbors. To be triggered at every epoch change.
         """
-        session_ticket_store = SessionTicketStore(self.port)
+        from jam.state.state import state
+        from jam.settings import settings
+        w = math.floor(math.sqrt(VALIDATOR_COUNT))
+        index = settings.validator_index
+        row = index // w
+        col = index % w
+        neighbors = set([
+            k for i, k in enumerate(state.kappa)
+            if (i // w == row or i % w == col) and i != index
+        ])
+        if index != 7:
+            neighbors.add(state.lambda_[index])
+            neighbors.add(state.gamma.p[index])
+            neighbors.add(state.iota[index])
 
-        logger.info("Starting QUIC server", node_name=self.name, host=self.host, port=self.port, endpoint=f"{self.host}:{self.port}")
+        neighbors = [n for n in neighbors if n.ed25519 != settings.ed25519_public]
+        logger.info("🏠 Neighbors set", neighbors=[n.metadata.port for n in neighbors], count=len(neighbors))
+        # Convert to list and save
+        self.neighbors = list([n.ed25519 for n in neighbors])
 
-        server = await serve(
-            self.host,
-            self.port,
-            configuration=self.configuration(is_client=False),
-            create_protocol=QuicServerProtocol,
-            session_ticket_fetcher=session_ticket_store.pop,
-            session_ticket_handler=session_ticket_store.add,
-        )
-
-        # Save server connection
-        self.server = server
-        
-        logger.info("QUIC server started successfully", node_name=self.name, endpoint=f"{self.host}:{self.port}")
-
-    async def connect_peer(self, peer: Peer):
+    def close(self) -> None:
         """
-        Function to connect the node to a peer.
+        Close any ongoing connections and stop listening.
         """
-        session_ticket_store = SessionTicketStore(self.port)
+        for protocol in self.connection_ids.values():
+            protocol.close()
+        self.conns = {}
+        self.connection_ids = {}
+        self.neighbors = []
+        if self._transport: self._transport.close()
+
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        self._transport = cast(asyncio.DatagramTransport, transport)
+
+    def datagram_received(self, data: Union[bytes, Text], addr: NetworkAddress) -> None:
+        data = cast(bytes, data)
+        buf = Buffer(data=data)
 
         try:
-            # Skip self
-            if peer.host == self.host and peer.port == self.port:
-                return
-            
-            logger.info("Establishing peer connection", node_name=self.name, peer_host=peer.host, peer_port=peer.port, peer_san=peer.san, peer_endpoint=f"{peer.host}:{peer.port}")
-
-            async with connect(
-                    peer.host,
-                    peer.port,
-                    configuration=self.configuration(),
-                    create_protocol=QuicClientProtocol,
-                    session_ticket_handler=session_ticket_store.add,
-            ) as client:
-
-                # Save peer connection
-                self.connections.append(client)
-                client = cast(QuicClientProtocol, client)
-
-                logger.info("Peer connection established", node_name=self.name, peer_endpoint=f"{peer.host}:{peer.port}", connection_count=len(self.connections))
-
-                stream_id = client._quic.get_next_available_stream_id()
-                
-                # Send initial ping
-                ping_message = json.dumps({
-                    "type": "ping",
-                    "from": self.name
-                }).encode()
-                
-                client.stream_and_keep_open(stream_id=stream_id, message=ping_message)
-
-                logger.debug("Initial ping sent to peer", node_name=self.name, peer_endpoint=f"{peer.host}:{peer.port}", stream_id=stream_id, message_size=len(ping_message))
-
-                # last_block = self.state.beta[-1]
-                # final = Final(block_hash=last_block.header_hash, time_slot=U32(0))
-                # await client.stream_and_keep_open(stream_id=stream_id, message=final.encode())
-
-                self.peer_conn[peer] = stream_id, client
-                self.is_initialized = True
-
-                logger.info("Node initialization completed - peer connections active", node_name=self.name, total_connections=len(self.connections), is_initialized=self.is_initialized)
-
-                # Wait indefinitely - the connection will be managed by the context manager
-                await asyncio.Future()
-
-        except asyncio.CancelledError:
-            logger.info(
-                "Peer connection cancelled",
-                node_name=self.name,
-                peer_endpoint=f"{peer.host}:{peer.port}"
+            header = pull_quic_header(
+                buf, host_cid_length=self._cfg.connection_id_length
             )
-        except Exception as e:
-            logger.error(
-                "Failed to establish peer connection",
-                node_name=self.name,
-                peer_endpoint=f"{peer.host}:{peer.port}",
-                error=str(e),
-                error_type=type(e).__name__
+        except ValueError:
+            logger.error("Invalid QUIC packet received from %s", addr)
+            return
+
+        if not self._transport:
+            raise ValueError("Misconfig: Transport is not set")
+
+        # version negotiation
+        if (
+            header.version is not None
+            and header.version not in self._cfg.supported_versions
+                ):
+            self._transport.sendto(
+                encode_quic_version_negotiation(
+                    source_cid=header.destination_cid,
+                    destination_cid=header.source_cid,
+                    supported_versions=self._cfg.supported_versions,
+                ),
+                addr,
             )
+            return
 
-    async def run_client(self):
-        """
-        Function to initialize client connections of the node.
-        """
-        logger.info("Starting client connections", node_name=self.name, peer_count=len(self.peers))
-        
-        tasks = []
-        for peer in self.peers:
-            task = asyncio.create_task(self.connect_peer(peer))
-            tasks.append(task)
-            
-        logger.debug("Created connection tasks for all peers", node_name=self.name, task_count=len(tasks))
-        
-        await asyncio.gather(*tasks)
+        protocol = self.connection_ids.get(header.destination_cid, None)
+        original_destination_connection_id: Optional[bytes] = None
+        retry_source_connection_id: Optional[bytes] = None
 
-    async def initialize(self):
-        """
-        Function to fully initialize a node.
-        """
-        logger.info("Starting node initialization", node_name=self.name, node_type="builder" if self.is_builder else "validator", endpoint=f"{self.host}:{self.port}")
+        # logger.debug("Datagram received", protocol_exists=protocol is not None, addr=addr, packet_type=header.packet_type, cid=header.destination_cid.hex(), data_len=len(data))
 
-        if self.is_builder:
-            logger.info("Initializing builder node", node_name=self.name, endpoint=f"{self.host}:{self.port}")
+        if (
+            protocol is None and
+            len(data) >= SMALLEST_MAX_DATAGRAM_SIZE
+            and header.packet_type == QuicPacketType.INITIAL
+            # TODO: Builder shouldn't accept incoming connections
+            # is_client enabled server shouldn't accept unknown connections
+            # and not self._server_cfg.is_client
+        ):
+            # retry
+            if self._retry is not None:
+                if not header.token:
+                    # create a retry token
+                    source_cid = os.urandom(8)
+                    self._transport.sendto(
+                        encode_quic_retry(
+                            version=header.version,
+                            source_cid=source_cid,
+                            destination_cid=header.source_cid,
+                            original_destination_cid=header.destination_cid,
+                            retry_token=self._retry.create_token(
+                                addr, header.destination_cid, source_cid
+                            ),
+                        ),
+                        addr,
+                    )
+                    return
+                else:
+                    # validate retry token
+                    try:
+                        (
+                            original_destination_connection_id,
+                            retry_source_connection_id,
+                        ) = self._retry.validate_token(addr, header.token)
+                    except ValueError:
+                        return
+            else:
+                original_destination_connection_id = header.destination_cid
 
-        if not self.is_builder:
-            logger.info("Starting validator server", node_name=self.name, endpoint=f"{self.host}:{self.port}")
-            await self.run_server()
+            # Create a server config from the original configuration
+            server_cfg = QuicConfiguration(**self._cfg.__dict__)
+            server_cfg.is_client = False  # Server side
+            connection = QuicConnection(
+                configuration=server_cfg,
+                original_destination_connection_id=original_destination_connection_id,
+                retry_source_connection_id=retry_source_connection_id,
+                session_ticket_fetcher=self._session_ticket_fetcher,
+                session_ticket_handler=self._session_ticket_handler,
+            )
+            protocol = self._create_protocol(_id=self._id, quic=connection, is_initiating=False, port=addr[1])
+            protocol.connection_made(self._transport)
 
-            # Give server time to fully initialize
-            await asyncio.sleep(1)
-            
-            logger.debug(
-                "Server initialization complete, starting client connections",
-                node_name=self.name
+            # register callbacks
+            protocol._connection_id_issued_handler = partial(
+                self._connection_id_issued, protocol=protocol
+            )
+            protocol._connection_id_retired_handler = partial(
+                self._connection_id_retired, protocol=protocol
+            )
+            protocol._connection_terminated_handler = partial(
+                self._connection_terminated, protocol=protocol
             )
 
-        logger.info(
-            "Opening connections to peers",
-            node_name=self.name,
-            peer_count=len(self.peers)
+            self.connection_ids[header.destination_cid] = protocol
+            self.connection_ids[connection.host_cid] = protocol
+
+            connection._logger = logger
+            logger.info(f"⬅️ Created server connection with {addr[1]}", CID=connection.host_cid.hex())
+
+        if protocol is not None:
+            logger.debug("🌸Processing datagram", data_len=len(data), connection_id=protocol._quic.host_cid.hex())
+            protocol.datagram_received(data, addr)
+
+    def _connection_id_issued(self, cid: bytes, protocol: NodeConnection):
+        logger.debug(f"Connection ID issued", cid=cid.hex())
+        self.connection_ids[cid] = protocol
+        if protocol.ed25519_public:
+            self.conns[protocol.ed25519_public] = cid
+        # # Delete the old connection ID. Find by protocol
+        # for old_cid, old_protocol in list(self.connection_ids.items()):
+        #     if old_protocol == protocol and old_cid != cid:
+        #         logger.debug(f"Deleting old connection ID", old_cid=old_cid.hex(), new_cid=cid.hex())
+        #         del self.connection_ids[old_cid]
+
+    def _connection_id_retired(
+        self, cid: bytes, protocol: QuicConnectionProtocol
+    ) -> None:
+        assert self.connection_ids[cid] == protocol
+        del self.connection_ids[cid]
+        logger.debug(f"Connection ID retired", cid=cid.hex())
+
+    @property
+    def active_peers(self) -> Set[NodeConnection]:
+        """
+        Get all active peers - connected nodes (up0) that are neighbors 
+        """
+        return set([
+            self.connection_ids[self.conns[k]]
+            for k in self.neighbors
+            if self.conns.get(k) and self.connection_ids.get(self.conns.get(k)) and self.connection_ids.get(self.conns.get(k)).up0_stream is not None
+        ])
+
+    @property
+    def all_connected(self) -> Set[NodeConnection]:
+        return set([
+            conn
+            for _, conn in self.connection_ids.items()
+            if conn.ed25519_public
+        ])
+
+    def _connection_terminated(self, protocol: NodeConnection):
+        for cid, proto in list(self.connection_ids.items()):
+            if proto == protocol:
+                del self.connection_ids[cid]
+
+        if not protocol.ed25519_public:
+            logger.warning("Connection terminated without public key", cid=protocol._quic.host_cid.hex())
+            return
+        from jam.state.state import state
+        val = state.kappa.find(protocol.ed25519_public)[1]
+        if not val:
+            logger.warning("Connection terminated for a non active validator", cid=protocol._quic.host_cid.hex(), ed25519=protocol.ed25519_public.hex())
+            return
+        asyncio.create_task(self.connect(val))
+
+    async def connect(self, peer: ValidatorData) -> QuicConnectionProtocol|None:
+        # Only if we are the initiator
+        from jam.settings import settings
+
+        addr = (str(peer.metadata.host), int(peer.metadata.port))
+
+        if (
+            (peer.ed25519[31] > 127) ^
+            (settings.ed25519_public[31] > 127) ^
+            (int.from_bytes(peer.ed25519) < int.from_bytes(settings.ed25519_public))
+        ):
+            return None
+
+        quic = QuicConnection(configuration=self._cfg)
+        protocol: NodeConnection = self._create_protocol(
+            generate_san(peer.ed25519),  # register peer's san
+            quic=quic, is_initiating=True, port=peer.metadata.port
         )
-        await self.run_client()
+        protocol.connection_made(self._transport)       # share transport
+        self.connection_ids[quic.host_cid] = protocol   # register protocol
+        self.conns[peer.ed25519] = quic.host_cid        # register connection ID
+        protocol._connection_id_issued_handler = partial(
+            self._connection_id_issued, protocol=protocol
+        )
+        protocol._connection_id_retired_handler = partial(
+            self._connection_id_retired, protocol=protocol
+        )
+        protocol._connection_terminated_handler = partial(
+            self._connection_terminated, protocol=protocol
+        )
+        # --- Connect --- #
+        protocol.connect(addr)                        # start handshake
+        protocol.transmit()                           # send initial flight
+        await protocol.wait_connected()
+        logger.info(f"➡️ Created client connection with {addr[1]}", cid=quic.host_cid.hex())
+
+        # FIX: Only if neighbor
+        protocol.up0_stream = 0
+        protocol.stream_and_keep_open(bytes(1), protocol.up0_stream)
+        asyncio.create_task(self.keep_pinging(protocol))
+
+        # stream_id = protocol._quic.get_next_available_stream_id()
+        # from jam.network.protocols import BlockAnnouncement
+        # BlockAnnouncement.handshake(stream_id, protocol, True)
+
+        return protocol
+
+    async def keep_pinging(self, conn: NodeConnection, period = 10):
+        while True:
+            await conn.ping()
+            await asyncio.sleep(period)

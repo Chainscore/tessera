@@ -12,19 +12,24 @@ from jam.types.protocol.crypto import OpaqueHash, HeaderHash, StateRoot, BeefyRo
 
 
 class WorkExecResult(Choice):
-    """Work execution result choice."""
+    """
+    Set B U E
+    Work execution result choice.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/148e00149800?v=0.7.0
+    """
 
     ok: Bytes
     out_of_gas: NullType
     panic: NullType
     # circle dot
     bad_exports: NullType
+    # circle minus
+    result_oversize: NullType
     # BAD
     bad_code: NullType
     # BIG
     code_oversize: NullType
-    # circle minus
-    result_oversize: NullType
 
 
 ExecResults = TypedVector[WorkExecResult]
@@ -34,53 +39,72 @@ ExecResults = TypedVector[WorkExecResult]
 class RefineLoad:
     """Refine load structure."""
 
+    # u
     gas_used: Uint
+    # i
     imports: Uint
-    exports: Uint
+    # x
     extrinsic_count: Uint
+    # z
     extrinsic_size: Uint
+    # e
+    exports: Uint
 
 
 @structure
 class RefineContext:
-    """Refine context structure."""
+    """
+    Set C
+    Refine context structure.
 
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/13950213db02?v=0.7.0
+    """
+
+    # a
     anchor: HeaderHash
+    # s
     state_root: StateRoot
+    # b
     beefy_root: BeefyRoot
+    # l
     lookup_anchor: HeaderHash
+    # t
     lookup_anchor_slot: TimeSlot
+    # p
     prerequisites: TypedVector[OpaqueHash]
 
     @staticmethod
     def empty() -> "RefineContext":
         return RefineContext(
-            anchor=HeaderHash([0]*32),
-            state_root=StateRoot([0]*32),
-            beefy_root=BeefyRoot([0]*32),
-            lookup_anchor=HeaderHash([0]*32),
+            anchor=HeaderHash([0] * 32),
+            state_root=StateRoot([0] * 32),
+            beefy_root=BeefyRoot([0] * 32),
+            lookup_anchor=HeaderHash([0] * 32),
             lookup_anchor_slot=TimeSlot(0),
             prerequisites=TypedVector[OpaqueHash]([]),
         )
 
-
-
-
 @structure
-class WorkResult:
-    """Work result structure."""
+class WorkDigest:
+    """
+    Set D
+    Work result structure.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/142300147b00?v=0.7.0
+    """
+
     # s
     service_id: ServiceId
-    # h
+    # c
     code_hash: OpaqueHash
     # y
     payload_hash: OpaqueHash
     # g
     accumulate_gas: Gas
-    # d
+    # l
     result: WorkExecResult
-    # x
+    # u, i, x, z, e
     refine_load: RefineLoad
 
 
-WorkResults = TypedVector[WorkResult]  # Vector of Work Results
+WorkDigests = TypedVector[WorkDigest]  # Vector of Work Results

@@ -12,15 +12,23 @@ from jam.types.protocol.validators import ValidatorData
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 
 
-GammaK = TypedArray[ValidatorData, VALIDATOR_COUNT]
+class GammaP(TypedArray[ValidatorData, VALIDATOR_COUNT]):
+    ...
 
-GammaA = TypedVector[TicketBody]
+
+class GammaA(TypedVector[TicketBody]):
+    ...
+
 
 GammaZ = BandersnatchRingRoot
 
-GammaSTickets = TypedArray[TicketBody, EPOCH_LENGTH]
 
-GammaSFallback = TypedArray[BandersnatchPublic, EPOCH_LENGTH]
+class GammaSTickets(TypedArray[TicketBody, EPOCH_LENGTH]):
+    ...
+
+
+class GammaSFallback(TypedArray[BandersnatchPublic, EPOCH_LENGTH]):
+    ...
 
 
 class GammaS(Choice):
@@ -32,9 +40,14 @@ class GammaS(Choice):
 
 @structure
 class Gamma:
-    """Gamma state"""
+    """
+    Component: γ
+    Key: 4
 
-    k: GammaK = field(metadata={"name": "gamma_k"})
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/0ddb000ddb00?v=0.7.0
+    """
+
+    p: GammaP = field(metadata={"name": "gamma_k"})
     z: GammaZ = field(metadata={"name": "gamma_z"})
     s: GammaS = field(metadata={"name": "gamma_s"})
     a: GammaA = field(metadata={"name": "gamma_a"})

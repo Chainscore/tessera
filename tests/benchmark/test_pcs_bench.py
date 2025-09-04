@@ -1,10 +1,10 @@
-import time
-import random
-import pytest
-import numpy as np
-from sympy import symbols
+# import time
+# import random
+# import pytest
+# import numpy as np
 
-from numpy.polynomial.polynomial import Polynomial
+# from numpy.polynomial.polynomial import Polynomial
+
 # from jam.ring_vrf.ring_proof.constants import D, S_PRIME
 # from jam.ring_vrf.ring_proof.polynomial_interpolation import polynomial_interpolation
 # from scipy.interpolate import lagrange
@@ -33,18 +33,18 @@ from numpy.polynomial.polynomial import Polynomial
 #     """Test the performance of scipy's interpolation function."""
 #     sizes = [10, 50]
 #     times = []
-    
+
 #     for size in sizes:
 #         # Generate random points
 #         x_coords = np.array(D)
 #         y_coords = np.array(selector_vector())
-        
+
 #         # Time the interpolation
-#         start_time = time.time()    
+#         start_time = time.time()
 #         interp = lagrange(x_coords, y_coords)
 #         print([val for val in interp.c])
 #         end_time = time.time()
-        
+
 #         # Record the time
 #         elapsed = end_time - start_time
 #         times.append(elapsed)
@@ -61,13 +61,13 @@ from numpy.polynomial.polynomial import Polynomial
 
 #     x_coords = np.array(D)
 #     y_coords = np.array(selector_vector())
-    
+
 #     # Time the interpolation
-#     start_time = time.time()    
+#     start_time = time.time()
 #     interp = lagrange(x_coords, y_coords)
 #     print([val for val in interp.c])
 #     end_time = time.time()
-    
+
 #     # Record the time
 #     elapsed = end_time - start_time
 #     print(f"Time taken: {elapsed:.6f} seconds")
@@ -98,18 +98,18 @@ from numpy.polynomial.polynomial import Polynomial
 #     #         label=r"$3 x^2 - 2 x$", linestyle='-.')
 #     plt.legend()
 #     plt.show()
-    
+
 
 # def test_polynomial_interpolation_correctness():
 #     """Test that the interpolated polynomial passes through all input points."""
 #     # Create test data
 #     x_coords = [3, 7, 13, 21, 42]
 #     y_coords = [2, 10, 5, 8, 15]
-    
+
 #     # Perform interpolation
 #     poly = polynomial_interpolation(x_coords, y_coords)
 #     check_is_valid(poly, x_coords, y_coords)
-    
+
 #     # Verify that the polynomial passes through all points
 #     x = symbols('x')
 #     for i in range(len(x_coords)):
@@ -118,13 +118,13 @@ from numpy.polynomial.polynomial import Polynomial
 # @pytest.mark.parametrize("num_points", [10, 50, 100])
 # def test_polynomial_interpolation_benchmark(num_points, benchmark):
 #     """Benchmark polynomial interpolation with different numbers of points."""
-    
+
 #     def setup():
 #         # Generate random points in the finite field
 #         x_coords = [random.random() * S_PRIME for _ in range(num_points)]
 #         y_coords = [random.random() * S_PRIME for _ in range(num_points)]
 #         return x_coords, y_coords
-    
+
 #     # Run the benchmark
 #     benchmark.pedantic(polynomial_interpolation, setup())
 
@@ -132,26 +132,26 @@ from numpy.polynomial.polynomial import Polynomial
 #     """Manually time polynomial interpolation with different sizes to see detailed scaling."""
 #     sizes = [10, 50]
 #     times = []
-    
+
 #     for size in sizes:
 #         # Generate random points
 #         x_coords = [random.randint(0, 1000000) for _ in range(size)]
 #         y_coords = [random.randint(0, 1000000) for _ in range(size)]
-        
+
 #         # Time the interpolation
 #         start_time = time.time()
 #         poly = polynomial_interpolation(x_coords, y_coords)
 #         print(poly)
 #         end_time = time.time()
-        
+
 #         # Validate the interpolation
 #         # check_is_valid(poly, x_coords, y_coords)
-        
+
 #         # Record the time
 #         elapsed = end_time - start_time
 #         times.append(elapsed)
 #         print(f"Size {size}: {elapsed:.6f} seconds")
-    
+
 #     # Optional: plot the results if matplotlib is available
 #     try:
 #         import matplotlib.pyplot as plt
@@ -168,13 +168,13 @@ from numpy.polynomial.polynomial import Polynomial
 
 # def test_interpolation_with_edge_cases():
 #     """Test polynomial interpolation with edge cases."""
-    
+
 #     # Test with minimum number of points (2)
 #     x_coords = [1, 2]
 #     y_coords = [5, 7]
 #     poly = polynomial_interpolation(x_coords, y_coords)
 #     check_is_valid(poly, x_coords, y_coords)
-    
+
 #     # Test with sequential x values
 #     x_coords = list(range(1, 101))
 #     y_coords = [random.random() * S_PRIME for _ in range(100)]
@@ -182,7 +182,7 @@ from numpy.polynomial.polynomial import Polynomial
 #     poly = polynomial_interpolation(x_coords, y_coords)
 #     end_time = time.time()
 #     print(f"Sequential x values (100 points): {end_time - start_time:.6f} seconds")
-    
+
 #     # Test with x values being powers of a small value (similar to domain roots)
 #     base = 7
 #     x_coords = [pow(base, i, S_PRIME) for i in range(50)]

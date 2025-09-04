@@ -1,25 +1,29 @@
-from typing import cast, TYPE_CHECKING
+import asyncio
+from typing import cast
 
-from jam.config.logging import get_logger
-
-if TYPE_CHECKING:
-    from jam.network.quic.server import QuicServerProtocol
-    from jam.network.node import Node
-
+from tsrkit_types import U8
 from tsrkit_types.struct import structure
-from jam.network.protocols.base import NetworkProtocol, PrefixType
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import Uint, U32
+from tsrkit_types.sequences import TypedVector
+from jam.logging import logger
+from jam.network.connection import NodeConnection
+from jam.block.extrinsics.guarantees import ReportGuarantee
+from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.work import WorkReport
-from jam.types.protocol.core import TimeSlot
-
-# Module-specific logger
-logger = get_logger("network")
-
+from jam.utils.gather import gather_with_exceptions
 
 @structure
 class CE135Data:
-    report: WorkReport
-    slot: TimeSlot
+    len: Uint[32]
+    guaranteed_wr: ReportGuarantee
+
+    @property
+    def is_valid(self):
+        if len(self.guaranteed_wr.encode()) == self.len:
+            return True
+        return False
 
 
 class WorkReportDistribution(NetworkProtocol):
@@ -40,108 +44,99 @@ class WorkReportDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE135
 
-    def transmit(self, node: "Node", data: CE135Data):
-        """Transmit Work Report from Guarantor (client) to Validator (server)"""
+    async def transmit(self, data: CE135Data):
+        """Transmit Work Report from Guarantor to Other Validators"""
+        from jam.network.start import node
+        msg_a = data.guaranteed_wr.encode()
+        len_a = data.len.encode()
 
-        # TODO: Add Validator Index & Signature as per GP
-        message = self._prefix.encode() + data.report.encode() + data.slot.encode()
-        
         logger.info(
-            "Distributing guaranteed work report to validators",
-            node_name=node.name,
-            time_slot=int(data.slot),
-            validator_count=len(node.connections),
-            message_size=len(message),
-            core_index=int(data.report.core_index)
+            f"Transmitting Guaranteed Work-Report to {len(node.all_connected)} Validators"
         )
-        
-        distributed_count = 0
-        # TODO: Use All Validators Connections
-        for client in node.connections:
+
+        tasks = []
+        for client in node.all_connected:
+
             try:
-                client.stream_and_close(message=message)
-                distributed_count += 1
-                
+                logger.debug("Transmitting report", peer=client)
+
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+
+                # set prefix and buffer
+                client.stream_prefix[stream_id] = U8(self._prefix)
+                client.stream_buffer[stream_id] = b""
+
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                task = asyncio.create_task(res)
+                tasks.append(task)
                 logger.debug(
-                    "Work report distributed to validator",
-                    node_name=node.name,
-                    time_slot=int(data.slot),
-                    core_index=int(data.report.core_index)
+                    "Report transmitted to validator",
+                    stream_id=stream_id,
+                    port=client.port,
                 )
+
             except Exception as e:
                 logger.error(
-                    "Failed to distribute work report to validator",
-                    node_name=node.name,
+                    "Failed to distribute report.",
                     error=str(e),
-                    error_type=type(e).__name__
+                    error_type=type(e).__name__,
                 )
-        
-        logger.info(
-            "Work report distribution completed",
-            node_name=node.name,
-            distributed_to=distributed_count,
-            total_validators=len(node.connections),
-            time_slot=int(data.slot),
-            core_index=int(data.report.core_index)
-        )
 
-    def server_intercept(self, buffer: bytes, server: "QuicServerProtocol", stream_id: int):
-        """Intercept & Process Work Report on Validator (server)"""
+        responses = list[bool](await gather_with_exceptions(tasks))
+
+        if responses is not None:
+            return responses
+
+
+    def req_intercept(self, stream_id: int, server: NodeConnection):
+        """Intercept & Process Work Report on Validator"""
+
+        buffer = server.stream_buffer[stream_id][1:]
 
         try:
-            logger.debug(
-                "Received work report distribution",
-                stream_id=stream_id,
-                buffer_size=len(buffer)
-            )
-            
-            data, offset = CE135Data.decode_from(buffer)
+            logger.info("Received Work Report")
+            data = CE135Data.decode(buffer)
             data = cast(CE135Data, data)
 
-            logger.info(
-                "Processing guaranteed work report",
-                stream_id=stream_id,
-                time_slot=int(data.slot),
-                core_index=int(data.report.core_index),
-                authorizer_hash=data.report.authorizer_hash.hex()[:16] + "..."
-            )
-            
-            # TODO: Process received Work Report
-            # Process goes here
+            if not data.is_valid:
+                raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info(
-                "Work report processed successfully",
-                stream_id=stream_id,
-                time_slot=int(data.slot),
-                core_index=int(data.report.core_index)
-            )
+            # Save Mappings
+            from jam.incore.processor import Processor
+            Processor.process_guaranteed_report(data.guaranteed_wr)
 
             # Send Acknowledgement
-            ack = self._prefix.encode() + b""
-            server.stream_and_close(stream_id, ack)
+            ack = b""
+            server.stream_and_close(ack, stream_id)
 
-            logger.debug(
-                "Acknowledgement sent to guarantor",
-                stream_id=stream_id,
-                ack_size=len(ack)
-            )
-            
+            logger.info("Sent acknowledgement back to guarantor")
+
         except Exception as e:
+            # Stop Streaming
+            server.stop_stream(stream_id, 1)
+
             logger.error(
-                "Error processing work report distribution",
+                "Error processing report",
+                guarantor=server,
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
 
-    def client_intercept(self, buffer: bytes, stream_id: int):
+    def res_intercept(self, stream_id: int, client: NodeConnection) -> bool:
         """Intercept Acknowledgement"""
 
-        logger.info(
-            "Work report acknowledgement received from validator",
-            stream_id=stream_id,
-            buffer_size=len(buffer)
-        )
+        buffer = client.stream_buffer[stream_id]
 
+        if buffer == b"":
+            logger.info(
+                f"Guaranteed Report received on Guarantor Node.", stream_id=stream_id
+            )
+            return True
+
+        return False
 

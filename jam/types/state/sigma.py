@@ -1,11 +1,16 @@
 from tsrkit_types.struct import structure
 
-from . import Alpha, Phi, Beta, Eta, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Nu, Xi, Gamma, Delta
+from . import Alpha, Phi, Beta, Eta, Pi, Psi, Kappa, Lambda_, Rho, Tau, Chi, Iota, Omega, Xi, Gamma, Delta
+from .theta import Theta
 
 
 @structure
 class Sigma:
-    """Overall system state combining all components (σ). Defined in Graypaper section 4.2."""
+    """
+    Overall system state combining all components (σ). Defined in Graypaper section 4.2.
+
+    Source: https://graypaper.fluffylabs.dev/#/38c4e62/087601087601?v=0.7.0
+    """
 
     # Core authorizations pool tracking allowed authorizers for each core (α ∈ C⟦H⟧:OH C)
     # Defined in section 8.1
@@ -14,6 +19,10 @@ class Sigma:
     # Recent block history including block hash, state root, accumulation MMR, and work package hashes
     # Defined in section 7.1
     beta: Beta
+
+    # Most Recent Accumulated Outputs Sequence
+    # Defined in section 7.4
+    theta: Theta
 
     # Safrole consensus state containing ticket accumulator (γₐ), next epoch validator keys (γₖ),
     # sealing key sequence (γₛ), and Bandersnatch root (γᵧ)
@@ -67,7 +76,7 @@ class Sigma:
 
     # Accumulation ready work-reports
     # Defined in section 12
-    nu: Nu
+    omega: Omega
 
     # History of accumulated work-reports
     # Defined in section 12

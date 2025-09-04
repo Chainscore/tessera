@@ -17,8 +17,6 @@ from jam.types.protocol import (
     Register,
     ProgramCounter,
     RemainingGas,
-    # Epoch types
-    EpochMark,
     # Validator types
     ValidatorMetadata,
     ValidatorData,
@@ -42,10 +40,6 @@ from jam.types.protocol import (
     # Merkle types
     MMR,
     OptionHash,
-    TicketId,
-    TicketAttempt,
-    TicketBody,
-    TicketsMark
 )
 
 # Work types
@@ -57,7 +51,7 @@ from jam.types.work import (
     Authorizer,
     WorkPackage,
     WorkExecResult,
-    WorkResult,
+    WorkDigest,
     WorkPackageSpec,
     WorkPackageBundle,
     SegmentRootLookup,
@@ -69,29 +63,6 @@ from jam.types.work import (
     MultiSegments,
 )
 
-# Block types
-from jam.types.block import (
-    # Header types
-    Header,
-    OffendersMark,
-    # Block types
-    Block,
-    # Extrinsic types
-    TicketEnvelope,
-    TicketsExtrinsic,
-    Verdict,
-    Culprit,
-    Judgement,
-    DisputesExtrinsic,
-    Fault,
-    DisputesRecords,
-    ValidatorSignature,
-    ReportGuarantee,
-    GuaranteesExtrinsic,
-    PreimagesExtrinsic,
-    AssurancesExtrinsic,
-)
-
 # State types
 from jam.types.state import (
     Alpha,
@@ -99,7 +70,7 @@ from jam.types.state import (
     Beta,
     Gamma,
     GammaA,
-    GammaK,
+    GammaP,
     GammaZ,
     GammaS,
     Delta,
@@ -107,7 +78,7 @@ from jam.types.state import (
     Iota,
     Kappa,
     Lambda_,
-    Nu,
+    Omega,
     AllReadyWRs,
     Xi,
     Pi,
@@ -125,7 +96,7 @@ from jam.types.state import (
     OptionalWorkReportState,
     Tau,
     Chi,
-    ChiG,
+    ChiZ,
     Phi,
     AuthorizationQueue,
     AuthorizerHash,
@@ -157,8 +128,6 @@ __all__ = [
     "Register",
     "ProgramCounter",
     "RemainingGas",
-    # Epoch types
-    "EpochMark",
     # Validator types
     "ValidatorMetadata",
     "ValidatorData",
@@ -182,10 +151,6 @@ __all__ = [
     # Merkle types
     "MMR",
     "OptionHash",
-    # Block types
-    "Header",
-    "OffendersMark", 
-    "Block",
     # Work types
     "RefineContext",
     "ImportSpec",
@@ -194,7 +159,7 @@ __all__ = [
     "Authorizer",
     "WorkPackage",
     "WorkExecResult",
-    "WorkResult",
+    "WorkDigest",
     "WorkPackageSpec",
     "WorkPackageBundle",
     "SegmentRootLookup",
@@ -204,31 +169,13 @@ __all__ = [
     "Segment",
     "Segments",
     "MultiSegments",
-    # Extrinsic types
-    "TicketEnvelope",
-    "TicketBody",
-    "TicketsExtrinsic",
-    "TicketId",
-    "TicketAttempt",
-    "TicketsMark",
-    "Verdict",
-    "Culprit",
-    "Judgement",
-    "DisputesExtrinsic",
-    "Fault",
-    "DisputesRecords",
-    "ValidatorSignature",
-    "ReportGuarantee",
-    "GuaranteesExtrinsic",
-    "PreimagesExtrinsic",
-    "AssurancesExtrinsic",
     # State types
     "Alpha",
     "AuthorizationPool",
     "Beta",
     "Gamma",
     "GammaA",
-    "GammaK",
+    "GammaP",
     "GammaZ",
     "GammaS",
     "Delta",
@@ -236,7 +183,7 @@ __all__ = [
     "Iota",
     "Kappa",
     "Lambda_",
-    "Nu",
+    "Omega",
     "AllReadyWRs",
     "Xi",
     "Pi",
@@ -254,7 +201,7 @@ __all__ = [
     "OptionalWorkReportState",
     "Tau",
     "Chi",
-    "ChiG",
+    "ChiZ",
     "Phi",
     "AuthorizationQueue",
     "AuthorizerHash",
