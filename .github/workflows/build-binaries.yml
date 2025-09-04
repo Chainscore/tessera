@@ -8,6 +8,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build ${{ matrix.os }}-${{ matrix.arch }}
@@ -101,7 +104,7 @@ jobs:
     name: 🚀 Create Public Release
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     
     steps:
       - name: 📥 Checkout code
@@ -130,13 +133,13 @@ jobs:
           du -sh release-assets/*
 
       - name: 🚀 Create Release in Public Repo
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           repository: Chainscore/tessera-releases  # Public releases repo
           tag_name: v${{ steps.version.outputs.version }}
           name: "Tessera Node v${{ steps.version.outputs.version }}"
           body: |
-            ## 🚀 Tessera Node Binary Release v${{ steps.version.outputs.version }}
+            ## 🚀 Tessera Binary Release v${{ steps.version.outputs.version }}
             
             ### 📦 Downloads
             
@@ -148,20 +151,13 @@ jobs:
             
             ### 🚀 Quick Start
             
-            ```bash
-            # Download and extract
-            tar -xzf tessera-node-*.tar.gz
-            
-            # Run
+            # Run node
             ./tessera-node --help
-            ./tessera-node --port 40000
+            ./tessera-node --env <environment>
             ```
-            
-            ### 📋 What's Included
-            
-            - `tessera-node`: Main executable binary
-            - `dev-spec.json`: Development specification  
-            - `envs/`: Environment configurations
+
+            # Run fuzzer target
+            ./tessera-node --fuzzer --socket /tmp/jam_conformance.sock
             
             ### 🔍 Build Info
             
@@ -173,7 +169,7 @@ jobs:
             ---
             
             > **Note**: This is an automated release from the private Tessera repository.
-            > For support or issues, please contact the development team.
+            > For support or issues, please contact prasad@chainscore.finance
           files: release-assets/*
           draft: false
           prerelease: false

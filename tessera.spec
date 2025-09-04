@@ -16,71 +16,25 @@ essential_files = [
     ('envs', 'envs'),
 ]
 
-# Absolutely minimal hidden imports for core functionality
+# Essential hidden imports for core functionality  
 core_imports = [
-    'jam.cli',
-    'asyncio',
-    'dotenv',
+    'jam'
 ]
 
-# Extremely aggressive exclusions to minimize binary size
+# Extremely aggressive exclusions to minimize binary size  
 excluded_modules = [
     # Development and testing
     'pytest', 'test', 'tests', 'testing', '_pytest',
     'coverage', 'pytest_cov', 'pytest_asyncio',
+
+    # Test suites
+    'tessera-test-suites',
     
-    # Code formatting and linting
+    # Code formatting and linting  
     'black', 'flake8', 'isort', 'pre_commit', 'mypy', 'pylint',
     
     # Documentation
-    'sphinx', 'docs', 'documentation', 'docutils',
-    
-    # Build tools (be careful with distutils)
-    'setuptools', 'pip', 'wheel', 'pkg_resources',
-    'poetry', 'pyproject', 'build',
-    
-    # GUI frameworks (not needed for CLI)
-    'tkinter', 'turtle', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6',
-    
-    # Scientific computing (not needed for blockchain)
-    'matplotlib', 'numpy', 'scipy', 'pandas', 'jupyter', 
-    'notebook', 'ipython', 'seaborn', 'plotly',
-    
-    # Web frameworks (we use minimal ones)
-    'django', 'flask', 'fastapi', 'tornado',
-    
-    # Database drivers (we use RocksDB)
-    'sqlite3', 'psycopg2', 'pymongo', 'sqlalchemy',
-    
-    # XML/HTML processing (not needed)
-    'xml', 'html', 'html.parser', 'http.server',
-    'requests', 'beautifulsoup4', 'lxml',
-    
-    # Image processing (not needed)
-    'PIL', 'Pillow', 'imageio', 'opencv',
-    
-    # Compression (only need basic)
-    'bz2', 'lzma', 'zipapp',
-    
-    # Multimedia (not needed)
-    'wave', 'aifc', 'sunau', 'audioop',
-    
-    # Legacy modules
-    'imp', 'pkgutil', 'pydoc', 'tabnanny',
-    
-    # Debugging
-    'pdb', 'bdb', 'cProfile', 'profile', 'trace',
-    
-    # Networking we don't use
-    'ftplib', 'smtplib', 'telnetlib',
-    
-    # Platform-specific modules
-    'winsound', 'msilib', 'msvcrt',
-    
-    # Unused standard library - be careful with dependencies
-    'cgi', 'cgitb', 'mailbox', 'mimetypes', 'quopri', 'uu',
-    'xdrlib', 'shelve', 'dbm', 'nntplib', 'poplib',
-    'imaplib', 'smtpd', 'socketserver', 'xmlrpc',
+    'sphinx', 'docs', 'documentation', 'docutils'
 ]
 
 a = Analysis(
