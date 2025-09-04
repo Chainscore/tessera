@@ -68,24 +68,6 @@ class AccountStorage(Dictionary[Bytes, Bytes, "key", "value"]):
 
     _meta: AccountMetadata
 
-    def __setitem__(self, key, value):
-        if hasattr(self, "_meta"):
-            is_new = key not in self
-            if is_new:
-                self._meta.num_i = Ai(self._meta.num_i + 1)
-                self._meta.num_o = Ao(self._meta.num_o + len(value) + 34 + len(key))
-            else:
-                diff = len(value) - len(self[key])
-                self._meta.num_o = Ao(self._meta.num_o + diff)
-        super().__setitem__(key, value)
-
-    def __delitem__(self, key):
-        exists = key in self
-        if exists:
-            self._meta.num_i = Ai(self._meta.num_i - 1)
-            self._meta.num_o = Ao(self._meta.num_o - len(self[key]) - 34 - len(key))
-        super().__delitem__(key)
-        
     def transform(self, service_id: ServiceId):
         from jam.state.utils import construct_state_key
         res = {}
@@ -111,7 +93,7 @@ Timestamps = TypedBoundedVector[U32, 0, 3]
 
 @structure
 class LookupTable:
-    hash: Bytes[32]
+    hash: ServiceCodeHash
     length: BlobLength
 
     def __hash__(self):
@@ -130,20 +112,6 @@ class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
     """Lookup timestamps"""
 
     _meta: AccountMetadata
-
-    def __setitem__(self, key: LookupTable, value):
-        if hasattr(self, "_meta"):
-            is_new = key not in self
-            if is_new:
-                self._meta.num_i = Ai(self._meta.num_i + 2)
-                self._meta.num_o = Ao(self._meta.num_o + key.length + 81)
-        super().__setitem__(key, value)
-
-    def __delitem__(self, key: LookupTable):
-        if key in self:
-            self._meta.num_i = Ai(self._meta.num_i - 2)
-            self._meta.num_o = Ao(self._meta.num_o - key.length - 81)
-        super().__delitem__(key)
 
     def transform(self, service_id: ServiceId):
         from jam.state.utils import construct_state_key
