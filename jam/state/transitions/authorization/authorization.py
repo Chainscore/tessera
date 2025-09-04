@@ -17,10 +17,10 @@ class Authorization:
         Returns:
             State after transition
         """
-        if len(state.alpha) != CORE_COUNT:
+        if len(pre_state.alpha) != CORE_COUNT:
             raise ValueError("Invalid alpha length, must be equal to CORE_COUNT")
 
-        alpha_temp = state.alpha
+        alpha_temp = pre_state.alpha
         for i in range(CORE_COUNT):
             core_alpha_temp = alpha_temp[i]
             if len(core_alpha_temp) == 0:
