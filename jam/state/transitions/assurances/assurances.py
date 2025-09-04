@@ -37,8 +37,9 @@ class Assurances:
         Returns:
             The new state of the chain.
         """
+        # rho_dagger
         rho = state.rho
-        kappa = state.kappa
+        kappa = pre_state.kappa
 
         # Get the assurances from the extrinsic
         assurances = block.extrinsic.assurances
@@ -85,7 +86,8 @@ class Assurances:
         # Clear them
         super_majority = math.floor(2 * VALIDATOR_COUNT / 3)
         for i in range(len(rho)):
-            if rho[i] == None:
+            rep = rho[i].unwrap()
+            if rep == Null:
                 continue
             else:
                 if core_assurances[i] > super_majority:

@@ -32,7 +32,7 @@ class Statistics:
             State after transition
         """
 
-        e = state.tau // EPOCH_LENGTH
+        e = pre_state.tau // EPOCH_LENGTH
         e_dash = block.header.slot // EPOCH_LENGTH
 
         is_new_epoch = e_dash > e
