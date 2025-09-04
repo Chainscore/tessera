@@ -5,8 +5,6 @@ import os
 from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING
-
-# Only import essential modules at startup
 from dotenv import load_dotenv
 
 if TYPE_CHECKING:
@@ -21,40 +19,16 @@ if TYPE_CHECKING:
     from jam.api.rpc.app import rpc
     from jam.operations.ticket_queue import setup_ticket_queue
 
-# Lazy import functions for heavy modules
-def lazy_import_logging():
-    from jam.logging import setup_logging, logger
-    return setup_logging, logger
-
-def lazy_import_network():
-    from jam.network.start import start_node
-    return start_node
-
-def lazy_import_operations():
-    from jam.operations.operator import operate
-    from jam.operations.ticket_queue import setup_ticket_queue
-    return operate, setup_ticket_queue
-
-def lazy_import_state():
-    from jam.state.state import setup_state
-    from jam.settings import setup_setting
-    return setup_state, setup_setting
-
-def lazy_import_finality():
-    from jam.finality.finality import Finality
-    return Finality
-
-def lazy_import_block():
-    from jam.block import Block
-    return Block
-
-def lazy_import_rpc():
-    from jam.api.rpc.app import rpc
-    return rpc
-
-def lazy_import_chainspec():
-    from jam.utils.chainspec import chain_config
-    return chain_config
+from jam.logging import setup_logging, logger
+from jam.network.start import start_node
+from jam.operations.operator import operate
+from jam.operations.ticket_queue import setup_ticket_queue
+from jam.state.state import setup_state
+from jam.settings import setup_setting
+from jam.finality.finality import Finality
+from jam.block import Block
+from jam.api.rpc.app import rpc
+from jam.utils.chainspec import chain_config
 
 
 async def main(
@@ -78,11 +52,6 @@ async def main(
 
     if not name or not port or not host or not seed:
         raise ValueError(f"Missing node info in {env}")
-
-    # ---------- LAZY IMPORTS ----------
-    setup_logging, logger = lazy_import_logging()
-    setup_state, setup_setting = lazy_import_state()
-    chain_config = lazy_import_chainspec()
 
     # ---------- SETUP LOGGING ----------
     environment = os.environ.get("ENVIRONMENT", "development")
@@ -110,13 +79,6 @@ async def main(
     )
 
     try:
-        # -------------- LAZY IMPORTS FOR HEAVY MODULES -------------
-        Block = lazy_import_block()
-        Finality = lazy_import_finality()
-        operate, setup_ticket_queue = lazy_import_operations()
-        start_node = lazy_import_network()
-        rpc = lazy_import_rpc()
-        
         # -------------- SETUP STATE -------------
         # Set genesis state
         dev_spec = json.load(open("dev-spec.json"))
@@ -135,8 +97,6 @@ async def main(
 
         # RPC/WebSocket server setup
         rpc_port = int(os.environ.get("RPC_PORT", 5000))
-
-        logger.info("📡 Starting RPC/WebSocket server", host=host, port=rpc_port)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
