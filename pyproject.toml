@@ -26,9 +26,10 @@ rockstore = "^0.1.2"
 reed-solomon-leopard = "^0.2.1"
 python-dotenv = "^1.1.0"
 asyncio = "^3.4.3"
-py-ark-vrf = {path = "deps/py-ark-vrf", develop = true}
-tsrkit-pvm = {path = "deps/tsrkit-pvm", develop = true}
-tsrkit-asm = {path = "deps/tsrkit-asm", develop = true}
+#TODO: Uncomment deps later
+#py-ark-vrf = {path = "deps/py-ark-vrf", develop = true}
+#tsrkit-pvm = {path = "deps/tsrkit-pvm", develop = true}
+#tsrkit-asm = {path = "deps/tsrkit-asm", develop = true}
 deepdiff = "^8.5.0"
 pycryptodome = "^3.23.0"
 
