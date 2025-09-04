@@ -48,11 +48,11 @@ class Reporting:
         known_packages.extend(
             [
                 queue_el.report.context.prerequisites
-                for epoch_queue in state.omega
+                for epoch_queue in pre_state.omega
                 for queue_el in epoch_queue
             ]
         )
-        known_packages.extend([wps for deps in state.xi for wps in deps])
+        known_packages.extend([wps for deps in pre_state.xi for wps in deps])
 
         # small w
         all_reports = []
@@ -122,7 +122,7 @@ class Reporting:
             # --------- not-authorized -----------------
             # https://graypaper.fluffylabs.dev/#/38c4e62/157602158602?v=0.7.0
             # Ensure authorizer hash is present in core's Authorizer Pool
-            if report.authorizer_hash not in state.alpha[int(report.core_index)]:
+            if report.authorizer_hash not in pre_state.alpha[int(report.core_index)]:
                 raise ReportingError(
                     ReportingErrorCode.CORE_UNAUTHORIZED,
                     "Work Report's authorizer_hash not exist in AuthorizationPool",
@@ -168,7 +168,7 @@ class Reporting:
         recent_exports_roots = {}
         beta_wp_hashes = []
 
-        for x in state.beta.h:
+        for x in pre_state.beta.h:
             for wp_hash in x.reported:
                 beta_wp_hashes.append(wp_hash)
             recent_exports_roots.update(x.reported)
@@ -181,9 +181,11 @@ class Reporting:
         )
 
         rho_package_hashes = [
-            pending_wr.unwrap().report.package_spec.hash if pending_wr != None else None
-            for pending_wr in state.rho
+            wr.report.package_spec.hash
+            for pending_wr in pre_state.rho
+            if (wr := pending_wr.unwrap()) != Null
         ]
+
         for p in wp_hash_set:
             # Ensure this WP is not previously executed - checking Beta, Omega, Rho, Xi
             # 11.38
