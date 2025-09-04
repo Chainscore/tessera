@@ -43,6 +43,8 @@ class Disputes:
 
         rho_dagger = pre_state.rho
 
+        val_keys = {v.ed25519 for v in pre_state.lambda_} | {v.ed25519 for v in pre_state.kappa}
+
         # 4. Verifying signatures
         # Verifying fault signatures
         for fault in disputes.faults:
@@ -53,7 +55,7 @@ class Disputes:
                 )
             except InvalidSignature:
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
-            if fault.key not in [v.ed25519 for v in (*state.lambda_, *state.kappa)]:
+            if fault.key not in val_keys:
                 raise DisputesError(DisputesErrorCode.BAD_AUDITOR_KEY)
 
         # Verifying culprit signatures
@@ -65,9 +67,7 @@ class Disputes:
                 )
             except InvalidSignature:
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
-            if culprit.key not in [
-                validator.ed25519 for validator in (*state.lambda_, *state.kappa)
-            ]:
+            if culprit.key not in val_keys:
                 raise DisputesError(DisputesErrorCode.BAD_GUARANTOR_KEY)
 
         # Verifying verdicts are sorted by target
@@ -77,10 +77,10 @@ class Disputes:
             for vote in verdict.votes:
                 # Get the public key from the validator key-set
                 if verdict.age == valid_ages[0]:
-                    validator = state.kappa[vote.index]
+                    validator = pre_state.kappa[vote.index]
                     public_key = validator.ed25519
                 else:
-                    validator = state.lambda_[vote.index]
+                    validator = pre_state.lambda_[vote.index]
                     public_key = validator.ed25519
 
                 # Get the vote value and message
@@ -101,9 +101,9 @@ class Disputes:
         # Check if verdicts are already judged and validate age
         for verdict in disputes.verdicts:
             if (
-                verdict.target in state.psi.good
-                or verdict.target in state.psi.bad
-                or verdict.target in state.psi.wonky
+                verdict.target in pre_state.psi.good
+                or verdict.target in pre_state.psi.bad
+                or verdict.target in pre_state.psi.wonky
             ):
                 raise DisputesError(DisputesErrorCode.ALREADY_JUDGED)
 
@@ -126,7 +126,7 @@ class Disputes:
         # Process culprits and check for offenders already reported
         culprit_counts = {}  # Track culprits per target
         for culprit in disputes.culprits:
-            if culprit.key in state.psi.offenders:
+            if culprit.key in pre_state.psi.offenders:
                 raise DisputesError(DisputesErrorCode.OFFENDER_ALREADY_REPORTED)
             if culprit.key not in offenders_set:
                 offenders_set.add(culprit.key)
@@ -135,7 +135,7 @@ class Disputes:
         # Process faults and check for offenders already reported
         fault_counts = {}  # Track faults per target
         for fault in disputes.faults:
-            if fault.key in state.psi.offenders:
+            if fault.key in pre_state.psi.offenders:
                 raise DisputesError(DisputesErrorCode.OFFENDER_ALREADY_REPORTED)
             if fault.key not in offenders_set:
                 offenders_set.add(fault.key)
@@ -161,7 +161,7 @@ class Disputes:
                 for fault in disputes.faults:
                     if fault.target == verdict.target and fault.vote:
                         raise DisputesError(DisputesErrorCode.FAULT_VERDICT_WRONG)
-                if verdict.target not in state.psi.good:
+                if verdict.target not in pre_state.psi.good:
                     good_set.add(verdict.target)
 
             # Solely invalid verdict (all negative votes)
@@ -173,18 +173,18 @@ class Disputes:
                 for fault in disputes.faults:
                     if fault.target == verdict.target and not fault.vote:
                         raise DisputesError(DisputesErrorCode.FAULT_VERDICT_WRONG)
-                if verdict.target not in state.psi.bad:
+                if verdict.target not in pre_state.psi.bad:
                     bad_set.add(verdict.target)
 
             # Wonky verdict (mixed votes meeting wonky threshold)
             elif positive_votes == VALIDATORS_WONKY:  # Condition for wonky verdict EXACTLY
-                if verdict.target not in state.psi.wonky:
+                if verdict.target not in pre_state.psi.wonky:
                     wonky_set.add(verdict.target)
             else:
                 raise DisputesError(DisputesErrorCode.BAD_VOTE_SPLIT)
 
-        for i in range(len(state.rho)):
-            rep = state.rho[i].unwrap()
+        for i in range(len(pre_state.rho)):
+            rep = pre_state.rho[i].unwrap()
             if rep != Null:
                 try:
                     target = rep.report.hash()
