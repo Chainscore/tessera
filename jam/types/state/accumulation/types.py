@@ -33,11 +33,11 @@ class OperandTuples(TypedVector[OperandTuple]):
 
 @structure
 class DeferredTransfer:
-    sender: ServiceId
-    receiver: ServiceId
-    amount: Balance
-    memo: Bytes
-    gas: Gas
+    sender: ServiceId # s
+    receiver: ServiceId # d
+    amount: Balance # a
+    memo: Bytes # m
+    gas: Gas # g
 
 
 class DeferredTransfers(TypedVector[DeferredTransfer]):
