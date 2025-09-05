@@ -1,10 +1,11 @@
 from copy import deepcopy
-from typing import Tuple, Set
+from typing import Tuple, Set, List
 from jam.execution.invocations.accumulate import PsiA
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
 from tsrkit_types.null import Null
 from jam.block import Block
+from jam.execution.invocations.on_transfer import PsiT
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     AccumulationOutput,
@@ -287,7 +288,7 @@ class Accumulation:
         Accumulation.preimage_integration(
             partial_state.service_accounts, collected_preimages, timeslot
         )
-
+        check(partial_state.service_accounts, "INSIDE PARALLEL")
         return transfers, outputs, gas_consumed
 
     @staticmethod
@@ -488,13 +489,17 @@ class Accumulation:
         # ----------------------
 
         # accumulation_gas for Chi_z_services (that automatically accumulates), Eqn 12.22
+        check(state.delta, "PRIOR CHECK")
+
         service_gas=0
         for i in state.chi.chi_z:
             service_gas+=state.chi.chi_z[i]
 
         gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT) + service_gas))
 
+        check(state.chi.chi_z, "CHI CHECK")
         [num_accumulated, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, state.chi.chi_z, block.header.slot)
+        check(state.delta, "AFTER ACCUMULATION CHECK")
 
         accumulation_stats = {}
         for ga in gas_accumulations:
@@ -528,18 +533,38 @@ class Accumulation:
         # Section 12.3 Deferred Transfers & State Integration (Step 4)
         # ----------------------
 
+        # fetch updated services
+        services: List[ServiceId] = []
+        for key in state.store._updates:
+            exceptions = {0, 1,3,5,7}
+            service_id = ServiceId.decode(bytes([key[1], key[3], key[5], key[7]]))
+            if key[0] == 255 and service_id in state.delta:
+                for i in range(31):
+                    if i not in exceptions and key[i] != 0:
+                        break
+                else:
+                    print("INCLUDED ID", service_id)
+                    services.append(service_id)
+        print("UPDATED SERVICES", services)
+        print("DEFERRED TRANSFERS", deferred_transfers)
+
         pi = state.pi
-        for s in state.delta:
+        # print("ENCODED", state.pi.encode().hex())
+        for s in services:
             specific_transfers = Accumulation.selection_fn(deferred_transfers, s)
             # delta_double_dagger
-            a, u = PsiT(d=state.delta, t=block.header.slot, s=s, bold_t=specific_transfers).execute()
-            state.delta[s] = a
+            print("TRANSFERS", specific_transfers)
+            a, u = PsiT(d=state.delta, block_timeslot=block.header.slot, s=s, transfers=specific_transfers).execute()
 
             # Update Statistics
-            if s not in pi.services:
-                pi.services[s] = ServiceStat.empty()
-            pi.services[s].on_transfers_count = Uint(len(specific_transfers))
-            pi.services[s].on_transfers_gas_used = Uint(u)
+            if len(specific_transfers):
+                pi_service = pi.services
+                if s not in pi.services:
+                    pi.services[s] = ServiceStat.empty()
+                pi.services[s].on_transfers_count = Uint(len(specific_transfers))
+                pi.services[s].on_transfers_gas_used = Uint(u)
+
+                pi.services = pi_service
 
         state.pi = pi
 
@@ -570,3 +595,9 @@ class Accumulation:
         state.omega = omega
 
         return state, commitment_map
+
+def check(delta, flag: str):
+    service_1 = ServiceId(1809557284)
+    service_2 = ServiceId(1809557285)
+
+    print("FLAG CHECK",flag, service_1 in delta, service_2 in delta)
