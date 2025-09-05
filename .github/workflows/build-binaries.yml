@@ -149,12 +149,17 @@ jobs:
             ### 🚀 Quick Start
             
             # Run node
+            ```bash
             ./tessera-node --help
+            ```
+            ```bash
             ./tessera-node --env <environment>
             ```
 
             # Run fuzzer target
+            ```bash
             ./tessera-node --fuzzer --socket /tmp/jam_conformance.sock
+            ```
             
             ### 🔍 Build Info
             
