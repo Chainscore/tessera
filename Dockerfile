@@ -23,11 +23,20 @@ WORKDIR /app
 # Copy the entire application
 COPY . .
 
+# Initialize git submodules (assuming private token is available via build args)
+ARG GITHUB_TOKEN
+RUN if [ -n "$GITHUB_TOKEN" ]; then \
+        git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/" && \
+        git submodule update --init deps/py-ark-vrf deps/tsrkit-pvm deps/tsrkit-asm; \
+    else \
+        echo "Warning: GITHUB_TOKEN not provided, skipping submodule init"; \
+    fi
+
 # Configure Poetry to NOT use virtualenvs
 RUN poetry config virtualenvs.create false
 
 # Install all dependencies and the project itself
-RUN poetry install --no-interaction --no-ansi $(poetry --version | grep -q "Poetry (version 1.[0-1]" && echo "--no-dev" || echo "--without dev")
+RUN poetry install --only=main --no-interaction --no-ansi
 
 # Run the application
 # Copy entrypoint script

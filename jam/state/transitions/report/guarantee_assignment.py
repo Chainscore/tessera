@@ -2,7 +2,11 @@ from typing import Dict, List
 
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.integers import U32
-from jam.types.protocol.core import CoreIndex
+
+from jam.types import OpaqueHash, ValidatorIndex, Sigma
+from jam.types.audit.tranche import ValidatorList
+from jam.types.protocol.core import CoreIndex, TimeSlot
+
 from jam.utils.constants import (
     VALIDATOR_COUNT,
     CORE_COUNT,
@@ -100,3 +104,63 @@ def guarantor_assignment(
     mapping = {keys[i]: values[i] for i in range(len(keys))}
 
     return mapping
+
+def rotation_fn(c: TypedVector[U32], rotation_phase: int):
+    rotated_cores = TypedVector[CoreIndex]([])
+
+    for x in c:
+        rotated_cores.append(CoreIndex((x + rotation_phase) % CORE_COUNT))
+
+    return rotated_cores
+
+def permute_fn(e: OpaqueHash, t: TimeSlot):
+    assignment = TypedVector[U32]([])
+
+    for i in range(VALIDATOR_COUNT):
+        assignment.append(U32((CORE_COUNT * i) // VALIDATOR_COUNT))
+
+    shuffled_assignment = shuffle(e, assignment)
+
+    rotation_phase = (t % EPOCH_LENGTH) // ROTATION_PERIOD
+
+    assigned_cores = rotation_fn(shuffled_assignment, rotation_phase)
+
+    return assigned_cores
+
+
+def assign_fn(state: Sigma):
+    assigned_cores = permute_fn(state.eta[2], state.tau)
+    vals = state.kappa
+
+    curr_mapping: Dict[CoreIndex, ValidatorList] = {}
+
+    for i, (core, val) in enumerate(zip(assigned_cores, vals)):
+        if core not in curr_mapping:
+            curr_mapping[core] = ValidatorList([])
+
+        curr_mapping[core].append(ValidatorIndex(i))
+
+    if state.tau < ROTATION_PERIOD:
+        return curr_mapping, curr_mapping
+
+    prev_rot_slot = state.tau - ROTATION_PERIOD
+    prev_rot_epoch = prev_rot_slot // EPOCH_LENGTH
+
+    curr_rot_epoch = state.tau // EPOCH_LENGTH
+
+    if prev_rot_epoch == curr_rot_epoch:
+        assigned_cores = permute_fn(state.eta[2], prev_rot_slot)
+        vals = state.kappa
+    else:
+        assigned_cores = permute_fn(state.eta[3], prev_rot_slot)
+        vals = state.lambda_
+
+    prev_mapping: Dict[CoreIndex, ValidatorList] = {}
+
+    for i, (core, val) in enumerate(zip(assigned_cores, vals)):
+        if core not in prev_mapping:
+            prev_mapping[core] = ValidatorList([])
+
+        prev_mapping[core].append(ValidatorIndex(i))
+
+    return curr_mapping, prev_mapping

@@ -214,6 +214,10 @@ class State:
             # Disputes
             Disputes.transition(pre_state, self, block)
 
+            # Safrole
+            vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
+            Safrole.transition(pre_state, self, block, vrf_output)
+
             # Assurances
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
             if len(newly_avail_wrs) > 0:
@@ -238,7 +242,7 @@ class State:
 
             # Calculate Merkle root of Accumulation Outputs
             accumulate_root = bmr_merklizer.wb_merklize(
-                TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in state.theta])),
+                TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in self.theta])),
                 Hash.keccak256
             )
             RecentHistory.transition(pre_state, self, block, accumulate_root, header_hash)
@@ -248,10 +252,6 @@ class State:
 
             # Statistics
             Statistics.transition(pre_state, self, block, newly_avail_wrs)
-
-            # Safrole
-            vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
-            Safrole.transition(pre_state, self, block, vrf_output)
 
             if block.validate():
                 state.settle(header_hash)

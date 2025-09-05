@@ -40,21 +40,22 @@ class RecentHistory:
             State after transition
         """
 
-        beta = state.beta
-        if len(beta.h):
-            beta.h[-1].state_root = block.header.parent_state_root
+        beta_dagger = state.beta
+        # This is done again for passing test vectors
+        if len(beta_dagger.h):
+            beta_dagger.h[-1].state_root = block.header.parent_state_root
 
         # Length Check
-        if len(beta.h) > RECENT_HISTORY_SIZE:
-            raise ValueError(f"Invalid beta length, must be equal to {RECENT_HISTORY_SIZE}, got {len(beta.h)}")
+        if len(beta_dagger.h) > RECENT_HISTORY_SIZE:
+            raise ValueError(f"Invalid beta length, must be equal to {RECENT_HISTORY_SIZE}, got {len(beta_dagger.h)}")
 
         mmr_merklizer = MMRFunctions()
 
         # Append Accumulate root in MMR (β′b)
-        beta.b = mmr_merklizer.append_fn(beta.b, acc_root, Hash.keccak256)
+        beta_dagger.b = mmr_merklizer.append_fn(beta_dagger.b, acc_root, Hash.keccak256)
 
         # Calculate beefy root
-        beefy_root = mmr_merklizer.super_peak(beta.b)
+        beefy_root = mmr_merklizer.super_peak(beta_dagger.b)
 
         # Build and append block history in beta
         n = BlockHistory(
@@ -64,12 +65,12 @@ class RecentHistory:
             reported=package(block.extrinsic.guarantees)
         )
 
-        beta.h.append(n)
+        beta_dagger.h.append(n)
 
         # β′h
-        beta.h = BetaHistory(beta.h[-8:])
+        beta_dagger.h = BetaHistory(beta_dagger.h[-8:])
 
-        state.beta = beta
+        state.beta = beta_dagger
 
         # Return State
         return state
