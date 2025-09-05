@@ -17,7 +17,7 @@ class PsiT(InvocationProtocol):
         self.timeslot = block_timeslot
         self.service_id = s
         self.transfers: DeferredTransfers = transfers
-        
+
     def table(self):
         from jam.state.state import state
 
@@ -43,7 +43,7 @@ class PsiT(InvocationProtocol):
                     "service_index": self.service_id,
                     "accounts": state.delta,
                 },
-            ), 
+            ),
             # read
             3: (
                 GeneralFunctions,
@@ -67,7 +67,7 @@ class PsiT(InvocationProtocol):
         service = self.delta[self.service_id]
         _, pc = decode_code_hash(
             service.historical_lookup(
-                self.timeslot, 
+                self.timeslot,
                 service.service.code_hash
             )
         )
