@@ -215,12 +215,13 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
 
-        x_i = check(
+        accounts[context.x.i_index] = new_service
+        accounts[context.x.s_index].service.balance -= a_t
+        print("Created new service account", context.x.i_index, "with code hash", new_service.service.code_hash.hex())
+        context.x.i_index = check(
             u=context.x.partial_state,
             i=ServiceId(2**8 + (context.x.i_index - 2**8 + 42) % (2**32 - 2**9)),
         )
-        accounts[x_i] = new_service
-        accounts[context.x.s_index].service.balance -= a_t
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -248,7 +249,10 @@ class AccumulateFunctions(INVF):
         if not memory.is_accessible(o, TRANSFER_MEMO_SIZE):
             raise PvmError(PANIC)
         
+        print("Transfer", context.x.s_index, "->", d, "amount:", a, "gas:", l)
+        
         if ServiceId(d) not in delta:
+            print("Transfer failed: receiver service does not exist", d)
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         

@@ -36,7 +36,7 @@ class InvocationProtocol(Protocol):
     def dispatch(
         self, host_call: int, gas: int, registers: list, memory: Memory, x: Context
     ) -> DispatchReturn:
-        # print(f"Dispatching >> {host_call}")
+        print(f"Dispatching >> {host_call}")
         if host_call not in self.table():
             registers[7] = HostStatus.WHAT.value
             return ExecutionStatus.CONTINUE, gas - 10, registers, memory, x
