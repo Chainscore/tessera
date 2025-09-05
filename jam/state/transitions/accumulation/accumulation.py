@@ -370,7 +370,7 @@ class Accumulation:
                 service.lookup[key_hash] = blobs
 
     @staticmethod
-    def selection_fn(deferred_transfers: DeferredTransfers, delta: Delta) -> DeferredTransfers:
+    def selection_fn(deferred_transfers: DeferredTransfers, service_id: ServiceId) -> DeferredTransfers:
         """
         Selection function X defined in Eq 12.29
         Maps a sequence of deferred transfers & a desired destination service index
@@ -378,16 +378,16 @@ class Accumulation:
 
         Args:
             deferred_transfers (DeferredTransfers): Sequence of deferred transfers.
-            delta (ServiceId): Index of Particular Service
+            service_id (ServiceId): Index of Particular Service
 
         Returns:
             DeferredTransfers: A list of ordered, deferred transfers.
         """
 
         service_transfers = DeferredTransfers([])
-        for i in deferred_transfers:
-            if i.receiver in delta:
-                service_transfers.append(i)
+        for t in deferred_transfers:
+            if t.receiver == service_id:
+                service_transfers.append(t)
         return service_transfers
 
     @classmethod
@@ -523,35 +523,24 @@ class Accumulation:
         state.theta = theta
         
 
-        # TODO: Remove or implement
-        # This is likely to be merged with Accumulation, also it doesn't have any test vectors - so skipping it for now
         # ----------------------
         # Section 12.3 Deferred Transfers & State Integration (Step 4)
         # ----------------------
 
-        # Update Delta Double Dagger
-        # specific_transfers = Accumulation.selection_fn(deferred_transfers, state.delta)
-
-        # TODO: Calculate delta dagger, using a'
-        # link: https://graypaper.fluffylabs.dev/#/7e6ff6a/184e03184e03?v=0.6.7
-        # change_log: https://github.com/gavofyork/graypaper/pull/400/files#diff-abd897abe27e05cd5f28779d326efc03bf180542b29bc1a02d039a53a2996444
-
-        # for s in new_state.delta:
-            # specific_transfers = Accumulation.selection_fn(deferred_transfers,s)
+        pi = state.pi
+        for s in state.delta:
+            specific_transfers = Accumulation.selection_fn(deferred_transfers, s)
             # delta_double_dagger
-            # new_state.delta[s] = Accumulation.psi_t(new_state.delta, block.header.slot, s, specific_transfers)
-            # TODO uncomment
-            # new_state.delta[s] = PsiT(d=new_state.delta, t=block.header.slot, s=s, bold_t=specific_transfers).process()
-        #
-        # for service_id in specific_transfers.keys():
-        #     if service_id not in pi_service:
-        #         pi_service[service_id] = ServiceStat.empty()
-        #     pi_service[service_id].on_transfers_count = specific_transfers[
-        #         service_id
-        #     ][0]
-        #     pi_service[service_id].on_transfers_gas_used = specific_transfers[
-        #         service_id
-        #     ][1]
+            a, u = PsiT(d=state.delta, t=block.header.slot, s=s, bold_t=specific_transfers).execute()
+            state.delta[s] = a
+
+            # Update Statistics
+            if s not in pi.services:
+                pi.services[s] = ServiceStat.empty()
+            pi.services[s].on_transfers_count = Uint(len(specific_transfers))
+            pi.services[s].on_transfers_gas_used = Uint(u)
+
+        state.pi = pi
 
         # Update Accumulated History, Xi
         xi = state.xi
@@ -578,10 +567,5 @@ class Accumulation:
                 )
         state.xi = xi
         state.omega = omega
-
-        # TODO: Remove this redundancy
-        # We are aleady doing this in Safrol STF, but this is expected to be updated
-        # in Accumulate test vectors so I had added this
-        # state.tau = block.header.slot
 
         return state, commitment_map
