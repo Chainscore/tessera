@@ -228,7 +228,7 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-        registers[7] = Register(len(v))
+        registers[7] = len(v)
         memory.write(memory_start, v[f : f + l])
 
         logger.debug(
@@ -307,12 +307,12 @@ class GeneralFunctions(INVF):
             )
             return CONTINUE, gas, registers, memory, context
         else:
-            registers[7] = HostStatus.NONE
+            registers[7] = HostStatus.NONE.value
             logger.debug(
                 "Host call lookup: account or preimage",
                 lookup_key=lookup_key,
-                hash_hex=data.hex()[:16] + "...",
             )
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(3, gas_cost=10)

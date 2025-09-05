@@ -15,7 +15,6 @@ from jam.types.state.iota import Iota
 GasConsumed = List[Tuple[ServiceId, Gas]]
 BeefyMap = Set[Tuple[ServiceId, OpaqueHash]]
 
-
 @structure
 class OperandTuple:
     p: WorkPackageHash

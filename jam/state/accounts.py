@@ -40,7 +40,6 @@ def make_account_prop(field):
             return
         meta = AccountMetadata.decode(data)
 
-
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()
 
@@ -103,7 +102,7 @@ class Account:
             value.encode(),
         )
         self.store.put(storage_key, encoded_val)
-
+        
     @property
     def storage(self):
         return StorageView(self.id, self.store)
@@ -173,16 +172,19 @@ class DeltaView:
     def __setitem__(self, key: ServiceId, value: AccountData):
         account = Account(id=key, store=self.store)
         account.service = value.service
-        for k, v in value.preimages:
+        for k, v in value.preimages.items():
             account.preimages[k] = v
-        for k, v in value.storage:
+        for k, v in value.storage.items():
             account.storage[k] = v
-        for k, v in value.lookup:
+        for k, v in value.lookup.items():
             account.lookup[k] = v
 
     def __contains__(self, key: ServiceId):
         return self.store.get(bytes(construct_state_key((255, key)))) is not None
-
+    
+    def __delitem__(self, key: ServiceId):
+        account_s_key = bytes(construct_state_key((255, key)))
+        self.store.delete(account_s_key)
 
 class StorageView:
     def __init__(self, id: ServiceId, store: StateStorage):

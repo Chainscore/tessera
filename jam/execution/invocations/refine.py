@@ -26,7 +26,7 @@ class PsiR(InvocationProtocol):
         item_index: int,
         p: WorkPackage,
         auth_trace: bytes,
-        i_segments: [[bytes]],
+        i_segments: list[list[bytes]],
         e_offset: int,
     ):
         self.item_index = Uint[16](item_index)
