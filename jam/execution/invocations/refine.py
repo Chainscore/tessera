@@ -96,7 +96,6 @@ class PsiR(InvocationProtocol):
             + self.wi.payload.encode()
             + bytes(Hash.blake2b(self.work_package.encode()))
         )
-        print("Executing PsiR with args:", args.hex())
         start = time.time()
         u, r, context = PsiM.execute(
             pc,
@@ -106,9 +105,7 @@ class PsiR(InvocationProtocol):
             self.dispatch,
             RefineContext(m=RefinementMap({}), e=Segments([])),
         )
-        print(
-            f"PsiR execution completed in {time.time() - start:.2f} seconds, gas used: {u}, result: {r.hex() if isinstance(r, bytes) else r}"
-        )
+
         if r == PANIC:
             return WorkExecResult(Null, key="panic"), Segments([]), Gas(u)
 

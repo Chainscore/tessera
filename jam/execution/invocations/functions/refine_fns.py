@@ -114,7 +114,6 @@ class RefineFunctions(INVF):
                 value=ByteArray(memory.read(address=p, length=z)), n=SEGMENT_SIZE
             )
         else:
-            print("Memory is not accessible for export. (address, size) = ", p, z)
             raise PvmError(PANIC)
         if export_segment_offset + len(context.e) >= MAX_EXPORT_ITEM:
             registers[7] = HostStatus.FULL.value
