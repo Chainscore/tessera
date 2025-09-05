@@ -71,7 +71,9 @@ class PsiT(InvocationProtocol):
                 service.service.code_hash
             )
         )
-        
+
+        service.service.balance = service.service.balance + Gas(sum(int(t.amount) for t in self.transfers))
+
         if len(self.transfers) == 0 or pc is None or 0 == len(pc) > W_C:
             return service, Gas(0)
 
@@ -80,8 +82,6 @@ class PsiT(InvocationProtocol):
             + Uint(self.service_id).encode()
             + Uint(len(self.transfers)).encode()
         )
-        print("Executing PsiT with args:", args.hex())
-        service.service.balance = service.service.balance + Gas(sum(int(t.amount) for t in self.transfers))
         u, _, _ = PsiM.execute(
             pc,
             ProgramCounter(10),
@@ -90,6 +90,5 @@ class PsiT(InvocationProtocol):
             self.dispatch,
             None
         )
-        print(f"PsiT execution completed with gas used: {u}")
 
         return service, Gas(u)

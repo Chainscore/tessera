@@ -288,7 +288,6 @@ class Accumulation:
         Accumulation.preimage_integration(
             partial_state.service_accounts, collected_preimages, timeslot
         )
-        check(partial_state.service_accounts, "INSIDE PARALLEL")
         return transfers, outputs, gas_consumed
 
     @staticmethod
@@ -489,17 +488,13 @@ class Accumulation:
         # ----------------------
 
         # accumulation_gas for Chi_z_services (that automatically accumulates), Eqn 12.22
-        check(state.delta, "PRIOR CHECK")
-
         service_gas=0
         for i in state.chi.chi_z:
             service_gas+=state.chi.chi_z[i]
 
         gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT) + service_gas))
 
-        check(state.chi.chi_z, "CHI CHECK")
         [num_accumulated, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, state.chi.chi_z, block.header.slot)
-        check(state.delta, "AFTER ACCUMULATION CHECK")
 
         accumulation_stats = {}
         for ga in gas_accumulations:
@@ -543,17 +538,12 @@ class Accumulation:
                     if i not in exceptions and key[i] != 0:
                         break
                 else:
-                    print("INCLUDED ID", service_id)
                     services.append(service_id)
-        print("UPDATED SERVICES", services)
-        print("DEFERRED TRANSFERS", deferred_transfers)
 
         pi = state.pi
-        # print("ENCODED", state.pi.encode().hex())
         for s in services:
             specific_transfers = Accumulation.selection_fn(deferred_transfers, s)
             # delta_double_dagger
-            print("TRANSFERS", specific_transfers)
             a, u = PsiT(d=state.delta, block_timeslot=block.header.slot, s=s, transfers=specific_transfers).execute()
 
             # Update Statistics
@@ -595,9 +585,3 @@ class Accumulation:
         state.omega = omega
 
         return state, commitment_map
-
-def check(delta, flag: str):
-    service_1 = ServiceId(1809557284)
-    service_2 = ServiceId(1809557285)
-
-    print("FLAG CHECK",flag, service_1 in delta, service_2 in delta)

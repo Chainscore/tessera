@@ -51,7 +51,6 @@ from jam.utils.constants import (
 
 
 def check(u: GhostPartial, i: ServiceId):
-    print("Check i", i)
     if i not in u.service_accounts:
         return i
     else:
@@ -184,23 +183,18 @@ class AccumulateFunctions(INVF):
             return CONTINUE, gas, registers, memory, context
         
         c = memory.read(o, 32)
-        num_i = Ai(2)
-        num_o = Ao(l + 81)
-        a_t = At(
-            BASIC_MINIMUM_BALANCE 
-            + ADDITIONAL_BALANCE_PER_ITEM * num_i 
-            + ADDITIONAL_BALANCE_PER_OCTET * num_o - f
-        )
-        
         new_service = AccountData(
             service=AccountMetadata(
                 code_hash=ServiceCodeHash(c),
-                balance=Balance(a_t),
+                balance=Balance(BASIC_MINIMUM_BALANCE
+                    + ADDITIONAL_BALANCE_PER_ITEM * 2
+                    + ADDITIONAL_BALANCE_PER_OCTET * (81+l) - f
+                ),
                 gas_limit=Gas(g),
                 min_gas=Gas(m),
-                num_o=num_o,
+                num_o=Ao(0),
                 gratis_offset=Balance(f),
-                num_i=num_i,
+                num_i=Ai(0),
                 created_at=TimeSlot(block_timeslot),
                 accumulated_at=TimeSlot(0),
                 parent_service=ServiceId(context.x.s_index)
@@ -211,15 +205,14 @@ class AccumulateFunctions(INVF):
                 LookupTable(hash=ServiceCodeHash(c), length=BlobLength(l)): Timestamps([])
             })
         )
-        
+
         if accounts[context.x.s_index].service.balance < new_service.service.balance:
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
 
         registers[7] = context.x.i_index
         accounts[context.x.i_index] = new_service
-        accounts[context.x.s_index].service.balance -= a_t
-        print("Created new service account", context.x.i_index, "with code hash", new_service.service.code_hash.hex())
+        accounts[context.x.s_index].service.balance -= new_service.service.balance
         context.x.i_index = check(
             u=context.x.partial_state,
             i=ServiceId(2**8 + (context.x.i_index - 2**8 + 42) % (2**32 - 2**9)),
@@ -251,10 +244,7 @@ class AccumulateFunctions(INVF):
         if not memory.is_accessible(o, TRANSFER_MEMO_SIZE):
             raise PvmError(PANIC)
         
-        print("Transfer", context.x.s_index, "->", d, "amount:", a, "gas:", l)
-        
         if ServiceId(d) not in delta:
-            print("Transfer failed: receiver service does not exist", d)
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         
