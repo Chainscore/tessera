@@ -59,7 +59,7 @@ class PsiT(InvocationProtocol):
             # TODO: Add core_index [we'll probably be storing core_index in node info]
             100: (
                 GeneralFunctions,
-                {"core_index": 0, "service_id": self.wi.service},
+                {"core_index": 0, "service_id": self.service_id},
             ),  # log
         }
 
