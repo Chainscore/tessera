@@ -133,7 +133,7 @@ MAX_SERVICE_CODE_SIZE = 4_000_000
 W_C = MAX_SERVICE_CODE_SIZE
 
 # W_E — Basic size of erasure-coded pieces (in octets). See equation H.6
-BASIC_ERASURE_SIZE = 684
+BASIC_ERASURE_SIZE = 4104 // chain_config.num_ec_pieces_per_segment
 W_E = BASIC_ERASURE_SIZE
 
 # W_G — Size of a segment in octets.
@@ -145,7 +145,7 @@ MAX_IMPORT_ITEM = 3072
 W_M = MAX_IMPORT_ITEM
 
 # W_P — Number of erasure-coded pieces in a segment.
-ERASURE_PIECES_PER_SEGMENT = 6
+ERASURE_PIECES_PER_SEGMENT = chain_config.num_ec_pieces_per_segment
 W_P = ERASURE_PIECES_PER_SEGMENT
 
 # W_R — Total size of all unbounded blobs in work-report (in octets).
