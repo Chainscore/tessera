@@ -1,4 +1,6 @@
 from typing import Tuple
+
+from tsrkit_types import U32
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     DeferredTransfers,
@@ -143,14 +145,11 @@ class PsiA(InvocationProtocol):
         from jam.state.state import state
 
         value = (
-            Uint[32].decode_from(
-                bytes(
-                    Hash.blake2b(
-                        Uint(s).encode() + state.eta[0].encode() + Uint(state.tau).encode()
-                    )
+            U32.decode(
+                Hash.blake2b(
+                    Uint(s).encode() + state.eta[0].encode() + Uint(state.tau).encode()
                 )
-            )[0]
-            % (2**32 - 2**9)
+            ) % (2**32 - 2**9)
         ) + 2**8
         i = check(state_context, value)
         context = AccuContextX(
