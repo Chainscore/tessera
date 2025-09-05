@@ -1,4 +1,6 @@
 from typing import Tuple
+
+from tsrkit_types import U32
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     DeferredTransfers,
@@ -24,17 +26,16 @@ from jam.utils.constants import MAX_SERVICE_CODE_SIZE
 
 
 class PsiA(InvocationProtocol):
-    def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples):
+    def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples, entropy: OpaqueHash):
         self.partial_state = u
         self.timeslot = t
         self.service_id = s
         self.gas = g
         self.operandTuples = o
-        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone()), y=self.initializer_fn(s, u.clone()))
+        self.entropy = entropy
+        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(), t), y=self.initializer_fn(s, u.clone(), t))
 
     def table(self):
-        from jam.state.state import state
-
         xs = self.context.x.s_index
         delta = self.context.x.partial_state.service_accounts
         return {
@@ -43,8 +44,7 @@ class PsiA(InvocationProtocol):
                 GeneralFunctions,
                 {  
                     "package": None,
-                    # TODO: This should be posterier
-                    "entropy": state.eta[0],
+                    "entropy": self.entropy,
                     "trace": None,
                     "item_index": None,
                     "import_segments": None,
@@ -132,7 +132,7 @@ class PsiA(InvocationProtocol):
             return self.collapse(status, gas, context)
 
     @staticmethod
-    def initializer_fn(s: ServiceId, state_context: GhostPartial) -> AccuContextX:
+    def initializer_fn(s: ServiceId, state_context: GhostPartial, timeslot: TimeSlot) -> AccuContextX:
         """
         Take Service id and Account to yield a "mutator context" - this is to make sure no changes to actual state are made if we exit
         Args:
@@ -145,14 +145,11 @@ class PsiA(InvocationProtocol):
         from jam.state.state import state
 
         value = (
-            Uint[32].decode_from(
-                bytes(
-                    Hash.blake2b(
-                        Uint(s).encode() + state.eta[0].encode() + Uint(state.tau).encode()
-                    )
+            U32.decode(
+                Hash.blake2b(
+                    Uint(s).encode() + state.eta[0].encode() + Uint(state.tau).encode()
                 )
-            )[0]
-            % (2**32 - 2**9)
+            ) % (2**32 - 2**9)
         ) + 2**8
         i = check(state_context, value)
         context = AccuContextX(

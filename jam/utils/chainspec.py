@@ -38,6 +38,7 @@ class JamConfig:
     erasure_coding_original_shards: int  # RECOVERY THRESHOLD
     erasure_coding_recovery_shards: int
     recovery_threshold: int
+    num_ec_pieces_per_segment: int
     max_block_gas: int
     max_refine_gas: int 
 
@@ -60,6 +61,7 @@ class JamConfig:
             erasure_coding_recovery_shards=4,
             recovery_threshold=2,
             preimage_expunge_period=32,
+            num_ec_pieces_per_segment=1026,
             max_block_gas=20000000,
             max_refine_gas=1000000000
         )
@@ -83,6 +85,7 @@ class JamConfig:
             erasure_coding_recovery_shards=16,
             recovery_threshold=8,
             preimage_expunge_period=32,
+            num_ec_pieces_per_segment=513,
             max_block_gas=20000000,
             max_refine_gas=1000000000
         )
@@ -106,6 +109,7 @@ class JamConfig:
             erasure_coding_recovery_shards=32,
             recovery_threshold=16,
             preimage_expunge_period=32,
+            num_ec_pieces_per_segment=342,
             max_block_gas=20000000,
             max_refine_gas=1000000000
         )
@@ -129,6 +133,7 @@ class JamConfig:
             erasure_coding_recovery_shards=64,
             recovery_threshold=32,
             preimage_expunge_period=32,
+            num_ec_pieces_per_segment=171,
             max_block_gas=20000000,
             max_refine_gas=1000000000
         )
@@ -152,6 +157,7 @@ class JamConfig:
             erasure_coding_recovery_shards=128,
             recovery_threshold=64,
             preimage_expunge_period=32,
+            num_ec_pieces_per_segment=57,
             max_block_gas=20000000,
             max_refine_gas=1000000000
         )
@@ -175,6 +181,7 @@ class JamConfig:
             erasure_coding_recovery_shards=256,
             recovery_threshold=128,
             preimage_expunge_period=32,
+            num_ec_pieces_per_segment=18,
             max_block_gas=20000000,
             max_refine_gas=1000000000
         )
@@ -198,6 +205,7 @@ class JamConfig:
             erasure_coding_recovery_shards=371,
             recovery_threshold=205,
             preimage_expunge_period=32,
+            num_ec_pieces_per_segment=9,
             max_block_gas=20000000,
             max_refine_gas=1000000000
         )
@@ -221,6 +229,7 @@ class JamConfig:
             erasure_coding_recovery_shards=681,
             recovery_threshold=342,
             preimage_expunge_period=19200,
+            num_ec_pieces_per_segment=6,
             max_block_gas=3500000000,
             max_refine_gas=5000000000
         )

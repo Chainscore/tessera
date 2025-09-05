@@ -12,7 +12,7 @@ from jam.types.state.phi import Phi
 class PartialState:
     authorizer_keys       = make_state_prop(2,  Phi)
     validator_keys        = make_state_prop(7,  Iota)
-    privileges            = make_state_prop(12,  Chi)
+    privileges: Chi            = make_state_prop(12,  Chi)
 
     @property
     def service_accounts(self) -> "DeltaView":
@@ -26,7 +26,7 @@ class PartialState:
             StateStorage(
                 self.store._TRIE, 
                 self.store._DB, 
-                {} if not copy_cache else self.store._CACHE.copy(),
+                {} if not copy_cache else self.store._updates.copy(),
                 True
             )
         )

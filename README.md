@@ -46,16 +46,16 @@ Clean-room JAM client implementation in Python
 - **Run tests:**
   ```bash
   # All tests (unit + integration + vectors)
-  poetry run poe test
+  poetry run poe tests
   
   # Just unit tests
-  poetry run poe test unit
+  poetry run poe tests unit
   
   # Test vectors for specific module
-  poetry run poe test vectors --module safrole
+  poetry run poe tests vectors --module safrole
   
   # Test vectors with tiny spec
-  poetry run poe test vectors --module accumulate --spec tiny
+  poetry run poe tests vectors --module accumulate --spec tiny
   ```
 
 - **Update internal dependencies:**
@@ -68,6 +68,11 @@ Clean-room JAM client implementation in Python
   poetry update
   ```
 
+- **Build binary:**
+  ```bash
+  poetry run poe build
+  ```
+
 ## 📦 Dependencies
 
 This project uses several external dependencies that are managed as Git submodules:
@@ -75,6 +80,7 @@ This project uses several external dependencies that are managed as Git submodul
 - `py-ark-vrf` - VRF implementation (uses published ark-vrf crate from crates.io)
 - `tsrkit-pvm` - PVM toolkit
 - `tsrkit-asm` - Assembly toolkit
+- `tsrkit-types` - Serialization & scrit typing
 
 ## 🧪 Test Suites
 

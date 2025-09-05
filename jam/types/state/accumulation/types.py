@@ -15,7 +15,6 @@ from jam.types.state.iota import Iota
 GasConsumed = List[Tuple[ServiceId, Gas]]
 BeefyMap = Set[Tuple[ServiceId, OpaqueHash]]
 
-
 @structure
 class OperandTuple:
     p: WorkPackageHash
@@ -33,11 +32,11 @@ class OperandTuples(TypedVector[OperandTuple]):
 
 @structure
 class DeferredTransfer:
-    sender: ServiceId
-    receiver: ServiceId
-    amount: Balance
-    memo: Bytes
-    gas: Gas
+    sender: ServiceId # s
+    receiver: ServiceId # d
+    amount: Balance # a
+    memo: Bytes # m
+    gas: Gas # g
 
 
 class DeferredTransfers(TypedVector[DeferredTransfer]):
@@ -52,7 +51,7 @@ class AccuContextX:
     # s
     s_index: ServiceId
     # e
-    partial_state: GhostPartial
+    partial_state: PartialState
     # i
     i_index: ServiceId
     # t

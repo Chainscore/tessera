@@ -126,7 +126,7 @@ class BlockRequest(NetworkProtocol):
         else:
             start_key = Block.get_storage_key_slot(TimeSlot(0))
             end_key = Block.get_storage_key_slot(start_timeslot)
-            limit = 2**32 - 1 
+            limit = 2**32 - 1
 
 
         hhs = settings.main_db.get_range(
@@ -149,6 +149,8 @@ class BlockRequest(NetworkProtocol):
                 logger.error("Block not found against recorded header_hash", header_hash=hh.hex())
                 break
 
+        if data.dir == Direction.DesInc:
+            all_blocks.reverse()
 
         # It has to be an array and not a vector 
         msg = TypedArray[Block, len(all_blocks)](all_blocks).encode()
