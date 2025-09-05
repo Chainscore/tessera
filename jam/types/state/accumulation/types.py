@@ -51,7 +51,7 @@ class AccuContextX:
     # s
     s_index: ServiceId
     # e
-    partial_state: GhostPartial
+    partial_state: PartialState
     # i
     i_index: ServiceId
     # t
