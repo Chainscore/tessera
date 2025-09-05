@@ -15,7 +15,7 @@ from jam.types.state.accumulation.types import (
     BeefyMap,
     GasConsumed,
 )
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.state.pi import ServiceStat
 from jam.types.state.sigma import Sigma
 from jam.types.state.delta import Delta, LookupTable, Timestamps
@@ -274,7 +274,7 @@ class Accumulation:
                 _gas_consumed,
                 _preimages,
             ) = Accumulation.single_accumulation(
-                partial_state, work_reports, privileged_services, service, timeslot
+                partial_state, work_reports, privileged_services, service, timeslot, state.eta[0]
             )
             gas_consumed.append((service, _gas_consumed))
             if _output_hash and _output_hash.unwrap() != Null:
@@ -298,6 +298,7 @@ class Accumulation:
         services: ChiZ,
         service_id: ServiceId,
         timeslot: Tau,
+        entropy: OpaqueHash
     ) -> AccumulationOutput:
         """
         Single-Service accumulation function ∆1 defined in Eq 12.19
@@ -341,7 +342,7 @@ class Accumulation:
                         )
                     )
 
-        return PsiA(u=initial_state, t=timeslot, s=service_id, g=g, o=i).execute()
+        return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, o=i).execute()
 
     @staticmethod
     def preimage_integration(

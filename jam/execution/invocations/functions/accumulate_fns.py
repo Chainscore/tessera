@@ -7,7 +7,6 @@ from jam.types.state.accumulation.types import (
 from tsrkit_types import U32, U64, Bytes
 from tsrkit_types.sequences import TypedArray
 from jam.types.protocol.validators import ValidatorData
-
 from jam.logging import get_logger
 from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
@@ -82,7 +81,7 @@ class AccumulateFunctions(INVF):
         # build a dict mapping each 4-byte U32 → its 8-byte U64
         z_dict = {}
         for i in range(n):
-            chunk = buf[o + 12 * i : o + 12 * i + 12]
+            chunk = buf[12 * i : 12 * i + 12]
             s = U32.decode_from(chunk[:4])  # first  4 bytes
             g = U64.decode_from(chunk[4:12], offset=0)  # next   8 bytes
             z_dict[s] = g
@@ -104,7 +103,11 @@ class AccumulateFunctions(INVF):
     @INVF.register(15, gas_cost=10)
     def assign(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [c, o, a] = registers[7: 7 + 3]
-
+                
+        if not memory.is_accessible(o, 32 * MAX_AUTH_QUEUE_ITEMS):
+            logger.warning("Assign: Memory access violation in assign function: inaccessible authorizer_keys memory region")
+            raise PvmError(PANIC)
+        
         if c >= CORE_COUNT:
             logger.warning(f"Assign: Invalid value for c={c} in assign function: exceeds CORE_COUNT={CORE_COUNT}")
             registers[7] = HostStatus.CORE.value
@@ -114,19 +117,21 @@ class AccumulateFunctions(INVF):
             logger.warning("Assign: Privilege mismatch in assign function: chi_a does not match s_index for given c")
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
-        
-        if not memory.is_accessible(o, 32 * MAX_AUTH_QUEUE_ITEMS):
-            logger.warning("Assign: Memory access violation in assign function: inaccessible authorizer_keys memory region")
-            raise PvmError(PANIC)
-        
-        buf: bytes = memory.read(o, 32 * MAX_AUTH_QUEUE_ITEMS)
-        c = []
-        for index in range(MAX_AUTH_QUEUE_ITEMS):
-            start = o + 32 * index
-            c.append(AuthorizerHash(buf[start: start + 32]))
 
-        context.x.partial_state.authorizer_keys[c] = AuthorizationQueue(c)
-        context.x.partial_state.privileges.chi_a[c] = ServiceId(a)
+        buf: bytes = memory.read(o, 32 * MAX_AUTH_QUEUE_ITEMS)
+        queue = []
+        for index in range(MAX_AUTH_QUEUE_ITEMS):
+            start = 32 * index
+            queue.append(AuthorizerHash(buf[start: start + 32]))
+
+        auth_keys = context.x.partial_state.authorizer_keys
+        auth_keys[c] = AuthorizationQueue(queue)
+        context.x.partial_state.authorizer_keys = auth_keys
+        
+        chi = context.x.partial_state.privileges
+        chi.chi_a[c] = ServiceId(a)
+        context.x.partial_state.privileges = chi
+        
         registers[7] = HostStatus.OK.value
         return CONTINUE, gas, registers, memory, context
 
@@ -143,7 +148,7 @@ class AccumulateFunctions(INVF):
         buf: bytes = memory.read(o, 336 * VALIDATOR_COUNT)
 
         context.x.partial_state.validator_keys = Iota([
-            ValidatorData.decode(buf[o + 336 * i: o + 336*i + 336]) 
+            ValidatorData.decode(buf[336 * i: 336*i + 336]) 
             for i in range(VALIDATOR_COUNT)
         ])
         registers[7] = HostStatus.OK.value
@@ -152,7 +157,12 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(17, gas_cost=10)
     def checkpoint(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
-        context.y = context.x
+        context.y.s_index = context.x.s_index
+        context.y.partial_state.store._updates.update(context.x.partial_state.store._updates)
+        context.y.deferred_transfers = context.x.deferred_transfers.copy()
+        context.y.hash = context.x.hash
+        context.y.preimage = context.x.preimage.copy()
+        
         registers[7] = gas - 10
         return CONTINUE, gas, registers, memory, context
 
@@ -205,12 +215,13 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
 
-        x_i = check(
+        accounts[context.x.i_index] = new_service
+        accounts[context.x.s_index].service.balance -= a_t
+        print("Created new service account", context.x.i_index, "with code hash", new_service.service.code_hash.hex())
+        context.x.i_index = check(
             u=context.x.partial_state,
             i=ServiceId(2**8 + (context.x.i_index - 2**8 + 42) % (2**32 - 2**9)),
         )
-        accounts[x_i] = new_service
-        accounts[context.x.s_index].service.balance -= a_t
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -231,13 +242,17 @@ class AccumulateFunctions(INVF):
     @INVF.register(20, gas_cost=10)
     def transfer(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [d, a, l, o] = registers[7 : 7 + 4]
+        gas = gas - l
         
         delta: DeltaView = context.x.partial_state.service_accounts
         
         if not memory.is_accessible(o, TRANSFER_MEMO_SIZE):
             raise PvmError(PANIC)
         
+        print("Transfer", context.x.s_index, "->", d, "amount:", a, "gas:", l)
+        
         if ServiceId(d) not in delta:
+            print("Transfer failed: receiver service does not exist", d)
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         
