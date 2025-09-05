@@ -83,10 +83,20 @@ jobs:
           echo "📏 Binary size: $(du -sh dist/tessera-node | cut -f1)"
           ls -la dist/
 
-      - name: 🏷️ Get version
+      - name: 🏷️ Get version from tag
         id: version
         run: |
-          VERSION=$(cat .version)
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # Extract version from tag (remove 'v' prefix)
+            VERSION="${{ github.ref_name }}"
+            VERSION=${VERSION#v}  # Remove 'v' prefix if present
+          elif [[ -f .version ]]; then
+            # Fallback to .version file for manual dispatch
+            VERSION=$(cat .version)
+          else
+            # Default version for manual dispatch without .version file
+            VERSION="dev-$(date +%Y%m%d-%H%M%S)"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
@@ -107,10 +117,20 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🏷️ Get version
+      - name: 🏷️ Get version from tag
         id: version
         run: |
-          VERSION=$(cat .version)
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # Extract version from tag (remove 'v' prefix)
+            VERSION="${{ github.ref_name }}"
+            VERSION=${VERSION#v}  # Remove 'v' prefix if present
+          elif [[ -f .version ]]; then
+            # Fallback to .version file for manual dispatch
+            VERSION=$(cat .version)
+          else
+            # Default version for manual dispatch without .version file
+            VERSION="dev-$(date +%Y%m%d-%H%M%S)"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
