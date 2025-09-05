@@ -8,7 +8,7 @@ from jam.utils.chainspec import chain_config
 # ───────────────────────────────────────
 # Networking 
 # ───────────────────────────────────────
-GENESIS_HASH = "b5af8edad70d962097eefa2cef92c8284cf0a7578b70a6b7554cf53ae6d51222"
+GENESIS_HASH = "2bf11dc5e1c7b9bbaafc2c8533017abc12daeb0baf22c92509ad50f7875e5716"
 JAMNP_VERSION = "0"
 NODE_ALPN = f"jamnp-s/{JAMNP_VERSION}/{GENESIS_HASH[:8]}" 
 
