@@ -7,6 +7,7 @@ rust_dep_paths = [
     os.path.join(project_root, 'deps', 'py-ark-vrf'),
     os.path.join(project_root, 'deps', 'tsrkit-asm', 'python'),
     os.path.join(project_root, 'deps', 'tsrkit-pvm'),
+    os.path.join(project_root, 'deps', 'tsrkit-types'),
     project_root
 ]
 
@@ -14,6 +15,9 @@ rust_dep_paths = [
 essential_files = [
     ('dev-spec.json', '.'),
     ('envs', 'envs'),
+    # Include SRS file for VRF operations
+    ('deps/py-ark-vrf/bandersnatch_ring.srs', '.'),
+    ('deps/py-ark-vrf/py_ark_vrf/bandersnatch_ring.srs', 'py_ark_vrf'),
 ]
 
 # Essential hidden imports for core functionality  
