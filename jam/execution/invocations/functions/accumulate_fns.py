@@ -51,6 +51,7 @@ from jam.utils.constants import (
 
 
 def check(u: GhostPartial, i: ServiceId):
+    print("Check i", i)
     if i not in u.service_accounts:
         return i
     else:
@@ -215,6 +216,7 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
 
+        registers[7] = context.x.i_index
         accounts[context.x.i_index] = new_service
         accounts[context.x.s_index].service.balance -= a_t
         print("Created new service account", context.x.i_index, "with code hash", new_service.service.code_hash.hex())

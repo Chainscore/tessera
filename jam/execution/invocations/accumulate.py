@@ -33,7 +33,7 @@ class PsiA(InvocationProtocol):
         self.gas = g
         self.operandTuples = o
         self.entropy = entropy
-        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone()), y=self.initializer_fn(s, u.clone()))
+        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(), t), y=self.initializer_fn(s, u.clone(), t))
 
     def table(self):
         xs = self.context.x.s_index
@@ -132,7 +132,7 @@ class PsiA(InvocationProtocol):
             return self.collapse(status, gas, context)
 
     @staticmethod
-    def initializer_fn(s: ServiceId, state_context: GhostPartial) -> AccuContextX:
+    def initializer_fn(s: ServiceId, state_context: GhostPartial, timeslot: TimeSlot) -> AccuContextX:
         """
         Take Service id and Account to yield a "mutator context" - this is to make sure no changes to actual state are made if we exit
         Args:
