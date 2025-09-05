@@ -1,5 +1,6 @@
 from typing import Callable, Final
 
+import json
 import asyncio
 import signal
 import logging
@@ -88,7 +89,6 @@ async def run_node(
         # update_state(state)
 
         settings.update()
-        update_state(state)
 
         # setup ticket queue
         setup_ticket_queue()

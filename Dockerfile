@@ -38,11 +38,19 @@ RUN poetry config virtualenvs.create false
 # Install all dependencies and the project itself
 RUN poetry install --only=main --no-interaction --no-ansi
 
+# Run the application
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+#ENTRYPOINT ["poetry", "run", "jam"]
+
 # Create data directory with permissions
-RUN mkdir -p data/db && chmod -R 777 data
+#RUN mkdir -p data/db && chmod -R 777 data
 
 # Expose application port
-EXPOSE 8000
+#EXPOSE 8000
 
 # Run the FastAPI application
-CMD ["poetry", "run", "fastapi", "run", "jam/api/api-service.py", "--host", "0.0.0.0", "--port", "8000"]
+#CMD ["poetry", "run" ,"fastapi", "run", "jam/api/api-service.py", "--host", "0.0.0.0", "--port", "8000"]
