@@ -56,7 +56,12 @@ jobs:
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential librocksdb-dev
+
+      - name: 🔧 Install system dependencies (macOS)
+        if: matrix.os == 'darwin'
+        run: |
+          brew install rocksdb
 
       - name: 🏗️ Install dependencies
         run: |
@@ -72,7 +77,7 @@ jobs:
 
       - name: 🔨 Build binary
         run: |
-          chmod +x build-binary.sh
+          chmod +x build-binary.sh setup-rocksdb.sh
           ./build-binary.sh
 
       - name: 🧪 Test binary
