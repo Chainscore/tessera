@@ -38,7 +38,7 @@ jobs:
       - name: 📦 Checkout submodules
         run: |
           git config --global url."https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          git submodule update --init deps/py-ark-vrf deps/tsrkit-pvm deps/tsrkit-asm deps/tsrkit-types
+          git submodule update --init deps/py-ark-vrf deps/tsrkit-pvm deps/tsrkit-asm deps/tsrkit-types deps/rockstore
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v4
