@@ -17,7 +17,7 @@ cryptography = "45.0.2"
 structlog = "^25.2.0"
 aioquic = "^1.2.0"
 quart = "^0.20.0"
-rockstore = "^0.1.2"
+rockstore = {path = "deps/rockstore", develop = true}
 reed-solomon-leopard = "^0.2.1"
 python-dotenv = "^1.1.0"
 py-ark-vrf = {path = "deps/py-ark-vrf", develop = true}
