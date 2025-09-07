@@ -1,4 +1,5 @@
 import os
+import platform
 from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
 
 # Paths
@@ -10,6 +11,19 @@ rust_dep_paths = [
     os.path.join(project_root, 'deps', 'tsrkit-types'),
     project_root
 ]
+
+# Platform-specific RocksDB library bundling
+rocksdb_binaries = []
+system = platform.system()
+
+if system == "Linux":
+    rocksdb_lib_path = os.path.join(project_root, 'libs', 'librocksdb.so')
+    if os.path.exists(rocksdb_lib_path):
+        rocksdb_binaries = [(rocksdb_lib_path, 'lib')]
+elif system == "Darwin":
+    rocksdb_lib_path = os.path.join(project_root, 'libs', 'librocksdb.dylib')
+    if os.path.exists(rocksdb_lib_path):
+        rocksdb_binaries = [(rocksdb_lib_path, 'lib')]
 
 # Essential configuration files only - minimal set
 essential_files = [
@@ -44,7 +58,7 @@ excluded_modules = [
 a = Analysis(
     ['jam/cli.py'],
     pathex=rust_dep_paths,
-    binaries=[],
+    binaries=rocksdb_binaries,
     datas=essential_files,
     hiddenimports=core_imports,
     hookspath=[],

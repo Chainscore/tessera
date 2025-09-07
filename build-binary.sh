@@ -27,6 +27,9 @@ rm -rf build/ dist/
 echo "[INFO] Installing dependencies..."
 poetry install --only=main
 
+echo "[INFO] Setting up RocksDB library for bundling..."
+./setup-rocksdb.sh
+
 echo "[INFO] Building binary..."
 poetry run pyinstaller tessera.spec --clean --noconfirm
 
