@@ -9,6 +9,7 @@ rust_dep_paths = [
     os.path.join(project_root, 'deps', 'tsrkit-asm', 'python'),
     os.path.join(project_root, 'deps', 'tsrkit-pvm'),
     os.path.join(project_root, 'deps', 'tsrkit-types'),
+    os.path.join(project_root, 'deps', 'rockstore'),
     project_root
 ]
 
