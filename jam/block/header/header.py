@@ -7,7 +7,7 @@ from jam.block.extrinsics.extrinsic import Extrinsic
 from jam.types.protocol.ticket import TicketBody
 from jam.types.state.gamma import GammaSFallback
 from jam.utils.constants import EPOCH_LENGTH, X
-from tsrkit_types import Option, structure
+from tsrkit_types import Option, structure, Null
 from jam.types import (
     BandersnatchVrfSignature,
     Hash,
@@ -176,16 +176,16 @@ class Header:
         # Marker checks
         is_new_epoch = (self.slot // EPOCH_LENGTH) == (state.tau // EPOCH_LENGTH)
         # Epoch marker
-        if is_new_epoch and self.epoch_mark.unwrap() is None:
+        if is_new_epoch and self.epoch_mark.unwrap() == Null:
             raise BlockError(BlockErrorCode.EPOCH_MARKER_EMPTY)
-        elif not is_new_epoch and self.epoch_mark.unwrap() is not None:
+        elif not is_new_epoch and self.epoch_mark.unwrap() != Null:
             raise BlockError(BlockErrorCode.EPOCH_MARKER_NOT_EMPTY)
 
         # If we're in ticket mode
         is_ticket_mode = len(state.gamma.a) >= EPOCH_LENGTH
-        if is_new_epoch and is_ticket_mode and self.tickets_mark.unwrap() is None:
+        if is_new_epoch and is_ticket_mode and self.tickets_mark.unwrap() == Null:
             raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
-        elif not is_new_epoch and self.tickets_mark.unwrap() is not None:
+        elif not is_new_epoch and self.tickets_mark.unwrap() != Null:
             raise BlockError(BlockErrorCode.TICKETS_MARK_NOT_EMPTY)
 
         # Parent exists
