@@ -173,8 +173,11 @@ class Header:
         if self.parent_state_root != state.root:
             raise BlockError(BlockErrorCode.INCORRECT_STATE_ROOT, f"E: {self.parent_state_root.hex()}, A: {state.root.hex()}")
         
+        from ...state.state import State
+        pre_state = State.load()
+
         # Marker checks
-        is_new_epoch = (self.slot // EPOCH_LENGTH) == (state.tau // EPOCH_LENGTH)
+        is_new_epoch = (self.slot // EPOCH_LENGTH) > (pre_state.tau // EPOCH_LENGTH)
         # Epoch marker
         if is_new_epoch and self.epoch_mark.unwrap() is None:
             raise BlockError(BlockErrorCode.EPOCH_MARKER_EMPTY)
