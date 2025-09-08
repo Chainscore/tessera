@@ -57,6 +57,8 @@ env/
 ENV/
 .build.env
 
+.build.env
+
 .cursorrules
 .cursorignore
 

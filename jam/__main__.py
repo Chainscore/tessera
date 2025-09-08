@@ -50,6 +50,8 @@ async def main(
     port = os.environ["PORT"]
     seed = os.environ["SEED"]
     host = os.environ["HOST"]
+    rpc_port = os.environ["RPC_PORT"]
+    rpc_host = os.environ["RPC_HOST"]
 
     if not name or not port or not host or not seed:
         raise ValueError(f"Missing node info in {env}")
@@ -96,9 +98,8 @@ async def main(
         Finality.finalise(header_hash, main_db, True)
 
         # RPC/WebSocket server setup
-        rpc_port = int(os.environ.get("RPC_PORT", 5000))
         rpc_config = Config()
-        rpc_config.bind = [f"{host}:{rpc_port}"]
+        rpc_config.bind = [f"{rpc_host}:{rpc_port}"]
         rpc_config.debug = True
         rpc_config.use_reloader = False
 
@@ -109,7 +110,7 @@ async def main(
             # Networking - Block Imports, WP Processing, etc
             tg.create_task(start_node(str(host), int(port), is_builder))
             # RPC
-            tg.create_task(rpc.run_task(debug=True, host=host, port=rpc_port))
+            tg.create_task(rpc.run_task(debug=True, host=rpc_host, port=rpc_port))
             # Node Ops - Block Prod, Audit, Assurances, etc
             tg.create_task(operate(is_builder))
 
