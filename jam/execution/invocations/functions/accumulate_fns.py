@@ -157,13 +157,14 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(17, gas_cost=10)
     def checkpoint(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+        context.y.i_index = context.x.i_index
         context.y.s_index = context.x.s_index
         context.y.partial_state.store._updates.update(context.x.partial_state.store._updates)
         context.y.deferred_transfers = context.x.deferred_transfers.copy()
         context.y.hash = context.x.hash
         context.y.preimage = context.x.preimage.copy()
 
-        registers[7] = gas - 10
+        registers[7] = gas
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
