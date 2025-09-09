@@ -4,7 +4,7 @@ from time import process_time_ns
 from tsrkit_types import Null, Option, TypedVector, Uint
 
 from jam.audit.auditor import Auditor
-from jam.audit.utils import Utils
+from jam.audit.audit import Audit
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits, Faults
 from jam.block.block import Block
 from jam.finality.finality import Finality
@@ -50,7 +50,7 @@ class AuditEngine:
         from jam.state.state import State
 
         auditor = Auditor()
-        audit = Utils()
+        audit = Audit()
 
         # -------------- Fetch Last Finalized Block --------------
         last_finalized_block = Finality.load_final(settings.main_db)

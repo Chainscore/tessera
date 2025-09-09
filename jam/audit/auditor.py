@@ -3,7 +3,7 @@ import math
 from typing import List, Tuple
 
 from tsrkit_types import U8, U32, TypedVector, Null, Bool
-from jam.audit.utils import Utils
+from jam.audit.audit import Audit
 from jam.types import Ed25519Signature, HeaderHash, Hash
 from jam.types.audit.audit_tranche import TrancheIndex, Tranche, OptionalReports, OptionalReport, TrancheState, CoreReportHash, CoreReport
 from jam.types.protocol.core import CoreIndex, EpochIndex, ValidatorIndex
@@ -32,7 +32,7 @@ class Auditor:
         from jam.settings import settings
         from jam.storage.tranche_audit_store import tranche_store
 
-        audit = Utils()
+        audit = Audit()
 
         entropy = block.header.entropy_source
         tranche_index = tranche.tranche_index
@@ -84,11 +84,11 @@ class Auditor:
                 set of ed21599 signature   [ Eq: 17.9, 17.10, 17.11]
         """
 
-        from jam.audit.utils import Utils
+        from jam.audit.audit import Audit
         from jam.settings import settings
         from jam.storage.tranche_audit_store import tranche_store
 
-        audit = Utils()
+        audit = Audit()
 
         # --------------------------------------------- CONDITION CHECK ------------------------------------------------
         if HeaderHash(block.header.hash()) != HeaderHash(tranche.header_hash):
@@ -213,10 +213,12 @@ class Auditor:
         description come
         """
         from jam.audit.utils import Utils
+        from jam.audit.audit import Audit
         from jam.settings import settings
         from jam.storage.tranche_audit_store import tranche_store
 
-        audit = Utils()
+        utils = Utils()
+        audit = Audit()
 
         # --------- unwrap Tranche -------------
         curr_tranche = tranche
@@ -241,13 +243,11 @@ class Auditor:
 
                 wr_hash = r.hash()
 
-                # validity = await audit.process_refine(block=block, wr=r, tranche=curr_tranche)
+                # validity = await utils.process_refine(block=block, wr=r, tranche=curr_tranche)
                 if cnt > 1:
                     validity = U8(0)
                 else:
                     validity = cls.refine2(wr=r)
-
-                print("validity ==>", validity)
 
                 ed25519_signature = audit.judgment_signature(wr=r, validity=validity)
 
