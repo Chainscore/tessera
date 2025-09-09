@@ -25,14 +25,21 @@ class ValidatorSignature:
 
     validator_index: ValidatorIndex
     ed25519_public: Ed25519Public
-    signature: Ed25519Signature
+    ed25519_signature: Ed25519Signature
 
 judgments = TypedVector[ValidatorSignature]
 
 @structure
 class CoreReport:
     core_index: CoreIndex
-    report_hash: WorkReportHash
+    work_report: OptionalReport
+
+
+@structure
+class CoreReportHash:
+    core_index: CoreIndex
+    work_report_hash: WorkReportHash
+
 
 @structure
 class AuditRecord:
@@ -76,8 +83,8 @@ class TrancheState:
     """ Represents the tranche state, which maintains audit records associated with each tranche. """
     unaudited_list: OptionalReports                                             # Corpus of reports (q), a_n will be calculated from this.
     records: Records                                                            # A_n, J_t, J_f mappings.
-    valid_set: TypedVector[CoreReport]                                          # Already validated_wrs [(1, wr1), (4, wr4), ....]
-    invalid_set: TypedVector[CoreReport]                                        # Already invalid_wrs [(2, wr1), (5, wr4), ....]
+    valid_set: TypedVector[CoreReportHash]                                          # Already validated_wrs [(1, wr1), (4, wr4), ....]
+    invalid_set: TypedVector[CoreReportHash]                                        # Already invalid_wrs [(2, wr1), (5, wr4), ....]
     dispute: DisputesExtrinsic
 
 
@@ -87,8 +94,8 @@ class TrancheState:
         return TrancheState(
             unaudited_list=OptionalReports([]),
             records=Records({}),
-            valid_set=TypedVector[WorkReportHash]([]),
-            invalid_set=TypedVector[WorkReportHash]([]),
+            valid_set=TypedVector[CoreReportHash]([]),
+            invalid_set=TypedVector[CoreReportHash]([]),
             dispute=DisputesExtrinsic(
                 verdicts=Verdicts([]),
                 culprits=Culprits([]),

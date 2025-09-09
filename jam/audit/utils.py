@@ -1,6 +1,4 @@
-from typing import List, Tuple
-
-from tsrkit_types import Null, TypedVector, Bytes, Uint, Option, U32
+from tsrkit_types import Null, TypedVector, Bytes, Uint, U32
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -17,18 +15,33 @@ from jam.utils.shuffle import shuffle
 from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.block.block import Block
 from jam.types import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash
-from jam.types.audit.tranche import TrancheIndex, Tranche, TrancheState, OptionalReports
+from jam.types.audit.audit_tranche import TrancheIndex, Tranche, TrancheState, OptionalReports,  TrancheIndex, OptionalReport, CoreReport
 from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR
-
+from jam.types.state.rho import WorkReportState, OptionalWorkReportState
+from jam.block.header.header import Header
 from jam.logging import get_logger
 from py_ark_vrf import prove_ietf, vrf_output
-
 
 # Module-specifier logger
 logger = get_logger("auditor")
 
 
 class Utils:
+
+    @staticmethod
+    def auditable_reports(prior_state: TypedVector[OptionalWorkReportState], newly_rep: OptionalReports) -> OptionalReports:
+        """   """
+        auditable_reports = OptionalReports([])
+
+        for r in prior_state:
+            report_state: (WorkReportState | Null) = r.unwrap()
+            if isinstance(report_state, WorkReportState) and report_state.report in newly_rep:
+                auditable_reports.append(OptionalReport(report_state.report))
+            else:
+                auditable_reports.append(OptionalReport(Null))
+
+        return auditable_reports
+
     @staticmethod
     def vrf_signature_bandersnatch(
         entropy_source: BandersnatchVrfSignature,
@@ -72,7 +85,7 @@ class Utils:
         bandersnatch_key: Bytes[32],
         unaudited_report: OptionalReports,
         tranche: Tranche,
-    ) -> List[Tuple[CoreIndex, WorkReport]]:
+    ) -> TypedVector[CoreReport]:
         """
         Equation: 17.5, 17.6
         Here in this function we just take q(report_to_be_audit function above) , shuffled it and get initial 10 Work Reports assign to validator.
@@ -99,9 +112,13 @@ class Utils:
         )
 
         # ---------------------------- mapping q's reports as tuple[CoreIndex, Option[WorkReport]] ---------------------
-        core_report = list[tuple[CoreIndex, Option[WorkReport]]]([])
+        core_report = TypedVector[CoreReport]([])
         for c, w_r in enumerate(unaudited_report):
-            core_report.append((CoreIndex(c), w_r))
+            value= CoreReport(
+                core_index= CoreIndex(c),
+                work_report= OptionalReport(w_r)
+            )
+            core_report.append(value)
 
         # ---------------------------------- Array same as size of core_report and shuffle -----------------------------
         array_index = TypedVector[Uint[32]]([])
@@ -112,19 +129,22 @@ class Utils:
         shuffle_array = shuffle(entropy, array_index)
 
         # ---------------------------------------- updated shuffle auditing list ---------------------------------------
-        lookup = dict(core_report)
-        updated_array = [(CoreIndex(i), lookup[i].unwrap()) for i in shuffle_array]
+        # lookup = dict(core_report)
+        # updated_array = [(CoreIndex(i), lookup[i]) for i in shuffle_array]
+        lookup = {cr.core_index: cr for cr in core_report}
+        updated_array = [lookup[CoreIndex(int(i))] for i in shuffle_array]
+
 
         # ------------------------------------------ take initial 10 reports -------------------------------------------
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
-        shuffle_not_null = list[tuple[CoreIndex, WorkReport]](
-            [(c, w) for (c, w) in updated_array if w is not Null][:10]
+        shuffle_not_null = TypedVector[CoreReport](
+            [c_r for c_r in updated_array if c_r.work_report != Null][:2]
         )
 
         return shuffle_not_null
 
     @staticmethod
-    def tranche_index(block: Block) -> TrancheIndex:
+    def tranche_index(header: Header) -> TrancheIndex:
         """
         Equation: 17.7
         This function calculated the tranches based on the timeslot, Current time
@@ -139,13 +159,13 @@ class Utils:
         """
 
         tranche_index = TrancheIndex(
-            (CURRENT_TIME() - (SLOT_PERIOD * int(block.header.slot))) // AUDIT_PERIOD
+            (CURRENT_TIME() - (SLOT_PERIOD * int(header.slot))) // AUDIT_PERIOD
         )
         return tranche_index
 
     @staticmethod
     def validator_announcement_statement(
-        assign_report: List[Tuple[CoreIndex, WorkReport]],
+        assign_report: TypedVector[CoreReport],
         header_hash: HeaderHash,
         tranche: Tranche
     ) -> Ed25519Signature:
@@ -171,8 +191,8 @@ class Utils:
 
         set_value: set[Bytes] = set()
 
-        for c, r in assign_report:
-            report_encode = Bytes(c.encode() + r.hash().encode())
+        for c_r in assign_report:
+            report_encode = Bytes(c_r.core_index.encode() + c_r.work_report.hash().encode())
             set_value.add(report_encode)
 
         set_encode = Bytes()
@@ -194,7 +214,7 @@ class Utils:
         tranche: Tranche,
         entropy: BandersnatchVrfSignature,
         unaudited_wrs: OptionalReports,
-    ) -> List[Tuple[CoreIndex, WorkReport]]:
+    ) -> TypedVector[CoreReport]:
         """
         Equation: 17.14, 17.15
         This function define a_n beyond the initial tranche through a new vrf which acts upon the set of no-show validators (for n (tranche) > 0).
@@ -211,12 +231,12 @@ class Utils:
         Source: https://graypaper.fluffylabs.dev/#/1c979cb/1f3d001fb900?v=0.7.1
         """
         from jam.settings import settings
-        from jam.storage.tranche_store import tranche_store
+        from jam.storage.tranche_audit_store import tranche_store
 
         tranche_index = tranche.tranche_index
 
         # DEFINE EMPTY LIST
-        assigned_wrs = list[tuple[CoreIndex, WorkReport]]([])
+        assigned_wrs = TypedVector[CoreReport]([])
 
         for wr in unaudited_wrs:
             rep = wr.unwrap()
@@ -248,7 +268,11 @@ class Utils:
                 m_n = len(records.announces) - len(records.true_votes)
 
                 if vrf_check < m_n:
-                    assigned_report = (rep.core_index, rep)
+                    assigned_report = CoreReport(
+                        core_index= rep.core_index,
+                        work_report= rep
+                    )
+
                     assigned_wrs.append(assigned_report)
 
         return assigned_wrs
@@ -303,7 +327,7 @@ class Utils:
             return False
 
     @staticmethod
-    def judgment_signature(wr: WorkReport, validity: bool) -> Bytes[96]:
+    def judgment_signature(wr: WorkReport, validity: Uint[8]) -> Bytes[96]:
         """
         Equations: 17.17
         This function just build the ed25519 signature(Judgment Signature) for the particular work report.
@@ -318,7 +342,7 @@ class Utils:
         from jam.settings import settings
 
         wr_hash = wr.hash()
-        if validity:
+        if validity == Uint[8](1):
             message = X.VALID.value + wr_hash.encode()
         else:
             message = X.INVALID.value + wr_hash.encode()
@@ -335,7 +359,8 @@ class Utils:
         1. check in ReportDA
         2. using protocol 136
         """
-        # 1. check in ReportDA
+        # 1. check in ReportDAe pta h kese
+        #
         from jam.settings import settings
         from jam.storage.da.reports import ReportsDA
         from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data, CE136Response
@@ -370,7 +395,7 @@ class Utils:
         """ Check previously refine or not"""
 
         from jam.settings import settings
-        from jam.storage.tranche_store import tranche_store
+        from jam.storage.tranche_audit_store import tranche_store
 
         curr_tranche = tranche
         tranche_index = curr_tranche.tranche_index

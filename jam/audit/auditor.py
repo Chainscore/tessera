@@ -2,11 +2,10 @@ import asyncio
 import math
 from typing import List, Tuple
 
-from tsrkit_types import U8, U32, TypedVector, Null, Bool, Bytes
+from tsrkit_types import U8, U32, TypedVector, Null, Bool
 from jam.audit.utils import Utils
-from jam.types import Ed25519Signature, HeaderHash
-from jam.finality.finality import Finality
-from jam.types.audit.tranche import TrancheIndex, Tranche, OptionalReports, OptionalReport, TrancheState, CoreReport
+from jam.types import Ed25519Signature, HeaderHash, Hash
+from jam.types.audit.audit_tranche import TrancheIndex, Tranche, OptionalReports, OptionalReport, TrancheState, CoreReportHash, CoreReport
 from jam.types.protocol.core import CoreIndex, EpochIndex, ValidatorIndex
 from jam.types.protocol.crypto import BandersnatchVrfSignature, Ed25519Public
 from jam.types.work.report import WorkReport, WorkReportHash
@@ -15,8 +14,6 @@ from jam.logging import get_logger
 from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY
 from jam.network.protocols.ce_144 import NoShow, NoShows
 from jam.block.extrinsics.disputes import Verdict, Culprit, Fault, JudgementVotes, Judgement
-
-
 
 # Module-specifier logger
 logger = get_logger("auditor")
@@ -33,9 +30,9 @@ class Auditor:
         Main Function to trigger auditing for nth tranche (n >= 0)
         """
         from jam.settings import settings
-        from jam.storage.tranche_store import tranche_store
+        from jam.storage.tranche_audit_store import tranche_store
 
-        utils = Utils()
+        audit = Utils()
 
         entropy = block.header.entropy_source
         tranche_index = tranche.tranche_index
@@ -44,25 +41,27 @@ class Auditor:
         curr_state = tranche_store.get_state(tranche=tranche)
 
         if tranche_index == TrancheIndex(0):
-            assigned_wrs = utils.verifiable_random_selection(
+            assigned_wrs = audit.verifiable_random_selection(
                 entropy_source=entropy,
                 bandersnatch_key=settings.bandersnatch_private,
                 unaudited_report=curr_state.unaudited_list,
                 tranche=tranche,
             )
+
         else:
-            assigned_wrs = utils.vrf_tranche(
+            assigned_wrs = await audit.vrf_tranche(
                 header_hash=tranche.header_hash,
                 tranche=tranche,
                 entropy=entropy,
                 unaudited_wrs=curr_state.unaudited_list,
             )
 
+        # verify this condition
         if len(assigned_wrs) == 0:
             logger.debug("No Reports to audit", block=str(block), tranche=tranche, tranche_state=curr_state.to_json())
             return
 
-        logger.debug("ASSIGNED REPORTS", block=str(block), tranche=tranche, tranche_state=curr_state.to_json(), assigned_reps=assigned_wrs)
+        # logger.debug("ASSIGNED REPORTS", block=str(block), tranche=tranche, tranche_state=curr_state.to_json(), assigned_reps=assigned_wrs)
         await self.announcement(block, tranche, assigned_wrs, no_shows)
         ...
 
@@ -71,7 +70,7 @@ class Auditor:
         cls,
         block: Block,
         tranche: Tranche,
-        assigned_wrs: List[Tuple[CoreIndex, WorkReport]],
+        assigned_wrs: TypedVector[CoreReport],
         no_shows: TypedVector[NoShow] = None,
     ):
         """
@@ -87,7 +86,7 @@ class Auditor:
 
         from jam.audit.utils import Utils
         from jam.settings import settings
-        from jam.storage.tranche_store import tranche_store
+        from jam.storage.tranche_audit_store import tranche_store
 
         audit = Utils()
 
@@ -96,7 +95,7 @@ class Auditor:
             logger.info("Block's header_has and tranche header_hash are different")
             return
 
-        # ---------------------------------------------- DEFINES VALUE --------------------------------------------------
+        # ---------------------------------------------- DEFINES VALUE -------------------------------------------------
         tranche_index = tranche.tranche_index
         header_hash = HeaderHash(block.header.hash())
         entropy_source = BandersnatchVrfSignature(block.header.entropy_source)
@@ -117,15 +116,14 @@ class Auditor:
         CE144 = AuditAnnouncement()
 
         # ------------------------------------- VALIDATOR ANNOUNCEMENT AND STATEMENT -----------------------------------
-        announcement_wrs = TypedVector[AssignedReport](
-            [
-                AssignedReport(
-                    core_index=core_idx,
-                    report_hash=r.hash()
-                )
-                for core_idx, r in assigned_wrs
-            ]
-        )
+
+        announcement_wrs = TypedVector[AssignedReport]([
+            AssignedReport(
+                core_index=c_r.core_index,
+                report_hash=Hash.blake2b(c_r.work_report.unwrap())
+            )
+            for c_r in assigned_wrs
+        ])
 
         announcement_sign = audit.validator_announcement_statement(
             assign_report=assigned_wrs,
@@ -142,6 +140,7 @@ class Auditor:
                 tranche=tranche,
             )
             evidence = Evidence(FirstTrancheEvidence(bandersnatch_sign))
+
         else:
             bandersnatch_sign = audit.vrf_signature_bandersnatch(
                 entropy_source=entropy_source,
@@ -162,7 +161,7 @@ class Auditor:
         # ------------------- Save Announcement in Tranche State ---------------------------------------------
         curr_tranche = tranche
 
-        await tranche_store.records_announcement(
+        tranche_store.records_announcement(
             tranche=curr_tranche,
             validator_index=settings.validator_index,
             announce=Announcement(
@@ -170,6 +169,8 @@ class Auditor:
                 ed25519_signature=announcement_sign
             ),
         )
+
+        # logger.debug(f"saved transmitted announcement of {settings.NODE_NAME} from state || {tranche_store.get_state(tranche=tranche)}")
 
         # ---------------------- Data to be transmitted ----------------------------------------
         tranche_announce = TrancheAnnouncement(
@@ -190,12 +191,10 @@ class Auditor:
 
         try:
             responses = await CE144.transmit(data=data)
-            logger.debug(f"Assign Work Reports announcement transmitted successfully")
-
-            if responses:
-                await cls.judgment_process(block=block, tranche=tranche,assign_wrs=assigned_wrs)
 
             logger.debug(f"Assign Work Reports announcement transmitted successfully")
+
+            await  cls.judgment_process(block=block, tranche=tranche,assign_wrs=assigned_wrs)
 
         except Exception as e:
             logger.error(
@@ -208,14 +207,14 @@ class Auditor:
         block: Block,
         tranche: Tranche,
         assign_wrs: List[Tuple[CoreIndex, WorkReport]] = None,
-        negative_wrs: TypedVector[CoreReport] = None
+        negative_wrs: TypedVector[CoreReportHash] = None
     ):
         """
         description come
         """
         from jam.audit.utils import Utils
         from jam.settings import settings
-        from jam.storage.tranche_store import tranche_store
+        from jam.storage.tranche_audit_store import tranche_store
 
         audit = Utils()
 
@@ -223,19 +222,32 @@ class Auditor:
         curr_tranche = tranche
         tranche_index = tranche.tranche_index
         header_hash = tranche.header_hash
-
         validator_index = settings.validator_index
+
         # latest_block = Finality.load_latest(kv=settings.main_db)
         # header_hash = latest_block.header.hash()
 
-        logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)} ")
+        if assign_wrs != None:
+            logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)} ")
+        else:
+            logger.info(f"Reports are available for judgment on this node is {len(negative_wrs)} ")
+            assign_wrs = negative_wrs
+
+        cnt = 0
 
         try:
             for c, r in assign_wrs:
+                cnt += 1
 
                 wr_hash = r.hash()
 
-                validity = await cls.process_refine(block=block, wr=r, tranche=curr_tranche)
+                # validity = await audit.process_refine(block=block, wr=r, tranche=curr_tranche)
+                if cnt > 1:
+                    validity = U8(0)
+                else:
+                    validity = cls.refine2(wr=r)
+
+                print("validity ==>", validity)
 
                 ed25519_signature = audit.judgment_signature(wr=r, validity=validity)
 
@@ -251,7 +263,7 @@ class Auditor:
                 judgment = Judgment(
                     epoch_index=epoch_index,
                     validator_index=validator_index,
-                    validity=Bool(validity),
+                    validity=validity,
                     work_report_hash=WorkReportHash(wr_hash),
                     ed25519_signature=Ed25519Signature(ed25519_signature),
                 )
@@ -264,11 +276,11 @@ class Auditor:
                     ed25519_public=settings.ed25519_public
                 )
 
+                # logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {wr_hash} from state || {tranche_store.get_state(tranche=tranche)}")
+
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
-
-                response = await CE145.transmit(data=data)
-
-            logger.debug(f"Judgment transmitted successfully")
+                # response = await CE145.transmit(data=data)
+                await asyncio.create_task(CE145.transmit(data=data))
 
         except Exception as e:
             logger.error(
@@ -278,11 +290,11 @@ class Auditor:
             )
 
     @classmethod
-    def is_tranche(cls,
+    async def is_tranche(cls,
         block: Block,
         curr_tranche: Tranche,
         prev_state: TrancheState,
-        ) -> Tuple[NoShows, TypedVector[CoreReport]]:
+        ) -> Tuple[NoShows, TypedVector[CoreReportHash]]:
         """
         Function to check whether the block is tranche will be continued or not.
         Builds new queue to audit and corresponding no shows and false judgments
@@ -295,7 +307,7 @@ class Auditor:
         Returns:
             NoShows
         """
-        from jam.storage.tranche_store import Tranche, tranche_store
+        from jam.storage.tranche_audit_store import Tranche, tranche_store
         from jam.state.state import state
 
         # Define tranche here for
@@ -303,17 +315,18 @@ class Auditor:
         tranche_index = curr_tranche.tranche_index
 
         # ------------------------------------ GET UNAUDITED LIST (q) FROM LAST TRANCHE --------------------------------
-        unaudited_reports = prev_state.unaudited_list
+        prev_unaudited_reports = prev_state.unaudited_list
+        print("prev_unaudited_reports", len(prev_unaudited_reports))
 
         # ---------------- Initialized NO_SHOW, UNAUDITED and NEGATIVE WR  list for this tranche -----------------------
         updated_unaudited_list = OptionalReports([])                                                                    # unaudited work reports list to be audited for this tranche
         global_no_shows = NoShows([])                                                                                   # global no show has validator who did give judgment in lat tranche
-        negative_wrs = TypedVector[CoreReport]([])                                                                      # Reports which receiver at least one single negative judgment
+        negative_wrs = TypedVector[CoreReportHash]([])                                                                      # Reports which receiver at least one single negative judgment
 
        # ------------------------------------ Iterate previous tranche unaudited work reports --------------------------
-        for core_index, wr in enumerate(unaudited_reports):
+        for core_index, wr in enumerate(prev_unaudited_reports):
 
-            rep = wr.unwrap()
+            rep = wr
 
             if rep == Null:
                 updated_unaudited_list.append(OptionalReport(Null))
@@ -322,6 +335,7 @@ class Auditor:
                 wr_hash = rep.hash()
 
                 if wr_hash in prev_state.records:
+                    print("iterate", wr_hash)
 
                     # ----------------------------------- WORK REPORT RECORDS FOR AUDITING  ----------------------------
                     audit_record = prev_state.records[wr_hash]
@@ -334,25 +348,36 @@ class Auditor:
                     # No need to update state here because there is no False judgments
                     if len(false_votes) == 0:
                         if len(no_shows) == 0:
-                            if len(announces) <= len(true_votes):
+                            print("no show no false")
+                            if len(announces) <= len(true_votes):       # here we're checking subset condition for this
                                 updated_unaudited_list.append(OptionalReport(Null))
-                                tranche_store.add_to_valid_set(tranche=curr_tranche, c_w=Tuple[core_index, wr_hash])
+                                core_report = CoreReportHash(
+                                    core_index=CoreIndex(core_index),
+                                    work_report_hash=WorkReportHash(wr_hash)
+                                )
+                                await tranche_store.add_to_valid_set(tranche=curr_tranche, c_w=core_report)
+                                logger.debug(f"valid list of reports {await tranche_store.get_valid_list(tranche=curr_tranche)}")
 
                             else:
                                 logger.debug(f"false_votes = no_show = 0, and Error in => check true_votes >= announcement")
 
                         else:
                             if len(no_shows) != 0:
-                                updated_unaudited_list.append(OptionalReport(OptionalReport(wr_hash)))
+                                updated_unaudited_list.append(OptionalReport(rep))
                                 for no_show in no_shows:
                                     if no_show not in global_no_shows:
                                         global_no_shows.append(no_show)
 
                     # ------------------------------------- Dispute handling -------------------------------------
                     else:
+                        logger.info("negative judgments trigger wala portion trigger")
                         if tranche_index == TrancheIndex(1):
-                            updated_unaudited_list.append(OptionalReport(wr_hash))
-                            negative_wrs.append(Tuple[core_index, wr_hash])
+                            updated_unaudited_list.append(OptionalReport(rep))
+                            core_report = CoreReportHash(
+                                core_index=CoreIndex(core_index),
+                                work_report_hash=WorkReportHash(wr_hash)
+                            )
+                            negative_wrs.append(core_report)
 
                         else:
                             # ---------- Handling Dispute with state ------------------------------------------
@@ -365,8 +390,12 @@ class Auditor:
 
                             #   VERY RARE CASE  =>
                             if len(before_prev_records.false_votes) == 0:
-                                updated_unaudited_list.append(OptionalReport(wr_hash))
-                                negative_wrs.append(wr_hash)
+                                updated_unaudited_list.append(OptionalReport(rep))
+                                core_report = CoreReportHash(
+                                    core_index=CoreIndex(core_index),
+                                    work_report_hash=WorkReportHash(wr_hash)
+                                )
+                                negative_wrs.append(core_report)
 
                             else:
                                 # ======================================================= Verdict = True =======================================================
@@ -381,7 +410,13 @@ class Auditor:
 
 
                                         updated_unaudited_list.append(OptionalReport(Null))
-                                        tranche_store.add_to_valid_set(tranche=curr_tranche, c_w=Tuple[core_index, wr_hash])
+
+                                        core_report = CoreReportHash(
+                                            core_index=CoreIndex(core_index),
+                                            work_report_hash=WorkReportHash(wr_hash)
+                                        )
+
+                                        await tranche_store.add_to_valid_set(tranche=curr_tranche, c_w=core_report)
 
                                         # E_v => verdict
                                         judgments = JudgementVotes([])
@@ -400,7 +435,7 @@ class Auditor:
                                             age= U32(age),
                                             votes= judgments
                                         )
-                                        tranche_store.add_verdict(tranche=curr_tranche, verdict=verdict)
+                                        await tranche_store.add_verdict(tranche=curr_tranche, verdict=verdict)
 
                                         # E_f => fault
                                         for validator_index, public_key, signature in false_votes:
@@ -412,14 +447,19 @@ class Auditor:
                                                 signature=Ed25519Signature(signature)
                                             )
 
-                                            tranche_store.add_fault(tranche=curr_tranche, fault=fault)
+                                            await tranche_store.add_fault(tranche=curr_tranche, fault=fault)
 
                                 # ================================================ Verdict = False =====================================================
                                 elif len(false_votes) >= VALIDATORS_SUPER_MAJORITY:
                                 # change with len(true_votes) = VALIDATORS_SUPER_MAJORITY:
 
                                     updated_unaudited_list.append(OptionalReport(Null))
-                                    tranche_store.add_to_invalid_set(tranche=curr_tranche, c_w=Tuple[core_index, wr_hash])
+
+                                    core_report = CoreReportHash(
+                                        core_index=CoreIndex(core_index),
+                                        work_report_hash=WorkReportHash(wr_hash)
+                                    )
+                                    await tranche_store.add_to_invalid_set(tranche=curr_tranche, c_w=core_report)
 
                                     age = state.tau // EPOCH_LENGTH
 
@@ -440,7 +480,7 @@ class Auditor:
                                         votes=judgments
                                     )
 
-                                    tranche_store.add_verdict(tranche=curr_tranche, verdict=verdict)
+                                    await tranche_store.add_verdict(tranche=curr_tranche, verdict=verdict)
 
                                     # E_c ==>> culprit : True votes
                                     for validator_index, public_key, signature in true_votes:
@@ -456,12 +496,17 @@ class Auditor:
                                                             key=Ed25519Public(public_key),
                                                             signature=Ed25519Signature(signature)
                                                         )
-                                                        tranche_store.add_culprit(tranche=curr_tranche, culprit=culprit)
+                                                        await tranche_store.add_culprit(tranche=curr_tranche, culprit=culprit)
 
                                 # ========================= NO-VERDICT =================================================
                                 elif len(true_votes) == VALIDATORS_WONKY:        # WONKY CONDITION: NONE RECEIVED VERDICT
+
                                     updated_unaudited_list.append(OptionalReport(Null))
-                                    tranche_store.add_to_wonky_set(tranche=curr_tranche, c_w=Tuple[core_index, wr_hash])
+                                    core_report = CoreReportHash(
+                                        core_index=CoreIndex(core_index),
+                                        work_report_hash=WorkReportHash(wr_hash)
+                                    )
+                                    tranche_store.add_to_wonky_set(tranche=curr_tranche, c_w=core_report)
 
                                     age = state.tau // EPOCH_LENGTH
 
@@ -489,8 +534,31 @@ class Auditor:
                                         age=U32(age),
                                         votes=judgments
                                     )
-                                    tranche_store.add_verdict(tranche=curr_tranche, verdict=verdict)
+                                    await tranche_store.add_verdict(tranche=curr_tranche, verdict=verdict)
 
+                else:
+                    updated_unaudited_list.append(OptionalReport(Null))
+
+        # before updating unaudited list for next tranche we check
+        # print("ye chala hai")
+        print("updated_unaudited_list", updated_unaudited_list)
+        print("global_no_shows", global_no_shows)
+        print("negative_wrs", global_no_shows)
+        found_not_null = False
+        for x in updated_unaudited_list:
+            if x != Null:
+                found_not_null = True
+                logger.debug(f"Found not Null report, process further for new tranche")
+
+        if not found_not_null:
+            print("andar aa gya")
+            logger.info(
+                f"Block Audited inside in tranche 🔍",
+                block=block,
+                header_hash=header_hash.hex(),
+                block_slot=block.header.slot,
+                curr_tranche=curr_tranche
+            )
 
         # UPDATE WORK REPORTS IN Q AND
         tranche_store.update_unaudited_list(
@@ -504,16 +572,3 @@ class Auditor:
 
         return global_no_shows, negative_wrs
 
-    """
-    
-    i think here i m talking about no_show, sorting in based on validator index 
-    want to return sorted no_showdata = [[3, []], [1, []], [6, []]]
-
-    sorted_data = sorted(data, key=lambda x: x[0])
-    print(sorted_data)
-    data = [[3, []], [1, []], [6, []]]
-    
-    sorted_data = sorted(data, key=lambda x: x[0])
-    print(sorted_data)
-
-    """

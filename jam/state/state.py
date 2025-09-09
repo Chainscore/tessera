@@ -4,7 +4,6 @@ from typing import Type
 
 from jam.audit.audit_engine import AuditEngine
 from jam.error import JamError, JamErrorCode
-from jam.types.audit.tranche import TrancheIndex
 from jam.utils.merkle import BMRFunctions
 from rockstore import RockStore
 from jam.state.accounts import DeltaView

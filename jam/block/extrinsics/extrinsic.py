@@ -89,7 +89,7 @@ class Extrinsic:
         ep = PreimagesExtrinsic(preimg_store._store[:])
 
         # Already sorted
-        ed = DisputesExtrinsic(dpt_store._store)
+        # ed = DisputesExtrinsic(dpt_store._store)
 
         def sort_fn(ticket: TicketEnvelope) -> int:
             # Take VRF output of the signature and sort by it
@@ -121,12 +121,12 @@ class Extrinsic:
         from .tickets import ticket_store
         from .guarantees import wrg_store
         from .assurances import asr_store
-        from .disputes import dpt_store
+        # from .disputes import dpt_store
 
         ticket_store.remove(self.tickets)
         wrg_store.remove(self.guarantees)
         asr_store.remove(self.assurances)
-        dpt_store.remove(self.disputes)
+        # dpt_store.remove(self.disputes)
         return
 
     def validate(self, header: "Header") -> bool:
