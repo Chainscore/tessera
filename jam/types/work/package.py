@@ -103,26 +103,21 @@ class WorkPackage:
     def hash(self) -> Bytes[32]:
         return Hash.blake2b(self.encode())
 
-    def encode_into(self, buffer: bytes, offset=0) -> int:
+    def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
         current_offset = offset
-        item = self.auth_code_host
-        size = item.encode_into(buffer, current_offset)
-        current_offset += size
-        item = self.authorizer.code_hash
-        size = item.encode_into(buffer, current_offset)
-        current_offset += size
-        item = self.context
-        size = item.encode_into(buffer, current_offset)
-        current_offset += size
-        item = self.authorization
-        size = item.encode_into(buffer, current_offset)
-        current_offset += size
-        item = self.authorizer.params
-        size = item.encode_into(buffer, current_offset)
-        current_offset += size
-        item = self.items
-        size = item.encode_into(buffer, current_offset)
-        current_offset += size
+
+        items = [
+            self.auth_code_host,
+            self.authorizer.code_hash,
+            self.context,
+            self.authorization,
+            self.authorizer.params,
+            self.items
+        ]
+
+        for item in items:
+            size = item.encode_into(buffer, current_offset)
+            current_offset += size
 
         return current_offset - offset
 
@@ -130,19 +125,18 @@ class WorkPackage:
     def decode_from(
             cls, buffer: Union[bytes, bytearray, memoryview], offset: int = 0
     ) -> Tuple["WorkPackage", int]:
-        curr_offset = offset
-        auth_code_host, size = ServiceId.decode_from(buffer, curr_offset)
-        curr_offset += size
-        code_hash, size = OpaqueHash.decode_from(buffer, curr_offset)
-        curr_offset += size
-        context, size = RefineContext.decode_from(buffer, curr_offset)
-        curr_offset += size
-        authorization, size = Bytes.decode_from(buffer, curr_offset)
-        curr_offset += size
-        params, size = Bytes.decode_from(buffer, curr_offset)
-        curr_offset += size
-        items, size = WorkItems.decode_from(buffer, curr_offset)
-        curr_offset += size
+        auth_code_host, size = ServiceId.decode_from(buffer, offset)
+        offset += size
+        code_hash, size = OpaqueHash.decode_from(buffer, offset)
+        offset += size
+        context, size = RefineContext.decode_from(buffer, offset)
+        offset += size
+        authorization, size = Bytes.decode_from(buffer, offset)
+        offset += size
+        params, size = Bytes.decode_from(buffer, offset)
+        offset += size
+        items, size = WorkItems.decode_from(buffer, offset)
+        offset += size
 
         authorizer = Authorizer(code_hash=code_hash, params=params)
 
@@ -154,7 +148,7 @@ class WorkPackage:
             items=items,
         )
 
-        return wp, curr_offset - offset
+        return wp, offset
 
 @structure
 class WorkPackageBundle:

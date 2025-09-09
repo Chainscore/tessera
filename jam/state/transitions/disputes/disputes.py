@@ -4,6 +4,7 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.null import Null
 
 from jam.state.transitions.disputes.error import DisputesError, DisputesErrorCode
+from jam.types import PsiG, PsiB, PsiW, PsiO, Psi
 from jam.types.state.rho import OptionalWorkReportState
 from jam.types.state.sigma import Sigma
 from jam.block import Block, OffendersMark, DisputesExtrinsic
@@ -25,7 +26,7 @@ class Disputes:
         disputes = block.extrinsic.disputes
 
         # epoch Index
-        current_epoch = state.tau // EPOCH_LENGTH
+        current_epoch = pre_state.tau // EPOCH_LENGTH
 
         # 2. Valid age
         valid_ages = (
@@ -34,11 +35,15 @@ class Disputes:
             else [current_epoch, current_epoch - 1]
         )
 
-        # 3. Psi sets
-        good_set = set()
-        bad_set = set()
-        wonky_set = set()
-        offenders_set = set()
+        # 3. Pre States
+        good_set = set(pre_state.psi.good)
+        bad_set = set(pre_state.psi.bad)
+        wonky_set = set(pre_state.psi.wonky)
+        offenders_set = set(pre_state.psi.offenders)
+
+        rho_dagger = pre_state.rho
+
+        val_keys = {v.ed25519 for v in pre_state.lambda_} | {v.ed25519 for v in pre_state.kappa}
 
         # 4. Verifying signatures
         # Verifying fault signatures
@@ -50,7 +55,7 @@ class Disputes:
                 )
             except InvalidSignature:
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
-            if fault.key not in [v.ed25519 for v in (*state.lambda_, *state.kappa)]:
+            if fault.key not in val_keys:
                 raise DisputesError(DisputesErrorCode.BAD_AUDITOR_KEY)
 
         # Verifying culprit signatures
@@ -62,9 +67,7 @@ class Disputes:
                 )
             except InvalidSignature:
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
-            if culprit.key not in [
-                validator.ed25519 for validator in (*state.lambda_, *state.kappa)
-            ]:
+            if culprit.key not in val_keys:
                 raise DisputesError(DisputesErrorCode.BAD_GUARANTOR_KEY)
 
         # Verifying verdicts are sorted by target
@@ -74,10 +77,10 @@ class Disputes:
             for vote in verdict.votes:
                 # Get the public key from the validator key-set
                 if verdict.age == valid_ages[0]:
-                    validator = state.kappa[vote.index]
+                    validator = pre_state.kappa[vote.index]
                     public_key = validator.ed25519
                 else:
-                    validator = state.lambda_[vote.index]
+                    validator = pre_state.lambda_[vote.index]
                     public_key = validator.ed25519
 
                 # Get the vote value and message
@@ -98,9 +101,9 @@ class Disputes:
         # Check if verdicts are already judged and validate age
         for verdict in disputes.verdicts:
             if (
-                verdict.target in state.psi.good
-                or verdict.target in state.psi.bad
-                or verdict.target in state.psi.wonky
+                verdict.target in pre_state.psi.good
+                or verdict.target in pre_state.psi.bad
+                or verdict.target in pre_state.psi.wonky
             ):
                 raise DisputesError(DisputesErrorCode.ALREADY_JUDGED)
 
@@ -123,9 +126,8 @@ class Disputes:
         # Process culprits and check for offenders already reported
         culprit_counts = {}  # Track culprits per target
         for culprit in disputes.culprits:
-            if culprit.key in state.psi.offenders:
+            if culprit.key in pre_state.psi.offenders:
                 raise DisputesError(DisputesErrorCode.OFFENDER_ALREADY_REPORTED)
-            # new_state.psi.offenders.append(culprit.key)
             if culprit.key not in offenders_set:
                 offenders_set.add(culprit.key)
             culprit_counts[culprit.target] = culprit_counts.get(culprit.target, 0) + 1
@@ -133,9 +135,8 @@ class Disputes:
         # Process faults and check for offenders already reported
         fault_counts = {}  # Track faults per target
         for fault in disputes.faults:
-            if fault.key in state.psi.offenders:
+            if fault.key in pre_state.psi.offenders:
                 raise DisputesError(DisputesErrorCode.OFFENDER_ALREADY_REPORTED)
-            # new_state.psi.offenders.append(fault.key)
             if fault.key not in offenders_set:
                 offenders_set.add(fault.key)
             fault_counts[fault.target] = fault_counts.get(fault.target, 0) + 1
@@ -160,7 +161,7 @@ class Disputes:
                 for fault in disputes.faults:
                     if fault.target == verdict.target and fault.vote:
                         raise DisputesError(DisputesErrorCode.FAULT_VERDICT_WRONG)
-                if verdict.target not in state.psi.good:
+                if verdict.target not in pre_state.psi.good:
                     good_set.add(verdict.target)
 
             # Solely invalid verdict (all negative votes)
@@ -172,43 +173,33 @@ class Disputes:
                 for fault in disputes.faults:
                     if fault.target == verdict.target and not fault.vote:
                         raise DisputesError(DisputesErrorCode.FAULT_VERDICT_WRONG)
-                if verdict.target not in state.psi.bad:
+                if verdict.target not in pre_state.psi.bad:
                     bad_set.add(verdict.target)
 
             # Wonky verdict (mixed votes meeting wonky threshold)
             elif positive_votes == VALIDATORS_WONKY:  # Condition for wonky verdict EXACTLY
-                if verdict.target not in state.psi.wonky:
+                if verdict.target not in pre_state.psi.wonky:
                     wonky_set.add(verdict.target)
             else:
                 raise DisputesError(DisputesErrorCode.BAD_VOTE_SPLIT)
 
-        # 8. Remove wrong targets from the rho array
-        # TODO: Change the rho array when the new types are implemented.
-        # Removing the wrong targets from the rho array
-        for i in range(len(state.rho)):
-            if state.rho[i] != Null:
+        for i in range(len(pre_state.rho)):
+            rep = pre_state.rho[i].unwrap()
+            if rep != Null:
                 try:
-                    target = Hash.blake2b(state.rho[i].get_value().report.encode())
+                    target = rep.report.hash()
                     if target in bad_set:
-                        state.rho[i] = OptionalWorkReportState(Null)
+                        rho_dagger[i] = OptionalWorkReportState(Null)
                     if target in wonky_set:
-                        state.rho[i] = OptionalWorkReportState(Null)
+                        rho_dagger[i] = OptionalWorkReportState(Null)
                 except Exception:
                     pass
 
         # 9. Update of the Disputes states and return the new state
         # Update of the Disputes states
         offenders_set = sorted(offenders_set)
-        for i in good_set:
-            if i not in state.psi.good:
-                state.psi.good.append(i)
-        for i in bad_set:
-            if i not in state.psi.bad:
-                state.psi.bad.append(i)
-        for i in wonky_set:
-            if i not in state.psi.wonky:
-                state.psi.wonky.append(i)
-        for i in offenders_set:
-            if i not in state.psi.offenders:
-                state.psi.offenders.append(i)
+
+        state.psi = Psi(PsiG(list(good_set)), PsiB(list(bad_set)), PsiW(list(wonky_set)), PsiO(offenders_set))
+        state.rho = rho_dagger
+
         return state

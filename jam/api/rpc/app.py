@@ -28,7 +28,6 @@ logger = get_logger("rpc")
 
 rpc = Quart(__name__)
 
-logger.info("RPC server is starting up")
 # subscription ID's setup
 # increment sub id at every connection
 _sub_id_counter = itertools.count(1)

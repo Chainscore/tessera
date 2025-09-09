@@ -81,7 +81,6 @@ class ShardDistributionProtocol(NetworkProtocol):
         https://docs.jamcha.in/advanced/simple-networking/spec#ce-137-shard-distribution
     """
 
-    from jam.network.node import Node
 
     def __init__(self):
         super().__init__()

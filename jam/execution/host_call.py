@@ -63,6 +63,7 @@ class PsiH:
                     )
                 return status, pc, remaining_gas, registers, memory, context
             except PvmError as e:
+                remaining_gas -= 10
                 return e.code, pc, remaining_gas, registers, memory, context
         else:
             raise PvmError(ExecutionStatus.PANIC, f"Invalid execution status {status}")

@@ -40,7 +40,6 @@ def make_account_prop(field):
             return
         meta = AccountMetadata.decode(data)
 
-
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()
 
@@ -57,14 +56,14 @@ class AccountDataView:
         self.id = id
         self.store = store
 
-    code_hash = make_account_prop("code_hash")
-    balance = make_account_prop("balance")
-    gas_limit = make_account_prop("gas_limit")  # min_item_gas
-    min_gas = make_account_prop("min_gas")  # min_memo_gas
-    num_o = make_account_prop("num_o")
+    code_hash   = make_account_prop("code_hash")
+    balance     = make_account_prop("balance")
+    gas_limit   = make_account_prop("gas_limit")  # min_item_gas
+    min_gas     = make_account_prop("min_gas")  # min_memo_gas
+    num_o       = make_account_prop("num_o")
     gratis_offset = make_account_prop("gratis_offset")
-    num_i = make_account_prop("num_i")
-    created_at = make_account_prop("created_at")
+    num_i       = make_account_prop("num_i")
+    created_at  = make_account_prop("created_at")
     accumulated_at = make_account_prop("accumulated_at")
     parent_service = make_account_prop("parent_service")
 
@@ -103,7 +102,7 @@ class Account:
             value.encode(),
         )
         self.store.put(storage_key, encoded_val)
-
+        
     @property
     def storage(self):
         return StorageView(self.id, self.store)
@@ -117,7 +116,14 @@ class Account:
         return TimestampsView(self.id, self.store)
 
     def m_c(self) -> Tuple[bytes, bytes]:
-        return decode_code_hash(self.preimages[self.service.code_hash])
+        img = self.preimages.get(self.service.code_hash)
+        if img:
+            try:
+                return decode_code_hash(img)
+            except:
+                return None
+        else:
+            return None
 
     def historical_lookup(self, timeslot: TimeSlot, preimage_hash: Bytes[32]):
         """
@@ -166,16 +172,19 @@ class DeltaView:
     def __setitem__(self, key: ServiceId, value: AccountData):
         account = Account(id=key, store=self.store)
         account.service = value.service
-        for k, v in value.preimages:
+        for k, v in value.preimages.items():
             account.preimages[k] = v
-        for k, v in value.storage:
+        for k, v in value.storage.items():
             account.storage[k] = v
-        for k, v in value.lookup:
+        for k, v in value.lookup.items():
             account.lookup[k] = v
 
     def __contains__(self, key: ServiceId):
         return self.store.get(bytes(construct_state_key((255, key)))) is not None
-
+    
+    def __delitem__(self, key: ServiceId):
+        account_s_key = bytes(construct_state_key((255, key)))
+        self.store.delete(account_s_key)
 
 class StorageView:
     def __init__(self, id: ServiceId, store: StateStorage):

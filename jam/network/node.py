@@ -1,6 +1,5 @@
 from typing import List, Set
 import math
-from _pytest.nodes import Node
 from aioquic.quic.retry import QuicRetryTokenHandler
 from aioquic.quic.connection import NetworkAddress
 from aioquic._buffer import Buffer

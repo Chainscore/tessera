@@ -21,6 +21,7 @@ develop-eggs/
 lib/
 lib64/
 venv/
+dist-obf/
 
 dist-obf/
 
@@ -54,6 +55,7 @@ data/
 .venv
 env/
 ENV/
+.build.env
 
 .cursorrules
 .cursorignore
@@ -82,3 +84,6 @@ packets/
 
 # Ignore polkajam binary
 polkajam
+
+# Ignore fuzzer reports
+fuzzer_session.json

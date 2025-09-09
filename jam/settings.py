@@ -57,16 +57,13 @@ class Settings:
     def __init__(
         self,
         data_path: Optional[str],
-        seed=Optional[int],
+        seed: Optional[int] = None,
         name: str = "god_mode",
         port: int = 3000,
     ):
         self.NODE_NAME = name
         random.seed(port)
         self.NODE_ID = random.randint(0, 2**16 - 1)
-
-        # Cleanup
-        self.clear()
 
         self._main_db = None
         self._audit_db = None

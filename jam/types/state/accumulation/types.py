@@ -1,5 +1,6 @@
 from typing import Tuple, List, Set
 from tsrkit_types import structure, TypedVector, Bytes, Uint
+from jam.state.partial import GhostPartial, PartialState
 from jam.types.protocol.merkle import OptionHash
 from jam.types.state.phi import Phi, AuthorizerHash
 from jam.types.work import WorkExecResult
@@ -13,7 +14,6 @@ from jam.types.state.iota import Iota
 # Accumulation Types
 GasConsumed = List[Tuple[ServiceId, Gas]]
 BeefyMap = Set[Tuple[ServiceId, OpaqueHash]]
-
 
 @structure
 class OperandTuple:
@@ -32,27 +32,15 @@ class OperandTuples(TypedVector[OperandTuple]):
 
 @structure
 class DeferredTransfer:
-    sender: ServiceId
-    receiver: ServiceId
-    amount: Balance
-    memo: Bytes
-    gas: Gas
+    sender: ServiceId # s
+    receiver: ServiceId # d
+    amount: Balance # a
+    memo: Bytes # m
+    gas: Gas # g
 
 
 class DeferredTransfers(TypedVector[DeferredTransfer]):
     ...
-
-
-@structure
-class StateContext:
-    # d
-    service_accounts: Delta
-    # i
-    validator_keys: Iota
-    # q
-    authorizer_keys: Phi
-    # m, a, v, z
-    privileges: Chi
 
 
 PreimageDict = Set[Tuple[ServiceId, Bytes]]
@@ -63,7 +51,7 @@ class AccuContextX:
     # s
     s_index: ServiceId
     # e
-    partial_state: StateContext
+    partial_state: PartialState
     # i
     i_index: ServiceId
     # t
@@ -88,4 +76,4 @@ class AccumulationContext:
 #     u: Gas # gas used
 #     p: PreimageDict # new preimages ?
 
-AccumulationOutput = Tuple[StateContext, DeferredTransfers, OptionHash, Gas, PreimageDict]
+AccumulationOutput = Tuple[GhostPartial, DeferredTransfers, OptionHash, Gas, PreimageDict]

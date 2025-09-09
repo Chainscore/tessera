@@ -45,7 +45,6 @@ class ExtrinsicStore(Generic[T]):
             except ValueError as e:
                 logger.debug(
                     "Extrinsic was not collected",
-                    error=e,
                     ext=ext.__class__.__name__,
                     val=ext.to_json(),
                 )

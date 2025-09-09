@@ -7,7 +7,7 @@ from jam.block.extrinsics.extrinsic import Extrinsic
 from jam.types.protocol.ticket import TicketBody
 from jam.types.state.gamma import GammaSFallback
 from jam.utils.constants import EPOCH_LENGTH, X
-from tsrkit_types import Option, structure
+from tsrkit_types import Option, structure, Null
 from jam.types import (
     BandersnatchVrfSignature,
     Hash,
@@ -147,7 +147,7 @@ class Header:
         if isinstance(s_vals, GammaSFallback):
             if author.bandersnatch != s_vals[slot_entry]:
                 raise BlockError(
-                    BlockErrorCode.INVALID_AUTHOR, f"E: {s_vals[slot_entry]}, A: {author.bandersnatch}",
+                    BlockErrorCode.INVALID_AUTHOR, f"Expected: {s_vals[slot_entry].hex()}, Actual: {author.bandersnatch.hex()}",
                 )
         else:
             if s_vals[slot_entry].id != vrf_output(self.seal):
@@ -173,19 +173,22 @@ class Header:
         if self.parent_state_root != state.root:
             raise BlockError(BlockErrorCode.INCORRECT_STATE_ROOT, f"E: {self.parent_state_root.hex()}, A: {state.root.hex()}")
         
+        from ...state.state import State
+        pre_state = State.load()
+
         # Marker checks
-        is_new_epoch = (self.slot // EPOCH_LENGTH) == (state.tau // EPOCH_LENGTH)
+        is_new_epoch = (self.slot // EPOCH_LENGTH) > (pre_state.tau // EPOCH_LENGTH)
         # Epoch marker
-        if is_new_epoch and self.epoch_mark.unwrap() is None:
+        if is_new_epoch and self.epoch_mark.unwrap() == Null:
             raise BlockError(BlockErrorCode.EPOCH_MARKER_EMPTY)
-        elif not is_new_epoch and self.epoch_mark.unwrap() is not None:
+        elif not is_new_epoch and self.epoch_mark.unwrap() != Null:
             raise BlockError(BlockErrorCode.EPOCH_MARKER_NOT_EMPTY)
 
         # If we're in ticket mode
         is_ticket_mode = len(state.gamma.a) >= EPOCH_LENGTH
-        if is_new_epoch and is_ticket_mode and self.tickets_mark.unwrap() is None:
+        if is_new_epoch and is_ticket_mode and self.tickets_mark.unwrap() == Null:
             raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
-        elif not is_new_epoch and self.tickets_mark.unwrap() is not None:
+        elif not is_new_epoch and self.tickets_mark.unwrap() != Null:
             raise BlockError(BlockErrorCode.TICKETS_MARK_NOT_EMPTY)
 
         # Parent exists

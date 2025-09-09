@@ -1,73 +1,94 @@
-# from jam.types.state.delta import AccountData, Delta
-# from jam.types.protocol.core import Balance, Gas, ServiceId, TimeSlot
-# from jam.hostCall.types import XContent, DeferredTransfers
-# from jam.execution.pvm.register import Registers
-# from jam.execution.pvm.pvm_memory import PageMemory
-# from jam.types.state.delta import AccountData, Delta
-# from jam.hostCall.process import HostCall
-# from jam.execution.pvm.extract import Status
-# from copy import deepcopy
-#
-#
-# class PsiT:
-#     def __init__(self, d: Delta, t: TimeSlot, s: ServiceId, bold_t: DeferredTransfers):
-#         self.delta = d
-#         self.timeslot = t
-#         self.service_id = s
-#         self.transfer = bold_t
-#         self.f_function = self.transfer_f
-#
-#     def transfer_f(self):
-#
-#         def read(_gas: Gas, register: Registers, memory: PageMemory, bold_s: AccountData, s: ServiceId, d: Delta):
-#             call = HostCall(gas=_gas, register=register, memory=memory, service=bold_s, s_index=s, delta=d)
-#             return HostCall.read(call)
-#
-#         def lookup(_gas: Gas, register: Registers, memory: PageMemory, bold_s: AccountData, s: ServiceId, d: Delta):
-#             call = HostCall(gas=_gas, register=register, memory=memory, service=bold_s, s_index=s, delta=d)
-#             return HostCall.lookup(call)
-#
-#         def write(_gas: Gas, register: Registers, memory: PageMemory, bold_s: AccountData, s: ServiceId):
-#             call = HostCall(gas=_gas, register=register, memory=memory, service=bold_s, s_index=s)
-#             return HostCall.write(call)
-#
-#         def gas(_gas: Gas, register: Registers, memory: PageMemory):
-#             call = HostCall(gas=_gas, register=register, memory=memory)
-#             return HostCall.gas(call)
-#
-#         def info(_gas: Gas, register: Registers, memory: PageMemory, s: ServiceId, d: Delta):
-#             call = HostCall(gas=_gas, register=register, memory=memory, s_index=s, delta=d)
-#             return HostCall.info(call)
-#
-#         def default(_gas: Gas, register: Registers, memory: PageMemory, x: XContent, y: XContent):
-#             _gas -= 10
-#             register[6] = 2 ** 64
-#             return Status("continue"), _gas, register
-#
-#         # Dictionary to map `n` to the corresponding function
-#         function_map = {
-#             "read": read, 2: read,
-#             "write": write, 3: write,
-#             "lookup": lookup, 1: lookup,
-#             "info": info, 4: info,
-#         }
-#
-#         def get_function(n):
-#             return function_map.get(n, default)  # Default function if `n` not found
-#
-#         return get_function  # Return the dynamic function selector
-#
-#     def process(self):
-#         s = deepcopy(self.delta[self.service_id])
-#         for item in self.transfer:
-#             s.balance += item.amount
-#         if s.code_hash is None or self.transfer == []:
-#             return s, 0
-#         else:
-#             gas = 0
-#             encoded_value = self.timeslot.encode() + self.service_id.encode() + self.transfer.encode()
-#             for item in self.transfer:
-#                 gas += item.gas
-#             g, r, _s = PsiM(s.code_hash, 10, gas, encoded_value, self.f_function, s).process()
-#             return _s, g
-#
+from typing import Tuple
+from tsrkit_types import Uint
+from jam.execution.invocations.arg_invoke import PsiM
+from jam.execution.invocations.functions.general_fns import GeneralFunctions
+from jam.execution.invocations.protocol import InvocationProtocol
+from jam.execution.utils import decode_code_hash
+from jam.state.accounts import DeltaView
+from jam.types.state.accumulation.types import DeferredTransfers
+from jam.types.state.delta import AccountData
+from jam.types.protocol.core import Gas, ProgramCounter, ServiceId, TimeSlot
+from jam.utils.constants import W_C
+
+
+class PsiT(InvocationProtocol):
+    def __init__(self, d: DeltaView, block_timeslot: TimeSlot, s: ServiceId, transfers: DeferredTransfers):
+        self.delta = d
+        self.timeslot = block_timeslot
+        self.service_id = s
+        self.transfers: DeferredTransfers = transfers
+
+    def table(self):
+        from jam.state.state import state
+
+        return {
+            0: (GeneralFunctions, {}),
+            1: (
+                GeneralFunctions,
+                {
+                    "package": None,
+                    "entropy": state.eta[0],
+                    "trace": None,
+                    "item_index": None,
+                    "import_segments": None,
+                    "extrinsics": None,
+                    "o": None,
+                    "t": self.transfers,
+                },
+            ),
+            2: (
+                GeneralFunctions,
+                {
+                    "service_data": self.delta[self.service_id],
+                    "service_index": self.service_id,
+                    "accounts": state.delta,
+                },
+            ),
+            # read
+            3: (
+                GeneralFunctions,
+                {"service_data": self.delta[self.service_id], "service_index": self.service_id, "accounts": self.delta},
+            ),
+            # write
+            4: (
+                GeneralFunctions,
+                {"service_data": self.delta[self.service_id], "service_index": self.service_id},
+            ),
+            # info
+            5: (GeneralFunctions, {"service_index": self.service_id, "accounts": self.delta}),  # info
+            # TODO: Add core_index [we'll probably be storing core_index in node info]
+            100: (
+                GeneralFunctions,
+                {"core_index": 0, "service_id": self.service_id},
+            ),  # log
+        }
+
+    def execute(self) -> Tuple[AccountData, Gas]:
+        service = self.delta[self.service_id]
+        _, pc = decode_code_hash(
+            service.historical_lookup(
+                self.timeslot,
+                service.service.code_hash
+            )
+        )
+
+        service.service.balance = service.service.balance + Gas(sum(int(t.amount) for t in self.transfers))
+
+        if len(self.transfers) == 0 or pc is None or 0 == len(pc) > W_C:
+            return service, Gas(0)
+
+        args = (
+            Uint(self.timeslot).encode()
+            + Uint(self.service_id).encode()
+            + Uint(len(self.transfers)).encode()
+        )
+        u, _, _ = PsiM.execute(
+            pc,
+            ProgramCounter(10),
+            sum(int(t.gas) for t in self.transfers),
+            args,
+            self.dispatch,
+            None
+        )
+
+        return service, Gas(u)

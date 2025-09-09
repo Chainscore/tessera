@@ -26,7 +26,7 @@ class PsiR(InvocationProtocol):
         item_index: int,
         p: WorkPackage,
         auth_trace: bytes,
-        i_segments: [[bytes]],
+        i_segments: list[list[bytes]],
         e_offset: int,
     ):
         self.item_index = Uint[16](item_index)
@@ -90,15 +90,12 @@ class PsiR(InvocationProtocol):
             )
         )
 
-        # 0.6.6 Sync.
         args = (
-            Uint(self.wi.service).encode()
+            Uint(self.item_index).encode()
+            + Uint(self.wi.service).encode()
             + self.wi.payload.encode()
             + bytes(Hash.blake2b(self.work_package.encode()))
-            + self.work_package.context.encode()
-            + self.work_package.authorizer.code_hash.encode()
         )
-        print("Executing PsiR with args:", args.hex())
         start = time.time()
         u, r, context = PsiM.execute(
             pc,
@@ -108,9 +105,7 @@ class PsiR(InvocationProtocol):
             self.dispatch,
             RefineContext(m=RefinementMap({}), e=Segments([])),
         )
-        print(
-            f"PsiR execution completed in {time.time() - start:.2f} seconds, gas used: {u}, result: {r.hex() if isinstance(r, bytes) else r}"
-        )
+
         if r == PANIC:
             return WorkExecResult(Null, key="panic"), Segments([]), Gas(u)
 

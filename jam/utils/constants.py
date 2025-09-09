@@ -8,7 +8,7 @@ from jam.utils.chainspec import chain_config
 # ───────────────────────────────────────
 # Networking 
 # ───────────────────────────────────────
-GENESIS_HASH = "b5af8edad70d962097eefa2cef92c8284cf0a7578b70a6b7554cf53ae6d51222"
+GENESIS_HASH = "2bf11dc5e1c7b9bbaafc2c8533017abc12daeb0baf22c92509ad50f7875e5716"
 JAMNP_VERSION = "0"
 NODE_ALPN = f"jamnp-s/{JAMNP_VERSION}/{GENESIS_HASH[:8]}" 
 
@@ -133,7 +133,7 @@ MAX_SERVICE_CODE_SIZE = 4_000_000
 W_C = MAX_SERVICE_CODE_SIZE
 
 # W_E — Basic size of erasure-coded pieces (in octets). See equation H.6
-BASIC_ERASURE_SIZE = 684
+BASIC_ERASURE_SIZE = 4104 // chain_config.num_ec_pieces_per_segment
 W_E = BASIC_ERASURE_SIZE
 
 # W_G — Size of a segment in octets.
@@ -145,7 +145,7 @@ MAX_IMPORT_ITEM = 3072
 W_M = MAX_IMPORT_ITEM
 
 # W_P — Number of erasure-coded pieces in a segment.
-ERASURE_PIECES_PER_SEGMENT = 6
+ERASURE_PIECES_PER_SEGMENT = chain_config.num_ec_pieces_per_segment
 W_P = ERASURE_PIECES_PER_SEGMENT
 
 # W_R — Total size of all unbounded blobs in work-report (in octets).

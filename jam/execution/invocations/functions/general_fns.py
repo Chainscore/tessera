@@ -5,6 +5,8 @@ from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
 from jam.execution.invocations.protocol import Context, DispatchNormalReturn
+from jam.types.state.accumulation.types import DeferredTransfers, OperandTuples
+from jam.types.work.manifest import Extrinsics
 from tsrkit_pvm import (
     Memory,
     ExecutionStatus,
@@ -59,7 +61,7 @@ from jam.utils.constants import (
 
 # Module-specific logger
 logger = get_logger("host_calls")
-
+# logger.debug = logger.error
 
 class GeneralFunctions(INVF):
     @staticmethod
@@ -81,13 +83,13 @@ class GeneralFunctions(INVF):
         trace: Optional[Bytes],
         item_index: int,
         import_segments: Optional[List],
-        extrinsics: Optional[List],
-        o: Optional[List],
-        t: Optional[List],
+        extrinsics: Optional[Extrinsics],
+        o: Optional[OperandTuples],
+        t: Optional[DeferredTransfers],
     ):
         fetch_type = registers[10]
 
-        logger.debug("Host call: fetch", fetch_type=fetch_type, item_index=item_index)
+        logger.info("Host call: fetch", fetch_type=fetch_type, item_index=item_index)
 
         w10 = registers[10]
         w11 = registers[11]
@@ -129,7 +131,6 @@ class GeneralFunctions(INVF):
                 + U32(W_X).encode()
                 + U32(Y).encode()
             )
-
             logger.debug("Fetch: returning system constants")
         elif w10 == 1 and entropy is not None:
             v = entropy
@@ -228,7 +229,7 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-        registers[7] = Register(len(v))
+        registers[7] = len(v)
         memory.write(memory_start, v[f : f + l])
 
         logger.debug(
@@ -265,7 +266,7 @@ class GeneralFunctions(INVF):
         )
 
         a: None | AccountData = None
-        if service_index <= lookup_key <= 2**64 - 1:
+        if service_index == lookup_key or lookup_key == 2**64 - 1:
             a = service_data
         elif lookup_key in accounts:
             a = accounts[lookup_key]
@@ -286,8 +287,8 @@ class GeneralFunctions(INVF):
                 logger.error("Failed key check")
                 raise PvmError(PANIC)
 
-            f = min(int(registers[10]), len(v))
-            l = min(int(registers[11]), len(v) - f)
+            f = min(registers[10], len(v))
+            l = min(registers[11], len(v) - f)
 
             if not memory.is_accessible(output_addr, l, Accessibility.WRITE):
                 logger.error(
@@ -297,7 +298,7 @@ class GeneralFunctions(INVF):
                 )
                 raise PvmError(PANIC)
 
-            registers[7] = Register(len(v))
+            registers[7] = len(v)
             memory.write(output_addr, v[f:f+l])
             logger.debug(
                 "Host call lookup: value found",
@@ -307,12 +308,12 @@ class GeneralFunctions(INVF):
             )
             return CONTINUE, gas, registers, memory, context
         else:
-            registers[7] = HostStatus.NONE
+            registers[7] = HostStatus.NONE.value
             logger.debug(
                 "Host call lookup: account or preimage",
                 lookup_key=lookup_key,
-                hash_hex=data.hex()[:16] + "...",
             )
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(3, gas_cost=10)
@@ -339,19 +340,17 @@ class GeneralFunctions(INVF):
         )
 
         if service_key == 2**64 - 1:
-            s_star = service_index
-        else:
-            s_star = ServiceId(service_key)
+            service_key = service_index
 
         a: None | AccountData = None
-        if s_star == service_index:
+        if service_key == service_index:
             a = service_data
-        elif s_star in accounts:
-            a = accounts[s_star]
+        elif service_key in accounts:
+            a = accounts[service_key]
 
         key_start, key_len, o = registers[8 : 8 + 3]
 
-        if not memory.is_accessible(key_start, key_len, Accessibility.READ):
+        if not memory.is_accessible(key_start, key_len):
             logger.error(
                 "Host call read: memory not accessible for key",
                 key_offset=key_start,
@@ -417,7 +416,7 @@ class GeneralFunctions(INVF):
             service_index=int(service_index),
         )
 
-        if not memory.is_accessible(ko, kz, Accessibility.READ):
+        if not memory.is_accessible(ko, kz):
             logger.error(
                 "Host call write: memory not accessible for key",
                 key_offset=ko,
@@ -431,6 +430,7 @@ class GeneralFunctions(INVF):
         # state.store.save_n_clear_cache()
 
         k = Bytes(memory.read(ko, kz))
+        
         a = service_data.storage
 
         curr_value = a.get(k)
@@ -438,22 +438,25 @@ class GeneralFunctions(INVF):
         if vz == 0:
             a.__delitem__(k)
             logger.debug("Host call write: storage key deleted", storage_key=k.hex()[:16] + "...")
-        else:
-            if not memory.is_accessible(vo, vz, Accessibility.WRITE):
-                logger.error(
-                    "Host call write: memory not accessible for value",
-                    value_offset=vo,
-                    value_size=vz,
-                )
-                raise PvmError(PANIC)
-            
+        elif memory.is_accessible(vo, vz, Accessibility.WRITE):
+            pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
-            if service_data.service.t>service_data.service.balance:
+            if service_data.service.t > service_data.service.balance:
                 # state.store.clear()
                 registers[7] = HostStatus.FULL.value
+                if pre_data is None:
+                    del a[k]
+                else:
+                    a[k] = pre_data
                 logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
                 return CONTINUE, gas, registers, memory, context
-
+        else:
+            logger.error(
+                "Host call write: memory not accessible for value",
+                value_offset=vo,
+                value_size=vz,
+            )
+            raise PvmError(PANIC)
 
         registers[7] = storage_len
         return CONTINUE, gas, registers, memory, context
@@ -479,41 +482,41 @@ class GeneralFunctions(INVF):
         )
 
         if target_service == 2**64 - 1:
-            t = accounts[service_index]
-        else:
-            t = accounts[ServiceId(target_service)]
-
-        if t is not None:
-            m = (
-                bytes(t.service.code_hash)
-                + U64(t.service.balance).encode()
-                + U64(t.service.t).encode()
-                + U64(t.service.gas_limit).encode()
-                + U64(t.service.min_gas).encode()
-                + U64(t.service.num_o).encode()
-                + U32(t.service.num_i).encode()
-                + U64(t.service.gratis_offset).encode()
-                + U32(t.service.created_at).encode()
-                + U32(t.service.accumulated_at).encode()
-                + U32(t.service.parent_service).encode()
-            )
-            f = min(registers[9], len(m))
-            l = min(registers[10], len(m) - f)
-
-            if memory.is_accessible(output_offset, l, Accessibility.WRITE):
-                registers[7] = len(m)
-                memory.write(output_offset, m[:l])
-                logger.debug(
-                    "Host call info: service info written",
-                    target_service=target_service,
-                    info_size=len(m),
-                )
-            else:
-                logger.error("Host call info: memory not accessible", output_offset=output_offset, required_size=len(m))
-                raise PvmError(PANIC)
-        else:
+            target_service = service_index
+            
+        if target_service not in accounts:
             registers[7] = HostStatus.NONE.value
             logger.debug("Host call info: service not found", target_service=target_service)
+            return CONTINUE, gas, registers, memory, context
+
+        acc: AccountData = accounts[target_service]
+        v = (
+            bytes(acc.service.code_hash)
+            + U64(acc.service.balance).encode()
+            + U64(acc.service.t).encode()
+            + U64(acc.service.gas_limit).encode()
+            + U64(acc.service.min_gas).encode()
+            + U64(acc.service.num_o).encode()
+            + U32(acc.service.num_i).encode()
+            + U64(acc.service.gratis_offset).encode()
+            + U32(acc.service.created_at).encode()
+            + U32(acc.service.accumulated_at).encode()
+            + U32(acc.service.parent_service).encode()
+        )
+        f = min(registers[9], len(v))
+        l = min(registers[10], len(v) - f)
+
+        if not memory.is_accessible(output_offset, l, Accessibility.WRITE):
+            logger.error("Host call info: memory not accessible", output_offset=output_offset, required_size=len(m))
+            raise PvmError(PANIC)
+        
+        registers[7] = len(v)
+        memory.write(output_offset, v[f:f+l])
+        logger.debug(
+            "Host call info: service info written",
+            target_service=target_service,
+            info_size=len(v),
+        )
 
         return CONTINUE, gas, registers, memory, context
 
@@ -533,7 +536,7 @@ class GeneralFunctions(INVF):
         target_start = registers[8]
         target_length = registers[9]
 
-        level = registers[7]
+        level = int(registers[7])
 
         # Validate memory accessibility for message
         if not memory.is_accessible(message_start, message_length):

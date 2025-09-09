@@ -5,18 +5,14 @@ import asyncio
 import json
 
 from tsrkit_types import U32, Bytes
-from jam.consensus.bp_engine import BlockProducer
-from jam.execution.pvm.code import Code
 from jam.network.node import Node
-from jam.operations.utils.state_update import update_state
 from jam.settings import setup_setting
 from jam.state import accounts
 from jam.state.accounts import Account
 from jam.state.state import State, set_state, setup_state
 from jam.state.utils import construct_state_key
-from jam.statistics.statistics import Statistics
-from jam.types.block import Block
-from jam.consensus.grandpa.finality import Finality
+from jam.block.block import Block
+from jam.finality.finality import Finality
 from jam.api.rpc.app import rpc
 from jam.api.rpc.broker import broker
 from jam.types.protocol.core import ServiceId, TimeSlot
@@ -171,7 +167,6 @@ async def test_ws_service_data(db_path):
             # 2) churn 5 blocks (slots 1–5)
             produce_chain(state, settings.main_db, length=5)
 
-            update_state(state)
             await asyncio.wait_for(ws.receive(), timeout=5)
             state_delta_store = state.delta[ServiceId(42)].service.store
             expected = state_delta_store.get(bytes(construct_state_key((255, ServiceId(42)))))
