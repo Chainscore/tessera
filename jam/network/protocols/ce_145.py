@@ -1,17 +1,14 @@
 import asyncio
 from typing import cast
-from tsrkit_types import structure, Uint, Bool, U8
-
-from jam.network.protocols.ce_144 import Announcement
+from tsrkit_types import structure, Uint, U8
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
-
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.logging import get_logger
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, HeaderHash
-
+from jam.types.protocol.crypto import Ed25519Signature
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
+from jam.types.work.report import WorkReportHash
 
 # Module-specific logger
 logger = get_logger("network")
@@ -21,7 +18,7 @@ logger = get_logger("network")
 class Judgment:
     epoch_index: EpochIndex
     validator_index: ValidatorIndex
-    validity: Bool
+    validity: Uint[8]
     work_report_hash: WorkReportHash
     ed25519_signature: Ed25519Signature
 
@@ -43,7 +40,7 @@ class JudgmentPublication(NetworkProtocol):
     CE 145 (Judgement Publication) protocol for sharing Judgment to other Auditors
 
     Protocol Flow:
-        Auditor -> Auditor
+        Auditor -> Validator
 
         --> Epoch_index ++ Validator_Index ++ Validity ++ Work_Report_Hash ++ Ed25519_Signature
         --> FIN
@@ -100,6 +97,7 @@ class JudgmentPublication(NetworkProtocol):
                     port=client.port,
                     validator=client,
                 )
+
             responses = await gather_with_exceptions(tasks)
             return responses
 
@@ -110,17 +108,22 @@ class JudgmentPublication(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
+
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept individual Judgment from other Auditors for their assigned Work Reports """
-        from jam.storage.tranche_store import tranche_store, Tranche
-        from jam.finality.finality import Finality
-        from jam.settings import settings
 
         buffer = server.stream_buffer[stream_id][1:]
 
         try:
             data = CE145Data.decode(buffer)
             data = cast(CE145Data, data)
+
+            # ----------------------- break received judgment -----------------
+            epoch_index = data.judgment.epoch_index
+            validator_index = data.judgment.validator_index
+            validity = data.judgment.validity
+            wr_hash = data.judgment.work_report_hash
+            edd2519_signature = data.judgment.ed25519_signature
 
             # Handle received judgment
             asyncio.create_task(self.handle_judgment(data.judgment))
@@ -130,6 +133,7 @@ class JudgmentPublication(NetworkProtocol):
                 stream_id=stream_id,
                 peer=server,
                 buffer_size=len(buffer[1:]),
+                data=data
             )
 
             if not data.is_valid:
@@ -165,20 +169,33 @@ class JudgmentPublication(NetworkProtocol):
 
     @staticmethod
     async def handle_judgment(judgment: Judgment):
-        from jam.storage.tranche_store import tranche_store
+        from jam.storage.tranche_audit_store import tranche_store
+        from jam.state.state import State, state
+        from jam.settings import settings
 
         try:
-            # Fetch Report's Tranche
             tranche = await tranche_store.fetch_rep_tranche(judgment)
+
             if not tranche:
                 raise ValueError(f"Tranche not found for report {judgment.work_report_hash.hex()}")
 
-            # Handle Judgement
-            await tranche_store.update_judgment(tranche=tranche, judgment=judgment)
+            header_hash = tranche.header_hash
+
+            header_state = state.load(header_hash=header_hash)
+
+            ed25519_public = header_state.kappa[settings.validator_index].ed25519
+
+            # SAVE JUDGMENTS RECORDS
+            await tranche_store.update_judgment(
+                tranche=tranche,
+                judgment=judgment,
+                ed25519_public=ed25519_public
+            )
+            # logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {judgment.work_report_hash} from state || {tranche_store.get_state(tranche=tranche)}")
 
         except Exception as JERR:
             logger.error(
-                "Error Handling Judgment",
+                "Error Handling Judgment, fetching tranche for work report",
                 judgment=judgment.to_json(),
                 err=str(JERR),
                 err_type=type(JERR).__name__

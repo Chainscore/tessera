@@ -1,4 +1,5 @@
 from typing import Any, Generic, List, TypeVar
+
 from jam.logging import get_logger
 
 

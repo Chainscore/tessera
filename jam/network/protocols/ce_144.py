@@ -1,19 +1,16 @@
 import asyncio
-from typing import TYPE_CHECKING, cast
-from tsrkit_types import TypedVector, Uint, structure, Choice
-
+from typing import cast
+from tsrkit_types import TypedVector, Uint, structure, Choice, U8
 from jam.utils.gather import gather_with_exceptions
-
 from jam.logging import get_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
-from jam.types.protocol.core import CoreIndex, ValidatorIndex
-from tsrkit_types import U8
+from jam.types.protocol.core import CoreIndex, ValidatorIndex, TrancheIndex
 from jam.types.protocol.crypto import (
-    WorkReportHash,
-    Ed25519Signature,
-    BandersnatchVrfSignature,
     HeaderHash,
+    BandersnatchVrfSignature,
+    Ed25519Signature,
+    WorkReportHash,
 )
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -22,7 +19,6 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 # Module-specific logger
 logger = get_logger("network")
 
-TrancheIndex = U8
 
 @structure
 class AssignedReport:
@@ -74,10 +70,8 @@ class CE144Data:
 
     @property
     def is_valid(self):
-        if (
-            len(self.tranche_announcement.encode()) == self.len_a
-            and len(self.evidence.encode()) == self.len_b
-        ):
+        if (len(self.tranche_announcement.encode()) == self.len_a
+            and len(self.evidence.encode()) == self.len_b):
             return True
         return False
 
@@ -105,9 +99,7 @@ class AuditAnnouncement(NetworkProtocol):
     async def transmit(self, data: CE144Data):
         """Transmit Announcement of assign Work report for auditing from Auditor to Other Validators(Auditors)"""
 
-        from jam.storage.tranche_store import tranche_store, Tranche
         from jam.network.start import node
-        from jam.settings import settings
 
         len_a = data.len_a.encode()
         msg_a = data.tranche_announcement.encode()
@@ -121,13 +113,6 @@ class AuditAnnouncement(NetworkProtocol):
             stream_a_size=data.len_a,
             stream_b_size=data.len_b,
         )
-
-        tranche = Tranche(
-            tranche_index=data.tranche_announcement.tranche,
-            header_hash=data.tranche_announcement.header_hash
-        )
-
-        await tranche_store.record_announcement(tranche, settings.validator_index, data.tranche_announcement.announcement)
 
         tasks = []
         responses = []
@@ -169,6 +154,7 @@ class AuditAnnouncement(NetworkProtocol):
 
             responses = await gather_with_exceptions(tasks)
 
+
         except Exception as e:
             logger.error(
                 "Failed to transmitting Announcement",
@@ -180,8 +166,9 @@ class AuditAnnouncement(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
-        from jam.storage.tranche_store import tranche_store
-        from jam.types.audit.tranche import Tranche, TrancheIndex
+        from jam.storage.tranche_audit_store import tranche_store
+        from jam.types.audit.audit_tranche import Tranche
+        from jam.settings import settings
 
         buffer = server.stream_buffer[stream_id][1:]
 
@@ -196,19 +183,21 @@ class AuditAnnouncement(NetworkProtocol):
             data = CE144Data.decode(buffer)
             data = cast(CE144Data, data)
 
+            logger.debug(f"received announcements data {data.tranche_announcement}")
+
             v_index = server.validator_index
             tranche_idx = data.tranche_announcement.tranche
             header_hash = data.tranche_announcement.header_hash
 
             tranche = Tranche(
-                tranche_index= tranche_idx,
+                tranche_index=tranche_idx,
                 header_hash=header_hash
             )
 
-            asyncio.create_task(
-                tranche_store.record_announcement(tranche, v_index, data.tranche_announcement.announcement)
-            )
+            #SAVE ANNOUNCEMENT RECORDS
+            tranche_store.records_announcement(tranche, v_index, data.tranche_announcement.announcement)
 
+            # logger.debug(f"saved received announcement of {settings.NODE_NAME} from state || {tranche_store.get_state(tranche=tranche)}")
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)

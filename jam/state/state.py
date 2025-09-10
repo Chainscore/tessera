@@ -298,12 +298,12 @@ class State:
         self._lock = False
 
         return False
-    
+
     def to_partial(self) -> "PartialState":
         return PartialState(
             StateStorage(
-                StateTrie(), 
-                self.store._DB, 
+                StateTrie(),
+                self.store._DB,
                 self.store._updates.copy(),
                 True
             )
