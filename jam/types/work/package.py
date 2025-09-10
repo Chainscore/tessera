@@ -125,18 +125,19 @@ class WorkPackage:
     def decode_from(
             cls, buffer: Union[bytes, bytearray, memoryview], offset: int = 0
     ) -> Tuple["WorkPackage", int]:
-        auth_code_host, size = ServiceId.decode_from(buffer, offset)
-        offset += size
-        code_hash, size = OpaqueHash.decode_from(buffer, offset)
-        offset += size
-        context, size = RefineContext.decode_from(buffer, offset)
-        offset += size
-        authorization, size = Bytes.decode_from(buffer, offset)
-        offset += size
-        params, size = Bytes.decode_from(buffer, offset)
-        offset += size
-        items, size = WorkItems.decode_from(buffer, offset)
-        offset += size
+        curr_offset = offset
+        auth_code_host, size = ServiceId.decode_from(buffer, curr_offset)
+        curr_offset += size
+        code_hash, size = OpaqueHash.decode_from(buffer, curr_offset)
+        curr_offset += size
+        context, size = RefineContext.decode_from(buffer, curr_offset)
+        curr_offset += size
+        authorization, size = Bytes.decode_from(buffer, curr_offset)
+        curr_offset += size
+        params, size = Bytes.decode_from(buffer, curr_offset)
+        curr_offset += size
+        items, size = WorkItems.decode_from(buffer, curr_offset)
+        curr_offset += size
 
         authorizer = Authorizer(code_hash=code_hash, params=params)
 
@@ -148,7 +149,7 @@ class WorkPackage:
             items=items,
         )
 
-        return wp, offset
+        return wp, curr_offset - offset
 
 @structure
 class WorkPackageBundle:
