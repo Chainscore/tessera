@@ -28,9 +28,12 @@ from jam.settings import setup_setting
 from jam.finality.finality import Finality
 from jam.block import Block
 from jam.api.rpc.app import rpc
-from hypercorn.config import Config
 from jam.utils.chainspec import chain_config
 
+shutdown_event = asyncio.Event()
+
+async def rpc_shutdown_trigger():
+    await shutdown_event.wait()
 
 async def main(
     db: str,
@@ -97,26 +100,26 @@ async def main(
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db, True)
 
-        # RPC/WebSocket server setup
-        rpc_config = Config()
-        rpc_config.bind = [f"{rpc_host}:{rpc_port}"]
-        rpc_config.debug = True
-        rpc_config.use_reloader = False
-
-        logger.info("📡 Starting RPC/WebSocket server", host=host, port=rpc_port)
+        logger.info("📡 Starting RPC/WebSocket server", host=rpc_host, port=rpc_port)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
             # Networking - Block Imports, WP Processing, etc
             tg.create_task(start_node(str(host), int(port), is_builder))
             # RPC
-            tg.create_task(rpc.run_task(debug=True, host=rpc_host, port=rpc_port))
+            tg.create_task(rpc.run_task(debug=True, host=rpc_host, port=rpc_port, shutdown_trigger=rpc_shutdown_trigger))
             # Node Ops - Block Prod, Audit, Assurances, etc
             tg.create_task(operate(is_builder))
 
     except Exception as e:
+        shutdown_event.set()
         logger.critical("Fatal error", e=e, error_type=type(e).__name__)
         # Close db connections
         if Path("data/tmp").exists():
             shutil.rmtree("data/tmp")
         settings.clear()
+        raise asyncio.exceptions.CancelledError
+    finally:
+        loop = asyncio.get_running_loop()
+        for t in asyncio.all_tasks(loop):
+            t.cancel()
