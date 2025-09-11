@@ -91,7 +91,7 @@ class WorkPackage:
     @property
     def a(self) -> OpaqueHash:
         return Hash.blake2b(
-            self.authorizer.code_hash.encode() + self.authorizer.params.encode()
+            self.authorizer.code_hash + self.authorizer.params
         )
 
     def m_c(self, delta: "Delta") -> Tuple[bytes, bytes]:
