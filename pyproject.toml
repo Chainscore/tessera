@@ -43,6 +43,8 @@ deepdiff = "^8.5.0"
 sphinx = "8.1.3"
 pyinstaller = { version = "^6.15.0", markers = "python_version < '3.14'" }
 poethepoet = "^0.36.0"
+mypy = "^1.17.1"
+mypyc = "^0.0.1"
 
 [tool.poetry.scripts]
 jam = "jam:run_jam"
