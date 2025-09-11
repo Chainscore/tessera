@@ -73,21 +73,6 @@ else
     echo "✅ Poetry already installed"
 fi
 
-# Initialize and update submodules
-echo "📥 Initializing and updating Git submodules..."
-git submodule init
-git submodule update --recursive
-
-# Ensure tsrkit-pvm is on the correct branch
-if [ -d "deps/tsrkit-pvm" ]; then
-    echo "   Checking out feat/mypyc branch for tsrkit-pvm..."
-    cd deps/tsrkit-pvm
-    git checkout feat/mypyc || echo "   ⚠️ Warning: Failed to checkout feat/mypyc branch"
-    cd ../..
-fi
-
-echo "✅ Submodules updated"
-
 # Build submodule dependencies
 echo "🔨 Building submodule dependencies..."
 
@@ -111,20 +96,18 @@ if [ -d "deps/tsrkit-pvm" ]; then
     echo "   Building tsrkit-pvm..."
     cd deps/tsrkit-pvm
     
-    pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
-
-    # # Run the custom setup.py with MyPyC compilation
-    # if [ -f "setup.py" ]; then
-    #     # Install MyPyC if not already installed
-    #     pip install mypy mypyc setuptools || echo "   ⚠️ Warning: mypy install failed"
-    #     echo "   Compiling critical PVM modules with MyPyC..."
-    #     python setup.py build_ext --inplace || echo "   ⚠️ Warning: MyPyC compilation failed, falling back to regular install"
-    #     # Install the package in editable mode
-    #     pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
-    # else
-    #     echo "   setup.py not found, installing normally..."
-    #     pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
-    # fi
+    # Run the custom setup.py with MyPyC compilation
+    if [ -f "setup.py" ]; then
+        # Install MyPyC if not already installed
+        pip install mypy mypyc setuptools || echo "   ⚠️ Warning: mypy install failed"
+        echo "   Compiling critical PVM modules with MyPyC..."
+        python setup.py build_ext --inplace || echo "   ⚠️ Warning: MyPyC compilation failed, falling back to regular install"
+        # Install the package in editable mode
+        pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
+    else
+        echo "   setup.py not found, installing normally..."
+        pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
+    fi
     cd ../..
 fi
 
