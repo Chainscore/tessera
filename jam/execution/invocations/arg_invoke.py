@@ -5,11 +5,6 @@ from tsrkit_pvm import PANIC, ExecutionStatus, y_function
 from tsrkit_types.bytes import Bytes
 from jam.types.protocol.core import Gas
 from jam.logging import get_logger
-import os
-if os.environ.get("PVM_MODE") == "recompiler":
-    from tsrkit_pvm import REC_Program as Program
-else:
-    from tsrkit_pvm import INT_Program as Program
 
 # Module-specific logger
 logger = get_logger("host_calls")
@@ -37,39 +32,20 @@ class PsiM:
         )
 
         try:
-            code, registers, memory = y_function(bytes(Bytes(blob)), arguments, os.environ.get("PVM_MODE", "interpreter"))
-            logger.debug(
-                "Initialized program successfully",
-                code_size=len(code),
-                registers_count=len(registers),
-            )
+            program, registers, memory = y_function(bytes(Bytes(blob)), arguments, "")
 
         except Exception as e:
             logger.error(
                 "Failed to initialize the program",
                 error=str(e),
                 error_type=type(e).__name__,
-                blob_size=len(blob),
-                pc=pc,
             )
             return Gas(0), PANIC, context
-        program = Program.decode(code)
-
+        
         return PsiM.R(
             gas,
             PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context),
         )
-        # try:
-        #     program = Program.decode(code)
-
-        #     host_return = PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context),
-        # except:
-        #     host_return = HostCallReturn(ExecutionStatus.PANIC, pc, gas, registers, memory, context)
-        # finally:
-        #     return PsiM.R(
-        #         gas,
-        #         host_return
-        #     )
 
 
     @staticmethod

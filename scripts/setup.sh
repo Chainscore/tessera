@@ -77,6 +77,15 @@ fi
 echo "📥 Initializing and updating Git submodules..."
 git submodule init
 git submodule update --recursive
+
+# Ensure tsrkit-pvm is on the correct branch
+if [ -d "deps/tsrkit-pvm" ]; then
+    echo "   Checking out feat/mypyc branch for tsrkit-pvm..."
+    cd deps/tsrkit-pvm
+    git checkout feat/mypyc || echo "   ⚠️ Warning: Failed to checkout feat/mypyc branch"
+    cd ..
+fi
+
 echo "✅ Submodules updated"
 
 # Build submodule dependencies
@@ -90,11 +99,24 @@ if [ -d "deps/py-ark-vrf" ]; then
     cd ../..
 fi
 
-# Install other submodule dependencies as editable
+# Build and install tsrkit-pvm with MyPyC compilation
 if [ -d "deps/tsrkit-pvm" ]; then
-    echo "   Installing tsrkit-pvm as editable..."
+    echo "   Building tsrkit-pvm with MyPyC compilation..."
     cd deps/tsrkit-pvm
-    pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
+    
+    # Install MyPyC if not already installed
+    pip install mypy || echo "   ⚠️ Warning: mypy install failed"
+    
+    # Run the custom setup.py with MyPyC compilation
+    if [ -f "setup.py" ]; then
+        echo "   Compiling critical PVM modules with MyPyC..."
+        python setup.py build_ext --inplace || echo "   ⚠️ Warning: MyPyC compilation failed, falling back to regular install"
+        # Install the package in editable mode
+        pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
+    else
+        echo "   setup.py not found, installing normally..."
+        pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
+    fi
     cd ../..
 fi
 
@@ -102,6 +124,13 @@ if [ -d "deps/tsrkit-asm" ]; then
     echo "   Installing tsrkit-asm as editable..."
     cd deps/tsrkit-asm
     pip install -e . || echo "   ⚠️ Warning: tsrkit-asm install failed"
+    cd ../..
+fi
+
+if [ -d "deps/rockstore" ]; then
+    echo "   Installing rockstore as editable..."
+    cd deps/rockstore
+    pip install -e . || echo "   ⚠️ Warning: rockstore install failed"
     cd ../..
 fi
 

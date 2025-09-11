@@ -8,8 +8,8 @@ from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.utils.trie.merkle import StateTrie
 from jam.state.storage import StateStorage
-from jam.state.utils import construct_state_key, make_state_prop
-from tsrkit_types import Bytes, Codable, Dictionary, TypedVector
+from jam.state.utils import make_state_prop
+from tsrkit_types import Bytes, Dictionary, TypedVector
 from jam.types import (
     Hash,
     Alpha,
@@ -32,7 +32,17 @@ from jam.types import (
 from jam.block.block import Block
 from jam.logging import get_logger
 from jam.types.state.theta import Theta
-
+from jam.state.transitions import (
+    Accumulation,
+    Reporting,
+    Authorization,
+    RecentHistory,
+    Safrole,
+    Assurances,
+    Disputes,
+    Preimages,
+    Statistics,
+)
 logger = get_logger("import")
 
 
@@ -115,12 +125,10 @@ class State:
             - `header_hash`: Loads state at point in time when this header was imported.
             If this is not provided, we assume the request is just to have a readable instance of latest state
         """
-        from jam.settings import settings
-
         # Empty trie -I dont think we need past trie data anywhere
         trie = StateTrie()
         # Create a Read-Only instance
-        db = RockStore(state.store._DB.path.decode(), options={"read_only": True})
+        db = state.store._DB # RockStore(state.store._DB.path.decode(), options={"read_only": True})
         # Load past updates
         cache = state.store._load_updates(header_hash)
 
@@ -161,17 +169,7 @@ class State:
 
         self._lock = True
 
-        from jam.state.transitions import (
-            Accumulation,
-            Reporting,
-            Authorization,
-            RecentHistory,
-            Safrole,
-            Assurances,
-            Disputes,
-            Preimages,
-            Statistics,
-        )
+        
         from jam.settings import settings as _set
         from jam.finality.finality import Finality
 
@@ -305,7 +303,7 @@ class State:
                 StateTrie(), 
                 self.store._DB, 
                 self.store._updates.copy(),
-                True
+                cache_mode=True,
             )
         )
 

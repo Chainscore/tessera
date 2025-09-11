@@ -22,10 +22,20 @@ def encode_branch(left_hash: Bytes[32] = ZERO_HASH, right_hash: Bytes[32] = ZERO
     """Encode a branch node (B function in D.3)
 
     For a branch, we:
-    1. Clear the first bit of left_hash (AND with 0xfe)
+    1. Clear the first bit of left_hash (AND with 0x7F)
     2. Concatenate with full right_hash
     """
-    return Bytes[64].from_bits([False] + Bytes(left_hash).to_bits()[1:] + right_hash.to_bits())
+    # branch encoding without full bit conversion
+    if len(left_hash) != 32 or len(right_hash) != 32:
+        raise ValueError("Hash lengths must be 32 bytes")
+    
+    # Clear first bit of left_hash by AND with 0x7F (01111111)
+    result = bytearray(64)
+    result[0] = left_hash[0] & 0x7F  # Clear first bit
+    result[1:32] = left_hash[1:]     # Copy rest of left hash
+    result[32:64] = right_hash       # Copy right hash
+    
+    return Bytes[64](bytes(result))
 
 
 def encode_leaf(key: Bytes, value: Bytes) -> Bytes[64]:
@@ -44,12 +54,13 @@ def encode_leaf(key: Bytes, value: Bytes) -> Bytes[64]:
     # First bit is 1 for leaf nodes
 
     # Set first 31 bytes of key to 1:32
-    key_bits = Bytes(key).to_bits()[:248]
+    key_bits = Bytes(key).slice_bits(0, 248)
+        
     if len(value) <= 32:
         # Embedded value leaf
         # 6-bit - size of value
         # Store key and value
-        val_bits = value.to_bits() + [False] * (256 - len(value.to_bits()))
+        val_bits = value.to_bits() + [False] * (256 - len(value) * 8)
         # Rest is already zeroed
         node_bits = (
             [True, False] + Bytes(Uint[8](len(value)).encode()).to_bits()[2:] + key_bits + val_bits

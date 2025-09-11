@@ -39,7 +39,7 @@ poetry.lock
 data/main
 data/d3l
 data/audit
-
+perf/
 benchmarks/
 vectors/
 
