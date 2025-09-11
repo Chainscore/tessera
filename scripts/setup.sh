@@ -80,9 +80,9 @@ else
     echo "✅ Poetry already installed"
 fi
 
-echo "📥 Initializing and updating Git submodules..."
-git submodule init
-git submodule update --recursive
+#echo "📥 Initializing and updating Git submodules..."
+#git submodule init
+#git submodule update --recursive
 
 # Build submodule dependencies
 echo "🔨 Building submodule dependencies..."
