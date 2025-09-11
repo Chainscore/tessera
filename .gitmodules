@@ -5,7 +5,7 @@
 [submodule "deps/tsrkit-pvm"]
 	path = deps/tsrkit-pvm
 	url = https://github.com/chainscore/tsrkit-pvm.git
-	branch = feat/mypyc
+	branch = fix/deps
 [submodule "deps/tsrkit-asm"]
 	path = deps/tsrkit-asm
 	url = https://github.com/chainscore/tsrkit-asm.git
