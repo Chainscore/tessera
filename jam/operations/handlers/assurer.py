@@ -33,7 +33,7 @@ class Assurer:
 
     async def run(self, time_slot: int):
         from jam.settings import settings
-
+        settings.update()
         pref = Bytes("jam_available", "utf-8")
 
         from jam.network.protocols.ce_141 import CE141Data, AssuranceDistribution

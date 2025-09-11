@@ -69,7 +69,7 @@ class ValidatorData:
 
 
 """Fixed-size array of validator data with size VALIDATOR_COUNT."""
-class ValidatorsData(TypedArray[ValidatorData, VALIDATOR_COUNT]):
+class   ValidatorsData(TypedArray[ValidatorData, VALIDATOR_COUNT]):
     def find(self, key: BandersnatchPublic|Ed25519Public) -> Union[int, ValidatorData]:
         for i, validator in enumerate(self):
             if validator.bandersnatch == key or validator.ed25519 == key:

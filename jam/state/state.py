@@ -1,4 +1,5 @@
 import json
+import asyncio
 from typing import Type
 from jam.error import JamError, JamErrorCode
 from jam.state.partial import PartialState
@@ -218,6 +219,8 @@ class State:
             vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
             Safrole.transition(pre_state, self, block, vrf_output)
 
+            logger.debug("BLOCK RECEIVED", block=block.to_json())
+            logger.debug("PRE RHO", rho=self.rho.to_json())
             # Assurances
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
             if len(newly_avail_wrs) > 0:
@@ -225,9 +228,11 @@ class State:
                     "Newly available WRs", count=len(newly_avail_wrs),
                     wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
                 )
+            logger.debug("POST RHO", rho=self.rho.to_json())
 
             # Reporting
             Reporting.transition(pre_state, self, block, [])
+            logger.debug("POST RHO 2", rho=self.rho.to_json())
 
             # Accumulation
             _, commitment_map = Accumulation.transition(
@@ -267,10 +272,10 @@ class State:
                     final_state_root=self.root.hex()[:16] + "...",
                 )
 
-                # from jam.operations.handlers.assurer import assurer
-                # for ext in block.extrinsic.guarantees:
-                #     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
-                #     asyncio.create_task(assurer._req_shard(ext))
+                from jam.operations.handlers.assurer import assurer
+                for ext in block.extrinsic.guarantees:
+                    logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                    asyncio.create_task(assurer._req_shard(ext))
 
                 # TODO: Test Auditing & Refining with PJ
                 # # Start Auditing for new block received
