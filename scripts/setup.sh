@@ -7,11 +7,11 @@ set -e
 echo "🚀 Setting up Tessera development environment..."
 
 # Find the best available Python version
-REQUIRED_PYTHON_VERSION="3.12"
+REQUIRED_PYTHON_VERSION="3.11"
 PYTHON_EXECUTABLE=""
 
 # Try to find a compatible Python version
-for python_cmd in python3.12 python3.13 python3; do
+for python_cmd in python3.11 python3.12 python3.13 python3; do
     if command -v "$python_cmd" &> /dev/null; then
         PYTHON_VERSION=$($python_cmd -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
         if [ $(echo "$PYTHON_VERSION >= $REQUIRED_PYTHON_VERSION" | bc -l) -eq 1 ]; then
@@ -83,7 +83,7 @@ if [ -d "deps/tsrkit-pvm" ]; then
     echo "   Checking out feat/mypyc branch for tsrkit-pvm..."
     cd deps/tsrkit-pvm
     git checkout feat/mypyc || echo "   ⚠️ Warning: Failed to checkout feat/mypyc branch"
-    cd ..
+    cd ../..
 fi
 
 echo "✅ Submodules updated"
@@ -99,31 +99,32 @@ if [ -d "deps/py-ark-vrf" ]; then
     cd ../..
 fi
 
-# Build and install tsrkit-pvm with MyPyC compilation
-if [ -d "deps/tsrkit-pvm" ]; then
-    echo "   Building tsrkit-pvm with MyPyC compilation..."
-    cd deps/tsrkit-pvm
-    
-    # Install MyPyC if not already installed
-    pip install mypy || echo "   ⚠️ Warning: mypy install failed"
-    
-    # Run the custom setup.py with MyPyC compilation
-    if [ -f "setup.py" ]; then
-        echo "   Compiling critical PVM modules with MyPyC..."
-        python setup.py build_ext --inplace || echo "   ⚠️ Warning: MyPyC compilation failed, falling back to regular install"
-        # Install the package in editable mode
-        pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
-    else
-        echo "   setup.py not found, installing normally..."
-        pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
-    fi
-    cd ../..
-fi
-
 if [ -d "deps/tsrkit-asm" ]; then
     echo "   Installing tsrkit-asm as editable..."
     cd deps/tsrkit-asm
     pip install -e . || echo "   ⚠️ Warning: tsrkit-asm install failed"
+    cd ../..
+fi
+
+# Build and install tsrkit-pvm with MyPyC compilation
+if [ -d "deps/tsrkit-pvm" ]; then
+    echo "   Building tsrkit-pvm..."
+    cd deps/tsrkit-pvm
+    
+    pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
+
+    # # Run the custom setup.py with MyPyC compilation
+    # if [ -f "setup.py" ]; then
+    #     # Install MyPyC if not already installed
+    #     pip install mypy mypyc setuptools || echo "   ⚠️ Warning: mypy install failed"
+    #     echo "   Compiling critical PVM modules with MyPyC..."
+    #     python setup.py build_ext --inplace || echo "   ⚠️ Warning: MyPyC compilation failed, falling back to regular install"
+    #     # Install the package in editable mode
+    #     pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
+    # else
+    #     echo "   setup.py not found, installing normally..."
+    #     pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
+    # fi
     cd ../..
 fi
 
