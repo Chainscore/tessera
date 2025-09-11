@@ -8,6 +8,7 @@ from jam.logging import get_logger
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+# from jam.state.transitions.report.guarantee_assignment import assign_fn
 
 from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
@@ -34,6 +35,8 @@ class CE133Data:
 
     @property
     def is_valid(self):
+        print("Extrinsics" , self.extrinsics)
+        print("LENGTH CHECK", len(self.package_data.encode()), self.package_len, len(self.extrinsics.encode()), self.extrinsics_len)
         if (
             len(self.package_data.encode()) == self.package_len
             and len(self.extrinsics.encode()) == self.extrinsics_len
@@ -78,7 +81,11 @@ class WorkPackageSubmission(NetworkProtocol):
         mapping = assign_guarantors()
         guarantors = mapping[0][ci]
         logger.debug("Fetched Assigned Guarantors (133)", mapping=mapping[1], tau=state.tau, root=state.root.hex())
-
+        # mapping = assign_fn(state)
+        # guarantors = mapping[1]
+        # print(mapping[0])
+        # logger.debug("Fetched Assigned Guarantors (133)", mapping=mapping[0], tau=state.tau, root=state.root.hex())
+        print("CHECKING ID VALID", data.is_valid)
         wp_hash = data.package_data.work_package.hash().hex()
         logger.info(
             "Trying transmitting work package",
@@ -95,6 +102,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
         for client in node.all_connected:
             try:
+                print("client", client.val)
                 if client.val not in guarantors:
                     continue
                 logger.info("Transmitting package", peer=client)
@@ -107,11 +115,11 @@ class WorkPackageSubmission(NetworkProtocol):
                 client.stream_buffer[stream_id] = b""
 
                 # Send Messages with their lengths
+                print("BUFFER SIZE", len(data.encode()))
                 client.stream_and_keep_open(message=len_a, stream_id=stream_id)
                 client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                 client.stream_and_keep_open(message=len_b, stream_id=stream_id)
                 res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
-
                 logger.debug(
                     "Work package transmitted",
                     stream_id=stream_id,
@@ -160,6 +168,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )
+            print("BUFFER SIZE RECEIVED", len(buffer))
 
             data = CE133Data.decode(buffer)
             data = cast(CE133Data, data)
