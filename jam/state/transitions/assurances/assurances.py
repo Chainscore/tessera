@@ -91,13 +91,15 @@ class Assurances:
                 continue
             else:
                 if core_assurances[i] > super_majority:
-                    newly_avail_reports.append(rho[i].unwrap().report)
+                    print("CHECK 1")
+                    newly_avail_reports.append(rep.report)
                     rho[i] = OptionalWorkReportState(Null)
                 if (
                     core_assurances[i] > super_majority
                     or block.header.slot
-                    >= rho[i].unwrap().timeout + UNAVAILABLE_WORK_EXPIRY
+                    >= rep.timeout + UNAVAILABLE_WORK_EXPIRY
                 ):
+                    print("CHECK 2")
                     rho[i] = OptionalWorkReportState(Null)
 
         state.rho = rho
