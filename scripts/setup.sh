@@ -7,11 +7,11 @@ set -e
 echo "🚀 Setting up Tessera development environment..."
 
 # Find the best available Python version
-REQUIRED_PYTHON_VERSION="3.11"
+REQUIRED_PYTHON_VERSION="3.12"
 PYTHON_EXECUTABLE=""
 
 # Try to find a compatible Python version
-for python_cmd in python3.11 python3.12 python3.13 python3; do
+for python_cmd in python3.12 python3; do
     if command -v "$python_cmd" &> /dev/null; then
         PYTHON_VERSION=$($python_cmd -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
         if [ $(echo "$PYTHON_VERSION >= $REQUIRED_PYTHON_VERSION" | bc -l) -eq 1 ]; then
@@ -28,7 +28,7 @@ if [ -z "$PYTHON_EXECUTABLE" ]; then
     echo "❌ Error: Python $REQUIRED_PYTHON_VERSION or higher is required"
     echo ""
     echo "   Available Python versions:"
-    for cmd in python3 python3.11 python3.12 python3.13; do
+    for cmd in python3.12 python3 python3.12 python3.13; do
         if command -v "$cmd" &> /dev/null; then
             version=$($cmd -c 'import sys; print(".".join(map(str, sys.version_info[:2])))' 2>/dev/null || echo "unknown")
             echo "     $cmd: $version"
@@ -54,14 +54,21 @@ fi
 # Activate virtual environment
 echo "🔧 Activating virtual environment..."
 source venv/bin/activate
+echo "⬆️  Upgrading pip... Installing Libs..."
+pip install --upgrade pip setuptools wheel mypy mypyc
 
 # Verify we're using the right Python in venv
 VENV_PYTHON_VERSION=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
 echo "📍 Virtual environment Python version: $VENV_PYTHON_VERSION"
 
+# Get Current Python
+VENV_DIR="$(pwd)/venv"
+VENV_PYTHON="$VENV_DIR/bin/python"
+
 # Upgrade pip
-echo "⬆️  Upgrading pip..."
-pip install --upgrade pip
+#pip install --upgrade pip
+python3 --version
+#pip install mypy mypyc setuptools wheel
 
 # Install poetry if not present
 if ! command -v poetry &> /dev/null; then
@@ -72,6 +79,10 @@ if ! command -v poetry &> /dev/null; then
 else
     echo "✅ Poetry already installed"
 fi
+
+echo "📥 Initializing and updating Git submodules..."
+git submodule init
+git submodule update --recursive
 
 # Build submodule dependencies
 echo "🔨 Building submodule dependencies..."
@@ -95,13 +106,16 @@ fi
 if [ -d "deps/tsrkit-pvm" ]; then
     echo "   Building tsrkit-pvm..."
     cd deps/tsrkit-pvm
-    
+    echo "📌 tsrkit-pvm branch: $(git rev-parse --abbrev-ref HEAD)"
+
     # Run the custom setup.py with MyPyC compilation
     if [ -f "setup.py" ]; then
         # Install MyPyC if not already installed
+        echo "📌 tsrkit-pvm branch setup: $(git rev-parse --abbrev-ref HEAD)"
+        "$VENV_PYTHON" --version
         pip install mypy mypyc setuptools || echo "   ⚠️ Warning: mypy install failed"
         echo "   Compiling critical PVM modules with MyPyC..."
-        python setup.py build_ext --inplace || echo "   ⚠️ Warning: MyPyC compilation failed, falling back to regular install"
+        "$VENV_PYTHON" setup.py build_ext --inplace || echo "   ⚠️ Warning: MyPyC compilation failed, falling back to regular install"
         # Install the package in editable mode
         pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
     else
