@@ -577,7 +577,7 @@ class GeneralFunctions(INVF):
         }
 
         # Load the default logger
-        jam_logger = get_logger()
+        jam_logger = logger # get_logger()
         if int(level) == 0:
             jam_logger.error(message_str, **log_kwargs)
         elif int(level) == 1:

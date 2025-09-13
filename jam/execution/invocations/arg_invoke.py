@@ -22,17 +22,8 @@ class PsiM:
         dispatch_fn: DispatchFunction,
         context: Any,
     ) -> ArgInvokeReturn:
-        logger.debug(
-            "Starting invocation",
-            blob_size=len(blob),
-            program_counter=pc,
-            gas=int(gas),
-            arguments_size=len(arguments),
-            context_type=type(context).__name__,
-        )
-
         try:
-            program, registers, memory = y_function(bytes(Bytes(blob)), arguments, "")
+            program, registers, memory = y_function(blob, arguments)
 
         except Exception as e:
             logger.error(
@@ -42,48 +33,43 @@ class PsiM:
             )
             return Gas(0), PANIC, context
         
-        return PsiM.R(
-            gas,
-            PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context),
-        )
+        # Direct execution without intermediate R call
+        host_result = PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context)
+        return PsiM.R(gas, host_result)
 
 
     @staticmethod
     def R(g: Gas, grouped: HostCallReturn) -> ArgInvokeReturn:
         status, pc, remaining_gas, registers, memory, context = grouped
-        result: ExecutionStatus | bytes = bytes(0)
-        u = Gas(g - max(int(remaining_gas), 0))
+        
+        # Fast path calculations
+        consumed_gas = Gas(g - max(remaining_gas, 0))
 
-        logger.debug(
-            "Processing invocation result",
-            initial_gas=int(g),
-            remaining_gas=remaining_gas,
-            consumed_gas=int(u),
-            status=str(status),
-            final_pc=pc,
-        )
-
+        # Optimized status handling
         if status == ExecutionStatus.OUT_OF_GAS:
             result = status
-            logger.warning("Invocation ran out of gas", initial_gas=int(g), consumed_gas=int(u))
+            logger.warning("Invocation ran out of gas", initial_gas=int(g), consumed_gas=int(consumed_gas))
         elif status == ExecutionStatus.HALT:
-            if memory.is_accessible(int(registers[7]), int(registers[8])):
-                result = memory.read(int(registers[7]), int(registers[8]))
+            # Fast path for memory access check
+            reg7, reg8 = int(registers[7]), int(registers[8])
+            if memory.is_accessible(reg7, reg8):
+                result = memory.read(reg7, reg8)
                 logger.debug(
                     "Invocation halted with result",
-                    res_mem_addr=registers[7],
-                    result_size=registers[8],
+                    res_mem_addr=reg7,
+                    result_size=reg8,
                     result_hex=(
                         result.hex()[:32] + "..." if len(result.hex()) > 32 else result.hex()
                     ),
-                    memory_addr=int(registers[7]),
-                    memory_size=int(registers[8]),
+                    memory_addr=reg7,
+                    memory_size=reg8,
                 )
             else:
+                result = bytes(0)
                 logger.warning(
                     "Invocation halted but result memory not accessible",
-                    memory_addr=int(registers[7]),
-                    memory_size=int(registers[8]),
+                    memory_addr=reg7,
+                    memory_size=reg8,
                 )
         else:
             result = ExecutionStatus.PANIC
@@ -91,16 +77,15 @@ class PsiM:
                 "Invocation ended with panic",
                 status=str(status),
                 final_pc=pc,
-                consumed_gas=int(u),
+                consumed_gas=int(consumed_gas),
             )
 
         logger.info(
             "Invocation completed",
             status=str(status._value_),
             initial_gas=int(g),
-            consumed_gas=int(u),
+            consumed_gas=int(consumed_gas),
             result_type=type(result).__name__,
-            result_size=len(result) if isinstance(result, bytes) else None,
         )
 
-        return u, result, context
+        return consumed_gas, result, context
