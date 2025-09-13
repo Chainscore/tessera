@@ -18,8 +18,13 @@ class InvocationFunctions(Protocol):
 
     @classmethod
     def execute(cls, host_call: int, gas: int, registers: list, memory: Memory, context, args):
-        call = cls.HANDLERS[host_call]
+        # Fast path for gas check
         if gas < 0:
             return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context
-        gas = gas - cls.HANDLERS[host_call]["gas"]
+        
+        # Direct handler lookup and execution
+        call = cls.HANDLERS[host_call]
+        gas -= call["gas"]
+        
+        # Direct function call without intermediate steps
         return call["execute"](gas=gas, registers=registers, memory=memory, context=context, **args)

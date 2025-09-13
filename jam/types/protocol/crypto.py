@@ -12,6 +12,9 @@ Ed25519Signature = Bytes[64]
 BandersnatchVrfSignature = Bytes[96]
 BandersnatchRingVrfSignature = Bytes[784]
 
+from hashlib import blake2b, sha256, sha512, sha3_256
+import os
+from Crypto.Hash import keccak
 
 # Hash functions
 class Hash:
@@ -24,7 +27,6 @@ class Hash:
     @staticmethod
     def blake2b(data: bytes, digest_size: int = 32) -> Bytes[32]:
         """Blake2b hash function with caching"""
-        from hashlib import blake2b
 
         if not isinstance(data, bytes):
             data = bytes(data)
@@ -56,8 +58,6 @@ class Hash:
     @staticmethod
     def sha256(data: bytes) -> Bytes[32]:
         """SHA256 hash function"""
-        from hashlib import sha256
-
         if not isinstance(data, bytes):
             data = bytes(data)
         return Bytes[32](sha256(data).digest())
@@ -65,8 +65,6 @@ class Hash:
     @staticmethod
     def sha512(data: bytes) -> Bytes[64]:
         """SHA512 hash function"""
-        from hashlib import sha512
-
         if not isinstance(data, bytes):
             data = bytes(data)
         return Bytes[64](sha512(data).digest())
@@ -74,8 +72,6 @@ class Hash:
     @staticmethod
     def sha3256(data: bytes) -> Bytes[32]:
         """SHA3_256 hash function"""
-        from hashlib import sha3_256
-
         if not isinstance(data, bytes):
             data = bytes(data)
         return Bytes[32](sha3_256(data).digest())
@@ -83,8 +79,6 @@ class Hash:
     @staticmethod
     def keccak256(data: bytes) -> Bytes[32]:
         """Keccak-256 hash function (optimized)"""
-        from Crypto.Hash import keccak
-
         if not isinstance(data, bytes):
             data = bytes(data)
         return Bytes[32](keccak.new(digest_bits=256, data=data).digest())
