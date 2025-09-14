@@ -1,5 +1,5 @@
-from typing import Dict, Protocol
-from tsrkit_pvm import Memory, ExecutionStatus
+from typing import Dict, Protocol, Any
+from tsrkit_pvm import ExecutionStatus
 
 
 class InvocationFunctions(Protocol):
@@ -17,7 +17,7 @@ class InvocationFunctions(Protocol):
         return decorator
 
     @classmethod
-    def execute(cls, host_call: int, gas: int, registers: list, memory: Memory, context, args):
+    def execute(cls, host_call: int, gas: int, registers: list, memory: Any, context, args):
         # Fast path for gas check
         if gas < 0:
             return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context
