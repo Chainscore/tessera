@@ -83,11 +83,17 @@ class Hash:
     @staticmethod
     def keccak256(data: bytes) -> Bytes[32]:
         """Keccak-256 hash function (optimized)"""
-        from Crypto.Hash import keccak
+        from sha3 import keccak_256
 
         if not isinstance(data, bytes):
             data = bytes(data)
-        return Bytes[32](keccak.new(digest_bits=256, data=data).digest())
+        return Bytes[32](keccak_256(data).digest())
+
+        # from Crypto.Hash import keccak
+        #
+        # if not isinstance(data, bytes):
+        #     data = bytes(data)
+        # return Bytes[32](keccak.new(digest_bits=256, data=data).digest())
 
 
 # Hash types

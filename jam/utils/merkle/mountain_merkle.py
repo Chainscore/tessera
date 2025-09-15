@@ -1,16 +1,12 @@
-from copy import deepcopy
-
 from tsrkit_types.null import Null
 from tsrkit_types.integers import Uint
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
 from jam.types.protocol.crypto import OpaqueHash
 
-from typing import Callable, TypeVar, Optional
+from typing import Callable, Optional
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.merkle import MMR, OptionHash
-
-T = TypeVar("T")
 
 
 class MMRFunctions:
@@ -20,33 +16,13 @@ class MMRFunctions:
         super().__init__()
         self._ZERO_HASH = OpaqueHash([0] * 32)
         self._PEAK_PREFIX = bytes("peak", "utf-8")
-
-    @staticmethod
-    def _r(seq: TypedVector[T], ind: Uint, val: T) -> TypedVector[T]:
-        """
-        Helper Function R Implementation as defined in Equation E.8
-
-        Definition:
-            (s: [T], i: N, v: T) -> o: [T]
-        Source:
-
-        Args:
-            seq: Generic Sequence
-            ind: Index to update
-            val: New Value
-        Returns:
-            Updated Sequence
-        """
-
-        seq_dash = deepcopy(seq)
-        seq_dash[ind] = val
-        return MMR(seq_dash)
+        self._NULL_VAL = OptionHash(Null)
 
     def _p(
         self,
         mmr: MMR,
         new_hash: Bytes[32],
-        index: Uint,
+        index: int,
         hash_fn: Optional[Callable[[bytes], "Bytes[32]"]] = Hash.blake2b,
     ) -> MMR:
         """
@@ -65,22 +41,25 @@ class MMRFunctions:
             Updated Mountain Merkle
         """
 
-        mmr_len = Uint(len(mmr))
+        mmr_len = len(mmr)
 
         if index >= mmr_len:
             mmr.append(OptionHash(new_hash))
-            return mmr
-
-        elif index < mmr_len and mmr[index] == OptionHash(Null):
-            return self._r(mmr, index, OptionHash(new_hash))
 
         else:
-            mmr_dagger = self._r(mmr, index, OptionHash(Null))
-            mmr_dash = MMR(mmr_dagger)
+            val = mmr[index].unwrap()
 
-            hash_dash = hash_fn(bytes(mmr[Uint(index)].unwrap()) + bytes(new_hash))
+            if val == Null:
+                mmr[index] = OptionHash(new_hash)
 
-            return self._p(mmr_dash, hash_dash, Uint(index + 1), hash_fn)
+            else:
+                mmr[index] = self._NULL_VAL
+
+                hash_dash = hash_fn(val + new_hash)
+
+                mmr = self._p(mmr, hash_dash, index+1, hash_fn)
+
+        return mmr
 
     def append_fn(
         self,
@@ -103,7 +82,7 @@ class MMRFunctions:
             Updated Mountain Merkle
         """
 
-        return self._p(mmr, new_hash, Uint(0), hash_fn)
+        return self._p(mmr, new_hash, 0, hash_fn)
 
     @staticmethod
     def encode_mmr(mmr: MMR) -> bytes:
@@ -154,5 +133,5 @@ class MMRFunctions:
         else:
             val = self.super_peak(MMR(h[:-1]), False)
             return Hash.keccak256(
-                self._PEAK_PREFIX + bytes(val) + bytes(h[-1].unwrap())
+                self._PEAK_PREFIX + val + bytes(h[-1].unwrap())
             )

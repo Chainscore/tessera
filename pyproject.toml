@@ -26,6 +26,7 @@ tsrkit-pvm = {path = "deps/tsrkit-pvm", develop = true}
 tsrkit-asm = {path = "deps/tsrkit-asm", develop = true}
 pycryptodome = "^3.23.0"
 pydantic = "^2.11.7"
+safe-pysha3 = "^1.0.5"
 
 [tool.pyrefly]
 project-includes = ["**/*"]
