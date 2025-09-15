@@ -25,7 +25,7 @@ echo "[INFO] Cleaning previous builds..."
 rm -rf build/ dist/
 
 echo "[INFO] Installing dependencies..."
-poetry install --only=main
+PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 poetry install --only=main
 
 echo "[INFO] Setting up RocksDB library for bundling..."
 ./setup-rocksdb.sh

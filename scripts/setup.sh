@@ -87,7 +87,7 @@ fi
 if [ -d "deps/tsrkit-asm" ]; then
     echo "   Installing tsrkit-asm as editable..."
     cd deps/tsrkit-asm
-    pip install -e . || echo "   ⚠️ Warning: tsrkit-asm install failed"
+    PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 pip install -e . || echo "   ⚠️ Warning: tsrkit-asm install failed"
     cd ../..
 fi
 
