@@ -366,8 +366,8 @@ class Accumulation:
                 )
             key_hash = Hash.blake2b(blobs)
             lookup = LookupTable(hash=key_hash,length= len(blobs))
-            if len(service.timestamps[lookup]) == 0:
-                service.timestamps[lookup] = Timestamps([timeslot])
+            if len(service.lookup[lookup]) == 0:
+                service.lookup[lookup] = Timestamps([timeslot])
                 service.lookup[key_hash] = blobs
 
     @staticmethod
