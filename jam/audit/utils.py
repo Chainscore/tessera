@@ -1,24 +1,39 @@
-from tsrkit_types import U32
+import asyncio
+from wsgiref.validate import validator
+
+from docutils.nodes import header
+from tsrkit_types import U32, Uint, U8
+
+from jam.types.protocol.core import TrancheIndex
 from jam.types.work.report import WorkReport
 from jam.block.block import Block
 from jam.types.work.report import WorkReportHash
 from jam.types.audit.audit_tranche import Tranche
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
+
+
 
 from jam.logging import get_logger
 
 # Module-specifier logger
-logger = get_logger("auditor")
+logger = get_logger("utils")
 
 
 class Utils:
 
     @classmethod
-    async def getting_report(cls, wr_hash: WorkReportHash) -> WorkReport | bool:
+    async def fetch_report(cls, wr_hash: WorkReportHash) -> WorkReport | None:
         """
-        fetch Work Report if it is not exist in Report
-        1. check in ReportDA
-        2. using protocol 136
+        Fetch Work Report.
+        1. Check in ReportDA (local)
+        2. Request from other Auditor via protocol 136 if not found.
+        Returns:
+            WorkReport if found
+        Raises:
+            KeyError if not found anywhere
+            NetworkingError if protocol 136 failed
         """
+
         # 1. check in ReportDA
         #
         from jam.settings import settings
@@ -27,83 +42,99 @@ class Utils:
 
         CE136 = WorkReportRequest()
 
-        d3l = settings.d3l
-        reports_da = ReportsDA(d3l)
-        report = reports_da.get(wr_hash=wr_hash)
+        reports_da = ReportsDA(settings.d3l)
+        work_report : WorkReport | None = reports_da.get(wr_hash=wr_hash)
 
-        # 2. using protocol 136
-        if type(report) == WorkReportHash:
-            return report
-        else:
+        if work_report is not None:
+            return work_report
+
+        try:
             logger.info(
-                "Work Report Not found in RepostDA, Now request to the other Auditor via protocol 136"
+                "Work Report not found in ReportsDA, requesting via protocol 136",
+                wr_hash=wr_hash,
             )
             report_hash = WorkReportHash(wr_hash)
 
             data = CE136Data(len=U32(len(report_hash.encode())), work_report_hash=report_hash)
 
-            response = await CE136.transmit(data=data)
+            wr = await CE136.transmit(data=data)
 
-            if type(response) == WorkReportHash:
-                return response
-            else:
-                logger.debud("No work report was found in ReportDA and under protocol 136.")
-                return False
+            if wr.hash() != wr_hash:
+                logger.error("Received mismatched WorkReport from protocol 136")
+                return None
+
+            return wr
+
+        except asyncio.TimeoutError:
+            logger.warning("Timeout while requesting Work Report via protocol 136", wr_hash=wr_hash)
+
+        except Exception as e:
+            logger.exception("Failed to fetch Work Report via protocol 136", wr_hash=wr_hash, exc=e)
+            raise KeyError(f"Work Report not found for hash {wr_hash}")
 
     @classmethod
-    async def process_refine(cls, block: Block, wr: WorkReport, tranche: Tranche) -> bool:
-        """Check previously refine or not"""
+    async def process_refine(cls, wr_hash : WorkReportHash, tranche: Tranche) -> U8 | None:
+        """
+        Check whether the given Work Report has already been refined.
+
+        Refinement can be skipped if either:
+          1. The report was refined in any previous tranche.
+          2. The report was already refined during the guarantee process.
+          3. If neither condition (1) nor (2) is true, then perform refinement now.
+
+        Args:
+            wr_hash:
+            tranche: Work Report tranche
+        """
 
         from jam.settings import settings
         from jam.storage.tranche_audit_store import tranche_store
+        from jam.types.audit.audit_tranche import TrancheState
+        from jam.audit.audit import Audit
+        from rockstore import RockStore
 
-        curr_tranche = tranche
-        tranche_index = curr_tranche.tranche_index
-        validator_index = settings.validator_index
+        audit =  Audit()
 
-        wr_hash = wr.hash()
+        tranche_index = tranche.tranche_index
+        header_hash = tranche.header_hash
+        validator_index = -settings.validator_index
 
-        # ---------------------------- Check => already refine or not ----------------------------------------
-        # 1. Guarantee refine check
-        # does neet to check past blocks ????????????
-        guarantee_refine = False
-        guarantee_ext = block.extrinsic.guarantees
-        for report, slot, signature in guarantee_ext:
-            if report.hash() == wr_hash:
-                logger.info(f"already judgment given for Work report: {wr_hash}")
-                guarantee_refine = True
-                break
+        state = tranche_store.get_state(tranche=tranche)
 
-        if guarantee_refine:
-            return True
+        # Get state records
+        audit_record = state.records[wr_hash]
+        announces = audit_record.announces
+        true_votes = audit_record.true_votes
+        false_votes = audit_record.false_votes
 
-        elif guarantee_refine == False and tranche_index > 0:
-            # 2. previous tranche refine check
-            curr_state = tranche_store.get_state(
-                tranche=curr_tranche
-            )  # WHY CURRENT STATE BECAUSE WE CARRY FORWARD PREVIOUS JUDGMENT TO NEXT TRANCHE STATE
-            records = curr_state.records[wr_hash]
-            true_votes = records.no_shows
-            false_votes = records.false_votes
-            if validator_index in true_votes:
-                logger.info(
-                    f"already true judgment given in prev tranche for Work report: {wr_hash}"
-                )
-                return True
+        if validator_index in true_votes:
+            logger.info(
+                f"already true judgment given in prev tranche for Work report: {wr_hash}"
+            )
+            return None
 
-            elif validator_index in false_votes:
-                logger.info(
-                    f"already false judgment given in prev tranche for Work report: {wr_hash}"
-                )
-                return False
-            else:
-                validity = await cls.refine(wr=wr)
-                return validity
+        elif validator_index in false_votes:
+            logger.info(
+                f"already false judgment given in prev tranche for Work report: {wr_hash}"
+            )
+            return None
 
         else:
-            logger.info(
-                f" Work Report hsa not been refine via validator: {validator_index} => {wr_hash},"
-            )
-            logger.info(f"Process refine for Work Report : {wr_hash}")
-            validity = await cls.refine(wr=wr)
-            return validity
+            # 2. -------------- Guarantee refine check -------------------
+            block = Block.load(header_hash=header_hash, db=settings.main_db)
+            guarantee_found = False
+
+            guarantee_ext = block.extrinsic.guarantees
+            for guarantee in guarantee_ext:
+                if guarantee.report.hash() == wr_hash:
+                    guarantee_found = True
+                    break
+
+            if guarantee_found:
+                return U8(1)
+
+            else:
+                wr = await cls.fetch_report(wr_hash=wr_hash)
+                if wr is not None:
+                    validity = await audit.refine(wr=wr)
+                    return validity

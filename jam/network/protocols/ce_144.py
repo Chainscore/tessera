@@ -107,11 +107,11 @@ class AuditAnnouncement(NetworkProtocol):
         msg_b = data.evidence.encode()
 
         logger.info(
-            f"Transmitting Announcement to other Auditors",
-            announcement=data.tranche_announcement,
-            evidence=data.evidence,
-            stream_a_size=data.len_a,
-            stream_b_size=data.len_b,
+            f"Transmitting Work-report Announcement to other Auditors",
+            announcement= data.tranche_announcement,
+            evidence= data.evidence,
+            stream_a_size= data.len_a,
+            stream_b_size= data.len_b,
         )
 
         tasks = []
@@ -146,14 +146,13 @@ class AuditAnnouncement(NetworkProtocol):
                 tasks.append(task)
 
                 logger.debug(
-                    "Transmitted announcement",
-                    stream_id=stream_id,
-                    port=client.port,
-                    validator=client,
+                    "Assign Work Reports announcement transmitted successfully",
+                    stream_id= stream_id,
+                    port= client.port,
+                    validator= client,
                 )
 
             responses = await gather_with_exceptions(tasks)
-
 
         except Exception as e:
             logger.error(
@@ -172,32 +171,36 @@ class AuditAnnouncement(NetworkProtocol):
 
         buffer = server.stream_buffer[stream_id][1:]
 
-        logger.debug(
-            "Received Audit's Announcement from other Auditors",
-            stream_id=stream_id,
-            peer=server,
-            buffer_size=len(buffer[1:]),
-        )
-
         try:
             data = CE144Data.decode(buffer)
             data = cast(CE144Data, data)
 
-            logger.debug(f"received announcements data {data.tranche_announcement}")
+            logger.debug(
+                "Received Audit's Announcement from other Auditors",
+                stream_id= stream_id,
+                peer= server,
+                buffer_size= len(buffer[1:]),
+                data= data
+            )
 
             v_index = server.validator_index
             tranche_idx = data.tranche_announcement.tranche
             header_hash = data.tranche_announcement.header_hash
 
             tranche = Tranche(
-                tranche_index=tranche_idx,
-                header_hash=header_hash
+                tranche_index= tranche_idx,
+                header_hash= header_hash
             )
 
             #SAVE ANNOUNCEMENT RECORDS
-            tranche_store.records_announcement(tranche, v_index, data.tranche_announcement.announcement)
-
-            # logger.debug(f"saved received announcement of {settings.NODE_NAME} from state || {tranche_store.get_state(tranche=tranche)}")
+            asyncio.create_task(tranche_store.records_announcement(
+                tranche= tranche,
+                validator_index= v_index,
+                announce= Announcement(
+                    assigned_reports= data.tranche_announcement.announcement.assigned_reports,
+                    ed25519_signature= data.tranche_announcement.announcement.ed25519_signature
+                )
+            ))
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
@@ -208,11 +211,10 @@ class AuditAnnouncement(NetworkProtocol):
         except Exception as e:
             # Stop Streaming
             server.stop_stream(stream_id, 1)
-
             logger.error(
                 "Error while intercepting Audit's Announcement",
-                auditor=server,
-                stream_id=stream_id,
+                auditor= server,
+                stream_id= stream_id,
                 error=str(e),
                 err_type=type(e).__name__,
             )
@@ -220,12 +222,14 @@ class AuditAnnouncement(NetworkProtocol):
     def res_intercept(self, stream_id: int, client: NodeConnection):
         """Intercept Announcement Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
+
         if buffer == b"":
             logger.info(
                 "Announcement acknowledge received",
-                stream_id=stream_id,
+                stream_id= stream_id,
                 buffer_size=len(buffer),
             )
             return True
 
         return False
+

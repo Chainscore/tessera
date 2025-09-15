@@ -1,12 +1,10 @@
-from typing import TYPE_CHECKING, Tuple
-from tsrkit_types import Null
+from dataclasses import dataclass
+from typing import Set, TypeAlias
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
-from tsrkit_types.integers import U8
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.struct import structure
 from tsrkit_types.option import Option
-
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits, Faults
 from jam.network.protocols.ce_144 import NoShows
 from jam.types.protocol.crypto import HeaderHash, Hash, Ed25519Signature, Ed25519Public
@@ -14,38 +12,42 @@ from jam.types.protocol.core import ValidatorIndex, TrancheIndex, CoreIndex
 from jam.types.work.report import WorkReport, WorkReportHash
 
 SignatureList = TypedVector[Bytes]
-ValidatorList = TypedVector[ValidatorIndex]
+ValidatorSet = set[ValidatorIndex]
 
 OptionalReport = Option[WorkReport]
 OptionalReports = TypedVector[OptionalReport]
 
-@structure
+
+@dataclass(frozen=True)
 class ValidatorSignature:
-    """Validator signature structure."""
+    """ Validator judgment with their ed25519_public key and signature structure. """
 
     validator_index: ValidatorIndex
     ed25519_public: Ed25519Public
     ed25519_signature: Ed25519Signature
 
-judgments = TypedVector[ValidatorSignature]
+judgmentSet = set[ValidatorSignature]
 
 @structure
 class CoreReport:
+    """ Work Report associated with their Core Index. """
     core_index: CoreIndex
     work_report: OptionalReport
 
 
 @structure
 class CoreReportHash:
+    """ Work Report Hash associated with their Core Index. """
     core_index: CoreIndex
     work_report_hash: WorkReportHash
 
 
 @structure
 class AuditRecord:
-    announces: ValidatorList            # A_n
-    true_votes: judgments               # J_t(wr)(t, key and sign) => Carry Forward
-    false_votes: judgments              # J_f(wr)(t, key and sign) => Carry Forward
+    """ Managing auditing records based on tranche. """
+    announces: ValidatorSet
+    true_votes: judgmentSet
+    false_votes: judgmentSet
     no_shows: NoShows
 
 
@@ -53,16 +55,16 @@ class AuditRecord:
     def empty() -> "AuditRecord":
         """ Initialized empty audit records """
         return AuditRecord(
-            announces= ValidatorList([]),
-            true_votes= judgments([]),
-            false_votes= judgments([]),
+            announces= ValidatorSet(),
+            true_votes= set(),
+            false_votes= set(),
             no_shows= NoShows([])
         )
 
     def carry_forward(self) -> "AuditRecord":
         """ Forward work reports judgment records for next Tranche (for same slot) """
         return AuditRecord(
-            announces= ValidatorList([]),
+            announces= ValidatorSet(),
             true_votes= self.true_votes,
             false_votes= self.false_votes,
             no_shows= NoShows([])
@@ -81,10 +83,10 @@ class Records(Dictionary[WorkReportHash, AuditRecord]):
 @structure
 class TrancheState:
     """ Represents the tranche state, which maintains audit records associated with each tranche. """
-    unaudited_list: OptionalReports                                             # Corpus of reports (q), a_n will be calculated from this.
-    records: Records                                                            # A_n, J_t, J_f mappings.
-    valid_set: TypedVector[CoreReportHash]                                          # Already validated_wrs [(1, wr1), (4, wr4), ....]
-    invalid_set: TypedVector[CoreReportHash]                                        # Already invalid_wrs [(2, wr1), (5, wr4), ....]
+    unaudited_list: OptionalReports
+    records: Records
+    audited_list: TypedVector[CoreReportHash]
+    invalid_list: TypedVector[CoreReportHash]
     dispute: DisputesExtrinsic
 
 
@@ -92,26 +94,26 @@ class TrancheState:
     def empty() -> "TrancheState":
         """ Creates and returns an initialized empty state object. """
         return TrancheState(
-            unaudited_list=OptionalReports([]),
-            records=Records({}),
-            valid_set=TypedVector[CoreReportHash]([]),
-            invalid_set=TypedVector[CoreReportHash]([]),
-            dispute=DisputesExtrinsic(
-                verdicts=Verdicts([]),
-                culprits=Culprits([]),
-                faults=Faults([])
+            unaudited_list= OptionalReports([]),
+            records= Records({}),
+            audited_list= TypedVector[CoreReportHash]([]),
+            invalid_list= TypedVector[CoreReportHash]([]),
+            dispute= DisputesExtrinsic(
+                verdicts= Verdicts([]),
+                culprits= Culprits([]),
+                faults= Faults([])
             )
        )
 
     def carry_forward(self) -> "TrancheState":
         """ Carry forward and returns an initialized empty state object. """
         return TrancheState(
-            unaudited_list=OptionalReports([]),
-            records=self.records.clear_an(),
-            valid_set=self.valid_set,
-            invalid_set=self.invalid_set,
-            dispute=DisputesExtrinsic(
-                verdicts=Verdicts([]),
+            unaudited_list= OptionalReports([]),
+            records= self.records.clear_an(),
+            audited_list= self.audited_list,
+            invalid_list= self.invalid_list,
+            dispute= DisputesExtrinsic(
+                verdicts= Verdicts([]),
                 culprits= Culprits([]),
                 faults= Faults([])
             )
@@ -119,6 +121,7 @@ class TrancheState:
 
 @structure
 class Tranche:
+    """Represents a Tranche containing a header hash and a tranche index."""
     tranche_index: TrancheIndex
     header_hash: HeaderHash
 
