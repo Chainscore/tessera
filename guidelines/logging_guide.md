@@ -222,15 +222,13 @@ from jam.logging import setup_logging
 # Show only specific modules
 setup_logging(
     theme='matrix',
-    node_name='debug-node',
-    allowed_modules=['jam.execution.pvm', 'jam.network.quic']
+    node_name='debug-node'
 )
 
 # Block noisy modules
 setup_logging(
     theme='matrix',
-    node_name='debug-node',
-    blocked_modules=['jam.network.protocols', 'jam.types']
+    node_name='debug-node'
 )
 ```
 `

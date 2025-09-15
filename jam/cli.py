@@ -113,7 +113,7 @@ def main():
     if args.import_path:
         # Setup basic logging for import mode
         from jam.logging import setup_logging
-        setup_logging(theme="default", node_name="importer", level="INFO")
+        setup_logging("default", "importer")
         
         print("📥 Starting Tessera in import mode...")
         
