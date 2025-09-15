@@ -3,7 +3,7 @@ from typing import cast
 from tsrkit_types import U8
 from tsrkit_types.integers import Uint
 from tsrkit_types.struct import structure
-from jam.logging import get_logger
+from jam.logging import network_logger as logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
@@ -14,8 +14,6 @@ from jam.types.protocol.crypto import WorkReportHash, Hash
 from jam.types.work.report import WorkReport
 from jam.types.work.manifest import Assurers
 
-# Module-specific logger
-logger = get_logger("network")
 
 
 @structure

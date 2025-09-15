@@ -7,7 +7,7 @@ from tsrkit_types import Bytes, Uint, Null
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 from jam.block import Block
-from jam.logging import get_logger
+from jam.logging import logger
 from jam.state.transitions.report.error import ReportingError, ReportingErrorCode
 from jam.state.transitions.report.guarantee_assignment import assign_fn
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
@@ -23,8 +23,6 @@ from jam.utils.constants import (
     ROTATION_PERIOD,
     MAX_WORK_REPORT_SIZE,
 )
-
-logger = get_logger("import")
 
 
 class Reporting:

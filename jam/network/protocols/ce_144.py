@@ -4,7 +4,7 @@ from tsrkit_types import TypedVector, Uint, structure, Choice
 
 from jam.utils.gather import gather_with_exceptions
 
-from jam.logging import get_logger
+from jam.logging import network_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.types.protocol.core import CoreIndex, ValidatorIndex
@@ -20,7 +20,7 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 
 # Module-specific logger
-logger = get_logger("network")
+logger = network_logger
 
 TrancheIndex = U8
 

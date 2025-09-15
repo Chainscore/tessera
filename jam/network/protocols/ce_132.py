@@ -1,7 +1,7 @@
 from typing import cast
 from tsrkit_types import structure, Bool, U32, U8
 
-from jam.logging import get_logger
+from jam.logging import network_logger as logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -11,10 +11,6 @@ from jam.network.connection import NodeConnection
 from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS, EPOCH_LENGTH
 from jam.finality.finality import Finality
 from jam.utils.gather import gather_with_exceptions
-
-
-# Module-specific logger
-logger = get_logger("network")
 
 @structure
 class EpochTicket:

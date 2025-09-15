@@ -1,12 +1,8 @@
 from typing import Any, Callable, Dict, Protocol, Tuple
 
-from jam.logging import get_logger
+from jam.logging import pvm_logger as logger
 from jam.execution.invocations.functions.protocol import InvocationFunctions
 from tsrkit_pvm import (
-    CONTINUE,
-    HALT,
-    OUT_OF_GAS,
-    PANIC,
     ExecutionStatus,
     HostStatus,
 )
@@ -20,8 +16,6 @@ DispatchFunction = Callable[[Register, Gas, list, MemoryLike, Context], Dispatch
 
 
 InvocationInfo = Tuple[InvocationFunctions, Tuple]
-
-logger = get_logger("host_calls")
 
 
 class InvocationProtocol(Protocol):

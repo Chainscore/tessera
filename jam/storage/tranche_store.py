@@ -1,7 +1,7 @@
 import asyncio
 from typing import Dict
 
-from jam.logging import get_logger
+from jam.logging import node_logger
 from jam.network.protocols.ce_144 import Announcement
 from jam.network.protocols.ce_145 import Judgment
 
@@ -11,7 +11,7 @@ from jam.types.protocol.core import ValidatorIndex
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.work.report import WorkReport, WorkReportHash
 
-logger = get_logger("tranche")
+logger = node_logger
 
 
 class TrancheStore:

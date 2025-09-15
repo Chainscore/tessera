@@ -2,10 +2,8 @@ import asyncio
 import os
 from pathlib import Path
 import signal
-from jam.logging import get_logger
+from jam.logging import node_logger as logger
 
-# Logger for Node test
-logger = get_logger("test")
 
 proc = None
 

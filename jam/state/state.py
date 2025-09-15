@@ -30,7 +30,7 @@ from jam.types import (
     HeaderHash,
 )
 from jam.block.block import Block
-from jam.logging import get_logger
+from jam.logging import block_logger as logger
 from jam.types.state.theta import Theta
 from jam.state.transitions import (
     Accumulation,
@@ -43,8 +43,6 @@ from jam.state.transitions import (
     Preimages,
     Statistics,
 )
-logger = get_logger("import")
-
 
 class State:
     """

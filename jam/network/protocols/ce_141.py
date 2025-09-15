@@ -1,6 +1,6 @@
 import asyncio
 from tsrkit_types import structure, U32, U8
-from jam.logging import get_logger
+from jam.logging import network_logger
 from typing import cast
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -10,7 +10,7 @@ from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
 
-logger = get_logger("network")
+logger = network_logger
 
 
 @structure
