@@ -45,17 +45,16 @@ async def main(
     load_dotenv(".env")
     load_dotenv(env,override=True)
 
-    name = os.environ["NODE_NAME"]
-    port = os.environ["PORT"]
-    seed = os.environ["SEED"]
-    host = os.environ["HOST"]
+    name = os.environ.get("NODE_NAME", "jam-node")
+    port = os.environ.get("PORT", 40000)
+    seed = os.environ.get("SEED", "0")
+    host = os.environ.get("HOST", "0.0.0.0")
 
     if not name or not port or not host or not seed:
         raise ValueError(f"Missing node info in {env}")
 
     # ---------- SETUP LOGGING ----------
-    log_level = os.environ.get("LOG_LEVEL", "INFO")
-    setup_logging(theme=theme, node_name=name, level=log_level)
+    setup_logging(theme=theme, node_name=name)
 
     # ---------- SETUP SETTINGS ----------
     settings = setup_setting(

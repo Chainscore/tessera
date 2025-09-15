@@ -5,10 +5,7 @@ This guide explains how to properly use logging in the JAM node codebase for bot
 ## Quick Start
 
 ```python
-from jam.logging import get_logger
-
-# Create a logger for your module
-logger = get_logger("module-name")
+from jam.logging import node_logger as logger
 
 # Use structured logging with key-value pairs
 logger.info("Block produced", block_hash=hash, slot=slot, validator=validator_id)

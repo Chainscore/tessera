@@ -7,14 +7,14 @@ from jam.types.protocol.core import ValidatorIndex, EpochIndex
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
-from jam.logging import get_logger
+from jam.logging import network_logger
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, HeaderHash
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
 
 # Module-specific logger
-logger = get_logger("network")
+logger = network_logger
 
 
 @structure

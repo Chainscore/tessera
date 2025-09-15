@@ -3,7 +3,7 @@ from typing import Self
 from jam.types.protocol.ticket import TicketBody
 from tsrkit_types.struct import structure
 from rockstore import RockStore
-from jam.logging import get_logger
+from jam.logging import block_logger as logger
 from jam.types import TimeSlot
 from jam.block.extrinsics.extrinsic import Extrinsic
 from jam.block.header import Header
@@ -11,8 +11,6 @@ from jam.types.protocol.crypto import Hash, HeaderHash
 
 from jam.utils.dummy.dummy_extrinsics import create_dummy_extrinsics
 from jam.utils.dummy.dummy_header import create_dummy_header
-
-logger = get_logger("author")
 
 
 @structure

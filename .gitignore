@@ -35,6 +35,8 @@ poetry.lock
 *.swo
 .DS_Store
 
+libs/
+
 # Project specific
 data/main
 data/d3l

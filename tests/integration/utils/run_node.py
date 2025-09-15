@@ -19,11 +19,9 @@ from jam.state.state import setup_state
 from jam.block import Block
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
-from jam.logging import get_logger
+from jam.logging import node_logger as logger
 from jam.operations.ticket_queue import setup_ticket_queue
 
-# Logger for Node test
-logger = get_logger("test")
 
 async def run_node(
     genesis_path: str,

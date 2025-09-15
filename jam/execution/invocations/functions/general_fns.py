@@ -1,6 +1,6 @@
 from typing import Any, Optional, List
 
-from jam.logging import get_logger
+from jam.logging import pvm_logger as logger, logger as jam_logger
 from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
@@ -58,10 +58,6 @@ from jam.utils.constants import (
     W_X,
     Y,
 )
-
-# Module-specific logger
-logger = get_logger("host_calls")
-# logger.debug = logger.error
 
 class GeneralFunctions(INVF):
     @staticmethod
@@ -577,7 +573,7 @@ class GeneralFunctions(INVF):
         }
 
         # Load the default logger
-        jam_logger = logger # get_logger()
+        # jam_logger = logger
         if int(level) == 0:
             jam_logger.error(message_str, **log_kwargs)
         elif int(level) == 1:

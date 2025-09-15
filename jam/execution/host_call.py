@@ -1,8 +1,7 @@
 from typing import Any, Tuple
 from jam.execution.invocations.protocol import Context, DispatchFunction
 import os
-
-from jam.logging import get_logger 
+from jam.logging import pvm_logger as logger
 from tsrkit_pvm import (
         ExecutionStatus,
         CONTINUE,
@@ -10,7 +9,8 @@ from tsrkit_pvm import (
         _HAS_RECOMPILER,
         _HAS_CYTHON,
 )
-# Pre-compute PVM mode imports to avoid dynamic imports during execution
+
+
 _PVM_MODE = os.environ.get("PVM_MODE", "interpreter")
 if _PVM_MODE == "interpreter":
     from tsrkit_pvm import INT_Memory as Memory, INT_Program as Program, Interpreter as PVM 
@@ -24,7 +24,6 @@ else:
 
 HostCallReturn = Tuple[ExecutionStatus, int, int, list, Memory, Context]
 
-logger = get_logger("pvm")
 
 class PsiH:
     @staticmethod
