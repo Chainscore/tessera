@@ -34,12 +34,14 @@ class PsiR(InvocationProtocol):
         self.auth_trace = auth_trace
         self.i_segments = i_segments
         self.e_offset = e_offset
+        self.table = self.build_table()
 
     @property
     def wi(self):
         return self.work_package.items[self.item_index]
 
-    def table(self):
+
+    def build_table(self):
         from jam.state.state import state
         from jam.storage.item_extrinsics import ItemExtrinsics
         from jam.settings import settings
