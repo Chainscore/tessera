@@ -3,7 +3,9 @@ name: 🚀 Binary Build
 on:
   push:
     tags: [ 'v*' ]
-    branches: [ 'hotfix/bin-*', 'develop' ]
+    branches: [ 'hotfix/bin-*' ]
+  pull_request:
+    branches: [ main, develop ]
   workflow_dispatch:
 
 permissions:
@@ -56,17 +58,9 @@ jobs:
         run: |
           brew install rocksdb
 
-      - name: 🏗️ Install dependencies
+      - name: 🏗️ Setup project
         run: |
           ./scripts/setup.sh
-          
-          # Verify PyInstaller is available
-          if ! poetry run pyinstaller --version > /dev/null 2>&1; then
-            echo "⚠️ PyInstaller not found, installing directly..."
-            poetry run pip install pyinstaller>=6.14.2
-          fi
-          
-          echo "✅ PyInstaller version: $(poetry run pyinstaller --version)"
 
       - name: 🔨 Build binary
         run: |
