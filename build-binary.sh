@@ -33,6 +33,8 @@ echo "[INFO] Setting up RocksDB library for bundling..."
 if [ -f deps/tsrkit-pvm/setup.py ]; then
     cd deps/tsrkit-pvm
     echo "[INFO] Building tsrkit-pvm..."
+    pip install mypy mypyc setuptools==80.9.0 || echo "   ⚠️ Warning: mypy install failed"
+    echo "   Compiling critical PVM modules with MyPyC..."
     python setup.py build_ext --inplace
     cd ../..
 fi
@@ -41,6 +43,7 @@ echo "[INFO] Setting up RocksDB library for bundling..."
 ./setup-rocksdb.sh
 
 echo "[INFO] Building binary..."
+poetry install --with dev
 poetry run pyinstaller tessera.spec --clean --noconfirm
 
 # Test binary
