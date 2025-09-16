@@ -25,7 +25,7 @@ git submodule update --remote
 if [ -d "deps/test-suites" ]; then
     echo "   Updating test-suites submodules..."
     cd deps/test-suites
-    git submodule init 
+    git submodule init
     git submodule update --remote --recursive
     cd ../..
 fi
