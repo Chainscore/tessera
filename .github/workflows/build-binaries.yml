@@ -45,13 +45,6 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 📦 Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: '1.8.2'
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
       - name: 🔧 Install system dependencies (Ubuntu)
         if: matrix.os == 'linux'
         run: |
@@ -65,7 +58,7 @@ jobs:
 
       - name: 🏗️ Install dependencies
         run: |
-          poetry install --with dev
+          ./scripts/setup.sh
           
           # Verify PyInstaller is available
           if ! poetry run pyinstaller --version > /dev/null 2>&1; then

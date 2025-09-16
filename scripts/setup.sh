@@ -118,21 +118,9 @@ fi
 
 echo "✅ Submodule dependencies built"
 
-# Configure Poetry to use virtual environment
-echo "⚙️  Configuring Poetry..."
-poetry config virtualenvs.create false
-poetry config virtualenvs.in-project false
-
-# Check if poetry.lock needs to be updated
-if ! poetry check --lock 2>/dev/null; then
-    echo "🔄 Updating poetry.lock file..."
-    poetry lock
-    echo "✅ Poetry lock file updated"
-fi
-
 # Install dependencies
 echo "📦 Installing project dependencies..."
-poetry install
+pip install -e .
 echo "✅ Dependencies installed"
 
 # Setup test suites if available
@@ -147,18 +135,6 @@ if [ -d "test-suites" ]; then
         echo "✅ Test vector submodules initialized"
     fi
     
-    # Install test suites dependencies if it has its own pyproject.toml
-    if [ -f "pyproject.toml" ]; then
-        echo "📦 Installing test suites dependencies..."
-        # Configure poetry to use the parent venv
-        poetry config virtualenvs.create false
-        poetry config virtualenvs.in-project false
-        # Install just the dependencies from pyproject.toml
-        poetry lock
-        poetry install --only main --no-root || echo "   ⚠️ Warning: test-suites dependencies install failed"
-        echo "✅ Test suites dependencies installed"
-    fi
-    
     cd ..
     echo "✅ Test suites setup complete"
 else
@@ -167,7 +143,7 @@ fi
 
 # Setup pre-commit hooks
 echo "🔗 Setting up pre-commit hooks..."
-poetry run pre-commit install
+pip install pre-commit
 echo "✅ Pre-commit hooks installed"
 
 # Initialize database directory
