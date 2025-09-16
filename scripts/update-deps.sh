@@ -19,7 +19,16 @@ done
 echo ""
 
 # Update all submodules to latest commit on their tracked branch
+git submodule init
 git submodule update --remote
+
+if [ -d "deps/test-suites" ]; then
+    echo "   Updating test-suites submodules..."
+    cd deps/test-suites
+    git submodule init 
+    git submodule update --remote
+    cd ../..
+fi
 
 # Check if there are any changes
 if git diff --quiet --ignore-submodules; then

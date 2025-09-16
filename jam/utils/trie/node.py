@@ -25,4 +25,5 @@ class Node:
 
     @property
     def key_bits_248(self) -> List[bool]:
-        return self.encoded.key_bits_248()
+        """Extraction of key bits from encoded node (bits 8-255)."""
+        return self.encoded.slice_bits(8, 256)
