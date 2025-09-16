@@ -36,8 +36,8 @@ class PsiA(InvocationProtocol):
         self.table = self.build_table(s, self.context.x.partial_state.service_accounts)
 
     def build_table(self, 
-        xs: int = None, 
-        delta: Dict[int, Any] = None
+        xs: int,
+        delta: Dict[int, Any]
     ) -> Dict[int, InvocationInfo]:
         return {
             # fetch

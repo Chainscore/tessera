@@ -102,8 +102,6 @@ if [ -d "deps/tsrkit-pvm" ]; then
         pip install mypy mypyc setuptools || echo "   ⚠️ Warning: mypy install failed"
         echo "   Compiling critical PVM modules with MyPyC..."
         python setup.py build_ext --inplace || echo "   ⚠️ Warning: MyPyC compilation failed, falling back to regular install"
-        # Install the package in editable mode
-        pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
     else
         echo "   setup.py not found, installing normally..."
         pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
