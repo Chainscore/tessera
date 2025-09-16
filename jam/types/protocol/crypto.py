@@ -1,4 +1,5 @@
 from tsrkit_types.bytes import Bytes
+from sha3 import keccak_256
 
 # Public key types
 BandersnatchPublic = Bytes[32]
@@ -14,12 +15,11 @@ BandersnatchRingVrfSignature = Bytes[784]
 
 from hashlib import blake2b, sha256, sha512, sha3_256
 import os
-from Crypto.Hash import keccak
 
 # Hash functions
 class Hash:
     """Cryptographic hash functions that produce 32-byte outputs"""
-    
+
     # cache for hash results to avoid recomputation
     _blake2b_cache = {}
     _cache_max_size = 1000
@@ -30,26 +30,26 @@ class Hash:
 
         if not isinstance(data, bytes):
             data = bytes(data)
-            
+
         # Use cache for common case (32-byte digest)
         if digest_size == 32:
             if data in Hash._blake2b_cache:
                 return Hash._blake2b_cache[data]
-                
+
             result = Bytes[32](blake2b(data, digest_size=digest_size).digest())
-            
+
             # Simple cache eviction when full
             if len(Hash._blake2b_cache) >= Hash._cache_max_size:
                 # Remove oldest 20% of entries
                 items_to_remove = Hash._cache_max_size // 5
                 for _ in range(items_to_remove):
                     Hash._blake2b_cache.pop(next(iter(Hash._blake2b_cache)))
-            
+
             Hash._blake2b_cache[data] = result
             return result
         else:
             return Bytes[32](blake2b(data, digest_size=digest_size).digest())
-    
+
     @staticmethod
     def clear_cache():
         """Clear the blake2b cache to prevent memory buildup"""
@@ -81,7 +81,7 @@ class Hash:
         """Keccak-256 hash function (optimized)"""
         if not isinstance(data, bytes):
             data = bytes(data)
-        return Bytes[32](keccak.new(digest_bits=256, data=data).digest())
+        return Bytes[32](keccak_256(data).digest())
 
 
 # Hash types

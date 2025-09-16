@@ -12,7 +12,7 @@ readme = "README.md"
 packages = [{ include = "jam" }]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 cryptography = "45.0.2"
 structlog = "^25.2.0"
 aioquic = "^1.2.0"
@@ -26,6 +26,7 @@ tsrkit-pvm = {path = "deps/tsrkit-pvm", develop = true}
 tsrkit-asm = {path = "deps/tsrkit-asm", develop = true}
 pycryptodome = "^3.23.0"
 pydantic = "^2.11.7"
+safe-pysha3 = "^1.0.5"
 
 [tool.pyrefly]
 project-includes = ["**/*"]

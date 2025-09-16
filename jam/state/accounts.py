@@ -147,7 +147,8 @@ class Account:
         """
         https://graypaper.fluffylabs.dev/#/38c4e62/114301114301?v=0.7.0
         """
-        if not lookup_ts: return False
+        if not lookup_ts:
+            return False
         if len(lookup_ts) == 0:
             return False
         elif len(lookup_ts) == 1:
