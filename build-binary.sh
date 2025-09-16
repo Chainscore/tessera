@@ -24,21 +24,11 @@ echo "[INFO] Building for: $PLATFORM_NAME-$ARCH_NAME"
 echo "[INFO] Cleaning previous builds..."
 rm -rf build/ dist/
 
-echo "[INFO] Installing dependencies..."
-PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 poetry install --only=main
-
 echo "[INFO] Setting up RocksDB library for bundling..."
 ./setup-rocksdb.sh
 
-if [ -f deps/tsrkit-pvm/setup.py ]; then
-    cd deps/tsrkit-pvm
-    echo "[INFO] Building tsrkit-pvm..."
-    python setup.py build_ext --inplace
-    cd ../..
-fi
-
 echo "[INFO] Building binary..."
-poetry run pyinstaller tessera.spec --clean --noconfirm
+python -m pyinstaller tessera.spec --clean --noconfirm
 
 # Test binary
 echo "[INFO] Testing binary..."

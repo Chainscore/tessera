@@ -90,15 +90,8 @@ if [ -d "deps/tsrkit-pvm" ]; then
     if [ -f "setup.py" ]; then
         # Install MyPyC if not already installed
         pip install mypy mypyc setuptools==80.9.0 || echo "   ⚠️ Warning: mypy install failed"
-        echo "   Compiling critical PVM modules with MyPyC..."
-        if python setup.py build_ext --inplace; then
-            echo "   ✅ MyPyC compilation succeeded"
-            # Register as editable to avoid re-building during main install
-            pip install -e . || echo "   ⚠️ Editable install failed"
-        else
-            echo "   ⚠️ MyPyC compilation failed, falling back to regular install"
-            pip install -e . || echo "   ❌ Fallback install failed"
-        fi
+        echo "   Compiling PVM module with MyPyC..."
+        python setup.py build_ext --inplace;
     else
         echo "   setup.py not found, installing normally..."
         pip install -e . || echo "   ❌ Install failed"
