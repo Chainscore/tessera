@@ -89,14 +89,9 @@ if [ -d "deps/tsrkit-pvm" ]; then
     # Run the custom setup.py with MyPyC compilation
     if [ -f "setup.py" ]; then
         # Install MyPyC if not already installed
-        pip install mypy mypyc || echo "   ⚠️ Warning: mypy install failed"
+        pip install mypy mypyc setuptools==80.9.0 || echo "   ⚠️ Warning: mypy install failed"
         echo "   Compiling critical PVM modules with MyPyC..."
-        
-        # Set timeout for MyPyC compilation (5 minutes max)
-        timeout 300 python setup.py build_ext --inplace || {
-            echo "   ⚠️ Warning: MyPyC compilation timed out or failed, falling back to regular install"
-            pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
-        }
+        python setup.py build_ext --inplace || echo "   ⚠️ Warning: MyPyC compilation failed, falling back to regular install"
     else
         echo "   setup.py not found, installing normally..."
         pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
