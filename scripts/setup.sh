@@ -99,12 +99,14 @@ if [ -d "deps/tsrkit-pvm" ]; then
     # Run the custom setup.py with MyPyC compilation
     if [ -f "setup.py" ]; then
         # Install MyPyC if not already installed
-        pip install mypy mypyc setuptools || echo "   ⚠️ Warning: mypy install failed"
+        pip install mypy mypyc setuptools==80.9.0 || echo "   ⚠️ Warning: mypy install failed"
         echo "   Compiling critical PVM modules with MyPyC..."
         python setup.py build_ext --inplace || echo "   ⚠️ Warning: MyPyC compilation failed, falling back to regular install"
+        # Install the package in editable mode
+#        pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
     else
         echo "   setup.py not found, installing normally..."
-        pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
+#        pip install -e . || echo "   ⚠️ Warning: tsrkit-pvm install failed"
     fi
     cd ../..
 fi
@@ -132,33 +134,22 @@ fi
 
 # Install dependencies
 echo "📦 Installing project dependencies..."
-poetry install
+pip install -e .
 echo "✅ Dependencies installed"
 
 # Setup test suites if available
 if [ -d "test-suites" ]; then
     echo "🧪 Setting up test suites..."
     cd test-suites
-    
+
     # Initialize test suites submodules (for external test vectors)
     if [ -f ".gitmodules" ]; then
         echo "📥 Initializing test vector submodules..."
-        git submodule update --init --recursive
+        git submodule init
+        git submodule update --recursive
         echo "✅ Test vector submodules initialized"
     fi
-    
-    # Install test suites dependencies if it has its own pyproject.toml
-    if [ -f "pyproject.toml" ]; then
-        echo "📦 Installing test suites dependencies..."
-        # Configure poetry to use the parent venv
-        poetry config virtualenvs.create false
-        poetry config virtualenvs.in-project false
-        # Install just the dependencies from pyproject.toml
-        poetry lock
-        poetry install --only main --no-root || echo "   ⚠️ Warning: test-suites dependencies install failed"
-        echo "✅ Test suites dependencies installed"
-    fi
-    
+
     cd ..
     echo "✅ Test suites setup complete"
 else
@@ -167,6 +158,7 @@ fi
 
 # Setup pre-commit hooks
 echo "🔗 Setting up pre-commit hooks..."
+pip install pre-commit
 poetry run pre-commit install
 echo "✅ Pre-commit hooks installed"
 

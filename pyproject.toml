@@ -12,7 +12,7 @@ readme = "README.md"
 packages = [{ include = "jam" }]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 cryptography = "45.0.2"
 structlog = "^25.2.0"
 aioquic = "^1.2.0"
