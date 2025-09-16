@@ -2,7 +2,7 @@ from typing import cast, TYPE_CHECKING
 
 from tsrkit_types import Bytes, TypedVector, Dictionary
 
-from jam.logging import get_logger
+from jam.logging import network_logger as logger
 from jam.network.connection import NodeConnection
 from jam.state.state import state
 from jam.types import HeaderHash
@@ -13,10 +13,6 @@ if TYPE_CHECKING:
 from tsrkit_types.integers import U32
 from tsrkit_types.struct import structure
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-
-# Module-specific logger
-logger = get_logger("network")
-
 
 @structure
 class CE129Data:

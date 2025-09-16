@@ -5,9 +5,8 @@ from jam.types.state.accumulation.types import (
     DeferredTransfer,
 )
 from tsrkit_types import U32, U64, Bytes
-from tsrkit_types.sequences import TypedArray
 from jam.types.protocol.validators import ValidatorData
-from jam.logging import get_logger
+from jam.logging import pvm_logger as logger
 from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
@@ -55,8 +54,6 @@ def check(u: GhostPartial, i: ServiceId):
         return i
     else:
         return check(u, ServiceId((i - 2**8 + 1) % (2**32 - 2**9) + 2**8))
-
-logger = get_logger("host_calls")
 
 
 class AccumulateFunctions(INVF):
@@ -157,13 +154,14 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(17, gas_cost=10)
     def checkpoint(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+        context.y.i_index = context.x.i_index
         context.y.s_index = context.x.s_index
         context.y.partial_state.store._updates.update(context.x.partial_state.store._updates)
         context.y.deferred_transfers = context.x.deferred_transfers.copy()
         context.y.hash = context.x.hash
         context.y.preimage = context.x.preimage.copy()
 
-        registers[7] = gas - 10
+        registers[7] = gas
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod

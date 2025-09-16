@@ -17,8 +17,9 @@ class PsiT(InvocationProtocol):
         self.timeslot = block_timeslot
         self.service_id = s
         self.transfers: DeferredTransfers = transfers
+        self.table = self.build_table()
 
-    def table(self):
+    def build_table(self):
         from jam.state.state import state
 
         return {

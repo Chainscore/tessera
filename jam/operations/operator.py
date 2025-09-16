@@ -3,13 +3,13 @@ import math
 import time
 from typing import List, Tuple
 
-from jam.logging import get_logger
+from jam.logging import node_logger
 from .handlers import WPBuilder, assurer, BlockProducer, Conductor, Forwarding
 from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from ..finality.finality import Finality
 
-logger = get_logger("nodeops")
+logger = node_logger
 
 
 def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:

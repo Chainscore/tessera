@@ -1,7 +1,7 @@
 from typing import List
 from jam.types.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
-from jam.logging import get_logger
+from jam.logging import logger
 from jam.block import TicketEnvelope, TicketsExtrinsic
 from jam.types.state.eta import Eta
 from jam.types.state.kappa import Kappa
@@ -29,8 +29,6 @@ from jam.types.protocol.crypto import (
 from jam.types.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from py_ark_vrf import verify_ring, get_ring_root, vrf_output
-
-logger = get_logger("import")
 
 
 class Safrole:

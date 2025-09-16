@@ -22,6 +22,14 @@ echo ""
 git submodule init
 git submodule update --remote
 
+if [ -d "deps/test-suites" ]; then
+    echo "   Updating test-suites submodules..."
+    cd deps/test-suites
+    git submodule init 
+    git submodule update --remote
+    cd ../..
+fi
+
 # Check if there are any changes
 if git diff --quiet --ignore-submodules; then
     echo "✅ All submodules are up to date"

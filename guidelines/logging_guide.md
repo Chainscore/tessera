@@ -5,10 +5,7 @@ This guide explains how to properly use logging in the JAM node codebase for bot
 ## Quick Start
 
 ```python
-from jam.logging import get_logger
-
-# Create a logger for your module
-logger = get_logger("module-name")
+from jam.logging import node_logger as logger
 
 # Use structured logging with key-value pairs
 logger.info("Block produced", block_hash=hash, slot=slot, validator=validator_id)
@@ -225,15 +222,13 @@ from jam.logging import setup_logging
 # Show only specific modules
 setup_logging(
     theme='matrix',
-    node_name='debug-node',
-    allowed_modules=['jam.execution.pvm', 'jam.network.quic']
+    node_name='debug-node'
 )
 
 # Block noisy modules
 setup_logging(
     theme='matrix',
-    node_name='debug-node',
-    blocked_modules=['jam.network.protocols', 'jam.types']
+    node_name='debug-node'
 )
 ```
 `

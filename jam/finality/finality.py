@@ -1,13 +1,7 @@
-import asyncio
-from typing import TYPE_CHECKING
-from jam.logging import get_logger
+from jam.logging import block_logger as logger
 from rockstore import RockStore
 from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.block import Block
-from jam.api.rpc.broker import broker
-
-logger = get_logger("grandpa")
-
 
 class Finality:
     """

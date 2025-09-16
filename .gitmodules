@@ -5,7 +5,7 @@
 [submodule "deps/tsrkit-pvm"]
 	path = deps/tsrkit-pvm
 	url = https://github.com/chainscore/tsrkit-pvm.git
-	branch = fix/deps
+	branch = feat/mypyc
 [submodule "deps/tsrkit-asm"]
 	path = deps/tsrkit-asm
 	url = https://github.com/chainscore/tsrkit-asm.git
@@ -13,7 +13,7 @@
 [submodule "test-suites"]
 	path = test-suites
 	url = https://github.com/Chainscore/tessera-test-suites.git
-	branch = tests/speedup
+	branch = sync/0.7.0
 [submodule "deps/tsrkit-types"]
 	path = deps/tsrkit-types
 	url = https://github.com/Chainscore/tsrkit-types.git
