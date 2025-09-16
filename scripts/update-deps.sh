@@ -19,6 +19,7 @@ done
 echo ""
 
 # Update all submodules to latest commit on their tracked branch
+git submodule init
 git submodule update --remote
 
 # Check if there are any changes
