@@ -17,15 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: linux
-            arch: x64
-            runner: ubuntu-22.04
           - os: darwin
             arch: arm64
             runner: macos-14
-          - os: darwin
-            arch: x64
-            runner: macos-13
+          # - os: linux
+          #   arch: x64
+          #   runner: ubuntu-22.04
+          # - os: darwin
+          #   arch: x64
+          #   runner: macos-13
 
     steps:
       - name: 📥 Checkout code

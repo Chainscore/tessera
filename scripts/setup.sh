@@ -63,16 +63,6 @@ echo "📍 Virtual environment Python version: $VENV_PYTHON_VERSION"
 echo "⬆️  Upgrading pip..."
 pip install --upgrade pip
 
-# Install poetry if not present
-if ! command -v poetry &> /dev/null; then
-    echo "📚 Installing Poetry..."
-    curl -sSL https://install.python-poetry.org | python -
-    export PATH="$HOME/.local/bin:$PATH"
-    echo "✅ Poetry installed"
-else
-    echo "✅ Poetry already installed"
-fi
-
 # Build submodule dependencies
 echo "🔨 Building submodule dependencies..."
 
