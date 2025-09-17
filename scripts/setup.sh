@@ -26,10 +26,6 @@ fi
 export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 uv sync --all-extras
 
-echo "🔧 Building Rust and native components..."
-# UV automatically handles maturin builds for Rust-Python packages
-# and other build backends defined in pyproject.toml
-
 # Setup pre-commit hooks
 echo "🔗 Setting up pre-commit hooks..."
 uv run pre-commit install
@@ -37,17 +33,6 @@ uv run pre-commit install
 # Initialize database directory
 echo "💾 Initializing data directories..."
 mkdir -p data/
-
-# Setup test suites if available  
-if [ -d "test-suites" ]; then
-    echo "🧪 Setting up test suites..."
-    cd test-suites
-    if [ -f ".gitmodules" ]; then
-        echo "📥 Initializing test vector submodules..."
-        git submodule update --init --recursive
-    fi
-    cd ..
-fi
 
 echo ""
 echo "🎉 Setup completed successfully!"

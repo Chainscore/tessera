@@ -14,6 +14,9 @@ jobs:
   build:
     name: Build ${{ matrix.os }}-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
+    env:
+      JAM_LOG_LEVEL: "critical"
+      PVM_MODE: ${{ matrix.os == 'linux' && matrix.arch == 'x64' && 'recompiler' || 'interpreter' }}
     strategy:
       fail-fast: false
       matrix:
@@ -41,41 +44,88 @@ jobs:
           git config --global url."https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
           git submodule update --init deps/py-ark-vrf deps/tsrkit-pvm deps/tsrkit-asm deps/tsrkit-types deps/rockstore
 
-      - name: 🐍 Set up Python
-        uses: actions/setup-python@v4
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.12'
+          version: "latest"   # or pin to a version like "0.4.26"
 
-      - name: 🔧 Install system dependencies (Ubuntu)
+      - name: Install system dependencies (Ubuntu)
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential librocksdb-dev
+          sudo apt-get install -y \
+            build-essential \
+            librocksdb-dev \
+            git \
+            curl \
+            pkg-config
 
-      - name: 🔧 Install system dependencies (macOS)
+      - name: Install Rust toolchain (Linux)
+        if: matrix.os == 'linux'
+        shell: bash
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          source "$HOME/.cargo/env" || true
+          rustc --version
+          cargo --version
+
+      - name: Install system dependencies (macOS)
         if: matrix.os == 'darwin'
         run: |
           brew install rocksdb
 
-      - name: 🏗️ Setup project
+      - name: Install Rust toolchain (macOS)
+        if: matrix.os == 'darwin'
+        shell: bash
+        run: |
+          brew install rustup-init || true
+          rustup-init -y --profile minimal
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          source "$HOME/.cargo/env" || true
+          rustc --version
+          cargo --version
+
+      - name: Setup project
         run: |
           ./scripts/setup.sh
 
-      - name: 🔨 Build binary
+      - name: Compile MyPyC modules
+        run: |
+          echo "🔥 Compiling PVM module with MyPyC..."
+          cd deps/tsrkit-pvm
+          PVM_BUILD_MODE=mypyc uv run python setup.py build_ext --inplace
+          echo "✅ MyPyC compilation completed"
+          ls -la tsrkit_pvm/interpreter/ | grep -E "\.(so|dylib|pyd)$" || echo "No compiled modules found"
+
+      - name: Build binary
         run: |
           chmod +x build-binary.sh setup-rocksdb.sh
           ./build-binary.sh
 
-      - name: 🧪 Test binary
+      - name: Fetch JAM test vectors
         run: |
-          ./dist/tessera-node --help
+          git clone --depth 1 https://github.com/w3f/jamtestvectors jamtestvectors
 
-      - name: 📊 Show results
+      - name: 🧪 Import test (JAM vectors)
+        run: |
+          VEC_DIR="${{ github.workspace }}/jamtestvectors/traces/storage"
+          echo "Using vectors at: $VEC_DIR"
+          if [ ! -d "$VEC_DIR" ]; then
+            echo "❌ Missing test vectors path: $VEC_DIR" >&2
+            echo "Workspace: ${{ github.workspace }}"
+            echo "Listing jamtestvectors root (if present):" && ls -la "${{ github.workspace }}/jamtestvectors" || true
+            echo "Listing jamtestvectors/traces (if present):" && ls -la "${{ github.workspace }}/jamtestvectors/traces" || true
+            exit 1
+          fi
+          ./dist/tessera-node --import "$VEC_DIR"
+
+      - name: Show results
         run: |
           echo "📏 Binary size: $(du -sh dist/tessera-node | cut -f1)"
           ls -la dist/
 
-      - name: 🏷️ Get version from tag
+      - name: Get version from tag
         id: version
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
@@ -87,12 +137,12 @@ jobs:
             VERSION=$(cat .version)
           else
             # Default version for manual dispatch without .version file
-            VERSION="dev-$(date +%Y%m%d-%H%M%S)"
+            VERSION="dev-$(date +'%Y-%m-%d-%H-%M-%S')"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
-      - name: 📤 Upload artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tessera-v${{ steps.version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}
