@@ -2,9 +2,10 @@ name: 🚀 Binary Build
 
 on:
   push:
-    tags: [ 'v*' ]
+    tags: ["v*"]
+    branches: ["hotfix/bin-*"]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -47,7 +48,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          version: "latest"   # or pin to a version like "0.4.26"
+          version: "latest" # or pin to a version like "0.4.26"
 
       - name: Install system dependencies (Ubuntu)
         if: matrix.os == 'linux'
@@ -194,22 +195,22 @@ jobs:
       - name: 🚀 Create Release in Public Repo
         uses: softprops/action-gh-release@v2
         with:
-          repository: Chainscore/tessera-releases  # Public releases repo
+          repository: Chainscore/tessera-releases # Public releases repo
           tag_name: v${{ steps.version.outputs.version }}
           name: "Tessera Node v${{ steps.version.outputs.version }}"
           body: |
             ## 🚀 Tessera Binary Release v${{ steps.version.outputs.version }}
-            
+
             ### 📦 Downloads
-            
+
             Choose the appropriate binary for your platform:
-            
+
             - **Linux x86_64**: `tessera-node-Linux-x64.tar.gz`
             - **macOS Apple Silicon (M-Series)**: `tessera-node-Darwin-arm64.tar.gz`  
             - **macOS Intel**: `tessera-node-Darwin-x64.tar.gz`
-            
+
             ### 🚀 Quick Start
-            
+
             # Run node
             ```bash
             ./tessera-node --help
@@ -222,16 +223,16 @@ jobs:
             ```bash
             ./tessera-node --fuzzer --socket /tmp/jam_conformance.sock
             ```
-            
+
             ### 🔍 Build Info
-            
+
             - **Python**: 3.12
             - **PyInstaller**: Latest
             - **Version**: v${{ steps.version.outputs.version }}
             - **Build Date**: $(date +'%Y-%m-%d %H:%M:%S UTC')
-            
+
             ---
-            
+
             > **Note**: This is an automated release from the private Tessera repository.
             > For support or issues, please contact prasad@chainscore.finance
           files: release-assets/*
