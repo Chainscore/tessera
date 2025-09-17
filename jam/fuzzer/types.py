@@ -1,30 +1,97 @@
-"""Small typed structures used by the JAM fuzzer target.
+"""Fuzzer message types implementing the JAM Fuzzing Protocol v1.
 
-This module keeps simple type definitions in one place. We avoid heavy
-third-party typing dependencies here so the module is easy to read and
-maintain.
+This module contains types that match the ASN.1 schema defined in fuzz-v1.asn.
+Uses tsrkit-types for automatic encode/decode functionality.
 """
-from __future__ import annotations
+from tsrkit_types import Bytes, Bytes32, U8, U16, U32, TypedVector, String, structure
 
-from dataclasses import dataclass
-from typing import List
-
-# Keep binary alias for clarity in code that handles bytes blobs
-Bytes = bytes
+from jam.block.header import Header
+from jam.block.block import Block
 
 
-@dataclass(frozen=True)
-class KeyVal:
-    key: Bytes
+@structure
+class Version:
+    """Version ::= SEQUENCE { major U8, minor U8, patch U8 }"""
+    major: U8
+    minor: U8  
+    patch: U8
+
+
+@structure  
+class PeerInfo:
+    """PeerInfo ::= SEQUENCE {
+        fuzz-version  U8,
+        fuzz-features Features,  
+        jam-version   Version,
+        app-version   Version,
+        app-name      UTF8String
+    }"""
+    fuzz_version: U8
+    fuzz_features: U32   # Features = U32
+    jam_version: Version
+    app_version: Version  
+    app_name: String
+
+
+@structure
+class KeyValue:
+    """KeyValue ::= SEQUENCE {
+        key     OCTET STRING (SIZE(31)),
+        value   OCTET STRING
+    }"""
+    key: Bytes[31]     # Will be constrained to 31 bytes at runtime
     value: Bytes
 
 
-@dataclass(frozen=True)
-class SetStateData:
-    header: object  # keep generic to avoid importing large header module here
-    state: List[KeyVal]
+@structure
+class State:
+    """State ::= SEQUENCE OF KeyValue"""
+    keyvals: TypedVector[KeyValue]
 
 
-SetState = list[SetStateData]
+@structure
+class AncestryItem:
+    """AncestryItem ::= SEQUENCE {
+        slot TimeSlot,
+        header-hash HeaderHash  
+    }"""
+    slot: U32        # TimeSlot = U32
+    header_hash: Bytes32  # HeaderHash = Hash = 32 bytes
 
-__all__ = ["Bytes", "KeyVal", "SetStateData", "SetState"]
+
+@structure
+class Ancestry:
+    """Ancestry ::= SEQUENCE (SIZE(0..24)) OF AncestryItem
+    
+    Note: Max size constraint handled at application level
+    """
+    items: TypedVector[AncestryItem]
+
+
+@structure
+class Initialize:
+    """Initialize ::= SEQUENCE {
+        header Header,
+        keyvals State,
+        ancestry Ancestry
+    }"""
+    header: Header
+    keyvals: State
+    ancestry: Ancestry
+
+
+@structure
+class ErrorMessage:
+    """Error ::= UTF8String"""
+    message: String
+
+
+# Keep old aliases for compatibility during transition
+KeyVal = KeyValue
+SetStateData = Initialize  # Old name mapping
+
+__all__ = [
+    "Version", "PeerInfo", "KeyValue", "KeyVal", "State", 
+    "AncestryItem", "Ancestry", "Initialize", "ErrorMessage",
+    "SetStateData"  # Legacy alias
+]
