@@ -233,7 +233,9 @@ async def run_fuzzer_target(
         shutil.rmtree(db_path)
     
     from jam.settings import setup_setting
+    from jam.log_setup import setup_logging
     settings = setup_setting(db_path, 1, "fuzzer", 40001)
+    setup_logging("default", "fuzzer-target")
 
     # Ensure the socket does not already exist
     if os.path.exists(socket_path):

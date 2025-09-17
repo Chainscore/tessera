@@ -18,15 +18,13 @@ import asyncio
 import os
 from functools import partial
 from typing import Callable, Optional, Text, Union, cast
-from jam.logging import get_logger
+from jam.log_setup import network_logger as logger
 from jam.types.protocol.crypto import Ed25519Public
 from jam.utils.constants import VALIDATOR_COUNT
 from .base.certificate import generate_san
 from .connection import NodeConnection
 from jam.types.protocol.validators import ValidatorData
 
-
-logger = get_logger("quic")
 
 # AIOQUIC - Patch to recieve certificates
 _original_initialize = QuicConnection._initialize

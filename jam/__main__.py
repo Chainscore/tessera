@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 if TYPE_CHECKING:
     from jam.finality.finality import Finality
-    from jam.logging import setup_logging
+    from jam.log_setup import setup_logging
     from jam.network.start import start_node
     from jam.operations.operator import operate
     from jam.utils.chainspec import chain_config
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from jam.api.rpc.app import rpc
     from jam.operations.ticket_queue import setup_ticket_queue
 
-from jam.logging import setup_logging, logger
+from jam.log_setup import setup_logging, logger
 from jam.network.start import start_node
 from jam.operations.operator import operate
 from jam.operations.ticket_queue import setup_ticket_queue
@@ -45,24 +45,16 @@ async def main(
     load_dotenv(".env")
     load_dotenv(env,override=True)
 
-    name = os.environ["NODE_NAME"]
-    port = os.environ["PORT"]
-    seed = os.environ["SEED"]
-    host = os.environ["HOST"]
+    name = os.environ.get("NODE_NAME", "jam-node")
+    port = os.environ.get("PORT", 40000)
+    seed = os.environ.get("SEED", "0")
+    host = os.environ.get("HOST", "0.0.0.0")
 
     if not name or not port or not host or not seed:
         raise ValueError(f"Missing node info in {env}")
 
     # ---------- SETUP LOGGING ----------
-    environment = os.environ.get("ENVIRONMENT", "development")
-    log_level = os.environ.get("LOG_LEVEL", None)
-
-    setup_logging(
-        theme=theme,
-        node_name=name,
-        environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None,
-    )
+    setup_logging(theme=theme, node_name=name)
 
     # ---------- SETUP SETTINGS ----------
     settings = setup_setting(
@@ -71,12 +63,7 @@ async def main(
 
     main_db = settings.main_db
 
-    logger.info(
-        "Starting Tessera Node!",
-        name=name,
-        port=port,
-        spec=chain_config.name,
-    )
+    logger.info(f"Starting Tessera Node! name={name} port={port} spec={chain_config.name}")
 
     try:
         # -------------- SETUP STATE -------------
@@ -107,7 +94,7 @@ async def main(
             tg.create_task(operate(is_builder))
 
     except Exception as e:
-        logger.critical("Fatal error", e=e, error_type=type(e).__name__)
+        logger.critical(f"Fatal error: {e} ({type(e).__name__})")
         # Close db connections
         if Path("data/tmp").exists():
             shutil.rmtree("data/tmp")

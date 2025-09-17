@@ -27,6 +27,9 @@ class Disputes:
 
         # epoch Index
         current_epoch = pre_state.tau // EPOCH_LENGTH
+        pre_psi = pre_state.psi
+        pre_lambda = pre_state.lambda_
+        pre_kappa = pre_state.kappa
 
         # 2. Valid age
         valid_ages = (
@@ -36,14 +39,14 @@ class Disputes:
         )
 
         # 3. Pre States
-        good_set = set(pre_state.psi.good)
-        bad_set = set(pre_state.psi.bad)
-        wonky_set = set(pre_state.psi.wonky)
-        offenders_set = set(pre_state.psi.offenders)
+        good_set = set(pre_psi.good)
+        bad_set = set(pre_psi.bad)
+        wonky_set = set(pre_psi.wonky)
+        offenders_set = set(pre_psi.offenders)
 
         rho_dagger = pre_state.rho
 
-        val_keys = {v.ed25519 for v in pre_state.lambda_} | {v.ed25519 for v in pre_state.kappa}
+        val_keys = {v.ed25519 for v in pre_lambda} | {v.ed25519 for v in pre_kappa}
 
         # 4. Verifying signatures
         # Verifying fault signatures
@@ -77,10 +80,10 @@ class Disputes:
             for vote in verdict.votes:
                 # Get the public key from the validator key-set
                 if verdict.age == valid_ages[0]:
-                    validator = pre_state.kappa[vote.index]
+                    validator = pre_kappa[vote.index]
                     public_key = validator.ed25519
                 else:
-                    validator = pre_state.lambda_[vote.index]
+                    validator = pre_lambda[vote.index]
                     public_key = validator.ed25519
 
                 # Get the vote value and message

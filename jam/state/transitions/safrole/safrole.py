@@ -1,8 +1,7 @@
 from typing import List
-
 from jam.types.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
-from jam.logging import get_logger
+from jam.log_setup import logger
 from jam.block import TicketEnvelope, TicketsExtrinsic
 from jam.types.state.eta import Eta
 from jam.types.state.kappa import Kappa
@@ -10,7 +9,7 @@ from jam.types.state.lambda_ import Lambda_
 from jam.types.state.sigma import Sigma
 from jam.types.state.gamma import GammaS, GammaSTickets
 from jam.utils.util_fns import outside_in
-from tsrkit_types import Bytes, U64, U32, Null
+from tsrkit_types import Bytes, U32
 from jam.block import Block
 from jam.utils.constants import (
     EPOCH_LENGTH,
@@ -29,29 +28,22 @@ from jam.types.protocol.crypto import (
 )
 from jam.types.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
-# from dot_ring.vrf.ring.ring_vrf import RingVrf
 from py_ark_vrf import verify_ring, get_ring_root, vrf_output
-
-logger = get_logger("import")
 
 
 class Safrole:
     @staticmethod
     def verify_vrf(
-        message: bytes, ring_root: bytes, gamma_p: list[bytes], proof: BandersnatchRingVrfSignature
+        message: bytes, gamma_p: list[bytes], proof: BandersnatchRingVrfSignature
     ) -> bool:
-        # return RingVrf.ring_vrf_proof_verify(message, ring_root, proof)
         return verify_ring(message, proof, gamma_p, b"")  # Input Data  # Proof  # Ring  # AD
 
     @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> GammaZ:
-        # return Bytes[32](RingVrf.construct_ring_root(keys))
-        # return Bytes[32](PublicKey.get_ring_commitment_bytes(keys))
         return GammaZ(get_ring_root(keys))
 
     @staticmethod
     def get_vrf_output(signature: BandersnatchRingVrfSignature) -> OpaqueHash:
-        # return Bytes[32](RingVrf.pedersen_proof_to_hash(signature))
         return OpaqueHash(vrf_output(signature)[:32])
 
     @staticmethod
@@ -70,7 +62,7 @@ class Safrole:
         new_epoch = int(block.header.slot) // EPOCH_LENGTH
         epoch_jump = new_epoch - old_epoch
 
-        gamma = pre_state.gamma
+        gamma = state.gamma
         eta = pre_state.eta
 
         if new_epoch > old_epoch:
@@ -156,7 +148,6 @@ class Safrole:
             # Signature must be valid Ring-VRF proof
             if not Safrole.verify_vrf(
                 X.TICKET.value + eta[2] + bytes([ticket.attempt]),
-                gamma.z,
                 [k.bandersnatch for k in gamma.p],
                 ticket.signature,
             ):

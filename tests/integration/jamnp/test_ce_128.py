@@ -8,7 +8,7 @@ from multiprocessing import Process
 
 from tsrkit_types import U32
 from dotenv import load_dotenv
-from jam.logging import setup_logging, logger
+from jam.log_setup import setup_logging, logger
 from jam.finality.finality import Finality
 from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
 from jam.network.start import start_node

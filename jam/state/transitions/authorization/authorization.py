@@ -17,10 +17,11 @@ class Authorization:
         Returns:
             State after transition
         """
-        if len(pre_state.alpha) != CORE_COUNT:
+        alpha_temp = pre_state.alpha
+        curr_phi = state.phi
+        if len(alpha_temp) != CORE_COUNT:
             raise ValueError("Invalid alpha length, must be equal to CORE_COUNT")
 
-        alpha_temp = pre_state.alpha
         for i in range(CORE_COUNT):
             core_alpha_temp = alpha_temp[i]
             if len(core_alpha_temp) == 0:
@@ -39,7 +40,7 @@ class Authorization:
             # Push an authorizer from posterior phi[c] to alpha[c]
             # Phi is a circular array, so we need to take the modulo of the current slot
             # https://graypaper.fluffylabs.dev/#/5f542d7/107300107a00
-            core_alpha_temp.append(state.phi[i][block.header.slot % len(state.phi[i])])
+            core_alpha_temp.append(curr_phi[i][block.header.slot % len(curr_phi[i])])
             alpha_temp[i] = AuthorizationPool(core_alpha_temp)
 
         state.alpha = Alpha(alpha_temp)

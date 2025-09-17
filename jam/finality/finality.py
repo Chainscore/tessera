@@ -1,13 +1,7 @@
-import asyncio
-from typing import TYPE_CHECKING
-from jam.logging import get_logger
+from jam.log_setup import block_logger as logger
 from rockstore import RockStore
 from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.block import Block
-from jam.api.rpc.broker import broker
-
-logger = get_logger("grandpa")
-
 
 class Finality:
     """
@@ -31,23 +25,23 @@ class Finality:
             kv.put(cls.FINAL_KEY, header_hash.encode())
 
     @classmethod
-    def finalise(cls, header_hash: HeaderHash, kv: RockStore, initial: bool):
+    def finalise(cls, header_hash: HeaderHash, kv: RockStore, initial: bool): 
         # asyncio.create_task(ws_broker.publish("final", {"" : header_hash}))
-        logger.debug("Finalised block", header_hash=header_hash.hex())
-        asyncio.create_task(cls.schedule_run(header_hash, kv, 18, initial))
-        block = Block.load(header_hash, kv)
+        # logger.debug("Finalised block", header_hash=header_hash.hex())
+        # asyncio.create_task(cls.schedule_run(header_hash, kv, 18, initial))
+        kv.put(cls.FINAL_KEY, header_hash.encode())
+        # block = Block.load(header_hash, kv)
 
         #Subscribe's to updates of the latest finalized block, as returned by finalizedBlock.
-        asyncio.create_task(broker.publish("subscribeFinalizedBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
+        # asyncio.create_task(broker.publish("subscribeFinalizedBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
 
     @classmethod
     def set_head(cls, header_hash: HeaderHash, kv: RockStore):
-        logger.debug("Setting header...", header_hash=header_hash.hex())
-        block = Block.load(header_hash, kv)
-
+        # logger.debug("Setting header...", header_hash=header_hash.hex())
+        # block = Block.load(header_hash, kv)
         #Subscribe's to updates of the head of the "best" chain, as returned by bestBlock.
-        if block: asyncio.create_task(broker.publish("subscribeBestBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
-        else: logger.warning("Head published, but not found in store", header_hash=header_hash.hex())
+        # if block: asyncio.create_task(broker.publish("subscribeBestBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
+        # else: logger.warning("Head published, but not found in store", header_hash=header_hash.hex())
         kv.put(cls.LATEST_KEY, header_hash.encode())
 
     @classmethod

@@ -5,7 +5,7 @@ from tsrkit_types import Null
 from jam.audit.auditor import Auditor
 from jam.block.block import Block
 from jam.finality.finality import Finality
-from jam.logging import get_logger
+from jam.log_setup import logger
 from jam.network.protocols.ce_144 import NoShows
 
 from jam.types.audit.tranche import (
@@ -20,7 +20,6 @@ from jam.types.work.report import WorkReports
 from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
 
 # Logger for Auditing module
-logger = get_logger("auditor")
 
 
 class AuditEngine:

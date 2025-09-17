@@ -4,7 +4,7 @@ from collections import deque
 from tsrkit_types import TypedVector, U32
 
 from jam.block import Block
-from jam.logging import get_logger
+from jam.log_setup import logger
 
 from jam.types.protocol.core import TimeSlot
 
@@ -15,8 +15,6 @@ from jam.utils.constants import (
     EPOCH_LENGTH,
     ROTATION_PERIOD,
 )
-
-logger = get_logger()
 
 def assign_guarantors(slot: TimeSlot = None, epoch=0):
     """

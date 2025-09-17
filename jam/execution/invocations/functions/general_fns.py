@@ -1,10 +1,10 @@
 from typing import Any, Optional, List
 
-from jam.logging import get_logger
+from jam.log_setup import pvm_logger as logger, logger as jam_logger
 from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
-from jam.execution.invocations.protocol import Context, DispatchNormalReturn
+from jam.execution.invocations.protocol import Context, DispatchReturn
 from jam.types.state.accumulation.types import DeferredTransfers, OperandTuples
 from jam.types.work.manifest import Extrinsics
 from tsrkit_pvm import (
@@ -59,16 +59,12 @@ from jam.utils.constants import (
     Y,
 )
 
-# Module-specific logger
-logger = get_logger("host_calls")
-# logger.debug = logger.error
-
 class GeneralFunctions(INVF):
     @staticmethod
     @INVF.register(0, gas_cost=10)
-    def gas(gas: Gas, registers: list, memory: Memory, context: Context) -> DispatchNormalReturn:
+    def gas(gas: Gas, registers: list, memory: Memory, context: Context) -> DispatchReturn:
         logger.debug("Host call: gas", gas_remaining=gas, gas_value_returned=gas)
-        registers[7] = gas - 10
+        registers[7] = gas
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -577,7 +573,7 @@ class GeneralFunctions(INVF):
         }
 
         # Load the default logger
-        jam_logger = get_logger()
+        # jam_logger = logger
         if int(level) == 0:
             jam_logger.error(message_str, **log_kwargs)
         elif int(level) == 1:

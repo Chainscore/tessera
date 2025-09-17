@@ -6,7 +6,7 @@ Clean-room JAM client implementation in Python
 
 ### Prerequisites
 
-- Python 3.12 or higher
+- Python 3.11+ (3.12 recommended)
 - Git
 
 ### Setup
@@ -23,54 +23,49 @@ Clean-room JAM client implementation in Python
    ```
 
    This script will:
-   - ✅ Check Python version compatibility
-   - 📦 Create a local virtual environment
-   - 📚 Install Poetry (if not already installed)
-   - 📥 Initialize and update Git submodules
+   - ✅ Install UV package manager (if not present)
+   - � Install Python 3.12 (if needed)
+   - 📥 Initialize and update Git submodules  
    - 📦 Install all project dependencies
+   - 🔧 Build native extensions (Rust, MyPyC)
    - 🔗 Set up pre-commit hooks
    - 💾 Create necessary data directories
-
-3. **Activate the virtual environment:**
-   ```bash
-   source venv/bin/activate
-   ```
 
 ### Development Workflow
 
 - **Run the application:**
   ```bash
-  poetry run jam
+  uv run jam
   ```
 
 - **Run tests:**
   ```bash
   # All tests (unit + integration + vectors)
-  poetry run poe tests
+  uv run poe tests
   
   # Just unit tests
   poetry run poe tests unit
   
   # Test vectors for specific module
-  poetry run poe tests vectors --module safrole
+  uv run poe tests vectors --module safrole
   
   # Test vectors with tiny spec
-  poetry run poe tests vectors --module accumulate --spec tiny
+  uv run poe tests vectors --module accumulate --spec tiny
   ```
 
 - **Update internal dependencies:**
   ```bash
-  poetry run poe update-deps
+  uv run poe update-deps
   ```
 
 - **Update dependencies:**
   ```bash
-  poetry update
+  uv lock --upgrade
   ```
 
 - **Build binary:**
   ```bash
-  poetry run poe build
+  uv run poe build
   ```
 
 ## 📦 Dependencies
@@ -103,26 +98,25 @@ If you prefer to set up manually:
    cd tessera
    ```
 
-2. **Install Poetry:**
+2. **Install UV:**
    ```bash
-   curl -sSL https://install.python-poetry.org | python3 -
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
 3. **Setup:**
    ```bash
-   poetry run poe setup
-   source venv/bin/activate
+   uv run poe setup
    ```
 
 4. **Start Dev Node**
    ```bash
-   poetry run jam --env envs/40000.env
+   uv run jam --env envs/40000.env
    ```
 
 ## 🔧 Troubleshooting
 
 ### Python Version Issues
-- Ensure you have Python 3.12 or higher installed
+- Ensure you have Python 3.11+ installed (3.12 recommended)
 - Check your Python version: `python3 --version`
 
 ### Submodule Issues

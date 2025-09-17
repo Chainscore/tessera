@@ -6,7 +6,9 @@ from jam.execution.invocations.functions.protocol import (
 
 import os
 
-if os.environ.get("PVM_MODE") == "recompiler":
+# Pre-compute PVM mode imports to avoid dynamic imports during execution
+_PVM_MODE = os.environ.get("PVM_MODE", "interpreter")
+if _PVM_MODE == "recompiler":
     from tsrkit_pvm import REC_Memory as Memory, REC_Program as Program, Recompiler as PVM
 else:
     from tsrkit_pvm import INT_Memory as Memory, INT_Program as Program, Interpreter as PVM

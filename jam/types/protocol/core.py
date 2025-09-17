@@ -1,8 +1,6 @@
-from typing import List
 from jam.types.protocol.validators import ValidatorsData
 from tsrkit_types.integers import Uint
 from jam.types.protocol.crypto import OpaqueHash
-from jam.logging import get_logger
 
 # Simple type aliases
 TimeSlot = Uint[32]
@@ -16,7 +14,7 @@ class ValidatorIndex(Uint[16]):
         """
         from jam.network.start import node
         from jam.state.state import state
-        logger = get_logger()
+        from jam.log_setup import node_logger as logger
 
         for i, validator in enumerate(state.kappa):
             if validator.bandersnatch == node.validator_data.bandersnatch:

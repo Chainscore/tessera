@@ -5,7 +5,7 @@ from tsrkit_types import Uint, U32
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.logging import get_logger
+from jam.log_setup import network_logger
 
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -18,7 +18,7 @@ from jam.types.protocol.crypto import HeaderHash
 from jam.types.protocol.validators import ValidatorData
 
 # Module-specific logger
-logger = get_logger("network")
+logger = network_logger
 
 
 @structure

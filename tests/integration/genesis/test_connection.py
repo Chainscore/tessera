@@ -9,7 +9,7 @@ from jam.network.start import start_node as start_global_node
 
 from dotenv import load_dotenv
 
-from jam.logging import setup_logging, logger
+from jam.log_setup import setup_logging, logger
 from jam.utils.chainspec import chain_config
 
 from jam.finality.finality import Finality

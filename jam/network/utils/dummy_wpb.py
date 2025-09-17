@@ -10,7 +10,7 @@ from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpe
 from jam.types.work.manifest import Extrinsics
 from jam.utils.constants import EPOCH_LENGTH, GENESIS_TS
 from jam.network.node import Node
-from jam.logging import get_logger
+from jam.log_setup import pvm_logger
 from rockstore import RockStore
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
@@ -18,7 +18,7 @@ from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
 
 # Logger for WP Production
-logger = get_logger("in_core")
+logger = pvm_logger
 
 
 async def wp_producer(node: Node, db: RockStore):
