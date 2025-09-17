@@ -87,10 +87,13 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                         block = Block.decode(payload)
                         if record_enabled and json_data:
                             json_data["blocks"].append(block.to_json())
-                        state.transition(block)
-                        duration = time.time() - start_time
-                        print(f"⚡ Block transition completed in {duration:.4f}s")
-                        send_message(conn, TAG_STATE_ROOT, state.root)
+                        valid_block = state.transition(block)
+                        if valid_block:
+                            duration = time.time() - start_time
+                            print(f"⚡ Block transition completed in {duration:.4f}s")
+                            send_message(conn, TAG_STATE_ROOT, state.root)
+                        else:
+                            send_message(conn, TAG_ERROR, String("Invalid block. Error message unavailable").encode())
                     except Exception as e:
                         print(f"❌ Block processing failed: {e}", file=sys.stderr)
                         # Send Error message for protocol-defined failures
@@ -188,4 +191,4 @@ async def run_fuzzer_target(
             os.remove(socket_path)
         if os.path.exists(db_path):
             shutil.rmtree(db_path)
-        print("🧹 Cleanup complete.", db_path)
+        print("🧹 Cleanup complete.")
