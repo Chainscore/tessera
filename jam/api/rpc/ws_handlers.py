@@ -1,18 +1,15 @@
 import asyncio
 from typing import Callable
-from tsrkit_types import U32, U8, Bytes, TypedArray, Null, Uint
+from tsrkit_types import U32, U8, TypedArray, Uint
 
-from jam.api.rpc.broker import broker
 from jam.block import Block
 from jam.finality.finality import Finality
-from jam.settings import settings
 from jam.types.protocol.crypto import HeaderHash, OpaqueHash
 from jam.state.state import State
 from jam.types.protocol.core import ServiceId
 from tsrkit_types.bytes import Bytes
 from jam.api.rpc.utils import parse_data
 from jam.types.state.delta import AccountMetadata, LookupTable
-from jam.utils.merkle import MMRFunctions
 from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics, Extrinsic
 from jam.types.work.package import WorkPackage
@@ -42,18 +39,6 @@ def finalized_block_handler(params: list):
     final = Finality.load_final(settings.main_db)
     return {"header_hash": list(final.header.hash()), "slot": int(final.header.slot)}
 
-async def initial_subscribe_service_request(sid, pi_hash, pi_len, finality):
-    from jam.settings import settings
-    # block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(settings.main_db)
-    block = Finality.load_final(settings.main_db)
-    state_at_hh = State.load(block.header.hash())
-    try:
-        value = list(state_at_hh.delta[sid].preimages[pi_hash])
-    except Exception:
-        value = None
-
-    method = f"subscribeServiceRequest:{sid}:{list(pi_hash)}:{pi_len}:{finality}"
-    await broker.publish(method, {"header_hash": list(block.header.hash()), "slot": int(block.header.slot), "value": value})
 
 def service_data_handler(params):
     hh, sid = parse_data([HeaderHash, ServiceId], params)

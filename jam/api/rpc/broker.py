@@ -6,6 +6,7 @@ from typing import Any, AsyncGenerator, Dict, Set
 class Broker:
     def __init__(self):
         self.topics: Dict[str, Set[asyncio.Queue]] = defaultdict(set)
+        self.last_publish: Dict[str, Any] = {}
 
     async def publish(self, topic: str, message: Any) -> None:
         for q in set(self.topics[topic]):
