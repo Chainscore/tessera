@@ -27,6 +27,16 @@ rm -rf build/ dist/
 echo "[INFO] Setting up RocksDB library for bundling..."
 ./setup-rocksdb.sh
 
+if [ -f deps/tsrkit-pvm ]; then
+    cd deps/tsrkit-pvm
+    echo "[INFO] Building tsrkit-pvm..."
+    PVM_BUILD_MODE=mypyc uv run python setup.py build_ext --inplace
+    cd ../..
+fi
+
+echo "[INFO] Setting up RocksDB library for bundling..."
+./setup-rocksdb.sh
+
 echo "[INFO] Building binary..."
 uv run pyinstaller tessera.spec --clean --noconfirm
 
