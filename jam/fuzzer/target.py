@@ -233,7 +233,7 @@ async def run_fuzzer_target(
         shutil.rmtree(db_path)
     
     from jam.settings import setup_setting
-    from jam.logging import setup_logging
+    from jam.log_setup import setup_logging
     settings = setup_setting(db_path, 1, "fuzzer", 40001)
     setup_logging("default", "fuzzer-target")
 

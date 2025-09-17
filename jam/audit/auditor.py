@@ -13,7 +13,7 @@ from jam.types.protocol.crypto import BandersnatchVrfSignature
 from jam.types.work.report import WorkReport, WorkReportHash
 from jam.block.block import Block
 
-from jam.logging import logger
+from jam.log_setup import logger
 from jam.utils.constants import EPOCH_LENGTH
 from jam.network.protocols.ce_144 import NoShow, NoShows
 

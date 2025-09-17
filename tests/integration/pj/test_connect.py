@@ -8,7 +8,7 @@ import pytest
 
 
 async def node_info_printer():
-    from jam.logging import node_logger as logger
+    from jam.log_setup import node_logger as logger
 
     ts = int((time() - GENESIS_TS) // 6)
     while True:

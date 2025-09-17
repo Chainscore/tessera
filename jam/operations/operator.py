@@ -3,7 +3,7 @@ import math
 import time
 from typing import List, Tuple
 
-from jam.logging import node_logger
+from jam.log_setup import node_logger
 from .handlers import WPBuilder, assurer, BlockProducer, Conductor, Forwarding
 from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, TICKET_SUBMISSION_END

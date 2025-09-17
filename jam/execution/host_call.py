@@ -1,7 +1,7 @@
 from typing import Any, Tuple
 from jam.execution.invocations.protocol import Context, DispatchFunction
 import os
-from jam.logging import pvm_logger as logger
+from jam.log_setup import pvm_logger as logger
 from tsrkit_pvm import (
         ExecutionStatus,
         CONTINUE,

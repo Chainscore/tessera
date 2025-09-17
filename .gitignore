@@ -57,6 +57,7 @@ data/
 .venv
 env/
 ENV/
+.secrets
 
 .cursorrules
 .cursorignore

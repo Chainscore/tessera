@@ -1,53 +1,91 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry]
+[tool.uv.workspace]
+members = [
+    "deps/rockstore",
+    "deps/py-ark-vrf", 
+    "deps/tsrkit-pvm",
+    "deps/tsrkit-asm",
+    "deps/tsrkit-types",
+    "test-suites"
+]
+
+[project]
 name = "tessera"
 version = "0.1.0"
 description = "JAM blockchain client implementation in Python"
-authors = ["Chainscore Labs <hello@chainscore.finance>"]
+authors = [
+    {name = "Chainscore Labs", email = "hello@chainscore.finance"}
+]
 license = "GPL-3.0-only"
 readme = "README.md"
-packages = [{ include = "jam" }]
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "cryptography==45.0.2",
+    "structlog>=25.2.0",
+    "aioquic>=1.2.0",
+    "quart>=0.20.0",
+    "reed-solomon-leopard>=0.2.1",
+    "python-dotenv>=1.1.0",
+    "pycryptodome>=3.23.0",
+    "pydantic>=2.11.7",
+    "gprof2dot>=2025.4.14",
+    "numba>=0.61.2",
+    "numpy>=2.2.6",
+    "bitarray>=3.7.1,<4.0.0",
+    "rockstore",
+    "py-ark-vrf",
+    "tsrkit-types",
+    "tsrkit-pvm",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "deepdiff>=8.6.1",
+    "tsrkit-asm",
+    "pre-commit>=4.0.1",
+    "safe-pysha3>=1.0.5",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-cryptography = "45.0.2"
-structlog = "^25.2.0"
-aioquic = "^1.2.0"
-quart = "^0.20.0"
-rockstore = {path = "deps/rockstore", develop = true}
-reed-solomon-leopard = "^0.2.1"
-python-dotenv = "^1.1.0"
-py-ark-vrf = {path = "deps/py-ark-vrf", develop = true}
-tsrkit-types = {path = "deps/tsrkit-types", develop = true}
-tsrkit-pvm = {path = "deps/tsrkit-pvm", develop = true}
-tsrkit-asm = {path = "deps/tsrkit-asm", develop = true}
-pycryptodome = "^3.23.0"
-pydantic = "^2.11.7"
-safe-pysha3 = "^1.0.5"
+[tool.hatch.build.targets.wheel]
+packages = ["jam"]
 
-[tool.pyrefly]
-project-includes = ["**/*"]
-project-excludes = ["**/*venv/**/*"]
+[tool.uv.sources]
+rockstore = { workspace = true }
+py-ark-vrf = { workspace = true }
+tsrkit-types = { workspace = true }
+tsrkit-pvm = { workspace = true }
+tsrkit-asm = { workspace = true }
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.5"
-pytest-asyncio = "^0.26.0"
-pytest-cov = "^6.0.0"
-flake8 = "4.0.1"
-black = "23.12.1"
-isort = "5.13.2"
-pre-commit = "4.0.1"
-deepdiff = "^8.5.0"
-sphinx = "8.1.3"
-pyinstaller = { version = "^6.15.0", markers = "python_version < '3.14'" }
-poethepoet = "^0.36.0"
-mypy = "^1.17.1"
-mypyc = "^0.0.1"
+[project.optional-dependencies]
+dev = [
+    "flake8==4.0.1",
+    "black==23.12.1",
+    "isort==5.13.2",
+    "pre-commit==4.0.1",
+    "mypy>=1.17.1",
+    "poethepoet>=0.36.0",
+]
+test = [
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.0.0",
+    "deepdiff>=8.5.0",
+    "pytest-benchmark>=4.0.0",
+    "pytest-profiling>=1.7.0",
+    "memory-profiler>=0.61.0",
+    "psutil>=5.9.0",
+    "matplotlib>=3.7.0",
+]
+docs = [
+    "sphinx==8.1.3",
+]
+build = [
+    "pyinstaller>=6.15.0",
+    "mypyc>=0.0.1",
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 jam = "jam:run_jam"
 
 [tool.ruff]
@@ -68,8 +106,11 @@ target-version = ['py310']
 
 [tool.poe.tasks]
 build = "./build-binary.sh"
-setup = "./scripts/setup.sh"
+setup = "uv sync --all-extras"
+test = "uv run pytest tests/"
 tests = "./scripts/test.sh"
 testnet = "./scripts/testnet.sh"
-update-deps = "./scripts/update-deps.sh"
+update-deps = "uv lock --upgrade"
 deploy-azure = "./scripts/deploy-to-azure.sh"
+lint = ["uv run flake8 jam tests", "uv run mypy jam tests", "uv run black --check jam tests", "uv run isort --check-only jam tests"]
+format = ["uv run black jam tests", "uv run isort jam tests"]

@@ -7,7 +7,7 @@ from tsrkit_types import Bytes, Uint, Null
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 from jam.block import Block
-from jam.logging import logger
+from jam.log_setup import logger
 from jam.state.transitions.report.error import ReportingError, ReportingErrorCode
 from jam.state.transitions.report.guarantee_assignment import assign_fn
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats

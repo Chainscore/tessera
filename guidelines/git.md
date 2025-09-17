@@ -149,7 +149,7 @@ We use pre-commit hooks for quality checks:
 
 First-time setup:
 ```bash
-poetry run pre-commit install
+uv run pre-commit install
 ```
 
 ## 🧰 Useful Git Commands

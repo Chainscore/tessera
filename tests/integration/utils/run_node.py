@@ -8,7 +8,7 @@ import os
 import time
 from dotenv import load_dotenv
 
-from jam.logging import setup_logging
+from jam.log_setup import setup_logging
 from jam.utils.chainspec import chain_config
 from .state_update import update_state
 
@@ -19,7 +19,7 @@ from jam.state.state import setup_state
 from jam.block import Block
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 from jam.operations.ticket_queue import setup_ticket_queue
 
 

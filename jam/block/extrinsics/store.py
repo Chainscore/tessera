@@ -1,5 +1,5 @@
 from typing import Any, Generic, List, TypeVar
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 
 T = TypeVar("T")
 

@@ -20,7 +20,7 @@ from jam.types import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash
 from jam.types.audit.tranche import TrancheIndex, Tranche, TrancheState, OptionalReports
 from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR
 
-from jam.logging import logger
+from jam.log_setup import logger
 from py_ark_vrf import prove_ietf, vrf_output
 
 

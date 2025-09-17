@@ -1,7 +1,7 @@
 import asyncio
 from typing import Dict
 
-from jam.logging import node_logger
+from jam.log_setup import node_logger
 from jam.network.protocols.ce_144 import Announcement
 from jam.network.protocols.ce_145 import Judgment
 

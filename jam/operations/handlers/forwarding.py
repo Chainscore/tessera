@@ -3,7 +3,7 @@ from time import time
 from math import ceil
 from jam.types.protocol.core import TimeSlot
 from tsrkit_types import U32
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS
 from jam.network.protocols.ce_132 import SafroleTicketDistribution, CE132Data
 

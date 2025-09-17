@@ -18,7 +18,7 @@ import asyncio
 import os
 from functools import partial
 from typing import Callable, Optional, Text, Union, cast
-from jam.logging import network_logger as logger
+from jam.log_setup import network_logger as logger
 from jam.types.protocol.crypto import Ed25519Public
 from jam.utils.constants import VALIDATOR_COUNT
 from .base.certificate import generate_san

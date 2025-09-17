@@ -19,7 +19,7 @@ for ((i=0; i<N; i++)); do
   DB="db/$PORT"
   ENV="envs/$PORT.env"
   THEME="${THEMES[i % ${#THEMES[@]}]}"
-  CMD="poetry run jam --env \"$ENV\" --db \"$DB\" --theme \"$THEME\" --start-genesis --validator"
+  CMD="uv run jam --env \"$ENV\" --db \"$DB\" --theme \"$THEME\" --start-genesis --validator"
 
   if (( i == 0 )); then
     # Send first command to original pane

@@ -110,9 +110,6 @@ async def run_import(db_path: str, import_path: str) -> None:
             filename = os.path.basename(file_path)
             if transition_time > 0:
                 transition_data.append((filename, transition_time))
-                print(f"✓ {filename} ({transition_time:.4f}s)")
-            else:
-                print(f"✓ {filename}")
 
             post_root = test_vector.get("post_state", {}).get("state_root")
             if post_root:

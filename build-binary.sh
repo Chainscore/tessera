@@ -24,18 +24,10 @@ echo "[INFO] Building for: $PLATFORM_NAME-$ARCH_NAME"
 echo "[INFO] Cleaning previous builds..."
 rm -rf build/ dist/
 
-echo "[INFO] Installing dependencies..."
-PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 poetry install --only=main
-
-echo "[INFO] Setting up RocksDB library for bundling..."
-./setup-rocksdb.sh
-
-if [ -f deps/tsrkit-pvm/setup.py ]; then
+if [ -f deps/tsrkit-pvm ]; then
     cd deps/tsrkit-pvm
     echo "[INFO] Building tsrkit-pvm..."
-    pip install mypy mypyc setuptools==80.9.0 || echo "   ⚠️ Warning: mypy install failed"
-    echo "   Compiling critical PVM modules with MyPyC..."
-    python setup.py build_ext --inplace
+    PVM_BUILD_MODE=mypyc uv run python setup.py build_ext --inplace
     cd ../..
 fi
 
@@ -43,8 +35,7 @@ echo "[INFO] Setting up RocksDB library for bundling..."
 ./setup-rocksdb.sh
 
 echo "[INFO] Building binary..."
-poetry install --with dev
-poetry run pyinstaller tessera.spec --clean --noconfirm
+uv run pyinstaller tessera.spec --clean --noconfirm
 
 # Test binary
 echo "[INFO] Testing binary..."

@@ -15,10 +15,10 @@ tmux has-session -t "$SESSION" 2>/dev/null && tmux kill-session -t "$SESSION"
 # 2) Start a fresh session
 tmux new-session -d -s "$SESSION" -n network
 
-# 3) Carve off rightmost 30% for poetry/jam
-POETRY_IDX=$(tmux split-window -h -p 30 -t "${SESSION}:network.0" -P -F "#{pane_index}")
-tmux send-keys -t "${SESSION}:network.${POETRY_IDX}" \
-  "poetry run jam --start-genesis --validator --theme 'matrix' --env 'envs/40001.env'" C-m
+# 3) Carve off rightmost 30% for uv/jam
+UV_IDX=$(tmux split-window -h -p 30 -t "${SESSION}:network.0" -P -F "#{pane_index}")
+tmux send-keys -t "${SESSION}:network.${UV_IDX}" \
+  "uv run jam --start-genesis --validator --theme 'matrix' --env 'envs/40001.env'" C-m
 
 # 4) Carve off middle 30% for validator 5
 MIDDLE_IDX=$(tmux split-window -h -p 30 -t "${SESSION}:network.0" -P -F "#{pane_index}")

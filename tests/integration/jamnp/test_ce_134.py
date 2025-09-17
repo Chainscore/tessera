@@ -34,7 +34,7 @@ from jam.types import (
 from jam.types.work import RefineLoad
 
 from jam.types.work.manifest import Extrinsics
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex

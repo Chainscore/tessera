@@ -4,7 +4,7 @@ from jam.execution.invocations.protocol import Context, DispatchFunction
 from tsrkit_pvm import PANIC, ExecutionStatus, y_function
 from tsrkit_types.bytes import Bytes
 from jam.types.protocol.core import Gas
-from jam.logging import pvm_logger as logger
+from jam.log_setup import pvm_logger as logger
 
 ArgInvokeReturn = Tuple[Gas, ExecutionStatus | bytes, Context]
 

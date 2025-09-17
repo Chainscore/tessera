@@ -120,21 +120,13 @@ if [ ! -f "pyproject.toml" ]; then
     exit 1
 fi
 
-# Activate virtual environment if it exists
-if [ -d "venv" ]; then
-    source venv/bin/activate
-    print_info "Activated virtual environment"
-else
-    print_warning "No virtual environment found. Run scripts/setup.sh first."
-fi
-
 if [ -n "$TEST_PATTERN" ]; then
     PYTEST_ARGS="$PYTEST_ARGS -k '$TEST_PATTERN'"
 fi
 
 # Run the tests
-echo "Running tests with command: poetry run pytest $PYTEST_ARGS"
-poetry run pytest $PYTEST_ARGS
+echo "Running tests with command: uv run python -m pytest $PYTEST_ARGS"
+uv run python -m pytest $PYTEST_ARGS
 
 if [ $? -eq 0 ]; then
     print_success "All tests passed!"

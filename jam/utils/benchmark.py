@@ -2,7 +2,7 @@ import os
 import json
 from time import perf_counter as now
 from contextlib import contextmanager
-from jam.logging import node_logger
+from jam.log_setup import node_logger
 
 logger = node_logger
 

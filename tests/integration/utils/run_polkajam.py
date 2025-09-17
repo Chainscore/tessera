@@ -2,7 +2,7 @@ import asyncio
 import os
 from pathlib import Path
 import signal
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 
 
 proc = None

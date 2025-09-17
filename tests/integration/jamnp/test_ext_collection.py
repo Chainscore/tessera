@@ -16,7 +16,7 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, Uint
 from jam.network.start import start_node as start_global_node
 
-from jam.logging import setup_logging
+from jam.log_setup import setup_logging
 from jam.network.base.certificate import generate_san
 from jam.types import (
     WorkReport,
@@ -50,7 +50,7 @@ from jam.block import Block
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.types.work.manifest import Extrinsics
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex

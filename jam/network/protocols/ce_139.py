@@ -6,7 +6,7 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 from tsrkit_types import Bytes
 
-from jam.logging import logger
+from jam.log_setup import logger
 
 from jam.network.base.protocol import PrefixType
 from jam.types.work.shard import SegmentsShard, SegmentShard

@@ -11,7 +11,7 @@ from jam.network.protocols.ce_139_base import (
 from jam.network.base.protocol import PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.logging import logger
+from jam.log_setup import logger
 from jam.utils.merkle import BMRFunctions
 
 from jam.types.work.shard import SegmentsShard, SegmentShard
