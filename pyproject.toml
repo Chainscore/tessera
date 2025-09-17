@@ -44,6 +44,7 @@ dependencies = [
     "deepdiff>=8.6.1",
     "tsrkit-asm",
     "pre-commit>=4.0.1",
+    "safe-pysha3>=1.0.5",
 ]
 
 [tool.hatch.build.targets.wheel]

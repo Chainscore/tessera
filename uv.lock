@@ -1552,6 +1552,18 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [[package]]
+name = "safe-pysha3"
+version = "1.0.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a4/27/a942b8a95b97c5fb8d27d3b86b8d269546cf21f87d9ec6b44c3702ce67cc/safe_pysha3-1.0.5.tar.gz", hash = "sha256:88ceaad6af4b6bdecd2f54b31ad0e5e5e210d4f5ecabb1bd1fd3539ad61b7bf1", size = 827796, upload-time = "2025-06-19T13:55:04.106Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fc/80/60f78a39693d5d38440d1e71f117f0131d668bfa42988ba23bcdd45f66ac/safe_pysha3-1.0.5-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4505f4b3ce327a8b02299e48b55c32094ed15c63f83e8d9477ebe91e8777fc8f", size = 190198, upload-time = "2025-06-20T15:19:18.436Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/ad/30e8abf4535b0ed4f36eea451534f61adb1012226d7a36c1e1ed970717f0/safe_pysha3-1.0.5-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:4048005b764861f36eed98a83fb04268c972b6100fe530303999ff6fce744e64", size = 184239, upload-time = "2025-06-20T15:19:19.786Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/59/8d7f64a3eb6ebbde248cc0347a67d7825e2ba6edfa2bd180ebdfb599b3c5/safe_pysha3-1.0.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d137a73029c6c5a1db5791ae9fa62373827eee5226d19b79b836a6cf48b6b197", size = 190427, upload-time = "2025-06-20T15:19:20.862Z" },
+    { url = "https://files.pythonhosted.org/packages/da/6a/25e926ab9c8d714be2ee1d40f45eb425f438c968d97ede69a7cbff054094/safe_pysha3-1.0.5-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:9a0cb37252a8767992f354d7d2af2ef04730032927eb6af2057e71744c741287", size = 184478, upload-time = "2025-06-20T15:19:22.289Z" },
+]
+
+[[package]]
 name = "service-identity"
 version = "24.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1705,6 +1717,7 @@ dependencies = [
     { name = "quart" },
     { name = "reed-solomon-leopard" },
     { name = "rockstore" },
+    { name = "safe-pysha3" },
     { name = "structlog" },
     { name = "tsrkit-asm" },
     { name = "tsrkit-pvm" },
@@ -1775,6 +1788,7 @@ requires-dist = [
     { name = "quart", specifier = ">=0.20.0" },
     { name = "reed-solomon-leopard", specifier = ">=0.2.1" },
     { name = "rockstore", editable = "deps/rockstore" },
+    { name = "safe-pysha3", specifier = ">=1.0.5" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = "==8.1.3" },
     { name = "structlog", specifier = ">=25.2.0" },
     { name = "tsrkit-asm", editable = "deps/tsrkit-asm" },
