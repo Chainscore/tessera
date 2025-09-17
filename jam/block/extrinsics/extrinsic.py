@@ -117,10 +117,12 @@ class Extrinsic:
         from .tickets import ticket_store
         from .guarantees import wrg_store
         from .assurances import asr_store
+        from .preimages import preimg_store
 
         ticket_store.remove(self.tickets)
         wrg_store.remove(self.guarantees)
         asr_store.remove(self.assurances)
+        preimg_store.remove(self.preimages)
         # TODO: Handle disputes
         return
 

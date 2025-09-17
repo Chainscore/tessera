@@ -3,13 +3,11 @@ import json
 from jam.api.rpc.broker import broker
 from jam.api.rpc.api_handlers import dispatch_api_call
 from jam.api.rpc.utils import RpcRequest
-from jam.api.rpc.websocket import ws_receive, ws_broker
 from jam.logging import get_logger
 from quart import Quart, websocket, jsonify, request
-import jam.finality.finality as Finality
 import itertools
-from tsrkit_types import U32, Null
-from .ws_handlers import dispatch_ws_call, initial_subscribe_service_request
+from tsrkit_types import U32
+from .ws_handlers import dispatch_ws_call
 
 
 def _json_default(val):
@@ -62,6 +60,9 @@ SUBSCRIPTIONS = {
     "subscribeFinalizedBlock": lambda params: "subscribeFinalizedBlock",
     "subscribeServiceRequest": lambda params:(
         f"subscribeServiceRequest:{params[0]}:{params[1]}:{params[2]}:{params[3]}"
+    ),
+    "subscribeServiceValue": lambda params:(
+        f"subscribeServiceValue:{params[0]}:{params[1]}:{params[2]}"
     )
 }
 
@@ -96,10 +97,6 @@ async def ws():
                 pass
 
         subs[sub_id] = asyncio.create_task(pump())
-        if method == "subscribeServiceRequest":
-            sid, pi_hash_list, pi_len, finality = params
-            pi_hash = bytes(pi_hash_list)
-            asyncio.create_task(initial_subscribe_service_request(sid, pi_hash, int(pi_len), bool(finality)))
 
     try:
         while True:
@@ -117,7 +114,7 @@ async def ws():
                 continue
 
             # unsubscribe just this stream using id
-            if method == "unsubscribeSyncStatus" or method == "unsubscribeFinalizedBlock" or method == "unsubscribeServiceRequest":
+            if method == "unsubscribeSyncStatus" or method == "unsubscribeFinalizedBlock" or method == "unsubscribeServiceRequest" or method == "unsubscribeServiceValue":
                 ok = False
                 if params:  # expect [sub_id]
                     sid = params[0]

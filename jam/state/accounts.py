@@ -42,9 +42,6 @@ def make_account_prop(field):
 
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()
-
-        # Publishes updates of the service data.
-        asyncio.create_task(broker.publish("subscribeServiceData", list(meta.encode())))
        
         self.store.put(k, v)
 
@@ -147,6 +144,8 @@ class Account:
         """
         https://graypaper.fluffylabs.dev/#/38c4e62/114301114301?v=0.7.0
         """
+        if not lookup_ts:
+            return False
         if len(lookup_ts) == 0:
             return False
         elif len(lookup_ts) == 1:
@@ -214,9 +213,6 @@ class StorageView:
             #websocket broadcast for service value
 
         self.store.put(storage_key, value)
-       
-        # Publishes updates of the service value. On every setitem, the value is broadcasted to all subscribers
-        asyncio.create_task(broker.publish("subscribeServiceValue", list(value)))
 
     def __delitem__(self, key: Bytes):
         curr_value = self[key]
@@ -226,9 +222,6 @@ class StorageView:
             meta_view.num_i = meta_view.num_i - 1
             meta_view.num_o = meta_view.num_o - len(curr_value) - 34 - len(key)
 
-        # Publishes updates of the service value. On every delitem, the value is broadcasted to all subscribers
-        asyncio.create_task(broker.publish("subscribeServiceValue", []))
-    
         self.store.delete(storage_key)
 
 
@@ -251,14 +244,9 @@ class PreImageView:
         k = self.get_key(key)
         self.store.put(k, value)
 
-        # Publishes updates of the service preimage. On every setitem, the value is broadcasted to all subscribers
-        asyncio.create_task(broker.publish("subscribeServicePreimage", list(value)))
-
     def __delitem__(self, key: Bytes[32]):
         storage_key = self.get_key(key)
 
-        # Publishes updates of the service preimage. On every delitem, the value is broadcasted to all subscribers
-        asyncio.create_task(broker.publish("subscribeServicePreimage", list(storage_key)))
         self.store.delete(storage_key)
 
 
@@ -289,10 +277,6 @@ class TimestampsView:
             meta_view.num_i = meta_view.num_i + 2
             meta_view.num_o = meta_view.num_o + key.length + 81
 
-        # Publishes updates of the service request. On every setitem, the value is broadcasted to all subscribers
-        asyncio.create_task(broker.publish("subscribeServiceRequest", value))
-
-
         self.store.put(storage_key, v)
 
     def __delitem__(self, key: LookupTable):
@@ -302,8 +286,5 @@ class TimestampsView:
             meta_view = AccountDataView(self.id, self.store)
             meta_view.num_i = meta_view.num_i - 2
             meta_view.num_o = meta_view.num_o - key.length - 81
-            
-        # Publishes updates of the service value. On every delitem, the value is broadcasted to all subscribers
-        asyncio.create_task(broker.publish("subscribeServiceRequest", curr_data))
 
         self.store.delete(storage_key)
