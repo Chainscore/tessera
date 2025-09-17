@@ -6,7 +6,7 @@ from tsrkit_types.struct import structure
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint, U32
 from tsrkit_types.sequences import TypedVector
-from jam.logging import logger
+from jam.log_setup import logger
 from jam.network.connection import NodeConnection
 from jam.block.extrinsics.guarantees import ReportGuarantee
 from jam.network.base.protocol import NetworkProtocol, PrefixType

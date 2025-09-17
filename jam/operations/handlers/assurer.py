@@ -3,7 +3,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.block.extrinsics.assurances import AvailAssurance
 from jam.block.extrinsics.guarantees import ReportGuarantee
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 
 from tsrkit_types import Bytes, U32, TypedVector
 

@@ -6,7 +6,7 @@ from jam.types.state.accumulation.types import (
 )
 from tsrkit_types import U32, U64, Bytes
 from jam.types.protocol.validators import ValidatorData
-from jam.logging import pvm_logger as logger
+from jam.log_setup import pvm_logger as logger
 from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )

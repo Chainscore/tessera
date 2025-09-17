@@ -1,7 +1,7 @@
 import asyncio
 from typing import List, Coroutine
 
-from jam.logging import logger
+from jam.log_setup import logger
 
 
 async def gather_with_exceptions(tasks: List[asyncio.Task | Coroutine]):

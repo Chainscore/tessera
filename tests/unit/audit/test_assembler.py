@@ -21,7 +21,7 @@ from jam.storage.da.mappings import (
 from jam.storage.da.reports import ReportsDA
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
 from tests.unit.incore.types import RefineVectors, RefineVector, BundleVector, BundleVectors
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 
 
 CLIENTS = [

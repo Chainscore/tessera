@@ -5,7 +5,7 @@ This guide explains how to properly use logging in the JAM node codebase for bot
 ## Quick Start
 
 ```python
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 
 # Use structured logging with key-value pairs
 logger.info("Block produced", block_hash=hash, slot=slot, validator=validator_id)
@@ -132,7 +132,7 @@ logger.info(
 
 ```python
 # At the top of your module
-from jam.logging import get_logger
+from jam.log_setup import get_logger
 
 logger = get_logger("pvm")  # Component name for context
 ```
@@ -140,7 +140,7 @@ logger = get_logger("pvm")  # Component name for context
 ### 3. Use Performance Logging for Critical Paths
 
 ```python
-from jam.logging import log_performance
+from jam.log_setup import log_performance
 
 # Context manager for automatic timing
 with log_performance(logger, "block_validation", block_hash=hash):
@@ -217,7 +217,7 @@ export LOG_LEVEL_EXECUTION=DEBUG
 ### Method 2: Programmatic Filtering
 
 ```python
-from jam.logging import setup_logging
+from jam.log_setup import setup_logging
 
 # Show only specific modules
 setup_logging(
@@ -251,7 +251,7 @@ setup_logging(
 ### Network Protocol Handler
 
 ```python
-from jam.logging import get_logger
+from jam.log_setup import get_logger
 
 logger = get_logger("quic-server")
 
@@ -290,7 +290,7 @@ def handle_message(self, buffer: bytes, stream_id: int):
 ### PVM Execution
 
 ```python
-from jam.logging import get_logger, log_performance
+from jam.log_setup import get_logger, log_performance
 
 logger = get_logger("pvm")
 
@@ -337,7 +337,7 @@ def execute_program(self, program, gas):
 ### Consensus Engine
 
 ```python
-from jam.logging import get_logger
+from jam.log_setup import get_logger
 
 logger = get_logger("consensus")
 

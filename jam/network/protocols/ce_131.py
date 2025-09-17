@@ -2,7 +2,7 @@ from typing import cast
 from tsrkit_types import structure, Uint, Bool, U32, U8
 
 from jam.finality.finality import Finality
-from jam.logging import network_logger as logger
+from jam.log_setup import network_logger as logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType

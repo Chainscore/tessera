@@ -2,7 +2,7 @@ from typing import cast, TYPE_CHECKING
 
 from tsrkit_types import Bytes, TypedVector, Dictionary
 
-from jam.logging import network_logger as logger
+from jam.log_setup import network_logger as logger
 from jam.network.connection import NodeConnection
 from jam.state.state import state
 from jam.types import HeaderHash

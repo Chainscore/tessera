@@ -4,7 +4,7 @@ from collections import deque
 from tsrkit_types import TypedVector, U32
 
 from jam.block import Block
-from jam.logging import logger
+from jam.log_setup import logger
 
 from jam.types.protocol.core import TimeSlot
 

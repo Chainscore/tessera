@@ -9,7 +9,7 @@ from tsrkit_types.bytes import Bytes
 from jam.incore.error import BundlerError, BundlerErrorCode as Code
 from jam.incore.utils import Utils
 
-from jam.logging import pvm_logger as logger
+from jam.log_setup import pvm_logger as logger
 
 from jam.network.node import Node
 from jam.network.utils.shards import get_vi

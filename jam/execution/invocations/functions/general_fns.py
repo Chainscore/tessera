@@ -1,6 +1,6 @@
 from typing import Any, Optional, List
 
-from jam.logging import pvm_logger as logger, logger as jam_logger
+from jam.log_setup import pvm_logger as logger, logger as jam_logger
 from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )

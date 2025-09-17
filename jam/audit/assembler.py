@@ -4,7 +4,7 @@ from tsrkit_types import U32, Bytes, Vector
 
 from jam.audit.error import AssemblerError, AssemblerErrorCode as Code
 from jam.network.utils.shards import get_si, get_vi
-from jam.logging import logger
+from jam.log_setup import logger
 from jam.settings import Settings
 
 from jam.storage.da.audits import AuditShardsDA
@@ -28,7 +28,7 @@ from jam.utils.constants import VALIDATOR_COUNT
 from jam.utils.merkle import BMRFunctions
 from jam.utils.erasure_coding.erasure_code import ErasureCode
 from jam.utils.merkle.binary_merkle import OpaqueHashes
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 
 
 class Assembler:

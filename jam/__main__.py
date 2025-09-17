@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 if TYPE_CHECKING:
     from jam.finality.finality import Finality
-    from jam.logging import setup_logging
+    from jam.log_setup import setup_logging
     from jam.network.start import start_node
     from jam.operations.operator import operate
     from jam.utils.chainspec import chain_config
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from jam.api.rpc.app import rpc
     from jam.operations.ticket_queue import setup_ticket_queue
 
-from jam.logging import setup_logging, logger
+from jam.log_setup import setup_logging, logger
 from jam.network.start import start_node
 from jam.operations.operator import operate
 from jam.operations.ticket_queue import setup_ticket_queue

@@ -1,7 +1,7 @@
 from typing import List
 from jam.types.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
-from jam.logging import logger
+from jam.log_setup import logger
 from jam.block import TicketEnvelope, TicketsExtrinsic
 from jam.types.state.eta import Eta
 from jam.types.state.kappa import Kappa

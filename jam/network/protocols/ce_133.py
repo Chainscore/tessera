@@ -3,7 +3,7 @@ import time
 from typing import cast
 
 from tsrkit_types import structure, Uint, U8
-from jam.logging import network_logger as logger
+from jam.log_setup import network_logger as logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection

@@ -3,7 +3,7 @@ from typing import cast, Tuple
 
 from tsrkit_types import structure, Uint, TypedVector, Bytes, U8
 
-from jam.logging import network_logger
+from jam.log_setup import network_logger
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code

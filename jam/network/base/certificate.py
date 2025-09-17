@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from tsrkit_types import Uint
 
-from jam.logging import network_logger as logger
+from jam.log_setup import network_logger as logger
 from jam.types.protocol.crypto import Hash
 
 ASN1_PREFIX = bytes.fromhex("302e020100300506032b657004220420")

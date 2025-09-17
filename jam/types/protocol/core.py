@@ -14,7 +14,7 @@ class ValidatorIndex(Uint[16]):
         """
         from jam.network.start import node
         from jam.state.state import state
-        from jam.logging import node_logger as logger
+        from jam.log_setup import node_logger as logger
 
         for i, validator in enumerate(state.kappa):
             if validator.bandersnatch == node.validator_data.bandersnatch:

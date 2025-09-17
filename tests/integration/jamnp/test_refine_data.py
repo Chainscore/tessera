@@ -7,7 +7,7 @@ from multiprocessing import Process
 
 from jam.network.node import Node
 
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 from tests.integration.jamnp.utils.run_node import run_node_process
 
 CLIENTS = [

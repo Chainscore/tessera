@@ -6,7 +6,7 @@ from jam.state.state import State
 from jam.utils.constants import EPOCH_LENGTH
 from jam.utils.dummy.dummy_extrinsics import create_dummy_work_report
 from jam.network.node import Node
-from jam.logging import pvm_logger
+from jam.log_setup import pvm_logger
 from rockstore import RockStore
 from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
 from jam.types.protocol.core import TimeSlot

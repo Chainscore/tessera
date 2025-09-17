@@ -39,10 +39,11 @@ dependencies = [
     "py-ark-vrf",
     "tsrkit-types",
     "tsrkit-pvm",
-    "tsrkit-asm",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "deepdiff>=8.6.1",
+    "tsrkit-asm",
+    "pre-commit>=4.0.1",
 ]
 
 [tool.hatch.build.targets.wheel]

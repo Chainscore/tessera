@@ -30,7 +30,7 @@ def build_parser():
         default="envs/40000.env",
         help="Path to env file containing required environment variables",
     )
-    p.add_argument("--db", type=str, default="data/tmp", help="Path to database directory")
+    p.add_argument("--db", type=str, default="data/tmp/" + str(os.getpid()), help="Path to database directory")
     p.add_argument("--theme", type=str, default="bitcoin", help="Theme to use for logging")
     p.add_argument("--fuzzer", action="store_true", help="Run as a fuzzer target for conformance testing")
     
@@ -112,7 +112,7 @@ def main():
     # Check for import mode
     if args.import_path:
         # Setup basic logging for import mode
-        from jam.logging import setup_logging
+        from jam.log_setup import setup_logging
         setup_logging("default", "importer")
         
         print("📥 Starting Tessera in import mode...")

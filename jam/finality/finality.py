@@ -1,4 +1,4 @@
-from jam.logging import block_logger as logger
+from jam.log_setup import block_logger as logger
 from rockstore import RockStore
 from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.block import Block

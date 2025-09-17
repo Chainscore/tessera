@@ -4,7 +4,7 @@ from typing import List
 
 from tsrkit_types import TypedArray, Enum
 
-from jam.logging import network_logger as logger
+from jam.log_setup import network_logger as logger
 from jam.network.base.error import NetworkingErrorCode
 from jam.network.connection import NodeConnection
 from jam.types import HeaderHash 

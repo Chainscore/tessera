@@ -4,7 +4,7 @@ from tsrkit_types import TypedVector, Uint, structure, Choice
 
 from jam.utils.gather import gather_with_exceptions
 
-from jam.logging import network_logger
+from jam.log_setup import network_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.types.protocol.core import CoreIndex, ValidatorIndex

@@ -9,7 +9,7 @@ from tsrkit_types import U32
 
 from jam.audit.assembler import Assembler
 from jam.incore.processor import Processor
-from jam.logging import node_logger as logger
+from jam.log_setup import node_logger as logger
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
 from jam.types import Hash

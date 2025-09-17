@@ -18,7 +18,7 @@ from jam.block.extrinsics.guarantees import (
 from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_134 import Credential
 
-from jam.logging import pvm_logger
+from jam.log_setup import pvm_logger
 from jam.execution.invocations.is_authorized import PsiI
 from jam.execution.invocations.refine import PsiR
 
