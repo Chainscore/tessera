@@ -28,8 +28,7 @@ echo "[INFO] Setting up RocksDB library for bundling..."
 ./setup-rocksdb.sh
 
 echo "[INFO] Building binary..."
-python -m pip install pyinstaller
-pyinstaller tessera.spec --clean --noconfirm
+uv run pyinstaller tessera.spec --clean --noconfirm
 
 # Test binary
 echo "[INFO] Testing binary..."

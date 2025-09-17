@@ -5,17 +5,17 @@ setup:
 	./scripts/setup.sh
 
 test:
-	poetry run pytest tests/
+	uv run pytest tests/
 
 lint:
-	flake8 jam tests
-	mypy jam tests
-	black --check jam tests
-	isort --check-only jam tests
+	uv run flake8 jam tests
+	uv run mypy jam tests
+	uv run black --check jam tests
+	uv run isort --check-only jam tests
 
 format:
-	black jam tests
-	isort jam tests
+	uv run black jam tests
+	uv run isort jam tests
 
 clean:
 	rm -rf build/
