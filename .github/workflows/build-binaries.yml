@@ -91,14 +91,6 @@ jobs:
         run: |
           ./scripts/setup.sh
 
-      - name: Compile MyPyC modules
-        run: |
-          echo "🔥 Compiling PVM module with MyPyC..."
-          cd deps/tsrkit-pvm
-          PVM_BUILD_MODE=mypyc uv run python setup.py build_ext --inplace
-          echo "✅ MyPyC compilation completed"
-          ls -la tsrkit_pvm/interpreter/ | grep -E "\.(so|dylib|pyd)$" || echo "No compiled modules found"
-
       - name: Build binary
         run: |
           chmod +x build-binary.sh setup-rocksdb.sh
