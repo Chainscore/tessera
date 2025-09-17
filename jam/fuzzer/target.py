@@ -167,19 +167,19 @@ def run_fuzzer_target_loop(sock: socket.socket, settings, record_path: Optional[
                     print(f"📦 Received Block #{block_count} ({len(payload)} bytes)")
                     
                     start_time = time.time()
-                    block = Block.decode(payload)
-                    if record_enabled and json_data:
-                        json_data["blocks"].append(block.to_json())
-                    state.transition(block)
-                    duration = time.time() - start_time
-                    print(f"⚡ Block transition completed in {duration:.4f}s")
-                    send_message(conn, TAG_STATE_ROOT, state.root)
-                    # try:
-                    # except Exception as e:
-                    #     print(f"❌ Block processing failed: {e}", file=sys.stderr)
-                    #     # Send Error message for protocol-defined failures
-                    #     error_msg = ErrorMessage(message=String(f"Block import failed: {str(e)}"))
-                    #     send_message(conn, TAG_ERROR, error_msg.encode())
+                    try:
+                        block = Block.decode(payload)
+                        if record_enabled and json_data:
+                            json_data["blocks"].append(block.to_json())
+                        state.transition(block)
+                        duration = time.time() - start_time
+                        print(f"⚡ Block transition completed in {duration:.4f}s")
+                        send_message(conn, TAG_STATE_ROOT, state.root)
+                    except Exception as e:
+                        print(f"❌ Block processing failed: {e}", file=sys.stderr)
+                        # Send Error message for protocol-defined failures
+                        error_msg = ErrorMessage(message=String(f"Block import failed: {str(e)}"))
+                        send_message(conn, TAG_ERROR, error_msg.encode())
 
                 elif tag == TAG_INITIALIZE:
                     print(f"🔧 Received Initialize command ({len(payload)} bytes)")
