@@ -16,29 +16,20 @@ from typing import Optional, Tuple
 
 from jam.block.block import Block
 from jam.block.header import Header
-from tsrkit_types import Bytes, TypedVector, structure
+from tsrkit_types import Bytes, Bytes32, U8, U32, TypedVector, String, structure
 
 from .constants import (
     TAG_PEER_INFO,
+    TAG_INITIALIZE, 
     TAG_IMPORT_BLOCK,
-    TAG_SET_STATE,
     TAG_GET_STATE,
     TAG_STATE,
     TAG_STATE_ROOT,
+    TAG_ERROR,
+    FEATURE_ANCESTRY,
+    FEATURE_FORK,
 )
-
-
-@structure 
-class KeyVal:
-    key: Bytes[31]
-    value: Bytes 
-
-@structure 
-class SetStateData:
-    header: Header
-    state: TypedVector[KeyVal]
-
-SetState = TypedVector[SetStateData]
+from .types import PeerInfo, Version, Initialize, State, KeyValue, ErrorMessage
 
 
 def read_message(conn: socket.socket) -> Tuple[Optional[int], Optional[bytes]]:
@@ -105,20 +96,32 @@ def handle_handshake(conn: socket.socket) -> bool:
         print(f"Expected PeerInfo (tag {TAG_PEER_INFO}), but got tag {tag}. Terminating.", file=sys.stderr)
         return False
 
-    # For this implementation, we don't decode the fuzzer's PeerInfo
-    print("📨 Received PeerInfo from fuzzer. Responding...")
+    # Decode the fuzzer's PeerInfo
+    try:
+        fuzzer_peer_info = PeerInfo.decode(payload)
+        print(f"📨 Received PeerInfo from {fuzzer_peer_info.app_name} (fuzz v{fuzzer_peer_info.fuzz_version})")
+        print(f"   Features: {fuzzer_peer_info.fuzz_features}, JAM: {fuzzer_peer_info.jam_version.major}.{fuzzer_peer_info.jam_version.minor}.{fuzzer_peer_info.jam_version.patch}")
+    except Exception as e:
+        print(f"❌ Failed to decode fuzzer PeerInfo: {e}", file=sys.stderr)
+        return False
 
     # Create our PeerInfo response
-    # PeerInfo ::= SEQUENCE { name UTF8String, app-version Version, jam-version Version }
-    # Version ::= SEQUENCE { major, minor, patch }
-    name = b"tessera-node-target"
-    name_len = bytes([len(name)])
-    # app-version: 1.0.0, jam-version: 2.0.0
-    version_payload = name_len + name + b'\x01\x00\x00' + b'\x02\x00\x00'
+    our_peer_info = PeerInfo(
+        fuzz_version=U8(1),  # Protocol version 1
+        fuzz_features=U32(FEATURE_ANCESTRY | FEATURE_FORK),  # We support ancestry and basic forking
+        jam_version=Version(major=U8(0), minor=U8(7), patch=U8(0)),  # JAM 0.7.0
+        app_version=Version(major=U8(1), minor=U8(0), patch=U8(0)),  # App 1.0.0
+        app_name=String("tessera-target")
+    )
     
-    send_message(conn, TAG_PEER_INFO, version_payload)
-    print("✅ Handshake complete.")
-    return True
+    try:
+        response_payload = our_peer_info.encode()
+        send_message(conn, TAG_PEER_INFO, response_payload)
+        print("✅ Handshake complete.")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send PeerInfo response: {e}", file=sys.stderr)
+        return False
 
 
 def run_fuzzer_target_loop(sock: socket.socket, settings, record_path: Optional[str] = None):
@@ -164,50 +167,58 @@ def run_fuzzer_target_loop(sock: socket.socket, settings, record_path: Optional[
                     print(f"📦 Received Block #{block_count} ({len(payload)} bytes)")
                     
                     start_time = time.time()
-                    try:
-                        block = Block.decode(payload)
-                        if record_enabled and json_data:
-                            json_data["blocks"].append(block.to_json())
-                        state.transition(block)
-                        duration = time.time() - start_time
-                        print(f"⚡ Block transition completed in {duration:.4f}s")
-                        send_message(conn, TAG_STATE_ROOT, state.root)
-                    except Exception as e:
-                        print(f"❌ Block processing failed: {e}", file=sys.stderr)
-                        # Send empty root on error
-                        send_message(conn, TAG_STATE_ROOT, b'\x00' * 32)
+                    block = Block.decode(payload)
+                    if record_enabled and json_data:
+                        json_data["blocks"].append(block.to_json())
+                    state.transition(block)
+                    duration = time.time() - start_time
+                    print(f"⚡ Block transition completed in {duration:.4f}s")
+                    send_message(conn, TAG_STATE_ROOT, state.root)
+                    # try:
+                    # except Exception as e:
+                    #     print(f"❌ Block processing failed: {e}", file=sys.stderr)
+                    #     # Send Error message for protocol-defined failures
+                    #     error_msg = ErrorMessage(message=String(f"Block import failed: {str(e)}"))
+                    #     send_message(conn, TAG_ERROR, error_msg.encode())
 
-                elif tag == TAG_SET_STATE:
-                    print(f"🔧 Received SetState command ({len(payload)} bytes)")
+                elif tag == TAG_INITIALIZE:
+                    print(f"🔧 Received Initialize command ({len(payload)} bytes)")
                     try:
-                        data = SetStateData.decode(payload)
+                        init_data = Initialize.decode(payload)
                         if record_enabled and json_data:
-                            json_data["pre_state"] = data.state.to_json()
+                            json_data["pre_state"] = init_data.keyvals.to_json()
                         
                         from jam.state.state import setup_state
-                        state = setup_state(settings.state_db, {keyval.key: keyval.value for keyval in data.state})
-                        print(f"✅ State updated. Root: {state.root.hex()}")
+                        # Convert State to dict for setup_state
+                        state_dict = {kv.key: kv.value for kv in init_data.keyvals.keyvals}
+                        state = setup_state(settings.state_db, state_dict)
+                        print(f"✅ State initialized. Root: {state.root.hex()}")
                         send_message(conn, TAG_STATE_ROOT, state.root)
                     except Exception as e:
-                        print(f"❌ SetState failed: {e}", file=sys.stderr)
-                        send_message(conn, TAG_STATE_ROOT, b'\x00' * 32)
+                        print(f"❌ Initialize failed: {e}", file=sys.stderr)
+                        error_msg = ErrorMessage(message=String(f"Initialize failed: {str(e)}"))
+                        send_message(conn, TAG_ERROR, error_msg.encode())
                 
                 elif tag == TAG_GET_STATE:
                     print(f"📤 Received GetState command ({len(payload)} bytes)")
                     print(f"🔍 Current StateRoot: {state.root.hex()}")
 
                     try:
-                        state_vector = TypedVector[KeyVal]([])
+                        keyvals = TypedVector[KeyValue]([])
                         for key, val in settings.state_db.get_all().items():
-                            state_vector.append(KeyVal(Bytes[31](key[:31]), Bytes(val)))
+                            # Ensure key is 31 bytes
+                            key_31 = key[:31].ljust(31, b'\x00') if len(key) < 31 else key[:31]
+                            keyvals.append(KeyValue(key=Bytes[31](key_31), value=Bytes(val)))
 
+                        state_response = State(keyvals=keyvals)
                         if record_enabled and json_data:
-                            json_data["post_state"] = state_vector.to_json()
+                            json_data["post_state"] = state_response.to_json()
                         
-                        send_message(conn, TAG_STATE, state_vector.encode())
+                        send_message(conn, TAG_STATE, state_response.encode())
                     except Exception as e:
                         print(f"❌ GetState failed: {e}", file=sys.stderr)
-                        send_message(conn, TAG_STATE, b'')
+                        error_msg = ErrorMessage(message=String(f"GetState failed: {str(e)}"))
+                        send_message(conn, TAG_ERROR, error_msg.encode())
 
                 else:
                     print(f"❓ Received unexpected message with tag {tag}. Closing connection.", file=sys.stderr)
