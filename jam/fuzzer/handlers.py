@@ -69,7 +69,7 @@ def send_message(conn: socket.socket, tag: int, payload: bytes) -> None:
         print(f"Error sending message: {e}", file=sys.stderr)
 
 
-def handle_handshake(conn: socket.socket) -> bool:
+def handle_handshake(conn: socket.socket) -> bool|PeerInfo:
     """
     Handles the initial handshake with the fuzzer.
     1. Receives the fuzzer's PeerInfo.
