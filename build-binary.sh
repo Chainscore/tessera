@@ -24,9 +24,6 @@ echo "[INFO] Building for: $PLATFORM_NAME-$ARCH_NAME"
 echo "[INFO] Cleaning previous builds..."
 rm -rf build/ dist/
 
-echo "[INFO] Setting up RocksDB library for bundling..."
-./setup-rocksdb.sh
-
 if [ -f deps/tsrkit-pvm ]; then
     cd deps/tsrkit-pvm
     echo "[INFO] Building tsrkit-pvm..."
