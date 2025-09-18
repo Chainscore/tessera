@@ -1,9 +1,10 @@
 import os
 
 from concurrent.futures.process import ProcessPoolExecutor
+
+from jam.utils.constants import MAX_TICKETS_PER_EXTRINSIC
 from .worker import Worker
 
-MAX_WORKERS = min(16, os.cpu_count())
 EXECUTOR: ProcessPoolExecutor | None = None
 PUBKEYS: list[bytes] | None = None
 
@@ -20,7 +21,7 @@ def setup_executor(pubkeys: list[bytes]):
     PUBKEYS = pubkeys
 
     EXECUTOR = ProcessPoolExecutor(
-        max_workers=MAX_WORKERS,
+        max_workers=min(MAX_TICKETS_PER_EXTRINSIC, os.cpu_count()),
         initializer=Worker.init_worker,
         initargs=(pubkeys,),
     )
