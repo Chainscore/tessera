@@ -1,5 +1,8 @@
 import json
-from typing import Type
+import asyncio
+
+from concurrent.futures import ThreadPoolExecutor
+
 from jam.error import JamError, JamErrorCode
 from jam.state.partial import PartialState
 from jam.utils.merkle import BMRFunctions
@@ -8,6 +11,7 @@ from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.utils.trie.merkle import StateTrie
 from jam.state.storage import StateStorage
+from jam.state.transitions.safrole.executor import setup_executor
 from jam.state.utils import make_state_prop
 from tsrkit_types import Bytes, Dictionary, TypedVector
 from jam.types import (
@@ -346,4 +350,8 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
 
     global state
     state = new_state
+
+    # Init Executor
+    pubkeys = [bytes(k.bandersnatch) for k in state.gamma.p]
+    setup_executor(pubkeys)
     return state

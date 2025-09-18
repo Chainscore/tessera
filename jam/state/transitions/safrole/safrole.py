@@ -1,3 +1,6 @@
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
+
 from typing import List
 from jam.types.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
@@ -29,6 +32,9 @@ from jam.types.protocol.crypto import (
 from jam.types.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from py_ark_vrf import verify_ring, get_ring_root, vrf_output
+
+from .worker import Worker
+from .executor import get_curr_keys, get_executor, setup_executor
 
 
 class Safrole:
@@ -121,6 +127,10 @@ class Safrole:
 
             gamma.p = GammaP(filtered_validators)
 
+            # Reinit Executor
+            pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
+            setup_executor(pubkeys)
+
             # 4.2 . Shift entropy
             eta = Eta([eta[0], eta[0], eta[1], eta[2]])
 
@@ -144,17 +154,38 @@ class Safrole:
             # 4. 4. Update ring root using gamma p
             gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in gamma.p])
 
-        for ticket in block.extrinsic.tickets:
+        tickets = block.extrinsic.tickets
+        count = len(tickets)
+
+        if count == 1:
             # Signature must be valid Ring-VRF proof
             if not Safrole.verify_vrf(
-                X.TICKET.value + eta[2] + bytes([ticket.attempt]),
-                [k.bandersnatch for k in gamma.p],
-                ticket.signature,
+                X.TICKET.value + eta[2] + bytes([tickets[0].attempt]),
+                get_curr_keys(),
+                tickets[0].signature,
             ):
                 raise SafroleError(
                     SafroleErrorCode.BAD_TICKET_PROOF,
-                    f"Ticket {ticket} VRF Proof is invalid",
+                    f"Ticket {tickets[0]} VRF Proof is invalid",
                 )
+
+        elif count > 1:
+            executor = get_executor()
+            futures = []
+            for ticket in tickets:
+                fut = executor.submit(Worker.verify_ticket, ticket, bytes(eta[2]))
+                futures.append(fut)
+
+            try:
+                for fut in as_completed(futures):
+                    fut.result()
+
+            except Exception:
+                for fut in futures:
+                    fut.cancel()
+
+                raise
+
         # 2. Accumulate entropy
         # Use entropy coming from vrf output of Hv once we have valid seals generated
         if int.from_bytes(entropy) > 0:
