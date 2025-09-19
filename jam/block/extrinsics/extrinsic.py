@@ -5,7 +5,7 @@ from jam.types.protocol.crypto import Hash
 from jam.utils.constants import CORE_COUNT, MAX_TICKETS_PER_EXTRINSIC, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from tsrkit_types.struct import structure
 from jam.block.extrinsics.tickets import TicketsExtrinsic, TicketEnvelope
-from jam.block.extrinsics.preimages import PreimagesExtrinsic
+from jam.block.extrinsics.preimages import PreimagesExtrinsic, Preimage
 from jam.block.extrinsics.guarantees import GuaranteesExtrinsic
 from jam.block.extrinsics.assurances import AssurancesExtrinsic
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Culprits, Faults, Verdicts
@@ -86,6 +86,13 @@ class Extrinsic:
         rg_cores.clear()
 
         ep = PreimagesExtrinsic(preimg_store._store[:])
+        def preimage_sort_fn(preimage: Preimage):
+            return (
+                int(preimage.requester),
+                preimage.blob,
+            )
+
+        ep.sort(key=preimage_sort_fn)
 
         def sort_fn(ticket: TicketEnvelope) -> int:
             # Take VRF output of the signature and sort by it
@@ -96,7 +103,6 @@ class Extrinsic:
             et = TicketsExtrinsic(ticket_store._store[:MAX_TICKETS_PER_EXTRINSIC])
             et.sort(key=sort_fn)
             print("Number of tickets included", len(et))
-
         else:
             print(f"Tickets are not allowed in block after TICKET_SUBMISSION_END, time_slot={time_slot}, slot={time_slot%EPOCH_LENGTH}")
             et = TicketsExtrinsic([])
