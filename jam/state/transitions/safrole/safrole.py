@@ -30,7 +30,7 @@ from jam.types.protocol.crypto import (
     OpaqueHash,
 )
 from jam.types.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
-from jam.types.protocol.validators import ValidatorData, Va lidatorMetadata
+from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
 from py_ark_vrf import verify_ring, get_ring_root, vrf_output
 
 from .worker import Worker
@@ -76,6 +76,8 @@ class Safrole:
             gamma.a = GammaA([])
 
         tickets = block.extrinsic.tickets
+        print("_tickets", len(tickets))
+        
         # 3. Ticket Accumulation
         ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
         # Process the tickets before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
@@ -165,7 +167,8 @@ class Safrole:
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
             # 4. 4. Update ring root using gamma p
-            gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in gamma.p])
+            if pre_state.gamma.p != pre_state.kappa:
+                gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in gamma.p])
 
         tickets = block.extrinsic.tickets
         count = len(tickets)
