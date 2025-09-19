@@ -17,7 +17,12 @@ def setup_executor(pubkeys: list[bytes]):
     if EXECUTOR:
         shutdown_executor()
 
-    # multiprocessing.set_start_method("spawn", force=False)
+    # TODO: If required, move this to setup_state()
+    # NOTE: fork isnt safe when parent processes are multithreaded
+    # By default Linux systems have fork which is faster, but Windows and IoS systems have spawn, which is slower.
+
+    # multiprocessing.set_start_method("fork", force=False)
+
     PUBKEYS = pubkeys
 
     EXECUTOR = ProcessPoolExecutor(

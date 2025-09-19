@@ -1,11 +1,10 @@
-import os
-from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
+from concurrent.futures import as_completed
 
 from typing import List
 from jam.types.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
 from jam.log_setup import logger
-from jam.block import TicketEnvelope, TicketsExtrinsic
+from jam.block import TicketEnvelope
 from jam.types.state.eta import Eta
 from jam.types.state.kappa import Kappa
 from jam.types.state.lambda_ import Lambda_
@@ -168,7 +167,7 @@ class Safrole:
 
             # 4. 4. Update ring root using gamma p
             if pre_state.gamma.p != pre_state.kappa:
-                gamma.z = Safrole.compute_ring_root([k.bandersnatch for k in gamma.p])
+                gamma.z = Safrole.compute_ring_root(pubkeys)
 
         tickets = block.extrinsic.tickets
         count = len(tickets)
