@@ -76,7 +76,7 @@ from jam.utils.constants import (
     SEGMENT_SIZE,
     MAX_WORK_REPORT_SIZE,
     SLOT_PERIOD,
-    X,
+    X, VALIDATOR_COUNT
 )
 
 from tests.unit.incore.types import FullVector
@@ -273,6 +273,7 @@ class Processor:
                 # ------------------------------------------ REFINE INVOCATION ----------------------------------------
                 logger.debug(f"Refining Work Item {j}..", payload=p.items[j].payload.hex())
                 r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
+                logger.debug(f"REFINE RESULT: {r}", item=j, payload=list(p.items[j].payload))
                 # ------------------------------------------ ----------------- ----------------------------------------
 
                 segment = Segment([U8(0)] * SEGMENT_SIZE)
@@ -325,7 +326,7 @@ class Processor:
                 authorizer_hash=p.a,
                 auth_output=Bytes(o),
                 segment_root_lookup=sr_lookup,
-                results=r_list,
+                digests=r_list,
                 auth_gas_used=Uint(g),
             )
 
@@ -417,14 +418,22 @@ class Processor:
                 logger.debug("Segments Shard formed", count=len(seg_chunks), segment=i)
                 i += 1
 
-            segments_shards = SegmentsShards(
-                [
-                    SegmentsShard(
-                        [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
-                    )
-                    for i in range(len(all_chunks[0]))
-                ]
-            )
+            if len(all_chunks) != 0:
+                segments_shards = SegmentsShards(
+                    [
+                        SegmentsShard(
+                            [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
+                        )
+                        for i in range(len(all_chunks[0]))
+                    ]
+                )
+            else:
+                segments_shards = SegmentsShards(
+                    [
+                        SegmentsShard([])
+                        for _ in range(VALIDATOR_COUNT)
+                    ]
+                )
 
             ss_roots = SegmentsShardRoots([])
             ss_dict = SegShardsDict({})

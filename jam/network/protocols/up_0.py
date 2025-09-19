@@ -16,6 +16,7 @@ from jam.block import Block, Header
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.protocol.validators import ValidatorData
+from jam.api.rpc.broker import broker
 
 # Module-specific logger
 logger = get_logger("network")
@@ -247,6 +248,7 @@ class BlockAnnouncement(NetworkProtocol):
         header = anc.header
 
         logger.debug("Fetching block to import", slot=header.slot)
+        asyncio.create_task(broker.publish("subscribeSyncStatus", "InProgress"))
         blocks = await BlockRequest().transmit(
             CE128Data(
                 header=HeaderHash(header.hash()),
@@ -263,15 +265,18 @@ class BlockAnnouncement(NetworkProtocol):
 
         _valid = state._force_transition(blocks[0][0])
         if _valid:
+            asyncio.create_task(broker.publish("subscribeSyncStatus", "Completed"))
             await self.transmit(anc)
 
     @classmethod
     async def synchronise(cls, h: Handshake):
         from jam.state.state import state
+        asyncio.create_task(broker.publish("subscribeSyncStatus", "InProgress"))
 
         # To know how many blocks to fetch
         # (h.final.slot - state.tau)
         if h.final.time_slot <= state.tau:
+            asyncio.create_task(broker.publish("subscribeSyncStatus", "Completed"))
             return
 
         data_req = CE128Data(
@@ -288,4 +293,5 @@ class BlockAnnouncement(NetworkProtocol):
             state._force_transition(block)
 
         logger.info("Sync complete!", state_root=state.root)
+        asyncio.create_task(broker.publish("subscribeSyncStatus", "Completed"))
         return

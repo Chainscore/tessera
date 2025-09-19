@@ -1,3 +1,4 @@
+import asyncio
 from jam.state.accounts import AccountDataView, DeltaView
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
@@ -5,7 +6,6 @@ from jam.types.state.accumulation.types import (
     DeferredTransfer,
 )
 from tsrkit_types import U32, U64, Bytes
-from tsrkit_types.sequences import TypedArray
 from jam.types.protocol.validators import ValidatorData
 from jam.logging import get_logger
 from jam.execution.invocations.functions.protocol import (
@@ -157,13 +157,14 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(17, gas_cost=10)
     def checkpoint(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
+        context.y.i_index = context.x.i_index
         context.y.s_index = context.x.s_index
         context.y.partial_state.store._updates.update(context.x.partial_state.store._updates)
         context.y.deferred_transfers = context.x.deferred_transfers.copy()
         context.y.hash = context.x.hash
         context.y.preimage = context.x.preimage.copy()
 
-        registers[7] = gas - 10
+        registers[7] = gas
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -407,6 +408,7 @@ class AccumulateFunctions(INVF):
 
         # account.lookup[lookup_key] = lookup_val
         registers[7] = HostStatus.OK.value
+
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -431,7 +433,7 @@ class AccumulateFunctions(INVF):
             lookup_value.append(block_timeslot)
             a.lookup[lookup_key] = lookup_value
         elif len(a.lookup[lookup_key]) == 0 or (
-            len(a.lookup[lookup_key]) == 2 and 
+            len(a.lookup[lookup_key]) == 2 and
             a.lookup[lookup_key][1] < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS
         ):
             del a.lookup[lookup_key]

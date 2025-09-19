@@ -9,7 +9,6 @@ from jam.logging import get_logger
 # Module-specifier logger
 logger = get_logger("utils")
 
-
 class Utils:
 
     @classmethod

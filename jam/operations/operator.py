@@ -76,8 +76,8 @@ async def operate(is_builder = False):
             from jam.block.extrinsics.assurances import asr_store
             from jam.block.extrinsics.disputes import dpt_store
             ticket_store.clear()
-            wrg_store.clear()
-            asr_store.clear()
+            # wrg_store.clear()
+            # asr_store.clear()
             dpt_store.clear()
 
         if ts%EPOCH_LENGTH == 0:

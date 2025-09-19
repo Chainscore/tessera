@@ -1,7 +1,13 @@
 #!/bin/sh
 set -e
 
+export PYTHONUNBUFFERED=1
+
+echo "[INFO] Clearing Database..."
 rm -rf /app/data/*
+
+echo "[INFO] Setting up RocksDB library for bundling..."
+./setup-rocksdb.sh
 
 start() {
   envfile="$1"

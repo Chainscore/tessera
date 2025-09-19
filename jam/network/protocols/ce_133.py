@@ -8,6 +8,7 @@ from jam.logging import get_logger
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
+# from jam.state.transitions.report.guarantee_assignment import assign_fn
 
 from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
@@ -78,7 +79,10 @@ class WorkPackageSubmission(NetworkProtocol):
         mapping = assign_guarantors()
         guarantors = mapping[0][ci]
         logger.debug("Fetched Assigned Guarantors (133)", mapping=mapping[1], tau=state.tau, root=state.root.hex())
-
+        # mapping = assign_fn(state)
+        # guarantors = mapping[1]
+        # print(mapping[0])
+        # logger.debug("Fetched Assigned Guarantors (133)", mapping=mapping[0], tau=state.tau, root=state.root.hex())
         wp_hash = data.package_data.work_package.hash().hex()
         logger.info(
             "Trying transmitting work package",
@@ -111,7 +115,6 @@ class WorkPackageSubmission(NetworkProtocol):
                 client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                 client.stream_and_keep_open(message=len_b, stream_id=stream_id)
                 res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
-
                 logger.debug(
                     "Work package transmitted",
                     stream_id=stream_id,

@@ -5,7 +5,7 @@ from jam.types.protocol.crypto import Hash
 from jam.utils.constants import CORE_COUNT, MAX_TICKETS_PER_EXTRINSIC, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from tsrkit_types.struct import structure
 from jam.block.extrinsics.tickets import TicketsExtrinsic, TicketEnvelope
-from jam.block.extrinsics.preimages import PreimagesExtrinsic
+from jam.block.extrinsics.preimages import PreimagesExtrinsic, Preimage
 from jam.block.extrinsics.guarantees import GuaranteesExtrinsic
 from jam.block.extrinsics.assurances import AssurancesExtrinsic
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Culprits, Faults, Verdicts
@@ -70,7 +70,6 @@ class Extrinsic:
         from .guarantees import wrg_store
         from .assurances import asr_store
         from .preimages import preimg_store
-        from .disputes import dpt_store
 
         # Sort Assurances
         ea = AssurancesExtrinsic(sorted(asr_store._store, key=lambda a: a.validator_index))
@@ -87,6 +86,13 @@ class Extrinsic:
         rg_cores.clear()
 
         ep = PreimagesExtrinsic(preimg_store._store[:])
+        def preimage_sort_fn(preimage: Preimage):
+            return (
+                int(preimage.requester),
+                preimage.blob,
+            )
+
+        ep.sort(key=preimage_sort_fn)
 
         # Already sorted
         # ed = DisputesExtrinsic(dpt_store._store)
@@ -100,7 +106,6 @@ class Extrinsic:
             et = TicketsExtrinsic(ticket_store._store[:MAX_TICKETS_PER_EXTRINSIC])
             et.sort(key=sort_fn)
             print("Number of tickets included", len(et))
-
         else:
             print(f"Tickets are not allowed in block after TICKET_SUBMISSION_END, time_slot={time_slot}, slot={time_slot%EPOCH_LENGTH}")
             et = TicketsExtrinsic([])
@@ -121,11 +126,14 @@ class Extrinsic:
         from .tickets import ticket_store
         from .guarantees import wrg_store
         from .assurances import asr_store
+        from .preimages import preimg_store
         # from .disputes import dpt_store
 
         ticket_store.remove(self.tickets)
         wrg_store.remove(self.guarantees)
         asr_store.remove(self.assurances)
+        preimg_store.remove(self.preimages)
+        # TODO: Handle disputes
         # dpt_store.remove(self.disputes)
         return
 

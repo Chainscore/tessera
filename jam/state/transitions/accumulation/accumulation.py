@@ -1,11 +1,15 @@
+import asyncio
+import json
 from copy import deepcopy
 from typing import Tuple, Set, List
+from jam.api.rpc.broker import broker
 from jam.execution.invocations.accumulate import PsiA
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
 from tsrkit_types.null import Null
 from jam.block import Block
 from jam.execution.invocations.on_transfer import PsiT
+from jam.finality.finality import Finality
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     AccumulationOutput,
@@ -281,12 +285,12 @@ class Accumulation:
                 outputs.add((service, _output_hash.unwrap()))
             transfers.extend(_transfers)
             collected_preimages.update(_preimages)
-            
+
             # Add partial cache to state
             state.store += partial_state.store
 
         Accumulation.preimage_integration(
-            partial_state.service_accounts, collected_preimages, timeslot
+            state.delta, collected_preimages, timeslot
         )
         return transfers, outputs, gas_consumed
 
@@ -366,9 +370,9 @@ class Accumulation:
                 )
             key_hash = Hash.blake2b(blobs)
             lookup = LookupTable(hash=key_hash,length= len(blobs))
-            if len(service.timestamps[lookup]) == 0:
-                service.timestamps[lookup] = Timestamps([timeslot])
-                service.lookup[key_hash] = blobs
+            if len(service.lookup[lookup]) == 0:
+                service.lookup[lookup] = Timestamps([timeslot])
+                service.preimages[key_hash] = blobs
 
     @staticmethod
     def selection_fn(deferred_transfers: DeferredTransfers, service_id: ServiceId) -> DeferredTransfers:
@@ -583,5 +587,26 @@ class Accumulation:
                 )
         state.xi = xi
         state.omega = omega
+
+        keys = broker.topics.keys()
+        matches = [k for k in keys if "subscribeServiceValue" in k]
+        for req in matches:
+            params = req.split(":")
+            sid = ServiceId(params[1])
+            key_list = json.loads(params[2])
+            key = Bytes(key_list)
+            finality = True if params[3] == 'True' else False
+            value = state.delta[sid].storage.get(key) if state.delta[sid].storage.get(key) is None else list(state.delta[sid].storage.get(key))
+            last_publish = broker.last_publish
+            if req not in last_publish or last_publish[req] != value:
+                from jam.settings import settings
+                block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(settings.main_db)
+
+                print(f"Req: {req} header_hash: {block.header.hash().hex()[:16]} slot: {block.header.slot} value: {value}")
+
+                asyncio.create_task(broker.publish(req,
+                                                   {"header_hash": list(block.header.hash()),
+                                                    "slot": int(block.header.slot), "value": value}))
+                broker.last_publish[req] = value
 
         return state, commitment_map
