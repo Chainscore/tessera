@@ -30,7 +30,7 @@ from jam.types.protocol.crypto import (
     OpaqueHash,
 )
 from jam.types.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.types.protocol.validators import ValidatorData, Va lidatorMetadata
 from py_ark_vrf import verify_ring, get_ring_root, vrf_output
 
 from .worker import Worker
@@ -75,20 +75,31 @@ class Safrole:
             # 4.5. Empty the ticket acc for upcoming epoch
             gamma.a = GammaA([])
 
+        tickets = block.extrinsic.tickets
         # 3. Ticket Accumulation
         ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
         # Process the tickets before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
         # TEST: We removed jump == 0 here bc we also allow tickets to be introduced in an epoch's new slot
-        if ticket_submission_active and len(block.extrinsic.tickets) > 0:
+        if ticket_submission_active and len(tickets) > 0:
             # Validate extrinsics
-            Safrole.ensure_valid_ticket_extrinsics(block)
-            # Accumulate them in gamma.a
-            gamma.a += [
-                TicketBody(attempt=ticket.attempt, id=Safrole.get_vrf_output(ticket.signature))
-                for ticket in block.extrinsic.tickets
-            ]
+            Safrole.ensure_valid_tickets_count_before_epoch_end(block)
+
+            vrf_ids = []
+            for i, t in enumerate(tickets):
+                Safrole.ensure_valid_attempt(t)
+
+                vrf_op = Safrole.get_vrf_output(t.signature)
+                vrf_ids.append(vrf_op)
+                if i > 0:
+                    Safrole.ensure_tickets_order(vrf_ids[i-1], vrf_op)
+
+                # Accumulate them in gamma.a
+                gamma.a.append(TicketBody(attempt=t.attempt, id=vrf_op))
+
+            vrf_ids.clear()
             gamma.a.sort(key=lambda x: x.id)
             gamma.a = GammaA(gamma.a[:EPOCH_LENGTH])
+
             # Check for duplicates
             if len(gamma.a) != len(list(set(gamma.a))):
                 raise SafroleError(
@@ -109,6 +120,7 @@ class Safrole:
             state.lambda_ = Lambda_(pre_state.kappa)
             state.kappa = Kappa(gamma.p)
             filtered_validators = []
+            pubkeys = []
 
             for k in pre_state.iota:
                 if k.ed25519 in state.psi.offenders:
@@ -121,14 +133,15 @@ class Safrole:
                             metadata=ValidatorMetadata.decode(bytes(128)),
                         )
                     )
+                    pubkeys.append(bytes(32))
                 else:
                     # Not an offender, keep the original validator data
                     filtered_validators.append(k)
+                    pubkeys.append(bytes(k.bandersnatch))
 
             gamma.p = GammaP(filtered_validators)
 
             # Reinit Executor
-            pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
             setup_executor(pubkeys)
 
             # 4.2 . Shift entropy
@@ -196,29 +209,14 @@ class Safrole:
         return state
 
     @staticmethod
-    def ensure_valid_ticket_extrinsics(block: Block):
-        """
-        Ensures the ticket.py submitted via the extrinsic are valid.
-        """
-        Safrole.ensure_tickets_order(block.extrinsic.tickets)
-        for ticket in block.extrinsic.tickets:
-            Safrole.ensure_valid_attempt(ticket)
-        Safrole.ensure_valid_tickets_count_before_epoch_end(block)
-
-    @staticmethod
-    def ensure_tickets_order(tickets: TicketsExtrinsic):
+    def ensure_tickets_order(vrf_op_a: bytes, vrf_op_b: bytes):
         """
         Ensures the tickets submitted via the extrinsic must already have been placed in order of their implied identifier.
         https://graypaper.fluffylabs.dev/#/5b732de/0fc7000fc800
         """
 
-        def sort_fn(ticket: TicketEnvelope) -> int:
-            # Take VRF output of the signature and sort by it
-            return int.from_bytes(Safrole.get_vrf_output(ticket.signature))
-
-        tickets_sorted = tickets.copy()
-        tickets_sorted.sort(key=sort_fn)
-        if tickets_sorted != tickets:
+        # Raise Error if any 2 consecutive tickets are wrongly ordered
+        if vrf_op_a > vrf_op_b:
             raise SafroleError(
                 SafroleErrorCode.BAD_TICKET_ORDER,
                 "Tickets are not in sorted order by VRF output",

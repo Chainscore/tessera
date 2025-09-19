@@ -1,7 +1,7 @@
 import json
 import asyncio
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from jam.error import JamError, JamErrorCode
 from jam.state.partial import PartialState
@@ -158,6 +158,192 @@ class State:
 
         return self.transition(block)
 
+    @staticmethod
+    def transition_stats(pre_state, curr_state, block, newly_avail_wrs):
+        # Preimages
+        Preimages.transition(pre_state, curr_state, block)
+
+        # Statistics
+        Statistics.transition(pre_state, curr_state, block, newly_avail_wrs)
+
+    def new_transition(self, block: Block) -> bool:
+        """
+        Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
+
+        Args:
+            block: Incoming block
+        """
+        if self._lock:
+            logger.error("Lock detected, skipping transition")
+            return False
+
+        self._lock = True
+
+
+        from jam.settings import settings as _set
+        from jam.finality.finality import Finality
+
+        try:
+            header_hash = HeaderHash(block.header.hash())
+            logger.debug(
+                "Starting state transition on block",
+                header_hash=header_hash.hex(),
+                block_slot=int(block.header.slot),
+                parent_hash=block.header.parent.hex()[:16] + "...",
+                state_root=block.header.parent_state_root.hex()[:16] + "...",
+                author_index=int(block.header.author_index),
+                preimages=len(block.extrinsic.preimages),
+                wrs=len(block.extrinsic.guarantees),
+                assurances=len(block.extrinsic.assurances),
+            )
+
+            # TODO: Validate block headers
+            # Epoch markers - make sure eta0_1 are the same as current etas
+            # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
+            # Offenders mark - make sure offenders are present in psi.offenders
+            if block.header.slot == 0:
+                logger.debug("Found genesis block, skipping", hh=header_hash.hex())
+                self._lock = False
+                return False
+
+            if _set.main_db.get(Block.get_storage_key_block(header_hash)) is not None:
+                logger.debug("Duplicate block found, skipping", hh=header_hash.hex())
+                self._lock = False
+                return False
+
+            pre_state = self.load()
+
+            # Handle Parent's Block Posterior State Root (β† h)
+            beta: Beta = self.beta
+            # print("PRE BETA 1", beta.to_json())
+            if len(beta.h):
+                beta.h[-1].state_root = block.header.parent_state_root
+            self.beta = beta
+            # print("BETA 1 DONE", beta.to_json())
+
+            with ThreadPoolExecutor(max_workers=4) as executor:
+
+                # ---------------------- Level 1 ----------------------
+                # Disputes
+                Disputes.transition(pre_state, self, block)
+
+                # VRF Output
+                vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
+                # ---------------------- ------- ----------------------
+
+                # print("DISPUTES , VRF OP DONE")
+
+                # ---------------------- Level 2 ----------------------
+                stf2 = executor.submit(Safrole.transition, pre_state, self, block, vrf_output)
+                stf3 = executor.submit(Assurances.transition, pre_state, self, block)
+
+                # Safrole
+                _ = stf2.result()
+
+                # Block Validation
+                util2 = executor.submit(block.validate)
+
+                # Assurances
+                _, newly_avail_wrs = stf3.result()
+                # ---------------------- ------- ----------------------
+
+#                 print("SAFROLE , ASSURANCES DONE")
+
+                if len(newly_avail_wrs) > 0:
+                    logger.info(
+                        "Newly available WRs", count=len(newly_avail_wrs),
+                        wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
+                    )
+
+
+                # ---------------------- Level 3 ----------------------
+                # Reporting
+                Reporting.transition(pre_state, self, block, [])
+                # ---------------------- ------- ----------------------
+
+
+#                 print("REPORTING DONE")
+
+                # ---------------------- Level 4 ----------------------
+                # Accumulation
+                _, commitment_map = Accumulation.transition(
+                    pre_state, self, block, newly_avail_wrs=newly_avail_wrs
+                )
+
+                # Calculate Merkle root of Accumulation Outputs
+                bmr_merklizer = BMRFunctions()
+                accumulate_root = bmr_merklizer.wb_merklize(
+                    TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in self.theta])),
+                    Hash.keccak256
+                )
+                # ---------------------- ------- ----------------------
+
+#                 print("ACCUMULATION DONE")
+
+
+                # ---------------------- Level 5 ----------------------
+                stf4 = executor.submit(self.transition_stats, pre_state, self, block, newly_avail_wrs)
+                stf5 = executor.submit(Authorization.transition, pre_state, self, block)
+                stf6 = executor.submit(RecentHistory.transition, pre_state, self, block, accumulate_root, header_hash)
+
+                # Statistics, Authorization, Recent History
+                for fut in as_completed([stf4, stf5, stf6]):
+                    fut.result()
+
+#                 print("PREIMAGES, STATISTICS, AUTHORIZATION, RECENT HISTORY DONE")
+                # ---------------------- ------- ----------------------
+
+
+                # Is Block Valid
+                is_valid = util2.result()
+#                 print("BLOCK VALIDATION DONE")
+
+            if is_valid:
+                state.settle(header_hash)
+
+                # Set local chain head to produced block
+                block.save(_set.main_db)
+                Finality.set_head(header_hash, _set.main_db)
+                logger.info(
+                    "Block imported!",
+                    new_wrs=newly_avail_wrs,
+                    header=header_hash.hex()[:16] + "...",
+                    timeslot=self.tau,
+                    final_state_root=self.root.hex()[:16] + "...",
+                )
+
+                # from jam.operations.handlers.assurer import assurer
+                # for ext in block.extrinsic.guarantees:
+                #     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                #     asyncio.create_task(assurer._req_shard(ext))
+
+                # TODO: Test Auditing & Refining with PJ
+                # # Start Auditing for new block received
+                # audit_engine = AuditEngine()
+                # asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
+
+                # TODO: Remove Direct Finality
+                # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
+                Finality.finalise(header_hash, _set.main_db, True)
+
+                block.extrinsic.clear_from_stores()
+
+                self._lock = False
+                return True
+            else:
+                raise JamError(JamErrorCode.INVALID_BLOCK)
+
+        except JamError as jam_e:
+            logger.error(
+                "Invalid block", error=jam_e,
+                hh=block.header.hash().hex(),
+                slot=block.header.slot,
+            )
+            self.store.clear()
+        self._lock = False
+
+        return False
+
     def transition(self, block: Block) -> bool:
         """
         Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
@@ -171,7 +357,7 @@ class State:
 
         self._lock = True
 
-        
+
         from jam.settings import settings as _set
         from jam.finality.finality import Finality
 
@@ -298,7 +484,7 @@ class State:
         self._lock = False
 
         return False
-    
+
     def to_partial(self) -> "PartialState":
         return PartialState(
             StateStorage(
