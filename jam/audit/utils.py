@@ -1,18 +1,9 @@
 import asyncio
-from wsgiref.validate import validator
-
-from docutils.nodes import header
-from tsrkit_types import U32, Uint, U8
-
-from jam.types.protocol.core import TrancheIndex
+from tsrkit_types import U32, Uint, U8, Null
 from jam.types.work.report import WorkReport
 from jam.block.block import Block
 from jam.types.work.report import WorkReportHash
 from jam.types.audit.audit_tranche import Tranche
-from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-
-
-
 from jam.logging import get_logger
 
 # Module-specifier logger

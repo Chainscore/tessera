@@ -125,7 +125,7 @@ class JudgmentPublication(NetworkProtocol):
             data = cast(CE145Data, data)
 
             logger.debug(
-                "Received Judgment from auditor",
+                f"Received Judgment from auditor {server.validator_index}",
                 stream_id= stream_id,
                 peer= server,
                 buffer_size= len(buffer[1:]),
@@ -167,6 +167,7 @@ class JudgmentPublication(NetworkProtocol):
         if buffer == b"":
             logger.info(
                 "Judgment acknowledge received",
+                client_index=client.validator_index,
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )
@@ -204,38 +205,38 @@ class JudgmentPublication(NetworkProtocol):
                 ed25519_public= ed25519_public
             )
 
-            logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {judgment.work_report_hash} from state || {tranche_store.get_state(tranche=tranche)}")
+            # logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {judgment.work_report_hash} from state || { tranche_store.get_state(tranche=tranche)}")
 
-            if judgment.validity == U8(0):
-                print("ye nhi chala")
-                update_validity = await utils.process_refine(tranche=tranche, wr_hash=judgment.work_report_hash)
-
-                if update_validity is not None:
-                    epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
-
-                    ed25519_signature = audit.judgment_signature(wr=wr, validity=update_validity)
-
-                    judgment = Judgment(
-                        epoch_index=epoch_index,
-                        validator_index=settings.validator_index,
-                        validity=update_validity,
-                        work_report_hash=WorkReportHash(wr_hash),
-                        ed25519_signature=Ed25519Signature(ed25519_signature),
-                    )
-
-                    # ------------------- Save judgment in Tranche State ---------------------------------------------
-
-                    await tranche_store.update_judgment(
-                        tranche=tranche,
-                        judgment=judgment,
-                        ed25519_public=settings.ed25519_public
-                    )
-
-                    # logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {wr_hash} from state || {tranche_store.get_state(tranche=tranche)}")
-
-                    data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
-                    # response = await CE145.transmit(data=data)
-                    await asyncio.create_task(self.transmit(data=data))
+            # if judgment.validity == U8(0):
+            #     print("ye nhi chala")
+            #     update_validity = await utils.process_refine(tranche=tranche, wr_hash=judgment.work_report_hash)
+            #
+            #     if update_validity is not None:
+            #         epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
+            #
+            #         ed25519_signature = audit.judgment_signature(wr=wr, validity=update_validity)
+            #
+            #         judgment = Judgment(
+            #             epoch_index=epoch_index,
+            #             validator_index=settings.validator_index,
+            #             validity=update_validity,
+            #             work_report_hash=WorkReportHash(wr_hash),
+            #             ed25519_signature=Ed25519Signature(ed25519_signature),
+            #         )
+            #
+            #         # ------------------- Save judgment in Tranche State ---------------------------------------------
+            #
+            #         await tranche_store.update_judgment(
+            #             tranche=tranche,
+            #             judgment=judgment,
+            #             ed25519_public=settings.ed25519_public
+            #         )
+            #
+            #         # logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {wr_hash} from state || {tranche_store.get_state(tranche=tranche)}")
+            #
+            #         data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
+            #         # response = await CE145.transmit(data=data)
+            #         await asyncio.create_task(self.transmit(data=data))
 
 
         except Exception as JERR:

@@ -6,10 +6,10 @@ from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.struct import structure
 from tsrkit_types.option import Option
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits, Faults
-from jam.network.protocols.ce_144 import NoShows
+from jam.network.protocols.ce_144 import NoShows, CoreReportHash
 from jam.types.protocol.crypto import HeaderHash, Hash, Ed25519Signature, Ed25519Public
 from jam.types.protocol.core import ValidatorIndex, TrancheIndex, CoreIndex
-from jam.types.work.report import WorkReport, WorkReportHash
+from jam.types.work.report import WorkReport, WorkReportHash, WorkReports
 
 SignatureList = TypedVector[Bytes]
 ValidatorSet = set[ValidatorIndex]
@@ -32,15 +32,13 @@ judgmentSet = set[ValidatorSignature]
 class CoreReport:
     """ Work Report associated with their Core Index. """
     core_index: CoreIndex
-    work_report: OptionalReport
-
+    work_report: WorkReport
 
 @structure
-class CoreReportHash:
-    """ Work Report Hash associated with their Core Index. """
+class CoreOptionalReport:
+    """Optional Work Report associated with their Core Index. """
     core_index: CoreIndex
-    work_report_hash: WorkReportHash
-
+    work_report: OptionalReport
 
 @structure
 class AuditRecord:

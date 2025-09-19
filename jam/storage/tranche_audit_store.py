@@ -1,5 +1,6 @@
 from typing import Dict
 
+from pydantic.v1.typing import new_type_supertype
 from tsrkit_types import Null, Uint
 import bisect
 import asyncio
@@ -12,10 +13,9 @@ from jam.types.audit.audit_tranche import (
     AuditRecord,
     OptionalReports,
     ValidatorSignature,
-    CoreReportHash
 )
 
-from jam.network.protocols.ce_144 import NoShow, Announcement
+from jam.network.protocols.ce_144 import NoShow, Announcement, CoreReportHash
 from jam.network.protocols.ce_145 import Judgment
 from jam.types.protocol.core import ValidatorIndex, TrancheIndex
 from jam.types.protocol.crypto import HeaderHash, Ed25519Public
@@ -81,40 +81,22 @@ class TrancheStore:
     async def fetch_rep_tranche(self, judgment: Judgment):
         wr_hash = judgment.work_report_hash
 
-        h_hash: HeaderHash | None = None
-        rep_tranche: Tranche | None = None
+        async with self._lock:
 
-        async with (self._lock):
+            # collect matching tranches
+            list_tranche = [
+                tranche
+                for tranche, tranche_state in self._tranche_store.items()
+                if wr_hash in tranche_state.records
+                   and judgment.validator_index in tranche_state.records[wr_hash].announces
+            ]
 
-            max_tranche_index : TrancheIndex | None = None
-            for tranche, tranche_state in self._tranche_store.items():
-                unaudited_list  = tranche_state.unaudited_list
-                if len(unaudited_list) != 0:
-                    for rep in unaudited_list:
-                        if rep != Null:
-                            if Hash.blake2b(rep.unwrap().encode()) == wr_hash:
-                                h_hash = tranche.header_hash
-                                if h_hash and h_hash != tranche.header_hash:
-                                    raise ValueError("Found report in multiple blocks tranche!")
+            if not list_tranche:
+                return None  # nothing found
 
-                                if max_tranche_index is not None:
-                                    if tranche.tranche_index > max_tranche_index:
-                                        max_tranche_index = tranche.tranche_index
-                                        rep_tranche = Tranche(
-                                            tranche_index= max_tranche_index,
-                                            header_hash= tranche.header_hash
-                                        )
-                                else:
-                                    rep_tranche = tranche
+            # return tranche with max index
 
-                else:
-                    logger.debug(f"unaudited_list is empty for Tranche: {tranche}")
-                    return
-
-            if not rep_tranche:
-                logger.error("No audit tranche found for given judgement's report", judgment=judgment)
-
-        return rep_tranche
+            return max(list_tranche, key=lambda t: t.tranche_index)
 
     # --------------------- WR Queue Access Operations ---------------------
 
@@ -122,7 +104,7 @@ class TrancheStore:
         async with self._lock:
             state = self._tranche_store.get(tranche)
             if not state:
-                logger.warning("No state for given tranche", tranche=tranche)
+                logger.warning("No state for given tranche while update_unaudited_list", tranche=tranche)
                 return
 
             state.unaudited_list = unaudited_reports
@@ -141,7 +123,7 @@ class TrancheStore:
         async with self._lock:
             state = self._tranche_store.get(tranche)
             if not state:
-                logger.warning("No state for given tranche", tranche=tranche)
+                logger.warning("No state for given tranche while rm_from_unaudited", tranche=tranche)
                 return
             try:
                 state = self._tranche_store.get(tranche)
@@ -152,30 +134,28 @@ class TrancheStore:
 
     # --------------------- Announcement Access Operations ---------------------
 
-    async def records_announcement(self, tranche: Tranche, validator_index: ValidatorIndex, announce: Announcement):
-        async with self._lock:
-            from jam.settings import settings
+    def records_announcement(self, tranche: Tranche, validator_index: ValidatorIndex, announce: Announcement):
 
-            state = self._tranche_store.get(tranche)
+        state = self._tranche_store.get(tranche)
 
-            if not state:
+        if not state:
+            try:
                 logger.warning("No state for given tranche, so we create new one", tranche=tranche)
                 # this condition comes because 2md validator taking time to start processing so
-                # before initialzed its tranche state it received annfrom other, to save those ann
+                # before initialized its tranche state it received ann from other, to save those ann
                 # they have to build the tranche state
 
                 # special condition
                 if tranche.tranche_index == TrancheIndex(0):
                     new_state = TrancheState.empty()
 
+                    for c_r in announce.assigned_reports:
 
-                    for core_report in announce.assigned_reports:
+                        new_state.records[c_r.report_hash] = AuditRecord.empty()
 
-                        new_state.records[core_report.report_hash] = AuditRecord.empty()
+                        new_state.records[c_r.report_hash].announces.add(validator_index)
 
-                        new_state.records[core_report.report_hash].announces.add(validator_index)
-
-                        new_state.records[core_report.report_hash].no_shows.append(
+                        new_state.records[c_r.report_hash].no_shows.append(
                             NoShow(
                                 validator_index=validator_index,
                                 announcement=announce
@@ -183,16 +163,41 @@ class TrancheStore:
                         )
                     self._tranche_store[tranche] = new_state
 
-            else:
+                else:
+                    prev_tranche = Tranche(
+                        tranche_index= tranche.tranche_index - TrancheIndex(1),
+                        header_hash= tranche.header_hash
+                    )
 
-                for core_report in announce.assigned_reports:
+                    prev_state = self._tranche_store.get(prev_tranche)
+                    new_state = prev_state.carry_forward()
 
-                    if core_report.report_hash not in state.records:
-                        state.records[core_report.report_hash] = AuditRecord.empty()
+                    for c_r in announce.assigned_reports:
 
-                        state.records[core_report.report_hash].announces.add(validator_index)
+                        new_state.records[c_r.report_hash].announces.add(validator_index)
 
-                        state.records[core_report.report_hash].no_shows.append(
+                        new_state.records[c_r.report_hash].no_shows.append(
+                            NoShow(
+                                validator_index=validator_index,
+                                announcement=announce
+                            )
+                        )
+                    self._tranche_store[tranche] = new_state
+
+            except Exception as e:
+                logger.error(
+                    f"failed to save Announcements",
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+
+        else:
+            try:
+                for c_r in announce.assigned_reports:
+                    if c_r.report_hash not in state.records:
+                        state.records[c_r.report_hash] = AuditRecord.empty()
+                        state.records[c_r.report_hash].announces.add(validator_index)
+                        state.records[c_r.report_hash].no_shows.append(
                             NoShow(
                                 validator_index=validator_index,
                                 announcement=announce
@@ -200,11 +205,11 @@ class TrancheStore:
                         )
 
                     else:
-                        if validator_index not in state.records[core_report.report_hash].announces:
+                        if validator_index not in state.records[c_r.report_hash].announces:
 
-                            state.records[core_report.report_hash].announces.add(validator_index)
+                            state.records[c_r.report_hash].announces.add(validator_index)
 
-                            state.records[core_report.report_hash].no_shows.append(
+                            state.records[c_r.report_hash].no_shows.append(
                                 NoShow(
                                     validator_index=validator_index,
                                     announcement=announce
@@ -214,15 +219,18 @@ class TrancheStore:
                             logger.info("Validator already exist in ANNOUNCEMENT")
 
                 self._tranche_store[tranche] = state
+
+            except Exception as e:
+                logger.error(
+                    f"failed to save Announcements",
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
         # logger.info("Recorded audit announcement", tranche=tranche, vi=validator_index, ann=announce)
 
     # --------------------- Judgement Operations ---------------------
 
-    async def update_judgment(self,
-        tranche: Tranche,
-        judgment: Judgment,
-        ed25519_public: Ed25519Public
-        ):
+    async def update_judgment(self, tranche: Tranche, judgment: Judgment, ed25519_public: Ed25519Public):
         async with self._lock:
 
             validator_index = judgment.validator_index
@@ -231,6 +239,9 @@ class TrancheStore:
             edd2519_signature = judgment.ed25519_signature
 
             state = self._tranche_store.get(tranche)
+            # logger.info(f"{validator_index} {validity} {wr_hash} ")
+            # logger.info(f"whole tranche state {self._tranche_store}")
+            # logger.info(f"state inside update judgments {tranche} {state}")
 
             if not state:
                 logger.warning("No state for given tranche", tranche=tranche)
@@ -263,9 +274,7 @@ class TrancheStore:
                                 found_no_show = True
 
                         if not found_no_show:
-                            logger.error(f"work report exist in our state we don't have Announcements {wr_hash}")
-                        else:
-                            logger.info(f"Already judge the work report")
+                            logger.error(f"judgment comes ups through respect of negative judgment thats why not having no_showr {wr_hash}")
 
                     else:
                         validator_sign = ValidatorSignature(
@@ -293,11 +302,6 @@ class TrancheStore:
                         error_type=type(e).__name__,
                     )
 
-    # async def get_judgment(self, tranche: Tranche, wr_hash: WorkReportHash) -> AuditRecord | None:
-    #     state = await self.get_state(tranche)
-    #     return state.records.get(wr_hash)
-
-
     # --------------------- Validity Operations ---------------------
 
     async def add_to_audited_list(self, tranche: Tranche, c_w: CoreReportHash):
@@ -308,13 +312,13 @@ class TrancheStore:
                 logger.warning("No state for given tranche", tranche=tranche)
                 return
 
-            if c_w in state.audited_set:
-                logger.warning("Work report already in valid set", c_w=c_w.work_report_hash)
+            if c_w in state.audited_list:
+                logger.warning("Work report already in valid set", c_w=c_w.report_hash)
                 return
 
-            state.audited_set.add(c_w)
+            state.audited_list.append(c_w)
             self._tranche_store[tranche] = state
-            logger.info("Added work report to valid set", c_w=c_w.work_report_hash)
+            logger.info("Added work report to valid set", c_w=c_w.report_hash)
 
     async def get_audited_list(self, tranche: Tranche):
         async with self._lock:
@@ -324,7 +328,7 @@ class TrancheStore:
                 logger.warning("No state for given tranche", tranche=tranche)
                 return
 
-            valid_list = state.audited_set
+            valid_list = state.audited_list
 
             if valid_list:
                 return  valid_list
@@ -340,12 +344,12 @@ class TrancheStore:
                 return
 
             if c_w in state.invalid_set:
-                logger.warning("Work report already in invalid set", c_w=c_w.work_report_hash)
+                logger.warning("Work report already in invalid set", c_w=c_w.report_hash)
                 return
 
             state.invalid_set.add(c_w)
             self._tranche_store[tranche] = state
-            logger.debug("Added work report to invalid set", c_w=c_w.work_report_hash)
+            logger.debug("Added work report to invalid set", c_w=c_w.report_hash)
 
     async def get_invalid_list(self, tranche: Tranche):
         async with self._lock:

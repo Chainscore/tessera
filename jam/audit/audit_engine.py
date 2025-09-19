@@ -1,23 +1,20 @@
 import asyncio
 from tsrkit_types import Null, Option, TypedVector, Uint
-
 from jam.audit.auditor import Auditor
 from jam.audit.audit import Audit
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits, Faults
 from jam.block.block import Block
 from jam.finality.finality import Finality
 from jam.logging import get_logger
-from jam.types import Hash, TimeSlot
+from jam.network.protocols.ce_144 import SubsequentTrancheEvidence
 
 from jam.types.audit.audit_tranche import (
     TrancheIndex,
     Tranche,
     TrancheState,
     OptionalReports,
-    OptionalReport,
 )
-from jam.types.state.rho import WorkReportState
-from jam.types.work.report import WorkReports, WorkReport
+from jam.types.work.report import WorkReports
 from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
 
 # Logger for Auditing module
@@ -36,7 +33,7 @@ class AuditEngine:
 
     async def run(self, block: Block, new_wrs: WorkReports):
 
-        logger.info(f"Auditing process started for header_hash {block.header.hash()}")
+        logger.info(f"Auditing started header_hash {block.header.hash()} {block.header.hash().hex()}")
 
         from jam.settings import settings
         header_hash = block.header.hash()
@@ -55,27 +52,18 @@ class AuditEngine:
             return
 
         # -------------- Fetch Pending Reports --------------
-        """
+
         logger.debug("Fetching prior state", ph=block.header.parent.hex())
         prior_state = State.load(block.header.parent)
         auditable_reports = OptionalReports([])
 
         # define q : TypedVector[Option[WorkReport]] = [ |R ?]
         auditable_reports = audit.auditable_reports(prior_state=prior_state.rho, newly_rep=new_wrs)
-        
+
         logger.debug("Fetched prior state", rho=prior_state.rho, reps=auditable_reports)
-        """
-
-        # dummy ========================================================================================================
-        from jam.audit.dummy import sample_work_reports_with_nulls
-
-        auditable_reports = sample_work_reports_with_nulls(
-            filepath="/home/dikshant441/Desktop/jam/tessera/jam/combined.json", total_items=4, null_count=0)
-        # dummy ========================================================================================================
 
         curr_ts = SLOT_PERIOD * int(block.header.slot)
 
-        # Run Tranches continuously until block is audited
         while not self.is_audited:
 
             next_ts = curr_ts + AUDIT_PERIOD
@@ -89,7 +77,6 @@ class AuditEngine:
             )
 
             if tranche_index == TrancheIndex(0):
-
                 # ---------- BECAUSE BLOCK PRODUCED BLOCKED TRIGGER FIRST -----------------
                 if block.header.author_index == settings.validator_index:
                     tranche_state = TrancheState.empty()
@@ -112,11 +99,14 @@ class AuditEngine:
                 prev_tranche = Tranche(TrancheIndex(tranche_index - TrancheIndex(1)), header_hash)
                 prev_state = tranche_store.get_state(tranche=prev_tranche)
 
-                tranche_state = prev_state.carry_forward()
-                tranche_store.save_state(tranche=curr_tranche, state=tranche_state)
+                tranche_state = tranche_store.get_state(tranche=curr_tranche)
+
+                if tranche_state == TrancheState.empty():
+                    tranche_state = prev_state.carry_forward()
+                    tranche_store.save_state(tranche=curr_tranche, state=tranche_state)
 
                 # ------------------- Condition which check trigger next tranche ---------------
-                subsequent_evidence = await auditor.is_tranche(block=block, curr_tranche=curr_tranche, prev_tranche_state=prev_state)
+                subsequent_evidence : TypedVector[SubsequentTrancheEvidence] = await auditor.is_tranche(block=block, curr_tranche=curr_tranche, prev_tranche_state=prev_state)
 
                 # THIS IS THE CONDITION WHERE CHECK ALL CONDITION FOR "BLOCK AUDITED"
                 if len(subsequent_evidence) == 0:
@@ -146,8 +136,9 @@ class AuditEngine:
                         )
 
                         # add dispute extrinsic
-                        # from jam.block.extrinsics.disputes import dpt_store
-                        # dpt_store.store(d_ext)
+                        from jam.block.extrinsics.disputes import dpt_store
+                        dpt_store.store(d_ext)
+                        ...
 
                     self.is_audited = True
 
@@ -160,14 +151,18 @@ class AuditEngine:
                         tranche=prev_tranche,
                     )
 
-                    audit.block_audited(tranche=curr_tranche , block=block)
-
+                    # audit.block_audited(tranche=curr_tranche , block=block)
                     continue
 
             try:
                 print("timr left", next_ts - CURRENT_TIME())
                 await asyncio.wait_for(
-                    auditor.assignment_wrs(block, curr_tranche, subsequent_evidence), timeout=(next_ts - CURRENT_TIME())
+                    auditor.assignment_wrs(
+                        block=block,
+                        tranche=curr_tranche,
+                        subsequent_evidence=subsequent_evidence
+                    ),
+                    timeout=(next_ts - CURRENT_TIME())
                 )
 
             except asyncio.TimeoutError:

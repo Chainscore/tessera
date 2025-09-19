@@ -21,14 +21,14 @@ logger = get_logger("network")
 
 
 @structure
-class AssignedReport:
+class CoreReportHash:
     core_index: CoreIndex
     report_hash: WorkReportHash
 
 
 @structure
 class Announcement:
-    assigned_reports: TypedVector[AssignedReport]
+    assigned_reports: TypedVector[CoreReportHash]
     ed25519_signature: Ed25519Signature
 
 
@@ -47,7 +47,7 @@ NoShows = TypedVector[NoShow]
 @structure
 class SubsequentTrancheEvidence:
     bandersnatch_signature: BandersnatchVrfSignature
-    no_show: TypedVector[NoShow]
+    no_shows: TypedVector[NoShow]
 
 
 @structure
@@ -176,10 +176,10 @@ class AuditAnnouncement(NetworkProtocol):
             data = cast(CE144Data, data)
 
             logger.debug(
-                "Received Audit's Announcement from other Auditors",
+                f"Received Audit's Announcement from other Auditors {server.validator_index}",
                 stream_id= stream_id,
                 peer= server,
-                buffer_size= len(buffer[1:]),
+                buffer_size= len(buffer),
                 data= data
             )
 
@@ -193,14 +193,14 @@ class AuditAnnouncement(NetworkProtocol):
             )
 
             #SAVE ANNOUNCEMENT RECORDS
-            asyncio.create_task(tranche_store.records_announcement(
+            tranche_store.records_announcement(
                 tranche= tranche,
                 validator_index= v_index,
-                announce= Announcement(
-                    assigned_reports= data.tranche_announcement.announcement.assigned_reports,
-                    ed25519_signature= data.tranche_announcement.announcement.ed25519_signature
-                )
-            ))
+                announce= data.tranche_announcement.announcement
+            )
+
+            logger.debug(
+                f"saved transmitted announcement of {settings.NODE_NAME} from state for tranche {tranche_idx}|| { tranche_store.get_state(tranche=tranche)}")
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
@@ -226,10 +226,10 @@ class AuditAnnouncement(NetworkProtocol):
         if buffer == b"":
             logger.info(
                 "Announcement acknowledge received",
+                client_index=client.validator_index,
                 stream_id= stream_id,
                 buffer_size=len(buffer),
             )
             return True
 
         return False
-
