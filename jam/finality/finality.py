@@ -22,21 +22,24 @@ class Finality:
 
     @classmethod
     async def schedule_run(cls, header_hash: HeaderHash, kv: RockStore, sch_ts: int, initial: bool ) -> None:
+        from jam.settings import settings
         if initial:
             logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
             kv.put(cls.FINAL_KEY, header_hash.encode())
             block = Block.load(header_hash, kv)
-            # Subscribe's to updates of the latest finalized block, as returned by finalizedBlock.
-            asyncio.create_task(broker.publish("subscribeFinalizedBlock",
-                                               {"header_hash": list(header_hash), "slot": int(block.header.slot)}))
+            if settings.rpc_flag:
+                # Subscribe's to updates of the latest finalized block, as returned by finalizedBlock.
+                asyncio.create_task(broker.publish("subscribeFinalizedBlock",
+                                                   {"header_hash": list(header_hash), "slot": int(block.header.slot)}))
         else:
             await asyncio.sleep(sch_ts)
             logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
             kv.put(cls.FINAL_KEY, header_hash.encode())
             block = Block.load(header_hash, kv)
-            # Subscribe's to updates of the latest finalized block, as returned by finalizedBlock.
-            asyncio.create_task(broker.publish("subscribeFinalizedBlock",
-                                               {"header_hash": list(header_hash), "slot": int(block.header.slot)}))
+            if settings.rpc_flag:
+                # Subscribe's to updates of the latest finalized block, as returned by finalizedBlock.
+                asyncio.create_task(broker.publish("subscribeFinalizedBlock",
+                                                   {"header_hash": list(header_hash), "slot": int(block.header.slot)}))
 
     @classmethod
     def finalise(cls, header_hash: HeaderHash, kv: RockStore, initial: bool):

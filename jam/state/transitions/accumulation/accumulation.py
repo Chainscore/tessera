@@ -588,25 +588,27 @@ class Accumulation:
         state.xi = xi
         state.omega = omega
 
-        keys = broker.topics.keys()
-        matches = [k for k in keys if "subscribeServiceValue" in k]
-        for req in matches:
-            params = req.split(":")
-            sid = ServiceId(params[1])
-            key_list = json.loads(params[2])
-            key = Bytes(key_list)
-            finality = True if params[3] == 'True' else False
-            value = state.delta[sid].storage.get(key) if state.delta[sid].storage.get(key) is None else list(state.delta[sid].storage.get(key))
-            last_publish = broker.last_publish
-            if req not in last_publish or last_publish[req] != value:
-                from jam.settings import settings
-                block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(settings.main_db)
+        from jam.settings import settings
+        if settings.rpc_flag:
+            keys = broker.topics.keys()
+            matches = [k for k in keys if "subscribeServiceValue" in k]
+            for req in matches:
+                params = req.split(":")
+                sid = ServiceId(params[1])
+                key_list = json.loads(params[2])
+                key = Bytes(key_list)
+                finality = True if params[3] == 'True' else False
+                value = state.delta[sid].storage.get(key) if state.delta[sid].storage.get(key) is None else list(state.delta[sid].storage.get(key))
+                last_publish = broker.last_publish
+                if req not in last_publish or last_publish[req] != value:
+                    from jam.settings import settings
+                    block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(settings.main_db)
 
-                print(f"Req: {req} header_hash: {block.header.hash().hex()[:16]} slot: {block.header.slot} value: {value}")
+                    print(f"Req: {req} header_hash: {block.header.hash().hex()[:16]} slot: {block.header.slot} value: {value}")
 
-                asyncio.create_task(broker.publish(req,
-                                                   {"header_hash": list(block.header.hash()),
-                                                    "slot": int(block.header.slot), "value": value}))
-                broker.last_publish[req] = value
+                    asyncio.create_task(broker.publish(req,
+                                                       {"header_hash": list(block.header.hash()),
+                                                        "slot": int(block.header.slot), "value": value}))
+                    broker.last_publish[req] = value
 
         return state, commitment_map
