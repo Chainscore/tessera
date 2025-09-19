@@ -75,8 +75,8 @@ class Safrole:
             gamma.a = GammaA([])
 
         tickets = block.extrinsic.tickets
-        print("_tickets", len(tickets))
-        
+        count = len(tickets)
+
         # 3. Ticket Accumulation
         ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
         # Process the tickets before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
@@ -109,7 +109,7 @@ class Safrole:
                 )
 
         # We never expect tickets after TICKET_SUBMISSION_END
-        if not ticket_submission_active and len(block.extrinsic.tickets) > 0:
+        if not ticket_submission_active and count > 0:
             raise SafroleError(
                 SafroleErrorCode.UNEXPECTED_TICKET,
                 "Tickets are not allowed after TICKET_SUBMISSION_END",
@@ -168,9 +168,6 @@ class Safrole:
             # 4. 4. Update ring root using gamma p
             if pre_state.gamma.p != pre_state.kappa:
                 gamma.z = Safrole.compute_ring_root(pubkeys)
-
-        tickets = block.extrinsic.tickets
-        count = len(tickets)
 
         if count == 1:
             # Signature must be valid Ring-VRF proof
