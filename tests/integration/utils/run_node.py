@@ -36,7 +36,8 @@ async def run_node(
     theme: str,
     is_builder: bool,
     is_validator: bool,
-    node_tasks
+    node_tasks,
+    rpc_flag: bool
 ) -> None:
 
     # ---------- LOAD ENVIRONMENT ----------
@@ -47,8 +48,9 @@ async def run_node(
     port = os.environ["PORT"]
     seed = os.environ["SEED"]
     host = os.environ["HOST"]
-    rpc_port = os.environ["RPC_PORT"]
-    rpc_host = os.environ["RPC_HOST"]
+    if rpc_flag:
+        rpc_port = os.environ["RPC_PORT"]
+        rpc_host = os.environ["RPC_HOST"]
 
     if not name or not port or not host or not seed:
         raise ValueError(f"Missing node info in {env}")
@@ -66,7 +68,7 @@ async def run_node(
 
     # ---------- SETUP SETTINGS ----------
     settings = setup_setting(
-        name=name, port=int(port), seed=int(seed), data_path=db
+        name=name, port=int(port), seed=int(seed), data_path=db, rpc_flag=rpc_flag
     )
 
     main_db = settings.main_db
@@ -94,14 +96,16 @@ async def run_node(
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db, True)
 
-        logger.info("📡 Starting RPC/WebSocket server", host=rpc_host, port=rpc_port)
+        if rpc_flag:
+            logger.info("📡 Starting RPC/WebSocket server", host=rpc_host, port=rpc_port)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
             # Networking - Block Imports, WP Processing, etc
             tg.create_task(start_node(str(host), int(port), is_builder))
-            # RPC
-            tg.create_task(rpc.run_task(debug=True, host=rpc_host, port=rpc_port, shutdown_trigger=rpc_shutdown_trigger))
+            if rpc_flag:
+                # RPC
+                tg.create_task(rpc.run_task(debug=True, host=rpc_host, port=rpc_port, shutdown_trigger=rpc_shutdown_trigger))
             # Node Ops - Block Prod, Audit, Assurances, etc
             for node_task in node_tasks:
                 if node_task:
@@ -127,7 +131,8 @@ def run_node_process(
         theme: str,
         is_builder: bool,
         is_validator: bool,
-        node_tasks
+        node_tasks,
+        rpc_flag: bool
 ):
     try:
         # Handle clean termination
@@ -142,7 +147,8 @@ def run_node_process(
             theme,
             is_builder,
             is_validator,
-            node_tasks
+            node_tasks,
+            rpc_flag
         ))
     except asyncio.exceptions.CancelledError:
         asyncio.Runner().close()
