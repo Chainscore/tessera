@@ -285,12 +285,12 @@ class Accumulation:
                 outputs.add((service, _output_hash.unwrap()))
             transfers.extend(_transfers)
             collected_preimages.update(_preimages)
-            
+
             # Add partial cache to state
             state.store += partial_state.store
 
         Accumulation.preimage_integration(
-            partial_state.service_accounts, collected_preimages, timeslot
+            state.delta, collected_preimages, timeslot
         )
         return transfers, outputs, gas_consumed
 
@@ -372,7 +372,7 @@ class Accumulation:
             lookup = LookupTable(hash=key_hash,length= len(blobs))
             if len(service.lookup[lookup]) == 0:
                 service.lookup[lookup] = Timestamps([timeslot])
-                service.lookup[lookup] = blobs
+                service.preimages[key_hash] = blobs
 
     @staticmethod
     def selection_fn(deferred_transfers: DeferredTransfers, service_id: ServiceId) -> DeferredTransfers:
