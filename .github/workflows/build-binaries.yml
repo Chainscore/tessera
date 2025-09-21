@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     env:
       JAM_LOG_LEVEL: "critical"
-      PVM_MODE: "recompiler"  # Use fastest PVM mode for all builds
+      PVM_MODE: "interpreter"
       CFLAGS: "-O3 -march=native"
       LDFLAGS: "-O3"
     strategy:
