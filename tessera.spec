@@ -1,4 +1,4 @@
-import os, sys, pathlib, glob, importlib
+import os, sys, pathlib, glob, importlib, platform
 from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
 from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
 
@@ -24,8 +24,25 @@ rust_dep_paths = [
 ]
 
 # ------------------------------------------------------------------ #
-# Native binaries - use relative paths from project root
-binaries = [(str(project_root / 'libs' / 'librocksdb.dylib'), 'lib')]
+# Native binaries - detect platform-specific library extension
+current_platform = platform.system()
+if current_platform == 'Darwin':
+    rocksdb_lib = 'librocksdb.dylib'
+elif current_platform == 'Linux':
+    rocksdb_lib = 'librocksdb.so'
+else:
+    raise RuntimeError(f"Unsupported platform: {current_platform}")
+
+print(f">> Platform detected: {current_platform}")
+print(f">> Looking for RocksDB library: {rocksdb_lib}")
+
+# Verify the library file exists before adding to binaries
+rocksdb_path = project_root / 'libs' / rocksdb_lib
+if not rocksdb_path.exists():
+    raise FileNotFoundError(f"RocksDB library not found: {rocksdb_path}")
+
+binaries = [(str(rocksdb_path), 'lib')]
+print(f">> RocksDB library found and added: {rocksdb_path}")
 
 # bitarray - manual inclusion since PyInstaller has trouble finding it
 bitarray_venv_path = project_root / '.venv/lib/python3.12/site-packages/bitarray'
