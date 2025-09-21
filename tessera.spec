@@ -1,137 +1,110 @@
-import os
-import platform
+import os, sys, pathlib, glob, importlib
 from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
 
-print("🚀 Starting Tessera PyInstaller build with MyPyC optimizations...")
+# ------------------------------------------------------------------ #
+# Robust repo-root detection
+if '__file__' in globals():                       # normal exec
+    project_root = pathlib.Path(__file__).resolve().parent
+else:                                             # PyInstaller exec
+    project_root = pathlib.Path(sys.argv[0]).resolve().parent
+# ------------------------------------------------------------------ #
 
-# Paths
-project_root = os.path.abspath('.')
+print(">> Starting Tessera PyInstaller build...")
+
+# ------------------------------------------------------------------ #
+# Dep-paths relative to repo root
 rust_dep_paths = [
-    os.path.join(project_root, 'deps', 'py-ark-vrf'),
-    os.path.join(project_root, 'deps', 'tsrkit-asm', 'python'),
-    os.path.join(project_root, 'deps', 'tsrkit-pvm'),
-    os.path.join(project_root, 'deps', 'tsrkit-types'),
-    os.path.join(project_root, 'deps', 'rockstore', 'src'),
-    project_root
+    project_root / 'deps' / 'py-ark-vrf',
+    project_root / 'deps' / 'tsrkit-asm' / 'python',
+    project_root / 'deps' / 'tsrkit-pvm',
+    project_root / 'deps' / 'tsrkit-types',
+    project_root / 'deps' / 'rockstore' / 'src',
+    project_root,
 ]
 
-# Platform-specific RocksDB library bundling and MyPyC compiled modules
-rocksdb_binaries = []
-mypyc_binaries = []
-system = platform.system()
+# ------------------------------------------------------------------ #
+# Native binaries - use relative paths from project root
+binaries = [(str(project_root / 'libs' / 'librocksdb.dylib'), 'lib')]
 
-if system == "Linux":
-    rocksdb_lib_path = os.path.join(project_root, 'libs', 'librocksdb.so')
-    if os.path.exists(rocksdb_lib_path):
-        rocksdb_binaries = [(rocksdb_lib_path, 'lib')]
-elif system == "Darwin":
-    rocksdb_lib_path = os.path.join(project_root, 'libs', 'librocksdb.dylib')
-    if os.path.exists(rocksdb_lib_path):
-        rocksdb_binaries = [(rocksdb_lib_path, 'lib')]
+# bitarray - manual inclusion since PyInstaller has trouble finding it
+bitarray_venv_path = project_root / '.venv/lib/python3.12/site-packages/bitarray'
+essential_files = []
 
-# Find and bundle MyPyC compiled extensions from tsrkit-pvm
-mypyc_build_dir = os.path.join(project_root, 'deps', 'tsrkit-pvm', 'build')
-if os.path.exists(mypyc_build_dir):
-    print(f"Looking for MyPyC compiled modules in: {mypyc_build_dir}")
-    # Find all .so/.dylib/.pyd files in the build directory
-    for root, dirs, files in os.walk(mypyc_build_dir):
-        for file in files:
-            if file.endswith(('.so', '.dylib', '.pyd')):
-                src_path = os.path.join(root, file)
-                # Calculate relative path for destination
-                rel_path = os.path.relpath(root, mypyc_build_dir)
-                if rel_path == '.':
-                    dest_path = '.'
-                else:
-                    dest_path = rel_path
-                mypyc_binaries.append((src_path, dest_path))
-                print(f"Found MyPyC module: {src_path} -> {dest_path}")
+if bitarray_venv_path.exists():
+    # Include the entire bitarray package
+    essential_files.append((str(bitarray_venv_path), 'bitarray'))
+    # Explicitly include the binary extensions
+    bitarray_so_files = list(bitarray_venv_path.glob('*.so'))
+    for so_file in bitarray_so_files:
+        binaries.append((str(so_file), 'bitarray'))
+    print(f"Found bitarray at: {bitarray_venv_path}")
+    print(f"Found {len(bitarray_so_files)} bitarray binary extensions")
+else:
+    print("Warning: bitarray not found in venv")
 
-# Also check in the package directory for in-place compiled modules
-pvm_package_dir = os.path.join(project_root, 'deps', 'tsrkit-pvm', 'tsrkit_pvm')
-if os.path.exists(pvm_package_dir):
-    for root, dirs, files in os.walk(pvm_package_dir):
-        for file in files:
-            if file.endswith(('.so', '.dylib', '.pyd')):
-                src_path = os.path.join(root, file)
-                # Calculate relative path for destination within the package
-                rel_path = os.path.relpath(root, pvm_package_dir)
-                if rel_path == '.':
-                    dest_path = 'tsrkit_pvm'
-                else:
-                    dest_path = os.path.join('tsrkit_pvm', rel_path)
-                mypyc_binaries.append((src_path, dest_path))
-                print(f"Found in-place MyPyC module: {src_path} -> {dest_path}")
+# tsrkit-pvm compiled extensions - discover dynamically from multiple locations
+binaries += collect_dynamic_libs('tsrkit_pvm')
 
-# Combine all binaries
-all_binaries = rocksdb_binaries + mypyc_binaries
+# Collect from build directory (standard build output)
+pvm_build_glob = project_root.glob('deps/tsrkit-pvm/build/**/*.so')
+for so_file in pvm_build_glob:
+    rel_dest = str(so_file.relative_to(project_root / 'deps/tsrkit-pvm/build')).replace(so_file.name, '')
+    binaries.append((str(so_file), rel_dest.rstrip('/')))
 
-# Essential configuration files only - minimal set
-essential_files = [
-    ('dev-spec.json', '.'),
-    ('envs', 'envs'),
-    # Include SRS file for VRF operations
-    ('deps/py-ark-vrf/bandersnatch_ring.srs', '.'),
-    ('deps/py-ark-vrf/py_ark_vrf/bandersnatch_ring.srs', 'py_ark_vrf'),
-]
+# Collect from in-place builds (build_ext --inplace output)
+pvm_inplace_glob = project_root.glob('deps/tsrkit-pvm/tsrkit_pvm/**/*.so')
+for so_file in pvm_inplace_glob:
+    rel_dest = str(so_file.relative_to(project_root / 'deps/tsrkit-pvm')).replace(so_file.name, '')
+    binaries.append((str(so_file), rel_dest.rstrip('/')))
 
-# Essential hidden imports for core functionality and MyPyC modules
-core_imports = [
-    'jam',
-    # MyPyC compiled modules from tsrkit-pvm
-    'tsrkit_pvm.common.utils',
-    'tsrkit_pvm.common.status',
-    'tsrkit_pvm.common.constants',
-    'tsrkit_pvm.core.code',
-    'tsrkit_pvm.core.mapper',
-    'tsrkit_pvm.interpreter.pvm',
-    'tsrkit_pvm.interpreter.program',
-    'tsrkit_pvm.interpreter.memory',
-    'tsrkit_pvm.interpreter.instructions.tables.wo_args',
-    'tsrkit_pvm.interpreter.instructions.tables.i_imm',
-    'tsrkit_pvm.interpreter.instructions.tables.i_offset',
-    'tsrkit_pvm.interpreter.instructions.tables.i_reg_i_ewimm',
-    'tsrkit_pvm.interpreter.instructions.tables.i_reg_i_imm',
-    'tsrkit_pvm.interpreter.instructions.tables.i_reg_i_imm_i_offset',
-    'tsrkit_pvm.interpreter.instructions.tables.ii_imm',
-    'tsrkit_pvm.interpreter.instructions.tables.ii_reg',
-    'tsrkit_pvm.interpreter.instructions.tables.ii_reg_i_imm',
-    'tsrkit_pvm.interpreter.instructions.tables.ii_reg_i_offset',
-    'tsrkit_pvm.interpreter.instructions.tables.ii_reg_ii_imm',
-    'tsrkit_pvm.interpreter.instructions.tables.iii_reg',
-]
+# Also check for .pyd files on Windows and .dylib on macOS
+for ext in ['*.pyd', '*.dylib']:
+    for so_file in project_root.glob(f'deps/tsrkit-pvm/tsrkit_pvm/**/{ext}'):
+        rel_dest = str(so_file.relative_to(project_root / 'deps/tsrkit-pvm')).replace(so_file.name, '')
+        binaries.append((str(so_file), rel_dest.rstrip('/')))
+
+# ------------------------------------------------------------------ #
+# SRS file (needed by py-ark-vrf) - use relative path
+srs_path = project_root / 'deps' / 'py-ark-vrf' / 'bandersnatch_ring.srs'
+if srs_path.exists():
+    essential_files.extend([
+        (str(srs_path), '.'),
+        (str(srs_path), 'py_ark_vrf')
+    ])
+
+# ------------------------------------------------------------------ #
+hidden = (
+    ['jam']
+    + collect_submodules('tsrkit_pvm')
+    + collect_submodules('tsrkit_asm')
+    + collect_submodules('tsrkit_types')
+    + collect_submodules('rockstore')
+    + collect_submodules('py_ark_vrf')
+    + collect_submodules('bitarray')
+)
 
 # Extremely aggressive exclusions to minimize binary size  
 excluded_modules = [
     # Development and testing
     'pytest', 'test', 'tests', 'testing', '_pytest',
     'coverage', 'pytest_cov', 'pytest_asyncio',
-
     # Test suites
     'tessera-test-suites',
-    
     # Code formatting and linting  
     'black', 'flake8', 'isort', 'pre_commit', 'mypy', 'pylint',
-    
     # Documentation
     'sphinx', 'docs', 'documentation', 'docutils'
 ]
 
 a = Analysis(
     ['jam/cli.py'],
-    pathex=rust_dep_paths,
-    binaries=all_binaries,
+    pathex=[str(p) for p in rust_dep_paths],
+    binaries=binaries,
     datas=essential_files,
-    hiddenimports=core_imports,
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
+    hiddenimports=hidden,
     excludes=excluded_modules,
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=None,
-    noarchive=False,
-    optimize=1,  # Maximum optimization
+    optimize=1
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
