@@ -162,8 +162,6 @@ jobs:
           git clone --depth 1 https://github.com/w3f/jamtestvectors jamtestvectors
 
       - name: 🧪 Import test (JAM vectors)
-        env:
-          PVM_MODE: "recompiler"  # Ensure fast mode during testing
         run: |
           VEC_DIR="${{ github.workspace }}/jamtestvectors/traces/storage"
           echo "Using vectors at: $VEC_DIR"
