@@ -66,35 +66,7 @@ print(f'  Python library: {sysconfig.get_config_var(\"LIBDIR\")}')
 print(f'  Python include: {sysconfig.get_path(\"include\")}')
 "
 
-# Build Rust dependencies with proper Python linking
-if [ -d deps/py-ark-vrf ]; then
-    cd deps/py-ark-vrf
-    echo "[INFO] Building py-ark-vrf (PyO3/Rust) in release mode..."
-    
-    # Check if maturin is available globally or install it locally
-    if ! command -v maturin &> /dev/null && ! uv run --help | grep -q maturin; then
-        echo "[INFO] Installing maturin for PyO3 builds..."
-        uv add --dev maturin || uv pip install maturin
-    fi
-    
-    # Use maturin for PyO3 projects instead of cargo directly
-    echo "[INFO] Building with maturin for proper Python linking..."
-    PYO3_PYTHON="$PYTHON_SYS_EXECUTABLE" uv run maturin develop --release
-    cd ../..
-else
-    echo "[WARN] deps/py-ark-vrf not found, skipping"
-fi
-
-if [ -d deps/rockstore ]; then
-    cd deps/rockstore
-    echo "[INFO] Building rockstore (Python package) with optimizations..."
-    CFLAGS="-O3 -march=native" uv pip install -e . --force-reinstall
-    cd ../..
-else
-    echo "[WARN] deps/rockstore not found, skipping"
-fi
-
-# Build PVM with aggressive optimizations
+# Build PVM cython
 if [ -d deps/tsrkit-pvm ]; then
     cd deps/tsrkit-pvm
     echo "[INFO] Building tsrkit-pvm with Cython optimizations..."
@@ -104,20 +76,6 @@ else
     echo "[WARN] deps/tsrkit-pvm not found, skipping tsrkit-pvm build"
 fi
 
-# Build other native dependencies
-if [ -d deps/tsrkit-asm ]; then
-    cd deps/tsrkit-asm
-    echo "[INFO] Building tsrkit-asm with optimizations..."
-    CFLAGS="-O3 -march=native" uv pip install -e . --force-reinstall
-    cd ../..
-fi
-
-if [ -d deps/tsrkit-types ]; then
-    cd deps/tsrkit-types
-    echo "[INFO] Building tsrkit-types with optimizations..."
-    CFLAGS="-O3 -march=native" uv pip install -e . --force-reinstall
-    cd ../..
-fi
 
 echo "[INFO] Setting up RocksDB library for bundling..."
 ./setup-rocksdb.sh
