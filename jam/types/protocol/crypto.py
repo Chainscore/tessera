@@ -1,5 +1,5 @@
 from tsrkit_types.bytes import Bytes
-from sha3 import keccak_256
+from Crypto.Hash import keccak
 
 # Public key types
 BandersnatchPublic = Bytes[32]
@@ -81,7 +81,7 @@ class Hash:
         """Keccak-256 hash function (optimized)"""
         if not isinstance(data, bytes):
             data = bytes(data)
-        return Bytes[32](keccak_256(data).digest())
+        return Bytes[32](keccak.new(digest_bits=256).update(data).digest())
 
 
 # Hash types

@@ -88,6 +88,11 @@ build = [
 [project.scripts]
 jam = "jam:run_jam"
 
+[dependency-groups]
+dev = [
+    "maturin>=1.9.4",
+]
+
 [tool.ruff]
 line-length = 100
 select = [
