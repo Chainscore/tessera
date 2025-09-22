@@ -63,13 +63,15 @@ SUBSCRIPTIONS = {
     ),
     "subscribeServiceValue": lambda params:(
         f"subscribeServiceValue:{params[0]}:{params[1]}:{params[2]}"
-    )
+    ),
+    "subscribeBestBlock": lambda params: "subscribeBestBlock"
 }
 
 @rpc.websocket("/")
 async def ws():
     # active subscriptions for this connection: sub_id -> task
     subs: dict[int, asyncio.Task] = {}
+    topics: dict[int, str] = {}
 
     async def start_subscription(method: str, params, req_id):
         topic = SUBSCRIPTIONS[method](params)
@@ -97,6 +99,7 @@ async def ws():
                 pass
 
         subs[sub_id] = asyncio.create_task(pump())
+        topics[sub_id] = topic
 
     try:
         while True:
@@ -118,7 +121,10 @@ async def ws():
                 ok = False
                 if params:  # expect [sub_id]
                     sid = params[0]
-                    task = subs.pop(sid, None)
+                    task = subs.pop(sid)
+                    topic = topics.pop(sid)
+                    broker.topics.pop(topic)
+                    broker.last_publish.pop(topic)
                     if task:
                         task.cancel()
                         ok = True

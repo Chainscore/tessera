@@ -121,6 +121,14 @@ def service_request_handler(params: list):
     except Exception as e:
         return None
 
+def service_value_handler(params: list):
+    hh, sid, key = parse_data([HeaderHash, ServiceId, Bytes], params)
+    state_at_hh = State.load(hh)
+    try:
+        return list(state_at_hh.delta[sid].storage[key])
+    except Exception as e:
+        return None
+
 
 method_map: dict[str, Callable] = {
     "parameters": parameters_handler,
@@ -133,6 +141,7 @@ method_map: dict[str, Callable] = {
     "finalizedBlock": finalized_block_handler,
     "submitWorkPackage": submit_work_package_handler,
     "serviceRequest": service_request_handler,
+    "serviceValue": service_value_handler
 }
 
 
