@@ -514,7 +514,11 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
         genesis_type=type(genesis).__name__,
         genesis_source=genesis if isinstance(genesis, str) else "GhostState",
     )
+    print("start method before setup:", multiprocessing.get_start_method())
+
+    print("SETTING FORCE SPAWN")
     multiprocessing.set_start_method("spawn", force=True)
+    print("start method after setup:", multiprocessing.get_start_method())
 
     if isinstance(genesis, str):
         genesis_json = json.load(open(genesis))
