@@ -1,7 +1,59 @@
 import sys
 import os
+import re
 import argparse
+import multiprocessing as mp
 import asyncio
+
+# -------------------------------
+# EARLY: Handle spawn bootstrap call injected by multiprocessing.spawn
+# -------------------------------
+# When using spawn, Python may exec the program as:
+#   prog -B -S -I -c "from multiprocessing.resource_tracker import main;main(36)"
+# In a frozen binary this ends up in sys.argv and breaks argparse. Detect that
+# exact situation, run the resource_tracker main and exit immediately.
+for i, a in enumerate(sys.argv):
+    if a == '-c' and i + 1 < len(sys.argv) and 'resource_tracker' in sys.argv[i + 1]:
+        # Try to pull the integer argument from main(...)
+        m = re.search(r'main\((\d+)\)', sys.argv[i + 1])
+        try:
+            from multiprocessing.resource_tracker import main as _rt_main
+            if m:
+                _rt_main(int(m.group(1)))
+            else:
+                _rt_main()
+        except Exception:
+            # If we can't invoke it for some reason, exit quietly — this is
+            # the child helper process used internally by multiprocessing.
+            pass
+        finally:
+            sys.exit(0)
+
+# -------------------------------
+# EARLY: Configure multiprocessing for frozen apps and force spawn start method
+# -------------------------------
+# Force spawn everywhere per your requirement.
+try:
+    mp.set_start_method("spawn", force=True)
+except RuntimeError:
+    # already set - ignore
+    pass
+except Exception:
+    # best effort: continue if unsupported
+    pass
+
+# If running as a frozen binary (PyInstaller/Nuitka/etc), ensure multiprocessing
+# knows about the frozen status and which executable to exec for children.
+if getattr(sys, "frozen", False):
+    try:
+        mp.freeze_support()
+    except Exception:
+        pass
+    try:
+        # Ensure child processes exec this same binary (important for spawn)
+        mp.set_executable(sys.executable)
+    except Exception:
+        pass
 
 def detect_base_dir():
     """
@@ -119,7 +171,9 @@ def main():
         
         # Import import functionality
         from jam.fuzzer.importer import run_import
-        
+
+        print("IMPORTER setup:", mp.get_start_method())
+
         # Run importer
         asyncio.run(
             run_import(
@@ -134,6 +188,8 @@ def main():
     
     # Run the node
     try:
+        print("NODE setup:", mp.get_start_method())
+
         asyncio.run(
             node_main(
                 args.db,
