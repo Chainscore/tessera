@@ -29,19 +29,6 @@ for i, a in enumerate(sys.argv):
         finally:
             sys.exit(0)
 
-# -------------------------------
-# EARLY: Configure multiprocessing for frozen apps and force spawn start method
-# -------------------------------
-# Force spawn everywhere per your requirement.
-try:
-    mp.set_start_method("spawn", force=True)
-except RuntimeError:
-    # already set - ignore
-    pass
-except Exception:
-    # best effort: continue if unsupported
-    pass
-
 # If running as a frozen binary (PyInstaller/Nuitka/etc), ensure multiprocessing
 # knows about the frozen status and which executable to exec for children.
 if getattr(sys, "frozen", False):
