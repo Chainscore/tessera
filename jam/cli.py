@@ -159,8 +159,6 @@ def main():
         # Import import functionality
         from jam.fuzzer.importer import run_import
 
-        print("IMPORTER setup:", mp.get_start_method())
-
         # Run importer
         asyncio.run(
             run_import(
@@ -175,8 +173,6 @@ def main():
     
     # Run the node
     try:
-        print("NODE setup:", mp.get_start_method())
-
         asyncio.run(
             node_main(
                 args.db,

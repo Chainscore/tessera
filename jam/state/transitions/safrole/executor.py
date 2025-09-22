@@ -9,31 +9,21 @@ EXECUTOR: ProcessPoolExecutor | None = None
 PUBKEYS: list[bytes] | None = None
 
 def setup_executor(pubkeys: list[bytes]):
-    print("EXECUTOR SETUP STARTED")
     global EXECUTOR, PUBKEYS
 
     if pubkeys == PUBKEYS:
-        print("SAME PUBKEYS FOUND")
         return
 
     if EXECUTOR:
         shutdown_executor()
 
-    # TODO: If required, move this to setup_state()
-    # NOTE: fork isnt safe when parent processes are multithreaded
-    # By default Linux systems have fork which is faster, but Windows and IoS systems have spawn, which is slower.
-
-    # multiprocessing.set_start_method("fork", force=False)
-
     PUBKEYS = pubkeys
 
-    print("NEW EXECUTOR IS BEING SETUP")
     EXECUTOR = ProcessPoolExecutor(
         max_workers=min(MAX_TICKETS_PER_EXTRINSIC, os.cpu_count()),
         initializer=Worker.init_worker,
         initargs=(pubkeys,),
     )
-    print("EXECUTOR SETUP DONE")
 
 def get_executor():
     global EXECUTOR
