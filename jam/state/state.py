@@ -1,5 +1,5 @@
 import json
-import asyncio
+import multiprocessing
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -514,6 +514,7 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
         genesis_type=type(genesis).__name__,
         genesis_source=genesis if isinstance(genesis, str) else "GhostState",
     )
+    multiprocessing.set_start_method("spawn", force=True)
 
     if isinstance(genesis, str):
         genesis_json = json.load(open(genesis))

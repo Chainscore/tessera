@@ -182,9 +182,14 @@ class Safrole:
                 )
 
         elif count > 1:
+            import pickle
+            pickle.dumps(Worker.verify_ticket)  # will likely fail
+
             executor = get_executor()
             futures = []
             for ticket in tickets:
+                pickle.dumps(ticket)  # test TicketEnvelope
+                pickle.dumps(bytes(eta[2]))  # test TicketEnvelope
                 fut = executor.submit(Worker.verify_ticket, ticket, bytes(eta[2]))
                 futures.append(fut)
 
@@ -192,7 +197,8 @@ class Safrole:
                 for fut in as_completed(futures):
                     fut.result()
 
-            except Exception:
+            except Exception as e:
+                print("FUT ERROR OCCURRED", e)
                 for fut in futures:
                     fut.cancel()
 

@@ -9,9 +9,11 @@ EXECUTOR: ProcessPoolExecutor | None = None
 PUBKEYS: list[bytes] | None = None
 
 def setup_executor(pubkeys: list[bytes]):
+    print("EXECUTOR SETUP STARTED")
     global EXECUTOR, PUBKEYS
 
     if pubkeys == PUBKEYS:
+        print("SAME PUBKEYS FOUND")
         return
 
     if EXECUTOR:
@@ -25,11 +27,13 @@ def setup_executor(pubkeys: list[bytes]):
 
     PUBKEYS = pubkeys
 
+    print("NEW EXECUTOR IS BEING SETUP")
     EXECUTOR = ProcessPoolExecutor(
         max_workers=min(MAX_TICKETS_PER_EXTRINSIC, os.cpu_count()),
         initializer=Worker.init_worker,
         initargs=(pubkeys,),
     )
+    print("EXECUTOR SETUP DONE")
 
 def get_executor():
     global EXECUTOR
