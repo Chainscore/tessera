@@ -139,7 +139,7 @@ class Reporting:
             # -------- report_epoch_before_last ------------
             if guarantee.slot != block.header.slot:
                 # https://graypaper.fluffylabs.dev/#/38c4e62/15d80115e301?v=0.7.0
-                last_rotation_slot = ROTATION_PERIOD * ((block.header.slot // ROTATION_PERIOD) - 1)
+                last_rotation_slot = ROTATION_PERIOD * ((int(block.header.slot) // ROTATION_PERIOD) - 1)
                 if guarantee.slot < last_rotation_slot:
                     raise ReportingError(
                         ReportingErrorCode.REPORT_EPOCH_BEFORE_LAST,
@@ -331,12 +331,12 @@ class Reporting:
                 if (
                     x.slot == block.header.slot
                     or x.slot != block.header.slot
-                    and floor((block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH)
+                    and floor((int(block.header.slot) - ROTATION_PERIOD) / EPOCH_LENGTH)
                     == floor(block.header.slot / EPOCH_LENGTH)
                 ):
                     public_key = state.kappa[y.validator_index].ed25519
                 elif x.slot != block.header.slot and floor(
-                    (block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH
+                    (int(block.header.slot) - ROTATION_PERIOD) / EPOCH_LENGTH
                 ) != floor(block.header.slot / EPOCH_LENGTH):
                     public_key = state.lambda_[y.validator_index].ed25519
 

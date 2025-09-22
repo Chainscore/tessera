@@ -81,8 +81,8 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
     _is_setup = True
     
     # Get root log level from env
-    root_level_name = os.environ.get("JAM_LOG_LEVEL", "ERROR").upper()
-    root_level = getattr(logging, root_level_name, logging.ERROR)
+    root_level_name = os.environ.get("JAM_LOG_LEVEL", "CRITICAL").upper()
+    root_level = getattr(logging, root_level_name, logging.CRITICAL)
     
     # Collect module levels
     module_levels = {}
@@ -91,7 +91,7 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
             module_name = key[14:]
             try:
                 module = LogModule[module_name.upper()]
-                level = getattr(logging, value.upper(), logging.ERROR)
+                level = getattr(logging, value.upper(), logging.CRITICAL)
                 module_levels[module.value] = level
             except (KeyError, AttributeError):
                 # Invalid module or level, ignore

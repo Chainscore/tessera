@@ -328,7 +328,7 @@ class AccumulateFunctions(INVF):
 
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
 
-        lookup_key = LookupTable(hash=preimage_hash, length = preimage_len)
+        lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         lookup_value = context.x.partial_state.service_accounts[context.x.s_index].lookup[
             lookup_key
         ] # a' s value
