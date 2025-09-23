@@ -185,8 +185,8 @@ class Safrole:
         elif count > 1:
             executor = get_executor()
             futures = []
-            for ticket in tickets:
-                fut = executor.submit(Worker.verify_ticket, ticket, bytes(eta[2]))
+            for tid, ticket in enumerate(tickets):
+                fut = executor.submit(Worker.verify_ticket, ticket, bytes(eta[2]), tid, count)
                 futures.append(fut)
 
             try:

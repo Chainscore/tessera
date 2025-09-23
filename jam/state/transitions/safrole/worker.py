@@ -17,8 +17,8 @@ class Worker:
         cls.PUBKEYS = pubkeys
 
     @classmethod
-    def verify_ticket(cls, ticket: TicketEnvelope, entropy: bytes):
-        print(f"[child pid={os.getpid()}] | argv={sys.argv} | [cpus={os.cpu_count()}]")
+    def verify_ticket(cls, ticket: TicketEnvelope, entropy: bytes, tid: int, test: int):
+        print(f"[child pid={os.getpid()}] | tid={tid} | tcount={test} | [cpus={os.cpu_count()}]")
         if not cls.PUBKEYS:
             raise ValueError("Bandersnatch Keys cannot be None")
 
