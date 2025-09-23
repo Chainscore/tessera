@@ -169,6 +169,7 @@ class Safrole:
             if pre_state.gamma.p != pre_state.kappa:
                 gamma.z = Safrole.compute_ring_root(pubkeys)
 
+        print("Tickets Count", count)
         if count == 1:
             # Signature must be valid Ring-VRF proof
             if not Safrole.verify_vrf(

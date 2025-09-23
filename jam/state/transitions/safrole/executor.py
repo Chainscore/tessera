@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 
 from concurrent.futures.process import ProcessPoolExecutor
@@ -14,13 +15,20 @@ def setup_executor(pubkeys: list[bytes]):
     if pubkeys == PUBKEYS:
         return
 
+    max_workers = min(MAX_TICKETS_PER_EXTRINSIC, os.cpu_count())
+    print(
+        f"[parent pid={os.getpid()}] "
+        f"Creating Pool with context={multiprocessing.get_start_method()} "
+        f"[max workers={max_workers}]"
+    )
+
     if EXECUTOR:
         shutdown_executor()
 
     PUBKEYS = pubkeys
 
     EXECUTOR = ProcessPoolExecutor(
-        max_workers=min(MAX_TICKETS_PER_EXTRINSIC, os.cpu_count()),
+        max_workers=max_workers,
         initializer=Worker.init_worker,
         initargs=(pubkeys,),
     )

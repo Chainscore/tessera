@@ -85,7 +85,18 @@ def build_parser():
     
     return p
 
+def show_info():
+    print("=== Process info ===")
+    print(f"pid: {os.getpid()}")
+    print(f"argv: {sys.argv}")
+    print(f"cpu count: {os.cpu_count()}")
+    print(f"frozen: {getattr(sys, 'frozen', False)}")
+    print(f"multiprocessing start method (default): {mp.get_start_method(allow_none=True)}")
+    print("====================\n")
+
 def main():
+    show_info()
+
     # Display ASCII art on startup
     ascii_art = """
                                                                              

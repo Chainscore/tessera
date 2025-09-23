@@ -1,3 +1,6 @@
+import os
+import sys
+
 from py_ark_vrf import verify_ring
 
 from jam.block import TicketEnvelope
@@ -15,6 +18,7 @@ class Worker:
 
     @classmethod
     def verify_ticket(cls, ticket: TicketEnvelope, entropy: bytes):
+        print(f"[child pid={os.getpid()}] | argv={sys.argv} | [cpus={os.cpu_count()}]")
         if not cls.PUBKEYS:
             raise ValueError("Bandersnatch Keys cannot be None")
 
