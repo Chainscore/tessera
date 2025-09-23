@@ -91,7 +91,7 @@ def show_info():
     print(f"argv: {sys.argv}")
     print(f"cpu count: {os.cpu_count()}")
     print(f"frozen: {getattr(sys, 'frozen', False)}")
-    print(f"multiprocessing start method (default): {mp.get_start_method(allow_none=True)}")
+    print(f"multiprocessing start method (default): {mp.get_start_method()}")
     print("====================\n")
 
 def main():
