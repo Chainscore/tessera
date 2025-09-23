@@ -1,9 +1,8 @@
-import asyncio
 import json
 from jam.api.rpc.broker import broker
 from jam.api.rpc.api_handlers import dispatch_api_call
 from jam.api.rpc.utils import RpcRequest
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 from quart import Quart, websocket, jsonify, request
 import itertools
 from tsrkit_types import U32
@@ -22,7 +21,6 @@ def _json_default(val):
     return str(val)
 
 
-logger = get_logger("rpc")
 
 rpc = Quart(__name__)
 

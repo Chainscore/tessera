@@ -7,7 +7,7 @@ from tsrkit_types import Bytes, Uint, Null
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 from jam.block import Block
-from jam.logging import get_logger
+from jam.log_setup import logger
 from jam.state.transitions.report.error import ReportingError, ReportingErrorCode
 from jam.state.transitions.report.guarantee_assignment import assign_fn
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
@@ -23,8 +23,6 @@ from jam.utils.constants import (
     ROTATION_PERIOD,
     MAX_WORK_REPORT_SIZE,
 )
-
-logger = get_logger("import")
 
 
 class Reporting:
@@ -44,19 +42,22 @@ class Reporting:
             Returns the updated Rho(workreport, timeslot)
         """
 
+        pre_omega = pre_state.omega
+        pre_xi = pre_state.xi
+        rho = state.rho
+
         # Work package hashes form Omega and Xi
-        known_packages.extend(
-            [
-                queue_el.report.context.prerequisites
-                for epoch_queue in pre_state.omega
-                for queue_el in epoch_queue
-            ]
-        )
-        known_packages.extend([wps for deps in pre_state.xi for wps in deps])
+        known_packages = set(known_packages)
+        for epoch_queue in pre_omega:
+            for queue_el in epoch_queue:
+                known_packages.update(queue_el.report.context.prerequisites)
+        for deps in pre_xi:
+            known_packages.update(deps)
 
         # small w
         all_reports = []
         wp_hash_set: set[Bytes] = set()
+        recent_exports_roots = {}
 
         # First we loop through all guarantees to check their validity
         for guarantee in block.extrinsic.guarantees:
@@ -83,7 +84,7 @@ class Reporting:
             # -------- Check if the core already has pending report -------------
             # Ensure Rho is empty for this report
             # 11.29
-            if state.rho[report.core_index] != Null:
+            if rho[report.core_index].unwrap() != Null:
                 raise ReportingError(
                     ReportingErrorCode.CORE_ENGAGED,
                     "The core index mentioned in report should be available in rho",
@@ -122,7 +123,7 @@ class Reporting:
             # --------- not-authorized -----------------
             # https://graypaper.fluffylabs.dev/#/38c4e62/157602158602?v=0.7.0
             # Ensure authorizer hash is present in core's Authorizer Pool
-            if report.authorizer_hash not in pre_state.alpha[int(report.core_index)]:
+            if report.authorizer_hash not in pre_state.alpha[report.core_index]:
                 raise ReportingError(
                     ReportingErrorCode.CORE_UNAUTHORIZED,
                     "Work Report's authorizer_hash not exist in AuthorizationPool",
@@ -138,7 +139,7 @@ class Reporting:
             # -------- report_epoch_before_last ------------
             if guarantee.slot != block.header.slot:
                 # https://graypaper.fluffylabs.dev/#/38c4e62/15d80115e301?v=0.7.0
-                last_rotation_slot = ROTATION_PERIOD * ((block.header.slot // ROTATION_PERIOD) - 1)
+                last_rotation_slot = ROTATION_PERIOD * ((int(block.header.slot) // ROTATION_PERIOD) - 1)
                 if guarantee.slot < last_rotation_slot:
                     raise ReportingError(
                         ReportingErrorCode.REPORT_EPOCH_BEFORE_LAST,
@@ -148,6 +149,7 @@ class Reporting:
             # --------------- duplicated_package_in_recent_history ----------------------------
             # https://graypaper.fluffylabs.dev/#/38c4e62/154a03158303?v=0.7.0
             wp_hash_set.add(report.package_spec.hash)
+            recent_exports_roots[report.package_spec.hash] = report.package_spec.exports_root
             all_reports.append(report)
 
         # ------------- out_of_order_guarantee ---------------------
@@ -165,26 +167,18 @@ class Reporting:
                         "Core index for each guarantee is not in unique",
                     )
 
-        recent_exports_roots = {}
-        beta_wp_hashes = []
+        beta_wp_hashes = set()
 
         for x in pre_state.beta.h:
-            for wp_hash in x.reported:
-                beta_wp_hashes.append(wp_hash)
-            recent_exports_roots.update(x.reported)
+            for wp_hash, exports_root in x.reported.items():
+                beta_wp_hashes.add(wp_hash)
+                recent_exports_roots[wp_hash] = exports_root
 
-        recent_exports_roots.update(
-            {
-                report.package_spec.hash: report.package_spec.exports_root
-                for report in all_reports
-            }
-        )
-
-        rho_package_hashes = [
-            wr.report.package_spec.hash
-            for pending_wr in pre_state.rho
-            if (wr := pending_wr.unwrap()) != Null
-        ]
+        rho_package_hashes = set()
+        for pending_wr in pre_state.rho:
+            wr = pending_wr.unwrap()
+            if wr != Null:
+                rho_package_hashes.add(wr.report.package_spec.hash)
 
         for p in wp_hash_set:
             # Ensure this WP is not previously executed - checking Beta, Omega, Rho, Xi
@@ -287,8 +281,6 @@ class Reporting:
         pi_core = AllCoreStats.empty()
         pi_service = AllServiceStats({})
 
-        rho = state.rho
-
         for report in all_reports:
             rho[report.core_index] = OptionalWorkReportState(
                 WorkReportState(report=report, timeout=block.header.slot)
@@ -339,12 +331,12 @@ class Reporting:
                 if (
                     x.slot == block.header.slot
                     or x.slot != block.header.slot
-                    and floor((block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH)
+                    and floor((int(block.header.slot) - ROTATION_PERIOD) / EPOCH_LENGTH)
                     == floor(block.header.slot / EPOCH_LENGTH)
                 ):
                     public_key = state.kappa[y.validator_index].ed25519
                 elif x.slot != block.header.slot and floor(
-                    (block.header.slot - ROTATION_PERIOD) / EPOCH_LENGTH
+                    (int(block.header.slot) - ROTATION_PERIOD) / EPOCH_LENGTH
                 ) != floor(block.header.slot / EPOCH_LENGTH):
                     public_key = state.lambda_[y.validator_index].ed25519
 
@@ -404,11 +396,12 @@ class Reporting:
         """
         results = block.extrinsic.guarantees
 
+        delta = state.delta
         for x in results:
             total_accumulate_gas = 0
             for y in x.report.digests:
                 # --------------- bad_service_id -------------------
-                if y.service_id not in state.delta:
+                if y.service_id not in delta:
                     raise ReportingError(
                         ReportingErrorCode.BAD_SERVICE_ID,
                         f"Service ID {y.service_id} not found in state accounts",
@@ -417,7 +410,7 @@ class Reporting:
                 # --------------- bad_code_hash -------------------
                 # https://graypaper.fluffylabs.dev/#/38c4e62/161300162600?v=0.7.0
                 # Eq 11.42
-                if y.code_hash != state.delta[y.service_id].service.code_hash:
+                if y.code_hash != delta[y.service_id].service.code_hash:
                     raise ReportingError(
                         ReportingErrorCode.BAD_CODE_HASH,
                         "Result code_hash should match with state's delta code_hash",
@@ -426,7 +419,7 @@ class Reporting:
                 # --------------- service_item_gas_too_low -------------------
                 # https://graypaper.fluffylabs.dev/#/38c4e62/158b0215a302?v=0.7.0
                 # Eq 11.30
-                if y.accumulate_gas < state.delta[y.service_id].service.min_gas:
+                if y.accumulate_gas < delta[y.service_id].service.min_gas:
                     raise ReportingError(
                         ReportingErrorCode.SERVICE_ITEM_GAS_TOO_LOW,
                         "For every report its accumulate gas should be greater than the delta's min_gas",

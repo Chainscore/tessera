@@ -5,7 +5,7 @@ import asyncio
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.logger import QuicLogger
 
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 from jam.network.base.certificate import generate_keys
 from jam.network.base.sessions import SessionTicketStore
 from jam.network.connection import NodeConnection
@@ -14,7 +14,6 @@ from jam.network.node import QuicNode
 from jam.utils.constants import NODE_ALPN
 
 node: None|QuicNode = None
-logger = get_logger("nodeops")
 
 async def start_node(
     host: str,

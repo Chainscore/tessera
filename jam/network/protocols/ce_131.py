@@ -2,7 +2,7 @@ from typing import cast
 from tsrkit_types import structure, Uint, Bool, U32, U8
 
 from jam.finality.finality import Finality
-from jam.logging import get_logger
+from jam.log_setup import network_logger as logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -12,8 +12,6 @@ from jam.utils.constants import VALIDATOR_COUNT, EPOCH_LENGTH
 from py_ark_vrf import verify_ring, vrf_output
 from jam.utils.constants import X
 
-# Module-specific logger
-logger = get_logger("network")
 
 @structure
 class EpochTicket:

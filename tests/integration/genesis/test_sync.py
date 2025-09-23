@@ -8,7 +8,7 @@ import time
 from multiprocessing import Process
 
 from dotenv import load_dotenv
-from jam.logging import setup_logging, logger
+from jam.log_setup import setup_logging, logger
 from jam.finality.finality import Finality
 from jam.network.start import start_node
 from jam.settings import setup_setting

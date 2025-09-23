@@ -1,8 +1,5 @@
 from typing import Any, Generic, List, TypeVar
-from jam.logging import get_logger
-
-
-logger = get_logger("nodeops")
+from jam.log_setup import node_logger as logger
 
 T = TypeVar("T")
 

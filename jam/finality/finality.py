@@ -1,13 +1,9 @@
 import asyncio
-from typing import TYPE_CHECKING
-from jam.logging import get_logger
+from jam.log_setup import block_logger as logger
 from rockstore import RockStore
 from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.block import Block
 from jam.api.rpc.broker import broker
-
-logger = get_logger("grandpa")
-
 
 class Finality:
     """
@@ -49,12 +45,15 @@ class Finality:
 
     @classmethod
     def set_head(cls, header_hash: HeaderHash, kv: RockStore):
-        logger.debug("Setting header...", header_hash=header_hash.hex())
-        block = Block.load(header_hash, kv)
-
-        #Subscribe's to updates of the head of the "best" chain, as returned by bestBlock.
-        if block: asyncio.create_task(broker.publish("subscribeBestBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
-        else: logger.warning("Head published, but not found in store", header_hash=header_hash.hex())
+        from jam.settings import settings
+        # logger.debug("Setting header...", header_hash=header_hash.hex())
+        if settings.rpc_flag:
+            block = Block.load(header_hash, kv)
+            #Subscribe's to updates of the head of the "best" chain, as returned by bestBlock.
+            if block:
+                asyncio.create_task(broker.publish("subscribeBestBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
+            else:
+                logger.warning("Head published, but not found in store", header_hash=header_hash.hex())
         kv.put(cls.LATEST_KEY, header_hash.encode())
 
     @classmethod

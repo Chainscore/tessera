@@ -5,11 +5,10 @@ from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.types.protocol.crypto import BandersnatchRingVrfSignature
 from jam.types.protocol.core import TimeSlot
 from py_ark_vrf import prove_ring
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 from jam.utils.constants import EPOCH_LENGTH, X, TICKET_ENTRIES_PER_VALIDATOR
 from jam.network.protocols.ce_131 import SafroleTicketProxyDistribution, CE131Data, EpochTicket
 
-logger = get_logger("nodeops")
 
 class Conductor:
     

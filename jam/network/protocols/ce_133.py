@@ -3,7 +3,7 @@ import time
 from typing import cast
 
 from tsrkit_types import structure, Uint, U8
-from jam.logging import get_logger
+from jam.log_setup import network_logger as logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
@@ -15,9 +15,6 @@ from jam.types.work.manifest import Extrinsics
 from jam.types.work.package import WorkPackage
 
 from jam.utils.assignment import assign_guarantors
-
-# Module-specific logger
-logger = get_logger("network")
 
 
 @structure

@@ -1,12 +1,9 @@
-from typing import TYPE_CHECKING, Final, Self
-
+from typing import Self
+from collections import OrderedDict
 from jam.block.block import Block
 from jam.error import JamError
 from jam.finality.finality import Finality
-
 from rockstore import RockStore
-
-from jam.state.utils import construct_state_key
 from jam.types.protocol.crypto import OpaqueHash
 from tsrkit_types import Bytes, structure, Dictionary
 from jam.utils.trie.merkle import StateTrie
@@ -39,12 +36,14 @@ class StateStorage:
     _updates: dict[bytes, bytes] = {}
     _cache_mode = False
     _read_only = True
+    _prop_cache: dict[int, OrderedDict] = {}
 
     def __init__(self, trie: StateTrie, db: RockStore, _cache_updates={}, cache_mode = False):
         self._TRIE = trie
         self._DB = db
         self._updates = _cache_updates
         self._cache_mode = cache_mode
+        self._prop_cache = {}
 
     @staticmethod
     def get_storage_key(header: HeaderHash):
@@ -90,7 +89,6 @@ class StateStorage:
             if data is None:
                 raise ValueError("Updates missing for", curr_head.hex())
             _curr_updates = StateRecord.decode(data)
-            print(f"[{settings.NODE_NAME}] CURR HEAD", curr_head.hex())
             block = Block.load(curr_head, kv)
             if block is None:
                 raise JamError("Block missing for header hash:", curr_head.hex())
@@ -112,6 +110,10 @@ class StateStorage:
         if self._read_only:
             raise PermissionError("State storage is not writable")
         _state_cache = StateUpdates({})
+        
+        # Collect trie updates for batch processing
+        trie_updates = {}
+        trie_deletes = []
 
         for k, v in self._updates.items():
             curr_val = self._DB.get(k)
@@ -119,13 +121,26 @@ class StateStorage:
                 _state_cache[Bytes[31](k)] = Bytes(curr_val) if curr_val else Bytes(0)
             if v is None:
                 self._DB.delete(k)
-                self._TRIE.delete(Bytes(k))
+                trie_deletes.append(Bytes(k))
             elif v != curr_val:
                 self._DB.put(k, v)
-                self._TRIE.update(Bytes(k), Bytes(v))
+                trie_updates[Bytes[32](k)] = Bytes(v)
+        
+        # Batch process trie updates for better performance
+        if trie_updates:
+            self._TRIE.batch_update(trie_updates)
+        
+        # Process deletes individually (could be optimized further if needed)
+        for key in trie_deletes:
+            self._TRIE.delete(key)
+
+        # Clear hash cache periodically to prevent memory buildup
+        from jam.types.protocol.crypto import Hash
+        Hash.clear_cache()
 
         # Save the cache to DB
         self._updates = {}
+        self._prop_cache = {}
         # State cache to store in DB
         if kv and hh:
             kv.put(
@@ -135,6 +150,7 @@ class StateStorage:
 
     def clear(self):
         self._updates = {}
+        self._prop_cache = {}
 
     def put(self, key_bytes: bytes, value_bytes: bytes, sync: bool = False):
         if self._cache_mode:

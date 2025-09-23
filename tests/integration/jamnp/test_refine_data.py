@@ -7,15 +7,12 @@ from multiprocessing import Process
 
 from jam.network.node import Node
 
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 from tests.integration.jamnp.utils.run_node import run_node_process
 
 CLIENTS = [
     {"port": 40000, "role": "VALIDATOR", "theme": "gruvbox", "genesis": True},
 ]
-
-# Logger for WP Production
-logger = get_logger("in_core")
 
 from tests.unit.incore.types import RefineVectors
 

@@ -20,6 +20,7 @@ def build_parser():
         epilog="Examples:\n"
                "  tessera-node                                              # Run as validator node (default)\n"
                "  tessera-node --fuzzer --socket /tmp/custom.sock           # Run as fuzzer target for testing\n"
+               "  tessera-node --import /path/to/test_vectors               # Import test vectors from file or directory\n"
                "  tessera-node --env envs.40001.env                         # Override environment\n",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -29,7 +30,7 @@ def build_parser():
         default="envs/40000.env",
         help="Path to env file containing required environment variables",
     )
-    p.add_argument("--db", type=str, default="data/tmp", help="Path to database directory")
+    p.add_argument("--db", type=str, default="data/tmp/" + str(os.getpid()), help="Path to database directory")
     p.add_argument("--theme", type=str, default="bitcoin", help="Theme to use for logging")
     p.add_argument("--fuzzer", action="store_true", help="Run as a fuzzer target for conformance testing")
     
@@ -40,6 +41,8 @@ def build_parser():
                    help="Path to record fuzzer session data (only used with --fuzzer)")
     p.add_argument("--no-record", action="store_true",
                    help="Disable session recording (only used with --fuzzer)")
+    p.add_argument("--import", dest="import_path", type=str,
+                   help="Import test vector(s) from file or directory. JSON files are sorted by name.")
     
     return p
 
@@ -72,7 +75,7 @@ def main():
           .-===-..              .::::::::....                   ::    
       .:-==-:.                  ..........                      ..    
   ..-==-:.                        ...                           ..    
-.-==-.                                                           .    
+.-==-.                                                           .    By Chainscore Labs
 ...                                                                   
                                                                       
                                                                       
@@ -102,6 +105,26 @@ def main():
                 db_path=args.db,
                 socket_path=args.socket,
                 record_path=record_path
+            )
+        )
+        return
+    
+    # Check for import mode
+    if args.import_path:
+        # Setup basic logging for import mode
+        from jam.log_setup import setup_logging
+        setup_logging("default", "importer")
+        
+        print("📥 Starting Tessera in import mode...")
+        
+        # Import import functionality
+        from jam.fuzzer.importer import run_import
+        
+        # Run importer
+        asyncio.run(
+            run_import(
+                db_path=args.db,
+                import_path=args.import_path
             )
         )
         return

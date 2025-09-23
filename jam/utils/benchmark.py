@@ -2,10 +2,9 @@ import os
 import json
 from time import perf_counter as now
 from contextlib import contextmanager
-from jam.logging import get_logger
+from jam.log_setup import node_logger
 
-# Module-specific logger
-logger = get_logger("in_core")
+logger = node_logger
 
 BENCHMARK_FILE = "benchmark_results.txt"
 

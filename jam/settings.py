@@ -6,7 +6,7 @@ from typing import Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import U32, Bytes, Bytes32
 
-from jam.logging import get_logger
+from jam.log_setup import logger
 from jam.types import ValidatorIndex
 from jam.types.protocol.core import CoreIndex
 from jam.types.protocol.crypto import Hash
@@ -19,8 +19,6 @@ from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 
 if TYPE_CHECKING:
     from jam.state.state import State
-
-logger = get_logger()
 
 class Settings:
     # Node settings

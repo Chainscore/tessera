@@ -285,7 +285,7 @@ class Accumulation:
                 outputs.add((service, _output_hash.unwrap()))
             transfers.extend(_transfers)
             collected_preimages.update(_preimages)
-
+            
             # Add partial cache to state
             state.store += partial_state.store
 
