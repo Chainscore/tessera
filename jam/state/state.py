@@ -1,5 +1,9 @@
 import json
-from typing import Type
+import multiprocessing
+import os
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from jam.error import JamError, JamErrorCode
 from jam.state.partial import PartialState
 from jam.utils.merkle import BMRFunctions
@@ -8,6 +12,7 @@ from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.utils.trie.merkle import StateTrie
 from jam.state.storage import StateStorage
+from jam.state.transitions.safrole.executor import setup_executor
 from jam.state.utils import make_state_prop
 from tsrkit_types import Bytes, Dictionary, TypedVector
 from jam.types import (
@@ -167,7 +172,7 @@ class State:
 
         self._lock = True
 
-        
+
         from jam.settings import settings as _set
         from jam.finality.finality import Finality
 
@@ -263,6 +268,7 @@ class State:
                     final_state_root=self.root.hex()[:16] + "...",
                 )
 
+                # TODO: Uncomment it for assurances
                 # from jam.operations.handlers.assurer import assurer
                 # for ext in block.extrinsic.guarantees:
                 #     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
@@ -294,7 +300,7 @@ class State:
         self._lock = False
 
         return False
-    
+
     def to_partial(self) -> "PartialState":
         return PartialState(
             StateStorage(
@@ -346,4 +352,8 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
 
     global state
     state = new_state
+
+    # Init Executor
+    pubkeys = [bytes(k.bandersnatch) for k in state.gamma.p]
+    setup_executor(pubkeys)
     return state
