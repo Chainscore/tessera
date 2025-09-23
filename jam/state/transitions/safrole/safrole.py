@@ -169,7 +169,6 @@ class Safrole:
             if pre_state.gamma.p != pre_state.kappa:
                 gamma.z = Safrole.compute_ring_root(pubkeys)
 
-        print("Tickets Count", count)
         if count == 1:
             # Signature must be valid Ring-VRF proof
             if not Safrole.verify_vrf(
@@ -185,8 +184,8 @@ class Safrole:
         elif count > 1:
             executor = get_executor()
             futures = []
-            for tid, ticket in enumerate(tickets):
-                fut = executor.submit(Worker.verify_ticket, ticket, bytes(eta[2]), tid, count)
+            for ticket in tickets:
+                fut = executor.submit(Worker.verify_ticket, ticket, bytes(eta[2]))
                 futures.append(fut)
 
             try:

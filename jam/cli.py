@@ -95,7 +95,7 @@ def show_info():
     print("====================\n")
 
 def main():
-    show_info()
+    # show_info()
 
     # Display ASCII art on startup
     ascii_art = """

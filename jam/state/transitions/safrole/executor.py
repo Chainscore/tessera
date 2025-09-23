@@ -16,11 +16,6 @@ def setup_executor(pubkeys: list[bytes]):
         return
 
     max_workers = min(MAX_TICKETS_PER_EXTRINSIC, os.cpu_count())
-    print(
-        f"[parent pid={os.getpid()}] "
-        f"Creating Pool with context={multiprocessing.get_start_method()} "
-        f"[max workers={max_workers}]"
-    )
 
     if EXECUTOR:
         shutdown_executor()
