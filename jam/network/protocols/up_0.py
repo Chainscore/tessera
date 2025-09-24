@@ -270,7 +270,7 @@ class BlockAnnouncement(NetworkProtocol):
             from jam.settings import settings
             if settings.rpc_flag:
                 asyncio.create_task(broker.publish("subscribeSyncStatus", "Completed"))
-            await self.transmit(anc)
+            asyncio.create_task(self.transmit(anc))
 
     @classmethod
     async def synchronise(cls, h: Handshake):

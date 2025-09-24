@@ -85,7 +85,7 @@ class Extrinsic:
                 break
         rg_cores.clear()
 
-        ep = PreimagesExtrinsic(preimg_store._store[:])
+        ep = PreimagesExtrinsic(list(preimg_store._store.values())[:1])
         def preimage_sort_fn(preimage: Preimage):
             return (
                 int(preimage.requester),
