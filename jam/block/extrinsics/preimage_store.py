@@ -24,12 +24,6 @@ class PreimageStore:
     def __init__(self) -> None:
         self._store = {}
 
-    @classmethod
-    def _validate(cls, preimage: Preimage):
-        if preimage:
-            return True
-        return False
-
     def store(self, preimage: Preimage):
 
         pi_hash = OpaqueHash(Hash.blake2b(preimage.blob))
@@ -41,22 +35,19 @@ class PreimageStore:
                 val=preimage.blob[:16],
             )
         else:
-            if not self._validate(preimage):
-                logger.info(
-                    "Invalid preimage found",
-                    preimage=preimage.__class__.__name__,
-                    val=preimage.blob[:16],
-                )
-            else:
-                self._store[pi_hash] = preimage
-                from jam.network.protocols.ce_142 import PreImageAnnouncement, CE142Data, Announcement
-                pre_image_len = BlobLength(len(preimage.blob))
-                anc = Announcement(serviceId=preimage.requester,
-                                   hash=pi_hash,
-                                   preimage_len=pre_image_len)
-                data_len = Uint[32](len(anc.encode()))
-                data = CE142Data(len=data_len, announcement=anc)
-                asyncio.create_task(PreImageAnnouncement().transmit(data))
+            self._store[pi_hash] = preimage
+            asyncio.create_task(self.announce(preimage, pi_hash))
+
+    @staticmethod
+    async def announce(preimage: Preimage, pi_hash: OpaqueHash):
+        from jam.network.protocols.ce_142 import PreImageAnnouncement, CE142Data, Announcement
+        pre_image_len = BlobLength(len(preimage.blob))
+        anc = Announcement(serviceId=preimage.requester,
+                           hash=pi_hash,
+                           preimage_len=pre_image_len)
+        data_len = Uint[32](len(anc.encode()))
+        data = CE142Data(len=data_len, announcement=anc)
+        await PreImageAnnouncement().transmit(data)
 
 
     def remove(self, preimage_list: List[Preimage]):

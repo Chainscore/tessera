@@ -2,7 +2,6 @@ import asyncio
 import json
 from copy import deepcopy
 from typing import Tuple, Set, List
-from jam.api.rpc.broker import broker
 from jam.execution.invocations.accumulate import PsiA
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
@@ -588,7 +587,14 @@ class Accumulation:
         state.xi = xi
         state.omega = omega
 
+        asyncio.create_task(Accumulation.rpc(state))
+
+        return state, commitment_map
+
+    @staticmethod
+    async def rpc(state: Sigma):
         from jam.settings import settings
+        from jam.api.rpc.broker import broker
         if settings.rpc_flag:
             keys = broker.topics.keys()
             matches = [k for k in keys if "subscribeServiceValue" in k]
@@ -598,17 +604,13 @@ class Accumulation:
                 key_list = json.loads(params[2])
                 key = Bytes(key_list)
                 finality = True if params[3] == 'True' else False
-                value = state.delta[sid].storage.get(key) if state.delta[sid].storage.get(key) is None else list(state.delta[sid].storage.get(key))
+                value = state.delta[sid].storage.get(key) if state.delta[sid].storage.get(key) is None else list(
+                    state.delta[sid].storage.get(key))
                 last_publish = broker.last_publish
                 if req not in last_publish or last_publish[req] != value:
                     from jam.settings import settings
-                    block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(settings.main_db)
+                    block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(
+                        settings.main_db)
 
-                    print(f"Req: {req} header_hash: {block.header.hash().hex()[:16]} slot: {block.header.slot} value: {value}")
-
-                    asyncio.create_task(broker.publish(req,
-                                                       {"header_hash": list(block.header.hash()),
-                                                        "slot": int(block.header.slot), "value": value}))
+                    await broker.publish(req, {"header_hash": list(block.header.hash()), "slot": int(block.header.slot), "value": value})
                     broker.last_publish[req] = value
-
-        return state, commitment_map
