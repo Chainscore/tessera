@@ -6,7 +6,7 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.struct import structure
 
 from jam.types.protocol.core import ServiceId, BlobLength
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 from jam.types.protocol.crypto import (
     OpaqueHash, Hash
 )
@@ -17,8 +17,6 @@ class Preimage:
 
     requester: ServiceId
     blob: Bytes
-
-logger = get_logger("nodeops")
 
 class PreimageStore:
     _store: dict[OpaqueHash, Preimage] = {}
@@ -40,14 +38,14 @@ class PreimageStore:
             logger.debug(
                 "Duplicate preimage found",
                 preimage=preimage.__class__.__name__,
-                val=preimage.to_json(),
+                val=preimage.blob[:16],
             )
         else:
             if not self._validate(preimage):
                 logger.info(
                     "Invalid preimage found",
                     preimage=preimage.__class__.__name__,
-                    val=preimage.to_json(),
+                    val=preimage.blob[:16],
                 )
             else:
                 self._store[pi_hash] = preimage
@@ -72,7 +70,7 @@ class PreimageStore:
                     logger.debug(
                         "Extrinsic was not collected",
                         preimage=preimage.__class__.__name__,
-                        val=preimage.to_json(),
+                        val=preimage.blob[:16],
                     )
 
     def clear(self):

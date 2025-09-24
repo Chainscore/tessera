@@ -2,7 +2,7 @@ import asyncio
 from typing import cast
 from tsrkit_types import Uint, U8
 from tsrkit_types.struct import structure
-from jam.logging import get_logger
+from jam.log_setup import network_logger
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -11,7 +11,7 @@ from jam.types.protocol.crypto import OpaqueHash
 from .ce_143 import PreimageRequest, CE143Data
 
 # Module-specific logger
-logger = get_logger("network")
+logger = network_logger
 
 @structure
 class Announcement:
@@ -128,15 +128,15 @@ class PreImageAnnouncement(NetworkProtocol):
 
     @staticmethod
     async def _process_preimage(anc: Announcement, client: NodeConnection):
-        from jam.state.state import state
-        if not state.delta[anc.serviceId].preimages.get(anc.hash):
+        from jam.block.extrinsics.preimages import preimg_store, Preimage
+
+        if not preimg_store._store.get(anc.hash):
             CE_143 = PreimageRequest()
             hash_len = Uint[32](len(anc.hash.encode()))
             request_data = CE143Data(len=hash_len, pre_image_hash=anc.hash)
             response = await CE_143.transmit(request_data, client)
 
             if response:
-                from jam.block.extrinsics.preimages import preimg_store, Preimage
                 if len(response) == anc.preimage_len:
                     pre_img = Preimage(requester=ServiceId(anc.serviceId), blob=response)
                     preimg_store.store(pre_img)

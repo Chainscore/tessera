@@ -2,7 +2,7 @@ from typing import cast, List
 from tsrkit_types import U8, Bytes
 from tsrkit_types.integers import Uint
 from tsrkit_types.struct import structure
-from jam.logging import get_logger
+from jam.log_setup import network_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
@@ -10,7 +10,7 @@ from jam.network.connection import NodeConnection
 from jam.types.protocol.crypto import Hash, OpaqueHash
 
 # Module-specific logger
-logger = get_logger("network")
+logger = network_logger
 
 @structure
 class CE143Data:
