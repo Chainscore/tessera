@@ -12,8 +12,9 @@ class PsiI(InvocationProtocol):
     def __init__(self, p: WorkPackage, c: CoreIndex):
         self.work_package = p
         self.core = c
+        self.table = self.build_table()
 
-    def table(self):
+    def build_table(self):
         return {
             0: (GeneralFunctions, {}),
             1: (
