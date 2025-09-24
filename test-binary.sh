@@ -49,7 +49,7 @@ case "${1:-test}" in
         echo "Testing tessera-node with vector path: $VECTOR_PATH"
         echo "${DOCKER_ARGS[@]}"
         sudo chrt -f 99 nice -n -20 ionice -c1 -n0 taskset -c 0-32 \
-        docker run -e PVM_MODE=recompiler -e JAM_LOG_LEVEL=critical "${DOCKER_ARGS[@]}" "$IMAGE_NAME" ./tessera-node --import "/test-vectors/$VECTOR_PATH"
+        docker run -e JAM_LOG_LEVEL=critical "${DOCKER_ARGS[@]}" "$IMAGE_NAME" ./tessera-node --import "/test-vectors/$VECTOR_PATH"
         ;;
     *)
         echo "Usage: $0 [build|test|clean] [traces_name]"

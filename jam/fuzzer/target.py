@@ -34,6 +34,7 @@ from .types import PeerInfo, Version, Initialize, State, KeyValue, ErrorMessage
 
 from .handlers import read_message, send_message, handle_handshake
 
+
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):
     """
     The main server loop that listens for connections and handles messages.
@@ -46,7 +47,8 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
     
     record_enabled = record_path is not None
     json_data = {"blocks": []} if record_enabled else None
-
+    SESSION_ID = 0
+    
     while True:
         conn, addr = sock.accept()
         with conn:
@@ -57,9 +59,15 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                 continue
             else:
                 from jam.settings import setup_setting
-                db_ = db_path + str(int(time.time()))
-                print(">> Connected to", peer.to_json(), "|| Setting data path at", db_)
-                settings = setup_setting(db_, 1, "fuzzer", 40001)
+                print(">> Connected to", peer.to_json())
+                try:
+                    db_ = db_path + str(SESSION_ID)
+                    settings = setup_setting(db_, 1, "fuzzer", 40001)
+                except Exception as e:
+                    SESSION_ID += 1
+                    db_ = db_path + str(SESSION_ID)
+                    settings = setup_setting(db_, 1, "fuzzer", 40001)
+
 
             block_count = 0
 
