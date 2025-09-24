@@ -101,7 +101,7 @@ class PsiR(InvocationProtocol):
         start = time.time()
         u, r, context = PsiM.execute(
             pc,
-            ProgramCounter(0),
+            0,
             REFINE_GAS,
             args,
             self.dispatch,

@@ -47,7 +47,7 @@ class PsiI(InvocationProtocol):
         
         u, r, _ = PsiM.execute(
             blob=pc,
-            pc=ProgramCounter(0),
+            pc=0,
             gas=IS_AUTHORIZED_GAS,
             arguments=self.core.encode(),
             dispatch_fn=self.dispatch,
