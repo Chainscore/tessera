@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jam.audit.assembler import Assembler
 
 from jam.types.protocol.crypto import HeaderHash
-from jam.types import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash
+from jam.types import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash, Hash
 from jam.types.audit.audit_tranche import (
     Tranche,
     OptionalReports,
@@ -24,7 +24,6 @@ from jam.types.audit.audit_tranche import (
     CoreOptionalReport,
     CoreReport
 )
-from jam.block.block import Block
 from jam.types.work.report import WorkReport
 from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR
 
@@ -124,7 +123,7 @@ class Audit:
         # ---------------------------- mapping q's reports as tuple[CoreIndex, Option[WorkReport]] ---------------------
         core_report = TypedVector[CoreOptionalReport]([])
         for c, wr in enumerate(unaudited_report):
-            work_report = wr.unwrap()
+            work_report = wr.unwrap
             value = CoreOptionalReport(core_index=CoreIndex(c), work_report=wr)
             core_report.append(value)
 
@@ -342,13 +341,13 @@ class Audit:
             return U8(0)
 
     @staticmethod
-    def judgment_signature(wr: WorkReport, validity: Uint[8]) -> Bytes[96]:
+    def judgment_signature(wr_hash: WorkReportHash, validity: Uint[8]) -> Bytes[96]:
         """
         Equations: 17.17
         This function just build the ed25519 signature(Judgment Signature) for the particular work report.
 
         Args:
-            wr: Work Report
+            wr_hash: Work Report Hash
             validity: Boolean value (True/False)
 
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f6f011f9801?v=0.7.0
@@ -356,7 +355,6 @@ class Audit:
         """
         from jam.settings import settings
 
-        wr_hash = wr.hash()
         if validity == Uint[8](1):
             message = X.VALID.value + wr_hash.encode()
         else:
@@ -366,36 +364,3 @@ class Audit:
         signature = ed25519_pvt.sign(message)
 
         return Ed25519Signature(signature)
-
-
-    @staticmethod
-    def report_audited(tranche: Tranche, block: Block):
-        from jam.storage.tranche_audit_store import tranche_store
-
-        header_hash = tranche.header_hash
-
-        # ------------------------------ list of reports is audited -------------
-        audited_wr_list = tranche_store.get_audited_list(tranche=tranche)
-
-        # ------------------------------ available reports --------------
-        tranche_store_ = tranche_store.get_store()
-        available_reports = list(tranche_store_.values())[0].audited_list
-        available_r_hash: set[WorkReportHash] = set()
-        for c_r in available_reports:
-            wr_hash = c_r.work_report_hash
-            available_r_hash.add(wr_hash)
-
-        # ----------------- final audit check ------------------------
-        for wr in audited_wr_list:
-            if wr != Null:
-                wr_hash = wr.work_report.unwrap().hash()
-                if wr_hash not in available_r_hash:
-                    logger.info("Found a report which is not audited, so block is unaudited")
-                    return
-
-        logger.info(
-            f"Block Audited 🔍 from audit engine",
-            header_hash=header_hash.hex(),
-            block_slot=block.header.slot,
-            tranche=tranche,
-        )

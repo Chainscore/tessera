@@ -2,12 +2,12 @@ import asyncio
 from tsrkit_types import Null, Option, TypedVector, Uint
 from jam.audit.auditor import Auditor
 from jam.audit.audit import Audit
-from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits, Faults
+from jam.audit.utils import Utils
 from jam.block.block import Block
 from jam.finality.finality import Finality
 from jam.logging import get_logger
 from jam.network.protocols.ce_144 import SubsequentTrancheEvidence
-
+from jam.types.protocol.core import TimeSlot
 from jam.types.audit.audit_tranche import (
     TrancheIndex,
     Tranche,
@@ -43,6 +43,7 @@ class AuditEngine:
 
         auditor = Auditor()
         audit = Audit()
+        utils = Utils
 
         # -------------- Fetch Last Finalized Block --------------
         last_finalized_block = Finality.load_final(settings.main_db)
@@ -62,13 +63,13 @@ class AuditEngine:
 
         logger.debug("Fetched prior state", rho=prior_state.rho, reps=auditable_reports)
 
+
         curr_ts = SLOT_PERIOD * int(block.header.slot)
 
         while not self.is_audited:
 
             next_ts = curr_ts + AUDIT_PERIOD
 
-            # get tranche index
             tranche_index = audit.tranche_index(header=block.header)
 
             curr_tranche = Tranche(
@@ -91,7 +92,7 @@ class AuditEngine:
                 subsequent_evidence = None
 
             else:
-                # ------------------------------------- Handle > 0 Tranche Case --------------------
+                # ------- Tranche > 0 handling ---------
                 logger.info(
                     "New tranche started", header_hash=header_hash, tranche=audit.tranche_index(header=block.header)
                 )
@@ -106,39 +107,12 @@ class AuditEngine:
                     tranche_store.save_state(tranche=curr_tranche, state=tranche_state)
 
                 # ------------------- Condition which check trigger next tranche ---------------
-                subsequent_evidence : TypedVector[SubsequentTrancheEvidence] = await auditor.is_tranche(block=block, curr_tranche=curr_tranche, prev_tranche_state=prev_state)
+                subsequent_evidence : TypedVector[SubsequentTrancheEvidence] = await utils.is_tranche(block=block, curr_tranche=curr_tranche, prev_tranche_state=prev_state)
+
 
                 # THIS IS THE CONDITION WHERE CHECK ALL CONDITION FOR "BLOCK AUDITED"
                 if len(subsequent_evidence) == 0:
-                    if tranche_index > TrancheIndex(1):
-                        # 1. build dispute extrinsic
-                        final_tranche_state = tranche_store.get_state(tranche=curr_tranche)
-
-                        # verdict condition check
-                        verdicts = final_tranche_state.dispute.verdicts
-                        culprits = final_tranche_state.dispute.culprits
-                        faults = final_tranche_state.dispute.faults
-
-                        # sorted on based on work report_hash
-                        sorted_verdicts = sorted(verdicts, key=lambda x: int.from_bytes(x[0]))
-
-                        # sorted on based on work report_hash
-                        sorted_culprits = sorted(culprits, key=lambda x: int.from_bytes(x[1]))
-
-                        # sorted on based on work report_hash
-                        sorted_faults = sorted(faults, key=lambda x: int.from_bytes(x[1]))
-
-                        # Collect dispute in sorted order
-                        d_ext = DisputesExtrinsic(
-                            verdicts= Verdicts(sorted_verdicts),
-                            culprits= Culprits(sorted_culprits),
-                            faults= Faults(sorted_faults)
-                        )
-
-                        # add dispute extrinsic
-                        from jam.block.extrinsics.disputes import dpt_store
-                        dpt_store.store(d_ext)
-                        ...
+                    asyncio.create_task(utils.dispute_ext(block=block, tranche=curr_tranche))
 
                     self.is_audited = True
 
@@ -151,11 +125,10 @@ class AuditEngine:
                         tranche=prev_tranche,
                     )
 
-                    # audit.block_audited(tranche=curr_tranche , block=block)
+                    is_block_audit = utils.block_audited(tranche=curr_tranche , block=block)
                     continue
 
             try:
-                print("timr left", next_ts - CURRENT_TIME())
                 await asyncio.wait_for(
                     auditor.assignment_wrs(
                         block=block,
