@@ -1,7 +1,6 @@
 import asyncio
 import json
 
-from jam.api.rpc.broker import broker
 from jam.finality.finality import Finality
 from jam.types import ServiceId
 from jam.types.state.pi import ServiceStat
@@ -65,6 +64,7 @@ class Preimages:
 
         from jam.settings import settings
         if settings.rpc_flag:
+            from jam.api.rpc.broker import broker
             keys = broker.topics.keys()
             matches = [k for k in keys if "subscribeServiceRequest" in k]
             for req in matches:

@@ -1,3 +1,4 @@
+import asyncio
 import json
 from jam.api.rpc.broker import broker
 from jam.api.rpc.api_handlers import dispatch_api_call
@@ -119,10 +120,10 @@ async def ws():
                 ok = False
                 if params:  # expect [sub_id]
                     sid = params[0]
-                    task = subs.pop(sid)
-                    topic = topics.pop(sid)
-                    broker.topics.pop(topic)
-                    broker.last_publish.pop(topic)
+                    task = subs.pop(sid, None)
+                    topic = topics.pop(sid, None)
+                    broker.topics.pop(topic, None)
+                    broker.last_publish.pop(topic, None)
                     if task:
                         task.cancel()
                         ok = True

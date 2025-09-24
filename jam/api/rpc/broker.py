@@ -9,8 +9,13 @@ class Broker:
         self.last_publish: Dict[str, Any] = {}
 
     async def publish(self, topic: str, message: Any) -> None:
-        for q in set(self.topics[topic]):
-            await q.put(message)
+        try:
+            if len(set(self.topics[topic])) == 0:
+                self.last_publish.pop(topic, None)
+            for q in set(self.topics[topic]):
+                await q.put(message)
+        except Exception as e:
+            print("Error in publish", e)
 
     async def subscribe(self, topic: str) -> AsyncGenerator[Any, None]:
         q: asyncio.Queue = asyncio.Queue()
