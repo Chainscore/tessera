@@ -2,17 +2,19 @@ import asyncio
 import math
 from typing import cast
 from tsrkit_types import structure, Uint, U8, U32
-
-from jam.types import Hash
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.logging import get_logger
-from jam.types.protocol.crypto import Ed25519Signature
+from jam.types.protocol.crypto import Ed25519Signature, Ed25519Public
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
 from jam.types.work.report import WorkReportHash
 from jam.utils.constants import EPOCH_LENGTH
+from jam.types.audit.audit_tranche import Tranche
+from jam.state.state import state
+from jam.audit.utils import Utils
+from jam.audit.audit import Audit
 
 # Module-specific logger
 logger = get_logger("network")
@@ -117,6 +119,8 @@ class JudgmentPublication(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept individual Judgment from other Auditors for their assigned Work Reports """
+        from jam.state.state import state
+        from jam.settings import settings
 
         buffer = server.stream_buffer[stream_id][1:]
 
@@ -139,9 +143,20 @@ class JudgmentPublication(NetworkProtocol):
             wr_hash = data.judgment.work_report_hash
             edd2519_signature = data.judgment.ed25519_signature
 
+            # epoch compare
+            curr_epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
+            if curr_epoch_index == epoch_index:
+                edd2519_key = state.kappa[settings.validator_index].ed25519
+                logger.info("Same epoch judgment received")
+            else:
+                if curr_epoch_index - EpochIndex(1) == epoch_index:
+                    edd2519_key = state.lambda_[settings.validator_index].ed25519
+                    logger.info("judgments received last epoch")
+                else:
+                    raise KeyError("Judgment age is not Valid. because work report is too old.")
 
             # Handling received judgment
-            asyncio.create_task(self.handle_judgment(judgment=data.judgment))
+            asyncio.create_task(self.handle_judgment(judgment=data.judgment, ed25519_key=edd2519_key))
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
@@ -176,15 +191,10 @@ class JudgmentPublication(NetworkProtocol):
         return False
 
 
-    async def handle_judgment(self, judgment: Judgment):
-        from jam.storage.tranche_audit_store import tranche_store
-        from jam.state.state import State, state
+    async def handle_judgment(self, judgment: Judgment, ed25519_key: Ed25519Public):
+        from jam.state.state import state
         from jam.settings import settings
-        from jam.audit.utils import Utils
-        from jam.audit.audit import Audit
-
-        audit = Audit()
-        utils = Utils()
+        from jam.storage.tranche_audit_store import tranche_store
 
         try:
             tranche = await tranche_store.fetch_rep_tranche(judgment)
@@ -192,52 +202,16 @@ class JudgmentPublication(NetworkProtocol):
             if not tranche:
                 raise ValueError(f"Tranche not found for report {judgment.work_report_hash.hex()}")
 
-            header_hash = tranche.header_hash
+            if judgment.validity == U8(0):
+                asyncio.create_task(self.negative_judgments(judgment=judgment, tranche=tranche))
 
-            header_state = state.load(header_hash=header_hash)
-
-            ed25519_public = header_state.kappa[settings.validator_index].ed25519
-
-            # SAVE JUDGMENTS RECORDS
             await tranche_store.update_judgment(
                 tranche= tranche,
                 judgment= judgment,
-                ed25519_public= ed25519_public
+                ed25519_public= ed25519_key
             )
 
-            # logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {judgment.work_report_hash} from state || { tranche_store.get_state(tranche=tranche)}")
-
-            # if judgment.validity == U8(0):
-            #     print("ye nhi chala")
-            #     update_validity = await utils.process_refine(tranche=tranche, wr_hash=judgment.work_report_hash)
-            #
-            #     if update_validity is not None:
-            #         epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
-            #
-            #         ed25519_signature = audit.judgment_signature(wr=wr, validity=update_validity)
-            #
-            #         judgment = Judgment(
-            #             epoch_index=epoch_index,
-            #             validator_index=settings.validator_index,
-            #             validity=update_validity,
-            #             work_report_hash=WorkReportHash(wr_hash),
-            #             ed25519_signature=Ed25519Signature(ed25519_signature),
-            #         )
-            #
-            #         # ------------------- Save judgment in Tranche State ---------------------------------------------
-            #
-            #         await tranche_store.update_judgment(
-            #             tranche=tranche,
-            #             judgment=judgment,
-            #             ed25519_public=settings.ed25519_public
-            #         )
-            #
-            #         # logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {wr_hash} from state || {tranche_store.get_state(tranche=tranche)}")
-            #
-            #         data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
-            #         # response = await CE145.transmit(data=data)
-            #         await asyncio.create_task(self.transmit(data=data))
-
+            logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {judgment.work_report_hash} from state || { tranche_store.get_state(tranche=tranche)}")
 
         except Exception as JERR:
             logger.error(
@@ -246,3 +220,39 @@ class JudgmentPublication(NetworkProtocol):
                 err=str(JERR),
                 err_type=type(JERR).__name__
             )
+
+    async def negative_judgments(self, judgment: Judgment, tranche: Tranche):
+        """
+        this handle only negative judgments
+        """
+        from jam.settings import settings
+        from jam.storage.tranche_audit_store import tranche_store
+
+        # process refine results
+        update_validity = await Utils.process_refine(tranche=tranche, wr_hash=judgment.work_report_hash)
+
+        if update_validity is not None:
+
+            epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
+
+            ed25519_signature = Audit.judgment_signature(wr_hash=judgment.work_report_hash, validity=update_validity)
+
+            judgment = Judgment(
+                epoch_index=epoch_index,
+                validator_index=settings.validator_index,
+                validity=update_validity,
+                work_report_hash=judgment.work_report_hash,
+                ed25519_signature=Ed25519Signature(ed25519_signature),
+            )
+
+            # ------------------- Save judgment in Tranche State ---------------------------------------------
+            await tranche_store.update_judgment(
+                tranche=tranche,
+                judgment=judgment,
+                ed25519_public=settings.ed25519_public
+            )
+
+            # logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {wr_hash} from state || {tranche_store.get_state(tranche=tranche)}")
+
+            data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
+            response = await self.transmit(data=data)

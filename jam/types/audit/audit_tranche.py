@@ -1,15 +1,13 @@
 from dataclasses import dataclass
-from typing import Set, TypeAlias
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.struct import structure
 from tsrkit_types.option import Option
-from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits, Faults
 from jam.network.protocols.ce_144 import NoShows, CoreReportHash
 from jam.types.protocol.crypto import HeaderHash, Hash, Ed25519Signature, Ed25519Public
-from jam.types.protocol.core import ValidatorIndex, TrancheIndex, CoreIndex
-from jam.types.work.report import WorkReport, WorkReportHash, WorkReports
+from jam.types.protocol.core import ValidatorIndex, TrancheIndex, CoreIndex, EpochIndex
+from jam.types.work.report import WorkReport, WorkReportHash
 
 SignatureList = TypedVector[Bytes]
 ValidatorSet = set[ValidatorIndex]
@@ -19,14 +17,15 @@ OptionalReports = TypedVector[OptionalReport]
 
 
 @dataclass(frozen=True)
-class ValidatorSignature:
+class JudgmentData:
     """ Validator judgment with their ed25519_public key and signature structure. """
 
+    epoch_index: EpochIndex
     validator_index: ValidatorIndex
     ed25519_public: Ed25519Public
     ed25519_signature: Ed25519Signature
 
-judgmentSet = set[ValidatorSignature]
+judgmentSet = set[JudgmentData]
 
 @structure
 class CoreReport:
@@ -84,8 +83,6 @@ class TrancheState:
     unaudited_list: OptionalReports
     records: Records
     audited_list: TypedVector[CoreReportHash]
-    invalid_list: TypedVector[CoreReportHash]
-    dispute: DisputesExtrinsic
 
 
     @staticmethod
@@ -95,12 +92,6 @@ class TrancheState:
             unaudited_list= OptionalReports([]),
             records= Records({}),
             audited_list= TypedVector[CoreReportHash]([]),
-            invalid_list= TypedVector[CoreReportHash]([]),
-            dispute= DisputesExtrinsic(
-                verdicts= Verdicts([]),
-                culprits= Culprits([]),
-                faults= Faults([])
-            )
        )
 
     def carry_forward(self) -> "TrancheState":
@@ -109,12 +100,6 @@ class TrancheState:
             unaudited_list= OptionalReports([]),
             records= self.records.clear_an(),
             audited_list= self.audited_list,
-            invalid_list= self.invalid_list,
-            dispute= DisputesExtrinsic(
-                verdicts= Verdicts([]),
-                culprits= Culprits([]),
-                faults= Faults([])
-            )
         )
 
 @structure
@@ -128,3 +113,5 @@ class Tranche:
 
     def __hash__(self):
         return int.from_bytes(Hash.blake2b(self.encode()))
+
+
