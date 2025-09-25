@@ -1,5 +1,4 @@
-import asyncio
-import json
+
 from copy import deepcopy
 from typing import Tuple, Set, List
 from jam.execution.invocations.accumulate import PsiA
@@ -8,7 +7,6 @@ from tsrkit_types.integers import Uint
 from tsrkit_types.null import Null
 from jam.block import Block
 from jam.execution.invocations.on_transfer import PsiT
-from jam.finality.finality import Finality
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     AccumulationOutput,
@@ -27,7 +25,6 @@ from jam.types.state.chi import ChiZ
 from jam.types.state.omega import AllReadyWRs, ReadyWR
 from jam.types.state.theta import Commitment, Theta
 from jam.utils.constants import EPOCH_LENGTH, TOTAL_GAS, ACCUMULATION_GAS, CORE_COUNT
-from jam.types.protocol.merkle import OptionHash
 from jam.types.protocol.core import Gas, ServiceId
 from jam.types.work import (
     WorkDependencies,
@@ -587,30 +584,4 @@ class Accumulation:
         state.xi = xi
         state.omega = omega
 
-        asyncio.create_task(Accumulation.rpc(state))
-
         return state, commitment_map
-
-    @staticmethod
-    async def rpc(state: Sigma):
-        from jam.settings import settings
-        from jam.api.rpc.broker import broker
-        if settings.rpc_flag:
-            keys = broker.topics.keys()
-            matches = [k for k in keys if "subscribeServiceValue" in k]
-            for req in matches:
-                params = req.split(":")
-                sid = ServiceId(params[1])
-                key_list = json.loads(params[2])
-                key = Bytes(key_list)
-                finality = True if params[3] == 'True' else False
-                value = state.delta[sid].storage.get(key) if state.delta[sid].storage.get(key) is None else list(
-                    state.delta[sid].storage.get(key))
-                last_publish = broker.last_publish
-                if req not in last_publish or last_publish[req] != value:
-                    from jam.settings import settings
-                    block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(
-                        settings.main_db)
-
-                    await broker.publish(req, {"header_hash": list(block.header.hash()), "slot": int(block.header.slot), "value": value})
-                    broker.last_publish[req] = value

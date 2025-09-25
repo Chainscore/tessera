@@ -2,7 +2,7 @@ import asyncio
 import math
 from typing import List
 
-from jam.api.rpc.broker import broker
+from jam.api.rpc.subscription_handlers import subscribe_statistics
 from jam.types import AllValidatorStats, Sigma, WorkReport
 from jam.block.block import Block
 
@@ -94,7 +94,7 @@ class Statistics:
 
         state.pi = pi
 
-        # Publishes updates of the statistics stored in chain state returns blob
-        # asyncio.create_task(broker.publish("subscribeStatistics", list(pi.encode())))
+        # Publishes updates of the statistics stored in chain state
+        asyncio.create_task(subscribe_statistics(pi))
 
         return state

@@ -1,8 +1,3 @@
-import asyncio
-import json
-
-from jam.finality.finality import Finality
-from jam.types import ServiceId
 from jam.types.state.pi import ServiceStat
 from copy import deepcopy
 from tsrkit_types import Bytes
@@ -62,7 +57,6 @@ class Preimages:
             curr_service_stat.provided_size += len(preimage.blob)
         state.pi = pi
 
-        asyncio.create_task(Preimages.rpc(state))
 
         return state
 
@@ -102,37 +96,3 @@ class Preimages:
             raise PreimageError(
                 PreimageErrorEnum.PREIMAGE_NOT_SORTED_UNIQUE, "Preimages must be sorted"
             )
-
-    @staticmethod
-    async def rpc(state: Sigma):
-        from jam.settings import settings
-        if settings.rpc_flag:
-            from jam.api.rpc.broker import broker
-            keys = broker.topics.keys()
-            matches = [k for k in keys if "subscribeServiceRequest" in k]
-            for req in matches:
-                params = req.split(":")
-                # ['subscribeServiceRequest', '0',
-                #  '[190, 40, 209, 142, 179, 130, 108, 57, 75, 70, 177, 252, 4, 74, 224, 93, 191, 130, 151, 153, 194, 252, 49, 104, 23, 192, 93, 117, 207, 39, 52, 42]',
-                #  '16296', 'True']
-
-                hash_list = json.loads(params[2])
-
-                # method = params[0]
-                sid = ServiceId(params[1])
-                pi_hash = bytes(hash_list)
-                pi_len = BlobLength(params[3])
-                finality = True if params[4] == 'True' else False
-
-                account = state.delta[sid]
-                lookup_key = LookupTable(Bytes[32](pi_hash), BlobLength(pi_len))
-                value = account.lookup[lookup_key]
-
-                last_publish = broker.last_publish
-
-                if req not in last_publish or last_publish[req] != value:
-                    from jam.settings import settings
-                    block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(
-                        settings.main_db)
-                    await broker.publish(req, {"header_hash": list(block.header.hash()), "slot": int(block.header.slot), "value": value})
-                    broker.last_publish[req] = value

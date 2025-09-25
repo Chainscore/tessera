@@ -8,6 +8,7 @@ from quart import Quart, websocket, jsonify, request
 import itertools
 from tsrkit_types import U32
 from .ws_handlers import dispatch_ws_call
+from .subscription_handlers import initial_subscription
 
 
 def _json_default(val):
@@ -57,14 +58,25 @@ _sub_id_counter = itertools.count(1)
 SUBSCRIPTIONS = {
     "subscribeSyncStatus":  lambda params: "subscribeSyncStatus",
     "subscribeFinalizedBlock": lambda params: "subscribeFinalizedBlock",
-    "subscribeServiceRequest": lambda params:(
-        f"subscribeServiceRequest:{params[0]}:{params[1]}:{params[2]}:{params[3]}"
+    "subscribeBestBlock": lambda params: "subscribeBestBlock",
+    "subscribeStatistics": lambda params:(
+        f"subscribeStatistics:{params[0]}"
+    ),
+    "subscribeServiceData": lambda params:(
+        f"subscribeServiceData:{params[0]}:{params[1]}"
     ),
     "subscribeServiceValue": lambda params:(
         f"subscribeServiceValue:{params[0]}:{params[1]}:{params[2]}"
     ),
-    "subscribeBestBlock": lambda params: "subscribeBestBlock"
+    "subscribeServicePreimage": lambda params:(
+        f"subscribeServicePreimage:{params[0]}:{params[1]}:{params[2]}"
+    ),
+    "subscribeServiceRequest": lambda params:(
+        f"subscribeServiceRequest:{params[0]}:{params[1]}:{params[2]}:{params[3]}"
+    ),
 }
+
+REMOVE_SUBSCRIPTIONS = ["unsubscribeSyncStatus", "unsubscribeFinalizedBlock", "subscribeBestBlock", "unsubscribeStatistics", "unsubscribeServiceData", "unsubscribeServiceValue", "unsubscribeServicePreimage", "unsubscribeServiceRequest"]
 
 @rpc.websocket("/")
 async def ws():
@@ -99,6 +111,7 @@ async def ws():
 
         subs[sub_id] = asyncio.create_task(pump())
         topics[sub_id] = topic
+        initial_subscription(method, params)
 
     try:
         while True:
@@ -116,14 +129,13 @@ async def ws():
                 continue
 
             # unsubscribe just this stream using id
-            if method == "unsubscribeSyncStatus" or method == "unsubscribeFinalizedBlock" or method == "unsubscribeServiceRequest" or method == "unsubscribeServiceValue":
+            if method in REMOVE_SUBSCRIPTIONS:
                 ok = False
                 if params:  # expect [sub_id]
                     sid = params[0]
                     task = subs.pop(sid, None)
                     topic = topics.pop(sid, None)
                     broker.topics.pop(topic, None)
-                    broker.last_publish.pop(topic, None)
                     if task:
                         task.cancel()
                         ok = True
