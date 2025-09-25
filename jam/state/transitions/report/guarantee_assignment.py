@@ -3,7 +3,7 @@ from typing import Dict, List
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.integers import U32
 
-from jam.types import OpaqueHash, ValidatorIndex, Sigma
+from jam.types import OpaqueHash, ValidatorIndex, Sigma, ValidatorData
 from jam.types.audit.tranche import ValidatorList
 from jam.types.protocol.core import CoreIndex, TimeSlot
 
@@ -133,15 +133,18 @@ def assign_fn(state: Sigma):
     vals = state.kappa
 
     curr_mapping: Dict[CoreIndex, ValidatorList] = {}
+    curr_vals: Dict[CoreIndex, TypedVector[ValidatorData]] = {}
 
     for i, (core, val) in enumerate(zip(assigned_cores, vals)):
         if core not in curr_mapping:
             curr_mapping[core] = ValidatorList([])
+            curr_vals[core] = TypedVector[ValidatorData]([])
 
         curr_mapping[core].append(ValidatorIndex(i))
+        curr_vals[core].append(vals[i])
 
     if state.tau < ROTATION_PERIOD:
-        return curr_mapping, curr_mapping
+        return curr_mapping, curr_vals, curr_mapping, curr_vals
 
     prev_rot_slot = state.tau - ROTATION_PERIOD
     prev_rot_epoch = prev_rot_slot // EPOCH_LENGTH
@@ -156,11 +159,14 @@ def assign_fn(state: Sigma):
         vals = state.lambda_
 
     prev_mapping: Dict[CoreIndex, ValidatorList] = {}
+    prev_vals: Dict[CoreIndex, TypedVector[ValidatorData]] = {}
 
     for i, (core, val) in enumerate(zip(assigned_cores, vals)):
         if core not in prev_mapping:
             prev_mapping[core] = ValidatorList([])
+            prev_vals[core] = TypedVector[ValidatorData]([])
 
         prev_mapping[core].append(ValidatorIndex(i))
+        prev_vals[core].append(vals[i])
 
-    return curr_mapping, prev_mapping
+    return curr_mapping, curr_vals, prev_mapping, prev_vals

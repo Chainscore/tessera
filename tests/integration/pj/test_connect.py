@@ -71,7 +71,7 @@ async def test_1_tsr_2_pjam():
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_tiny_tsr():
+async def test_tiny_tsr(rpc):
     CLIENTS = [
         Client(Role.VAL, 40000 + 0),
         Client(Role.VAL, 40000 + 1),
@@ -81,7 +81,7 @@ async def test_tiny_tsr():
         Client(Role.VAL, 40000 + 5),
     ]
     
-    await setup_processes(CLIENTS, [operate], 2400)
+    await setup_processes(CLIENTS, [operate], 2400, rpc_flag=rpc)
 
 
 @pytest.mark.asyncio

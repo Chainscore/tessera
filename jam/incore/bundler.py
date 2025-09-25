@@ -11,7 +11,6 @@ from jam.incore.utils import Utils
 
 from jam.log_setup import pvm_logger as logger
 
-from jam.network.node import Node
 from jam.network.utils.shards import get_vi
 from jam.network.protocols.ce_139_base import SegmentIndexes, Query, Queries, CE139Data
 
