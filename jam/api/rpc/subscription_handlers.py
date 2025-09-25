@@ -2,10 +2,12 @@ import asyncio
 
 from jam.block import Block
 from jam.api.rpc.broker import broker
-from jam.types.state.delta import LookupTable
+from jam.types.state.delta import LookupTable, Timestamps, AccountMetadata
 from tsrkit_types import Bytes
 from jam.types.protocol.core import ServiceId, BlobLength
 from jam.log_setup import network_logger as logger
+from jam.types.protocol.crypto import HeaderHash, OpaqueHash
+from jam.types.state.pi import Pi
 
 
 def initial_subscription(method, params: list):
@@ -107,7 +109,7 @@ def initial_subscription(method, params: list):
         case _:
             return
 
-async def subscribe_sync_status(status):
+async def subscribe_sync_status(status: str):
     try:
         from jam.settings import settings
         if settings.rpc_flag:
@@ -115,7 +117,7 @@ async def subscribe_sync_status(status):
     except Exception as e:
         logger.error("Error publishing subscribeSyncStatus", e)
 
-async def subscribe_best_block(header_hash):
+async def subscribe_best_block(header_hash: HeaderHash):
     try:
         from jam.settings import settings
         if settings.rpc_flag:
@@ -127,7 +129,7 @@ async def subscribe_best_block(header_hash):
     except Exception as e:
         logger.error("Error publishing subscribeBestBlock", e)
 
-async def subscribe_finalized_block(header_hash):
+async def subscribe_finalized_block(header_hash: HeaderHash):
     try:
         from jam.settings import settings
         from jam.api.rpc.broker import broker
@@ -140,7 +142,7 @@ async def subscribe_finalized_block(header_hash):
     except Exception as e:
         logger.error("Error publishing subscribeFinalizedBlock", e)
 
-async def subscribe_service_value(sid: ServiceId, key, value):
+async def subscribe_service_value(sid: ServiceId, key: Bytes, value: list | None):
     try:
         key_list = list(key)
         method = f"subscribeServiceValue:{int(sid)}:{key_list}"
@@ -148,7 +150,7 @@ async def subscribe_service_value(sid: ServiceId, key, value):
     except Exception as e:
         logger.error("Error publishing subscribeServiceValue", e)
 
-async def subscribe_service_request(sid: ServiceId, pi_hash, pi_len, value):
+async def subscribe_service_request(sid: ServiceId, pi_hash: OpaqueHash, pi_len: BlobLength, value: Timestamps | None):
     try:
         pi_hash_list = list(pi_hash)
         method = f"subscribeServiceRequest:{int(sid)}:{pi_hash_list}:{int(pi_len)}"
@@ -156,7 +158,7 @@ async def subscribe_service_request(sid: ServiceId, pi_hash, pi_len, value):
     except Exception as e:
         logger.error("Error publishing subscribeServiceRequest", e)
 
-async def subscribe_statistics(pi):
+async def subscribe_statistics(pi: Pi):
     try:
         value = list(pi.encode()) if pi else None
         method = f"subscribeStatistics"
@@ -164,15 +166,15 @@ async def subscribe_statistics(pi):
     except Exception as e:
         logger.error("Error publishing subscribeStatistics", e)
 
-async def subscribe_service_data(sid: ServiceId, meta):
+async def subscribe_service_data(sid: ServiceId, account_metadata: AccountMetadata):
     try:
-        value = list(meta.encode()) if meta else None
+        value = list(account_metadata.encode()) if account_metadata else None
         method = f"subscribeServiceData:{int(sid)}"
         await pub(method, value)
     except Exception as e:
         logger.error("Error publishing subscribeServiceData", e)
 
-async def subscribe_service_preimage(sid: ServiceId, pi_hash, blob):
+async def subscribe_service_preimage(sid: ServiceId, pi_hash: OpaqueHash, blob: Bytes):
     try:
         pi_hash_list = list(pi_hash)
         value = list(blob) if blob else None
@@ -181,7 +183,7 @@ async def subscribe_service_preimage(sid: ServiceId, pi_hash, blob):
     except Exception as e:
         logger.error("Error publishing subscribeServicePreimage", e)
 
-async def pub(method, value):
+async def pub(method: str, value: list | None):
     from jam.settings import settings
     from jam.finality.finality import Finality
     if settings.rpc_flag:

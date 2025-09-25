@@ -219,7 +219,7 @@ class StorageView:
         else:
             meta_view.num_o = meta_view.num_o + len(value) - len(curr_data)
         # Publishes updates for service value
-        asyncio.create_task(subscribe_service_value(self.id, list(key), list(value)))
+        asyncio.create_task(subscribe_service_value(self.id, key, list(value)))
 
         self.store.put(storage_key, value)
 
@@ -231,7 +231,7 @@ class StorageView:
             meta_view.num_i = meta_view.num_i - 1
             meta_view.num_o = meta_view.num_o - len(curr_value) - 34 - len(key)
         # Publishes updates for service value
-        asyncio.create_task(subscribe_service_value(self.id, list(key), None))
+        asyncio.create_task(subscribe_service_value(self.id, key, None))
 
         self.store.delete(storage_key)
 
