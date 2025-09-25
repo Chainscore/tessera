@@ -3,7 +3,6 @@ from keyword import kwlist
 from typing import Tuple
 
 from rockstore import store
-from jam.api.rpc.broker import broker
 from jam.execution.utils import decode_code_hash
 from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
@@ -24,6 +23,12 @@ from jam.utils.constants import (
 )
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32
+from jam.api.rpc.subscription_handlers import (
+    subscribe_service_value,
+    subscribe_service_request,
+    subscribe_service_data,
+    subscribe_service_preimage
+)
 
 
 def make_account_prop(field):
@@ -44,6 +49,9 @@ def make_account_prop(field):
         k, v = construct_state_key((255, self.id)), meta.encode()
        
         self.store.put(k, v)
+
+        # Publishes updates of the service data.
+        asyncio.create_task(subscribe_service_data(self.id, meta))
 
     return property(getter, setter)
 
@@ -210,7 +218,8 @@ class StorageView:
             meta_view.num_o = meta_view.num_o + len(value) + 34 + len(key)
         else:
             meta_view.num_o = meta_view.num_o + len(value) - len(curr_data)
-            #websocket broadcast for service value
+        # Publishes updates for service value
+        asyncio.create_task(subscribe_service_value(self.id, list(key), list(value)))
 
         self.store.put(storage_key, value)
 
@@ -221,6 +230,8 @@ class StorageView:
             meta_view = AccountDataView(self.id, self.store)
             meta_view.num_i = meta_view.num_i - 1
             meta_view.num_o = meta_view.num_o - len(curr_value) - 34 - len(key)
+        # Publishes updates for service value
+        asyncio.create_task(subscribe_service_value(self.id, list(key), None))
 
         self.store.delete(storage_key)
 
@@ -243,9 +254,13 @@ class PreImageView:
     def __setitem__(self, key: Bytes[32], value: Bytes):
         k = self.get_key(key)
         self.store.put(k, value)
+        # Publishes updates for service preimage
+        asyncio.create_task(subscribe_service_preimage(self.id, key, value))
 
     def __delitem__(self, key: Bytes[32]):
         storage_key = self.get_key(key)
+        # Publishes updates for service preimage
+        asyncio.create_task(subscribe_service_preimage(self.id, key, None))
 
         self.store.delete(storage_key)
 
@@ -276,6 +291,8 @@ class TimestampsView:
         if curr_data is None:
             meta_view.num_i = meta_view.num_i + 2
             meta_view.num_o = meta_view.num_o + key.length + 81
+        # Publishes updates for service request
+        asyncio.create_task(subscribe_service_request(self.id, key.hash, key.length, value))
 
         self.store.put(storage_key, v)
 
@@ -286,5 +303,7 @@ class TimestampsView:
             meta_view = AccountDataView(self.id, self.store)
             meta_view.num_i = meta_view.num_i - 2
             meta_view.num_o = meta_view.num_o - key.length - 81
+        # Publishes updates for service request
+        asyncio.create_task(subscribe_service_request(self.id, key.hash, key.length, None))
 
         self.store.delete(storage_key)
