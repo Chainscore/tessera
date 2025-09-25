@@ -48,6 +48,7 @@ from jam.state.transitions import (
     Preimages,
     Statistics,
 )
+from jam.api.rpc.subscription_handlers import subscribe_statistics
 
 class State:
     """
@@ -256,6 +257,8 @@ class State:
 
             if block.validate():
                 state.settle(header_hash)
+                # Publishes updates of the statistics stored in chain state
+                asyncio.create_task(subscribe_statistics(state.pi))
 
                 # Set local chain head to produced block
                 block.save(_set.main_db)
