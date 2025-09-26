@@ -38,7 +38,6 @@ from jam.types.work.manifest import (
 )
 
 from jam.types.protocol.core import SegmentRoot
-from jam.types.protocol.crypto import OpaqueHash
 
 from jam.utils.chainspec import chain_config
 from jam.utils.gather import gather_with_exceptions

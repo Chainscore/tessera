@@ -98,7 +98,7 @@ async def main(
             tg.create_task(start_node(str(host), int(port), is_builder))
             if rpc_flag:
                 # RPC
-                tg.create_task(rpc.run_task(debug=True, host=rpc_host, port=rpc_port, shutdown_trigger=rpc_shutdown_trigger))
+                tg.create_task(rpc.run_task(debug=True, host=rpc_host, port=int(rpc_port), shutdown_trigger=rpc_shutdown_trigger))
             # Node Ops - Block Prod, Audit, Assurances, etc
             tg.create_task(operate(is_builder))
 
