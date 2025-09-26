@@ -24,7 +24,7 @@ def _json_default(val):
 
 
 
-rpc = Quart(__name__)
+rpc: Quart = Quart(__name__)
 
 # subscription ID's setup
 # increment sub id at every connection
