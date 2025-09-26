@@ -79,8 +79,7 @@ class Preimages:
                 preimage.blob,
             )
 
-        sorted_preimages = deepcopy(preimages)
-        sorted_preimages.sort(key=sort_fn)
+        sorted_preimages = sorted( preimages, key=sort_fn)
 
         # Check for duplicates in adjacent entries
         for i in range(1, len(sorted_preimages)):
