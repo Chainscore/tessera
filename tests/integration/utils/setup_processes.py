@@ -75,9 +75,6 @@ async def setup_processes(clients: list[Client], node_tasks: list[Optional[Calla
     for p in processes:
         p.join()
 
-    print("!!!!!!!!!SAVING VECTORS!!!!!!!!!!!!")
-    from ..jamnp.test_full import b_vectors
-    write_json("vectors/combined-full", b_vectors.to_json())
 
     print("END OF TEST")
 
