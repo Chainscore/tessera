@@ -1,4 +1,5 @@
 import asyncio
+import time
 from jam.log_setup import block_logger as logger
 from rockstore import RockStore
 from jam.types.protocol.crypto import Hash, HeaderHash
@@ -17,21 +18,17 @@ class Finality:
     LATEST_KEY = bytes(Hash.blake2b(b"LATEST_BLOCK"))
 
     @classmethod
-    async def schedule_run(cls, header_hash: HeaderHash, kv: RockStore, sch_ts: int, initial: bool ) -> None:
+    def finalise(cls, header_hash: HeaderHash, kv: RockStore, initial: bool = True, sch_ts: int = 18):
         if initial:
             logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
             kv.put(cls.FINAL_KEY, header_hash.encode())
         else:
-            await asyncio.sleep(sch_ts)
+            time.sleep(sch_ts)
             logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
             kv.put(cls.FINAL_KEY, header_hash.encode())
 
         # publish updates of the latest finalized block
         asyncio.create_task(subscribe_finalized_block(header_hash))
-
-    @classmethod
-    def finalise(cls, header_hash: HeaderHash, kv: RockStore, initial: bool):
-        asyncio.create_task(cls.schedule_run(header_hash, kv, 18, initial))
 
     @classmethod
     def set_head(cls, header_hash: HeaderHash, kv: RockStore):
