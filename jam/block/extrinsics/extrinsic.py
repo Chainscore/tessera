@@ -70,6 +70,7 @@ class Extrinsic:
         from .guarantees import wrg_store
         from .assurances import asr_store
         from .preimages import preimg_store
+        from .disputes import dpt_store
 
         # Sort Assurances
         ea = AssurancesExtrinsic(sorted(asr_store._store, key=lambda a: a.validator_index))
@@ -95,7 +96,7 @@ class Extrinsic:
         ep.sort(key=preimage_sort_fn)
 
         # Already sorted
-        # ed = DisputesExtrinsic(dpt_store._store)
+        ed = DisputesExtrinsic(dpt_store._store)
 
         def sort_fn(ticket: TicketEnvelope) -> int:
             # Take VRF output of the signature and sort by it
@@ -127,14 +128,13 @@ class Extrinsic:
         from .guarantees import wrg_store
         from .assurances import asr_store
         from .preimages import preimg_store
-        # from .disputes import dpt_store
+        from .disputes import dpt_store
 
         ticket_store.remove(self.tickets)
         wrg_store.remove(self.guarantees)
         asr_store.remove(self.assurances)
         preimg_store.remove(self.preimages)
-        # TODO: Handle disputes
-        # dpt_store.remove(self.disputes)
+        dpt_store.remove(self.disputes)
         return
 
     def validate(self, header: "Header") -> bool:

@@ -5,7 +5,7 @@ from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits,
 from jam.block.block import Block
 from jam.types.work.report import WorkReportHash, WorkReport
 from jam.types.audit.audit_tranche import TrancheIndex, Tranche, OptionalReports, OptionalReport, TrancheState, CoreReport, Records, AuditRecord
-from jam.types.protocol.crypto import BandersnatchVrfSignature, Ed25519Public, Ed25519Signature
+from jam.types.protocol.crypto import BandersnatchVrfSignature, Ed25519Public, Ed25519Signature, HeaderHash
 from jam.types.protocol.core import CoreIndex, EpochIndex, ValidatorIndex
 from jam.audit.audit import Audit
 from jam.network.protocols.ce_144 import NoShow, SubsequentTrancheEvidence, CoreReportHash
@@ -136,7 +136,7 @@ class Utils:
                 return validity
 
     @staticmethod
-    async def block_audited(tranche: Tranche, block: Block):
+    async def block_audited(tranche: Tranche, block: Block) -> bool:
         """
         block B may be considered audited, a condition denoted U, when all
         the work-reports which were made available are considered audited.
@@ -163,7 +163,7 @@ class Utils:
                 wr_hash = wr.work_report.unwrap().hash()
                 if wr_hash not in available_r_hash:
                     logger.info("Found a report which is not audited, so block is unaudited")
-                    return
+                    return False
 
         logger.info(
             f"Block Audited 🔍 from audit engine",
@@ -171,6 +171,8 @@ class Utils:
             block_slot=block.header.slot,
             tranche=tranche,
         )
+
+        return True
 
     @staticmethod
     async def is_tranche(
@@ -461,5 +463,10 @@ class Utils:
             culprits= culprits,
             faults= faults
         )
+
+        # check are case like sorting, duplicate faults >= 1, culprits >= 2 and many more.....
+        # Add extrinsic into extrinsic store (local)
+        from jam.block.extrinsics.disputes import dpt_store
+        dpt_store.store(ext=dispute_ext)
 
         return dispute_ext

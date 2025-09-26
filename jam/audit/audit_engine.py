@@ -144,3 +144,9 @@ class AuditEngine:
             # Sleep for remainder time period
             await asyncio.sleep(next_ts - CURRENT_TIME())
             curr_ts += AUDIT_PERIOD
+
+    def get_audit_status(self):
+        """
+        Return current audit status without re-running the process.
+        """
+        return self.is_audited
