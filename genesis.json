@@ -321,7 +321,11 @@
                         "min_item_gas": 10,
                         "min_memo_gas": 10,
                         "bytes": 152106,
-                        "items": 4
+                        "deposit_offset": 0,
+                        "items": 4,
+                        "creation_slot": 0,
+                        "last_accumulation_slot": 0,
+                        "parent_service": 0
                     }
                 }
             }
