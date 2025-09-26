@@ -101,7 +101,6 @@ async def run_import(db_path: str, import_path: str) -> None:
             if state is None:
                 pre_state = test_vector.get("pre_state", {})
                 keyvals = pre_state.get("keyvals", [])
-                import multiprocessing as mp
                 state = setup_state_from_keyvals(settings.state_db, keyvals)
 
             # Process vector
