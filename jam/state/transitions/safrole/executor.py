@@ -36,11 +36,15 @@ def get_executor():
 
     return EXECUTOR
 
-def shutdown_executor():
+def shutdown_executor(wait: bool = False):
     global EXECUTOR
 
+    if not EXECUTOR:
+        print("No Executor to shutdown!")
+        return
+
     try:
-        EXECUTOR.shutdown(wait=True)
+        EXECUTOR.shutdown(wait=wait)
     except Exception:
         raise
     finally:

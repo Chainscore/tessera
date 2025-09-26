@@ -3,7 +3,6 @@ from typing import Dict
 from jam.settings import Settings
 from jam.types.protocol.ticket import TicketAttempt, TicketBody, TicketId
 from jam.types.state.gamma import Gamma, GammaA, GammaP, GammaS, GammaSTickets
-from jam.types.protocol.merkle import MMR
 from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
 from jam.types.state.beta import Beta, BlockHistory, BetaHistory, BeefyBelt
 from jam.types.state.chi import Chi, ChiZ, ChiA
@@ -29,9 +28,7 @@ from jam.types import (
     Phi,
     AllValidatorStats,
     Pi,
-    ValidatorStat,
     AllCoreStats,
-    CoreStat,
     AllServiceStats,
     Psi,
     PsiB,
@@ -44,7 +41,7 @@ from jam.types import (
     AllReadyWRs,
     Omega,
     Xi,
-    BeefyRoot,
+    BeefyRoot, TimeSlot,
 )
 
 from jam.state.state import State
@@ -61,6 +58,7 @@ from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
 )
+from jam.types.state.theta import Theta
 from jam.types.work import SegmentRootLookup
 from jam.types.protocol.core import (
     SegmentRoot,
@@ -105,6 +103,7 @@ def create_dummy_state_components() -> Dict[str, object]:
         reported=package_dict,
     )
     components["beta"] = Beta(h=BetaHistory([block for _ in range(3)]), b=BeefyBelt([]))
+    components["theta"] = Theta([])
 
     # Create dummy validator data
     key_set = [Settings(data_path=None, seed=i) for i in range(VALIDATOR_COUNT)]
@@ -131,7 +130,7 @@ def create_dummy_state_components() -> Dict[str, object]:
         [TicketBody(TicketId(create_dummy_bytes32()), TicketAttempt(i)) for i in range(3)]
     )
     components["gamma"] = Gamma(
-        k=validator_set,
+        p=validator_set,
         z=ring_root,
         s=GammaS(slot_sealers),
         a=ticket_accumulator,
@@ -139,10 +138,10 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Delta - Service dictionary
     storage = AccountStorage(
-        {create_dummy_bytes32(): Bytes(create_dummy_bytes(32)) for _ in range(3)}
+        {Bytes(create_dummy_bytes(32)): Bytes(create_dummy_bytes(32)) for _ in range(3)}
     )
     lookup = AccountPreimages(
-        {create_dummy_bytes32(): Bytes(create_dummy_bytes(64)) for _ in range(2)}
+        {Bytes[32](create_dummy_bytes32()): Bytes(create_dummy_bytes(64)) for _ in range(2)}
     )
     timestamps = AccountLookup(
         {
@@ -159,8 +158,12 @@ def create_dummy_state_components() -> Dict[str, object]:
         service=AccountMetadata(
             code_hash=ServiceCodeHash(create_dummy_bytes32()),
             balance=Balance(1000),
+            gratis_offset=Balance(0),
             gas_limit=Gas(5000),
             min_gas=Gas(100),
+            created_at=TimeSlot(0),
+            accumulated_at=TimeSlot(0),
+            parent_service=ServiceId(1),
             num_o=Ao(0),
             num_i=Ai(0),
         ),
@@ -185,7 +188,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     chi_z = ChiZ({ServiceId(i): Gas(100) for i in range(3)})
     chi_a = ChiA([ServiceId(i) for i in range(CORE_COUNT)])
     components["chi"] = Chi(
-        chi_m=ServiceId(0), chi_a=chi_a, chi_v=ServiceId(2), chi_g=chi_z
+        chi_m=ServiceId(0), chi_a=chi_a, chi_v=ServiceId(2), chi_z=chi_z
     )
 
     # Psi

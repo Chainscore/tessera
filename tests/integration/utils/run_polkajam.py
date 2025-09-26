@@ -12,7 +12,7 @@ async def run_pj_command(node_id: int):
     binary_path = str(Path(__file__).parents[3] / "polkajam")
     envs = ""
     if hasattr(os.environ, "RUST_LOG"):
-        envs = f"RUST_LOG={os.environ["RUST_LOG"]}"
+        envs = f"RUST_LOG={os.environ['RUST_LOG']}"
 
     command = f"export {envs} && exec {binary_path}/polkajam run --dev-validator {node_id} --temp --rpc-port {19800+int(node_id)}"
 
