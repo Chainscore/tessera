@@ -64,19 +64,19 @@ pyenv install 3.11.4
 pyenv global 3.11.4
 ```
 
-### 📦 Poetry Setup
+### 📦 UV Setup
 
-We use Poetry for dependency management:
+We use UV for fast, modern Python package management:
 
 ```bash
-# Install Poetry
-curl -sSL https://install.python-poetry.org | python3 -
+# Install UV
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Add Poetry to your PATH
-export PATH="$HOME/.local/bin:$PATH"
+# Add UV to your PATH (restart shell or run)
+export PATH="$HOME/.cargo/bin:$PATH"
 
 # Verify installation
-poetry --version
+uv --version
 ```
 
 ### 📥 Project Setup
@@ -86,14 +86,12 @@ poetry --version
 git clone https://github.com/chainscore/tessera.git
 cd tessera
 
-# Install dependencies
-poetry install
+# Run setup script (installs dependencies and sets up environment)
+./scripts/setup.sh
 
-# Activate virtual environment
-poetry shell
-
-# Set up pre-commit hooks
-pre-commit install
+# Or manually:
+# uv sync --all-extras
+# uv run pre-commit install
 ```
 
 ### 🔧 IDE Setup
@@ -131,14 +129,13 @@ pre-commit install
 1. Install PyCharm from [jetbrains.com](https://www.jetbrains.com/pycharm/)
 
 2. Install plugins:
-   - Poetry
    - Black
    - isort
 
-3. Configure Poetry interpreter:
+3. Configure Python interpreter:
    - Go to Settings → Project → Python Interpreter
-   - Add Interpreter → Poetry Environment
-   - Select existing environment from your project
+   - Add Interpreter → System Interpreter
+   - Select the Python interpreter in your UV environment
 
 ## 🧪 Verifying Your Setup
 
@@ -173,16 +170,19 @@ jam
 
 ```bash
 # Add a new dependency
-poetry add package-name
+uv add package-name
 
-# Add a development dependency
-poetry add --group dev package-name
+# Add a development dependency  
+uv add package-name --dev
 
 # Update dependencies
-poetry update
+uv lock --upgrade
 
-# View dependency tree
-poetry show --tree
+# View installed packages
+uv tree
+
+# Run commands in the project environment
+uv run command-name
 ```
 
 ### 🔄 Git Workflow

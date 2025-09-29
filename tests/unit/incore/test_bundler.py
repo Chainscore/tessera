@@ -37,11 +37,10 @@ for i in range(1, 101):
 
 
 async def node_task():
-    from jam.logging import get_logger
+    from jam.log_setup import node_logger as logger
     from jam.incore.processor import Processor
     from jam.incore.bundler import Bundler
 
-    logger = get_logger()
     ts = int((time() - GENESIS_TS) // 6)
     init_ts = ts
 

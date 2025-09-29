@@ -86,7 +86,7 @@ class Extrinsic:
                 break
         rg_cores.clear()
 
-        ep = PreimagesExtrinsic(preimg_store._store[:])
+        ep = PreimagesExtrinsic(list(preimg_store._store.values()))
         def preimage_sort_fn(preimage: Preimage):
             return (
                 int(preimage.requester),
@@ -103,12 +103,9 @@ class Extrinsic:
             return int.from_bytes(Extrinsic.get_vrf_output(ticket.signature))
 
         if time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
-            print(f"Including tickets in block, time_slot={time_slot}, slot={time_slot%EPOCH_LENGTH}")
             et = TicketsExtrinsic(ticket_store._store[:MAX_TICKETS_PER_EXTRINSIC])
             et.sort(key=sort_fn)
-            print("Number of tickets included", len(et))
         else:
-            print(f"Tickets are not allowed in block after TICKET_SUBMISSION_END, time_slot={time_slot}, slot={time_slot%EPOCH_LENGTH}")
             et = TicketsExtrinsic([])
 
         return Extrinsic(

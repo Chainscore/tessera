@@ -13,16 +13,17 @@ class Node:
 
     @property
     def type(self) -> NodeType:
-        first_byte = self.encoded.to_bits()
-        if first_byte[0] and first_byte[1]:
-            return NodeType.LEAF_NORMAL
-        elif first_byte[0] and not first_byte[1]:
-            return NodeType.LEAF_EMBEDDED
-        elif not first_byte[0]:
+        # bit extraction without full conversion
+        first_byte = self.encoded[0]
+        if first_byte & 0x80:  # First bit is 1
+            if first_byte & 0x40:  # Second bit is 1
+                return NodeType.LEAF_NORMAL
+            else:  # Second bit is 0
+                return NodeType.LEAF_EMBEDDED
+        else:  # First bit is 0
             return NodeType.BRANCH
-        else:
-            raise ValueError(f"Invalid encoded node - {self.encoded}")
 
     @property
     def key_bits_248(self) -> List[bool]:
-        return Bytes(self.encoded).to_bits()[8:256]
+        """Extraction of key bits from encoded node (bits 8-255)."""
+        return self.encoded.slice_bits(8, 256)

@@ -1,5 +1,4 @@
-from typing import Tuple
-
+from typing import Any, Dict, Tuple
 from tsrkit_types import U32
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
@@ -11,7 +10,7 @@ from jam.types.state.accumulation.types import (
 )
 from jam.execution.invocations.arg_invoke import PsiM
 from jam.execution.invocations.functions.general_fns import GeneralFunctions
-from jam.execution.invocations.protocol import InvocationProtocol
+from jam.execution.invocations.protocol import InvocationInfo, InvocationProtocol
 from tsrkit_types.null import Null
 from tsrkit_types.integers import Uint
 from jam.types.protocol.core import Gas, ServiceId, TimeSlot
@@ -34,10 +33,12 @@ class PsiA(InvocationProtocol):
         self.operandTuples = o
         self.entropy = entropy
         self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(), t), y=self.initializer_fn(s, u.clone(), t))
+        self.table = self.build_table(s, self.context.x.partial_state.service_accounts)
 
-    def table(self):
-        xs = self.context.x.s_index
-        delta = self.context.x.partial_state.service_accounts
+    def build_table(self, 
+        xs: int,
+        delta: Dict[int, Any]
+    ) -> Dict[int, InvocationInfo]:
         return {
             # fetch
             1: (

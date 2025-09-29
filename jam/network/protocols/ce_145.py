@@ -5,7 +5,7 @@ from tsrkit_types import structure, Uint, U8, U32
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
-from jam.logging import get_logger
+from jam.log_setup import network_logger
 from jam.types.protocol.crypto import Ed25519Signature, Ed25519Public
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
@@ -17,7 +17,7 @@ from jam.audit.utils import Utils
 from jam.audit.audit import Audit
 
 # Module-specific logger
-logger = get_logger("network")
+logger = network_logger
 
 
 @structure

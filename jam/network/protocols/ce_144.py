@@ -1,8 +1,10 @@
 import asyncio
 from typing import cast
 from tsrkit_types import TypedVector, Uint, structure, Choice, U8
+
 from jam.utils.gather import gather_with_exceptions
-from jam.logging import get_logger
+
+from jam.log_setup import network_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.types.protocol.core import CoreIndex, ValidatorIndex, TrancheIndex
@@ -17,7 +19,7 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 
 # Module-specific logger
-logger = get_logger("network")
+logger = network_logger
 
 
 @structure

@@ -1,15 +1,12 @@
-import asyncio
-import json
+
 from copy import deepcopy
 from typing import Tuple, Set, List
-from jam.api.rpc.broker import broker
 from jam.execution.invocations.accumulate import PsiA
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
 from tsrkit_types.null import Null
 from jam.block import Block
 from jam.execution.invocations.on_transfer import PsiT
-from jam.finality.finality import Finality
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     AccumulationOutput,
@@ -28,7 +25,6 @@ from jam.types.state.chi import ChiZ
 from jam.types.state.omega import AllReadyWRs, ReadyWR
 from jam.types.state.theta import Commitment, Theta
 from jam.utils.constants import EPOCH_LENGTH, TOTAL_GAS, ACCUMULATION_GAS, CORE_COUNT
-from jam.types.protocol.merkle import OptionHash
 from jam.types.protocol.core import Gas, ServiceId
 from jam.types.work import (
     WorkDependencies,
@@ -285,7 +281,7 @@ class Accumulation:
                 outputs.add((service, _output_hash.unwrap()))
             transfers.extend(_transfers)
             collected_preimages.update(_preimages)
-
+            
             # Add partial cache to state
             state.store += partial_state.store
 
@@ -587,28 +583,5 @@ class Accumulation:
                 )
         state.xi = xi
         state.omega = omega
-
-        from jam.settings import settings
-        if settings.rpc_flag:
-            keys = broker.topics.keys()
-            matches = [k for k in keys if "subscribeServiceValue" in k]
-            for req in matches:
-                params = req.split(":")
-                sid = ServiceId(params[1])
-                key_list = json.loads(params[2])
-                key = Bytes(key_list)
-                finality = True if params[3] == 'True' else False
-                value = state.delta[sid].storage.get(key) if state.delta[sid].storage.get(key) is None else list(state.delta[sid].storage.get(key))
-                last_publish = broker.last_publish
-                if req not in last_publish or last_publish[req] != value:
-                    from jam.settings import settings
-                    block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(settings.main_db)
-
-                    print(f"Req: {req} header_hash: {block.header.hash().hex()[:16]} slot: {block.header.slot} value: {value}")
-
-                    asyncio.create_task(broker.publish(req,
-                                                       {"header_hash": list(block.header.hash()),
-                                                        "slot": int(block.header.slot), "value": value}))
-                    broker.last_publish[req] = value
 
         return state, commitment_map

@@ -7,7 +7,7 @@ from jam.types.state.accumulation.types import (
 )
 from tsrkit_types import U32, U64, Bytes
 from jam.types.protocol.validators import ValidatorData
-from jam.logging import get_logger
+from jam.log_setup import pvm_logger as logger
 from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
@@ -55,8 +55,6 @@ def check(u: GhostPartial, i: ServiceId):
         return i
     else:
         return check(u, ServiceId((i - 2**8 + 1) % (2**32 - 2**9) + 2**8))
-
-logger = get_logger("host_calls")
 
 
 class AccumulateFunctions(INVF):
@@ -331,7 +329,7 @@ class AccumulateFunctions(INVF):
 
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
 
-        lookup_key = LookupTable(hash=preimage_hash, length = preimage_len)
+        lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         lookup_value = context.x.partial_state.service_accounts[context.x.s_index].lookup[
             lookup_key
         ] # a' s value

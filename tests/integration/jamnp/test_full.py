@@ -9,7 +9,7 @@ import os
 from tsrkit_types import U32, Null
 
 from jam.block import Block
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
 from jam.operations import operate
@@ -19,9 +19,6 @@ from jam.utils.constants import GENESIS_TS
 
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
 from tests.unit.incore.types import BundleVector, BundleVectors, BlockVector, FullVector, FullVectors, BlockVectors
-
-# Logger for WP Production
-# logger = get_logger("test")
 
 CLIENTS = [
     Client(Role.VAL, 40000, theme="forest"),
@@ -61,7 +58,6 @@ async def node_task():
         if node.port == 40004:
             vector = vectors[wp_iter]
             merklizer = MMRFunctions()
-            logger = get_logger()
 
             ts = init_ts
 

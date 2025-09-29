@@ -50,23 +50,23 @@ Before adding a new dependency, evaluate:
 
 ```bash
 # Adding runtime dependency
-poetry add package-name==1.2.3
+uv add package-name==1.2.3
 
 # Adding development dependency
-poetry add --group dev package-name==1.2.3
-
-# Adding optional dependency
-poetry add --optional package-name==1.2.3
+uv add package-name==1.2.3 --dev
 
 # Adding dependency with extras
-poetry add "package-name[extra1,extra2]==1.2.3"
+uv add "package-name[extra1,extra2]==1.2.3"
+
+# Adding to optional dependency groups (edit pyproject.toml directly)
+# Then run: uv sync
 ```
 
 After adding:
 
 1. Update `README.md` or documentation if needed
-2. Run security scan: `safety check`
-3. Run all tests: `pytest`
+2. Run security scan: `uv run safety check`
+3. Run all tests: `uv run pytest`
 4. Document usage examples
 
 ## 🔍 Dependency Auditing
@@ -83,10 +83,10 @@ We conduct dependency audits:
 
 ```bash
 # Using safety
-poetry run safety check
+uv run safety check
 
-# Using pip-audit
-poetry run pip-audit
+# Using pip-audit  
+uv run pip-audit
 
 # Check for known vulnerabilities with specific output
 poetry export -f requirements.txt | safety check --full-report

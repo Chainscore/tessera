@@ -6,7 +6,7 @@ from jam.block.errors import BlockError, BlockErrorCode
 from jam.block.extrinsics.extrinsic import Extrinsic
 from jam.types.protocol.ticket import TicketBody
 from jam.types.state.gamma import GammaSFallback
-from jam.utils.constants import EPOCH_LENGTH, X
+from jam.utils.constants import EPOCH_LENGTH, X, TICKET_SUBMISSION_END
 from tsrkit_types import Option, structure, Null
 from jam.types import (
     BandersnatchVrfSignature,
@@ -186,9 +186,10 @@ class Header:
 
         # If we're in ticket mode
         is_ticket_mode = len(state.gamma.a) >= EPOCH_LENGTH
-        if is_new_epoch and is_ticket_mode and self.tickets_mark.unwrap() == Null:
+        is_last_ticket_slot = pre_state.tau % EPOCH_LENGTH < TICKET_SUBMISSION_END and self.slot % EPOCH_LENGTH >= TICKET_SUBMISSION_END
+        if is_last_ticket_slot and is_ticket_mode and not is_new_epoch and self.tickets_mark.unwrap() == Null:
             raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
-        elif not is_new_epoch and self.tickets_mark.unwrap() != Null:
+        if not (is_last_ticket_slot or is_ticket_mode or is_new_epoch) and self.tickets_mark.unwrap() != Null:
             raise BlockError(BlockErrorCode.TICKETS_MARK_NOT_EMPTY)
 
         # Parent exists

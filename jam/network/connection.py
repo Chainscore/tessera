@@ -15,7 +15,7 @@ from aioquic.quic.events import (
     StopSendingReceived,
 )
 from tsrkit_types import U8
-from jam.logging import get_logger
+from jam.log_setup import network_logger
 from jam.network.base.certificate import verify_certificate, generate_san
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import PrefixType
@@ -29,7 +29,7 @@ genesis_hash = "476243ad"
 protocol_version = "0"
 
 # Module-specific logger
-logger = get_logger("network")
+logger = network_logger
 
 
 class NodeConnection(QuicConnectionProtocol):

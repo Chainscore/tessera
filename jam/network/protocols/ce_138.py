@@ -3,7 +3,7 @@ from typing import cast, Tuple
 
 from tsrkit_types import Uint, structure, TypedVector, Bytes, U8
 
-from jam.logging import get_logger
+from jam.log_setup import network_logger
 
 from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_137 import CE137Data
@@ -21,7 +21,7 @@ from jam.utils.merkle import BMRFunctions
 from jam.utils.gather import gather_with_exceptions
 
 # Module-specific logger
-logger = get_logger("network")
+logger = network_logger
 
 class CE138Data(CE137Data):
     ...

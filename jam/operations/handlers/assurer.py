@@ -3,7 +3,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.block.extrinsics.assurances import AvailAssurance
 from jam.block.extrinsics.guarantees import ReportGuarantee
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 
 from tsrkit_types import Bytes, U32, TypedVector
 
@@ -17,8 +17,6 @@ from jam.storage.da.segments import SegmentShardsDA
 from jam.utils.merkle import BMRFunctions
 from jam.utils.chainspec import chain_config
 from jam.utils.constants import CORE_COUNT
-
-logger = get_logger("nodeops")
 
 
 class Assurer:

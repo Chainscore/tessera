@@ -39,9 +39,9 @@ parameters = {
     "deposit_per_byte": ADDITIONAL_BALANCE_PER_OCTET,  # B_L
     "min_turnaround_period": PREIMAGE_EVICTION_TIMESLOTS,  # D
     "epoch_period": EPOCH_LENGTH,  # E
-    "max_accumulate_gas": ACCUMULATION_GAS-1,  # G_A
+    "max_accumulate_gas": ACCUMULATION_GAS,  # G_A
     "max_is_authorized_gas": IS_AUTHORIZED_GAS,  # G_I
-    "max_refine_gas": REFINE_GAS-1,  # G_R
+    "max_refine_gas": REFINE_GAS,  # G_R
     "block_gas_limit": TOTAL_GAS,  # G_T
     "recent_block_count": RECENT_HISTORY_SIZE,  # H
     "max_work_items": MAX_WORK_ITEMS,  # I

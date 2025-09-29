@@ -18,10 +18,10 @@ for ((i=0; i<N; i++)); do
   THEME="${THEMES[i % ${#THEMES[@]}]}"
   echo "Launching validator $i on port $PORT with theme $THEME"
   if [[ $i -eq 0 ]]; then
-    poetry run jam --env "$ENV" --db "$DB" --theme "$THEME" --start-genesis --validator &
+    uv run jam --env "$ENV" --db "$DB" --theme "$THEME" --start-genesis --validator &
     sleep 10 &
   else
-    poetry run jam --env "$ENV" --db "$DB" --theme "$THEME" --validator &
+    uv run jam --env "$ENV" --db "$DB" --theme "$THEME" --validator &
   fi
   PIDS+=($!)
 done

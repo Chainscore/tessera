@@ -4,13 +4,12 @@ from typing import Optional, List
 
 from tsrkit_types import U8, U16, U32
 
-from jam.logging import get_logger
+from jam.log_setup import logger
 from jam.network.protocols.ce_145 import JudgmentPublication, Judgment, CE145Data
 from jam.types.protocol.crypto import Hash, Ed25519Signature, WorkReportHash
 from jam.types.protocol.core import ValidatorIndex
 
 # Module-specific logger
-logger = get_logger("judgment")
 
 
 def create_dummy_signature() -> Ed25519Signature:

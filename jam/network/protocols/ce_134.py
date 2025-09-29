@@ -4,7 +4,7 @@ from typing import cast
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import Option, Uint, structure, U8
 
-from jam.logging import get_logger
+from jam.log_setup import network_logger as logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -18,9 +18,6 @@ from jam.types.work import SegmentRootLookup
 
 from jam.utils.gather import gather_with_exceptions
 from jam.utils.constants import X
-
-# Module-specific logger
-logger = get_logger("network")
 
 
 @structure

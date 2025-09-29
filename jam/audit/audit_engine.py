@@ -5,7 +5,7 @@ from jam.audit.audit import Audit
 from jam.audit.utils import Utils
 from jam.block.block import Block
 from jam.finality.finality import Finality
-from jam.logging import get_logger
+from jam.log_setup import logger
 from jam.network.protocols.ce_144 import SubsequentTrancheEvidence
 from jam.types.protocol.core import TimeSlot
 from jam.types.audit.audit_tranche import (
@@ -16,9 +16,6 @@ from jam.types.audit.audit_tranche import (
 )
 from jam.types.work.report import WorkReports
 from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
-
-# Logger for Auditing module
-logger = get_logger("auditor")
 
 
 class AuditEngine:

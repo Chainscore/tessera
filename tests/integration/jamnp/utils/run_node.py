@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from jam.block import Block
 
 from jam.finality.finality import Finality
-from jam.logging import setup_logging, logger
+from jam.log_setup import setup_logging, logger
 
 
 from jam.settings import setup_setting

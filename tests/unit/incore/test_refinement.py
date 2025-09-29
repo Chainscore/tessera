@@ -8,7 +8,7 @@ import os
 
 from tsrkit_types import U32
 
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
 from jam.types import Hash
@@ -20,9 +20,6 @@ from jam.storage.da.mappings import (
 from jam.storage.da.reports import ReportsDA
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
 from tests.unit.incore.types import BundleVector, BundleVectors
-
-# Logger for WP Production
-# logger = get_logger("test")
 
 CLIENTS = [
     Client(Role.VAL, 40000, theme="cyberpunk"),
@@ -51,7 +48,6 @@ async def node_task():
     from jam.network.start import node
 
     if node.is_builder:
-        logger = get_logger()
 
         ts = init_ts
 
@@ -89,8 +85,6 @@ async def node_task():
     else:
         await asyncio.sleep(20)
         from jam.settings import settings
-
-        logger = get_logger()
 
         d3l = settings.d3l
 

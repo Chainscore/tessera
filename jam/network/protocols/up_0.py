@@ -5,7 +5,7 @@ from tsrkit_types import Uint, U32
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.logging import get_logger
+from jam.log_setup import network_logger
 
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -16,10 +16,10 @@ from jam.block import Block, Header
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.protocol.validators import ValidatorData
-from jam.api.rpc.broker import broker
+from jam.api.rpc.subscription_handlers import subscribe_sync_status
 
 # Module-specific logger
-logger = get_logger("network")
+logger = network_logger
 
 
 @structure
@@ -248,9 +248,7 @@ class BlockAnnouncement(NetworkProtocol):
         header = anc.header
 
         logger.debug("Fetching block to import", slot=header.slot)
-        from jam.settings import settings
-        if settings.rpc_flag:
-            asyncio.create_task(broker.publish("subscribeSyncStatus", "InProgress"))
+        asyncio.create_task(subscribe_sync_status("InProgress"))
         blocks = await BlockRequest().transmit(
             CE128Data(
                 header=HeaderHash(header.hash()),
@@ -267,24 +265,18 @@ class BlockAnnouncement(NetworkProtocol):
 
         _valid = state._force_transition(blocks[0][0])
         if _valid:
-            from jam.settings import settings
-            if settings.rpc_flag:
-                asyncio.create_task(broker.publish("subscribeSyncStatus", "Completed"))
-            await self.transmit(anc)
+            asyncio.create_task(self.transmit(anc))
+            asyncio.create_task(subscribe_sync_status("Completed"))
 
     @classmethod
     async def synchronise(cls, h: Handshake):
         from jam.state.state import state
-        from jam.settings import settings
-        if settings.rpc_flag:
-            asyncio.create_task(broker.publish("subscribeSyncStatus", "InProgress"))
+        asyncio.create_task(subscribe_sync_status( "InProgress"))
 
         # To know how many blocks to fetch
         # (h.final.slot - state.tau)
         if h.final.time_slot <= state.tau:
-            from jam.settings import settings
-            if settings.rpc_flag:
-                asyncio.create_task(broker.publish("subscribeSyncStatus", "Completed"))
+            asyncio.create_task(subscribe_sync_status("Completed"))
             return
 
         data_req = CE128Data(
@@ -301,7 +293,5 @@ class BlockAnnouncement(NetworkProtocol):
             state._force_transition(block)
 
         logger.info("Sync complete!", state_root=state.root)
-        from jam.settings import settings
-        if settings.rpc_flag:
-            asyncio.create_task(broker.publish("subscribeSyncStatus", "Completed"))
+        asyncio.create_task(subscribe_sync_status("Completed"))
         return

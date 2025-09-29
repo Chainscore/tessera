@@ -1,9 +1,5 @@
 from typing import Any, Generic, List, TypeVar
-
-from jam.logging import get_logger
-from jam.block.extrinsics.disputes import DisputesExtrinsic
-
-logger = get_logger("nodeops")
+from jam.log_setup import node_logger as logger
 
 T = TypeVar("T")
 
@@ -21,6 +17,8 @@ class ExtrinsicStore(Generic[T]):
         return False
 
     def store(self, ext: T):
+        from jam.block.extrinsics.disputes import DisputesExtrinsic
+
         if isinstance(ext, DisputesExtrinsic):
             if any(
                 d.verdicts == ext.verdicts and

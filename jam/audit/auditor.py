@@ -7,12 +7,10 @@ from jam.types.protocol.core import EpochIndex
 from jam.types.protocol.crypto import BandersnatchVrfSignature
 from jam.types.work.report import WorkReportHash, WorkReport
 from jam.block.block import Block
-from jam.logging import get_logger
+
+from jam.log_setup import logger
 from jam.utils.constants import EPOCH_LENGTH
 from jam.network.protocols.ce_144 import SubsequentTrancheEvidence, CoreReportHash
-
-# Module-specifier logger
-logger = get_logger("auditor")
 
 
 class Auditor:
@@ -252,10 +250,3 @@ class Auditor:
                 error_type=type(e).__name__,
             )
 
-    @classmethod
-    def refine2(cls,  wr: WorkReport) -> U8:
-        wr_hash = wr.hash()
-        from jam.audit.dummy import get_work_package_by_rep_hash
-        validity = get_work_package_by_rep_hash(filepath="/home/dikshant441/Desktop/jam/tessera/jam/combined.json", rep_hash=wr_hash)
-
-        return U8(validity)

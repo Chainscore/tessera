@@ -1,6 +1,9 @@
 import json
 import asyncio
 from typing import Type
+import multiprocessing
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from jam.error import JamError, JamErrorCode
 from jam.state.partial import PartialState
 from jam.utils.merkle import BMRFunctions
@@ -9,8 +12,9 @@ from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.utils.trie.merkle import StateTrie
 from jam.state.storage import StateStorage
-from jam.state.utils import construct_state_key, make_state_prop
-from tsrkit_types import Bytes, Codable, Dictionary, TypedVector
+from jam.state.transitions.safrole.executor import setup_executor
+from jam.state.utils import make_state_prop
+from tsrkit_types import Bytes, Dictionary, TypedVector
 from jam.types import (
     Hash,
     Alpha,
@@ -31,11 +35,20 @@ from jam.types import (
     HeaderHash,
 )
 from jam.block.block import Block
-from jam.logging import get_logger
+from jam.log_setup import block_logger as logger
 from jam.types.state.theta import Theta
-
-logger = get_logger("import")
-
+from jam.state.transitions import (
+    Accumulation,
+    Reporting,
+    Authorization,
+    RecentHistory,
+    Safrole,
+    Assurances,
+    Disputes,
+    Preimages,
+    Statistics,
+)
+from jam.api.rpc.subscription_handlers import subscribe_statistics
 
 class State:
     """
@@ -116,12 +129,10 @@ class State:
             - `header_hash`: Loads state at point in time when this header was imported.
             If this is not provided, we assume the request is just to have a readable instance of latest state
         """
-        from jam.settings import settings
-
         # Empty trie -I dont think we need past trie data anywhere
         trie = StateTrie()
         # Create a Read-Only instance
-        db = RockStore(state.store._DB.path.decode(), options={"read_only": True})
+        db = state.store._DB # RockStore(state.store._DB.path.decode(), options={"read_only": True})
         # Load past updates
         cache = state.store._load_updates(header_hash)
 
@@ -162,17 +173,7 @@ class State:
 
         self._lock = True
 
-        from jam.state.transitions import (
-            Accumulation,
-            Reporting,
-            Authorization,
-            RecentHistory,
-            Safrole,
-            Assurances,
-            Disputes,
-            Preimages,
-            Statistics,
-        )
+
         from jam.settings import settings as _set
         from jam.finality.finality import Finality
 
@@ -256,6 +257,8 @@ class State:
 
             if block.validate():
                 state.settle(header_hash)
+                # Publishes updates of the statistics stored in chain state
+                asyncio.create_task(subscribe_statistics(state.pi))
 
                 # Set local chain head to produced block
                 block.save(_set.main_db)
@@ -268,10 +271,11 @@ class State:
                     final_state_root=self.root.hex()[:16] + "...",
                 )
 
-                from jam.operations.handlers.assurer import assurer
-                for ext in block.extrinsic.guarantees:
-                    logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
-                    asyncio.create_task(assurer._req_shard(ext))
+                # TODO: Uncomment it for assurances
+                # from jam.operations.handlers.assurer import assurer
+                # for ext in block.extrinsic.guarantees:
+                #     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                #     asyncio.create_task(assurer._req_shard(ext))
 
                 # TODO: Test Auditing & Refining with PJ
                 # # Start Auditing for new block received
@@ -280,7 +284,7 @@ class State:
 
                 # TODO: Remove Direct Finality
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-                Finality.finalise(header_hash, _set.main_db, False)
+                Finality.finalise(header_hash, _set.main_db, True)
 
                 block.extrinsic.clear_from_stores()
 
@@ -306,7 +310,7 @@ class State:
                 StateTrie(),
                 self.store._DB,
                 self.store._updates.copy(),
-                True
+                cache_mode=True,
             )
         )
 
@@ -351,4 +355,8 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
 
     global state
     state = new_state
+
+    # Init Executor
+    pubkeys = [bytes(k.bandersnatch) for k in state.gamma.p]
+    setup_executor(pubkeys)
     return state

@@ -34,7 +34,7 @@ from jam.types import (
 from jam.types.work import RefineLoad
 
 from jam.types.work.manifest import Extrinsics
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
 from jam.types.protocol.core import CoreIndex
@@ -45,9 +45,6 @@ CLIENTS = [
     {"port": 40000, "role": "VALIDATOR", "theme": "matrix", "genesis": True},
     {"port": 40006, "role": "BUILDER", "theme": "polkadot", "genesis": True},
 ]
-
-# Logger for WP Production
-logger = get_logger("in_core")
 
 wp = WorkPackage(
     authorization=Bytes(b"\x01"),

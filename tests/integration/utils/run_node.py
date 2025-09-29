@@ -8,7 +8,7 @@ import os
 import time
 from dotenv import load_dotenv
 
-from jam.logging import setup_logging
+from jam.log_setup import setup_logging
 from jam.utils.chainspec import chain_config
 from .state_update import update_state
 
@@ -18,12 +18,10 @@ from jam.network.start import start_node
 from jam.state.state import setup_state
 from jam.block import Block
 
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 from jam.operations.ticket_queue import setup_ticket_queue
 from jam.api.rpc.app import rpc
 
-# Logger for Node test
-logger = get_logger("test")
 
 shutdown_event = asyncio.Event()
 
@@ -44,10 +42,10 @@ async def run_node(
     load_dotenv(".env")
     load_dotenv(env,override=True)
 
-    name = os.environ["NODE_NAME"]
-    port = os.environ["PORT"]
-    seed = os.environ["SEED"]
-    host = os.environ["HOST"]
+    name = os.environ.get("NODE_NAME", "jam-node")
+    port = os.environ.get("PORT", 40000)
+    seed = os.environ.get("SEED", "0")
+    host = os.environ.get("HOST", "0.0.0.0")
     if rpc_flag:
         rpc_port = os.environ["RPC_PORT"]
         rpc_host = os.environ["RPC_HOST"]
@@ -56,15 +54,7 @@ async def run_node(
         raise ValueError(f"Missing node info in {env}")
 
     # ---------- SETUP LOGGING ----------
-    environment = os.environ.get("ENVIRONMENT", "development")
-    log_level = os.environ.get("LOG_LEVEL", None)
-
-    setup_logging(
-        theme=theme,
-        node_name=name,
-        environment=environment,
-        min_level=getattr(logging, log_level.upper()) if log_level else None,
-    )
+    setup_logging(theme=theme, node_name=name)
 
     # ---------- SETUP SETTINGS ----------
     settings = setup_setting(

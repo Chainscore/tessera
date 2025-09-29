@@ -3,11 +3,10 @@ from time import time
 from math import ceil
 from jam.types.protocol.core import TimeSlot
 from tsrkit_types import U32
-from jam.logging import get_logger
+from jam.log_setup import node_logger as logger
 from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS
 from jam.network.protocols.ce_132 import SafroleTicketDistribution, CE132Data
 
-logger = get_logger("nodeops")
 
 class Forwarding:
 
@@ -15,7 +14,6 @@ class Forwarding:
     async def run(cls, slot: U32, time_slot: TimeSlot):
         try:
             from jam.operations.ticket_queue import ticket_queue
-            print("Ticket queue length", ticket_queue.length())
             if not ticket_queue.is_empty():
                 ts = time_slot
                 ticket_submission_end = TICKET_SUBMISSION_END // 2
