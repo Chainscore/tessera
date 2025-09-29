@@ -10,11 +10,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     iputils-ping \
     procps \
     net-tools \
+    python3-dev \
+    pkg-config \
+    libffi-dev \
+    libssl-dev \
+    cmake \
+    rustc \
+    cargo \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
-# Ensure Poetry is on PATH
+# Install pip, wheel tooling and install build-time Python packages
+RUN python3 -m pip install --upgrade pip setuptools wheel \
+ && python3 -m pip install --no-cache-dir mypy librt maturin
+
+# Install uv via shell installer
+RUN curl -sSL https://astral.sh/uv/install.sh | sh -s --  \
+  && echo "uv installed to:" && which uv || true
+
 ENV PATH="/root/.local/bin:$PATH"
 
 # Set working directory
@@ -22,6 +34,9 @@ WORKDIR /app
 
 # Copy the entire application
 COPY . .
+
+# setup
+RUN chmod +x /app/scripts/setup.sh
 
 # Initialize git submodules (assuming private token is available via build args)
 ARG GITHUB_TOKEN
@@ -32,14 +47,6 @@ RUN if [ -n "$GITHUB_TOKEN" ]; then \
         echo "Warning: GITHUB_TOKEN not provided, skipping submodule init"; \
     fi
 
-# Configure Poetry to NOT use virtualenvs
-RUN poetry config virtualenvs.create false
-
-# Generate poetry lock
-RUN poetry lock
-
-# Install all dependencies and the project itself
-RUN poetry install --only=main --no-interaction --no-ansi
 
 # Run the application
 # Copy entrypoint script
@@ -47,13 +54,3 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-#ENTRYPOINT ["poetry", "run", "jam"]
-
-# Create data directory with permissions
-#RUN mkdir -p data/db && chmod -R 777 data
-
-# Expose application port
-#EXPOSE 8000
-
-# Run the FastAPI application
-#CMD ["poetry", "run" ,"fastapi", "run", "jam/api/api-service.py", "--host", "0.0.0.0", "--port", "8000"]
