@@ -2,7 +2,7 @@ name: Deploy to Azure Container Instance
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, fix/deployment ]
   workflow_dispatch:
     inputs:
       debug_mode:
@@ -37,6 +37,67 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: 📥 Checkout code with submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          submodules: 'recursive'
+
+      - name: � Verify submodules are present
+        run: |
+          echo "🔍 Verifying critical submodules are present..."
+          REQUIRED_SUBMODULES=(
+            "deps/tsrkit-pvm"
+            "deps/py-ark-vrf" 
+            "deps/rockstore"
+            "deps/tsrkit-asm"
+            "deps/tsrkit-types"
+          )
+          
+          MISSING_SUBMODULES=()
+          for submod in "${REQUIRED_SUBMODULES[@]}"; do
+            if [ ! -d "$submod" ] || [ -z "$(ls -A $submod)" ]; then
+              MISSING_SUBMODULES+=("$submod")
+            else
+              echo "✅ $submod: present"
+            fi
+          done
+          
+          if [ ${#MISSING_SUBMODULES[@]} -ne 0 ]; then
+            echo "❌ Missing required submodules:"
+            printf '   %s\n' "${MISSING_SUBMODULES[@]}"
+            echo ""
+            echo "🔧 Attempting manual submodule update..."
+            git config --global url."https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
+            git submodule update --init --recursive --force
+            
+            # Verify again
+            STILL_MISSING=()
+            for submod in "${MISSING_SUBMODULES[@]}"; do
+              if [ ! -d "$submod" ] || [ -z "$(ls -A $submod)" ]; then
+                STILL_MISSING+=("$submod")
+              else
+                echo "✅ Recovered: $submod"
+              fi
+            done
+            
+            if [ ${#STILL_MISSING[@]} -ne 0 ]; then
+              echo "❌ Critical error: Still missing after recovery:"
+              printf '   %s\n' "${STILL_MISSING[@]}"
+              echo ""
+              echo "Debug info:"
+              echo "Git submodule status:"
+              git submodule status || true
+              echo ""
+              echo "Directory structure:"
+              ls -la deps/ || true
+              exit 1
+            fi
+          fi
+          
+          echo "🎉 All required submodules are present!"
 
       - name: Log in to Azure
         uses: azure/login@v2 
