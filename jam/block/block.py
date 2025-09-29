@@ -64,6 +64,8 @@ class Block:
     def load_w_ts(cls, ts: TimeSlot, db: RockStore) -> "Block":
         ts_key = cls.get_storage_key_slot(ts)
         header_hash = db.get(ts_key)
+        if not header_hash:
+            raise ValueError("No block found with given slot!")
         return cls.load(header_hash, db)
 
     @staticmethod
