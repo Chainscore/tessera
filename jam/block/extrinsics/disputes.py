@@ -36,7 +36,7 @@ class Fault:
     signature: Ed25519Signature
 
 
-JudgementVotes = TypedArray[Judgement, (1 + VALIDATOR_COUNT * 2 // 3)]
+JudgementVotes = TypedVector[Judgement]
 
 
 @structure
