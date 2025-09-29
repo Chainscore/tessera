@@ -14,7 +14,6 @@ from jam.log_setup import setup_logging, logger
 from jam.finality.finality import Finality
 from jam.network.start import start_node
 from jam.settings import setup_setting
-from jam.network.node import Node
 
 # from jam.operations.utils.state_update import update_state
 from jam.state.state import setup_state
