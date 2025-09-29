@@ -25,14 +25,14 @@ jobs:
     steps:
       - name: Set deployment specific variables
         run: |
-          if [[ ${{ github.ref }} == 'refs/heads/develop' ]]; then
-            echo "CONTAINER_NAME=tessera-node-develop" >> $GITHUB_ENV
-            echo "IMAGE_TAG=develop" >> $GITHUB_ENV
-            echo "DNS_LABEL=tessera-jam-node-develop" >> $GITHUB_ENV
-          else
+          if [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
             echo "CONTAINER_NAME=tessera-node" >> $GITHUB_ENV
             echo "IMAGE_TAG=latest" >> $GITHUB_ENV
             echo "DNS_LABEL=tessera-jam-node" >> $GITHUB_ENV
+          else
+            echo "CONTAINER_NAME=tessera-tiny" >> $GITHUB_ENV
+            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+            echo "DNS_LABEL=tessera-tiny-jam-latest" >> $GITHUB_ENV
           fi
 
       - name: Checkout code
@@ -185,7 +185,7 @@ jobs:
                   --cpu ${{ env.CPU }} \
                   --memory ${{ env.MEMORY }} \
                   --environment-variables JAM_DEBUG=$DEBUG_MODE \
-                  --ports 8000 \
+                  --ports 19800 \
                   --ip-address Public \
                   --dns-name-label "${{ env.DNS_LABEL }}" \
                   --restart-policy Never \
