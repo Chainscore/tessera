@@ -27,13 +27,16 @@ COPY . .
 ARG GITHUB_TOKEN
 RUN if [ -n "$GITHUB_TOKEN" ]; then \
         git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/" && \
-        git submodule update --init deps/py-ark-vrf deps/tsrkit-pvm deps/tsrkit-asm; \
+        git submodule update --init deps/py-ark-vrf deps/tsrkit-pvm deps/tsrkit-asm deps/rockstore deps/tsrkit-types; \
     else \
         echo "Warning: GITHUB_TOKEN not provided, skipping submodule init"; \
     fi
 
 # Configure Poetry to NOT use virtualenvs
 RUN poetry config virtualenvs.create false
+
+# Generate poetry lock
+RUN poetry lock
 
 # Install all dependencies and the project itself
 RUN poetry install --only=main --no-interaction --no-ansi

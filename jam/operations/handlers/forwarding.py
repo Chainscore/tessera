@@ -14,7 +14,6 @@ class Forwarding:
     async def run(cls, slot: U32, time_slot: TimeSlot):
         try:
             from jam.operations.ticket_queue import ticket_queue
-            print("Ticket queue length", ticket_queue.length())
             if not ticket_queue.is_empty():
                 ts = time_slot
                 ticket_submission_end = TICKET_SUBMISSION_END // 2

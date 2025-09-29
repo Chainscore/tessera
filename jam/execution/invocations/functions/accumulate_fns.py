@@ -1,3 +1,4 @@
+import asyncio
 from jam.state.accounts import AccountDataView, DeltaView
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
@@ -405,6 +406,7 @@ class AccumulateFunctions(INVF):
 
         # account.lookup[lookup_key] = lookup_val
         registers[7] = HostStatus.OK.value
+
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -429,7 +431,7 @@ class AccumulateFunctions(INVF):
             lookup_value.append(block_timeslot)
             a.lookup[lookup_key] = lookup_value
         elif len(a.lookup[lookup_key]) == 0 or (
-            len(a.lookup[lookup_key]) == 2 and 
+            len(a.lookup[lookup_key]) == 2 and
             a.lookup[lookup_key][1] < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS
         ):
             del a.lookup[lookup_key]

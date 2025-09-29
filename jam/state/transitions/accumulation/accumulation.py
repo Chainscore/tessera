@@ -1,3 +1,4 @@
+
 from copy import deepcopy
 from typing import Tuple, Set, List
 from jam.execution.invocations.accumulate import PsiA
@@ -24,7 +25,6 @@ from jam.types.state.chi import ChiZ
 from jam.types.state.omega import AllReadyWRs, ReadyWR
 from jam.types.state.theta import Commitment, Theta
 from jam.utils.constants import EPOCH_LENGTH, TOTAL_GAS, ACCUMULATION_GAS, CORE_COUNT
-from jam.types.protocol.merkle import OptionHash
 from jam.types.protocol.core import Gas, ServiceId
 from jam.types.work import (
     WorkDependencies,
@@ -286,7 +286,7 @@ class Accumulation:
             state.store += partial_state.store
 
         Accumulation.preimage_integration(
-            partial_state.service_accounts, collected_preimages, timeslot
+            state.delta, collected_preimages, timeslot
         )
         return transfers, outputs, gas_consumed
 
@@ -368,7 +368,7 @@ class Accumulation:
             lookup = LookupTable(hash=key_hash,length= len(blobs))
             if len(service.lookup[lookup]) == 0:
                 service.lookup[lookup] = Timestamps([timeslot])
-                service.lookup[key_hash] = blobs
+                service.preimages[key_hash] = blobs
 
     @staticmethod
     def selection_fn(deferred_transfers: DeferredTransfers, service_id: ServiceId) -> DeferredTransfers:

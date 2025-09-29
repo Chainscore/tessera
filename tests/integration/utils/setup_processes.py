@@ -25,7 +25,7 @@ class Client:
     theme: str = "default"
     genesis = True
 
-async def setup_processes(clients: list[Client], node_tasks: list[Optional[Callable]], max_time = 20):
+async def setup_processes(clients: list[Client], node_tasks: list[Optional[Callable]], max_time = 20, rpc_flag: bool = True):
     processes = []
 
     for client in clients:
@@ -48,13 +48,14 @@ async def setup_processes(clients: list[Client], node_tasks: list[Optional[Calla
             p = Process(
                 target=run_node_process,
                 args=(
-                    "",
+                    "data/tmp",
                     env_path,
                     client.genesis,
                     client.theme,
                     is_builder,
                     is_validator,
                     node_tasks,
+                    rpc_flag
                 ),
             )
         processes.append(p)

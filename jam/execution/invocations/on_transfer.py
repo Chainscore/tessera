@@ -85,7 +85,7 @@ class PsiT(InvocationProtocol):
         )
         u, _, _ = PsiM.execute(
             pc,
-            ProgramCounter(10),
+            10,
             sum(int(t.gas) for t in self.transfers),
             args,
             self.dispatch,

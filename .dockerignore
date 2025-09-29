@@ -1,0 +1,5 @@
+.git
+.build.env
+test-suits
+data
+poetry.lock

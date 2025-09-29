@@ -57,6 +57,7 @@ data/
 .venv
 env/
 ENV/
+.build.env
 .secrets
 
 .cursorrules

@@ -33,6 +33,7 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
     # ------ Fetch State --------
     if slot:
         from jam.settings import settings
+        from jam.state.state import State
 
         ts_key = Block.get_storage_key_slot(slot)
         hh = settings.main_db.get(ts_key)

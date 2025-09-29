@@ -2,7 +2,7 @@ from jam.types.state.pi import ServiceStat
 from copy import deepcopy
 from tsrkit_types import Bytes
 from jam.state.transitions.preimages.errors import PreimageError, PreimageErrorEnum
-from jam.types.state.delta import LookupTable
+from jam.types.state.delta import LookupTable, Timestamps
 from jam.types.state.sigma import Sigma
 from jam.block import Block
 from jam.block.extrinsics.preimages import Preimage, PreimagesExtrinsic
@@ -56,6 +56,7 @@ class Preimages:
             curr_service_stat.provided_count += 1
             curr_service_stat.provided_size += len(preimage.blob)
         state.pi = pi
+
 
         return state
 
