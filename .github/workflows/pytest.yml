@@ -26,8 +26,7 @@ jobs:
     - name: 📦 Checkout submodules
       run: |
         git config --global url."https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
-        git submodule update --recursive
-        git submodule update --init deps/tsrkit-pvm
+        git submodule update --init --recursive
         git submodule status --recursive
 
     - name: 🚀 Install uv
