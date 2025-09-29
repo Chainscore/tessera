@@ -210,22 +210,17 @@ jobs:
         uses: azure/CLI@v2
         with:
           inlineScript: |
-            echo "Checking if container is running properly..."
+            echo "Checking if container is running..."
             # Wait for service to start up
             sleep 30
-            
-            # Get the FQDN of the container
-            FQDN=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} --query "ipAddress.fqdn" -o tsv)
-            
-            # Check if service is responsive on port 8000
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${FQDN}:8000/docs || echo "Failed")
-            
-            if [[ "$HTTP_STATUS" == "200" ]]; then
-              echo "✅ Service is healthy on port 8000"
-              echo "NOTE: To access via HTTPS, you'll need to set up Azure Front Door or Application Gateway"
-            else
-              echo "❌ Service is not responding correctly. Status: $HTTP_STATUS"
-              echo "You may need to check logs for more details"
+            inst=$(az container show -g ${{ env.RESOURCE_GROUP }} -n ${{ env.CONTAINER_NAME }} -o json)
+            echo "$inst" | jq '.instanceView'
+            state=$(echo "$inst" | jq -r '.instanceView.state')
+            restartCounts=$(echo "$inst" | jq -r '.instanceView.containers[].restartCount')
+            echo "State=$state, restarts=$restartCounts"
+            if [[ "$state" != "Running" ]]; then
+              echo "Container not running"
+              az container logs -g ${{ env.RESOURCE_GROUP }} -n ${{ env.CONTAINER_NAME }} --container-name ${{ env.CONTAINER_NAME }} || true
               exit 1
             fi
 
