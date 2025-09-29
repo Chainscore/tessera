@@ -19,7 +19,7 @@ from jam.types import (
     WorkItem,
     OpaqueHash,
     WorkPackageSpec,
-    WorkResult,
+    WorkDigest,
     WorkExecResult,
     WorkReportHash,
     HeaderHash,
@@ -172,9 +172,9 @@ wr = WorkReport(
     authorizer_hash=b"\x9e\xcc\x01*<\xc8\xbbzG}\xef(\xac\xfd\xb6\xe5\xb0Y\xd7\xccU9y\x98\x95,\xefY\xa9\x1a\x18\x86",
     auth_output=b"\x01",
     segment_root_lookup=Dictionary({}),
-    results=TypedVector[WorkResult](
+    digests=TypedVector[WorkDigest](
         [
-            WorkResult(
+            WorkDigest(
                 service_id=U32(1),
                 code_hash=b"s\x8b\x9a\xff:\xcb\xcc\xabvnE\xcaN\xe1\x1d\x1d\xb9c\xca\xd1|\x9b\x931\xb2\xdaK\x10\xba@\xa8\x94",
                 payload_hash=b"\xad\x83\xe1\x97-\xd0\xa6\x04\xeb\xe9\x85|\xad\xf9\x0f\x9a\x96\xc3,\xf4|{\x82\xc8\x04\xfb\xe8=\x0e\xaa\xf0\xaf",
