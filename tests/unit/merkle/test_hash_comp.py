@@ -3,6 +3,8 @@ import time
 import pytest
 from tsrkit_types import Bytes
 
+from jam.types import Hash
+
 
 def keccak256(data: bytes) -> Bytes[32]:
     """Keccak-256 hash function using PyCryptodome"""
@@ -19,36 +21,39 @@ def keccak256(data: bytes) -> Bytes[32]:
 #         data = bytes(data)
 #     return Bytes[32](keccak(data))
 
-# def keccakSHA3(data: bytes) -> Bytes[32]:
-#     """Keccak-256 hash function using pysha3"""
-#     import sha3
-#     if not isinstance(data, bytes):
-#         data = bytes(data)
-#     return Bytes[32](sha3.keccak_256(data).digest())
+def keccakPySHA3(data: bytes) -> Bytes[32]:
+    """Keccak-256 hash function using pysha3"""
+    import sha3
+    if not isinstance(data, bytes):
+        data = bytes(data)
+    return Bytes[32](sha3.keccak_256(data).digest())
 
 def keccakSHA3(data: bytes) -> Bytes[32]:
     """SHA3_256 hash function"""
-    from sha3 import keccak_256
+    from hashlib import sha3_256
 
     if not isinstance(data, bytes):
         data = bytes(data)
-    return Bytes[32](keccak_256(data).digest())
+    return Bytes[32](sha3_256(data).digest())
 
 # Array of functions to test
 HASH_FUNCS = [
     ("PyCryptodome", keccak256),
-    # ("eth_utils", keccakETH),
-    ("pysha3", keccakSHA3),
+    ("pysha3", keccakPySHA3),
+    # ("hashlib", keccakSHA3), # keccak implementation changed
 ]
 
-def test_speed_comp():
-    # HELLO_IP = b"hello"
-    # HELLO_OP = bytes.fromhex("1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8")
-    # OP = keccakSHA3(HELLO_IP)
-    # assert HELLO_OP == OP
+def test_version_compatibility():
+    HELLO_IP = b"hello"
+    HELLO_OP = bytes.fromhex("1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8")
+    OP = keccakPySHA3(HELLO_IP)
+    OP2 = keccakSHA3(HELLO_IP)
+    OP3 = keccak256(HELLO_IP)
+    assert HELLO_OP == OP == OP3 != OP2
 
+def test_hash_benchmark():
     # Generate random test inputs
-    inputs = [os.urandom(i % 256 + 1) for i in range(1, 10_001)]  # 10k inputs, 1–256 bytes
+    inputs = [os.urandom(i % 256 + 1) for i in range(1, 1001)]  # 1k inputs, 1–256 bytes
 
     # --- Correctness check ---
     mismatches = []
@@ -82,4 +87,4 @@ def test_speed_comp():
 
     # Sanity check (fail only if absurdly slow)
     for elapsed in timings.values():
-        assert elapsed < 30.0
+        assert elapsed < 0.5
