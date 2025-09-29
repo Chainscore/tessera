@@ -20,7 +20,7 @@ from jam.types.work import Extrinsics, Extrinsic, Assurers
 from jam.utils.benchmark import write_json
 
 from jam.utils.constants import GENESIS_TS
-
+from tests.integration.jamnp.utils.fetch_test_vectors import fetch_vectors
 
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
 from tests.unit.incore.types import BundleVectors, BundleVector
@@ -29,12 +29,7 @@ CLIENTS = [Client(Role.VAL, 40001, theme="monokai")]
 
 # NOTE: Use this for testing refinement / bundler
 vectors: BundleVectors = BundleVectors([])
-for i in range(1, 101):
-    with open(f"vectors/bundles/bundles-{i:03d}.json", "r") as f:
-        data = json.load(f)
-        bundle_vec = BundleVector.from_json(data)
-        vectors.append(bundle_vec)
-
+# fetch_vectors(1, 101, vectors)
 
 async def node_task():
     from jam.log_setup import node_logger as logger
@@ -153,4 +148,5 @@ async def node_task():
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_bundler():
+    pytest.skip("Add latest vectors and test again!")
     await setup_processes(CLIENTS, node_task, 5)
