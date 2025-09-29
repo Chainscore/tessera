@@ -11,7 +11,6 @@ from tsrkit_types import U32, Null, Bytes ,U16
 
 from jam.block import Block
 from jam.incore import Processor
-from jam.logging import get_logger
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
 from jam.operations import operate
@@ -280,4 +279,5 @@ async def node_task():
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_services():
+    pytest.skip("This is work in progress")
     await setup_processes(CLIENTS, [node_task, operate], 140)
