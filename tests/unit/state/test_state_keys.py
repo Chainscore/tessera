@@ -3,6 +3,7 @@ from jam.state.utils import construct_state_key
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U8
 from jam.types.protocol.core import ServiceId
+from jam.types.protocol.crypto import Hash
 
 
 def test_single_u8_index():
@@ -54,13 +55,14 @@ def test_u32_service_id_pair():
 def test_service_id_hash_pair():
     """Test case 3: (ServiceId, ByteArray32) -> [n₀, h₀, n₁, h₁, n₂, h₂, n₃, h₃, h₄, h₅, ..., h₂₇]"""
     service_id = ServiceId(1)
-    hash_bytes = Bytes([i % 256 for i in range(32)])  # Test pattern
+    key_bytes = Bytes([i % 256 for i in range(32)])  # Test pattern
 
-    result = construct_state_key((service_id, hash_bytes))
+    result = construct_state_key((service_id, key_bytes))
     assert isinstance(result, Bytes)
     assert len(result) == 31
 
     service_id_encoded = service_id.encode()
+    hash_bytes = Hash.blake2b(key_bytes)
 
     # Check interleaved pattern for first 4 service ID bytes
     for i in range(min(len(service_id_encoded), 4)):
