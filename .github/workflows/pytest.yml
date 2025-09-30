@@ -1,47 +1,62 @@
-# name: Python Tests
+name: Python Tests
 
-# on:
-#   push:
-#     branches: [ main, develop ]
-#   pull_request:
-#     branches: [ main, develop ]
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
 
-# jobs:
-#   test:
-#     runs-on: ubuntu-latest
+jobs:
+  test:
+    runs-on: ubuntu-latest
 
-#     steps:
-#     - name: 📥 Checkout code
-#       uses: actions/checkout@v4
-#       with:
-#         fetch-depth: 0
-#         token: ${{ secrets.PRIVATE_REPO_TOKEN }}
-#         submodules: false
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+        submodules: false
 
-#     - name: 📦 Checkout submodules
-#       run: |
-#         git config --global url."https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
-#         git submodule update --init deps/py-ark-vrf deps/tsrkit-pvm deps/tsrkit-asm
-    
-#     - name: 🐍 Set up Python
-#       uses: actions/setup-python@v4
-#       with:
-#         python-version: '3.12'
-        
-#     - name: 📦 Install Poetry
-#       uses: snok/install-poetry@v1
-#       with:
-#         version: '1.8.2'
-#         virtualenvs-create: true
-#         virtualenvs-in-project: true
-        
-#     - name: 🔧 Install system dependencies
-#       run: |
-#         sudo apt-get update
-#         sudo apt-get install -y build-essential
+    - name: 🔧 Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential python3-dev python3-venv librocksdb-dev
 
-#     - name: 🏗️ Install dependencies via Poetry
-#       run: poetry install --with dev --no-interaction --no-ansi
+    - name: 📦 Checkout submodules
+      run: |
+        git config --global url."https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        git submodule update --init --recursive
+        git submodule status --recursive
 
-#     - name: Run unit tests
-#       run: RUNALL=1 poetry run pytest tests/unit/
+    - name: 🚀 Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        export PATH="$HOME/.local/bin:$PATH"
+        uv --version
+
+    - name: 🦀 Install Rust toolchain
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        source "$HOME/.cargo/env"
+        rustc --version
+        cargo --version
+
+    - name: 🐍 Install Python 3.12 via uv
+      run: |
+        uv python install 3.12
+        uv python find 3.12
+
+    - name: 🔧 Sync dependencies with uv
+      run: uv sync --all-extras
+
+    - name: 🔨 Build tsrkit-pvm
+      run: |
+        export PVM_BUILD_MODE=cython
+        cd deps/tsrkit-pvm/
+        uv run python setup.py build_ext --inplace
+        cd ../../
+
+    - name: 🏗️ Run unit tests
+      run: ASYNC=1 uv run pytest tests/unit/

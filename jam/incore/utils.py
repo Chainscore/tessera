@@ -73,7 +73,7 @@ class Utils:
     def decode_proof(proof: Segment):
         """Function to fetch trace and leaves from a paged proof"""
 
-        buffer = ByteArray(proof)
+        buffer = Bytes(proof)
 
         trace, offset = OpaqueHashes.decode_from(buffer)
         leaves, _ = OpaqueHashes.decode_from(buffer, offset)

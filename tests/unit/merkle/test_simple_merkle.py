@@ -15,7 +15,7 @@ def test_merklizer():
 
     # root = merklizer.print_nodes(values)
     print("ROOT", root, og == root)
-    visualizer.print_tree(tree)
+    # visualizer.print_tree(tree)
     #
 
     index = 34

@@ -29,7 +29,7 @@ def initial_subscription(method, params: list):
                 asyncio.create_task(broker.publish(method, {"header_hash": list(block.header.hash()), "slot": int(block.header.slot),
                                            "value": value}))
             except Exception as e:
-                logger.error("Error publishing subscribeServiceRequest", e)
+                logger.error("Error publishing subscribeServiceRequest", str(e))
 
             return
 
@@ -50,7 +50,7 @@ def initial_subscription(method, params: list):
                 asyncio.create_task(broker.publish(method, {"header_hash": list(block.header.hash()), "slot": int(block.header.slot),
                                            "value": value}))
             except Exception as e:
-                logger.error("Error publishing subscribeServiceValue", e)
+                logger.error("Error publishing subscribeServiceValue", str(e))
 
             return
 
@@ -61,20 +61,23 @@ def initial_subscription(method, params: list):
                 from jam.finality.finality import Finality
                 from jam.settings import settings
                 from jam.types.state.delta import AccountMetadata
-                service = state.delta[sid].service
-                accountMetadata = AccountMetadata(
-                    code_hash=service.code_hash,
-                    balance=service.balance,
-                    gas_limit=service.gas_limit,
-                    min_gas=service.min_gas,
-                    num_i=service.num_i,
-                    num_o=service.num_o,
-                    gratis_offset=service.gratis_offset,
-                    created_at=service.created_at,
-                    accumulated_at=service.accumulated_at,
-                    parent_service=service.parent_service
-                )
-                value = list(accountMetadata.encode())
+
+                value = None
+                if sid  in state.delta:
+                    service = state.delta[sid].service
+                    accountMetadata = AccountMetadata(
+                        code_hash=service.code_hash,
+                        balance=service.balance,
+                        gas_limit=service.gas_limit,
+                        min_gas=service.min_gas,
+                        num_i=service.num_i,
+                        num_o=service.num_o,
+                        gratis_offset=service.gratis_offset,
+                        created_at=service.created_at,
+                        accumulated_at=service.accumulated_at,
+                        parent_service=service.parent_service
+                    )
+                    value = list(accountMetadata.encode())
                 block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(
                     settings.main_db)
                 method = f"subscribeServiceData:{sid}:{finality}"
@@ -82,7 +85,7 @@ def initial_subscription(method, params: list):
                     broker.publish(method, {"header_hash": list(block.header.hash()), "slot": int(block.header.slot),
                                             "value": value}))
             except Exception as e:
-                logger.error("Error publishing subscribeServiceData", e)
+                logger.error("Error publishing subscribeServiceData", str(e))
 
             return
 
@@ -102,7 +105,7 @@ def initial_subscription(method, params: list):
                     asyncio.create_task(broker.publish(method, {"header_hash": list(block.header.hash()), "slot": int(block.header.slot),
                                                       "value": value}))
             except Exception as e:
-                logger.error("Error publishing subscribeServicePreimage", e)
+                logger.error("Error publishing subscribeServicePreimage", str(e))
 
             return
 
@@ -115,7 +118,7 @@ async def subscribe_sync_status(status: str):
         if settings.rpc_flag:
             await broker.publish("subscribeSyncStatus", status)
     except Exception as e:
-        logger.error("Error publishing subscribeSyncStatus", e)
+        logger.error("Error publishing subscribeSyncStatus", str(e))
 
 async def subscribe_best_block(header_hash: HeaderHash):
     try:
@@ -127,7 +130,7 @@ async def subscribe_best_block(header_hash: HeaderHash):
             else:
                 logger.warning("Trying to publish best block, but not found in store", header_hash=header_hash.hex())
     except Exception as e:
-        logger.error("Error publishing subscribeBestBlock", e)
+        logger.error("Error publishing subscribeBestBlock", str(e))
 
 async def subscribe_finalized_block(header_hash: HeaderHash):
     try:
@@ -140,7 +143,7 @@ async def subscribe_finalized_block(header_hash: HeaderHash):
             else:
                 logger.warning("Trying to publish finalized block, but not found in store", header_hash=header_hash.hex())
     except Exception as e:
-        logger.error("Error publishing subscribeFinalizedBlock", e)
+        logger.error("Error publishing subscribeFinalizedBlock", str(e))
 
 async def subscribe_service_value(sid: ServiceId, key: Bytes, value: list | None):
     try:
@@ -148,7 +151,7 @@ async def subscribe_service_value(sid: ServiceId, key: Bytes, value: list | None
         method = f"subscribeServiceValue:{int(sid)}:{key_list}"
         await pub(method, value)
     except Exception as e:
-        logger.error("Error publishing subscribeServiceValue", e)
+        logger.error("Error publishing subscribeServiceValue", str(e))
 
 async def subscribe_service_request(sid: ServiceId, pi_hash: OpaqueHash, pi_len: BlobLength, value: Timestamps | None):
     try:
@@ -156,7 +159,7 @@ async def subscribe_service_request(sid: ServiceId, pi_hash: OpaqueHash, pi_len:
         method = f"subscribeServiceRequest:{int(sid)}:{pi_hash_list}:{int(pi_len)}"
         await pub(method, value)
     except Exception as e:
-        logger.error("Error publishing subscribeServiceRequest", e)
+        logger.error("Error publishing subscribeServiceRequest", str(e))
 
 async def subscribe_statistics(pi: Pi):
     try:
@@ -164,7 +167,7 @@ async def subscribe_statistics(pi: Pi):
         method = f"subscribeStatistics"
         await pub(method, value)
     except Exception as e:
-        logger.error("Error publishing subscribeStatistics", e)
+        logger.error("Error publishing subscribeStatistics", str(e))
 
 async def subscribe_service_data(sid: ServiceId, account_metadata: AccountMetadata):
     try:
@@ -172,7 +175,7 @@ async def subscribe_service_data(sid: ServiceId, account_metadata: AccountMetada
         method = f"subscribeServiceData:{int(sid)}"
         await pub(method, value)
     except Exception as e:
-        logger.error("Error publishing subscribeServiceData", e)
+        logger.error("Error publishing subscribeServiceData", str(e))
 
 async def subscribe_service_preimage(sid: ServiceId, pi_hash: OpaqueHash, blob: Bytes):
     try:
@@ -181,7 +184,7 @@ async def subscribe_service_preimage(sid: ServiceId, pi_hash: OpaqueHash, blob: 
         method = f"subscribeServicePreimage:{int(sid)}:{pi_hash_list}"
         await pub(method, value)
     except Exception as e:
-        logger.error("Error publishing subscribeServicePreimage", e)
+        logger.error("Error publishing subscribeServicePreimage", str(e))
 
 async def pub(method: str, value: list | None):
     from jam.settings import settings

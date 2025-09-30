@@ -99,6 +99,13 @@ class LookupTable:
     def __hash__(self):
         return int.from_bytes(Hash.blake2b(self.length.encode() + self.hash.encode()))
 
+    def __lt__(self, other):
+        if not isinstance(other, LookupTable):
+            return NotImplemented
+
+        # Sort first by hash, then by length
+        return (self.hash, self.length) < (other.hash, other.length)
+
     def to_json(self):
         return self.encode().hex()
 

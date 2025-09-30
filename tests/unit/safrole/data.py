@@ -1,9 +1,13 @@
-from jam.settings import Settings
+import os
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from py_ark_vrf.py_ark_vrf import secret_from_seed
+
 from jam.state.ghost import GhostState
-from jam.state.transitions import Safrole
+from jam.types import Hash
 from jam.types.state.eta import Eta
 from jam.state.state import State
-from tsrkit_types.integers import U32
+from tsrkit_types import U32, Bytes, U16
 from jam.block import Block
 from jam.types.state.kappa import Kappa
 from jam.types.state.gamma import GammaP, GammaA, GammaS, GammaZ
@@ -11,8 +15,7 @@ from jam.types.state.psi import PsiO
 from jam.types.state.iota import Iota
 from jam.types.state.lambda_ import Lambda_
 from jam.block import TicketsExtrinsic
-from jam.types.protocol.crypto import BandersnatchPublic, BlsPublic, Ed25519Public
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.types.protocol.validators import ValidatorData, ValidatorMetadata, IPAddress
 from jam.utils.dummy.dummy_state import create_dummy_state
 
 
@@ -60,4 +63,35 @@ def create_state(
 
 def create_validator_data_from_keys():
     """Convert validator fixture data to ValidatorData objects"""
-    return [Settings(None, i).val for i in range(6)]
+    return [build_validator_data(i) for i in range(6)]
+
+def build_validator_data(seed: int) -> ValidatorData:
+    meta = ValidatorMetadata(
+        name=Bytes[10](os.urandom(10)),
+        protocol=U16(seed),
+        host=IPAddress.from_str("127.0.0.1"),
+        port=U16(19800+seed),
+        buffer=Bytes[110](110)
+    )
+
+    seed = Bytes[32](b"".join([U32(seed).encode()] * 8))
+    ed25519_private = Bytes[32](Hash.blake2b(Bytes(b"jam_val_key_ed25519") + seed))
+    ed25519_public = Bytes[32](
+        Ed25519PrivateKey.from_private_bytes(ed25519_private)
+        .public_key()
+        .public_bytes_raw()
+    )
+    bandersnatch_seed = Bytes[32](Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + seed))
+    pub, ss = secret_from_seed(bandersnatch_seed)
+    bandersnatch_public = Bytes[32](pub)
+
+    bls = Bytes[144](144)
+
+    data = ValidatorData(
+        bandersnatch_public,
+        ed25519_public,
+        bls,
+        meta
+    )
+
+    return data
