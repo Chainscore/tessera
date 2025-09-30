@@ -35,9 +35,6 @@ jobs:
             echo "DNS_LABEL=tessera-jam-node-develop" >> $GITHUB_ENV
           fi
 
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: 📥 Checkout code with submodules
         uses: actions/checkout@v4
         with:
@@ -45,7 +42,7 @@ jobs:
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           submodules: 'recursive'
 
-      - name: � Verify submodules are present
+      - name: Verify submodules are present
         run: |
           echo "🔍 Verifying critical submodules are present..."
           REQUIRED_SUBMODULES=(
@@ -121,6 +118,8 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           platforms: linux/amd64
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Get ACR credentials
         id: get-acr-creds
@@ -206,23 +205,29 @@ jobs:
               done
             fi
 
-      # - name: Verify deployment health
-      #   uses: azure/CLI@v2
-      #   with:
-      #     inlineScript: |
-      #       echo "Checking if container is running..."
-      #       # Wait for service to start up
-      #       sleep 30
-      #       inst=$(az container show -g ${{ env.RESOURCE_GROUP }} -n ${{ env.CONTAINER_NAME }} -o json)
-      #       echo "$inst" | jq '.instanceView'
-      #       state=$(echo "$inst" | jq -r '.instanceView.state')
-      #       restartCounts=$(echo "$inst" | jq -r '.instanceView.containers[].restartCount')
-      #       echo "State=$state, restarts=$restartCounts"
-      #       if [[ "$state" != "Running" ]]; then
-      #         echo "Container not running"
-      #         az container logs -g ${{ env.RESOURCE_GROUP }} -n ${{ env.CONTAINER_NAME }} --container-name ${{ env.CONTAINER_NAME }} || true
-      #         exit 1
-      #       fi
+      - name: Verify deployment health
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            echo "Checking if container is running..."
+            # Wait for service to start up
+            sleep 10
+            inst=$(az container show -g ${{ env.RESOURCE_GROUP }} -n ${{ env.CONTAINER_NAME }} -o json)
+
+            group_state=$(echo "$inst" | jq -r '.instanceView.state // empty')
+            container_state=$(echo "$inst" | jq -r '.containers[0].instanceView.currentState.state // empty')
+            container_name=$(echo "$inst" | jq -r '.containers[0].name // empty')
+            restartCounts=$(echo "$inst" | jq -r '.containers[0].instanceView.restartCount // 0' | paste -sd, -)
+
+            echo "GroupState=$group_state, ContainerState=$container_state, restarts=$restartCounts, containerName=$container_name"
+
+            if [[ "$container_state" != "Running" || "$group_state" != "Running" ]]; then
+              echo "Container not running"
+              az container logs -g ${{ env.RESOURCE_GROUP }} -n ${{ env.CONTAINER_NAME }} --container-name ${{ env.CONTAINER_NAME }} || true
+              exit 1
+            else
+              echo "Container is running"
+            fi
 
       - name: Debug information
         if: ${{ github.event.inputs.debug_mode != 'false' }}
