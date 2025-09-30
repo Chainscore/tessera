@@ -35,22 +35,22 @@ WORKDIR /app
 # Copy the entire application
 COPY . .
 
-# setup
-RUN chmod +x /app/scripts/setup.sh
-
-# Initialize git submodules (assuming private token is available via build args)
-ARG GITHUB_TOKEN
-RUN if [ -n "$GITHUB_TOKEN" ]; then \
-        git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/" && \
-        git submodule update --init deps/py-ark-vrf deps/tsrkit-pvm deps/tsrkit-asm deps/rockstore deps/tsrkit-types; \
+# Build PVM cython
+RUN if [ -d deps/tsrkit-pvm ]; then \
+        cd deps/tsrkit-pvm && \
+        echo "[INFO] Building tsrkit-pvm with Cython optimizations..." && \
+        # careful with -march=native (non-portable); remove if portability needed
+        CFLAGS="-O3 -march=native -flto" LDFLAGS="-flto" PVM_BUILD_MODE=cython /root/.local/bin/uv run python setup.py build_ext --inplace --force; \
+        cd /app; \
     else \
-        echo "Warning: GITHUB_TOKEN not provided, skipping submodule init"; \
+        echo "[WARN] deps/tsrkit-pvm not found, skipping tsrkit-pvm build"; \
     fi
 
+RUN uv sync
 
 # Run the application
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

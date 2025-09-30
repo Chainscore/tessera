@@ -2,6 +2,6 @@
 .build.env
 test-suites
 data
-poetry.lock
+uv.lock
 .venv
 polkajam
