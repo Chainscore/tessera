@@ -49,3 +49,53 @@ class Finality:
         if not latest_hh:
             latest_hh = bytes(32)
         return Block.load(latest_hh, kv)
+
+    @classmethod
+    def best_block(cls, block: Block):
+        """
+        Checking condition for best block.
+        1. Has finalized block as an ancestor.
+        2. Single validator can't produce two diff block in same timeslot.
+        3. Is considered audited.
+
+        Args:
+            block: Block for checking best block
+
+        """
+        from jam.settings import settings as _set
+
+        is_audited = False
+        is_finalized_ancestor = False
+        is_audited = False
+
+        latest_finalized_block = cls.load_final(kv=_set.main_db)
+
+        if latest_finalized_block.header.hash() == block.header.hash():
+            logger.error("latest finalized block and current process block can't have same header hash")
+            raise
+
+        parent_hash = block.header.parent
+
+        # -------------------- 1. Parent ancestor checked --------------------
+        while not is_finalized_ancestor:
+            parent_block = Block.load(header_hash=parent_hash, db=_set.main_db)
+            if parent_block.header.hash() == latest_finalized_block:
+                is_finalized_ancestor = True
+                break
+
+            # keep moving to parent block
+            parent_hash = parent_block.header.parent
+
+        # 3. -------------------- Block audited --------------------
+        from jam.audit.audit_engine import AuditEngine
+        engine = AuditEngine()
+        audited = engine.get_audit_status()
+        if audited:
+            is_audited =True
+        else:
+            logger.warning(
+                f"Block with header_hash {block.header.hash()} not audited"
+            )
+
+        # 3. -------------------- FORK => 1V , 2 diff B , in same slot --------------------
+        ...
