@@ -35,12 +35,24 @@ jobs:
             echo "DNS_LABEL=tessera-jam-node-develop" >> $GITHUB_ENV
           fi
 
-      - name: 📥 Checkout code with submodules
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
-          submodules: 'recursive'
+          submodules: false
+      
+      - name: Init required submodules only
+        run: |
+          git submodule init deps/tsrkit-pvm
+          git submodule init deps/py-ark-vrf
+          git submodule init deps/rockstore
+          git submodule init deps/tsrkit-asm
+          git submodule init deps/tsrkit-types
+
+          git -c "url.https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/.insteadOf=https://github.com/" \
+            submodule update --recursive --depth 0 \
+            deps/tsrkit-pvm deps/py-ark-vrf deps/rockstore deps/tsrkit-asm deps/tsrkit-types
 
       - name: Verify submodules are present
         run: |
@@ -118,8 +130,6 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           platforms: linux/amd64
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Get ACR credentials
         id: get-acr-creds
