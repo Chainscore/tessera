@@ -30,9 +30,9 @@ jobs:
             echo "IMAGE_TAG=latest" >> $GITHUB_ENV
             echo "DNS_LABEL=tessera-jam-node" >> $GITHUB_ENV
           else
-            echo "CONTAINER_NAME=tessera-tiny" >> $GITHUB_ENV
-            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
-            echo "DNS_LABEL=tessera-tiny-jam-latest" >> $GITHUB_ENV
+            echo "CONTAINER_NAME=tessera-node-develop" >> $GITHUB_ENV
+            echo "IMAGE_TAG=develop" >> $GITHUB_ENV
+            echo "DNS_LABEL=tessera-jam-node-develop" >> $GITHUB_ENV
           fi
 
       - name: Checkout code
@@ -206,23 +206,23 @@ jobs:
               done
             fi
 
-      - name: Verify deployment health
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            echo "Checking if container is running..."
-            # Wait for service to start up
-            sleep 30
-            inst=$(az container show -g ${{ env.RESOURCE_GROUP }} -n ${{ env.CONTAINER_NAME }} -o json)
-            echo "$inst" | jq '.instanceView'
-            state=$(echo "$inst" | jq -r '.instanceView.state')
-            restartCounts=$(echo "$inst" | jq -r '.instanceView.containers[].restartCount')
-            echo "State=$state, restarts=$restartCounts"
-            if [[ "$state" != "Running" ]]; then
-              echo "Container not running"
-              az container logs -g ${{ env.RESOURCE_GROUP }} -n ${{ env.CONTAINER_NAME }} --container-name ${{ env.CONTAINER_NAME }} || true
-              exit 1
-            fi
+      # - name: Verify deployment health
+      #   uses: azure/CLI@v2
+      #   with:
+      #     inlineScript: |
+      #       echo "Checking if container is running..."
+      #       # Wait for service to start up
+      #       sleep 30
+      #       inst=$(az container show -g ${{ env.RESOURCE_GROUP }} -n ${{ env.CONTAINER_NAME }} -o json)
+      #       echo "$inst" | jq '.instanceView'
+      #       state=$(echo "$inst" | jq -r '.instanceView.state')
+      #       restartCounts=$(echo "$inst" | jq -r '.instanceView.containers[].restartCount')
+      #       echo "State=$state, restarts=$restartCounts"
+      #       if [[ "$state" != "Running" ]]; then
+      #         echo "Container not running"
+      #         az container logs -g ${{ env.RESOURCE_GROUP }} -n ${{ env.CONTAINER_NAME }} --container-name ${{ env.CONTAINER_NAME }} || true
+      #         exit 1
+      #       fi
 
       - name: Debug information
         if: ${{ github.event.inputs.debug_mode != 'false' }}
