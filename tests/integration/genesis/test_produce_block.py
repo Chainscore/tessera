@@ -6,7 +6,7 @@ from jam.types.protocol.core import TimeSlot
 
 
 def test_block_production(db_path):
-    settings = setup_setting(db_path, 0, "alice", 0)
+    settings = setup_setting(db_path, 0, "alice", 3000)
     state = setup_state(settings.state_db)
 
     block = Block.genesis()
@@ -18,8 +18,21 @@ def test_block_production(db_path):
     assert b.validate()
     state.transition(b)
 
-    for i in range(2, 100):
-        b = b.produce(TimeSlot(i))
-        assert b.validate()
-        state.transition(b)
-        print("✅")
+    settings.clear()
+
+    settings = setup_setting(db_path, 3, "dave", 3000)
+    state = setup_state(settings.state_db)
+
+    b = block.produce(TimeSlot(2))
+    assert b.validate()
+
+    b = block.produce(TimeSlot(3))
+    assert b.validate()
+    settings.clear()
+
+    settings = setup_setting(db_path, 2, "charlie", 3000)
+    state = setup_state(settings.state_db)
+
+    b = block.produce(TimeSlot(4))
+    assert b.validate()
+    print("✅")

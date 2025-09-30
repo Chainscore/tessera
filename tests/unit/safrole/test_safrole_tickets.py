@@ -1,4 +1,6 @@
 from inspect import signature
+
+from jam.state.transitions.safrole.executor import setup_executor
 from py_ark_vrf import vrf_output
 import pytest
 from tsrkit_types.bytes import Bytes
@@ -41,6 +43,9 @@ def test_ticket_accumulation():
         ),
         offenders=PsiO([]),
     )
+
+    pubkeys = [val.bandersnatch for val in initial_state.kappa]
+    setup_executor(pubkeys)
 
     setup_setting(None, 1)
 
@@ -96,6 +101,8 @@ def test_ticket_submission_outside_period():
         ),
         offenders=PsiO([]),
     )
+    pubkeys = [val.bandersnatch for val in initial_state.kappa]
+    setup_executor(pubkeys)
 
     setup_setting(None, 1)
 
@@ -139,6 +146,9 @@ def test_ticket_duplicate_rejection():
         offenders=PsiO([]),
     )
 
+    pubkeys = [val.bandersnatch for val in initial_state.kappa]
+    setup_executor(pubkeys)
+
     setup_setting(None, 1)
 
     # Create a ticket envelope
@@ -181,6 +191,9 @@ def test_ticket_sorting():
         ),
         offenders=PsiO([]),
     )
+
+    pubkeys = [val.bandersnatch for val in initial_state.kappa]
+    setup_executor(pubkeys)
 
     setup_setting(None, 1)
 

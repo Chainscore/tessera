@@ -87,7 +87,6 @@ async def start_node(
     from jam.settings import settings
     index = settings.validator_index
     peers = set(state.kappa)
-    print("INDEX", index)
     if index != 7:
         peers.add(state.lambda_[index])
         peers.add(state.gamma.p[index])

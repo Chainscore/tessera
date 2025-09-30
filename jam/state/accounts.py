@@ -49,7 +49,6 @@ def make_account_prop(field):
         k, v = construct_state_key((255, self.id)), meta.encode()
        
         self.store.put(k, v)
-
         # Publishes updates of the service data.
         asyncio.create_task(subscribe_service_data(self.id, meta))
 
@@ -107,6 +106,8 @@ class Account:
             value.encode(),
         )
         self.store.put(storage_key, encoded_val)
+        # Publishes updates of the service data.
+        asyncio.create_task(subscribe_service_data(self.id, value))
         
     @property
     def storage(self):
