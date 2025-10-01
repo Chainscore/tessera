@@ -55,8 +55,8 @@ async def main(
     seed = os.environ.get("SEED", "0")
     host = os.environ.get("HOST", "0.0.0.0")
     if rpc_flag:
-        rpc_port = os.environ["RPC_PORT"]
-        rpc_host = os.environ["RPC_HOST"]
+        rpc_port = os.environ.get("RPC_PORT", 19800)
+        rpc_host = os.environ.get("RPC_HOST", "0.0.0.0")
 
     if not name or not port or not host or not seed:
         raise ValueError(f"Missing node info in {env}")

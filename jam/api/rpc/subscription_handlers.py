@@ -194,5 +194,6 @@ async def pub(method: str, value: list | None):
             publish_method = f"{method}:{finality}"
             block = Finality.load_final(settings.main_db) if finality else Finality.load_latest(
                 settings.main_db)
-            await broker.publish(publish_method, {"header_hash": list(block.header.hash()), "slot": int(block.header.slot),
+            if block:
+                await broker.publish(publish_method, {"header_hash": list(block.header.hash()), "slot": int(block.header.slot),
                                           "value": value})
