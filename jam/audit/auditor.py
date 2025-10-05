@@ -21,7 +21,8 @@ class Auditor:
         subsequent_evidence: TypedVector[SubsequentTrancheEvidence] = None,
     ):
         """
-        Main Function to trigger auditing for nth tranche (n >= 0)
+        The function assigns work reports for auditing to each validator
+        for tranche n and triggers an announcement for the assigned reports
         """
         from jam.settings import settings
         from jam.storage.tranche_audit_store import tranche_store
@@ -58,9 +59,8 @@ class Auditor:
 
             return
 
-        # logger.debug("ASSIGNED REPORTS", block=str(block), tranche=tranche, tranche_state=curr_state.to_json(), assigned_reps=assigned_wrs)
         await self.announcement(block=block, tranche=tranche, assigned_wrs=assigned_wrs, subsequent_evidence=subsequent_evidence)
-        ...
+
 
     @classmethod
     async def announcement(
@@ -71,14 +71,15 @@ class Auditor:
         subsequent_evidence: TypedVector[SubsequentTrancheEvidence] = None,
     ):
         """
-        This function just take a list of report which is available for auditing and assign random 10 reports to tha validator then create announcement for them.
+        This function takes a list of work reports and subsequent evidence (validators who have not given judgments),
+        then creates an announcement for them using  protocol 144.
 
-            Arg:
-                reports: List of report which just become available for auditing  [ ( Q[R?]_c )  Eq. 17.1 ]
-                tranche: Current tranche index
+        Arg:
+            block: Block on which Auditing trigger
+            tranche: Current tranche index
+            assigned_wrs: List of report which just become available for auditing
+            subsequent_evidence:
 
-            Return:
-                set of ed21599 signature   [ Eq: 17.9, 17.10, 17.11]
         """
 
         from jam.audit.audit import Audit
@@ -187,7 +188,14 @@ class Auditor:
         assign_wrs: TypedVector[CoreReport] = None,
     ):
         """
-        description come
+        This function takes a list of work reports, creates a judgment (Valid or Invalid) for each,
+        and transmits the individual judgments to other validators using protocol 145.
+
+        Arg:
+            block: Block on which Auditing trigger
+            tranche: Current tranche index
+            assigned_wrs: List of report which just become available for judgments
+
         """
         from jam.settings import settings
         from jam.storage.tranche_audit_store import tranche_store
@@ -201,10 +209,7 @@ class Auditor:
         header_hash = tranche.header_hash
         validator_index = settings.validator_index
 
-
         logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)}")
-
-        cnt = 0
 
         try:
             for c_r in assign_wrs:

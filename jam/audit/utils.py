@@ -1,9 +1,9 @@
 import asyncio
+import math
 from tsrkit_types import U32, Uint, U8, Null, TypedVector, Bool
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits, Faults
-
 from jam.block.block import Block
-from jam.types.work.report import WorkReportHash, WorkReport
+from jam.types.work.report import WorkReportHash, WorkReport, WorkReports
 from jam.types.audit.audit_tranche import TrancheIndex, Tranche, OptionalReports, OptionalReport, TrancheState, CoreReport, Records, AuditRecord
 from jam.types.protocol.crypto import BandersnatchVrfSignature, Ed25519Public, Ed25519Signature, HeaderHash
 from jam.types.protocol.core import CoreIndex, EpochIndex, ValidatorIndex
@@ -11,14 +11,11 @@ from jam.audit.audit import Audit
 from jam.network.protocols.ce_144 import NoShow, SubsequentTrancheEvidence, CoreReportHash
 from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY
 from jam.block.extrinsics.disputes import Verdict, Culprit, Fault, JudgementVotes, Judgement
-
-from jam.logging import get_logger
-
-# Module-specifier logger
-logger = get_logger("utils")
+from jam.log_setup import logger
 
 
 class Utils:
+
     @classmethod
     async def fetch_report(cls, wr_hash: WorkReportHash) -> WorkReport | None:
         """
@@ -135,44 +132,57 @@ class Utils:
                 validity = await Audit.refine(wr=wr)
                 return validity
 
-    @staticmethod
-    async def block_audited(tranche: Tranche, block: Block) -> bool:
+    @classmethod
+    async def block_audited(cls, tranche: Tranche, block: Block, new_wrs: WorkReports) -> bool |  None:
         """
         block B may be considered audited, a condition denoted U, when all
         the work-reports which were made available are considered audited.
         """
-
-        from jam.storage.tranche_audit_store import tranche_store
+        from jam.storage.tranche_audit_store import tranche_store, CoreReport
 
         header_hash = tranche.header_hash
+
+        # ----------------- list of unaudited reports ------------
+        unaudited_list = TypedVector[WorkReport]([])
 
         # ----------------- list of reports is audited -----------
         audited_wr_list = await tranche_store.get_audited_list(tranche=tranche)
 
-        # --------------------- available reports --------------
-        tranche_store_ = tranche_store.get_store()
-        available_reports = list(tranche_store_.values())[0].audited_list
-        available_r_hash: set[WorkReportHash] = set()
-        for c_r in available_reports:
-            wr_hash = c_r.work_report_hash
-            available_r_hash.add(wr_hash)
-
-        # ----------------- final audit check ------------------------
+        # ----------------- final audit check --------------------
         for wr in audited_wr_list:
             if wr != Null:
                 wr_hash = wr.work_report.unwrap().hash()
-                if wr_hash not in available_r_hash:
-                    logger.info("Found a report which is not audited, so block is unaudited")
-                    return False
+                if wr_hash not in new_wrs:
+                    unaudited_list.append(wr)
 
-        logger.info(
-            f"Block Audited 🔍 from audit engine",
-            header_hash=header_hash.hex(),
-            block_slot=block.header.slot,
-            tranche=tranche,
-        )
+        if len(unaudited_list) == 0:
+            logger.info(
+                f"Block Audited 🔍 from audit engine",
+                header_hash=header_hash.hex(),
+                block_slot=block.header.slot,
+                tranche=tranche,
+            )
+            return True
+        else:
+            logger.info("Found a report which is not audited, so block is unaudited, banned, chain revert logic")
+            # Here we come on reverting
+            cls.unaudited_revert(block=block)
 
-        return True
+    @classmethod
+    def unaudited_revert(cls, block: Block):
+        """  """
+        from jam.settings import settings
+        from jam.state.state import State, state
+        header_hash = block.header.hash()
+
+        States = State()
+
+        # as soon as new slot began we start auditing process
+        cache_update = State.load(header_hash=header_hash)
+
+        # delete all cache and remove all it from thr DB and tries
+        States.revert(header_hash=header_hash)
+        ...
 
     @staticmethod
     async def is_tranche(
@@ -190,7 +200,7 @@ class Utils:
             prev_tranche_state: last tranche state
 
         Returns:
-            NoShows
+            List of SubsequentTrancheEvidence
         """
         from jam.storage.tranche_audit_store import tranche_store
         from jam.audit.audit import Audit
@@ -203,7 +213,7 @@ class Utils:
         entropy_source = BandersnatchVrfSignature(block.header.entropy_source)
         bandersnatch_private = settings.bandersnatch_private
 
-        # ---------- Initialized NO_SHOW, UNAUDITED and NEGATIVE WR  list for this Tranche ----------
+        # ---------- Calculate SubsequentTrancheEvidence, UNAUDITED list for this Tranche ----------
         updated_unaudited_list = OptionalReports([])
         subsequent_evidence = TypedVector[SubsequentTrancheEvidence]([])
 
@@ -238,9 +248,14 @@ class Utils:
                                 if tranche_index > TrancheIndex(0):
                                     if len(announces) < len(true_votes):
                                         updated_unaudited_list.append(OptionalReport(Null))
+                                        core_report = CoreReportHash(
+                                            core_index=CoreIndex(core_index),
+                                            report_hash=wr_hash
+                                        )
+                                        await tranche_store.add_to_audited_list(tranche=curr_tranche, c_w=core_report)
                                     else:
                                         logger.error(
-                                            "got report which has announce > true_votes"
+                                            "got report which has announcements > true_votes"
                                         )
                                 else:
                                     logger.error(
@@ -288,9 +303,10 @@ class Utils:
     async def dispute_ext(block: Block, tranche : Tranche) -> DisputesExtrinsic:
         """ here we build while dispute extrinsic """
         from jam.storage.tranche_audit_store import tranche_store
+        from jam.state.state import state
         # TODO : Work Report Age
         # TODO : Error handling
-        # TODO : Does need to wrap up into Type before adding intp verdict, culprit and fault , check every where in this function
+        # TODO : Does need to wrap up into Type before adding into verdict, culprit and fault , check every where in this function
 
         # -------------------- Fetching State for dispute ext. calculate --------------------
         state = tranche_store.get_state(tranche=tranche)
@@ -301,7 +317,7 @@ class Utils:
         )
 
         init_state = tranche_store.get_state(tranche=init_tranche)
-        unaudited_reports = init_state.unaudited_list\
+        unaudited_reports = init_state.unaudited_list
 
         # ------------------------ Empty dispute extrinsic -------------------
         verdicts = Verdicts([])
@@ -321,6 +337,27 @@ class Utils:
                     true_votes = audit_record.true_votes
                     false_votes = audit_record.false_votes
 
+                    # ------------ Calculate report slot ------------
+                    report_slot = None
+                    for guarantee in block.extrinsic.guarantees:
+                        if guarantee.report.hash() == wr_hash:
+                            report_slot = guarantee.slot
+
+                    report_age = EpochIndex(math.floor(report_slot / EPOCH_LENGTH))
+
+                    # bit error handling for report slot
+                    current_epoch = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
+
+                    valid_ages = (
+                        [current_epoch, current_epoch]
+                        if current_epoch == 0
+                        else [current_epoch, current_epoch - 1]
+                    )
+
+                    if report_age not in valid_ages:
+                        logger.error(f"Work Report {wr_hash} is too old. can't process")
+                        continue
+
                     # -------------- sorted judgments (votes) --------------
 
                     t_votes = list(true_votes)
@@ -329,11 +366,13 @@ class Utils:
                     t_sorted = sorted(t_votes, key=lambda x: x[1])
                     f_sorted = sorted(f_votes, key=lambda x: x[1])
 
+                    # -------------- remove duplicate if exist ------------
+
+
                     # ------------E_v | E_f | E_c --------------
 
                     if len(true_votes) >= VALIDATORS_SUPER_MAJORITY:
                         if len(false_votes) >= 1:
-
                             core_report = CoreReportHash(
                                 core_index=CoreIndex(core_index),
                                 report_hash=WorkReportHash(wr_hash)
@@ -350,11 +389,10 @@ class Utils:
 
                                 judgments.append(Judgement=judgment)
 
-                            age = state.tau // EPOCH_LENGTH  # TODO
 
                             verdict = Verdict(
                                 target=wr_hash,
-                                age=U32(age),
+                                age=U32(report_age),
                                 votes=judgments
                             )
 
@@ -369,7 +407,8 @@ class Utils:
                                 )
                         else:
                             logger.error(
-                                "Report doesn't have at least one false votes (for Fault E_f)"
+                                "Report doesn't have more then one fault, it should "
+                                "have at least one false votes (for Fault E_f)"
                             )
 
                     elif len(false_votes) >= VALIDATORS_SUPER_MAJORITY:
@@ -379,21 +418,19 @@ class Utils:
                                 report_hash=WorkReportHash(wr_hash)
                             )
 
-                            age = state.tau // EPOCH_LENGTH  #TODO
-
                             judgments = JudgementVotes([])
                             for f in f_sorted[:VALIDATORS_SUPER_MAJORITY]:
                                 judgment = Judgement(
                                     vote=Bool(False),
-                                    index=ValidatorIndex(f.validator_index),
-                                    signature=Ed25519Signature(f.ed25519_signature)
+                                    index=f.validator_index,
+                                    signature=f.ed25519_signature
                                 )
 
                                 judgments.append(Judgement=judgment)
 
                             verdict = Verdict(
-                                target=WorkReportHash(wr_hash),
-                                age=U32(age),
+                                target=wr_hash,
+                                age=U32(report_age),
                                 votes=judgments
                             )
 
@@ -419,7 +456,6 @@ class Utils:
                                                     signature=s.signature
                                                 )
                                                 culprits.append(culprit)
-
                                         else:
                                             logger.error("Dont have enough guarantee to build Culprit extrinsic")
                                     else:
@@ -432,18 +468,16 @@ class Utils:
 
                     else:  # wonky
                         # TODO: add them in sorted order
-                        age = state.tau // EPOCH_LENGTH     #TODO
-
                         judgments = JudgementVotes([])
                         for t in t_sorted[:VALIDATORS_WONKY]:
                             judgment = Judgement(
                                 vote=Bool(True),
-                                index=ValidatorIndex(t.validator_index),
-                                signature=Ed25519Signature(t.ed25519_signature)
+                                index=t.validator_index,
+                                signature=t.ed25519_signature
                             )
                             judgments.append(Judgement=judgment)
 
-                        for f in f_sorted:
+                        for f in f_sorted[:(VALIDATORS_SUPER_MAJORITY - VALIDATORS_WONKY)]:
                             judgment = Judgement(
                                 vote=Bool(False),
                                 index=ValidatorIndex(f.validator_index),
@@ -452,11 +486,17 @@ class Utils:
                             judgments.append(Judgement=judgment)
 
                         verdict = Verdict(
-                            target=WorkReportHash(wr_hash),
-                            age=U32(age),
+                            target=wr_hash,
+                            age=U32(report_age),
                             votes=judgments
                         )
                         verdicts.append(verdict)
+
+        # --------------- sorting Ev, Ec and Ev ---------------
+        # TODO: doubt for Ev, hash to int sort or Core index sort
+        verdicts.sort(key=lambda v: int.from_bytes(v.target))
+        culprits.sort(key=lambda c : int.from_bytes(c.key))
+        faults.sort(key=lambda fs: int.from_bytes(fs.key))
 
         dispute_ext = DisputesExtrinsic(
             verdicts= verdicts,

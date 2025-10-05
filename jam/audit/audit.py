@@ -1,4 +1,3 @@
-from jam.logging import get_logger
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from tsrkit_types import Null, TypedVector, Bytes, Uint, U8
 from py_ark_vrf import prove_ietf, vrf_output
@@ -15,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jam.audit.assembler import Assembler
 
 from jam.types.protocol.crypto import HeaderHash
-from jam.types import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash, Hash
+from jam.types import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash
 from jam.types.audit.audit_tranche import (
     Tranche,
     OptionalReports,
@@ -26,9 +25,7 @@ from jam.types.audit.audit_tranche import (
 )
 from jam.types.work.report import WorkReport
 from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR
-
-# Module-specifier logger
-logger = get_logger("auditor")
+from jam.log_setup import logger
 
 
 class Audit:
@@ -38,6 +35,16 @@ class Audit:
         prior_state: TypedVector[OptionalWorkReportState],
         newly_rep: TypedVector[WorkReport]
     ) -> OptionalReports:
+        """
+        Equation: 17.3, 17.4
+        Define the sequence of work-reports which we may be required to audit as q = [ |R ?]c,
+        a sequence of length equal to the number of core.
+
+        Args:
+            prior_state: p (rho) block prior state
+            newly_rep: Work Report pending which has just become available.
+
+        """
 
         auditable_reports = OptionalReports([])
 
@@ -185,9 +192,9 @@ class Audit:
         This function create Announcement Statement (Valid Ed25519 Signature) is published and distributed to all other Validators Signature.
 
         Args:
-            assign_report: Assigned Reports to the validator
-            header_hash: latest Block's Header
             tranche: Current tranche
+            header_hash: latest Block's Header
+            assign_report: Assigned Reports to the validator
 
         Returns:
             valid Ed25519 Signature
@@ -231,7 +238,6 @@ class Audit:
         This function define a_n beyond the initial tranche through a new vrf which acts upon the set of no-show validators (for n (tranche) > 0).
 
         Args:
-            # block:
             header_hash: Current Tranche Header hash
             tranche: Current Tranche
             entropy: Entropy source
@@ -341,7 +347,7 @@ class Audit:
             return U8(0)
 
     @staticmethod
-    def judgment_signature(wr_hash: WorkReportHash, validity: Uint[8]) -> Bytes[96]:
+    def judgment_signature(wr_hash: WorkReportHash, validity: Uint[8]) -> Ed25519Signature:
         """
         Equations: 17.17
         This function just build the ed25519 signature(Judgment Signature) for the particular work report.

@@ -1,10 +1,7 @@
 from typing import Dict
-
 from tsrkit_types import Null, Uint, TypedVector
-import bisect
 import asyncio
-from jam.logging import get_logger
-from jam.types import Hash
+from jam.log_setup import node_logger
 
 from jam.types.audit.audit_tranche import (
     Tranche,
@@ -20,10 +17,8 @@ from jam.network.protocols.ce_145 import Judgment
 from jam.types.protocol.core import ValidatorIndex, TrancheIndex
 from jam.types.protocol.crypto import HeaderHash, Ed25519Public
 from jam.types.work.report import WorkReportHash
-from jam.block.extrinsics.disputes import Verdict, Culprit, Fault
-from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
 
-logger = get_logger("tranche")
+logger = node_logger
 
 
 class TrancheStore:
@@ -36,7 +31,7 @@ class TrancheStore:
         self._lock = asyncio.Lock()
 
     # ---------------------- Get whole tranche store -------------
-    # just for debugging
+
     async def get_store(self) -> Dict[Tranche, TrancheState]:
         """ Return the entire tranche store safely. """
         async with self._lock:
@@ -140,20 +135,13 @@ class TrancheStore:
         if not state:
             try:
                 logger.warning("No state for given tranche, so we create new one", tranche=tranche)
-                # this condition comes because 2md validator taking time to start processing so
-                # before initialized its tranche state it received ann from other, to save those ann
-                # they have to build the tranche state
 
-                # special condition
                 if tranche.tranche_index == TrancheIndex(0):
                     new_state = TrancheState.empty()
 
                     for c_r in announce.assigned_reports:
-
                         new_state.records[c_r.report_hash] = AuditRecord.empty()
-
                         new_state.records[c_r.report_hash].announces.add(validator_index)
-
                         new_state.records[c_r.report_hash].no_shows.append(
                             NoShow(
                                 validator_index=validator_index,
@@ -170,11 +158,8 @@ class TrancheStore:
 
                     prev_state = self._tranche_store.get(prev_tranche)
                     new_state = prev_state.carry_forward()
-
                     for c_r in announce.assigned_reports:
-
                         new_state.records[c_r.report_hash].announces.add(validator_index)
-
                         new_state.records[c_r.report_hash].no_shows.append(
                             NoShow(
                                 validator_index=validator_index,
@@ -205,9 +190,7 @@ class TrancheStore:
 
                     else:
                         if validator_index not in state.records[c_r.report_hash].announces:
-
                             state.records[c_r.report_hash].announces.add(validator_index)
-
                             state.records[c_r.report_hash].no_shows.append(
                                 NoShow(
                                     validator_index=validator_index,
@@ -225,7 +208,6 @@ class TrancheStore:
                     error=str(e),
                     error_type=type(e).__name__,
                 )
-        # logger.info("Recorded audit announcement", tranche=tranche, vi=validator_index, ann=announce)
 
     # --------------------- Judgement Operations ---------------------
     async def update_judgment(self, tranche: Tranche, judgment: Judgment, ed25519_public: Ed25519Public):
@@ -262,8 +244,6 @@ class TrancheStore:
                             ed25519_signature= edd2519_signature
                         )
 
-                        # bisect.insort_left(true_votes_list, (validator_index, ed25519_public, edd2519_signature), key=lambda x: x[0])
-
                         if validator_index in announcements:
                             true_votes.add(judge_info)
 
@@ -282,8 +262,6 @@ class TrancheStore:
                             ed25519_public=ed25519_public,
                             ed25519_signature=edd2519_signature
                         )
-
-                        # bisect.insort_left(true_votes_list, (validator_index, ed25519_public, edd2519_signature), key=lambda x: x[0])
 
                         if validator_index in announcements:
                             false_votes.add(judge_info)

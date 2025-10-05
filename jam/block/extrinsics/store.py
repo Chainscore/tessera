@@ -49,6 +49,10 @@ class ExtrinsicStore(Generic[T]):
 
     def remove(self, ext_list: List[T]):
         """Remove the recently included extrinsics"""
+        if not isinstance(ext_list, list):
+            ext_list = [ext_list]
+        else:
+            ext_list = ext_list
         for ext in ext_list:
             try:
                 indx = self._store.index(ext)

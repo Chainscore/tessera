@@ -141,22 +141,22 @@ class JudgmentPublication(NetworkProtocol):
             validator_index = data.judgment.validator_index
             validity = data.judgment.validity
             wr_hash = data.judgment.work_report_hash
-            edd2519_signature = data.judgment.ed25519_signature
+            ed25519_signature = data.judgment.ed25519_signature
 
             # epoch compare
             curr_epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
             if curr_epoch_index == epoch_index:
-                edd2519_key = state.kappa[settings.validator_index].ed25519
+                ed25519_key = state.kappa[settings.validator_index].ed25519
                 logger.info("Same epoch judgment received")
             else:
                 if curr_epoch_index - EpochIndex(1) == epoch_index:
-                    edd2519_key = state.lambda_[settings.validator_index].ed25519
+                    ed25519_key = state.lambda_[settings.validator_index].ed25519
                     logger.info("judgments received last epoch")
                 else:
                     raise KeyError("Judgment age is not Valid. because work report is too old.")
 
             # Handling received judgment
-            asyncio.create_task(self.handle_judgment(judgment=data.judgment, ed25519_key=edd2519_key))
+            asyncio.create_task(self.handle_judgment(judgment=data.judgment, ed25519_key=ed25519_key))
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)

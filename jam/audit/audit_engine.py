@@ -7,7 +7,6 @@ from jam.block.block import Block
 from jam.finality.finality import Finality
 from jam.log_setup import logger
 from jam.network.protocols.ce_144 import SubsequentTrancheEvidence
-from jam.types.protocol.core import TimeSlot
 from jam.types.audit.audit_tranche import (
     TrancheIndex,
     Tranche,
@@ -31,6 +30,8 @@ class AuditEngine:
     async def run(self, block: Block, new_wrs: WorkReports):
 
         logger.info(f"Auditing started header_hash {block.header.hash()} {block.header.hash().hex()}")
+        # for i in new_wrs:
+        #     print("new wrs", i)
 
         from jam.settings import settings
         header_hash = block.header.hash()
@@ -53,10 +54,9 @@ class AuditEngine:
 
         logger.debug("Fetching prior state", ph=block.header.parent.hex())
         prior_state = State.load(block.header.parent)
-        auditable_reports = OptionalReports([])
 
         # define q : TypedVector[Option[WorkReport]] = [ |R ?]
-        auditable_reports = audit.auditable_reports(prior_state=prior_state.rho, newly_rep=new_wrs)
+        auditable_reports : OptionalReports = audit.auditable_reports(prior_state=prior_state.rho, newly_rep=new_wrs)
 
         logger.debug("Fetched prior state", rho=prior_state.rho, reps=auditable_reports)
 
@@ -106,23 +106,17 @@ class AuditEngine:
                 # ------------------- Condition which check trigger next tranche ---------------
                 subsequent_evidence : TypedVector[SubsequentTrancheEvidence] = await utils.is_tranche(block=block, curr_tranche=curr_tranche, prev_tranche_state=prev_state)
 
-
-                # THIS IS THE CONDITION WHERE CHECK ALL CONDITION FOR "BLOCK AUDITED"
                 if len(subsequent_evidence) == 0:
+
                     asyncio.create_task(utils.dispute_ext(block=block, tranche=curr_tranche))
 
-                    self.is_audited = True
+                    is_block_audit = utils.block_audited(tranche=curr_tranche, block=block, new_wrs=new_wrs)
+                    if is_block_audit:
+                        self.is_audited = True
 
+                    # remove block tranche history after it become audited
                     await tranche_store.remove_block_history(header_hash=header_hash)
 
-                    logger.info(
-                        f"Block Audited 🔍 from audit engine",
-                        header_hash=header_hash.hex(),
-                        block_slot=block.header.slot,
-                        tranche=prev_tranche,
-                    )
-
-                    is_block_audit = utils.block_audited(tranche=curr_tranche , block=block)
                     continue
 
             try:

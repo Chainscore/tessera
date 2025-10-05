@@ -96,7 +96,12 @@ class Extrinsic:
         ep.sort(key=preimage_sort_fn)
 
         # Already sorted
-        ed = DisputesExtrinsic(dpt_store._store)
+        if dpt_store._store:
+            ed = DisputesExtrinsic(
+                verdicts=Verdicts([d.verdicts for d in dpt_store._store]),
+                culprits=Culprits([d.culprits for d in dpt_store._store]),
+                faults=Faults([d.faults for d in dpt_store._store]),
+            )
 
         def sort_fn(ticket: TicketEnvelope) -> int:
             # Take VRF output of the signature and sort by it
