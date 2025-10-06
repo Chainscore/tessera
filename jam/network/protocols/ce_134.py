@@ -143,7 +143,7 @@ class WorkPackageSharing(NetworkProtocol):
                 task = asyncio.create_task(res)
                 tasks.append(task)
 
-                logger.info(
+                logger.debug(
                     "Work package bundle transmitted to guarantor",
                     stream_id=stream_id,
                     peer=client,
@@ -247,7 +247,7 @@ class WorkPackageSharing(NetworkProtocol):
             server.stream_and_keep_open(len_a, stream_id)
             server.stream_and_close(msg_a, stream_id)
 
-            logger.info(
+            logger.debug(
                 "Report credential sent to OG guarantor",
                 guarantor=server,
                 stream_id=stream_id,
@@ -285,7 +285,7 @@ class WorkPackageSharing(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             logger.info(
-                "[EXTRINSICS]: RECEIVED GUARANTEE",
+                "Received guarantee",
                 stream_id=stream_id,
                 peer=client,
                 wr_hash=data.cred.work_report_hash.hex()[:16] + "...",

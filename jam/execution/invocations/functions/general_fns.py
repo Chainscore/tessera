@@ -85,7 +85,7 @@ class GeneralFunctions(INVF):
     ):
         fetch_type = registers[10]
 
-        logger.info("Host call: fetch", fetch_type=fetch_type, item_index=item_index)
+        logger.debug("Host call: fetch", fetch_type=fetch_type, item_index=item_index)
 
         w10 = registers[10]
         w11 = registers[11]
@@ -127,13 +127,10 @@ class GeneralFunctions(INVF):
                 + U32(W_X).encode()
                 + U32(Y).encode()
             )
-            logger.debug("Fetch: returning system constants")
         elif w10 == 1 and entropy is not None:
             v = entropy
-            logger.debug("Fetch: returning entropy")
         elif w10 == 2 and trace is not None:
             v = trace
-            logger.debug("Fetch: returning trace")
         elif (
             w10 == 3
             and item_index is not None
@@ -141,10 +138,8 @@ class GeneralFunctions(INVF):
             and w12 < len(extrinsics[int(w11)])
         ):
             v = extrinsics[w11][int(w12)]
-            logger.debug("Fetch: returning extrinsic data", w11=w11, w12=w12)
         elif w10 == 4 and item_index is not None and w11 < len(extrinsics[item_index]):
             v = extrinsics[item_index][w11]
-            logger.debug("Fetch: returning item extrinsic", item_index=item_index, w11=w11)
         elif (
             w10 == 5
             and item_index is not None
@@ -152,10 +147,8 @@ class GeneralFunctions(INVF):
             and w12 < len(import_segments[w11])
         ):
             v = import_segments[w11][w12]
-            logger.debug("Fetch: returning import segment", w11=w11, w12=w12)
         elif w10 == 6 and item_index is not None and w11 < len(import_segments[item_index]):
             v = import_segments[item_index][w11]
-            logger.debug("Fetch: returning item import segment", item_index=item_index, w11=w11)
         elif package is not None:
 
             def s_cap(w: WorkItem):
@@ -172,45 +165,33 @@ class GeneralFunctions(INVF):
 
             if w10 == 7:
                 v = package.encode()
-                logger.debug("Fetch: returning package data")
             elif w10 == 8:
                 v = package.authorizer.code_hash + package.authorizer.params.encode()
-                logger.debug("Fetch: returning authorizer data")
             elif w10 == 9:
                 v = package.authorization
-                logger.debug("Fetch: returning authorization")
             elif w10 == 10:
                 v = package.context.encode()
-                logger.debug("Fetch: returning context")
             elif w10 == 11:
                 v = Uint(len(package.items)).encode()
                 for item in package.items:
                     v += s_cap(item)
-                logger.debug("Fetch: returning all item summaries", item_count=len(package.items))
             elif w10 == 12 and w11 < len(package.items):
                 v = s_cap(package.items[w11])
-                logger.debug("Fetch: returning item summary", item_index=w11)
             elif w10 == 13 and w11 < len(package.items):
                 v = package.items[w11].payload
-                logger.debug("Fetch: returning item payload", item_index=w11)
         elif o is not None:
             if w10 == 14:
                 v = o.encode()
-                logger.debug("Fetch: returning o data")
             elif w10 == 15 and w11 < len(o):
                 v = o[w11].encode()
-                logger.debug("Fetch: returning o item", index=w11)
         elif t is not None:
             if w10 == 16:
                 v = t.encode()
-                logger.debug("Fetch: returning t data")
             elif w10 == 17 and w11 < len(t):
                 v = t[w11].encode()
-                logger.debug("Fetch: returning t item", index=w11)
 
         if v is None:
             registers[7] = HostStatus.NONE.value
-            logger.debug("Fetch: no data found for request", fetch_type=w10)
             return CONTINUE, gas, registers, memory, context
 
         memory_start = int(registers[7])
@@ -227,13 +208,6 @@ class GeneralFunctions(INVF):
 
         registers[7] = len(v)
         memory.write(memory_start, v[f : f + l])
-
-        logger.debug(
-            "Fetch: data written to memory",
-            memory_start=memory_start,
-            data_length=len(v),
-            written_length=l,
-        )
 
         return CONTINUE, gas, registers, memory, context
 
@@ -296,19 +270,9 @@ class GeneralFunctions(INVF):
 
             registers[7] = len(v)
             memory.write(output_addr, v[f:f+l])
-            logger.debug(
-                "Host call lookup: value found",
-                lookup_key=lookup_key,
-                value_length=len(v),
-                returned_length=l,
-            )
             return CONTINUE, gas, registers, memory, context
         else:
             registers[7] = HostStatus.NONE.value
-            logger.debug(
-                "Host call lookup: account or preimage",
-                lookup_key=lookup_key,
-            )
             return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -363,11 +327,6 @@ class GeneralFunctions(INVF):
 
         if value is None or len(value) == 0:
             registers[7] = HostStatus.NONE.value
-            logger.debug(
-                "Host call read: storage value not found",
-                service_key=service_key,
-                storage_key=key.hex()[:16] + "...",
-            )
         else:
             start = min(int(registers[11]), len(value))
             length = min(int(registers[12]), len(value) - start)
@@ -382,12 +341,6 @@ class GeneralFunctions(INVF):
             registers[7] = Register(len(value))
             memory.write(o, value[start : start + length])
 
-            logger.debug(
-                "Host call read: storage value found",
-                service_key=service_key,
-                value_length=len(value),
-                returned_length=length,
-            )
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -433,7 +386,6 @@ class GeneralFunctions(INVF):
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
         if vz == 0:
             a.__delitem__(k)
-            logger.debug("Host call write: storage key deleted", storage_key=k.hex()[:16] + "...")
         elif memory.is_accessible(vo, vz, Accessibility.WRITE):
             pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
@@ -482,7 +434,6 @@ class GeneralFunctions(INVF):
             
         if target_service not in accounts:
             registers[7] = HostStatus.NONE.value
-            logger.debug("Host call info: service not found", target_service=target_service)
             return CONTINUE, gas, registers, memory, context
 
         acc: AccountData = accounts[target_service]
@@ -508,11 +459,6 @@ class GeneralFunctions(INVF):
         
         registers[7] = len(v)
         memory.write(output_offset, v[f:f+l])
-        logger.debug(
-            "Host call info: service info written",
-            target_service=target_service,
-            info_size=len(v),
-        )
 
         return CONTINUE, gas, registers, memory, context
 

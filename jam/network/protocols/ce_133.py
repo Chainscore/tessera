@@ -75,7 +75,7 @@ class WorkPackageSubmission(NetworkProtocol):
         # Fetch guarantors mapping
         mapping = assign_guarantors()
         guarantors = mapping[0][ci]
-        logger.debug("Fetched Assigned Guarantors (133)", mapping=mapping[1], tau=state.tau, root=state.root.hex())
+        logger.debug("Assigned Guarantors (133)", mapping=mapping[1], tau=state.tau, root=state.root.hex())
         # mapping = assign_fn(state)
         # guarantors = mapping[1]
         # print(mapping[0])
@@ -98,7 +98,7 @@ class WorkPackageSubmission(NetworkProtocol):
             try:
                 if client.val not in guarantors:
                     continue
-                logger.info("Transmitting package", peer=client)
+                logger.debug("Transmitting work package", peer=client)
 
                 # Send Protocol Prefix
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -217,7 +217,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
         buffer = client.stream_buffer[stream_id]
         if buffer == b"":
-            logger.info(
+            logger.debug(
                 "Work package acknowledgement received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),

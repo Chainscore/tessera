@@ -36,10 +36,9 @@ class Conductor:
                     raise ValueError("Ticket generation failed")
 
             ack = await asyncio.gather(*tasks)
-            logger.info("Ticket transmission completed", port=node.port)
 
         except Exception as e:
-            logger.error("Failed to generate & transmit safrole ticket", error=e, time_slot=time_slot)
+            logger.error("Failed to generate & transmit ticket", error=e, time_slot=time_slot)
     
     @classmethod
     def generate_ticket(cls, state, attempt: int) -> TicketEnvelope | None:

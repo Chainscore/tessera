@@ -34,6 +34,6 @@ class Forwarding:
                             await sleep(next_time_slot_time - curr_time)
 
         except Exception as e:
-            logger.error("Failed to forward safrole ticket", error=e, time_slot=time_slot)
+            logger.error("Failed to forward ticket", error=e, time_slot=time_slot)
 
 

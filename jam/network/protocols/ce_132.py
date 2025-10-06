@@ -68,18 +68,17 @@ class SafroleTicketDistribution(NetworkProtocol):
 
             if finality_time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
                 # storing ticket extrinsic
-                logger.debug(f"Storing ticket in extrinsic (transmit), time_slot={finality_time_slot}, slot={finality_time_slot % EPOCH_LENGTH} ticket={data.epoch_ticket.ticket.signature[:14]}")
                 from jam.block.extrinsics.tickets import ticket_store
                 ticket_store.store(data.epoch_ticket.ticket)
 
             else:
-                logger.debug("Tickets are not allowed after TICKET_SUBMISSION_END")
                 raise ValueError("Tickets are not allowed after TICKET_SUBMISSION_END")
 
             stream_data = data.epoch_ticket_len.encode() + data.epoch_ticket.encode()
             tasks = []
+            logger.info(f"Transmitting ticket to proxy validators", ticket=data.epoch_ticket.ticket.signature.hex()[:16])
             for client in node.all_connected:
-                logger.debug("Sending safrole ticket", client=str(client.port))
+                logger.debug("Transmitting ticket", client=str(client.port))
 
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 client.stream_prefix[stream_id] = U8(self._prefix)
@@ -95,7 +94,7 @@ class SafroleTicketDistribution(NetworkProtocol):
                 )
 
             res = await gather_with_exceptions(tasks)
-            logger.info(
+            logger.debug(
                 "Ticket transmission completed",
                 node=str(node.port),
             )
@@ -116,7 +115,7 @@ class SafroleTicketDistribution(NetworkProtocol):
 
         try:
             logger.debug(
-                "Received safrole ticket",
+                "Received ticket",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )
@@ -142,12 +141,11 @@ class SafroleTicketDistribution(NetworkProtocol):
 
             # Tickets are not allowed after ticket submission ends
             if finality_time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
-                logger.debug("Received ticket from", port=server.port)
                 # storing ticket extrinsic
                 from jam.block.extrinsics.tickets import ticket_store
                 ticket_store.store(data.epoch_ticket.ticket)
             else:
-                logger.debug("Tickets are not allowed after TICKET_SUBMISSION_END")
+                logger.error("Tickets are not allowed after TICKET_SUBMISSION_END")
                 raise ValueError("Tickets are not allowed after TICKET_SUBMISSION_END")
 
             # Return acknowledgment to validator
@@ -157,7 +155,7 @@ class SafroleTicketDistribution(NetworkProtocol):
         except Exception as e:
             server.stop_stream(stream_id, 1)
             logger.error(
-                "Error safrole ticket submission",
+                "Error in ticket submission",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
@@ -168,8 +166,8 @@ class SafroleTicketDistribution(NetworkProtocol):
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer == b"":
-            logger.info(
-                "Safrole ticket acknowledgement received",
+            logger.debug(
+                "Ticket acknowledgement received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )

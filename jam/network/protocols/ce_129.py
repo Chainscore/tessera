@@ -91,13 +91,12 @@ class StateRequest(NetworkProtocol):
         """Intercept & Process Work Package on Guarantor (server)"""
         from jam.settings import settings
 
-        node = server.node
         buffer = server.stream_buffer[stream_id]
 
         try:
-            logger.debug(
+            logger.info(
                 "Received state request",
-                peer=server.peer,
+                peer=server,
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )
@@ -105,7 +104,7 @@ class StateRequest(NetworkProtocol):
             data, offset = CE129Data.decode_from(buffer)
             data = cast(CE129Data, data)
 
-            logger.info(
+            logger.debug(
                 "Processing state request",
                 stream_id=stream_id,
                 header_hash=data.header,
@@ -142,7 +141,7 @@ class StateRequest(NetworkProtocol):
             key_val_data = state_data.encode()
             server.stream_and_close(stream_id, key_val_data)
 
-            logger.info(
+            logger.debug(
                 "State response complete. Closed stream",
                 stream_id=stream_id,
                 peer=server.peer,
@@ -163,7 +162,7 @@ class StateRequest(NetworkProtocol):
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
 
-        logger.info(
+        logger.debug(
             "State request ack received",
             stream_id=stream_id,
             peer=client.peer,

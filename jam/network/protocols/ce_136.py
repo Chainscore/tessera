@@ -100,7 +100,7 @@ class WorkReportRequest(NetworkProtocol):
         """Intercept & Fetch requested Work Report on Node"""
         buffer = server.stream_buffer[stream_id][1:]
 
-        logger.info("Received Work Report Request")
+        logger.debug("Received Work Report Request")
         try:
             data = CE136Data.decode(buffer)
             data = cast(CE136Data, data)
@@ -123,7 +123,7 @@ class WorkReportRequest(NetworkProtocol):
             server.stream_and_keep_open(len_a, stream_id)
             server.stream_and_close(msg_a, stream_id)
 
-            logger.info(
+            logger.debug(
                 f"📩 Processed work report query.",
                 report_hash=data.work_report_hash.hex()[:16] + "...",
                 peer=server,
@@ -146,7 +146,7 @@ class WorkReportRequest(NetworkProtocol):
 
             wr_hash = WorkReportHash(Hash.blake2b(data.work_report.encode()))
 
-            logger.info(
+            logger.debug(
                 f"Requested Report received.", peer=client, stream_id=stream_id
             )
 

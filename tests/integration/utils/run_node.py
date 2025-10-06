@@ -63,12 +63,10 @@ async def run_node(
 
     main_db = settings.main_db
 
-    logger.info(
-        "Starting Tessera Node!",
-        name=name,
-        port=port,
-        spec=chain_config.name,
-    )
+    if rpc_flag:
+        logger.info(f"Starting Tessera Node! name={name} port={port} spec={chain_config.name} rpc_port={rpc_port}")
+    else:
+        logger.info(f"Starting Tessera Node! name={name} port={port} spec={chain_config.name}")
 
     try:
         # -------------- SETUP STATE -------------
@@ -85,9 +83,6 @@ async def run_node(
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db, True)
-
-        if rpc_flag:
-            logger.info("📡 Starting RPC/WebSocket server", host=rpc_host, port=rpc_port)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
