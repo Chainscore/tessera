@@ -114,7 +114,7 @@ class BlockRequest(NetworkProtocol):
         # Get the start block
         start_block = Block.load(data.header, settings.main_db)
         if not start_block:
-            logger.info("Block not found", hh=data.header.hex()[:16]+"...")
+            logger.debug("Block not found", hh=data.header.hex()[:16]+"...")
             server.stream_and_close(b"", stream_id)
             return
 

@@ -64,7 +64,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         from jam.state.state import state
         proxy_validator = state.gamma.p[proxy_validator_index]
 
-        logger.debug(f"Proxy validator port {proxy_validator.metadata.port}")
+        logger.info(f"Transmitting ticket to proxy validators", ticket=signature.hex()[:16])
 
         from jam.settings import settings
         if proxy_validator.ed25519 == settings.ed25519_public:
@@ -80,7 +80,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             for client in node.all_connected:
                 if proxy_validator.ed25519 == client.ed25519_public:
                     try:
-                        logger.debug("Sending safrole ticket", client=str(client.port))
+                        logger.debug("Transmitting ticket to proxy", client=str(client.port))
 
                         stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                         client.stream_prefix[stream_id] = U8(self._prefix)
@@ -109,7 +109,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
         try:
             logger.debug(
-                "Received safrole ticket",
+                "Received ticket",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )
@@ -155,10 +155,8 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             )
             # check if you are supposed to be a proxy and ticket is valid
             if proxy_validator.ed25519 == settings.ed25519_public and verification:
-                logger.debug(f"Proxy ticket received from {server.port}")
                 from jam.operations.ticket_queue import ticket_queue
                 ticket_queue.push(data)
-                logger.debug(f"Ticket queue updated {ticket_queue.length()}")
 
             # Return acknowledgment to validator
             ack = b""
@@ -168,7 +166,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         except Exception as e:
             server.stop_stream(stream_id, 1)
             logger.error(
-                "Error safrole ticket submission",
+                "Error in ticket submission",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
                 error=str(e),
@@ -179,8 +177,8 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer == b"":
-            logger.info(
-                "Safrole ticket acknowledgement received",
+            logger.debug(
+                "Ticket acknowledgement received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )

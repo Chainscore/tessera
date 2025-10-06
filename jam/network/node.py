@@ -122,7 +122,7 @@ class QuicNode(asyncio.DatagramProtocol):
             neighbors.add(state.iota[index])
 
         neighbors = [n for n in neighbors if n.ed25519 != settings.ed25519_public]
-        logger.info("🏠 Neighbors set", neighbors=[n.metadata.port for n in neighbors], count=len(neighbors))
+        logger.debug("🏠 Neighbors set", neighbors=[n.metadata.port for n in neighbors], count=len(neighbors))
         # Convert to list and save
         self.neighbors = list([n.ed25519 for n in neighbors])
 
@@ -242,7 +242,7 @@ class QuicNode(asyncio.DatagramProtocol):
             self.connection_ids[connection.host_cid] = protocol
 
             connection._logger = logger
-            logger.info(f"⬅️ Created server connection with {addr[1]}", CID=connection.host_cid.hex())
+            logger.debug(f"⬅️ Created server connection with {addr[1]}", CID=connection.host_cid.hex())
 
         if protocol is not None:
             logger.debug("🌸Processing datagram", data_len=len(data), connection_id=protocol._quic.host_cid.hex())
@@ -334,7 +334,7 @@ class QuicNode(asyncio.DatagramProtocol):
         protocol.connect(addr)                        # start handshake
         protocol.transmit()                           # send initial flight
         await protocol.wait_connected()
-        logger.info(f"➡️ Created client connection with {addr[1]}", cid=quic.host_cid.hex())
+        logger.debug(f"➡️ Created client connection with {addr[1]}", cid=quic.host_cid.hex())
 
         # FIX: Only if neighbor
         protocol.up0_stream = 0

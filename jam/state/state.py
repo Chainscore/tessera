@@ -223,7 +223,7 @@ class State:
             # Assurances
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
             if len(newly_avail_wrs) > 0:
-                logger.info(
+                logger.debug(
                     "Newly available WRs", count=len(newly_avail_wrs),
                     wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
                 )
@@ -320,15 +320,12 @@ state = State(None)
 
 def set_state(new_state: State):
     global state
-
-    logger.info("Global state updated")
-
     state = new_state
     return state
 
 
 def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spec.json"):
-    logger.info(
+    logger.debug(
         "Setting up state from genesis",
         genesis_type=type(genesis).__name__,
         genesis_source=genesis if isinstance(genesis, str) else "GhostState",
@@ -347,7 +344,7 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
     new_state.store.enable_writes()
     new_state.store.enable_cache()
 
-    logger.info(
+    logger.debug(
         "State setup completed",
         state_root=new_state.root.hex()[:16] + "...",
         data_entries=len(data),
