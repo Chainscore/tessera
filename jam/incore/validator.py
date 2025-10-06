@@ -1,4 +1,4 @@
-from jam.log_setup import pvm_logger as logger
+from jam.log_setup import node_logger as logger
 
 from jam.utils.constants import (
     MAX_EXPORT_ITEM,
