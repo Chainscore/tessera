@@ -272,10 +272,10 @@ class State:
                 )
 
                 # TODO: Uncomment it for assurances
-                from jam.operations.handlers.assurer import assurer
-                for ext in block.extrinsic.guarantees:
-                    logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
-                    asyncio.create_task(assurer._req_shard(ext))
+                # from jam.operations.handlers.assurer import assurer
+                # for ext in block.extrinsic.guarantees:
+                #     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                #     asyncio.create_task(assurer._req_shard(ext))
 
                 # TODO: Test Auditing & Refining with PJ
                 # # Start Auditing for new block received
