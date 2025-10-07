@@ -22,78 +22,144 @@ CPU="2"
 MEMORY="4"
 DEBUG_MODE="true"  # Set to "true" for debugging, "false" for normal operation
 
-# Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Building Docker image for amd64 platform...${NC}"
-docker buildx create --use --name amd64builder || echo "Builder already exists"
-
-# Build with GitHub token for private submodules if available
-if [ -n "$GITHUB_TOKEN" ]; then
-    echo -e "${YELLOW}Using GitHub token for private submodules...${NC}"
-    docker buildx build --no-cache --platform linux/amd64 \
-        --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
-        -t $IMAGE_NAME --push .
+# Init only the required submodules
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  echo -e "${YELLOW}Warning: GITHUB_TOKEN not set"
+  git submodule init deps/tsrkit-pvm
+  git submodule init deps/py-ark-vrf
+  git submodule init deps/rockstore
+  git submodule init deps/tsrkit-asm
+  git submodule init deps/tsrkit-types
 else
-    echo -e "${YELLOW}Warning: No GITHUB_TOKEN set, submodules may fail to initialize...${NC}"
-    docker buildx build --no-cache --platform linux/amd64 -t $IMAGE_NAME --push .
+  echo -e "${GREEN}Init required submodules only..."
+  git -c "url.https://x-access-token:${GITHUB_TOKEN}@github.com/.insteadOf=https://github.com/" \
+    submodule update --recursive --depth 0 \
+    deps/tsrkit-pvm deps/py-ark-vrf deps/rockstore deps/tsrkit-asm deps/tsrkit-types
 fi
 
-echo -e "${GREEN}Pushing to Azure Container Registry...${NC}"
-az acr login --name $ACR_NAME
-docker push $IMAGE_NAME
+# Update those submodules using the token for auth
+git -c "url.https://x-access-token:${GITHUB_TOKEN}@github.com/.insteadOf=https://github.com/" \
+  submodule update --recursive --depth 0 \
+  deps/tsrkit-pvm deps/py-ark-vrf deps/rockstore deps/tsrkit-asm deps/tsrkit-types
 
+echo -e "${GREEN}Ensure az and docker are available...${NC}"
+command -v az >/dev/null || { echo -e "${RED}az CLI not found${NC}"; exit 1; }
+command -v docker >/dev/null || { echo -e "${RED}docker not found${NC}"; exit 1; }
+
+echo -e "${GREEN}Login to Azure (if not already)...${NC}"
+az account show >/dev/null || { echo -e "${YELLOW}Please run 'az login' first${NC}"; exit 1; }
+
+echo -e "${GREEN}Login to ACR: $ACR_NAME...${NC}"
+az acr login --name "$ACR_NAME" || { echo -e "${RED}az acr login failed${NC}"; exit 1; }
+
+echo -e "${GREEN}Preparing buildx builder...${NC}"
+docker buildx create --use --name amd64builder 2>/dev/null || docker buildx use amd64builder || true
+
+# Build
+echo -e "${GREEN}Building and pushing image: $IMAGE_NAME${NC}"
+BUILD_CMD=(docker buildx build --no-cache --platform linux/amd64 -t "$IMAGE_NAME" --push .)
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+  BUILD_CMD+=(--build-arg "GITHUB_TOKEN=$GITHUB_TOKEN")
+fi
+"${BUILD_CMD[@]}"
+
+echo -e "${GREEN}Prepare ACR credentials for ACI (if needed)${NC}"
+ACR_USERNAME=$(az acr credential show --name "$ACR_NAME" --query "username" -o tsv 2>/dev/null || true)
+ACR_PASSWORD=$(az acr credential show --name "$ACR_NAME" --query "passwords[0].value" -o tsv 2>/dev/null || true)
+
+REGISTRY_ARGS=()
+if [ -n "$ACR_USERNAME" ] && [ -n "$ACR_PASSWORD" ]; then
+  REGISTRY_ARGS=(--registry-login-server "$ACR_NAME.azurecr.io" --registry-username "$ACR_USERNAME" --registry-password "$ACR_PASSWORD")
+else
+  echo -e "${YELLOW}ACR admin creds not available. Will rely on subscription-level pull permissions (recommended).${NC}"
+fi
+
+#echo -e "${GREEN}Deleting existing container if present...${NC}"
+#if az container show --resource-group "$RESOURCE_GROUP" --name "$CONTAINER_NAME" >/dev/null 2>&1; then
+#  az container delete --resource-group "$RESOURCE_GROUP" --name "$CONTAINER_NAME" --yes
+#fi
+
+# Check if container already exists
 echo -e "${GREEN}Checking if container exists...${NC}"
-if az container show --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME >/dev/null 2>&1; then
-    echo -e "${YELLOW}Container exists, deleting...${NC}"
-    az container delete --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME --yes
+
+if az container show --resource-group "$RESOURCE_GROUP" --name "$CONTAINER_NAME" >/dev/null 2>&1; then
+  echo -e "${YELLOW}Container exists — attempting graceful restart to pick up latest image...${NC}"
+
+  MAX_RETRIES=3
+  RETRY_COUNT=0
+  RESTARTED=false
+
+  while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$RESTARTED" != "true" ]; do
+    echo -e "${YELLOW}Restart attempt $((RETRY_COUNT+1))/${MAX_RETRIES}${NC}"
+    if az container restart --resource-group "$RESOURCE_GROUP" --name "$CONTAINER_NAME"; then
+      RESTARTED=true
+      echo -e "${GREEN}Restart command succeeded.${NC}"
+    else
+        RETRY_COUNT=$((RETRY_COUNT+1))
+        if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+          echo -e "${RED}Restart command failed. Retrying in 30s...${NC}"
+          sleep 30
+        else
+          echo -e "${RED}Failed to restart container after ${MAX_RETRIES} attempts. Fetching logs for debugging...${NC}"
+          exit 1
+      fi
+    fi
+  done
+else
+  echo "Container does not exist, creating new container instance..."
+  # For new deployments, create the container from scratch
+  MAX_RETRIES=3
+  RETRY_COUNT=0
+  CREATED=false
+
+  while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$CREATED" != "true" ]; do
+    echo "Attempt $(($RETRY_COUNT+1)) to create container instance..."
+    if az container create \
+      --resource-group "$RESOURCE_GROUP" \
+      --name "$CONTAINER_NAME" \
+      --image "$IMAGE_NAME" \
+      "${REGISTRY_ARGS[@]}" \
+      --cpu "$CPU" \
+      --memory "$MEMORY" \
+      --environment-variables JAM_DEBUG="$DEBUG_MODE" \
+      --ports 19800 \
+      --dns-name-label "tessera-jam-node" \
+      --restart-policy Never \
+      --os-type Linux; then
+
+      CREATED=true
+      echo "Container created successfully!"
+    else
+      echo "Failed to create container. Retrying in 30 seconds..."
+      RETRY_COUNT=$((RETRY_COUNT+1))
+      if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+        sleep 30
+      else
+        echo "Failed to create container after $MAX_RETRIES attempts."
+        exit 1
+      fi
+    fi
+  done
 fi
 
-# Get ACR credentials
-echo -e "${GREEN}Getting ACR credentials...${NC}"
-ACR_USERNAME=$(az acr credential show --name $ACR_NAME --query "username" -o tsv)
-ACR_PASSWORD=$(az acr credential show --name $ACR_NAME --query "passwords[0].value" -o tsv)
-
-if [ -z "$ACR_USERNAME" ] || [ -z "$ACR_PASSWORD" ]; then
-    echo -e "${RED}Failed to get ACR credentials. Make sure you're logged in and have access to the ACR.${NC}"
-    exit 1
+# Status
+sleep 10
+STATUS=$(az container show --resource-group "$RESOURCE_GROUP" --name "$CONTAINER_NAME" --query "instanceView.state" -o tsv 2>/dev/null || echo "")
+if [ "$STATUS" = "Running" ]; then
+  echo -e "${GREEN}Container is Running${NC}"
+else
+  echo -e "${YELLOW}Container status: $STATUS${NC}"
 fi
 
-echo -e "${GREEN}Creating container in Azure...${NC}"
-az container create \
-    --resource-group $RESOURCE_GROUP \
-    --name $CONTAINER_NAME \
-    --image $IMAGE_NAME \
-    --registry-login-server "$ACR_NAME.azurecr.io" \
-    --registry-username "$ACR_USERNAME" \
-    --registry-password "$ACR_PASSWORD" \
-    --cpu $CPU \
-    --memory $MEMORY \
-    --environment-variables JAM_DEBUG=$DEBUG_MODE \
-    --ports 30333 \
-    --dns-name-label "tessera-jam-node" \
-    --restart-policy Never \
-    --os-type Linux
-
-echo -e "${GREEN}Container created!${NC}"
-echo -e "${GREEN}Container logs:${NC}"
-az container logs --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME
+echo -e "${YELLOW}To see container logs (if Running):${NC}"
+echo "az container logs --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME"
 
 if [ "$DEBUG_MODE" = "true" ]; then
-    echo -e "${YELLOW}Container running in DEBUG mode${NC}"
-    echo -e "${YELLOW}To access container shell:${NC}"
-    echo -e "az container exec --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME --exec-command /bin/bash"
-    echo -e "${YELLOW}To view logs:${NC}"
-    echo -e "az container logs --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME"
-    echo -e "${YELLOW}To attach to container:${NC}"
-    echo -e "az container attach --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME"
-    
-    # Let's try to exec into the container right away
-    echo -e "${GREEN}Trying to access container shell...${NC}"
-    echo -e "${YELLOW}(If this fails, wait a minute and try the command manually)${NC}"
-    sleep 10
-    az container exec --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME --exec-command "/bin/bash -c 'ls -la /app/data || echo \"No data directory yet\"'"
-fi 
+  echo -e "${YELLOW}To exec into container (if Running):${NC}"
+  echo "az container exec --resource-group $RESOURCE_GROUP --name $CONTAINER_NAME --exec-command /bin/bash"
+fi
