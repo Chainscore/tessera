@@ -17,6 +17,10 @@ from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.api.utils import produce_chain, init_chain
 
 
+target_code = bytes([0, 0, 22, 124, 121, 81, 25, 1, 7, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1, 50, 0, 69, 147, 18])
+target_code_hash = Hash.blake2b(target_code)
+target_service = ServiceId(69)
+
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_best_block(db_path):
@@ -27,7 +31,7 @@ async def test_best_block(db_path):
     hh = block.save(settings.main_db)  # Save to test-specific DB
     Finality.finalise(hh, settings.main_db, True)
     Finality.set_head(hh, settings.main_db)
-    b1 = block.produce(TimeSlot(1), None)
+    b1 = block.produce(TimeSlot(1), state, None)
     state.transition(b1)
 
     # Simulate the best block handler
@@ -139,7 +143,9 @@ async def test_service_data_rpc(db_path):
     sid = ServiceId(2)
     state.delta[sid] = AccountData()
 
+    # Tweak Delta & Settle state first
     assert state.delta[sid].service.code_hash == Bytes(32)
+    state.settle(header_hash=Bytes([1] * 32))
 
     state, settings = produce_chain(db_path, False)
 
@@ -168,7 +174,10 @@ async def test_service_value_rpc(db_path):
     sid = ServiceId(1)
     key = Bytes[32]([0xA] * 32)
     value = Bytes[32]([0xB] * 32)
+
+    # Tweak Delta & Settle state first
     state.delta[sid].storage[key] = value
+    state.settle(header_hash=Bytes([1] * 32))
 
     state, settings = produce_chain(db_path, False)
     hh = settings.main_db.get(Block.get_storage_key_slot(TimeSlot(2)))
@@ -198,7 +207,9 @@ async def test_service_preimage_rpc(db_path):
     blob = b"hello, there!"
     hsh = Hash.blake2b(blob)
 
+    # Tweak Delta & Settle state first
     state.delta[sid].preimages[hsh] = blob
+    state.settle(header_hash=Bytes([1] * 32))
 
     state, settings = produce_chain(db_path, False)
 

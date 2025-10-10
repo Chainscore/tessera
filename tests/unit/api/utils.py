@@ -5,11 +5,11 @@ from jam.settings import setup_setting
 from jam.state.state import setup_state
 from jam.block.block import Block
 
-from tsrkit_types import Bytes
-from jam.types import BlobLength, Balance, Gas, Ai, Ao, OpaqueHash
+from tsrkit_types import Bytes, structure, TypedVector
+from jam.types import BlobLength, Balance, Gas, Ai, Ao
 from jam.types.protocol.core import ServiceId, TimeSlot
 from jam.types.state.delta import Timestamps, LookupTable
-from jam.types.protocol.crypto import Hash
+from jam.types.protocol.crypto import StateRoot, OpaqueHash, HeaderHash
 from jam.types.state.delta import AccountMetadata
 
 def init_chain(db_path, rpc: bool = True):
@@ -103,47 +103,56 @@ def tweak_lookup(target_service: ServiceId, code_hash: OpaqueHash, code: bytes):
 
     return data
 
+@structure
+class TestVector:
+    block: Block
+    state_root: StateRoot
+    header_hash: HeaderHash
+
+Vectors = TypedVector[TestVector]
+
 def produce_chain(db_path, init: bool = True, rpc: bool = True):
     """
     Produce chain of 5 blocks and save in db.
     Returns latest state and node settings
     """
-    from jam.state.state import state
     from jam.settings import settings
 
     if init:
         state, settings, b0 = init_chain(db_path, rpc)
     else:
+        from jam.state.state import state
+
         b0 = Finality.load_final(settings.main_db)
 
-    b1 = b0.produce(TimeSlot(1))
-    state.transition(b1)
+    b1 = b0.produce(TimeSlot(1), state)
+    state._force_transition(b1)
 
     settings.clear()
 
     settings = setup_setting(db_path, 3, "dave", 3000, rpc)
-    state = setup_state(settings.state_db)
+    state.store._DB = settings.state_db
 
-    b2 = b1.produce(TimeSlot(2))
-    state.transition(b2)
+    b2 = b1.produce(TimeSlot(2), state)
+    state._force_transition(b2)
 
-    b3 = b2.produce(TimeSlot(3))
-    state.transition(b3)
+    b3 = b2.produce(TimeSlot(3), state)
+    state._force_transition(b3)
 
     settings.clear()
 
     settings = setup_setting(db_path, 5, "fergie", 3000, rpc)
-    state = setup_state(settings.state_db)
+    state.store._DB = settings.state_db
 
-    b4 = b3.produce(TimeSlot(4))
-    state.transition(b4)
+    b4 = b3.produce(TimeSlot(4), state)
+    state._force_transition(b4)
 
     settings.clear()
 
     settings = setup_setting(db_path, 2, "charlie", 3000, rpc)
-    state = setup_state(settings.state_db)
+    state.store._DB = settings.state_db
 
-    b5 = b4.produce(TimeSlot(5))
-    state.transition(b5)
+    b5 = b4.produce(TimeSlot(5), state)
+    state._force_transition(b5)
 
     return state, settings

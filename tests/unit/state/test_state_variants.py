@@ -9,10 +9,12 @@ from jam.finality.finality import Finality
 from jam.state.state import State, setup_state
 from jam.state.utils import construct_state_key
 from jam.types import TimeSlot, HeaderHash, ServiceId, AccountData
+from jam.utils.constants import GENESIS_HASH
 from jam.utils.dummy.dummy_block import create_dummy_block
 from jam.settings import setup_setting
 from jam.block.block import Block
 from tests.unit.api.utils import produce_chain
+from tests.unit.state.test_state_load import simulate_chain
 
 
 def get_gen_state(db_path):
@@ -39,37 +41,22 @@ def test_state_update(db_path):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_block_import_state_save_n_fetch(db_path):
-    state, setting = get_gen_state(db_path)
-    db = setting.main_db
+async def test_block_import_state_save_n_fetch(db_path, rpc):
+    vectors, settings = simulate_chain(db_path, rpc)
+    from jam.state.state import state
 
-    parent = HeaderHash([0] * 32)
-    for i in range(10):
-        block = create_dummy_block()
-        block.header.parent = parent
-        block.header.slot = TimeSlot(i)
-
-        # Mockup of state transition
-        bh = HeaderHash(block.header.hash())
-        state.tau = block.header.slot
-        state.settle(bh)
-        Finality.set_head(bh, db)
-
-        block.save(db)
-
-        # Parent for next blocks
-        parent = bh
-
-    hh_4 = db.get(Block.get_storage_key_slot(TimeSlot(4)))
+    hh_4 = settings.main_db.get(Block.get_storage_key_slot(TimeSlot(4)))
     s_4 = state.load(hh_4)
     assert s_4.tau == TimeSlot(4)
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_delta_updates(db_path):
-    state, setting = get_gen_state(db_path)
-    db = setting.main_db
+async def test_delta_updates(db_path, rpc):
+    vectors, settings = simulate_chain(db_path, rpc)
+    from jam.state.state import state
+
+    hh = HeaderHash(bytes.fromhex(GENESIS_HASH))
 
     # Make updates
     state.delta[ServiceId(100)] = AccountData()
@@ -78,4 +65,5 @@ async def test_delta_updates(db_path):
     state.delta[ServiceId(100)].service.code_hash = Bytes[32]([1] * 32)
     assert state.delta[ServiceId(100)].service.code_hash == Bytes([1] * 32)
 
-    state.settle(HeaderHash([0] * 32))
+    state.stash(hh)
+    state.settle(hh)

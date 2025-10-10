@@ -140,7 +140,7 @@ async def test_ws_statistics(db_path, rpc):
             target_slot = TimeSlot(1)
 
             # Simulate Chain
-            b1 = b0.produce(target_slot)
+            b1 = b0.produce(target_slot, state)
             state.transition(b1)
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
@@ -182,7 +182,7 @@ async def test_ws_service_data(db_path, rpc):
             assert data["result"] is not None
 
             # Simulate Chain
-            b1 = b0.produce(TimeSlot(1))
+            b1 = b0.produce(TimeSlot(1), state)
             state.transition(b1)
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
@@ -239,7 +239,7 @@ async def test_ws_service_value(db_path, rpc):
             assert data["result"] is not None
 
             # Simulate Chain
-            b1 = b0.produce(TimeSlot(1))
+            b1 = b0.produce(TimeSlot(1), state)
             state.transition(b1)
 
             # Catch Initial Call for subscription
@@ -287,7 +287,7 @@ async def test_ws_service_preimage(db_path, rpc):
             assert data["result"] is not None
 
             # Simulate Chain
-            b1 = b0.produce(TimeSlot(1))
+            b1 = b0.produce(TimeSlot(1), state)
             state.transition(b1)
 
             # Catch Initial Call for subscription
