@@ -1,35 +1,35 @@
 {
     "id": "dev",
-    "genesis_validators": [
-        {
+    "genesis_validators": {
+        "ff71c6c03ff88adb5ed52c9681de1629a54e702fc14729f6b50d2f0a76f185b3": {
             "peer_id": "eecgwpgwq3noky4ijm4jmvjtmuzv44qvigciusxakq5epnrfj2utb",
-            "bandersnatch": "db9657a7d2ee3d4b9031cfc8ba85623b8cb7bfe2a0a059136eef24085c2071e2",
-            "net_addr": "127.0.0.1:40000"
+            "bandersnatch": "ff71c6c03ff88adb5ed52c9681de1629a54e702fc14729f6b50d2f0a76f185b3",
+            "net_addr": "tessera-node-alice.b5ckcpb6hjcee8h4.westeurope.azurecontainer.io:40000"
         },
-        {
+        "dee6d555b82024f1ccf8a1e37e60fa60fd40b1958c4bb3006af78647950e1b91": {
             "peer_id": "en5ejs5b2tybkfh4ym5vpfh7nynby73xhtfzmazumtvcijpcsz6ma",
-            "bandersnatch": "e86be8d202259e6b09aee186408e9d8a9a4991d86243f266757a9e85e3156532",
-            "net_addr": "127.0.0.1:40001"
+            "bandersnatch": "dee6d555b82024f1ccf8a1e37e60fa60fd40b1958c4bb3006af78647950e1b91",
+            "net_addr": "tessera-node-bob.axgyerdshyfahkc4.centralindia.azurecontainer.io:40001"
         },
-        {
+        "9326edb21e5541717fde24ec085000b28709847b8aab1ac51f84e94b37ca1b66": {
             "peer_id": "ekwmt37xecoq6a7otkm4ux5gfmm4uwbat4bg5m223shckhaaxdpqa",
-            "bandersnatch": "c9ef21d7106084a43277ebca4023eaabc48bed1e1f86eef7b47d94e4ff44d816",
-            "net_addr": "127.0.0.1:40002"
+            "bandersnatch": "9326edb21e5541717fde24ec085000b28709847b8aab1ac51f84e94b37ca1b66",
+            "net_addr": "tessera-node-charlie.fqhfeacbb7gmhrga.eastasia.azurecontainer.io:40002"
         },
-        {
+        "0746846d17469fb2f95ef365efcab9f4e22fa1feb53111c995376be8019981cc": {
             "peer_id": "etxckkczii4mvm22ox4m3horvx2bwlzerjxbd3n6c36qehdms2idb",
-            "bandersnatch": "5c42fdb2ce55284a7c4189bdd553084fbcb7db6cfa64bfe58747a0a7179786ab",
-            "net_addr": "127.0.0.1:40003"
+            "bandersnatch": "0746846d17469fb2f95ef365efcab9f4e22fa1feb53111c995376be8019981cc",
+            "net_addr": "tessera-node-dave.dhh0add3h6agadd8.southeastasia.azurecontainer.io:40003"
         },
-        {
+        "151e5c8fe2b9d8a606966a79edd2f9e5db47e83947ce368ccba53bf6ba20a40b": {
             "peer_id": "eled3vb5nse3n7cii6ybvtms5s2bdwvlkivc7cnwa33oatby4txka",
-            "bandersnatch": "2f7b1b47acc069a3e74fe2846d1cd0d417d8fb5707455f6d36df64fc35a8efa8",
-            "net_addr": "127.0.0.1:40004"
+            "bandersnatch": "151e5c8fe2b9d8a606966a79edd2f9e5db47e83947ce368ccba53bf6ba20a40b",
+            "net_addr": "tessera-node-eve.f5egahe3crbyh7cf.uksouth.azurecontainer.io:40004"
         },
-        {
+        "2105650944fcd101621fd5bb3124c9fd191d114b7ad936c1d79d734f9f21392e":{
             "peer_id": "elfaiiixcuzmzroa34lajwp52cdsucikaxdviaoeuvnygdi3imtba",
-            "bandersnatch": "15302e3369725c06ca2c9ade6eb1355bc7ac065fdececf9b993acd6a8cefe45d",
-            "net_addr": "127.0.0.1:40005"
+            "bandersnatch": "2105650944fcd101621fd5bb3124c9fd191d114b7ad936c1d79d734f9f21392e",
+            "net_addr": "tessera-node-fergie.euapd9b8c2g4ezex.eastasia.azurecontainer.io:40005"
         }
-    ]
+    }
 }

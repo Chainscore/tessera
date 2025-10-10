@@ -1,6 +1,8 @@
 import ssl
 import socket
 import asyncio
+import json
+import os
 
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.logger import QuicLogger
@@ -12,8 +14,15 @@ from jam.network.connection import NodeConnection
 from jam.network.node import QuicNode
 
 from jam.utils.constants import NODE_ALPN
+from tsrkit_types import Bytes, Dictionary, structure, String, U16
 
 node: None|QuicNode = None
+
+@structure
+class Config:
+    peer_id: String
+    bandersnatch: Bytes
+    net_addr: String
 
 async def start_node(
     host: str,
@@ -85,6 +94,9 @@ async def start_node(
 
     # --- Connect with peers --- #
     from jam.settings import settings
+    environment = os.environ.get("ENVIRONMENT", 'development')
+    dev_config_json = json.load(open('dev-config.json'))
+    data = Dictionary[Bytes, Config].from_json(dev_config_json["genesis_validators"])
     index = settings.validator_index
     peers = set(state.kappa)
     if index != 7:
@@ -94,6 +106,11 @@ async def start_node(
 
     tasks = []
     for peer in peers:
+        if environment == 'deployment':
+            dev_peer = data.get(peer.bandersnatch)
+            if dev_peer:
+                peer.metadata.host = dev_peer.net_addr.split(":")[0]
+                peer.metadata.port = U16(dev_peer.net_addr.split(":")[1])
         if peer.metadata.port == port:
             continue
         # TODO: reconnect in 6 secs if still not connected
