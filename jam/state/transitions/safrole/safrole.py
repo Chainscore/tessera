@@ -1,4 +1,5 @@
 from concurrent.futures import as_completed
+from copy import copy
 
 from typing import List
 from jam.types.protocol.ticket import TicketBody
@@ -67,7 +68,7 @@ class Safrole:
         new_epoch = int(block.header.slot) // EPOCH_LENGTH
         epoch_jump = new_epoch - old_epoch
 
-        gamma = state.gamma
+        gamma = copy(state.gamma)
         eta = pre_state.eta
 
         if new_epoch > old_epoch:
@@ -81,7 +82,7 @@ class Safrole:
         ticket_submission_active = (block.header.slot % EPOCH_LENGTH) < TICKET_SUBMISSION_END
         # Process the tickets before TICKET_SUBMISSION_END of the epoch, if the epoch is not jumped
         # TEST: We removed jump == 0 here bc we also allow tickets to be introduced in an epoch's new slot
-        if ticket_submission_active and len(tickets) > 0:
+        if ticket_submission_active and (count > 0):
             # Validate extrinsics
             Safrole.ensure_valid_tickets_count_before_epoch_end(block)
 

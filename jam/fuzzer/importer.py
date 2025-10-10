@@ -63,7 +63,7 @@ def process_test_vector(test_vector: Dict[str, Any], state, settings) -> Tuple[A
     if block_data:
         block = Block.from_json(block_data)
         start_time = time.time()
-        state.transition(block)
+        state._force_transition(block)
         transition_time = time.time() - start_time
     
     return state, transition_time
