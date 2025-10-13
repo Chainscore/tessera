@@ -64,6 +64,8 @@ class Block:
     def load_w_ts(cls, ts: TimeSlot, db: RockStore) -> "Block":
         ts_key = cls.get_storage_key_slot(ts)
         header_hash = db.get(ts_key)
+        if not header_hash:
+            raise ValueError("No block found with given slot!")
         return cls.load(header_hash, db)
 
     @staticmethod
@@ -102,7 +104,7 @@ class Block:
     def validate(self) -> bool:
         return self.header.validate() and self.extrinsic.validate(self.header)
 
-    def produce(self, time_slot: TimeSlot, ticket: TicketBody|None) -> "Block":
+    def produce(self, time_slot: TimeSlot, ticket: TicketBody | None = None) -> "Block":
         extrinsic = Extrinsic.from_collected(time_slot)
 
         # Produce a new header from previous header

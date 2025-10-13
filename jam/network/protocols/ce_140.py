@@ -11,7 +11,7 @@ from jam.network.protocols.ce_139_base import (
 from jam.network.base.protocol import PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.log_setup import logger
+from jam.log_setup import network_logger as logger
 from jam.utils.merkle import BMRFunctions
 
 from jam.types.work.shard import SegmentsShard, SegmentShard
@@ -166,7 +166,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
                 justifications.append(justification)
                 justifications_buf = justifications_buf[length + 4 :]
 
-            logger.info(
+            logger.debug(
                 "Segment Shards and Justifications received via CE140", peer=client
             )
 

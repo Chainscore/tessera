@@ -11,8 +11,8 @@ echo "[INFO] Setting up RocksDB library for bundling..."
 
 start() {
   envfile="$1"
-  echo "[entrypoint] starting: poetry run jam --env $envfile"
-  poetry run jam --env "$envfile" &
+  echo "[entrypoint] starting: uv run jam --env $envfile"
+  uv run jam --env "$envfile" &
 }
 
 start envs/40000.env
@@ -23,6 +23,3 @@ start envs/40004.env
 start envs/40005.env
 
 wait
-
-# Run the app
-#exec poetry run jam "$@"

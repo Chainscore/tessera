@@ -50,7 +50,7 @@ class Assurer:
             # TODO: Fix Assurances Check Per Block
             pending_reps = state.rho.pending_reps()
             if len(pending_reps) == 0:
-                logger.info("No Pending Reports. Skipping assurances.", slot=state.tau)
+                logger.debug("No Pending Reports. Skipping assurances.", slot=state.tau)
                 self.clear()
                 return
 
@@ -77,7 +77,7 @@ class Assurer:
             )
 
             logger.info(
-                "[EXTRINSICS]: STORING SELF ASSURANCE",
+                "Storing self assurance",
                 validator=settings.validator_index,
                 assurance=assr_ext.to_json(),
             )

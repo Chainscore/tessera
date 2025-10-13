@@ -15,7 +15,7 @@ from aioquic.quic.events import (
     StopSendingReceived,
 )
 from tsrkit_types import U8
-from jam.log_setup import network_logger
+from jam.log_setup import network_logger as logger
 from jam.network.base.certificate import verify_certificate, generate_san
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import PrefixType
@@ -27,10 +27,6 @@ from jam.utils.constants import VALIDATOR_COUNT, NODE_ALPN
 
 genesis_hash = "476243ad"
 protocol_version = "0"
-
-# Module-specific logger
-logger = network_logger
-
 
 class NodeConnection(QuicConnectionProtocol):
     """JAMNP-spec QUIC Connection handler"""
@@ -93,7 +89,7 @@ class NodeConnection(QuicConnectionProtocol):
                 raise ValueError("Certificate is not valid", e)
             
             pk = Ed25519Public(peer_cert.public_key().public_bytes_raw())
-            logger.info(f"🔗 Handshake completed with {pk.hex()}.")
+            logger.debug(f"🔗 Handshake completed with {pk.hex()}.")
 
             self.ed25519_public = pk 
             self._id = generate_san(pk)

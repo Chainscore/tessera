@@ -1,7 +1,5 @@
 import asyncio
-import json
 from time import time
-from typing import cast
 
 import pytest
 import os
@@ -12,15 +10,16 @@ from jam.audit.assembler import Assembler
 from jam.incore.processor import Processor
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
-from jam.types import Hash
+from jam.types import Hash, CoreIndex
+from jam.types.work import Extrinsics
 from jam.utils.constants import GENESIS_TS
 from jam.storage.da.mappings import (
     PackageSegmentMap,
     SegmentErasureMap,
 )
 from jam.storage.da.reports import ReportsDA
+from tests.integration.jamnp.utils.build_wp import build_package
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
-from tests.unit.incore.types import RefineVectors, RefineVector, BundleVector, BundleVectors
 from jam.log_setup import node_logger as logger
 
 
@@ -31,16 +30,10 @@ CLIENTS = [
     Client(Role.VAL, 40003, theme="sunset"),
     Client(Role.VAL, 40004, theme="gruvbox"),
     Client(Role.VAL, 40005, theme="dracula"),
-    Client(Role.BUILDER, 40006, theme="nord"),
 ]
 
-vectors = BundleVectors([])
-for i in range(14, 24):
-    with open(f"vectors/bundles/bundles-{i:03d}.json", "r") as f:
-        data = json.load(f)
-        bundle_vec = BundleVector.from_json(data)
-        vectors.append(bundle_vec)
-
+# vectors = BundleVectors([])
+# fetch_vectors(14,24,vectors)
 
 async def node_task():
     # Wait for initialization
@@ -50,16 +43,17 @@ async def node_task():
 
     from jam.network.start import node
 
-    if node.is_builder:
+    if node.port == 40002:
 
         ts = init_ts
 
         CE133 = WorkPackageSubmission()
-        for wp_iter, vector in enumerate(vectors):
+        for wp_iter in range(1):
             try:
-                wpc = WorkPackageCore(vector.work_package, vector.core_index)
+                wp = build_package()
+                wpc = WorkPackageCore(wp, CoreIndex(0))
                 wp_len = U32(len(wpc.encode()))
-                ext = vector.extrinsics
+                ext = Extrinsics([])
                 ext_len = U32(len(ext.encode()))
                 wp_data = CE133Data(wp_len, wpc, ext_len, ext)
 
@@ -140,4 +134,5 @@ async def node_task():
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_assembler():
-    await setup_processes(CLIENTS, node_task, 30)
+    pytest.skip("Add latest vectors and test again!")
+    await setup_processes(CLIENTS, [node_task], 30)

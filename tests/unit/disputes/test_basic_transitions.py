@@ -145,7 +145,7 @@ class TestBasicDisputesTransitions:
         wonky_verdict = Verdict(
             target=target_hash,
             age=U32(0),
-            votes=create_valid_judgement_votes(target_hash, True, VALIDATORS_SUPER_MAJORITY),
+            votes=create_valid_judgement_votes(target_hash, True, VALIDATORS_WONKY),
         )
 
         disputes_extrinsic = DisputesExtrinsic(

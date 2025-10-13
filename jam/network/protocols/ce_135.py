@@ -6,7 +6,7 @@ from tsrkit_types.struct import structure
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint, U32
 from tsrkit_types.sequences import TypedVector
-from jam.log_setup import logger
+from jam.log_setup import network_logger as logger
 from jam.network.connection import NodeConnection
 from jam.block.extrinsics.guarantees import ReportGuarantee
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -97,7 +97,7 @@ class WorkReportDistribution(NetworkProtocol):
         buffer = server.stream_buffer[stream_id][1:]
 
         try:
-            logger.info("Received Work Report")
+            logger.debug("Received Work Report")
             data = CE135Data.decode(buffer)
             data = cast(CE135Data, data)
 
@@ -112,7 +112,7 @@ class WorkReportDistribution(NetworkProtocol):
             ack = b""
             server.stream_and_close(ack, stream_id)
 
-            logger.info("Sent acknowledgement back to guarantor")
+            logger.debug("Sent acknowledgement back to guarantor")
 
         except Exception as e:
             # Stop Streaming
@@ -133,7 +133,7 @@ class WorkReportDistribution(NetworkProtocol):
         buffer = client.stream_buffer[stream_id]
 
         if buffer == b"":
-            logger.info(
+            logger.debug(
                 f"Guaranteed Report received on Guarantor Node.", stream_id=stream_id
             )
             return True

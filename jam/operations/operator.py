@@ -3,13 +3,11 @@ import math
 import time
 from typing import List, Tuple
 
-from jam.log_setup import node_logger
+from jam.log_setup import node_logger as logger
 from .handlers import WPBuilder, assurer, BlockProducer, Conductor, Forwarding
 from .dispatcher import NodeDispatcher
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from ..finality.finality import Finality
-
-logger = node_logger
 
 
 def dispatch_fns(is_bd: bool) -> List[Tuple[int, NodeDispatcher]]:
@@ -57,7 +55,6 @@ async def operate(is_builder = False):
         finality_time_slot = finality_block.header.slot
 
         if conductor_ts <= (finality_time_slot%EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2) and not ticket_generated:
-            logger.info("Tickets announcement to proxies")
             asyncio.create_task(schedule_run(0, Conductor, ts, finality_time_slot))
             ticket_generated = True
 
