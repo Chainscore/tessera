@@ -14,6 +14,7 @@ from jam.network.protocols.ce_144 import SubsequentTrancheEvidence, CoreReportHa
 
 
 class Auditor:
+
     async def assignment_wrs(
         self,
         block: Block,
@@ -35,7 +36,7 @@ class Auditor:
         header_hash = tranche.header_hash
 
         # fetch current state
-        curr_state = tranche_store.get_state(tranche=tranche)
+        curr_state = await tranche_store.get_state(tranche=tranche)
 
         if tranche_index == TrancheIndex(0):
             assigned_wrs = audit.verifiable_random_selection(
@@ -46,7 +47,7 @@ class Auditor:
             )
 
         else:
-            assigned_wrs = audit.vrf_tranche(
+            assigned_wrs = await audit.vrf_tranche(
                 header_hash=tranche.header_hash,
                 tranche=tranche,
                 entropy=entropy,
@@ -147,7 +148,7 @@ class Auditor:
                 ed25519_signature=announcement_sign
         )
 
-        tranche_store.records_announcement(
+        await tranche_store.records_announcement(
             tranche=curr_tranche,
             validator_index=settings.validator_index,
             announce=announce
@@ -195,13 +196,14 @@ class Auditor:
             block: Block on which Auditing trigger
             tranche: Current tranche index
             assigned_wrs: List of report which just become available for judgments
-
         """
         from jam.settings import settings
         from jam.storage.tranche_audit_store import tranche_store
         from jam.audit.utils import Utils
         from jam.audit.audit import Audit
 
+        utils = Utils()
+        audit = Audit()
 
         # --------- unwrap Tranche -------------
         curr_tranche = tranche
@@ -238,7 +240,6 @@ class Auditor:
                 )
 
                 # ------------------- Save judgment in Tranche State ----------------------------
-
                 await tranche_store.update_judgment(
                     tranche=curr_tranche,
                     judgment=judgment,

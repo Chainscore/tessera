@@ -1,9 +1,5 @@
 import json
 import asyncio
-from typing import Type
-import multiprocessing
-import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from jam.error import JamError, JamErrorCode
 from jam.state.partial import PartialState
 from jam.utils.merkle import BMRFunctions
@@ -244,7 +240,7 @@ class State:
 
             # Calculate Merkle root of Accumulation Outputs
             accumulate_root = bmr_merklizer.wb_merklize(
-                TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in self.theta])),
+                TypedVector[Bytes](sorted([Bytes(comm.service_id.encode() + comm.output.encode()) for comm in self.theta])),
                 Hash.keccak256
             )
             RecentHistory.transition(pre_state, self, block, accumulate_root, header_hash)
@@ -272,15 +268,16 @@ class State:
                 )
 
                 # TODO: Uncomment it for assurances
-                # from jam.operations.handlers.assurer import assurer
-                # for ext in block.extrinsic.guarantees:
-                #     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
-                #     asyncio.create_task(assurer._req_shard(ext))
+                from jam.operations.handlers.assurer import assurer
+                for ext in block.extrinsic.guarantees:
+                    logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                    asyncio.create_task(assurer._req_shard(ext))
 
-                # TODO: Test Auditing & Refining with PJ
-                # # Start Auditing for new block received
-                # audit_engine = AuditEngine()
-                # asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
+                from jam.audit.audit_engine import AuditEngine
+                audit_engine = AuditEngine()
+
+                if len(newly_avail_wrs) > 0:
+                    asyncio.create_task(audit_engine.run(block=block, newly_avail_wrs=newly_avail_wrs))
 
                 # TODO: Remove Direct Finality
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented

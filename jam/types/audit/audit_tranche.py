@@ -82,7 +82,7 @@ class TrancheState:
     """ Represents the tranche state, which maintains audit records associated with each tranche. """
     unaudited_list: OptionalReports
     records: Records
-    audited_list: TypedVector[CoreReportHash]
+    audited_list: TypedVector[CoreReport]
 
 
     @staticmethod
@@ -91,7 +91,7 @@ class TrancheState:
         return TrancheState(
             unaudited_list= OptionalReports([]),
             records= Records({}),
-            audited_list= TypedVector[CoreReportHash]([]),
+            audited_list= TypedVector[CoreReport]([]),
        )
 
     def carry_forward(self) -> "TrancheState":

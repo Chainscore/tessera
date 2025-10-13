@@ -14,7 +14,6 @@ from jam.types.protocol.crypto import (
     Ed25519Signature,
     WorkReportHash,
 )
-
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 
@@ -188,6 +187,7 @@ class AuditAnnouncement(NetworkProtocol):
             v_index = server.validator_index
             tranche_idx = data.tranche_announcement.tranche
             header_hash = data.tranche_announcement.header_hash
+            announcements = data.tranche_announcement.announcement
 
             tranche = Tranche(
                 tranche_index= tranche_idx,
@@ -195,14 +195,11 @@ class AuditAnnouncement(NetworkProtocol):
             )
 
             #SAVE ANNOUNCEMENT RECORDS
-            tranche_store.records_announcement(
+            asyncio.create_task(tranche_store.records_announcement(
                 tranche= tranche,
                 validator_index= v_index,
-                announce= data.tranche_announcement.announcement
-            )
-
-            logger.debug(
-                f"saved transmitted announcement of {settings.NODE_NAME} from state for tranche {tranche_idx}|| { tranche_store.get_state(tranche=tranche)}")
+                announce= announcements
+            ))
 
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)

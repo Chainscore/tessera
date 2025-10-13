@@ -13,8 +13,7 @@ from jam.types.work.report import WorkReportHash
 from jam.utils.constants import EPOCH_LENGTH
 from jam.types.audit.audit_tranche import Tranche
 from jam.state.state import state
-from jam.audit.utils import Utils
-from jam.audit.audit import Audit
+
 
 # Module-specific logger
 logger = network_logger
@@ -192,8 +191,7 @@ class JudgmentPublication(NetworkProtocol):
 
 
     async def handle_judgment(self, judgment: Judgment, ed25519_key: Ed25519Public):
-        from jam.state.state import state
-        from jam.settings import settings
+        """ Find tranche for received work report and if get negative judgments handle it. """
         from jam.storage.tranche_audit_store import tranche_store
 
         try:
@@ -211,8 +209,6 @@ class JudgmentPublication(NetworkProtocol):
                 ed25519_public= ed25519_key
             )
 
-            logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {judgment.work_report_hash} from state || { tranche_store.get_state(tranche=tranche)}")
-
         except Exception as JERR:
             logger.error(
                 "Error Handling Judgment, fetching tranche for work report",
@@ -222,37 +218,40 @@ class JudgmentPublication(NetworkProtocol):
             )
 
     async def negative_judgments(self, judgment: Judgment, tranche: Tranche):
-        """
-        this handle only negative judgments
-        """
+        """ this handle only negative judgments, do refine and transmit judgments. """
         from jam.settings import settings
-        from jam.storage.tranche_audit_store import tranche_store
+        from jam.storage.tranche_audit_store import tranche_store, TrancheIndex
+        from jam.audit.audit import Audit
+        from jam.audit.utils import Utils
+
+        audit = Audit()
+        utils = Utils()
+
+        validator_index = settings.validator_index
+        wr_hash = judgment.work_report_hash
 
         # process refine results
-        update_validity = await Utils.process_refine(tranche=tranche, wr_hash=judgment.work_report_hash)
+        wr = await utils.fetch_report(wr_hash=wr_hash)
+        update_validity = await audit.refine(wr=wr)
 
-        if update_validity is not None:
+        epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
 
-            epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
+        ed25519_signature = Audit.judgment_signature(wr_hash=judgment.work_report_hash, validity=update_validity)
 
-            ed25519_signature = Audit.judgment_signature(wr_hash=judgment.work_report_hash, validity=update_validity)
+        judgment = Judgment(
+            epoch_index= epoch_index,
+            validator_index= validator_index,
+            validity= update_validity,
+            work_report_hash= judgment.work_report_hash,
+            ed25519_signature= Ed25519Signature(ed25519_signature),
+        )
 
-            judgment = Judgment(
-                epoch_index=epoch_index,
-                validator_index=settings.validator_index,
-                validity=update_validity,
-                work_report_hash=judgment.work_report_hash,
-                ed25519_signature=Ed25519Signature(ed25519_signature),
-            )
+        # ------------------- Save judgment in Tranche State ---------------------------------------------
+        await tranche_store.update_judgment(
+            tranche= tranche,
+            judgment= judgment,
+            ed25519_public= settings.ed25519_public
+        )
 
-            # ------------------- Save judgment in Tranche State ---------------------------------------------
-            await tranche_store.update_judgment(
-                tranche=tranche,
-                judgment=judgment,
-                ed25519_public=settings.ed25519_public
-            )
-
-            # logger.debug(f"saved transmitted judgments of {settings.NODE_NAME} for wr_hash {wr_hash} from state || {tranche_store.get_state(tranche=tranche)}")
-
-            data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
-            response = await self.transmit(data=data)
+        data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
+        response = await self.transmit(data=data)

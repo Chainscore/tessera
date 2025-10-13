@@ -24,7 +24,7 @@ from jam.types.audit.audit_tranche import (
     CoreReport
 )
 from jam.types.work.report import WorkReport
-from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR
+from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR, AUDIT_REPORT_ASSIGNED
 from jam.log_setup import logger
 
 
@@ -43,7 +43,6 @@ class Audit:
         Args:
             prior_state: p (rho) block prior state
             newly_rep: Work Report pending which has just become available.
-
         """
 
         auditable_reports = OptionalReports([])
@@ -156,7 +155,7 @@ class Audit:
                 )
                 for c_r in updated_array
                 if c_r.work_report.unwrap() is not Null
-            ][:2]
+            ][:AUDIT_REPORT_ASSIGNED]
         )
 
         return shuffle_not_null
@@ -226,7 +225,7 @@ class Audit:
         return Ed25519Signature(signature)
 
     @classmethod
-    def vrf_tranche(
+    async def vrf_tranche(
         cls,
         header_hash: HeaderHash,
         tranche: Tranche,
@@ -281,7 +280,7 @@ class Audit:
 
                 wr_hash = rep.hash()
 
-                state = tranche_store.get_state(tranche=prev_tranche)
+                state = await tranche_store.get_state(tranche=prev_tranche)
 
                 records = state.records.get(wr_hash)
 
@@ -293,8 +292,6 @@ class Audit:
 
                     assigned_wrs.append(assigned_report)
 
-
-        logger.info(f"assigned report after no_tranche {assigned_wrs}")
         return assigned_wrs
 
     @staticmethod

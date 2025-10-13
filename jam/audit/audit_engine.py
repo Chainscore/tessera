@@ -7,6 +7,7 @@ from jam.block.block import Block
 from jam.finality.finality import Finality
 from jam.log_setup import logger
 from jam.network.protocols.ce_144 import SubsequentTrancheEvidence
+from jam.types import Hash
 from jam.types.audit.audit_tranche import (
     TrancheIndex,
     Tranche,
@@ -27,11 +28,9 @@ class AuditEngine:
     def __init__(self):
         self.is_audited = False
 
-    async def run(self, block: Block, new_wrs: WorkReports):
+    async def run(self, block: Block, newly_avail_wrs: WorkReports):
 
-        logger.info(f"Auditing started header_hash {block.header.hash()} {block.header.hash().hex()}")
-        # for i in new_wrs:
-        #     print("new wrs", i)
+        logger.info(f"Auditing started header_hash {block.header.hash()}")
 
         from jam.settings import settings
         header_hash = block.header.hash()
@@ -56,7 +55,7 @@ class AuditEngine:
         prior_state = State.load(block.header.parent)
 
         # define q : TypedVector[Option[WorkReport]] = [ |R ?]
-        auditable_reports : OptionalReports = audit.auditable_reports(prior_state=prior_state.rho, newly_rep=new_wrs)
+        auditable_reports : OptionalReports = audit.auditable_reports(prior_state=prior_state.rho, newly_rep=newly_avail_wrs)
 
         logger.debug("Fetched prior state", rho=prior_state.rho, reps=auditable_reports)
 
@@ -79,40 +78,48 @@ class AuditEngine:
                 if block.header.author_index == settings.validator_index:
                     tranche_state = TrancheState.empty()
                     tranche_state.unaudited_list = auditable_reports
-                    tranche_store.save_state(curr_tranche, tranche_state)
+                    await tranche_store.save_state(curr_tranche, tranche_state)
 
                 else:
-                    non_auth_state = tranche_store.get_state(tranche=curr_tranche)
+                    non_auth_state = await tranche_store.get_state(tranche=curr_tranche)
                     non_auth_state.unaudited_list = auditable_reports
-                    tranche_store.save_state(curr_tranche, non_auth_state)
+                    await tranche_store.save_state(curr_tranche, non_auth_state)
 
                 subsequent_evidence = None
 
             else:
                 # ------- Tranche > 0 handling ---------
+                utils.print_banner(text="New Tranche Trigger | ", tranche_index=curr_tranche.tranche_index)
                 logger.info(
                     "New tranche started", header_hash=header_hash, tranche=audit.tranche_index(header=block.header)
                 )
 
                 prev_tranche = Tranche(TrancheIndex(tranche_index - TrancheIndex(1)), header_hash)
-                prev_state = tranche_store.get_state(tranche=prev_tranche)
+                prev_state = await tranche_store.get_state(tranche=prev_tranche)
 
-                tranche_state = tranche_store.get_state(tranche=curr_tranche)
+
+                tranche_state = await tranche_store.get_state(tranche=curr_tranche)
 
                 if tranche_state == TrancheState.empty():
                     tranche_state = prev_state.carry_forward()
-                    tranche_store.save_state(tranche=curr_tranche, state=tranche_state)
+                    await tranche_store.save_state(tranche=curr_tranche, state=tranche_state)
 
                 # ------------------- Condition which check trigger next tranche ---------------
                 subsequent_evidence : TypedVector[SubsequentTrancheEvidence] = await utils.is_tranche(block=block, curr_tranche=curr_tranche, prev_tranche_state=prev_state)
 
-                if len(subsequent_evidence) == 0:
+                # if in this tranche subsequence is zero, means no report to audit for this tranche,
+                # no announcements no judgments no further negative judgments
+                if len(subsequent_evidence) == 0: # This say about new tranche follow or not due to no show
 
-                    asyncio.create_task(utils.dispute_ext(block=block, tranche=curr_tranche))
+                    dispute_extrinsic = await utils.dispute_ext(block=block, tranche=curr_tranche)
 
-                    is_block_audit = utils.block_audited(tranche=curr_tranche, block=block, new_wrs=new_wrs)
+                    is_block_audit = await utils.block_audited(tranche=curr_tranche, block=block, newly_avail_wrs=newly_avail_wrs)
+
                     if is_block_audit:
                         self.is_audited = True
+
+                    else:
+                        print("Not audited block")
 
                     # remove block tranche history after it become audited
                     await tranche_store.remove_block_history(header_hash=header_hash)
@@ -135,9 +142,3 @@ class AuditEngine:
             # Sleep for remainder time period
             await asyncio.sleep(next_ts - CURRENT_TIME())
             curr_ts += AUDIT_PERIOD
-
-    def get_audit_status(self):
-        """
-        Return current audit status without re-running the process.
-        """
-        return self.is_audited

@@ -20,6 +20,9 @@ NODE_ALPN = f"jamnp-s/{JAMNP_VERSION}/{GENESIS_HASH[:8]}"
 AUDIT_PERIOD = 8
 A = AUDIT_PERIOD
 
+AUDIT_REPORT_ASSIGNED = chain_config.audit_report_assign
+AA = AUDIT_REPORT_ASSIGNED
+
 # B_I — Additional minimum balance per item of elective service state.
 ADDITIONAL_BALANCE_PER_ITEM = 10
 B_I = ADDITIONAL_BALANCE_PER_ITEM
