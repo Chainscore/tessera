@@ -117,7 +117,7 @@ class Header:
         
         return header
 
-    def validate(self, state) -> bool:
+    def validate(self, state, pre_state) -> bool:
         """
         Validate a block's header
         1. Extrinsic hash should match hash(block.extrinsics)
@@ -170,9 +170,6 @@ class Header:
         # State root check
         if self.parent_state_root != state.root:
             raise BlockError(BlockErrorCode.INCORRECT_STATE_ROOT, f"E: {self.parent_state_root.hex()}, A: {state.root.hex()}")
-
-        # Load prestate
-        pre_state = state.load(self.parent)
 
         # Marker checks
         is_new_epoch = (self.slot // EPOCH_LENGTH) > (pre_state.tau // EPOCH_LENGTH)

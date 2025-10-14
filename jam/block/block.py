@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Self, List
 
 from jam.types.protocol.ticket import TicketBody
 from tsrkit_types.struct import structure
@@ -51,9 +51,9 @@ class Block:
         """
         Load the block for the given slot from DB
         """
-        # if bytes(header_hash) == bytes(32):
-        #     # Return genesis block
-        #     return Block.genesis()
+        if header_hash == bytes(32):
+            # Return genesis block
+            return Block.genesis()
 
         data = db.get(cls.get_storage_key_block(header_hash))
         if data is None:
@@ -61,12 +61,28 @@ class Block:
         return cls.decode(data)
 
     @classmethod
-    def load_w_ts(cls, ts: TimeSlot, db: RockStore) -> "Block":
+    def load_w_ts(cls, ts: TimeSlot, db: RockStore) -> "Block" | List["Block"]:
+
+        from jam.block.block_view import viewer
+        final = viewer.final
+
         ts_key = cls.get_storage_key_slot(ts)
-        header_hash = db.get(ts_key)
-        if not header_hash:
-            raise ValueError("No block found with given slot!")
-        return cls.load(header_hash, db)
+
+        # if ts is before or equal to that than directly load from db
+        if ts <= final.slot:
+            header_hash = db.get(ts_key)
+            if not header_hash:
+                raise ValueError("No block found with given slot!")
+            return cls.load(header_hash, db)
+
+        # otherwise load using block viewer
+        else:
+            blocks = viewer.load_block_w_ts(ts, db)
+            if len(blocks) == 0:
+                raise ValueError("No block found with given slot!")
+
+            logger.debug("Loaded blocks.", slot=ts, cnt=len(blocks))
+            return blocks
 
     @staticmethod
     def get_storage_key_block(header_hash: HeaderHash) -> bytes:
@@ -77,6 +93,10 @@ class Block:
         val = "TIMESLOT_TO_HH".encode() + slot.encode()
         val += bytes(32 - len(val))
         return val
+
+    @staticmethod
+    def get_storage_key_meta(header_hash: HeaderHash) -> bytes:
+        return b"BLOCK_META" + header_hash
 
     def save(self, db: RockStore) -> HeaderHash:
         """
@@ -94,15 +114,12 @@ class Block:
         # HeaderHash -> Block
         hh_key = self.get_storage_key_block(self.header.hash())
         db.put(hh_key, block_encoded)
-        # Timeslot -> HeaderHash
-        ts_key = self.get_storage_key_slot(self.header.slot)
-        db.put(ts_key, hh)
 
         # Return the HeaderHash
         return HeaderHash(hh)
 
-    def validate(self, state) -> bool:
-        return self.header.validate(state) and self.extrinsic.validate(self.header)
+    def validate(self, state, prestate) -> bool:
+        return self.header.validate(state, prestate) and self.extrinsic.validate(self.header)
 
     def produce(self, time_slot: TimeSlot, state, ticket: TicketBody | None = None) -> "Block":
         extrinsic = Extrinsic.from_collected(time_slot)
