@@ -42,8 +42,8 @@ class BlockProducer(NodeDispatcher):
 
         up0 = BlockAnnouncement()
 
-        if not node or len(node.all_connected) == 0:
-            logger.debug("Network not initialized - skipping block production")
+        if not node or len(node.active_peers) == 0:
+            logger.debug("Peers not initialized - skipping block production")
             return
 
         latest = Finality.load_latest(settings.main_db)

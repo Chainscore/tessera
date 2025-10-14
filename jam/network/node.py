@@ -302,50 +302,54 @@ class QuicNode(asyncio.DatagramProtocol):
 
     async def connect(self, peer: ValidatorData) -> QuicConnectionProtocol|None:
         # Only if we are the initiator
-        from jam.settings import settings
+        try:
+            from jam.settings import settings
 
-        addr = (str(peer.metadata.host), int(peer.metadata.port))
+            addr = (str(peer.metadata.host), int(peer.metadata.port))
 
-        if (
-            (peer.ed25519[31] > 127) ^
-            (settings.ed25519_public[31] > 127) ^
-            (int.from_bytes(peer.ed25519) < int.from_bytes(settings.ed25519_public))
-        ):
+            if (
+                (peer.ed25519[31] > 127) ^
+                (settings.ed25519_public[31] > 127) ^
+                (int.from_bytes(peer.ed25519) < int.from_bytes(settings.ed25519_public))
+            ):
+                return None
+
+            quic = QuicConnection(configuration=self._cfg)
+            protocol: NodeConnection = self._create_protocol(
+                generate_san(peer.ed25519),  # register peer's san
+                quic=quic, is_initiating=True, port=peer.metadata.port
+            )
+            protocol.connection_made(self._transport)       # share transport
+            self.connection_ids[quic.host_cid] = protocol   # register protocol
+            self.conns[peer.ed25519] = quic.host_cid        # register connection ID
+            protocol._connection_id_issued_handler = partial(
+                self._connection_id_issued, protocol=protocol
+            )
+            protocol._connection_id_retired_handler = partial(
+                self._connection_id_retired, protocol=protocol
+            )
+            protocol._connection_terminated_handler = partial(
+                self._connection_terminated, protocol=protocol
+            )
+            # --- Connect --- #
+            protocol.connect(addr)                        # start handshake
+            protocol.transmit()                           # send initial flight
+            await protocol.wait_connected()
+            logger.debug(f"➡️ Created client connection with {addr[1]}", cid=quic.host_cid.hex())
+
+            # FIX: Only if neighbor
+            protocol.up0_stream = 0
+            protocol.stream_and_keep_open(bytes(1), protocol.up0_stream)
+            asyncio.create_task(self.keep_pinging(protocol))
+
+            # stream_id = protocol._quic.get_next_available_stream_id()
+            # from jam.network.protocols import BlockAnnouncement
+            # BlockAnnouncement.handshake(stream_id, protocol, True)
+
+            return protocol
+        except ConnectionError as e:
+            logger.error("Error connecting", e=e)
             return None
-
-        quic = QuicConnection(configuration=self._cfg)
-        protocol: NodeConnection = self._create_protocol(
-            generate_san(peer.ed25519),  # register peer's san
-            quic=quic, is_initiating=True, port=peer.metadata.port
-        )
-        protocol.connection_made(self._transport)       # share transport
-        self.connection_ids[quic.host_cid] = protocol   # register protocol
-        self.conns[peer.ed25519] = quic.host_cid        # register connection ID
-        protocol._connection_id_issued_handler = partial(
-            self._connection_id_issued, protocol=protocol
-        )
-        protocol._connection_id_retired_handler = partial(
-            self._connection_id_retired, protocol=protocol
-        )
-        protocol._connection_terminated_handler = partial(
-            self._connection_terminated, protocol=protocol
-        )
-        # --- Connect --- #
-        protocol.connect(addr)                        # start handshake
-        protocol.transmit()                           # send initial flight
-        await protocol.wait_connected()
-        logger.debug(f"➡️ Created client connection with {addr[1]}", cid=quic.host_cid.hex())
-
-        # FIX: Only if neighbor
-        protocol.up0_stream = 0
-        protocol.stream_and_keep_open(bytes(1), protocol.up0_stream)
-        asyncio.create_task(self.keep_pinging(protocol))
-
-        # stream_id = protocol._quic.get_next_available_stream_id()
-        # from jam.network.protocols import BlockAnnouncement
-        # BlockAnnouncement.handshake(stream_id, protocol, True)
-
-        return protocol
 
     async def keep_pinging(self, conn: NodeConnection, period = 10):
         while True:

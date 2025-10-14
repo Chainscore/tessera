@@ -286,8 +286,11 @@ class BlockAnnouncement(NetworkProtocol):
         logger.debug(f"Received {len(blocks_to_import)} blocks. Importing...")
 
         for block in reversed(blocks_to_import):
-            state._force_transition(block)
+            # state._force_transition(block)
+            is_valid = state._force_transition(block)
+            if is_valid:
+                asyncio.create_task(BlockAnnouncement().transmit(cls.block_to_announcement(block)))
 
-        logger.info("Sync complete!", state_root=state.root)
+        logger.info("Sync complete!", state_root=state.root.hex())
         asyncio.create_task(subscribe_sync_status("Completed"))
         return
