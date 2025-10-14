@@ -2,7 +2,7 @@ import asyncio
 from time import time
 from jam.operations import operate
 from jam.utils.constants import GENESIS_TS
-from tests.integration.utils.setup_processes import Client, Role, setup_processes
+from tests.integration.utils.setup_processes import Client, Role, setup_processes, setup_processes_with_delay
 import os
 import pytest
 
@@ -178,3 +178,18 @@ async def test_5_tsr():
     ]
 
     await setup_processes(CLIENTS, [operate], 2400)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_sync(rpc):
+    CLIENTS = [
+        Client(Role.VAL, 40000 + 0),
+        Client(Role.VAL, 40000 + 5),
+        Client(Role.VAL, 40000 + 3),
+        Client(Role.VAL, 40000 + 1),
+        Client(Role.VAL, 40000 + 4),
+        Client(Role.VAL, 40000 + 2),
+    ]
+
+    await setup_processes_with_delay(CLIENTS, [operate], 2400, rpc_flag=rpc, delay=50)
