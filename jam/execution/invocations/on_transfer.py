@@ -5,6 +5,7 @@ from jam.execution.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.invocations.protocol import InvocationProtocol
 from jam.execution.utils import decode_code_hash
 from jam.state.accounts import DeltaView
+from jam.types import OpaqueHash
 from jam.types.state.accumulation.types import DeferredTransfers
 from jam.types.state.delta import AccountData
 from jam.types.protocol.core import Gas, ProgramCounter, ServiceId, TimeSlot
@@ -12,15 +13,15 @@ from jam.utils.constants import W_C
 
 
 class PsiT(InvocationProtocol):
-    def __init__(self, d: DeltaView, block_timeslot: TimeSlot, s: ServiceId, transfers: DeferredTransfers):
+    def __init__(self, d: DeltaView, block_timeslot: TimeSlot, s: ServiceId, transfers: DeferredTransfers, entropy: OpaqueHash):
         self.delta = d
         self.timeslot = block_timeslot
         self.service_id = s
         self.transfers: DeferredTransfers = transfers
+        self.entropy = entropy
         self.table = self.build_table()
 
     def build_table(self):
-        from jam.state.state import state
 
         return {
             0: (GeneralFunctions, {}),
@@ -28,7 +29,7 @@ class PsiT(InvocationProtocol):
                 GeneralFunctions,
                 {
                     "package": None,
-                    "entropy": state.eta[0],
+                    "entropy": self.entropy,
                     "trace": None,
                     "item_index": None,
                     "import_segments": None,
@@ -42,7 +43,7 @@ class PsiT(InvocationProtocol):
                 {
                     "service_data": self.delta[self.service_id],
                     "service_index": self.service_id,
-                    "accounts": state.delta,
+                    "accounts": self.delta,
                 },
             ),
             # read

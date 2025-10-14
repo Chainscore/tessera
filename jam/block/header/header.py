@@ -1,13 +1,12 @@
-from tsrkit_types.bytes import Bytes
-from jam.types.state.gamma import GammaSTickets
 import json
-from typing import Optional, Self
+from typing import Self
+
 from jam.block.errors import BlockError, BlockErrorCode
 from jam.block.extrinsics.extrinsic import Extrinsic
 from jam.types.protocol.ticket import TicketBody
-from jam.types.state.gamma import GammaSFallback
+from jam.types.state.gamma import GammaSFallback, GammaSTickets
 from jam.utils.constants import EPOCH_LENGTH, X, TICKET_SUBMISSION_END
-from tsrkit_types import Option, structure, Null
+from tsrkit_types import Option, structure, Null, Bytes
 from jam.types import (
     BandersnatchVrfSignature,
     Hash,
@@ -37,13 +36,13 @@ class Header:
     slot: TimeSlot
     # HE
     epoch_mark: EpochMark
-    # HT    
+    # HT
     tickets_mark: TicketsMark
     # HA
     author_index: ValidatorIndex
     # HV
     entropy_source: BandersnatchVrfSignature
-    # HO 
+    # HO
     offenders_mark: OffendersMark
     # HS
     seal: BandersnatchVrfSignature
@@ -66,12 +65,12 @@ class Header:
         time_slot: TimeSlot,
         extrinsic: Extrinsic,
         ticket: TicketBody | None,
+        state
     ) -> Self | None:
         """
         Produces a child header of current header
         """
         from jam.settings import settings
-        from jam.state.state import state 
 
         header = Header(
             parent=Hash.blake2b(self.encode()),
@@ -118,7 +117,7 @@ class Header:
         
         return header
 
-    def validate(self) -> bool:
+    def validate(self, state, pre_state) -> bool:
         """
         Validate a block's header
         1. Extrinsic hash should match hash(block.extrinsics)
@@ -130,7 +129,6 @@ class Header:
         7. H_r == state.root
         """
         from jam.settings import settings
-        from jam.state.state import state
 
         slot_entry = self.slot % EPOCH_LENGTH
         full_val_set = state.kappa
@@ -172,9 +170,6 @@ class Header:
         # State root check
         if self.parent_state_root != state.root:
             raise BlockError(BlockErrorCode.INCORRECT_STATE_ROOT, f"E: {self.parent_state_root.hex()}, A: {state.root.hex()}")
-        
-        from ...state.state import State
-        pre_state = State.load()
 
         # Marker checks
         is_new_epoch = (self.slot // EPOCH_LENGTH) > (pre_state.tau // EPOCH_LENGTH)

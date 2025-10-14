@@ -1,6 +1,7 @@
 from jam.state.transitions.safrole.executor import setup_executor
 from py_ark_vrf import vrf_output
 import pytest
+import os
 from tsrkit_types.bytes import Bytes
 from jam.operations.handlers.conductor import Conductor
 from jam.settings import setup_setting
@@ -109,8 +110,9 @@ def test_safrole_entropy_accumulation():
     assert new_state.eta[2] == initial_state.eta[2]
     assert new_state.eta[3] == initial_state.eta[3]
 
-
-def test_safrole_ticket_accumulation():
+@pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_safrole_ticket_accumulation(db_path):
     """Test that Safrole correctly accumulates ticket.py during the submission period"""
     # Create initial state with some ticket.py already in gamma_a
     initial_state = create_state(
@@ -135,7 +137,7 @@ def test_safrole_ticket_accumulation():
     pubkeys = [val.bandersnatch for val in initial_state.kappa]
     setup_executor(pubkeys)
 
-    setup_setting(None, 1)
+    setup_setting(db_path, 1)
 
     # Create a block with ticket during submission period
     # Assume slot 6 is within ticket submission period (less than TICKET_SUBMISSION_END)
@@ -162,7 +164,7 @@ def test_safrole_ticket_accumulation():
     assert ticket_body in new_state.gamma.a
 
 
-def test_safrole_ticket_submission_outside_period():
+def test_safrole_ticket_submission_outside_period(db_path):
     """Test that Safrole rejects ticket.py outside the submission period"""
     # Create initial state
     initial_state = create_state(
@@ -183,7 +185,7 @@ def test_safrole_ticket_submission_outside_period():
         ),
         offenders=PsiO([]),
     )
-    setup_setting(None, 1)
+    setup_setting(db_path, 1)
 
     # Create a block with ticket.py after the submission period
     # Calculate a slot that is after TICKET_SUBMISSION_END

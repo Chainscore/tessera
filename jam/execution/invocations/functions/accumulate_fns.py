@@ -374,8 +374,8 @@ class AccumulateFunctions(INVF):
         if not memory.is_accessible(preimage_hash_addr, 32):
             raise PvmError(PANIC)
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
-        from jam.state.state import state
 
+        # from jam.state.state import state
         # state.store.save_n_clear_cache()
 
         # Account
