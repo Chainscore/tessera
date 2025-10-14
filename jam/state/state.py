@@ -268,13 +268,13 @@ class State:
             # Statistics
             Statistics.transition(pre_state, self, block, newly_avail_wrs)
 
-            if block.validate(self):
+            if block.validate(self, pre_state):
                 # Set local chain head to produced block
+                # Save block in db, update ll create ghost block.
                 block.save(_set.main_db)
                 self.stash(header_hash)
 
-                # TODO: Implement Block View to handle forked chains' heads
-                Finality.set_head(header_hash, _set.main_db)
+                Finality.set_head(block, _set.main_db)
 
                 logger.info(
                     "Block imported!",
@@ -295,10 +295,15 @@ class State:
                 # audit_engine = AuditEngine()
                 # asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
 
+                # TODO: Mark block as audited once audit process is done.
+                # from jam.block.block_view import viewer
+                # viewer.mark_as_audited(block, _set.main_db)
+
                 # TODO: Remove Direct Finality
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                 if instant_finality:
-                    Finality.finalise(header_hash, _set.main_db, True)
+                    # finalize the block and update viewer and whole chain
+                    Finality.finalise(block, _set.main_db, True)
                     self.settle(header_hash)
 
                 # Publishes updates of the statistics stored in chain state

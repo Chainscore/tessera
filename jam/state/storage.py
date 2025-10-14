@@ -81,6 +81,8 @@ class StateStorage:
             hh (HeaderHash): block whose cache needs to be stashed.
             apply_trie (bool): flag for applying changes in trie.
         """
+        if hh == HeaderHash(32):
+            return {}
 
         from jam.settings import settings
 
