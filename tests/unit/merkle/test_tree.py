@@ -257,9 +257,8 @@ def test_tree():
         new_root = verify_proof(trace, sub_leaf, i)
 
         assert new_root == root
-        print("TEST ROOT 2", new_root.hex(), new_root == root)
-
-        print("\n")
+        # print("TEST ROOT 2", new_root.hex(), new_root == root)
+        # print("\n")
 
 
 def print_trace(values: OpaqueHashes):

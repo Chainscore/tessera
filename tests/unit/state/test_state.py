@@ -24,8 +24,8 @@ def setup_genesis():
     block = Block.genesis()
     hh = block.save(settings.main_db)
 
-    Finality.finalise(hh, settings.main_db)
-    Finality.set_head(hh, settings.main_db)
+    Finality.set_head(block, settings.main_db)
+    Finality.finalise(block, settings.main_db)
 
     return hh
 

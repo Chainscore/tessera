@@ -29,8 +29,8 @@ async def test_best_block(db_path):
 
     block = Block.genesis()
     hh = block.save(settings.main_db)  # Save to test-specific DB
-    Finality.finalise(hh, settings.main_db, True)
-    Finality.set_head(hh, settings.main_db)
+    Finality.set_head(block, settings.main_db)
+    Finality.finalise(block, settings.main_db, True)
     b1 = block.produce(TimeSlot(1), state, None)
     state.transition(b1)
 
@@ -55,8 +55,8 @@ async def test_finalized_block(db_path):
 
     block = Block.genesis()
     hh = block.save(settings.main_db)  # Save to test-specific DB
-    Finality.finalise(hh, settings.main_db)
-    Finality.set_head(hh, settings.main_db)
+    Finality.set_head(block, settings.main_db)
+    Finality.finalise(block, settings.main_db)
 
     finalized_block = Finality.load_final(settings.main_db)
 

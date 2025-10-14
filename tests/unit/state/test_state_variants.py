@@ -26,8 +26,9 @@ def get_gen_state(db_path):
     state.store.enable_writes()
     return state, settings
 
-
-def test_state_update(db_path):
+@pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_state_update(db_path):
     state, _ = get_gen_state(db_path)
 
     # Make updates
@@ -45,7 +46,13 @@ async def test_block_import_state_save_n_fetch(db_path, rpc):
     vectors, settings = simulate_chain(db_path, rpc)
     from jam.state.state import state
 
-    hh_4 = settings.main_db.get(Block.get_storage_key_slot(TimeSlot(4)))
+    blocks_4 = Block.load_w_ts(TimeSlot(4), settings.main_db)
+    assert len(blocks_4) == 1
+
+    hh_4 = blocks_4[0].header.hash()
+    assert hh_4 == vectors[4].header_hash
+    assert blocks_4[0] == vectors[4].block
+
     s_4 = state.load(hh_4)
     assert s_4.tau == TimeSlot(4)
 
@@ -56,7 +63,7 @@ async def test_delta_updates(db_path, rpc):
     vectors, settings = simulate_chain(db_path, rpc)
     from jam.state.state import state
 
-    hh = HeaderHash(bytes.fromhex(GENESIS_HASH))
+    hh = vectors[4].header_hash
 
     # Make updates
     state.delta[ServiceId(100)] = AccountData()

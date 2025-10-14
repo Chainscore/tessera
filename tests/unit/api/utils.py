@@ -20,8 +20,8 @@ def init_chain(db_path, rpc: bool = True):
 
     b0 = Block.genesis()
     hh = b0.save(settings.main_db)  # Save to test-specific DB
-    Finality.finalise(hh, settings.main_db)
-    Finality.set_head(hh, settings.main_db)
+    Finality.set_head(b0, settings.main_db)
+    Finality.finalise(b0, settings.main_db)
 
     return state, settings, b0
 

@@ -38,8 +38,8 @@ def simulate_chain(db_path, rpc: bool = True):
             hh = block.save(settings.main_db)  # Save to test-specific DB
             assert hh == header_hash
             assert state.root == state_root
-            Finality.finalise(hh, settings.main_db)
-            Finality.set_head(hh, settings.main_db)
+            Finality.set_head(block, settings.main_db)
+            Finality.finalise(block, settings.main_db)
 
             continue
 
