@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 from typing import List, Optional, Dict
 
 from jam.api.rpc.subscription_handlers import subscribe_best_block
@@ -43,10 +44,14 @@ class GhostBlock:
         return f"GhostBlock(header={self.header.hex()}, slot={self.slot}, status={self.status.value})"
 
     def __init__ (self, block: Optional[Block], parent: Optional["GhostBlock"] = None):
+        self.status = BlockStatus("unaudited")
+        if block is None:
+            block = Block.genesis()
+            self.status = BlockStatus("final")
+
         self.header = block.header.hash()
         self.slot = block.header.slot
         self.children = TypedVector[GhostBlock]([])
-        self.status = BlockStatus("unaudited")
         self.parent = parent
 
         if parent is not None:
